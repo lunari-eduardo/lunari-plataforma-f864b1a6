@@ -152,7 +152,7 @@ export default function TaskCard({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-xs hover:bg-white/30 dark:hover:bg-white/5 transition-colors"
+          className="h-8 text-xs hover:bg-black/[0.06] dark:hover:bg-white/10 transition-colors"
           onClick={onEdit}
           data-no-drag="true"
         >
@@ -163,7 +163,7 @@ export default function TaskCard({
           <Button
             variant="secondary"
             size="sm"
-            className="h-8 text-xs hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+            className="h-8 text-xs hover:bg-black/[0.08] dark:hover:bg-white/10 transition-colors"
             onClick={onComplete}
             data-no-drag="true"
           >
@@ -173,7 +173,7 @@ export default function TaskCard({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 text-xs hover:bg-white/30 dark:hover:bg-white/5 transition-colors"
+            className="h-8 text-xs hover:bg-black/[0.06] dark:hover:bg-white/10 transition-colors"
             onClick={onReopen}
             data-no-drag="true"
           >

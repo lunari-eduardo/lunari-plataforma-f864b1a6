@@ -176,7 +176,7 @@ export default function TaskDetailsModal({
                       <SelectValue />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="bg-lunar-surface border-lunar-border">
+                  <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                     <SelectItem value="low">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-green-500" />
@@ -213,7 +213,7 @@ export default function TaskDetailsModal({
                   <SelectTrigger className="bg-lunar-background border-lunar-border">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-lunar-surface border-lunar-border">
+                  <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                     <SelectItem value="todo">A Fazer</SelectItem>
                     <SelectItem value="doing">Em Andamento</SelectItem>
                     <SelectItem value="waiting">Aguardando</SelectItem>
@@ -283,7 +283,7 @@ export default function TaskDetailsModal({
                       <SelectValue placeholder="Selecione responsável" />
                     )}
                   </SelectTrigger>
-                  <SelectContent className="bg-lunar-surface border-lunar-border">
+                  <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                     <SelectItem value="__none__">Sem responsável</SelectItem>
                     {people.map((p) => (
                       <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
@@ -325,7 +325,7 @@ export default function TaskDetailsModal({
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="z-[10000] bg-lunar-surface border-lunar-border w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
+                <DropdownMenuContent className="z-[10000] bg-white dark:bg-neutral-950 border-border/30 w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
                   {tagDefs.length ? (
                     tagDefs.map((tag) => (
                       <DropdownMenuCheckboxItem

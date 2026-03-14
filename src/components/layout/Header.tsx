@@ -81,7 +81,7 @@ export default function Header() {
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" />
       )}
 
-      <header className="h-12 flex items-center justify-between px-4 backdrop-blur-xl bg-white/40 dark:bg-background/60 border-b border-border/30 relative z-50">
+      <header className="h-12 flex items-center justify-between px-4 backdrop-blur-xl bg-white/40 dark:bg-background/60 border-b border-border/30 relative z-30">
         <div>
           <h1 className="text-sm font-semibold text-foreground">{currentTitle}</h1>
         </div>

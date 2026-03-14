@@ -99,7 +99,7 @@ export default function TaskCaptionsSection({ task, onUpdateTask }: TaskCaptions
               Nova Legenda
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-lunar-surface border-lunar-border max-w-2xl">
+          <DialogContent className="bg-white dark:bg-neutral-950 border-border/30 max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-lunar-text">
                 {editingCaption ? 'Editar Legenda' : 'Nova Legenda'}

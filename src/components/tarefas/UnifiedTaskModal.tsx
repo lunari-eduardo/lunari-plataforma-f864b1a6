@@ -329,7 +329,7 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
                     <SelectValue placeholder="Selecione prioridade" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="bg-lunar-surface border-lunar-border">
+                <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                   <SelectItem value="low">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-green-500" />
@@ -364,7 +364,7 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
                 <SelectTrigger className="bg-lunar-background border-lunar-border">
                   <SelectValue placeholder="Selecione status" />
                 </SelectTrigger>
-                <SelectContent className="bg-lunar-surface border-lunar-border">
+                <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                   <SelectItem value="todo">A Fazer</SelectItem>
                   <SelectItem value="doing">Em Andamento</SelectItem>
                   <SelectItem value="waiting">Aguardando</SelectItem>
@@ -391,7 +391,7 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
                     <SelectValue placeholder="Selecione responsável" />
                   )}
                 </SelectTrigger>
-                <SelectContent className="bg-lunar-surface border-lunar-border">
+                <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                   <SelectItem value="__none__">Sem responsável</SelectItem>
                   {people.map((p) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
@@ -420,7 +420,7 @@ export default function UnifiedTaskModal({ open, onOpenChange, onSubmit, initial
                   </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="z-[10000] bg-lunar-surface border-lunar-border w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
+              <DropdownMenuContent className="z-[10000] bg-white dark:bg-neutral-950 border-border/30 w-[var(--radix-select-trigger-width,16rem)] min-w-[12rem]">
                 {tagDefs.length ? (
                   tagDefs.map((tag) => (
                     <DropdownMenuCheckboxItem
