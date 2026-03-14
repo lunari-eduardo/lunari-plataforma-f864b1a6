@@ -31,30 +31,28 @@ export function WorkflowCard({
     <div
       data-card-id={session.id}
       className={cn(
-        // Base styles — glassmorphism
         "rounded-2xl transition-all duration-200 ease-in-out w-full",
-        // Frosted glass background
-        "bg-white/40 backdrop-blur-xl backdrop-saturate-[1.8]",
-        // Dark mode glass
-        "dark:bg-white/[0.04] dark:backdrop-blur-xl dark:backdrop-saturate-[1.6]",
-        // Glass border — light edge
-        "border border-white/50 dark:border-white/10",
-        // Minimal base shadow + inner glow
-        "shadow-[0_1px_3px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.7)]",
-        "dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)]",
-        // Hover — increase white opacity (never darken)
+        // Collapsed: transparent by default, glass on hover
         !isExpanded && [
-          "hover:bg-white/55 dark:hover:bg-white/[0.06]"
+          "bg-transparent",
+          "border border-transparent",
+          "hover:bg-white/55 hover:backdrop-blur-xl hover:backdrop-saturate-[1.8]",
+          "hover:border-white/50 dark:hover:border-white/10",
+          "hover:shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)]",
+          "dark:hover:bg-white/[0.06] dark:hover:backdrop-blur-xl dark:hover:backdrop-saturate-[1.6]",
+          "dark:hover:shadow-[0_4px_16px_rgba(0,0,0,0.3)]",
         ],
-        // Expanded — elevated glass, hover increases further
+        // Expanded: glass always visible
         isExpanded && [
-          "bg-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]",
-          "dark:bg-white/[0.06] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
+          "bg-white/50 backdrop-blur-xl backdrop-saturate-[1.8]",
+          "dark:bg-white/[0.06] dark:backdrop-blur-xl dark:backdrop-saturate-[1.6]",
+          "border border-white/50 dark:border-white/10",
+          "shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]",
+          "dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
           "hover:bg-white/60 dark:hover:bg-white/[0.08]"
         ]
       )}
     >
-      {/* Collapsed row - sempre visível (clicável para expandir) */}
       <WorkflowCardCollapsed
         session={session}
         isExpanded={isExpanded}
@@ -67,12 +65,10 @@ export function WorkflowCard({
         onDeleteSession={onDeleteSession}
       />
       
-      {/* Separador visual elegante quando expandido */}
       {isExpanded && (
         <div className="mx-4 md:mx-6 border-b border-primary/20 dark:border-primary/30" />
       )}
       
-      {/* Expanded content - só visível quando expandido */}
       {isExpanded && (
         <WorkflowCardExpanded
           session={session}
