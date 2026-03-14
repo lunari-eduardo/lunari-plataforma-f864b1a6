@@ -1,19 +1,16 @@
 /**
- * Componente Categorias Refatorado
- * Padronizado conforme guia de UX - Edição inline
+ * Componente Categorias — Compacto, sem cor manual, edição inline funcional
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Plus, 
-  Trash2, 
-  AlertTriangle
-} from 'lucide-react';
+import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import type { Categoria, Pacote } from '@/types/configuration';
+
+const COLOR_PALETTE = ['#7950F2', '#228BE6', '#12B886', '#E64980', '#FD7E14', '#868E96', '#40C057', '#BE4BDB'];
 
 interface CategoriasProps {
   categorias: Categoria[];
@@ -23,337 +20,95 @@ interface CategoriasProps {
   pacotes: Pacote[];
 }
 
-export default function Categorias({
-  categorias,
-  onAdd,
-  onUpdate, 
-  onDelete,
-  pacotes
-}: CategoriasProps) {
-  const [novaCategoria, setNovaCategoria] = useState('');
-  const [novaCor, setNovaCor] = useState('#7950F2');
-  const [addValidationError, setAddValidationError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+// ── Inline Row (stable component, outside parent) ──────────────────────────
 
-  const validateNewCategoria = useCallback((nome: string): string => {
-    if (!nome.trim()) {
-      return 'O nome da categoria é obrigatório';
-    }
-    if (nome.trim().length < 2) {
-      return 'O nome deve ter pelo menos 2 caracteres';
-    }
-    const nomeExists = categorias.some(cat => 
-      cat.nome.toLowerCase() === nome.trim().toLowerCase()
-    );
-    if (nomeExists) {
-      return 'Já existe uma categoria com este nome';
-    }
-    return '';
-  }, [categorias]);
-
-  const podeRemoverCategoria = useCallback((id: string) => {
-    return !pacotes.some(pacote => pacote.categoria_id === id);
-  }, [pacotes]);
-
-  const handleNomeCategoriaChange = useCallback((value: string) => {
-    setNovaCategoria(value);
-    const error = validateNewCategoria(value);
-    setAddValidationError(error);
-  }, [validateNewCategoria]);
-
-  const adicionarCategoria = useCallback(async () => {
-    const error = validateNewCategoria(novaCategoria);
-    if (error) {
-      setAddValidationError(error);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      onAdd({
-        nome: novaCategoria.trim(),
-        cor: novaCor
-      });
-      setNovaCategoria('');
-      setNovaCor('#7950F2');
-      setAddValidationError('');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [novaCategoria, novaCor, onAdd, validateNewCategoria]);
-
-  const removerCategoria = useCallback(async (id: string) => {
-    if (!podeRemoverCategoria(id)) {
-      return;
-    }
-    try {
-      await onDelete(id);
-    } catch (error) {
-      console.error('Erro ao remover categoria:', error);
-    }
-  }, [onDelete, podeRemoverCategoria]);
-
-  const canAddNew = novaCategoria.trim().length >= 2 && !addValidationError && !isLoading;
-
-  return (
-    <div className="space-y-6 py-4">
-      <ConfigSectionHeader
-        title="Categorias"
-        subtitle="Configure as categorias para seus tipos de sessão fotográfica."
-      />
-
-      {/* Formulário Nova Categoria */}
-      <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 space-y-1.5">
-            <label htmlFor="nome" className="text-sm font-medium text-foreground">
-              Nome da Categoria <span className="text-destructive">*</span>
-            </label>
-            <Input
-              id="nome"
-              placeholder="Ex: Gestante, Newborn, Família..."
-              value={novaCategoria}
-              onChange={(e) => handleNomeCategoriaChange(e.target.value)}
-              className={cn(
-                "h-10",
-                addValidationError && "border-destructive focus-visible:ring-destructive"
-              )}
-              disabled={isLoading}
-            />
-            {addValidationError && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {addValidationError}
-              </p>
-            )}
-          </div>
-          
-          <div className="w-24 space-y-1.5">
-            <label htmlFor="cor" className="text-sm font-medium text-foreground">
-              Cor
-            </label>
-            <Input
-              id="cor"
-              type="color"
-              value={novaCor}
-              onChange={(e) => setNovaCor(e.target.value)}
-              className="h-10 p-1 cursor-pointer"
-            />
-          </div>
-          
-          <div className="flex items-end">
-            <Button
-              onClick={adicionarCategoria}
-              disabled={!canAddNew}
-              className="h-10"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-current" />
-                  Salvando...
-                </div>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Lista de Categorias */}
-      <div className="space-y-3">
-        {categorias.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-border rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              Nenhuma categoria encontrada. Crie sua primeira categoria acima.
-            </p>
-          </div>
-        ) : (
-          <div className="border border-border rounded-lg overflow-hidden">
-            {categorias.map((categoria, index) => {
-              const podeRemover = podeRemoverCategoria(categoria.id);
-              
-              return (
-                <InlineEditCategoriaRow
-                  key={categoria.id}
-                  categoria={categoria}
-                  index={index}
-                  categorias={categorias}
-                  onUpdate={onUpdate}
-                  onDelete={removerCategoria}
-                  podeRemover={podeRemover}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function InlineEditCategoriaRow({ 
-  categoria, 
-  index,
-  categorias,
-  onUpdate,
-  onDelete,
-  podeRemover
-}: {
+interface InlineRowProps {
   categoria: Categoria;
-  index: number;
-  categorias: Categoria[];
   onUpdate: (id: string, dados: Partial<Categoria>) => Promise<void>;
   onDelete: (id: string) => void;
   podeRemover: boolean;
-}) {
+  allCategorias: Categoria[];
+}
+
+function InlineEditCategoriaRow({ categoria, onUpdate, onDelete, podeRemover, allCategorias }: InlineRowProps) {
   const [editNome, setEditNome] = useState(categoria.nome);
-  const [editCor, setEditCor] = useState(categoria.cor);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
+  const deleteClickedRef = useRef(false);
 
-  // Sync with prop changes
-  useEffect(() => {
-    if (!isEditing && !isSaving) {
-      setEditNome(categoria.nome);
-      setEditCor(categoria.cor);
-    }
-  }, [categoria.nome, categoria.cor, isEditing, isSaving]);
-
-  const validateEdit = useCallback((nome: string): string => {
-    if (!nome.trim()) {
-      return 'O nome é obrigatório';
-    }
-    if (nome.trim().length < 2) {
-      return 'Mínimo 2 caracteres';
-    }
-    // Check for duplicates excluding current category
-    const nomeExists = categorias.some(cat => 
-      cat.id !== categoria.id && 
-      cat.nome.toLowerCase() === nome.trim().toLowerCase()
-    );
-    if (nomeExists) {
-      return 'Nome já existe';
-    }
+  const validate = useCallback((nome: string): string => {
+    if (!nome.trim()) return 'Nome obrigatório';
+    if (nome.trim().length < 2) return 'Mínimo 2 caracteres';
+    const dup = allCategorias.some(c => c.id !== categoria.id && c.nome.toLowerCase() === nome.trim().toLowerCase());
+    if (dup) return 'Nome já existe';
     return '';
-  }, [categorias, categoria.id]);
+  }, [allCategorias, categoria.id]);
 
-  const handleStartEdit = useCallback(() => {
+  const startEdit = useCallback(() => {
+    setEditNome(categoria.nome);
     setIsEditing(true);
     setError('');
     setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
+  }, [categoria.nome]);
 
-  const handleSave = useCallback(async () => {
-    const trimmedNome = editNome.trim();
-    const validationError = validateEdit(trimmedNome);
-    
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+  const save = useCallback(async () => {
+    if (savingRef.current) return;
+    const trimmed = editNome.trim();
+    const validationError = validate(trimmed);
+    if (validationError) { setError(validationError); return; }
+    if (trimmed === categoria.nome) { setIsEditing(false); setError(''); return; }
 
-    // No changes? Just exit edit mode
-    if (trimmedNome === categoria.nome && editCor === categoria.cor) {
-      setIsEditing(false);
-      setError('');
-      return;
-    }
-
+    savingRef.current = true;
     setIsSaving(true);
     try {
-      await onUpdate(categoria.id, { nome: trimmedNome, cor: editCor });
+      await onUpdate(categoria.id, { nome: trimmed });
       setIsEditing(false);
       setError('');
-    } catch (err) {
-      console.error('Erro ao salvar:', err);
+    } catch {
       setError('Erro ao salvar');
     } finally {
       setIsSaving(false);
+      savingRef.current = false;
     }
-  }, [editNome, editCor, categoria, onUpdate, validateEdit]);
+  }, [editNome, categoria, onUpdate, validate]);
 
-  // Save color immediately when changed (no edit mode needed)
-  const handleColorChange = useCallback(async (newColor: string) => {
-    setEditCor(newColor);
-    
-    // If the color is different from the original, save it immediately
-    if (newColor !== categoria.cor) {
-      setIsSaving(true);
-      try {
-        await onUpdate(categoria.id, { cor: newColor });
-      } catch (err) {
-        console.error('Erro ao salvar cor:', err);
-        // Revert on error
-        setEditCor(categoria.cor);
-      } finally {
-        setIsSaving(false);
-      }
-    }
-  }, [categoria.id, categoria.cor, onUpdate]);
-
-  const handleCancel = useCallback(() => {
+  const cancel = useCallback(() => {
     setEditNome(categoria.nome);
-    setEditCor(categoria.cor);
     setIsEditing(false);
     setError('');
-  }, [categoria.nome, categoria.cor]);
+  }, [categoria.nome]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
-      handleCancel();
-    }
-  }, [handleSave, handleCancel]);
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    else if (e.key === 'Escape') cancel();
+  }, [save, cancel]);
 
-  const handleBlur = useCallback((e: React.FocusEvent) => {
-    // Check if focus is moving to the color input or delete button
-    const relatedTarget = e.relatedTarget as HTMLElement;
-    if (relatedTarget?.closest('[data-inline-edit-row]')) {
-      return;
-    }
-    handleSave();
-  }, [handleSave]);
+  const handleBlur = useCallback(() => {
+    // Skip save if user clicked the delete button
+    if (deleteClickedRef.current) { deleteClickedRef.current = false; return; }
+    save();
+  }, [save]);
 
   return (
-    <div 
-      data-inline-edit-row
-      className={cn(
-        "flex items-center gap-3 px-4 py-3 transition-colors",
-        index % 2 === 0 ? "bg-background" : "bg-muted/30",
-        "hover:bg-accent/50"
-      )}
-    >
-      <Input
-        type="color"
-        value={editCor}
-        onChange={(e) => handleColorChange(e.target.value)}
-        className="w-8 h-8 p-0.5 cursor-pointer flex-shrink-0 rounded"
-        disabled={isSaving}
+    <div className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors group">
+      <div
+        className="w-3 h-3 rounded-full shrink-0"
+        style={{ backgroundColor: categoria.cor }}
       />
-      
-      <div className="flex-1">
+
+      <div className="flex-1 min-w-0">
         {isEditing ? (
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <Input
               ref={inputRef}
               value={editNome}
-              onChange={(e) => {
-                setEditNome(e.target.value);
-                setError('');
-              }}
+              onChange={(e) => { setEditNome(e.target.value); setError(''); }}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
-              className={cn(
-                "h-8 text-sm",
-                error && "border-destructive"
-              )}
+              className={cn("h-7 text-sm py-0", error && "border-destructive")}
               placeholder="Nome da categoria"
               disabled={isSaving}
             />
@@ -365,9 +120,9 @@ function InlineEditCategoriaRow({
             )}
           </div>
         ) : (
-          <span 
-            className="font-medium text-sm cursor-pointer hover:text-primary"
-            onClick={handleStartEdit}
+          <span
+            className="text-sm font-medium cursor-pointer hover:text-primary truncate block"
+            onClick={startEdit}
           >
             {categoria.nome}
           </span>
@@ -377,17 +132,112 @@ function InlineEditCategoriaRow({
       <Button
         size="sm"
         variant="ghost"
+        onMouseDown={() => { deleteClickedRef.current = true; }}
         onClick={() => onDelete(categoria.id)}
         disabled={isSaving || !podeRemover}
         className={cn(
-          podeRemover 
-            ? "text-destructive hover:text-destructive hover:bg-destructive/10" 
+          "h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity",
+          podeRemover
+            ? "text-destructive hover:text-destructive hover:bg-destructive/10"
             : "opacity-50 cursor-not-allowed"
         )}
         title={!podeRemover ? 'Categoria vinculada a pacotes' : 'Remover categoria'}
       >
-        <Trash2 className="h-4 w-4" />
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────────────────
+
+export default function Categorias({ categorias, onAdd, onUpdate, onDelete, pacotes }: CategoriasProps) {
+  const [novaCategoria, setNovaCategoria] = useState('');
+  const [addError, setAddError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateNew = useCallback((nome: string): string => {
+    if (!nome.trim()) return 'Nome obrigatório';
+    if (nome.trim().length < 2) return 'Mínimo 2 caracteres';
+    if (categorias.some(c => c.nome.toLowerCase() === nome.trim().toLowerCase())) return 'Nome já existe';
+    return '';
+  }, [categorias]);
+
+  const handleChange = useCallback((value: string) => {
+    setNovaCategoria(value);
+    setAddError(validateNew(value));
+  }, [validateNew]);
+
+  const adicionar = useCallback(async () => {
+    const err = validateNew(novaCategoria);
+    if (err) { setAddError(err); return; }
+    setIsLoading(true);
+    try {
+      const cor = COLOR_PALETTE[categorias.length % COLOR_PALETTE.length];
+      onAdd({ nome: novaCategoria.trim(), cor });
+      setNovaCategoria('');
+      setAddError('');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [novaCategoria, categorias.length, onAdd, validateNew]);
+
+  const podeRemover = useCallback((id: string) => !pacotes.some(p => p.categoria_id === id), [pacotes]);
+
+  const canAdd = novaCategoria.trim().length >= 2 && !addError && !isLoading;
+
+  return (
+    <div className="space-y-4 py-4">
+      <ConfigSectionHeader
+        title="Categorias"
+        subtitle="Configure as categorias para seus tipos de sessão fotográfica."
+      />
+
+      {/* Add form — single compact row */}
+      <div className="flex gap-2 items-start">
+        <div className="flex-1 space-y-1">
+          <Input
+            placeholder="Nova categoria..."
+            value={novaCategoria}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && canAdd) adicionar(); }}
+            className={cn("h-9", addError && novaCategoria && "border-destructive focus-visible:ring-destructive")}
+            disabled={isLoading}
+          />
+          {addError && novaCategoria && (
+            <p className="text-xs text-destructive flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              {addError}
+            </p>
+          )}
+        </div>
+        <Button onClick={adicionar} disabled={!canAdd} size="sm" className="h-9">
+          <Plus className="h-4 w-4 mr-1" />
+          Adicionar
+        </Button>
+      </div>
+
+      {/* List */}
+      {categorias.length === 0 ? (
+        <div className="text-center py-6 border border-dashed border-border rounded-lg">
+          <p className="text-sm text-muted-foreground">
+            Nenhuma categoria cadastrada.
+          </p>
+        </div>
+      ) : (
+        <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+          {categorias.map((cat) => (
+            <InlineEditCategoriaRow
+              key={cat.id}
+              categoria={cat}
+              allCategorias={categorias}
+              onUpdate={onUpdate}
+              onDelete={async (id) => { await onDelete(id); }}
+              podeRemover={podeRemover(cat.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
