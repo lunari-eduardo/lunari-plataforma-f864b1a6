@@ -74,7 +74,7 @@ export default function AdminConteudoNovo() {
 
     createPost.mutate(postData, {
       onSuccess: () => {
-        navigate('/admin/conteudos');
+        navigate('/app/admin/conteudos');
       },
     });
   };
