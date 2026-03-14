@@ -20,15 +20,15 @@ export function useHelpArticles() {
   return useQuery({
     queryKey: ['help_articles'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('blog_posts')
-        .select('*')
-        .eq('type' as any, 'help')
+        .select('*') as any)
+        .eq('type', 'help')
         .eq('status', 'published')
-        .order('display_order' as any, { ascending: true });
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
-      return (data || []) as unknown as HelpArticle[];
+      return (data || []) as HelpArticle[];
     },
   });
 }
