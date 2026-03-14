@@ -1,23 +1,25 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, GripVertical, Trash2, Type, Heading1, Heading2, Heading3, Image, List, Quote } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Type, Heading1, Heading2, Heading3, Image, List, Quote, Video } from 'lucide-react';
 import { TextBlock } from './blocks/TextBlock';
 import { HeadingBlock } from './blocks/HeadingBlock';
 import { ImageBlock } from './blocks/ImageBlock';
 import { ListBlock } from './blocks/ListBlock';
 import { QuoteBlock } from './blocks/QuoteBlock';
+import { VideoBlock } from './blocks/VideoBlock';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableBlock, useDragHandle } from './blocks/SortableBlock';
 
 export interface ContentBlock {
   id: string;
-  type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'image' | 'list' | 'quote';
+  type: 'paragraph' | 'h1' | 'h2' | 'h3' | 'image' | 'list' | 'quote' | 'video';
   content: string;
   imageUrl?: string;
   imageCaption?: string;
   imageAlt?: string;
   listType?: 'ul' | 'ol';
+  videoUrl?: string;
 }
 
 interface BlockEditorProps {
@@ -118,6 +120,18 @@ const blocksToHtml = (blocks: ContentBlock[]): string => {
           <img src="${block.imageUrl}" alt="${block.imageAlt || ''}" />
           ${block.imageCaption ? `<figcaption>${block.imageCaption}</figcaption>` : ''}
         </figure>`;
+      case 'video':
+        if (!block.videoUrl) return '';
+        // Check if YouTube/Vimeo
+        const ytMatch = block.videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if (ytMatch) {
+          return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" width="100%" style="aspect-ratio:16/9" frameborder="0" allowfullscreen></iframe>`;
+        }
+        const vimeoMatch = block.videoUrl.match(/vimeo\.com\/(\d+)/);
+        if (vimeoMatch) {
+          return `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" width="100%" style="aspect-ratio:16/9" frameborder="0" allowfullscreen></iframe>`;
+        }
+        return `<video src="${block.videoUrl}" controls style="width:100%"></video>`;
       default:
         return `<p>${block.content}</p>`;
     }
@@ -255,6 +269,15 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
       >
         <Quote className={`h-4 w-4 ${currentType === 'quote' ? 'text-primary' : ''}`} />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'video'); }}
+        title="Vídeo"
+      >
+        <Video className={`h-4 w-4 ${currentType === 'video' ? 'text-primary' : ''}`} />
+      </Button>
       <div className="h-4 w-px bg-border mx-1" />
       <Button
         variant="ghost"
@@ -291,6 +314,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
               {block.type === 'image' && 'Imagem'}
               {block.type === 'list' && 'Lista'}
               {block.type === 'quote' && 'Citação'}
+              {block.type === 'video' && 'Vídeo'}
             </span>
             <BlockTypeSelector
               blockId={block.id}
@@ -334,6 +358,13 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         );
       case 'quote':
         return <QuoteBlock {...commonProps} />;
+      case 'video':
+        return (
+          <VideoBlock
+            videoUrl={block.videoUrl || ''}
+            onUpdate={(updates) => updateBlock(block.id, updates)}
+          />
+        );
       default:
         return <TextBlock {...commonProps} />;
     }
@@ -408,6 +439,15 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
               title="Adicionar citação"
             >
               <Quote className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => addBlock('video', blocks.length - 1)}
+              title="Adicionar vídeo"
+            >
+              <Video className="h-4 w-4" />
             </Button>
           </div>
         </div>

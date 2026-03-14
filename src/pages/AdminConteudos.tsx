@@ -47,11 +47,14 @@ export default function AdminConteudos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'blog' | 'help'>('all');
 
   const filteredPosts = posts?.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const postType = (post as any).type || 'blog';
+    const matchesType = typeFilter === 'all' || postType === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const handleDelete = () => {
@@ -93,13 +96,35 @@ export default function AdminConteudos() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={typeFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('all')}
+          >
+            Todos
+          </Button>
+          <Button
+            variant={typeFilter === 'blog' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('blog')}
+          >
+            📝 Blog
+          </Button>
+          <Button
+            variant={typeFilter === 'help' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('help')}
+          >
+            ❓ Ajuda
+          </Button>
+          <div className="h-6 w-px bg-border mx-1 self-center" />
           <Button
             variant={statusFilter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setStatusFilter('all')}
           >
-            Todos
+            Todos status
           </Button>
           <Button
             variant={statusFilter === 'published' ? 'default' : 'outline'}
@@ -129,6 +154,7 @@ export default function AdminConteudos() {
             <TableHeader>
               <TableRow>
                 <TableHead>Título</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -140,8 +166,15 @@ export default function AdminConteudos() {
                   <TableCell>
                     <div>
                       <p className="font-medium line-clamp-1">{post.title}</p>
-                      <p className="text-sm text-muted-foreground">/conteudos/{post.slug}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(post as any).type === 'help' ? '/app/ajuda/' : '/conteudos/'}{post.slug}
+                      </p>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {(post as any).type === 'help' ? '❓ Ajuda' : '📝 Blog'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={post.status === 'published' ? 'default' : 'secondary'}>

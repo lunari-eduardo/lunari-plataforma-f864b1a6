@@ -5,6 +5,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { EquipmentSyncNotification } from '@/components/equipments/EquipmentSyncNotification';
 import { useEquipmentSync } from '@/hooks/useEquipmentSync';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
+import { HelpFloatingButton } from '@/components/help/HelpFloatingButton';
 import { cn } from '@/lib/utils';
 import InternalBackground from '@/components/backgrounds/InternalBackground';
 import DashboardBackground from '@/components/backgrounds/DashboardBackground';
@@ -41,5 +42,8 @@ export default function Layout() {
       
       {/* Equipment sync notifications */}
       <EquipmentSyncNotification />
+      
+      {/* Botão flutuante de ajuda contextual */}
+      <HelpFloatingButton />
     </div>;
 }
