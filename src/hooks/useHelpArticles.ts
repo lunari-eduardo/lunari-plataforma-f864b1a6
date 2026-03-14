@@ -40,16 +40,16 @@ export function useHelpArticleBySlug(slug: string) {
   return useQuery({
     queryKey: ['help_articles', 'slug', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('blog_posts')
-        .select('*')
+        .select('*') as any)
         .eq('slug', slug)
-        .eq('type' as any, 'help')
+        .eq('type', 'help')
         .eq('status', 'published')
         .single();
 
       if (error) throw error;
-      return data as unknown as HelpArticle;
+      return data as HelpArticle;
     },
     enabled: !!slug,
   });
