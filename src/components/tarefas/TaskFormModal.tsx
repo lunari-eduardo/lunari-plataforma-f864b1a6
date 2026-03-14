@@ -302,7 +302,7 @@ export default function TaskFormModal({ open, onOpenChange, onSubmit, initial, m
                     <SelectValue placeholder="Selecione responsável" />
                   )}
                 </SelectTrigger>
-                <SelectContent className="bg-lunar-surface border-lunar-border">
+                <SelectContent className="bg-white dark:bg-neutral-950 border-border/30">
                   <SelectItem value="__none__">Sem responsável</SelectItem>
                   {people.map((p) => (
                     <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
