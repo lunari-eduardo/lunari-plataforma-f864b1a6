@@ -96,13 +96,35 @@ export default function AdminConteudos() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={typeFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('all')}
+          >
+            Todos
+          </Button>
+          <Button
+            variant={typeFilter === 'blog' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('blog')}
+          >
+            📝 Blog
+          </Button>
+          <Button
+            variant={typeFilter === 'help' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTypeFilter('help')}
+          >
+            ❓ Ajuda
+          </Button>
+          <div className="h-6 w-px bg-border mx-1 self-center" />
           <Button
             variant={statusFilter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setStatusFilter('all')}
           >
-            Todos
+            Todos status
           </Button>
           <Button
             variant={statusFilter === 'published' ? 'default' : 'outline'}
