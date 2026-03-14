@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { SEOHead } from '@/components/seo/SEOHead';
 import { useHelpArticles } from '@/hooks/useHelpArticles';
-import { Loader2, BookOpen, ArrowRight } from 'lucide-react';
+import { Loader2, BookOpen, ChevronRight, HelpCircle } from 'lucide-react';
 
 /**
  * Centro de Ajuda — Lista de artigos de ajuda
@@ -11,12 +11,15 @@ export default function CentroAjuda() {
   const { data: articles, isLoading } = useHelpArticles();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8">
       <SEOHead title="Centro de Ajuda | Lunari" noindex />
 
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold font-sans text-foreground">Centro de Ajuda</h1>
-        <p className="text-muted-foreground text-lg">
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <HelpCircle className="h-7 w-7 text-primary" />
+          <h1 className="text-2xl font-bold font-sans text-foreground">Centro de Ajuda</h1>
+        </div>
+        <p className="text-muted-foreground text-sm">
           Tutoriais e guias para usar o Lunari
         </p>
       </div>
@@ -26,38 +29,27 @@ export default function CentroAjuda() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : articles && articles.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <nav className="border rounded-lg bg-card divide-y divide-border">
           {articles.map((article) => (
             <Link
               key={article.id}
               to={`/app/ajuda/${article.slug}`}
-              className="group p-6 rounded-xl border border-border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-md"
+              className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition-colors group first:rounded-t-lg last:rounded-b-lg"
             >
-              {article.featured_image_url && (
-                <div className="aspect-video rounded-lg overflow-hidden mb-4 bg-muted">
-                  <img
-                    src={article.featured_image_url}
-                    alt={article.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold font-sans text-foreground group-hover:text-primary transition-colors">
-                    {article.title}
-                  </h2>
-                  {article.route_reference && (
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {article.route_reference.replace('/app/', '')}
-                    </p>
-                  )}
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
+              <div className="min-w-0">
+                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                  {article.title}
+                </span>
+                {article.route_reference && (
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                    {article.route_reference.replace('/app/', '')}
+                  </p>
+                )}
               </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
             </Link>
           ))}
-        </div>
+        </nav>
       ) : (
         <div className="text-center py-16 border rounded-xl bg-muted/20">
           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

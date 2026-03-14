@@ -79,7 +79,6 @@ const parseHtmlToBlocks = (html: string): ContentBlock[] => {
         }
         break;
       default:
-        // Fallback para conteúdo genérico
         if (node.textContent?.trim()) {
           blocks.push({ id, type: 'paragraph', content: node.innerHTML });
         }
@@ -122,7 +121,6 @@ const blocksToHtml = (blocks: ContentBlock[]): string => {
         </figure>`;
       case 'video':
         if (!block.videoUrl) return '';
-        // Check if YouTube/Vimeo
         const ytMatch = block.videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
         if (ytMatch) {
           return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" width="100%" style="aspect-ratio:16/9" frameborder="0" allowfullscreen></iframe>`;
@@ -138,14 +136,106 @@ const blocksToHtml = (blocks: ContentBlock[]): string => {
   }).filter(Boolean).join('\n');
 };
 
+// ── Extracted sub-components (stable references across re-renders) ──
+
+const BLOCK_TYPE_LABELS: Record<ContentBlock['type'], string> = {
+  paragraph: 'Parágrafo',
+  h1: 'Título H1',
+  h2: 'Título H2',
+  h3: 'Título H3',
+  image: 'Imagem',
+  list: 'Lista',
+  quote: 'Citação',
+  video: 'Vídeo',
+};
+
+interface BlockTypeSelectorProps {
+  blockId: string;
+  currentType: ContentBlock['type'];
+  onChangeType: (id: string, type: ContentBlock['type']) => void;
+  onDelete: (id: string) => void;
+}
+
+function BlockTypeSelector({ blockId, currentType, onChangeType, onDelete }: BlockTypeSelectorProps) {
+  return (
+    <div className="flex items-center gap-1">
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'paragraph'); }} title="Parágrafo">
+        <Type className={`h-4 w-4 ${currentType === 'paragraph' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'h1'); }} title="Título H1">
+        <Heading1 className={`h-4 w-4 ${currentType === 'h1' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'h2'); }} title="Título H2">
+        <Heading2 className={`h-4 w-4 ${currentType === 'h2' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'h3'); }} title="Título H3">
+        <Heading3 className={`h-4 w-4 ${currentType === 'h3' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'image'); }} title="Imagem">
+        <Image className={`h-4 w-4 ${currentType === 'image' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'list'); }} title="Lista">
+        <List className={`h-4 w-4 ${currentType === 'list' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'quote'); }} title="Citação">
+        <Quote className={`h-4 w-4 ${currentType === 'quote' ? 'text-primary' : ''}`} />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onChangeType(blockId, 'video'); }} title="Vídeo">
+        <Video className={`h-4 w-4 ${currentType === 'video' ? 'text-primary' : ''}`} />
+      </Button>
+      <div className="h-4 w-px bg-border mx-1" />
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(blockId); }} title="Remover bloco">
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+interface BlockWrapperProps {
+  block: ContentBlock;
+  onChangeType: (id: string, type: ContentBlock['type']) => void;
+  onDelete: (id: string) => void;
+  children: React.ReactNode;
+}
+
+function BlockWrapper({ block, onChangeType, onDelete, children }: BlockWrapperProps) {
+  const { listeners, attributes } = useDragHandle();
+
+  return (
+    <div className="group flex items-start gap-2 p-3">
+      <div
+        {...listeners}
+        {...attributes}
+        className="flex items-center gap-1 pt-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase">
+            {BLOCK_TYPE_LABELS[block.type]}
+          </span>
+          <BlockTypeSelector
+            blockId={block.id}
+            currentType={block.type}
+            onChangeType={onChangeType}
+            onDelete={onDelete}
+          />
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ──
+
 export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) {
   const [blocks, setBlocks] = useState<ContentBlock[]>(() => parseHtmlToBlocks(value));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Só inicia drag após mover 8px
-      },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -169,31 +259,42 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
     updateBlocks(newBlocks);
   };
 
-  const updateBlock = (id: string, updates: Partial<ContentBlock>) => {
-    const newBlocks = blocks.map(block =>
-      block.id === id ? { ...block, ...updates } : block
-    );
-    updateBlocks(newBlocks);
-  };
+  const updateBlock = useCallback((id: string, updates: Partial<ContentBlock>) => {
+    setBlocks(prev => {
+      const newBlocks = prev.map(block =>
+        block.id === id ? { ...block, ...updates } : block
+      );
+      onChange(blocksToHtml(newBlocks));
+      return newBlocks;
+    });
+  }, [onChange]);
 
-  const deleteBlock = (id: string) => {
-    if (blocks.length <= 1) {
-      updateBlocks([{ id: crypto.randomUUID(), type: 'paragraph', content: '' }]);
-      return;
-    }
-    updateBlocks(blocks.filter(block => block.id !== id));
-  };
+  const deleteBlock = useCallback((id: string) => {
+    setBlocks(prev => {
+      if (prev.length <= 1) {
+        const newBlocks = [{ id: crypto.randomUUID(), type: 'paragraph' as const, content: '' }];
+        onChange(blocksToHtml(newBlocks));
+        return newBlocks;
+      }
+      const newBlocks = prev.filter(block => block.id !== id);
+      onChange(blocksToHtml(newBlocks));
+      return newBlocks;
+    });
+  }, [onChange]);
 
-  const changeBlockType = (id: string, newType: ContentBlock['type']) => {
-    const newBlocks = blocks.map(block =>
-      block.id === id ? { 
-        ...block, 
-        type: newType, 
-        listType: newType === 'list' ? 'ul' as const : undefined 
-      } : block
-    );
-    updateBlocks(newBlocks);
-  };
+  const changeBlockType = useCallback((id: string, newType: ContentBlock['type']) => {
+    setBlocks(prev => {
+      const newBlocks = prev.map(block =>
+        block.id === id ? {
+          ...block,
+          type: newType,
+          listType: newType === 'list' ? 'ul' as const : undefined
+        } : block
+      );
+      onChange(blocksToHtml(newBlocks));
+      return newBlocks;
+    });
+  }, [onChange]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -202,129 +303,6 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
       const newIndex = blocks.findIndex(b => b.id === over.id);
       updateBlocks(arrayMove(blocks, oldIndex, newIndex));
     }
-  };
-
-  const BlockTypeSelector = ({ blockId, currentType }: { blockId: string; currentType: ContentBlock['type'] }) => (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'paragraph'); }}
-        title="Parágrafo"
-      >
-        <Type className={`h-4 w-4 ${currentType === 'paragraph' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'h1'); }}
-        title="Título H1"
-      >
-        <Heading1 className={`h-4 w-4 ${currentType === 'h1' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'h2'); }}
-        title="Título H2"
-      >
-        <Heading2 className={`h-4 w-4 ${currentType === 'h2' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'h3'); }}
-        title="Título H3"
-      >
-        <Heading3 className={`h-4 w-4 ${currentType === 'h3' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'image'); }}
-        title="Imagem"
-      >
-        <Image className={`h-4 w-4 ${currentType === 'image' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'list'); }}
-        title="Lista"
-      >
-        <List className={`h-4 w-4 ${currentType === 'list' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'quote'); }}
-        title="Citação"
-      >
-        <Quote className={`h-4 w-4 ${currentType === 'quote' ? 'text-primary' : ''}`} />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7"
-        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'video'); }}
-        title="Vídeo"
-      >
-        <Video className={`h-4 w-4 ${currentType === 'video' ? 'text-primary' : ''}`} />
-      </Button>
-      <div className="h-4 w-px bg-border mx-1" />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-destructive hover:text-destructive"
-        onClick={(e) => { e.stopPropagation(); deleteBlock(blockId); }}
-        title="Remover bloco"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-
-  // Componente interno para usar o hook useDragHandle dentro do contexto
-  const BlockWrapper = ({ block, index }: { block: ContentBlock; index: number }) => {
-    const { listeners, attributes } = useDragHandle();
-    
-    return (
-      <div className="group flex items-start gap-2 p-3">
-        <div 
-          {...listeners} 
-          {...attributes}
-          className="flex items-center gap-1 pt-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase">
-              {block.type === 'paragraph' && 'Parágrafo'}
-              {block.type === 'h1' && 'Título H1'}
-              {block.type === 'h2' && 'Título H2'}
-              {block.type === 'h3' && 'Título H3'}
-              {block.type === 'image' && 'Imagem'}
-              {block.type === 'list' && 'Lista'}
-              {block.type === 'quote' && 'Citação'}
-              {block.type === 'video' && 'Vídeo'}
-            </span>
-            <BlockTypeSelector
-              blockId={block.id}
-              currentType={block.type}
-            />
-          </div>
-          {renderBlock(block, index)}
-        </div>
-      </div>
-    );
   };
 
   const renderBlock = (block: ContentBlock, index: number) => {
@@ -384,13 +362,19 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
           <div className="divide-y divide-border">
             {blocks.map((block, index) => (
               <SortableBlock key={block.id} id={block.id}>
-                <BlockWrapper block={block} index={index} />
+                <BlockWrapper
+                  block={block}
+                  onChangeType={changeBlockType}
+                  onDelete={deleteBlock}
+                >
+                  {renderBlock(block, index)}
+                </BlockWrapper>
               </SortableBlock>
             ))}
           </div>
         </SortableContext>
       </DndContext>
-      
+
       {/* Add block button */}
       <div className="p-3 border-t">
         <div className="flex items-center gap-2">
@@ -404,49 +388,19 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
             Adicionar bloco
           </Button>
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => addBlock('h2', blocks.length - 1)}
-              title="Adicionar título"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => addBlock('h2', blocks.length - 1)} title="Adicionar título">
               <Heading2 className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => addBlock('image', blocks.length - 1)}
-              title="Adicionar imagem"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => addBlock('image', blocks.length - 1)} title="Adicionar imagem">
               <Image className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => addBlock('list', blocks.length - 1)}
-              title="Adicionar lista"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => addBlock('list', blocks.length - 1)} title="Adicionar lista">
               <List className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => addBlock('quote', blocks.length - 1)}
-              title="Adicionar citação"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => addBlock('quote', blocks.length - 1)} title="Adicionar citação">
               <Quote className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => addBlock('video', blocks.length - 1)}
-              title="Adicionar vídeo"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => addBlock('video', blocks.length - 1)} title="Adicionar vídeo">
               <Video className="h-4 w-4" />
             </Button>
           </div>
