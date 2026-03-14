@@ -82,7 +82,7 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
   }), []);
   return <DialogPortal>
       <DialogOverlay hasOpenDropdown={hasOpenDropdown} className={overlayClassName} />
-      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border border-white/30 dark:border-white/10 p-6 shadow-lg backdrop-blur-2xl bg-gray-50/90 dark:bg-neutral-950/85 sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} onInteractOutside={handleInteractOutside} {...props}>
+      <DialogPrimitive.Content ref={ref} className={cn("fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border border-white/30 dark:border-white/10 p-6 shadow-lg backdrop-blur-2xl bg-white dark:bg-neutral-950/85 sm:rounded-lg outline-none focus:outline-none max-h-[85vh] overflow-auto scrollbar-elegant data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0", className)} onInteractOutside={handleInteractOutside} {...props}>
         <DialogDropdownContext.Provider value={contextValue}>
           {children}
         </DialogDropdownContext.Provider>
