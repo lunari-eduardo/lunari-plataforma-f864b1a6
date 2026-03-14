@@ -1,36 +1,41 @@
 
 
-# Checkout Transparente Asaas — Implementado ✅
+# Sistema de Ajuda e Tutoriais do Lunari — Implementado ✅
 
 ## Arquitetura
 
 ```text
-ChargeModal → Asaas → "Gerar Link de Checkout"
-  1. Cria registro na tabela cobrancas (status: pendente, sem chamada ao Asaas)
-  2. Gera URL interna: {origin}/checkout/{cobrancaId}
-  3. Mostra link com botões "Copiar" e "Enviar WhatsApp"
+blog_posts (tabela existente + novas colunas)
+  + type: 'blog' | 'help'
+  + route_reference: '/app/workflow', '/app/agenda', etc.
+  + display_order: ordenação dos artigos de ajuda
 
-Cliente abre o link → /checkout/:cobrancaId (rota pública)
-  1. checkout-get-data busca: cobrança, perfil do fotógrafo, settings Asaas, taxas reais
-  2. Renderiza checkout transparente branded (PIX + Cartão)
-  3. checkout-process-payment processa pagamento server-side via Asaas API
-  4. Polling automático para PIX / confirmação instantânea para Cartão
+Admin → Cria artigo tipo "Ajuda" → Seleciona rota de referência
+Usuário → Vê botão "?" flutuante → Clica → Abre artigo de ajuda da página
 ```
 
 ## Arquivos Criados/Modificados
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/PublicCheckout.tsx` | ✅ Criado — Checkout transparente público |
-| `supabase/functions/checkout-get-data/index.ts` | ✅ Criado — Busca dados da cobrança + taxas |
-| `supabase/functions/checkout-process-payment/index.ts` | ✅ Criado — Processa pagamento (PIX/Cartão) |
-| `src/components/cobranca/ChargeModal.tsx` | ✅ Modificado — Gera link interno |
-| `src/App.tsx` | ✅ Modificado — Rota /checkout/:cobrancaId |
-| `supabase/config.toml` | ✅ Modificado — Novas funções registradas |
+| Supabase migration | ✅ ADD colunas type, route_reference, display_order |
+| `src/hooks/useHelpArticles.ts` | ✅ Criado — queries de ajuda |
+| `src/components/help/HelpFloatingButton.tsx` | ✅ Criado — botão flutuante contextual |
+| `src/pages/CentroAjuda.tsx` | ✅ Criado — listagem de artigos `/app/ajuda` |
+| `src/pages/ArtigoAjuda.tsx` | ✅ Criado — visualização de artigo `/app/ajuda/:slug` |
+| `src/components/blog/blocks/VideoBlock.tsx` | ✅ Criado — bloco de vídeo/YouTube/GIF |
+| `src/components/blog/BlockEditor.tsx` | ✅ Modificado — novo tipo `video` |
+| `src/pages/AdminConteudoNovo.tsx` | ✅ Modificado — seletor tipo + rota |
+| `src/pages/AdminConteudoEditar.tsx` | ✅ Modificado — seletor tipo + rota |
+| `src/pages/AdminConteudos.tsx` | ✅ Modificado — filtro blog/ajuda |
+| `src/components/layout/Layout.tsx` | ✅ Modificado — HelpFloatingButton |
+| `src/App.tsx` | ✅ Modificado — rotas /app/ajuda |
 
-## Segurança
+## Funcionalidades
 
-- Edge Functions públicas (verify_jwt=false) mas validam status da cobrança
-- API key do Asaas nunca exposta ao frontend
-- Cobrança só pode ser paga uma vez (validação de status 'pendente')
-- Service Role usado internamente para acessar dados do fotógrafo
+- **Botão flutuante**: Translúcido (opacity 30%), canto inferior direito, detecta rota atual e leva ao artigo correspondente
+- **Centro de Ajuda**: `/app/ajuda` com cards de todos os artigos publicados
+- **Artigo de Ajuda**: `/app/ajuda/:slug` com sidebar de navegação, tipografia Inter
+- **Bloco de Vídeo**: Suporta YouTube, Vimeo, MP4, WebM, GIF no BlockEditor
+- **Admin**: Seletor de tipo (Blog/Ajuda), dropdown de rotas do sistema, ordem de exibição
+- **Filtros admin**: Filtro por tipo (Blog/Ajuda) e status na lista de conteúdos
