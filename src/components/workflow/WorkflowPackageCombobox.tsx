@@ -145,7 +145,7 @@ const WorkflowPackageComboboxComponent = ({
                     }
                     setOpen(false);
                   }}
-                  className="text-xs hover:bg-accent/10 rounded cursor-pointer"
+                  className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer"
                 >
                   <Check className={cn("mr-2 h-3 w-3", (pkg.id === value || pkg.nome === value || String(pkg.id) === String(value)) ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">

@@ -406,7 +406,7 @@ export function GerenciarProdutosModal({
                           e.stopPropagation();
                           handleSelectProduct(product);
                         }}
-                        className="px-3 py-2 cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-accent bg-popover"
+                        className="px-3 py-2 cursor-pointer text-xs border-b border-border last:border-b-0 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] bg-popover"
                       >
                         <div className="flex items-center">
                           <Package className="h-3 w-3 mr-2 text-muted-foreground" />
