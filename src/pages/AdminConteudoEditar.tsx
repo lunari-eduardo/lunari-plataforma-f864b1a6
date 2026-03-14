@@ -101,7 +101,7 @@ export default function AdminConteudoEditar() {
   const handleDelete = () => {
     if (!id) return;
     deletePost.mutate(id, {
-      onSuccess: () => navigate('/admin/conteudos'),
+      onSuccess: () => navigate('/app/admin/conteudos'),
     });
   };
 
