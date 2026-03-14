@@ -6,6 +6,7 @@ import { HeadingBlock } from './blocks/HeadingBlock';
 import { ImageBlock } from './blocks/ImageBlock';
 import { ListBlock } from './blocks/ListBlock';
 import { QuoteBlock } from './blocks/QuoteBlock';
+import { VideoBlock } from './blocks/VideoBlock';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableBlock, useDragHandle } from './blocks/SortableBlock';
