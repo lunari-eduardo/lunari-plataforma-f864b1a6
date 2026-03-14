@@ -77,7 +77,7 @@ export default function AdminConteudos() {
           <h1 className="text-2xl font-bold text-foreground">Conteúdos</h1>
           <p className="text-muted-foreground">Gerencie os artigos do blog</p>
         </div>
-        <Link to="/admin/conteudos/novo">
+        <Link to="/app/admin/conteudos/novo">
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
             Novo artigo
