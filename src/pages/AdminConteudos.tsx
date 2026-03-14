@@ -166,8 +166,15 @@ export default function AdminConteudos() {
                   <TableCell>
                     <div>
                       <p className="font-medium line-clamp-1">{post.title}</p>
-                      <p className="text-sm text-muted-foreground">/conteudos/{post.slug}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(post as any).type === 'help' ? '/app/ajuda/' : '/conteudos/'}{post.slug}
+                      </p>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {(post as any).type === 'help' ? '❓ Ajuda' : '📝 Blog'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={post.status === 'published' ? 'default' : 'secondary'}>
