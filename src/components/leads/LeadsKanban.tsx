@@ -469,8 +469,8 @@ export default function LeadsKanban({
             </div>
           </div>
 
-          <DragOverlay>
-            <div className="pointer-events-none">
+          <DragOverlay dropAnimation={null}>
+            <div className="pointer-events-none bg-white/60 dark:bg-white/[0.10] backdrop-blur-[30px] border-[1.5px] border-white/60 dark:border-white/[0.12] rounded-xl shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] dark:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] scale-[1.04]">
               {activeId
                 ? (() => {
                     const lead = leads.find((l) => l.id === activeId);

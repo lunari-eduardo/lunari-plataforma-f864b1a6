@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
@@ -13,142 +12,115 @@ import { useMemo, useState } from 'react';
 import { ChevronUp, ChevronDown, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+/* ── Compact row for People / Tags ── */
+function CompactRow({
+  name,
+  onNameChange,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+  disableUp,
+  disableDown,
+  disableRemove,
+}: {
+  name: string;
+  onNameChange: (v: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+  disableUp: boolean;
+  disableDown: boolean;
+  disableRemove?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors group">
+      <Input
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        className="flex-1 h-8 text-sm"
+      />
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onMoveUp} disabled={disableUp}>
+          <ChevronUp className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onMoveDown} disabled={disableDown}>
+          <ChevronDown className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive" onClick={onRemove} disabled={disableRemove}>
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Add form row ── */
+function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => void }) {
+  const [name, setName] = useState('');
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; onAdd(name.trim()); setName(''); }}
+      className="flex items-center gap-2 pt-2"
+    >
+      <Input placeholder={placeholder} value={name} onChange={(e) => setName(e.target.value)} className="flex-1 h-8 text-sm" />
+      <Button type="submit" size="sm" className="h-8 px-3">
+        <Plus className="h-3.5 w-3.5 mr-1" />
+        Adicionar
+      </Button>
+    </form>
+  );
+}
+
 function ManagePeopleSection() {
   const { people, addPerson, updatePerson, removePerson, movePerson } = useSupabaseTaskPeople();
-  const [name, setName] = useState('');
-  const isMobile = useIsMobile();
-  
+
   return (
-    <div className="space-y-3">
-      <div className="space-y-2">
+    <div className="space-y-1">
+      <div className="divide-y divide-border/40">
         {people.map((p, idx) => (
-          <div key={p.id} className={cn(
-            "gap-2",
-            isMobile ? "flex flex-col space-y-2" : "flex items-center"
-          )}>
-            <Input 
-              value={p.name} 
-              onChange={(e) => updatePerson(p.id, { name: e.target.value })} 
-              className="flex-1" 
-            />
-            <div className="flex items-center justify-end gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                onClick={() => movePerson(p.id, 'up')} 
-                disabled={idx===0}
-                title="Mover acima"
-              >
-                <ChevronUp className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                onClick={() => movePerson(p.id, 'down')} 
-                disabled={idx===people.length-1}
-                title="Mover abaixo"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                onClick={() => removePerson(p.id)} 
-                title="Remover"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <CompactRow
+            key={p.id}
+            name={p.name}
+            onNameChange={(v) => updatePerson(p.id, { name: v })}
+            onMoveUp={() => movePerson(p.id, 'up')}
+            onMoveDown={() => movePerson(p.id, 'down')}
+            onRemove={() => removePerson(p.id)}
+            disableUp={idx === 0}
+            disableDown={idx === people.length - 1}
+          />
         ))}
-      </div>
-      <Separator />
-      <form 
-        onSubmit={(e)=>{e.preventDefault(); if(!name.trim()) return; addPerson(name.trim()); setName('');}} 
-        className={cn(
-          "gap-2",
-          isMobile ? "flex flex-col space-y-2" : "flex items-center"
+        {people.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">Nenhum responsável cadastrado</p>
         )}
-      >
-        <Input placeholder="Novo responsável" value={name} onChange={(e)=>setName(e.target.value)} />
-        <Button type="submit" className={cn(isMobile && "w-full")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar
-        </Button>
-      </form>
+      </div>
+      <AddRow placeholder="Novo responsável" onAdd={addPerson} />
     </div>
   );
 }
 
 function ManageTagsSection() {
   const { tags, addTag, updateTag, removeTag, moveTag } = useSupabaseTaskTags();
-  const [name, setName] = useState('');
-  const isMobile = useIsMobile();
-  
+
   return (
-    <div className="space-y-3">
-      <div className="space-y-2">
+    <div className="space-y-1">
+      <div className="divide-y divide-border/40">
         {tags.map((t, idx) => (
-          <div key={t.id} className={cn(
-            "gap-2",
-            isMobile ? "flex flex-col space-y-2" : "flex items-center"
-          )}>
-            <Input 
-              value={t.name} 
-              onChange={(e)=>updateTag(t.id, { name: e.target.value })} 
-              className="flex-1" 
-            />
-            <div className="flex items-center justify-end gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                onClick={()=>moveTag(t.id,'up')} 
-                disabled={idx===0}
-                title="Mover acima"
-              >
-                <ChevronUp className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                onClick={()=>moveTag(t.id,'down')} 
-                disabled={idx===tags.length-1}
-                title="Mover abaixo"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                onClick={()=>removeTag(t.id)} 
-                title="Remover"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <CompactRow
+            key={t.id}
+            name={t.name}
+            onNameChange={(v) => updateTag(t.id, { name: v })}
+            onMoveUp={() => moveTag(t.id, 'up')}
+            onMoveDown={() => moveTag(t.id, 'down')}
+            onRemove={() => removeTag(t.id)}
+            disableUp={idx === 0}
+            disableDown={idx === tags.length - 1}
+          />
         ))}
-      </div>
-      <Separator />
-      <form 
-        onSubmit={(e)=>{e.preventDefault(); if(!name.trim()) return; addTag(name.trim()); setName('');}} 
-        className={cn(
-          "gap-2",
-          isMobile ? "flex flex-col space-y-2" : "flex items-center"
+        {tags.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma etiqueta cadastrada</p>
         )}
-      >
-        <Input placeholder="Nova etiqueta" value={name} onChange={(e)=>setName(e.target.value)} />
-        <Button type="submit" className={cn(isMobile && "w-full")}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar
-        </Button>
-      </form>
+      </div>
+      <AddRow placeholder="Nova etiqueta" onAdd={addTag} />
     </div>
   );
 }
@@ -172,141 +144,80 @@ export default function ManageTaskStatusesModal({ open, onOpenChange }: { open: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
         "max-h-[90vh] overflow-y-auto",
-        isMobile ? "mx-4 max-w-[calc(100vw-2rem)] p-4" : "sm:max-w-xl"
+        isMobile ? "mx-4 max-w-[calc(100vw-2rem)] p-4" : "sm:max-w-lg"
       )}>
         <DialogHeader>
-          <DialogTitle className="text-base">Gerenciar</DialogTitle>
+          <DialogTitle className="text-base">Configurações de Tarefas</DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="status" className="w-full">
-          <TabsList className={cn(
-            "w-full",
-            isMobile ? "grid grid-cols-3 text-xs h-8" : "grid grid-cols-3"
-          )}>
-            <TabsTrigger value="status" className={cn(isMobile && "px-2")}>
-              {isMobile ? "Status" : "Status"}
-            </TabsTrigger>
-            <TabsTrigger value="people" className={cn(isMobile && "px-1")}>
-              {isMobile ? "Pessoas" : "Responsáveis"}
-            </TabsTrigger>
-            <TabsTrigger value="tags" className={cn(isMobile && "px-2")}>
-              {isMobile ? "Tags" : "Etiquetas"}
-            </TabsTrigger>
+          <TabsList className="w-full grid grid-cols-3 h-9">
+            <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
+            <TabsTrigger value="people" className="text-xs">Responsáveis</TabsTrigger>
+            <TabsTrigger value="tags" className="text-xs">Etiquetas</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="status">
-            <div className="space-y-3">
-              <p className={cn(
-                "text-lunar-textSecondary",
-                isMobile ? "text-xs" : "text-2xs"
-              )}>
-                Marque qual coluna representa "Concluído". Tarefas finalizadas vão para esse status. Pelo menos um status precisa estar marcado.
-              </p>
-              <div className="space-y-3">
-                {statuses.map((s, idx) => (
-                  <div key={s.id} className={cn(
-                    "gap-2",
-                    isMobile ? "flex flex-col space-y-2 p-3 border border-lunar-border/30 rounded-lg" : "flex items-center"
-                  )}>
-                    {/* Primeira linha: Cor + Nome */}
-                    <div className="flex items-center gap-2 w-full">
-                      <div 
-                        className="w-4 h-4 rounded border border-lunar-border/50 shrink-0" 
-                        style={{ backgroundColor: s.color || '#6b7280' }}
-                      />
-                      {!isMobile && (
-                        <input
-                          type="color"
-                          value={s.color || '#6b7280'}
-                          onChange={(e) => updateStatus(s.id, { color: e.target.value })}
-                          className="w-8 h-8 rounded border-0 cursor-pointer"
-                          title="Escolher cor"
-                        />
-                      )}
-                      <Input
-                        value={s.name}
-                        onChange={(e) => updateStatus(s.id, { name: e.target.value })}
-                        className="flex-1"
-                      />
-                    </div>
-                    
-                    {/* Segunda linha: Switch + Botões */}
-                    <div className={cn(
-                      "flex items-center gap-2",
-                      isMobile ? "justify-between w-full" : ""
-                    )}>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={!!s.isDone}
-                          onCheckedChange={(v) => updateStatus(s.id, { isDone: v })}
-                        />
-                        <Label className={cn(isMobile ? "text-xs" : "text-2xs")}>Concluído</Label>
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                          onClick={() => moveStatus(s.id, 'up')} 
-                          disabled={idx === 0}
-                          title="Mover acima"
-                        >
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")} 
-                          onClick={() => moveStatus(s.id, 'down')} 
-                          disabled={idx === statuses.length - 1}
-                          title="Mover abaixo"
-                        >
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(isMobile ? "h-10 w-10" : "h-8 w-8")}
-                          onClick={() => canDelete(s.id) && removeStatus(s.id)}
-                          disabled={!canDelete(s.id)}
-                          title={canDelete(s.id) ? 'Remover' : 'Não é possível remover o único status de concluído'}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+          <TabsContent value="status" className="mt-3">
+            <p className="text-xs text-muted-foreground mb-3">
+              Marque qual coluna representa "Concluído". Pelo menos um status precisa estar marcado.
+            </p>
+            <div className="divide-y divide-border/40">
+              {statuses.map((s, idx) => (
+                <div key={s.id} className="flex items-center gap-2.5 py-2.5 px-2 rounded-lg hover:bg-muted/40 transition-colors group">
+                  {/* Color dot */}
+                  <div
+                    className="w-3.5 h-3.5 rounded-full shrink-0 ring-1 ring-black/10 dark:ring-white/10"
+                    style={{ backgroundColor: s.color || '#6b7280' }}
+                  />
+
+                  {/* Name */}
+                  <Input
+                    value={s.name}
+                    onChange={(e) => updateStatus(s.id, { name: e.target.value })}
+                    className="flex-1 h-8 text-sm"
+                  />
+
+                  {/* Done switch */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Switch
+                      checked={!!s.isDone}
+                      onCheckedChange={(v) => updateStatus(s.id, { isDone: v })}
+                      className="scale-90"
+                    />
+                    <Label className="text-2xs text-muted-foreground whitespace-nowrap">
+                      {isMobile ? '✓' : 'Concluído'}
+                    </Label>
                   </div>
-                ))}
-              </div>
 
-              <Separator />
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!newName.trim()) return;
-                  addStatus(newName.trim());
-                  setNewName('');
-                }}
-                className={cn(
-                  "gap-2",
-                  isMobile ? "flex flex-col space-y-2" : "flex items-center"
-                )}
-              >
-                <Input placeholder="Novo status" value={newName} onChange={(e) => setNewName(e.target.value)} />
-                <Button type="submit" className={cn(isMobile && "w-full")}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
-                </Button>
-              </form>
+                  {/* Actions */}
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveStatus(s.id, 'up')} disabled={idx === 0}>
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveStatus(s.id, 'down')} disabled={idx === statuses.length - 1}>
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive/70 hover:text-destructive"
+                      onClick={() => canDelete(s.id) && removeStatus(s.id)}
+                      disabled={!canDelete(s.id)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            <AddRow placeholder="Novo status" onAdd={(name) => { addStatus(name); setNewName(''); }} />
           </TabsContent>
 
-          <TabsContent value="people">
+          <TabsContent value="people" className="mt-3">
             <ManagePeopleSection />
           </TabsContent>
 
-          <TabsContent value="tags">
+          <TabsContent value="tags" className="mt-3">
             <ManageTagsSection />
           </TabsContent>
         </Tabs>

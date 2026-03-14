@@ -117,7 +117,7 @@ export default function ChecklistPanel({
           <Switch checked={hideCompleted} onCheckedChange={setHideCompleted} />
         </div>
       </header>
-      <Card className="p-2 bg-lunar-surface border-lunar-border/60">
+      <Card className="p-2 bg-white/30 dark:bg-white/[0.04] backdrop-blur-xl border-white/35 dark:border-white/[0.08]">
         <div className="flex items-center gap-2 mb-2">
           <Input
             value={title}

@@ -85,7 +85,7 @@ export default function LeadMetricsCards({
   )}>
       {cards.map((card, index) => {
       const Icon = card.icon;
-      return <Card key={index} className="bg-lunar-surface border-lunar-border/50 hover:border-lunar-border transition-colors">
+      return <Card key={index} className="bg-white/40 dark:bg-white/[0.05] backdrop-blur-sm border-white/30 dark:border-white/[0.08] hover:bg-white/60 dark:hover:bg-white/[0.08] transition-all">
             <CardContent className={cn(
               "flex items-center justify-between",
               isMobile ? "px-2 py-1.5" : "px-3 py-2"

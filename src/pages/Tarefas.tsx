@@ -171,7 +171,7 @@ export default function Tarefas() {
   const ListView = () => (
     <div className="space-y-2">
       <ChecklistPanel items={checklistItems} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} doneKey={doneKey} defaultOpenKey={defaultOpenKey} variant="section" />
-      <Card className="p-2 bg-lunar-surface border-lunar-border/60">
+      <Card className="p-2 bg-white/30 dark:bg-white/[0.04] backdrop-blur-xl border-white/35 dark:border-white/[0.08]">
         <div className="grid gap-2">
           {filtered.map(t => (
             <CleanTaskCard key={t.id} task={t} onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }} onView={() => setSelectedTask(t)} isDone={t.status === doneKey as any} />
