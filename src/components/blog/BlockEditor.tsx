@@ -358,6 +358,13 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
         );
       case 'quote':
         return <QuoteBlock {...commonProps} />;
+      case 'video':
+        return (
+          <VideoBlock
+            videoUrl={block.videoUrl || ''}
+            onUpdate={(updates) => updateBlock(block.id, updates)}
+          />
+        );
       default:
         return <TextBlock {...commonProps} />;
     }
