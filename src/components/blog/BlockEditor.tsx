@@ -269,6 +269,15 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
       >
         <Quote className={`h-4 w-4 ${currentType === 'quote' ? 'text-primary' : ''}`} />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7"
+        onClick={(e) => { e.stopPropagation(); changeBlockType(blockId, 'video'); }}
+        title="Vídeo"
+      >
+        <Video className={`h-4 w-4 ${currentType === 'video' ? 'text-primary' : ''}`} />
+      </Button>
       <div className="h-4 w-px bg-border mx-1" />
       <Button
         variant="ghost"
