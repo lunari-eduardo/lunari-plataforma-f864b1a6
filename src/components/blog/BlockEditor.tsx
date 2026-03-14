@@ -440,6 +440,15 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
             >
               <Quote className="h-4 w-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => addBlock('video', blocks.length - 1)}
+              title="Adicionar vídeo"
+            >
+              <Video className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>

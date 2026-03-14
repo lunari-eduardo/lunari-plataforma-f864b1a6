@@ -42,5 +42,8 @@ export default function Layout() {
       
       {/* Equipment sync notifications */}
       <EquipmentSyncNotification />
+      
+      {/* Botão flutuante de ajuda contextual */}
+      <HelpFloatingButton />
     </div>;
 }

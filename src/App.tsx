@@ -230,6 +230,8 @@ function App() {
                               <AdminPlanos />
                             </AdminRoute>
                           } />
+                          <Route path="ajuda" element={<CentroAjuda />} />
+                          <Route path="ajuda/:slug" element={<ArtigoAjuda />} />
                           <Route path="*" element={<NotFound />} />
                         </Route>
 
