@@ -90,7 +90,7 @@ export function ProductCombobox({
               <CommandItem
                 value="__none__"
                 onSelect={handleSelectNone}
-                className="text-xs hover:bg-accent/10 rounded cursor-pointer border-b border-border"
+                className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer border-b border-border"
               >
                 <Check
                   className={cn(
@@ -105,7 +105,7 @@ export function ProductCombobox({
                   key={product.id}
                   value={product.nome}
                   onSelect={() => handleSelectProduct(product)}
-                  className="text-xs hover:bg-accent/10 rounded cursor-pointer"
+                  className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer"
                 >
                   <Check
                     className={cn(
