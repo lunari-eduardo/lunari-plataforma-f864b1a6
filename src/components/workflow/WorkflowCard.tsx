@@ -42,15 +42,15 @@ export function WorkflowCard({
         // Minimal base shadow + inner glow
         "shadow-[0_1px_3px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.7)]",
         "dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.05)]",
-        // Hover — subtle gray only, no movement
+        // Hover — increase white opacity (never darken)
         !isExpanded && [
-          "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+          "hover:bg-white/55 dark:hover:bg-white/[0.06]"
         ],
-        // Expanded — moderate glass elevation, subtle hover
+        // Expanded — elevated glass, hover increases further
         isExpanded && [
           "bg-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]",
           "dark:bg-white/[0.06] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
-          "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+          "hover:bg-white/60 dark:hover:bg-white/[0.08]"
         ]
       )}
     >
