@@ -314,6 +314,7 @@ export function BlockEditor({ value, onChange, placeholder }: BlockEditorProps) 
               {block.type === 'image' && 'Imagem'}
               {block.type === 'list' && 'Lista'}
               {block.type === 'quote' && 'Citação'}
+              {block.type === 'video' && 'Vídeo'}
             </span>
             <BlockTypeSelector
               blockId={block.id}
