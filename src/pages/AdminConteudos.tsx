@@ -211,7 +211,7 @@ export default function AdminConteudos() {
                           <Eye className="h-4 w-4" />
                         )}
                       </Button>
-                      <Link to={`/admin/conteudos/editar/${post.id}`}>
+                      <Link to={`/app/admin/conteudos/editar/${post.id}`}>
                         <Button variant="ghost" size="icon" title="Editar">
                           <Edit className="h-4 w-4" />
                         </Button>
