@@ -246,7 +246,7 @@
    Glass Modal
    ========================================================================= */
 .glass-modal {
-  background: rgba(255, 255, 255, 0.80) !important;
+  background: rgba(255, 255, 255, 1.0) !important;
   backdrop-filter: blur(30px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
   border: 1px solid rgba(255, 255, 255, 0.55) !important;

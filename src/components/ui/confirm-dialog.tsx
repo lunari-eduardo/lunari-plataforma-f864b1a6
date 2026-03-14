@@ -45,7 +45,7 @@ export function ConfirmDialog({ state, onConfirm, onCancel, onClose }: ConfirmDi
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel 
             onClick={onCancel}
-            className="bg-lunar-surface border-lunar-border text-lunar-text hover:bg-lunar-border/50"
+            className="bg-muted border-border text-foreground hover:bg-muted/80"
           >
             {state.cancelText}
           </AlertDialogCancel>
