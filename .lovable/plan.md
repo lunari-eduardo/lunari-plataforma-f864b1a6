@@ -1,36 +1,45 @@
 
 
-# Checkout Transparente Asaas — Implementado ✅
+# Fix Dropdown Hover: Neutral Gray Instead of Accent Brown
 
-## Arquitetura
+## Root Cause
 
-```text
-ChargeModal → Asaas → "Gerar Link de Checkout"
-  1. Cria registro na tabela cobrancas (status: pendente, sem chamada ao Asaas)
-  2. Gera URL interna: {origin}/checkout/{cobrancaId}
-  3. Mostra link com botões "Copiar" e "Enviar WhatsApp"
+- `--accent` = terracotta brown (`19 49% 45%`)
+- `--accent-foreground` = near-white (`30 30% 98%`)
+- CommandItem uses `data-[selected='true']:bg-accent/20` and `data-[selected=true]:text-accent-foreground`
+- All workflow combobox items use `hover:bg-accent/10`
+- Result: brown hover background + white/invisible text in light mode
 
-Cliente abre o link → /checkout/:cobrancaId (rota pública)
-  1. checkout-get-data busca: cobrança, perfil do fotógrafo, settings Asaas, taxas reais
-  2. Renderiza checkout transparente branded (PIX + Cartão)
-  3. checkout-process-payment processa pagamento server-side via Asaas API
-  4. Polling automático para PIX / confirmação instantânea para Cartão
-```
+## Fix
 
-## Arquivos Criados/Modificados
+### 1. `src/components/ui/command.tsx` — CommandItem base class
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/PublicCheckout.tsx` | ✅ Criado — Checkout transparente público |
-| `supabase/functions/checkout-get-data/index.ts` | ✅ Criado — Busca dados da cobrança + taxas |
-| `supabase/functions/checkout-process-payment/index.ts` | ✅ Criado — Processa pagamento (PIX/Cartão) |
-| `src/components/cobranca/ChargeModal.tsx` | ✅ Modificado — Gera link interno |
-| `src/App.tsx` | ✅ Modificado — Rota /checkout/:cobrancaId |
-| `supabase/config.toml` | ✅ Modificado — Novas funções registradas |
+Replace accent-based selected/hover with neutral gray:
+- `data-[selected='true']:bg-accent/20` → `data-[selected='true']:bg-black/[0.04] dark:data-[selected='true']:bg-white/[0.08]`
+- `data-[selected=true]:text-accent-foreground` → `data-[selected=true]:text-foreground`
 
-## Segurança
+### 2. Workflow combobox files — Replace `hover:bg-accent/10`
 
-- Edge Functions públicas (verify_jwt=false) mas validam status da cobrança
-- API key do Asaas nunca exposta ao frontend
-- Cobrança só pode ser paga uma vez (validação de status 'pendente')
-- Service Role usado internamente para acessar dados do fotógrafo
+All items in these files use `hover:bg-accent/10` which produces a brownish hover. Replace with `hover:bg-black/[0.04] dark:hover:bg-white/[0.08]`:
+
+- `WorkflowPackageCombobox.tsx` (lines 125, 148)
+- `ProductCombobox.tsx` (lines 93, 108)
+- `PackageCombobox.tsx` (line 78)
+- `CategoryCombobox.tsx` (line 69)
+- `GerenciarProdutosModal.tsx` (line 409): `hover:bg-accent` → `hover:bg-black/[0.04] dark:hover:bg-white/[0.08]`
+
+### 3. `src/components/ui/dropdown-menu.tsx` — DropdownMenuItem
+
+The `focus:bg-accent focus:text-accent-foreground` on DropdownMenuItem also produces brown+white-text. Replace with:
+- `focus:bg-black/[0.04] dark:focus:bg-white/[0.08] focus:text-foreground`
+
+Same for DropdownMenuCheckboxItem, DropdownMenuRadioItem, DropdownMenuSubTrigger.
+
+### Visual Result
+
+- Light mode: hover = very subtle gray (`rgba(0,0,0,0.04)`), text stays dark
+- Dark mode: hover = subtle white glow (`rgba(255,255,255,0.08)`), text stays light
+- No more brown backgrounds or white text on hover
+
+7 files, className-only changes.
+
