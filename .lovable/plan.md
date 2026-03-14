@@ -1,41 +1,40 @@
 
 
-# Sistema de Ajuda e Tutoriais do Lunari — Implementado ✅
+# Fix: Input Perdendo Foco + Centro de Ajuda com Menu Lateral
 
-## Arquitetura
+## 1. Bug do Input — Causa Raiz
+
+`BlockWrapper` e `BlockTypeSelector` são definidos **dentro** do componente `BlockEditor` (linhas 207-328). A cada keystroke:
+1. `updateBlock` → `setBlocks` → re-render de `BlockEditor`
+2. React cria **novas definições** de `BlockWrapper` e `BlockTypeSelector`
+3. React interpreta como componentes diferentes → **desmonta e remonta** os blocos
+4. Input perde foco (o DOM node é destruído e recriado)
+
+**Solução**: Extrair `BlockTypeSelector` e `BlockWrapper` para fora do corpo de `BlockEditor`, passando as funções necessárias via props. Isso mantém referências estáveis entre re-renders.
 
 ```text
-blog_posts (tabela existente + novas colunas)
-  + type: 'blog' | 'help'
-  + route_reference: '/app/workflow', '/app/agenda', etc.
-  + display_order: ordenação dos artigos de ajuda
-
-Admin → Cria artigo tipo "Ajuda" → Seleciona rota de referência
-Usuário → Vê botão "?" flutuante → Clica → Abre artigo de ajuda da página
+Antes:  function BlockEditor() { const BlockWrapper = () => ... }  ← recriado a cada render
+Depois: function BlockWrapper({ onDelete, onChangeType, ... }) { ... }  ← referência estável
+        function BlockEditor() { return <BlockWrapper ... /> }
 ```
 
-## Arquivos Criados/Modificados
+## 2. Centro de Ajuda — Menu Lateral em vez de Cards
 
-| Arquivo | Ação |
-|---------|------|
-| Supabase migration | ✅ ADD colunas type, route_reference, display_order |
-| `src/hooks/useHelpArticles.ts` | ✅ Criado — queries de ajuda |
-| `src/components/help/HelpFloatingButton.tsx` | ✅ Criado — botão flutuante contextual |
-| `src/pages/CentroAjuda.tsx` | ✅ Criado — listagem de artigos `/app/ajuda` |
-| `src/pages/ArtigoAjuda.tsx` | ✅ Criado — visualização de artigo `/app/ajuda/:slug` |
-| `src/components/blog/blocks/VideoBlock.tsx` | ✅ Criado — bloco de vídeo/YouTube/GIF |
-| `src/components/blog/BlockEditor.tsx` | ✅ Modificado — novo tipo `video` |
-| `src/pages/AdminConteudoNovo.tsx` | ✅ Modificado — seletor tipo + rota |
-| `src/pages/AdminConteudoEditar.tsx` | ✅ Modificado — seletor tipo + rota |
-| `src/pages/AdminConteudos.tsx` | ✅ Modificado — filtro blog/ajuda |
-| `src/components/layout/Layout.tsx` | ✅ Modificado — HelpFloatingButton |
-| `src/App.tsx` | ✅ Modificado — rotas /app/ajuda |
+Substituir o layout de grid de cards em `CentroAjuda.tsx` por um layout com sidebar de navegação à esquerda e conteúdo do artigo selecionado à direita. Quando há artigos:
+- Sidebar fixa com lista de títulos clicáveis
+- Ao clicar, navega para `/app/ajuda/:slug` (comportamento atual mantido)
+- Em mobile, sidebar vira menu horizontal ou accordion
 
-## Funcionalidades
+Alternativa mais simples e consistente com `ArtigoAjuda.tsx`: manter a página de listagem como índice simples (lista vertical, sem cards pesados) com estilo de menu/nav links.
 
-- **Botão flutuante**: Translúcido (opacity 30%), canto inferior direito, detecta rota atual e leva ao artigo correspondente
-- **Centro de Ajuda**: `/app/ajuda` com cards de todos os artigos publicados
-- **Artigo de Ajuda**: `/app/ajuda/:slug` com sidebar de navegação, tipografia Inter
-- **Bloco de Vídeo**: Suporta YouTube, Vimeo, MP4, WebM, GIF no BlockEditor
-- **Admin**: Seletor de tipo (Blog/Ajuda), dropdown de rotas do sistema, ordem de exibição
-- **Filtros admin**: Filtro por tipo (Blog/Ajuda) e status na lista de conteúdos
+## Arquivos
+
+```text
+Arquivo                              Mudança
+────────────────────────────────────  ──────────────
+src/components/blog/BlockEditor.tsx  Extrair BlockWrapper e BlockTypeSelector para fora do componente
+src/pages/CentroAjuda.tsx            Trocar grid de cards por lista simples estilo menu lateral
+```
+
+2 arquivos.
+
