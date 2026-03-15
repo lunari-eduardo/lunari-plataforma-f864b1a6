@@ -196,18 +196,41 @@ export function useSupabaseLeads() {
 
       console.log('✅ [Leads] Lead atualizado com sucesso:', id);
     },
-    retry: 2, // Tentar novamente até 2 vezes em caso de falha
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
+    onMutate: async ({ id, updates }) => {
+      // Cancel outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: [QUERY_KEY, userId] });
+
+      // Snapshot current cache
+      const previousLeads = queryClient.getQueryData<Lead[]>([QUERY_KEY, userId]);
+
+      // Optimistically update the cache
+      if (previousLeads && typeof updates !== 'function') {
+        queryClient.setQueryData<Lead[]>([QUERY_KEY, userId], (old) =>
+          (old || []).map((lead) =>
+            lead.id === id ? { ...lead, ...updates } : lead
+          )
+        );
+      }
+
+      return { previousLeads };
     },
-    onError: (error, variables) => {
+    onError: (error, variables, context) => {
+      // Rollback to snapshot on error
+      if (context?.previousLeads) {
+        queryClient.setQueryData([QUERY_KEY, userId], context.previousLeads);
+      }
       console.error('❌ [Leads] Erro ao atualizar lead:', error, 'ID:', variables.id);
       toast({
         title: 'Erro ao mover lead',
         description: `Não foi possível atualizar o lead. Tente novamente.`,
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // Always refetch to ensure consistency with server
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
     },
   });
 
