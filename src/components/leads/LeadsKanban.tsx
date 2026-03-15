@@ -456,7 +456,10 @@ export default function LeadsKanban({
                 handleStatusChange(current, overId);
               }
             }
-            setActiveId(null);
+            // Delay clearing activeId to let the optimistic cache update
+            // from onMutate settle first, preventing the card from flashing
+            // back to its original column
+            requestAnimationFrame(() => setActiveId(null));
           }}
           onDragCancel={() => setActiveId(null)}
         >

@@ -18,7 +18,8 @@ export default function DraggableLeadCard(props: {
   const { lead, activeId, ...rest } = props;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id, data: { lead } });
 
-  const style = isDragging ? { opacity: 0, pointerEvents: 'none' } : (transform ? { transform: CSS.Transform.toString(transform) } : undefined);
+  const isHidden = isDragging || activeId === lead.id;
+  const style = isHidden ? { opacity: 0, pointerEvents: 'none' } : (transform ? { transform: CSS.Transform.toString(transform) } : undefined);
 
   return (
     <LeadCard
