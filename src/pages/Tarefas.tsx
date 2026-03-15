@@ -228,9 +228,9 @@ export default function Tarefas() {
                     toast({ title: 'Tarefa movida' });
                   }
                 }
-                setActiveId(null);
+                requestAnimationFrame(() => setActiveId(null));
               }}
-              onDragCancel={() => setActiveId(null)}
+              onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
               <div className="flex-1 relative">
                 <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">

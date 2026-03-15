@@ -18,10 +18,12 @@ export default function DraggableTaskCard(props: {
   const { task, activeId, statusColor, ...rest } = props;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, data: { task } });
 
-  // Placeholder stays visible but faded; overlay handles the "flying" card
-  const style = transform && !isDragging
-    ? { transform: CSS.Transform.toString(transform) }
-    : undefined;
+  const isHidden = isDragging || activeId === task.id;
+  const style: React.CSSProperties | undefined = isHidden
+    ? { opacity: 0, pointerEvents: 'none' as const }
+    : transform
+      ? { transform: CSS.Transform.toString(transform) }
+      : undefined;
 
   return (
     <TaskCard
@@ -37,7 +39,7 @@ export default function DraggableTaskCard(props: {
       dndListeners={listeners}
       dndAttributes={attributes}
       dndStyle={style}
-      isDragging={!!isDragging}
+      isDragging={isHidden}
     />
   );
 }

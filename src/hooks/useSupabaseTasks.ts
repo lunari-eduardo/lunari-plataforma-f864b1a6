@@ -156,10 +156,23 @@ export function useSupabaseTasks() {
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
     if (!user?.id) return;
 
+    // Optimistic update — snapshot for rollback
+    const snapshot = tasks;
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const next: Task = { ...t, ...updates };
+      if (updates.status && updates.status !== t.status) {
+        if (updates.status === 'done') {
+          next.completedAt = new Date().toISOString();
+        } else if (t.status === 'done') {
+          next.completedAt = undefined;
+        }
+      }
+      return next;
+    }));
+
     try {
       const dbRow: Record<string, unknown> = {};
-      
-      // Only add fields that are being updated (exclude user_id)
       const tempRow = taskToDbRow(updates, user.id);
       Object.keys(tempRow).forEach(key => {
         if (key !== 'user_id') {
@@ -167,9 +180,8 @@ export function useSupabaseTasks() {
         }
       });
 
-      // Handle completedAt for status changes
       if (updates.status) {
-        const currentTask = tasks.find(t => t.id === id);
+        const currentTask = snapshot.find(t => t.id === id);
         if (updates.status === 'done' && currentTask?.status !== 'done') {
           dbRow.completed_at = new Date().toISOString();
         } else if (updates.status !== 'done' && currentTask?.status === 'done') {
@@ -184,21 +196,10 @@ export function useSupabaseTasks() {
         .eq('user_id', user.id);
 
       if (error) throw error;
-
-      setTasks(prev => prev.map(t => {
-        if (t.id !== id) return t;
-        const next: Task = { ...t, ...updates };
-        if (updates.status && updates.status !== t.status) {
-          if (updates.status === 'done') {
-            next.completedAt = new Date().toISOString();
-          } else if (t.status === 'done') {
-            next.completedAt = undefined;
-          }
-        }
-        return next;
-      }));
     } catch (error) {
       console.error('Error updating task:', error);
+      // Rollback on failure
+      setTasks(snapshot);
     }
   }, [user?.id, tasks]);
 
