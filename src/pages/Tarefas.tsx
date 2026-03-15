@@ -230,7 +230,7 @@ export default function Tarefas() {
                 }
                 requestAnimationFrame(() => setActiveId(null));
               }}
-              onDragCancel={() => requestAnimationFrame(() => setActiveId(null)))
+              onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
               <div className="flex-1 relative">
                 <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">
