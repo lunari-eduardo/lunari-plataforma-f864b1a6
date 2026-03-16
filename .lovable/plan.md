@@ -1,37 +1,62 @@
 
 
-# R2 Media Upload — Implementado ✅
+# Fix: Make Anticipation Toggle Independent from "Absorver Taxas"
 
-## Arquitetura
+## Problem
 
+When `absorverTaxa` is enabled, the `incluirTaxaAntecipação` toggle is hidden in the UI (wrapped in `{!absorverTaxa && ...}`). This prevents the photographer from choosing to pass anticipation costs to the client while still absorbing processing fees. Additionally, all fee calculation in both edge functions and frontend is skipped entirely when `absorverTaxa = true`, so no fees are ever added to the client price — even anticipation.
+
+## Correct Behavior
+
+The two toggles should be independent:
+
+| absorverTaxa | incluirTaxaAntecipacao | Client pays |
+|---|---|---|
+| false | false | valor + processing fees |
+| false | true | valor + processing + anticipation |
+| **true** | **false** | valor (photographer absorbs all) |
+| **true** | **true** | valor + anticipation only |
+
+## Changes (5 files)
+
+### 1. `src/components/integracoes/AsaasCard.tsx`
+Remove the `{!absorverTaxa && ...}` conditional around the anticipation toggle in both the initial setup form (line 247) and edit form (line 335). The toggle should always be visible. Update the description text contextually: when `absorverTaxa` is true, show "Repassa taxa de antecipação ao cliente".
+
+### 2. `supabase/functions/gestao-asaas-create-payment/index.ts`
+Refactor the fee calculation block (line 210). Instead of `if (!settings.absorverTaxa)` gating everything:
+- Fetch Asaas fees whenever `billingType === 'CREDIT_CARD'` AND either `!absorverTaxa` OR `incluirTaxaAntecipacao`
+- Add processing cost to `valorFinal` only if `!absorverTaxa`
+- Add anticipation cost to `valorFinal` only if `incluirTaxaAntecipacao`
+
+### 3. `supabase/functions/checkout-process-payment/index.ts`
+Same refactor as above — identical logic change at line 155.
+
+### 4. `src/components/cobranca/AsaasCheckoutSection.tsx`
+- Line 151: Fetch fees even when `absorverTaxa` is true (if `incluirTaxaAntecipacao` is enabled)
+- Lines 262-284: Split fee calculation — only add processing fees if `!absorverTaxa`, only add anticipation if `incluirTaxaAntecipacao`
+
+### 5. `src/pages/PublicCheckout.tsx`
+- Lines 274-296: Same split — only add processing if `!absorverTaxa`, only add anticipation if `incluirTaxaAntecipacao`
+
+## Technical Detail
+
+The fee fetch condition changes from:
 ```text
-Frontend (useR2Upload hook)
-  → supabase.functions.invoke('r2-media-upload', FormData)
-  → Edge Function autentica JWT + faz upload via AWS Sig V4
-  → Cloudflare R2 (bucket: lunari-previews, prefix: media/)
-  → Retorna URL pública: https://media.lunarihub.com/media/{context}/{userId}/{file}
+if (absorverTaxa) return;  // skip everything
+```
+to:
+```text
+if (absorverTaxa && !incluirTaxaAntecipacao) return;  // only skip if nothing to calculate
 ```
 
-## Arquivos Criados/Modificados
+The fee application changes from:
+```text
+valorFinal = valor + processingCost + anticipationCost
+```
+to:
+```text
+valorFinal = valor
+  + (!absorverTaxa ? processingCost : 0)
+  + (incluirAntecipacao ? anticipationCost : 0)
+```
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/r2-media-upload/index.ts` | ✅ Criado — Edge function com AWS Sig V4 |
-| `supabase/config.toml` | ✅ Modificado — Adicionado config da função |
-| `src/hooks/useR2Upload.ts` | ✅ Criado — Hook compartilhado para uploads R2 |
-| `src/components/blog/blocks/ImageBlock.tsx` | ✅ Modificado — Usa R2 ao invés de Supabase Storage |
-| `src/components/blog/blocks/VideoBlock.tsx` | ✅ Modificado — Adicionada aba de upload de vídeo via R2 |
-
-## Detalhes Técnicos
-
-- **Bucket**: `lunari-previews` (mesmo do Gallery)
-- **Prefixo**: `media/` (separado do `galleries/` do Gallery)
-- **CDN**: `https://media.lunarihub.com`
-- **Secrets**: Reutiliza `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` já configurados
-- **Limites**: 10MB imagens, 50MB vídeos
-- **Contextos**: `blog`, `form`, `task`, `general`
-
-## Não alterado (mantido como está)
-- `FormularioPublico.tsx` — formulários públicos sem auth, mantém Supabase Storage
-- `TaskDocumentForm.tsx` — usa URL.createObjectURL (local)
-- Avatares, documentos de clientes — pequenos, funcionam bem no Supabase Storage
