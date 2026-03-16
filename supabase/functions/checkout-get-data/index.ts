@@ -106,8 +106,9 @@ Deno.serve(async (req) => {
     // 4. Fetch real fees from Asaas API (same logic as asaas-fetch-fees)
     let accountFees: AccountFees | null = null;
     const absorverTaxa = settings.absorverTaxa === true;
+    const incluirTaxaAntecipacao = settings.incluirTaxaAntecipacao !== false;
 
-    if (!absorverTaxa && (settings.habilitarCartao !== false)) {
+    if ((!absorverTaxa || incluirTaxaAntecipacao) && (settings.habilitarCartao !== false)) {
       try {
         const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
           headers: { access_token: integracao.access_token },
