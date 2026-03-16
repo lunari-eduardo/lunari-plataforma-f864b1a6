@@ -152,7 +152,8 @@ Deno.serve(async (req) => {
     let valorFinal = valor;
     const incluirAntecipacao = settings.incluirTaxaAntecipacao !== false;
 
-    if (billingType === 'CREDIT_CARD' && !settings.absorverTaxa) {
+    const absorverTaxa = !!settings.absorverTaxa;
+    if (billingType === 'CREDIT_CARD' && (!absorverTaxa || incluirAntecipacao)) {
       const installments = installmentCount && installmentCount > 1 ? installmentCount : 1;
 
       try {
@@ -204,8 +205,8 @@ Deno.serve(async (req) => {
             }
           }
 
-          valorFinal = Math.round((valor + processingCost + anticipationCost) * 100) / 100;
-          console.log(`📊 Fee calc: processing=R$${processingCost.toFixed(2)}, anticipation=R$${anticipationCost.toFixed(2)}, total=R$${valorFinal.toFixed(2)}`);
+          valorFinal = Math.round((valor + (!absorverTaxa ? processingCost : 0) + (incluirAntecipacao ? anticipationCost : 0)) * 100) / 100;
+          console.log(`📊 Fee calc: absorverTaxa=${absorverTaxa}, processing=R$${processingCost.toFixed(2)}${absorverTaxa ? '(absorbed)' : ''}, anticipation=R$${anticipationCost.toFixed(2)}, total=R$${valorFinal.toFixed(2)}`);
         }
       } catch (feeErr) {
         console.warn('Error fetching Asaas fees for payment:', feeErr);

@@ -271,13 +271,15 @@ export default function PublicCheckout() {
       let totalComTaxas = valor;
       let label = `${i}x de R$ ${(valor / i).toFixed(2)}`;
 
-      if (!data.settings.absorverTaxa && data.accountFees) {
+      if (data.accountFees) {
         const activeTiers = (data.accountFees.discount?.active && data.accountFees.discount.tiers.length > 0)
           ? data.accountFees.discount.tiers
           : data.accountFees.creditCard.tiers;
         const tier = activeTiers.find(t => i >= t.min && i <= t.max);
         const processingPercentage = tier?.percentageFee ?? 0;
-        const processingFee = (valor * processingPercentage / 100) + data.accountFees.creditCard.operationValue;
+        const processingFee = !data.settings.absorverTaxa
+          ? (valor * processingPercentage / 100) + data.accountFees.creditCard.operationValue
+          : 0;
 
         let anticipationFee = 0;
         if (incluirAntecipacao) {
