@@ -148,7 +148,7 @@ export function AsaasCheckoutSection({
 
   // Fetch fees if client pays
   useEffect(() => {
-    if (settings.absorverTaxa || !settings.habilitarCartao) return;
+    if ((settings.absorverTaxa && settings.incluirTaxaAntecipacao === false) || !settings.habilitarCartao) return;
     
     const fetchFees = async () => {
       setFeesLoading(true);
