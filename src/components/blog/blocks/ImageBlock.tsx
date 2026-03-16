@@ -4,8 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Link, Loader2, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useR2Upload } from '@/hooks/useR2Upload';
 import { toast } from 'sonner';
 
 interface ImageBlockProps {
@@ -16,51 +15,27 @@ interface ImageBlockProps {
 }
 
 export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: ImageBlockProps) {
-  const [isUploading, setIsUploading] = useState(false);
   const [urlInput, setUrlInput] = useState(imageUrl);
-  const { user } = useAuth();
+  const { uploadFile, uploading } = useR2Upload({
+    context: 'blog',
+    onSuccess: (url) => {
+      onUpdate({ imageUrl: url });
+      setUrlInput(url);
+      toast.success('Imagem enviada com sucesso!');
+    },
+  });
 
   const handleFileUpload = useCallback(async (file: File) => {
-    if (!user) {
-      toast.error('Você precisa estar logado para fazer upload');
-      return;
-    }
-
     if (!file.type.startsWith('image/')) {
       toast.error('Por favor, selecione apenas imagens');
       return;
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('A imagem deve ter no máximo 5MB');
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 10MB');
       return;
     }
-
-    setIsUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('blog-images')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('blog-images')
-        .getPublicUrl(fileName);
-
-      onUpdate({ imageUrl: publicUrl });
-      setUrlInput(publicUrl);
-      toast.success('Imagem enviada com sucesso!');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Erro ao enviar imagem');
-    } finally {
-      setIsUploading(false);
-    }
-  }, [user, onUpdate]);
+    await uploadFile(file);
+  }, [uploadFile]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -156,10 +131,10 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
             input.click();
           }}
         >
-          {isUploading ? (
+          {uploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">Enviando...</span>
+              <span className="text-sm text-muted-foreground">Enviando para CDN...</span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
@@ -168,7 +143,7 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
                 Arraste uma imagem ou clique para selecionar
               </span>
               <span className="text-xs text-muted-foreground">
-                PNG, JPG ou WebP até 5MB
+                PNG, JPG ou WebP até 10MB
               </span>
             </div>
           )}
