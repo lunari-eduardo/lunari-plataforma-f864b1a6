@@ -244,15 +244,15 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
                   <Switch id="asaas-absorver" checked={absorverTaxa} onCheckedChange={setAbsorverTaxa} />
                 </div>
 
-                {!absorverTaxa && (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="asaas-antecipacao">Incluir taxa de antecipação</Label>
-                      <p className="text-xs text-muted-foreground">Cobra taxa de antecipação do cliente</p>
-                    </div>
-                    <Switch id="asaas-antecipacao" checked={incluirTaxaAntecipacao} onCheckedChange={setIncluirTaxaAntecipacao} />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="asaas-antecipacao">Incluir taxa de antecipação</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {absorverTaxa ? 'Repassa taxa de antecipação ao cliente' : 'Cobra taxa de antecipação do cliente'}
+                    </p>
                   </div>
-                )}
+                  <Switch id="asaas-antecipacao" checked={incluirTaxaAntecipacao} onCheckedChange={setIncluirTaxaAntecipacao} />
+                </div>
               </div>
             )}
           </div>
@@ -332,15 +332,15 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
                   <Switch id="asaas-absorver-edit" checked={absorverTaxa} onCheckedChange={setAbsorverTaxa} />
                 </div>
 
-                {!absorverTaxa && (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="asaas-antecipacao-edit">Incluir taxa de antecipação</Label>
-                      <p className="text-xs text-muted-foreground">Cobra taxa de antecipação do cliente</p>
-                    </div>
-                    <Switch id="asaas-antecipacao-edit" checked={incluirTaxaAntecipacao} onCheckedChange={setIncluirTaxaAntecipacao} />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label htmlFor="asaas-antecipacao-edit">Incluir taxa de antecipação</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {absorverTaxa ? 'Repassa taxa de antecipação ao cliente' : 'Cobra taxa de antecipação do cliente'}
+                    </p>
                   </div>
-                )}
+                  <Switch id="asaas-antecipacao-edit" checked={incluirTaxaAntecipacao} onCheckedChange={setIncluirTaxaAntecipacao} />
+                </div>
               </div>
             )}
           </div>

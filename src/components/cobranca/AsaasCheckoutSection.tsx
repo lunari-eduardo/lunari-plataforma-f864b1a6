@@ -148,7 +148,7 @@ export function AsaasCheckoutSection({
 
   // Fetch fees if client pays
   useEffect(() => {
-    if (settings.absorverTaxa || !settings.habilitarCartao) return;
+    if ((settings.absorverTaxa && settings.incluirTaxaAntecipacao === false) || !settings.habilitarCartao) return;
     
     const fetchFees = async () => {
       setFeesLoading(true);
@@ -259,13 +259,15 @@ export function AsaasCheckoutSection({
     let totalComTaxas = valor;
     let label = `${i}x de R$ ${(valor / i).toFixed(2)}`;
 
-    if (!settings.absorverTaxa && accountFees) {
+    if (accountFees) {
       const activeTiers = (accountFees.discount?.active && accountFees.discount.tiers.length > 0)
         ? accountFees.discount.tiers
         : accountFees.creditCard.tiers;
       const tier = activeTiers.find(t => i >= t.min && i <= t.max);
       const processingPercentage = tier?.percentageFee ?? 0;
-      const processingFee = (valor * processingPercentage / 100) + accountFees.creditCard.operationValue;
+      const processingFee = !settings.absorverTaxa
+        ? (valor * processingPercentage / 100) + accountFees.creditCard.operationValue
+        : 0;
 
       let anticipationFee = 0;
       if (incluirAntecipacao) {
