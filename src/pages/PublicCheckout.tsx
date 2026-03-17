@@ -268,7 +268,9 @@ export default function PublicCheckout() {
   const installmentOptions: Array<{ value: string; label: string; totalValue: number }> = [];
   if (data) {
     const valor = data.cobranca.valor;
-    const incluirAntecipacao = data.settings.incluirTaxaAntecipacao;
+    const ireiAntecipar = data.settings.ireiAntecipar ?? false;
+    const repassarAntecipacao = ireiAntecipar ? (data.settings.repassarTaxaAntecipacao ?? false) : false;
+    const repassarTaxas = !data.settings.absorverTaxa;
     for (let i = 1; i <= data.settings.maxParcelas; i++) {
       let totalComTaxas = valor;
       let label = `${i}x de R$ ${(valor / i).toFixed(2)}`;
