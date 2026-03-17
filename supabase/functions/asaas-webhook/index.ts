@@ -240,10 +240,47 @@ Deno.serve(async (req) => {
         }
       } else {
         // Non-subscription payment (gestão charges / checkout)
-        // Find cobrança by Asaas payment ID and update status + valor_liquido
-        const asaasPaymentId = payment?.id;
-        if (asaasPaymentId) {
-          const netValue = payment?.netValue ?? null;
+        // Use installment ID (parent) if present, otherwise payment ID
+        const lookupId = payment?.installment || payment?.id;
+        if (lookupId) {
+          let netValue: number | null = payment?.netValue ?? null;
+
+          // For installment payments, fetch total netValue from all installments
+          if (payment?.installment) {
+            const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
+            if (ASAAS_API_KEY) {
+              try {
+                const installmentsRes = await fetch(
+                  `${ASAAS_BASE_URL}/v3/payments?installment=${payment.installment}`,
+                  { headers: { access_token: ASAAS_API_KEY } }
+                );
+                if (installmentsRes.ok) {
+                  const installmentsData = await installmentsRes.json();
+                  const allPayments = installmentsData?.data || [];
+                  if (allPayments.length > 0) {
+                    const totalNet = allPayments.reduce(
+                      (acc: number, p: any) => acc + (p.netValue || 0),
+                      0
+                    );
+                    netValue = Math.round(totalNet * 100) / 100;
+                    console.log(
+                      `Installment ${payment.installment}: ${allPayments.length} parcelas, totalNet=${netValue}`
+                    );
+                  }
+                } else {
+                  console.error(
+                    "Failed to fetch installments from Asaas:",
+                    await installmentsRes.text()
+                  );
+                  netValue = null; // fallback: trigger will use valor bruto
+                }
+              } catch (err) {
+                console.error("Error fetching installments:", err);
+                netValue = null;
+              }
+            }
+          }
+
           const { data: cobranca, error: cobrancaErr } = await adminClient
             .from("cobrancas")
             .update({
@@ -252,7 +289,7 @@ Deno.serve(async (req) => {
               valor_liquido: netValue,
               updated_at: new Date().toISOString(),
             })
-            .eq("mp_payment_id", asaasPaymentId)
+            .eq("mp_payment_id", lookupId)
             .eq("status", "pendente")
             .select("id")
             .maybeSingle();
@@ -260,9 +297,13 @@ Deno.serve(async (req) => {
           if (cobrancaErr) {
             console.error("Error updating cobrança from webhook:", cobrancaErr);
           } else if (cobranca) {
-            console.log(`✅ Cobrança ${cobranca.id} marked as paid via webhook. netValue=${netValue}`);
+            console.log(
+              `✅ Cobrança ${cobranca.id} marked as paid via webhook. netValue=${netValue}, lookupId=${lookupId}`
+            );
           } else {
-            console.log(`ℹ️ No pending cobrança found for Asaas payment ${asaasPaymentId}`);
+            console.log(
+              `ℹ️ No pending cobrança found for lookupId=${lookupId} (payment.id=${payment?.id}, installment=${payment?.installment})`
+            );
           }
         }
       }

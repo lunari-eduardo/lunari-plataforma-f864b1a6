@@ -1,73 +1,59 @@
 
 
-# Fix: Pagamento Parcelado Registra Apenas Uma Parcela
+# Asaas Fee Management — Reorganizado ✅
 
-## Problema Identificado
+## Mudanças Implementadas
 
-Quando o cliente paga R$150 em 3x no cartão de crédito:
+### 1. DB: `valor_liquido` na tabela `cobrancas`
+- Coluna `valor_liquido NUMERIC` adicionada
+- Trigger `ensure_transaction_on_cobranca_paid` usa `COALESCE(valor_liquido, valor)` para transações financeiras
 
-1. O Asaas cria 1 pagamento "pai" + 3 pagamentos "filhos" (um por parcela)
-2. O Asaas dispara `PAYMENT_CONFIRMED` para **cada parcela individualmente**, com o `payment.id` sendo o ID da parcela (diferente do pai)
-3. O webhook busca a cobrança por `mp_payment_id = payment.id`, mas a cobrança armazena o ID do pagamento **pai**
-4. O campo `payment.installment` no webhook contém o ID do pai — mas o código não o utiliza
-5. Resultado: a primeira parcela pode encontrar a cobrança (se o ID coincidir) e registra `valor_liquido = 48.60` (net de UMA parcela de R$50), ou nenhuma parcela encontra
+### 2. DB: `dados_extras` JSONB na tabela `cobrancas`
+- Coluna para armazenar overrides per-charge (repassarTaxasProcessamento, anteciparParcelas, repassarTaxaAntecipacao)
 
+### 3. Settings Reorganizados (`AsaasCard.tsx`)
 ```text
-Checkout cria pagamento → Asaas retorna pay_abc (pai)
-cobrancas.mp_payment_id = "pay_abc"
-
-Webhook 1: payment.id = "pay_xyz1" (parcela 1), payment.installment = "pay_abc"
-  → busca mp_payment_id = "pay_xyz1" → NÃO ENCONTRA (ou encontra errado)
-
-Webhook 2: payment.id = "pay_xyz2" (parcela 2), payment.installment = "pay_abc"
-  → mesma coisa
+Absorver taxas de processamento  [ON/OFF]
+Irei antecipar parcelas          [ON/OFF]
+  └── Repassar taxa de antecipação [ON/OFF]  (só aparece se antecipar=ON)
 ```
 
-## Solução
+### 4. Per-Charge Overrides (`ChargeModal.tsx`)
+- Toggles por cobrança: Repassar taxas, Antecipar, Repassar antecipação
+- Pre-preenchidos das configurações globais
+- **Overrides salvos em `cobrancas.dados_extras`** para checkout ler
 
-### 1. Webhook: Buscar cobrança pelo ID pai (`payment.installment`)
+### 5. Edge Functions Atualizadas
+- `gestao-asaas-create-payment`: valor_liquido = null para cartão (vem via webhook)
+- `checkout-process-payment`: lê overrides de `cobranca.dados_extras`, valor_liquido = null para cartão
+- `checkout-get-data`: retorna overrides per-charge sobre settings globais
+- `asaas-webhook`: **agora processa PAYMENT_CONFIRMED/RECEIVED para cobranças não-subscription**, atualiza status=pago + valor_liquido=netValue
 
-No `asaas-webhook`, quando receber `PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED` para pagamento não-subscription:
+### 6. Antecipação via API Asaas
+- Nova edge function `gestao-asaas-anticipation` com ações `simulate` e `request`
+- UI no `ChargeHistory.tsx`: botão de antecipação em cobranças pagas (link/cartão Asaas)
+- Dialog com simulação mostrando valor, taxa e líquido, com botão para confirmar
 
-- Se `payment.installment` existe → usar como chave de busca (é o ID pai)
-- Se não existe → usar `payment.id` (pagamento avulso/PIX)
-- Marcar como `pago` apenas na **primeira** confirmação (cobrança ainda `pendente`)
+### 7. Frontend Fee Calc Atualizado
+- `AsaasCheckoutSection.tsx` e `PublicCheckout.tsx` usam nova lógica
+- `ChargeHistory.tsx` mostra valor líquido quando diferente do bruto
 
-### 2. Webhook: Buscar valor líquido total via API Asaas
-
-Para pagamentos parcelados, o `netValue` de cada webhook é apenas de UMA parcela. Para obter o total líquido:
-
-- Chamar `GET /v3/payments?installment={parentId}` na API Asaas
-- Somar `netValue` de todas as parcelas retornadas
-- Salvar o total em `valor_liquido`
-
-Fallback: se a API falhar, salvar `valor_liquido = null` (o trigger usará `valor` bruto).
-
-### 3. Idempotência
-
-Parcelas subsequentes (webhook 2, 3...) vão tentar atualizar a mesma cobrança que já está `pago`. O filtro `.eq("status", "pendente")` já garante que não será duplicado. Adicionar log informativo.
-
-## Arquivos Modificados
-
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/asaas-webhook/index.ts` | Usar `payment.installment` para buscar cobrança; buscar netValue total via API |
-
-## Fluxo Corrigido
+## Fluxo de valor_liquido
 
 ```text
-1. Checkout cria pagamento 3x → Asaas retorna pay_abc (pai)
-   → cobrancas.mp_payment_id = "pay_abc"
+1. Fotógrafo cria cobrança (absorverTaxa=true)
+   → cobrancas.valor = 100, dados_extras = {overrides...}
+   → valor_liquido = NULL (desconhecido até Asaas confirmar)
 
-2. Webhook parcela 1: payment.installment = "pay_abc"
-   → busca mp_payment_id = "pay_abc" ✓
-   → chama API: GET /v3/payments?installment=pay_abc
-   → soma netValue de 3 parcelas = R$145.32
-   → cobrancas: status=pago, valor_liquido=145.32
-   → trigger cria transação de R$145.32
+2. Cliente paga via checkout
+   → checkout-process-payment cria pagamento Asaas por R$100
+   → Asaas retorna paymentId, status=PENDING
+   → cobrancas.status = 'pendente'
 
-3. Webhook parcela 2: payment.installment = "pay_abc"  
-   → busca mp_payment_id = "pay_abc" AND status=pendente
-   → NÃO encontra (já está pago) → log informativo, sem duplicação ✓
+3. Asaas confirma pagamento → webhook dispara
+   → PAYMENT_CONFIRMED com payment.netValue = 94.56
+   → Webhook atualiza: status='pago', valor_liquido=94.56
+   → DB trigger cria transação com R$94.56 (líquido)
+
+4. Fotógrafo vê R$94.56 no histórico financeiro ✓
 ```
-
