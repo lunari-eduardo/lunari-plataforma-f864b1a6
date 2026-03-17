@@ -272,7 +272,7 @@ export function AsaasCheckoutSection({
         : accountFees.creditCard.tiers;
       const tier = activeTiers.find(t => i >= t.min && i <= t.max);
       const processingPercentage = tier?.percentageFee ?? 0;
-      const processingFee = !settings.absorverTaxa
+      const processingFee = repassarTaxas
         ? (valor * processingPercentage / 100) + accountFees.creditCard.operationValue
         : 0;
 
