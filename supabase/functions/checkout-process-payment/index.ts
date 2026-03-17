@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     // 1. Fetch and validate cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
       .from('cobrancas')
-      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor')
+      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, dados_extras')
       .eq('id', cobrancaId)
       .maybeSingle();
 
@@ -150,12 +150,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Resolve fee settings
+    // 4. Resolve fee settings (per-charge overrides from cobranca.dados_extras > global settings)
+    const chargeOverrides = (cobranca.dados_extras || {}) as {
+      repassarTaxasProcessamento?: boolean;
+      anteciparParcelas?: boolean;
+      repassarTaxaAntecipacao?: boolean;
+    };
+    const hasOverrides = Object.keys(chargeOverrides).length > 0;
+
     const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
-    const absorverTaxa = !!settings.absorverTaxa;
-    const ireiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
-    const repassarAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
-    const repassarTaxas = !absorverTaxa;
+    const globalAbsorverTaxa = !!settings.absorverTaxa;
+    const globalIreiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
+    const globalRepassarAntecipacao = globalIreiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
+
+    const repassarTaxas = hasOverrides ? (chargeOverrides.repassarTaxasProcessamento ?? !globalAbsorverTaxa) : !globalAbsorverTaxa;
+    const ireiAntecipar = hasOverrides ? (chargeOverrides.anteciparParcelas ?? globalIreiAntecipar) : globalIreiAntecipar;
+    const repassarAntecipacao = ireiAntecipar
+      ? (hasOverrides ? (chargeOverrides.repassarTaxaAntecipacao ?? globalRepassarAntecipacao) : globalRepassarAntecipacao)
+      : false;
 
     let valorFinal = valor;
 
@@ -277,7 +289,8 @@ Deno.serve(async (req) => {
 
     // 7. Update cobrança in database with valor_liquido
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-    const valorLiquido = paymentData.netValue ?? (valorFinal !== valor ? valor : null);
+    // For PIX: netValue is usually available immediately. For credit card: it comes via webhook.
+    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
 
     const updateData: Record<string, unknown> = {
       mp_payment_id: paymentData.id,

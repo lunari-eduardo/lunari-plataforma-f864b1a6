@@ -93,5 +93,8 @@ verify_jwt = false
 [functions.checkout-process-payment]
 verify_jwt = false
 
+[functions.gestao-asaas-anticipation]
+verify_jwt = false
+
 [functions.r2-media-upload]
 verify_jwt = false

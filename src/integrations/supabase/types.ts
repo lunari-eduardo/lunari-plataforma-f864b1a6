@@ -705,6 +705,7 @@ export type Database = {
         Row: {
           cliente_id: string | null
           created_at: string | null
+          dados_extras: Json | null
           data_pagamento: string | null
           descricao: string | null
           galeria_id: string | null
@@ -733,6 +734,7 @@ export type Database = {
         Insert: {
           cliente_id?: string | null
           created_at?: string | null
+          dados_extras?: Json | null
           data_pagamento?: string | null
           descricao?: string | null
           galeria_id?: string | null
@@ -761,6 +763,7 @@ export type Database = {
         Update: {
           cliente_id?: string | null
           created_at?: string | null
+          dados_extras?: Json | null
           data_pagamento?: string | null
           descricao?: string | null
           galeria_id?: string | null

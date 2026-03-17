@@ -265,7 +265,7 @@ export function ChargeModal({
         repassarTaxaAntecipacao: overrideAntecipar ? overrideRepassarAntecipacao : false,
       };
 
-      // Create cobrança record locally (no Asaas call yet — payment happens on checkout page)
+      // Create cobrança record locally with per-charge overrides stored in dados_extras
       const { data: cobranca, error: insertError } = await supabase
         .from('cobrancas')
         .insert({
@@ -277,7 +277,8 @@ export function ChargeModal({
           tipo_cobranca: 'link',
           provedor: 'asaas',
           status: 'pendente',
-        })
+          dados_extras: chargeOverrides,
+        } as any)
         .select('id')
         .single();
 

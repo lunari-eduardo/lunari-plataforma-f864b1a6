@@ -238,6 +238,33 @@ Deno.serve(async (req) => {
         if (sub?.pending_downgrade_plan) {
           await applyDowngrade(adminClient, sub);
         }
+      } else {
+        // Non-subscription payment (gestão charges / checkout)
+        // Find cobrança by Asaas payment ID and update status + valor_liquido
+        const asaasPaymentId = payment?.id;
+        if (asaasPaymentId) {
+          const netValue = payment?.netValue ?? null;
+          const { data: cobranca, error: cobrancaErr } = await adminClient
+            .from("cobrancas")
+            .update({
+              status: "pago",
+              data_pagamento: new Date().toISOString(),
+              valor_liquido: netValue,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("mp_payment_id", asaasPaymentId)
+            .eq("status", "pendente")
+            .select("id")
+            .maybeSingle();
+
+          if (cobrancaErr) {
+            console.error("Error updating cobrança from webhook:", cobrancaErr);
+          } else if (cobranca) {
+            console.log(`✅ Cobrança ${cobranca.id} marked as paid via webhook. netValue=${netValue}`);
+          } else {
+            console.log(`ℹ️ No pending cobrança found for Asaas payment ${asaasPaymentId}`);
+          }
+        }
       }
     }
 
