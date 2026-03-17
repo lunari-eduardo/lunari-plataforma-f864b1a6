@@ -257,7 +257,9 @@ export function AsaasCheckoutSection({
   }, [clienteId, sessionId, valor, descricao, onPaymentCreated]);
 
   // Calculate installments with fees
-  const incluirAntecipacao = settings.incluirTaxaAntecipacao !== false;
+  const repassarTaxas = !settings.absorverTaxa;
+  const ireiAntecipar = settings.ireiAntecipar ?? false;
+  const repassarAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? false) : false;
 
   const installmentOptions: Array<{ value: string; label: string; totalValue: number }> = [];
   for (let i = 1; i <= (settings.maxParcelas || 12); i++) {
