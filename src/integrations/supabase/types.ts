@@ -728,6 +728,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           valor: number
+          valor_liquido: number | null
         }
         Insert: {
           cliente_id?: string | null
@@ -755,6 +756,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           valor: number
+          valor_liquido?: number | null
         }
         Update: {
           cliente_id?: string | null
@@ -782,6 +784,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           valor?: number
+          valor_liquido?: number | null
         }
         Relationships: [
           {
