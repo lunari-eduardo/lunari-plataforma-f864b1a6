@@ -150,12 +150,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Resolve fee settings
+    // 4. Resolve fee settings (per-charge overrides from cobranca.dados_extras > global settings)
+    const chargeOverrides = (cobranca.dados_extras || {}) as {
+      repassarTaxasProcessamento?: boolean;
+      anteciparParcelas?: boolean;
+      repassarTaxaAntecipacao?: boolean;
+    };
+    const hasOverrides = Object.keys(chargeOverrides).length > 0;
+
     const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
-    const absorverTaxa = !!settings.absorverTaxa;
-    const ireiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
-    const repassarAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
-    const repassarTaxas = !absorverTaxa;
+    const globalAbsorverTaxa = !!settings.absorverTaxa;
+    const globalIreiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
+    const globalRepassarAntecipacao = globalIreiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
+
+    const repassarTaxas = hasOverrides ? (chargeOverrides.repassarTaxasProcessamento ?? !globalAbsorverTaxa) : !globalAbsorverTaxa;
+    const ireiAntecipar = hasOverrides ? (chargeOverrides.anteciparParcelas ?? globalIreiAntecipar) : globalIreiAntecipar;
+    const repassarAntecipacao = ireiAntecipar
+      ? (hasOverrides ? (chargeOverrides.repassarTaxaAntecipacao ?? globalRepassarAntecipacao) : globalRepassarAntecipacao)
+      : false;
 
     let valorFinal = valor;
 
