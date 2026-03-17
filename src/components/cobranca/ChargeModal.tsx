@@ -346,7 +346,7 @@ export function ChargeModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border"
+          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
           overlayClassName="backdrop-blur-sm bg-black/60 z-[59]"
         >
           <DialogHeader className="p-4 pb-2">
