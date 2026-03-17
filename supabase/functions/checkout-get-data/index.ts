@@ -105,12 +105,26 @@ Deno.serve(async (req) => {
       ? 'https://api.asaas.com'
       : 'https://api-sandbox.asaas.com';
 
-    // Resolve fee settings with backward compat
+    // Resolve fee settings: per-charge overrides (dados_extras) > global settings
+    const chargeOverrides = (cobranca.dados_extras || {}) as {
+      repassarTaxasProcessamento?: boolean;
+      anteciparParcelas?: boolean;
+      repassarTaxaAntecipacao?: boolean;
+    };
+    const hasOverrides = Object.keys(chargeOverrides).length > 0;
+
     const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
-    const absorverTaxa = settings.absorverTaxa === true;
-    const ireiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
-    const repassarTaxaAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
-    const repassarTaxas = !absorverTaxa;
+    const globalAbsorverTaxa = settings.absorverTaxa === true;
+    const globalIreiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
+    const globalRepassarAntecipacao = globalIreiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
+
+    // If per-charge overrides exist, use them; otherwise use global
+    const repassarTaxas = hasOverrides ? (chargeOverrides.repassarTaxasProcessamento ?? !globalAbsorverTaxa) : !globalAbsorverTaxa;
+    const absorverTaxa = !repassarTaxas;
+    const ireiAntecipar = hasOverrides ? (chargeOverrides.anteciparParcelas ?? globalIreiAntecipar) : globalIreiAntecipar;
+    const repassarTaxaAntecipacao = ireiAntecipar
+      ? (hasOverrides ? (chargeOverrides.repassarTaxaAntecipacao ?? globalRepassarAntecipacao) : globalRepassarAntecipacao)
+      : false;
 
     // 4. Fetch real fees from Asaas API
     let accountFees: AccountFees | null = null;

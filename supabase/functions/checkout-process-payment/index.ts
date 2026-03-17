@@ -277,7 +277,8 @@ Deno.serve(async (req) => {
 
     // 7. Update cobrança in database with valor_liquido
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-    const valorLiquido = paymentData.netValue ?? (valorFinal !== valor ? valor : null);
+    // For PIX: netValue is usually available immediately. For credit card: it comes via webhook.
+    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
 
     const updateData: Record<string, unknown> = {
       mp_payment_id: paymentData.id,

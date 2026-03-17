@@ -360,7 +360,8 @@ Deno.serve(async (req) => {
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
 
     // Calculate valor_liquido: netValue from Asaas or estimate
-    const valorLiquido = paymentData.netValue ?? (valorFinal !== valor ? valor : null);
+    // For PIX: netValue usually available immediately. For credit card: comes via webhook.
+    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
 
     const cobrancaData: Record<string, unknown> = {
       user_id: userId,
