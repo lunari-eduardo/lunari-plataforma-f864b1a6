@@ -358,8 +358,8 @@ export function ChargeModal({
             <p className="text-sm text-muted-foreground">{clienteNome}</p>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')}>
-            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2" style={{ width: 'calc(100% - 32px)' }}>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2 shrink-0" style={{ width: 'calc(100% - 32px)' }}>
               <TabsTrigger value="cobrar" className="gap-2">
                 <CreditCard className="h-4 w-4" />
                 Nova Cobrança
