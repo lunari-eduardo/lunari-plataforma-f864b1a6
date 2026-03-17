@@ -1,37 +1,30 @@
 
 
-# R2 Media Upload — Implementado ✅
+# Asaas Fee Management — Reorganizado ✅
 
-## Arquitetura
+## Mudanças Implementadas
 
+### 1. DB: `valor_liquido` na tabela `cobrancas`
+- Coluna `valor_liquido NUMERIC` adicionada
+- Trigger `ensure_transaction_on_cobranca_paid` usa `COALESCE(valor_liquido, valor)` para transações financeiras
+
+### 2. Settings Reorganizados (`AsaasCard.tsx`)
 ```text
-Frontend (useR2Upload hook)
-  → supabase.functions.invoke('r2-media-upload', FormData)
-  → Edge Function autentica JWT + faz upload via AWS Sig V4
-  → Cloudflare R2 (bucket: lunari-previews, prefix: media/)
-  → Retorna URL pública: https://media.lunarihub.com/media/{context}/{userId}/{file}
+Absorver taxas de processamento  [ON/OFF]
+Irei antecipar parcelas          [ON/OFF]
+  └── Repassar taxa de antecipação [ON/OFF]  (só aparece se antecipar=ON)
 ```
+- Novos campos: `ireiAntecipar`, `repassarTaxaAntecipacao`
+- Backward compat: lê `incluirTaxaAntecipacao` como fallback
 
-## Arquivos Criados/Modificados
+### 3. Per-Charge Overrides (`ChargeModal.tsx`)
+- Toggles por cobrança: Repassar taxas, Antecipar, Repassar antecipação
+- Pre-preenchidos das configurações globais
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/r2-media-upload/index.ts` | ✅ Criado — Edge function com AWS Sig V4 |
-| `supabase/config.toml` | ✅ Modificado — Adicionado config da função |
-| `src/hooks/useR2Upload.ts` | ✅ Criado — Hook compartilhado para uploads R2 |
-| `src/components/blog/blocks/ImageBlock.tsx` | ✅ Modificado — Usa R2 ao invés de Supabase Storage |
-| `src/components/blog/blocks/VideoBlock.tsx` | ✅ Modificado — Adicionada aba de upload de vídeo via R2 |
+### 4. Edge Functions Atualizadas
+- `gestao-asaas-create-payment`: aceita overrides, salva `valor_liquido`
+- `checkout-process-payment`: salva `valor_liquido` do Asaas `netValue`
+- `checkout-get-data`: retorna `ireiAntecipar` e `repassarTaxaAntecipacao`
 
-## Detalhes Técnicos
-
-- **Bucket**: `lunari-previews` (mesmo do Gallery)
-- **Prefixo**: `media/` (separado do `galleries/` do Gallery)
-- **CDN**: `https://media.lunarihub.com`
-- **Secrets**: Reutiliza `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` já configurados
-- **Limites**: 10MB imagens, 50MB vídeos
-- **Contextos**: `blog`, `form`, `task`, `general`
-
-## Não alterado (mantido como está)
-- `FormularioPublico.tsx` — formulários públicos sem auth, mantém Supabase Storage
-- `TaskDocumentForm.tsx` — usa URL.createObjectURL (local)
-- Avatares, documentos de clientes — pequenos, funcionam bem no Supabase Storage
+### 5. Frontend Fee Calc Atualizado
+- `AsaasCheckoutSection.tsx` e `PublicCheckout.tsx` usam nova lógica
