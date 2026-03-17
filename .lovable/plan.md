@@ -1,59 +1,24 @@
 
 
-# Asaas Fee Management — Reorganizado ✅
+# Fix: Rolagem Vertical no Modal de Cobrança
 
-## Mudanças Implementadas
+## Problema
 
-### 1. DB: `valor_liquido` na tabela `cobrancas`
-- Coluna `valor_liquido NUMERIC` adicionada
-- Trigger `ensure_transaction_on_cobranca_paid` usa `COALESCE(valor_liquido, valor)` para transações financeiras
+O conteúdo do modal ultrapassa a altura da viewport e fica cortado na parte inferior. O `ScrollArea` tem `max-h-[calc(90vh-180px)]` mas o componente `Tabs` que o envolve não usa layout flex, impedindo que a restrição de altura funcione corretamente.
 
-### 2. DB: `dados_extras` JSONB na tabela `cobrancas`
-- Coluna para armazenar overrides per-charge (repassarTaxasProcessamento, anteciparParcelas, repassarTaxaAntecipacao)
+## Solução
 
-### 3. Settings Reorganizados (`AsaasCard.tsx`)
-```text
-Absorver taxas de processamento  [ON/OFF]
-Irei antecipar parcelas          [ON/OFF]
-  └── Repassar taxa de antecipação [ON/OFF]  (só aparece se antecipar=ON)
-```
+### `src/components/cobranca/ChargeModal.tsx`
 
-### 4. Per-Charge Overrides (`ChargeModal.tsx`)
-- Toggles por cobrança: Repassar taxas, Antecipar, Repassar antecipação
-- Pre-preenchidos das configurações globais
-- **Overrides salvos em `cobrancas.dados_extras`** para checkout ler
+1. **Tabs**: Adicionar `className="flex-1 flex flex-col min-h-0 overflow-hidden"` para que participe do layout flex do `DialogContent`
+2. **ScrollArea**: Trocar a classe fixa `max-h-[calc(90vh-180px)]` por um `overflow-y-auto` nativo, já que o Radix ScrollArea Viewport precisa de height constraints explícitas vindas do container flex — ou substituir o `ScrollArea` por uma `div` com `overflow-y-auto flex-1 min-h-0`
 
-### 5. Edge Functions Atualizadas
-- `gestao-asaas-create-payment`: valor_liquido = null para cartão (vem via webhook)
-- `checkout-process-payment`: lê overrides de `cobranca.dados_extras`, valor_liquido = null para cartão
-- `checkout-get-data`: retorna overrides per-charge sobre settings globais
-- `asaas-webhook`: **agora processa PAYMENT_CONFIRMED/RECEIVED para cobranças não-subscription**, atualiza status=pago + valor_liquido=netValue
+A abordagem mais confiável: substituir `<ScrollArea>` por `<div className="flex-1 min-h-0 overflow-y-auto">` pois o Radix ScrollArea tem problemas conhecidos com containers flex dinâmicos.
 
-### 6. Antecipação via API Asaas
-- Nova edge function `gestao-asaas-anticipation` com ações `simulate` e `request`
-- UI no `ChargeHistory.tsx`: botão de antecipação em cobranças pagas (link/cartão Asaas)
-- Dialog com simulação mostrando valor, taxa e líquido, com botão para confirmar
+### Detalhes
 
-### 7. Frontend Fee Calc Atualizado
-- `AsaasCheckoutSection.tsx` e `PublicCheckout.tsx` usam nova lógica
-- `ChargeHistory.tsx` mostra valor líquido quando diferente do bruto
+- `DialogContent` já tem `flex flex-col` e `max-h-[90vh]` ✓
+- `DialogHeader` é fixo no topo ✓  
+- `Footer` é fixo embaixo ✓
+- O conteúdo central (Tabs + conteúdo) precisa receber `flex-1 min-h-0` e scroll interno
 
-## Fluxo de valor_liquido
-
-```text
-1. Fotógrafo cria cobrança (absorverTaxa=true)
-   → cobrancas.valor = 100, dados_extras = {overrides...}
-   → valor_liquido = NULL (desconhecido até Asaas confirmar)
-
-2. Cliente paga via checkout
-   → checkout-process-payment cria pagamento Asaas por R$100
-   → Asaas retorna paymentId, status=PENDING
-   → cobrancas.status = 'pendente'
-
-3. Asaas confirma pagamento → webhook dispara
-   → PAYMENT_CONFIRMED com payment.netValue = 94.56
-   → Webhook atualiza: status='pago', valor_liquido=94.56
-   → DB trigger cria transação com R$94.56 (líquido)
-
-4. Fotógrafo vê R$94.56 no histórico financeiro ✓
-```
