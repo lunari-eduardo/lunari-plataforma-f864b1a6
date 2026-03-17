@@ -27,7 +27,9 @@ export interface AsaasSettings {
   habilitarBoleto: boolean;
   maxParcelas: number;
   absorverTaxa: boolean;
-  incluirTaxaAntecipacao: boolean;
+  ireiAntecipar: boolean;
+  repassarTaxaAntecipacao: boolean;
+  incluirTaxaAntecipacao?: boolean;
 }
 
 export interface MercadoPagoSettings {
