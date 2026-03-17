@@ -277,7 +277,7 @@ export function AsaasCheckoutSection({
         : 0;
 
       let anticipationFee = 0;
-      if (incluirAntecipacao) {
+      if (repassarAntecipacao) {
         const taxaMensal = i === 1
           ? accountFees.creditCard.detachedMonthlyFeeValue
           : accountFees.creditCard.installmentMonthlyFeeValue;
