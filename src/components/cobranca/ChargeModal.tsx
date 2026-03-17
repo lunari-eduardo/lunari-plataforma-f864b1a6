@@ -358,8 +358,8 @@ export function ChargeModal({
             <p className="text-sm text-muted-foreground">{clienteNome}</p>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')}>
-            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2" style={{ width: 'calc(100% - 32px)' }}>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2 shrink-0" style={{ width: 'calc(100% - 32px)' }}>
               <TabsTrigger value="cobrar" className="gap-2">
                 <CreditCard className="h-4 w-4" />
                 Nova Cobrança
@@ -370,7 +370,7 @@ export function ChargeModal({
               </TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-180px)]">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
                 {/* Valor da cobrança */}
                 <div className="space-y-3">
@@ -541,7 +541,7 @@ export function ChargeModal({
                   onView={handleViewCharge}
                 />
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
 
           {/* Footer */}
