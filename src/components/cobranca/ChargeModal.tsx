@@ -370,7 +370,7 @@ export function ChargeModal({
               </TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-180px)]">
+            <div className="flex-1 min-h-0 overflow-y-auto">
               <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
                 {/* Valor da cobrança */}
                 <div className="space-y-3">
