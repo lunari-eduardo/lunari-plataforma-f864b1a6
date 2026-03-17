@@ -281,12 +281,12 @@ export default function PublicCheckout() {
           : data.accountFees.creditCard.tiers;
         const tier = activeTiers.find(t => i >= t.min && i <= t.max);
         const processingPercentage = tier?.percentageFee ?? 0;
-        const processingFee = !data.settings.absorverTaxa
+        const processingFee = repassarTaxas
           ? (valor * processingPercentage / 100) + data.accountFees.creditCard.operationValue
           : 0;
 
         let anticipationFee = 0;
-        if (incluirAntecipacao) {
+        if (repassarAntecipacao) {
           const taxaMensal = i === 1
             ? data.accountFees.creditCard.detachedMonthlyFeeValue
             : data.accountFees.creditCard.installmentMonthlyFeeValue;
