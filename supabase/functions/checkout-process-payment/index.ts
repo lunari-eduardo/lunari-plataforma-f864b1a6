@@ -95,6 +95,8 @@ Deno.serve(async (req) => {
       environment?: string;
       maxParcelas?: number;
       absorverTaxa?: boolean;
+      ireiAntecipar?: boolean;
+      repassarTaxaAntecipacao?: boolean;
       incluirTaxaAntecipacao?: boolean;
     };
 
@@ -148,12 +150,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Calculate fees for credit card (server-side)
-    let valorFinal = valor;
-    const incluirAntecipacao = settings.incluirTaxaAntecipacao !== false;
-
+    // 4. Resolve fee settings
+    const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
     const absorverTaxa = !!settings.absorverTaxa;
-    if (billingType === 'CREDIT_CARD' && (!absorverTaxa || incluirAntecipacao)) {
+    const ireiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
+    const repassarAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
+    const repassarTaxas = !absorverTaxa;
+
+    let valorFinal = valor;
+
+    if (billingType === 'CREDIT_CARD' && (repassarTaxas || repassarAntecipacao)) {
       const installments = installmentCount && installmentCount > 1 ? installmentCount : 1;
 
       try {
@@ -189,7 +195,7 @@ Deno.serve(async (req) => {
           const processingCost = (valor * percentageFee / 100) + operationValue;
 
           let anticipationCost = 0;
-          if (incluirAntecipacao) {
+          if (ireiAntecipar && repassarAntecipacao) {
             const detachedMonthlyFee = anticipationCC.detachedMonthlyFeeValue ?? 1.25;
             const installmentMonthlyFee = anticipationCC.installmentMonthlyFeeValue ?? 1.70;
             const taxaMensal = installments === 1 ? detachedMonthlyFee : installmentMonthlyFee;
@@ -205,8 +211,8 @@ Deno.serve(async (req) => {
             }
           }
 
-          valorFinal = Math.round((valor + (!absorverTaxa ? processingCost : 0) + (incluirAntecipacao ? anticipationCost : 0)) * 100) / 100;
-          console.log(`📊 Fee calc: absorverTaxa=${absorverTaxa}, processing=R$${processingCost.toFixed(2)}${absorverTaxa ? '(absorbed)' : ''}, anticipation=R$${anticipationCost.toFixed(2)}, total=R$${valorFinal.toFixed(2)}`);
+          valorFinal = Math.round((valor + (repassarTaxas ? processingCost : 0) + (repassarAntecipacao ? anticipationCost : 0)) * 100) / 100;
+          console.log(`📊 Fee calc: repassarTaxas=${repassarTaxas}, antecipar=${ireiAntecipar}, repassarAntecipacao=${repassarAntecipacao}, processing=R$${processingCost.toFixed(2)}, anticipation=R$${anticipationCost.toFixed(2)}, total=R$${valorFinal.toFixed(2)}`);
         }
       } catch (feeErr) {
         console.warn('Error fetching Asaas fees for payment:', feeErr);
@@ -269,12 +275,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7. Update cobrança in database
+    // 7. Update cobrança in database with valor_liquido
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
+    const valorLiquido = paymentData.netValue ?? (valorFinal !== valor ? valor : null);
 
     const updateData: Record<string, unknown> = {
       mp_payment_id: paymentData.id,
       status: isConfirmed ? 'pago' : 'pendente',
+      valor_liquido: valorLiquido,
       updated_at: new Date().toISOString(),
     };
 
@@ -292,9 +300,7 @@ Deno.serve(async (req) => {
       .update(updateData)
       .eq('id', cobrancaId);
 
-    // 8. Transaction creation is handled EXCLUSIVELY by the database trigger
-    // `ensure_transaction_on_cobranca_paid` when cobrancas.status changes to 'pago'.
-    // Do NOT insert into clientes_transacoes here to avoid duplicates.
+    // Transaction creation is handled EXCLUSIVELY by the database trigger
 
     return new Response(
       JSON.stringify({

@@ -16,7 +16,10 @@ export interface AsaasSettings {
   habilitarBoleto: boolean;
   maxParcelas: number;
   absorverTaxa: boolean;
-  incluirTaxaAntecipacao: boolean;
+  ireiAntecipar: boolean;
+  repassarTaxaAntecipacao: boolean;
+  // Legacy compat
+  incluirTaxaAntecipacao?: boolean;
 }
 
 export interface AsaasCardRef {
@@ -55,7 +58,8 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
   const [habilitarBoleto, setHabilitarBoleto] = useState(false);
   const [maxParcelas, setMaxParcelas] = useState('12');
   const [absorverTaxa, setAbsorverTaxa] = useState(false);
-  const [incluirTaxaAntecipacao, setIncluirTaxaAntecipacao] = useState(true);
+  const [ireiAntecipar, setIreiAntecipar] = useState(false);
+  const [repassarTaxaAntecipacao, setRepassarTaxaAntecipacao] = useState(false);
 
   useImperativeHandle(ref, () => ({
     scrollIntoView: () => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
@@ -77,24 +81,32 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
       setHabilitarBoleto(settings.habilitarBoleto ?? false);
       setMaxParcelas(String(settings.maxParcelas ?? 12));
       setAbsorverTaxa(settings.absorverTaxa ?? false);
-      setIncluirTaxaAntecipacao(settings.incluirTaxaAntecipacao ?? true);
+      // Backward compat: ireiAntecipar didn't exist before, derive from incluirTaxaAntecipacao
+      const legacyAntecipar = settings.incluirTaxaAntecipacao ?? false;
+      setIreiAntecipar(settings.ireiAntecipar ?? legacyAntecipar);
+      setRepassarTaxaAntecipacao(settings.repassarTaxaAntecipacao ?? legacyAntecipar);
     }
   }, [settings]);
+
+  const buildSettings = (): AsaasSettings => ({
+    environment,
+    habilitarPix,
+    habilitarCartao,
+    habilitarBoleto,
+    maxParcelas: parseInt(maxParcelas),
+    absorverTaxa,
+    ireiAntecipar,
+    repassarTaxaAntecipacao: ireiAntecipar ? repassarTaxaAntecipacao : false,
+    // Legacy compat: set incluirTaxaAntecipacao for older code that reads it
+    incluirTaxaAntecipacao: ireiAntecipar && repassarTaxaAntecipacao,
+  });
 
   const handleSave = async () => {
     if (!apiKey.trim()) return;
     
     setSaving(true);
     try {
-      await onSave(apiKey.trim(), {
-        environment,
-        habilitarPix,
-        habilitarCartao,
-        habilitarBoleto,
-        maxParcelas: parseInt(maxParcelas),
-        absorverTaxa,
-        incluirTaxaAntecipacao,
-      });
+      await onSave(apiKey.trim(), buildSettings());
       setIsEditing(false);
       setApiKey('');
     } finally {
@@ -107,15 +119,7 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
     
     setSaving(true);
     try {
-      await onUpdateSettings({
-        environment,
-        habilitarPix,
-        habilitarCartao,
-        habilitarBoleto,
-        maxParcelas: parseInt(maxParcelas),
-        absorverTaxa,
-        incluirTaxaAntecipacao,
-      });
+      await onUpdateSettings(buildSettings());
       setShowSettings(false);
     } finally {
       setSaving(false);
@@ -123,6 +127,54 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
   };
 
   const isConnected = status === 'conectado';
+
+  // Shared credit card settings section
+  const renderCreditCardSettings = (idSuffix: string) => (
+    <div className="space-y-3 pt-2 border-t">
+      <div className="space-y-2">
+        <Label>Máximo de parcelas</Label>
+        <Select value={maxParcelas} onValueChange={setMaxParcelas}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+              <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <Label htmlFor={`asaas-absorver-${idSuffix}`}>Absorver taxas de processamento</Label>
+          <p className="text-xs text-muted-foreground">Você paga as taxas de cartão</p>
+        </div>
+        <Switch id={`asaas-absorver-${idSuffix}`} checked={absorverTaxa} onCheckedChange={setAbsorverTaxa} />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <Label htmlFor={`asaas-antecipar-${idSuffix}`}>Irei antecipar parcelas</Label>
+          <p className="text-xs text-muted-foreground">Você pretende solicitar antecipação no Asaas</p>
+        </div>
+        <Switch id={`asaas-antecipar-${idSuffix}`} checked={ireiAntecipar} onCheckedChange={(v) => {
+          setIreiAntecipar(v);
+          if (!v) setRepassarTaxaAntecipacao(false);
+        }} />
+      </div>
+
+      {ireiAntecipar && (
+        <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
+          <div>
+            <Label htmlFor={`asaas-repassar-${idSuffix}`}>Repassar taxa de antecipação</Label>
+            <p className="text-xs text-muted-foreground">Inclui taxa de antecipação no valor do cliente</p>
+          </div>
+          <Switch id={`asaas-repassar-${idSuffix}`} checked={repassarTaxaAntecipacao} onCheckedChange={setRepassarTaxaAntecipacao} />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div ref={cardRef} className="border rounded-lg p-4 space-y-4 bg-card">
@@ -220,41 +272,7 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
               </div>
             </div>
 
-            {habilitarCartao && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="space-y-2">
-                  <Label>Máximo de parcelas</Label>
-                  <Select value={maxParcelas} onValueChange={setMaxParcelas}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                        <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="asaas-absorver">Absorver taxas</Label>
-                    <p className="text-xs text-muted-foreground">Você paga as taxas de processamento</p>
-                  </div>
-                  <Switch id="asaas-absorver" checked={absorverTaxa} onCheckedChange={setAbsorverTaxa} />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="asaas-antecipacao">Incluir taxa de antecipação</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {absorverTaxa ? 'Repassa taxa de antecipação ao cliente' : 'Cobra taxa de antecipação do cliente'}
-                    </p>
-                  </div>
-                  <Switch id="asaas-antecipacao" checked={incluirTaxaAntecipacao} onCheckedChange={setIncluirTaxaAntecipacao} />
-                </div>
-              </div>
-            )}
+            {habilitarCartao && renderCreditCardSettings('setup')}
           </div>
 
           <div className="flex gap-2">
@@ -308,41 +326,7 @@ export const AsaasCard = forwardRef<AsaasCardRef, AsaasCardProps>(({
               </div>
             </div>
 
-            {habilitarCartao && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="space-y-2">
-                  <Label>Máximo de parcelas</Label>
-                  <Select value={maxParcelas} onValueChange={setMaxParcelas}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                        <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="asaas-absorver-edit">Absorver taxas</Label>
-                    <p className="text-xs text-muted-foreground">Você paga as taxas de processamento</p>
-                  </div>
-                  <Switch id="asaas-absorver-edit" checked={absorverTaxa} onCheckedChange={setAbsorverTaxa} />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="asaas-antecipacao-edit">Incluir taxa de antecipação</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {absorverTaxa ? 'Repassa taxa de antecipação ao cliente' : 'Cobra taxa de antecipação do cliente'}
-                    </p>
-                  </div>
-                  <Switch id="asaas-antecipacao-edit" checked={incluirTaxaAntecipacao} onCheckedChange={setIncluirTaxaAntecipacao} />
-                </div>
-              </div>
-            )}
+            {habilitarCartao && renderCreditCardSettings('edit')}
           </div>
 
           <div className="flex gap-2">

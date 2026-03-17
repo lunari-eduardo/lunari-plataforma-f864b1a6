@@ -15,7 +15,9 @@ export interface AsaasCheckoutSettings {
   habilitarBoleto: boolean;
   maxParcelas: number;
   absorverTaxa: boolean;
-  incluirTaxaAntecipacao: boolean;
+  ireiAntecipar?: boolean;
+  repassarTaxaAntecipacao?: boolean;
+  incluirTaxaAntecipacao?: boolean;
 }
 
 interface AccountFees {
@@ -148,7 +150,10 @@ export function AsaasCheckoutSection({
 
   // Fetch fees if client pays
   useEffect(() => {
-    if ((settings.absorverTaxa && settings.incluirTaxaAntecipacao === false) || !settings.habilitarCartao) return;
+    const repassarTaxas = !settings.absorverTaxa;
+    const ireiAntecipar = settings.ireiAntecipar ?? false;
+    const repassarAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? false) : false;
+    if ((!repassarTaxas && !repassarAntecipacao) || !settings.habilitarCartao) return;
     
     const fetchFees = async () => {
       setFeesLoading(true);
@@ -252,7 +257,9 @@ export function AsaasCheckoutSection({
   }, [clienteId, sessionId, valor, descricao, onPaymentCreated]);
 
   // Calculate installments with fees
-  const incluirAntecipacao = settings.incluirTaxaAntecipacao !== false;
+  const repassarTaxas = !settings.absorverTaxa;
+  const ireiAntecipar = settings.ireiAntecipar ?? false;
+  const repassarAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? false) : false;
 
   const installmentOptions: Array<{ value: string; label: string; totalValue: number }> = [];
   for (let i = 1; i <= (settings.maxParcelas || 12); i++) {
@@ -265,12 +272,12 @@ export function AsaasCheckoutSection({
         : accountFees.creditCard.tiers;
       const tier = activeTiers.find(t => i >= t.min && i <= t.max);
       const processingPercentage = tier?.percentageFee ?? 0;
-      const processingFee = !settings.absorverTaxa
+      const processingFee = repassarTaxas
         ? (valor * processingPercentage / 100) + accountFees.creditCard.operationValue
         : 0;
 
       let anticipationFee = 0;
-      if (incluirAntecipacao) {
+      if (repassarAntecipacao) {
         const taxaMensal = i === 1
           ? accountFees.creditCard.detachedMonthlyFeeValue
           : accountFees.creditCard.installmentMonthlyFeeValue;

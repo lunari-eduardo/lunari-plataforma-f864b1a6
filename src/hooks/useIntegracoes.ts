@@ -27,7 +27,9 @@ export interface AsaasSettings {
   habilitarBoleto: boolean;
   maxParcelas: number;
   absorverTaxa: boolean;
-  incluirTaxaAntecipacao: boolean;
+  ireiAntecipar: boolean;
+  repassarTaxaAntecipacao: boolean;
+  incluirTaxaAntecipacao?: boolean;
 }
 
 export interface MercadoPagoSettings {
@@ -167,7 +169,9 @@ export function useIntegracoes(): UseIntegracoesReturn {
         habilitarBoleto: (asaasIntegration.dados_extras?.habilitarBoleto as boolean) === true,
         maxParcelas: (asaasIntegration.dados_extras?.maxParcelas as number) || 12,
         absorverTaxa: (asaasIntegration.dados_extras?.absorverTaxa as boolean) === true,
-        incluirTaxaAntecipacao: (asaasIntegration.dados_extras?.incluirTaxaAntecipacao as boolean) !== false,
+        ireiAntecipar: (asaasIntegration.dados_extras?.ireiAntecipar as boolean) ?? ((asaasIntegration.dados_extras?.incluirTaxaAntecipacao as boolean) === true),
+        repassarTaxaAntecipacao: (asaasIntegration.dados_extras?.repassarTaxaAntecipacao as boolean) ?? ((asaasIntegration.dados_extras?.incluirTaxaAntecipacao as boolean) === true),
+        incluirTaxaAntecipacao: (asaasIntegration.dados_extras?.incluirTaxaAntecipacao as boolean) === true,
       }
     : null;
 

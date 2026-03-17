@@ -63,6 +63,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         ipReceiptUrl: c.ip_receipt_url || undefined,
         // Common fields
         dataPagamento: c.data_pagamento || undefined,
+        valorLiquido: (c as any).valor_liquido || undefined,
         createdAt: c.created_at,
         updatedAt: c.updated_at,
       }));

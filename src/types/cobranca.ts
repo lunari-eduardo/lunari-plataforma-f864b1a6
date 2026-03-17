@@ -27,6 +27,7 @@ export interface Cobranca {
   ipReceiptUrl?: string;
   // Common fields
   dataPagamento?: string;
+  valorLiquido?: number;
   createdAt: string;
   updatedAt: string;
 }
