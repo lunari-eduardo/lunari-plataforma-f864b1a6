@@ -96,6 +96,8 @@ Deno.serve(async (req) => {
       habilitarBoleto?: boolean;
       maxParcelas?: number;
       absorverTaxa?: boolean;
+      ireiAntecipar?: boolean;
+      repassarTaxaAntecipacao?: boolean;
       incluirTaxaAntecipacao?: boolean;
     };
 
@@ -103,12 +105,17 @@ Deno.serve(async (req) => {
       ? 'https://api.asaas.com'
       : 'https://api-sandbox.asaas.com';
 
-    // 4. Fetch real fees from Asaas API (same logic as asaas-fetch-fees)
-    let accountFees: AccountFees | null = null;
+    // Resolve fee settings with backward compat
+    const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
     const absorverTaxa = settings.absorverTaxa === true;
-    const incluirTaxaAntecipacao = settings.incluirTaxaAntecipacao !== false;
+    const ireiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
+    const repassarTaxaAntecipacao = ireiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
+    const repassarTaxas = !absorverTaxa;
 
-    if ((!absorverTaxa || incluirTaxaAntecipacao) && (settings.habilitarCartao !== false)) {
+    // 4. Fetch real fees from Asaas API
+    let accountFees: AccountFees | null = null;
+
+    if ((repassarTaxas || repassarTaxaAntecipacao) && (settings.habilitarCartao !== false)) {
       try {
         const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
           headers: { access_token: integracao.access_token },
@@ -122,7 +129,6 @@ Deno.serve(async (req) => {
           const anticipation = feesData.anticipation || {};
           const anticipationCC = anticipation.creditCard || {};
 
-          // Build standard tiers
           const oneInstallment = creditCard.oneInstallmentPercentage;
           const upToSix = creditCard.upToSixInstallmentsPercentage;
           const upToTwelve = creditCard.upToTwelveInstallmentsPercentage;
@@ -143,7 +149,6 @@ Deno.serve(async (req) => {
             tiers.push({ min: 1, max: 21, percentageFee: 2.99 });
           }
 
-          // Discount tiers
           let discountInfo: AccountFees['discount'] = undefined;
           const hasDiscount = creditCard.hasValidDiscount === true;
           const discountExpiration = creditCard.discountExpiration;
@@ -190,7 +195,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Return checkout data
+    // 5. Return checkout data with new settings format
     return new Response(
       JSON.stringify({
         success: true,
@@ -211,7 +216,10 @@ Deno.serve(async (req) => {
           habilitarBoleto: settings.habilitarBoleto === true,
           maxParcelas: settings.maxParcelas || 12,
           absorverTaxa,
-          incluirTaxaAntecipacao: settings.incluirTaxaAntecipacao !== false,
+          ireiAntecipar,
+          repassarTaxaAntecipacao,
+          // Legacy compat
+          incluirTaxaAntecipacao: repassarTaxaAntecipacao,
         },
         accountFees,
       }),

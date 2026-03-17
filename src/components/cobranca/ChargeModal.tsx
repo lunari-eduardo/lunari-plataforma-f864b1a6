@@ -9,7 +9,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CreditCard, History } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { CreditCard, History, Settings2 } from 'lucide-react';
 import { useCobranca } from '@/hooks/useCobranca';
 import { Cobranca } from '@/types/cobranca';
 import { ChargeLinkSection } from './ChargeLinkSection';
@@ -30,6 +31,16 @@ interface ChargeModalProps {
   valorSugerido: number;
 }
 
+interface AsaasSettingsState {
+  habilitarPix: boolean;
+  habilitarCartao: boolean;
+  habilitarBoleto: boolean;
+  maxParcelas: number;
+  absorverTaxa: boolean;
+  ireiAntecipar: boolean;
+  repassarTaxaAntecipacao: boolean;
+}
+
 export function ChargeModal({
   isOpen,
   onClose,
@@ -46,7 +57,12 @@ export function ChargeModal({
   const [activeTab, setActiveTab] = useState<'cobrar' | 'historico'>('cobrar');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
-  const [asaasSettings, setAsaasSettings] = useState<{ habilitarPix: boolean; habilitarCartao: boolean; habilitarBoleto: boolean; maxParcelas: number; absorverTaxa: boolean; incluirTaxaAntecipacao: boolean } | null>(null);
+  const [asaasSettings, setAsaasSettings] = useState<AsaasSettingsState | null>(null);
+
+  // Per-charge overrides
+  const [overrideRepassarTaxas, setOverrideRepassarTaxas] = useState(false);
+  const [overrideAntecipar, setOverrideAntecipar] = useState(false);
+  const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
 
   // Asaas sub-flow state
   const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
@@ -93,6 +109,9 @@ export function ChargeModal({
       setAsaasPixQrCode(null);
       setAsaasPixCopiaECola(null);
       setAsaasPixModalOpen(false);
+      setOverrideRepassarTaxas(false);
+      setOverrideAntecipar(false);
+      setOverrideRepassarAntecipacao(false);
     }
   }, [isOpen, valorSugerido]);
 
@@ -115,14 +134,25 @@ export function ChargeModal({
         .single();
       if (data?.dados_extras) {
         const d = data.dados_extras as Record<string, unknown>;
+        // Read new fields with backward compat
+        const legacyAntecipar = d.incluirTaxaAntecipacao === true;
+        const ireiAntecipar = (d.ireiAntecipar as boolean) ?? legacyAntecipar;
+        const repassarTaxaAntecipacao = (d.repassarTaxaAntecipacao as boolean) ?? legacyAntecipar;
+        const absorverTaxa = d.absorverTaxa === true;
+
         setAsaasSettings({
           habilitarPix: d.habilitarPix !== false,
           habilitarCartao: d.habilitarCartao !== false,
           habilitarBoleto: d.habilitarBoleto === true,
           maxParcelas: (d.maxParcelas as number) || 12,
-          absorverTaxa: d.absorverTaxa === true,
-          incluirTaxaAntecipacao: d.incluirTaxaAntecipacao !== false,
+          absorverTaxa,
+          ireiAntecipar,
+          repassarTaxaAntecipacao,
         });
+        // Pre-fill per-charge overrides from global settings
+        setOverrideRepassarTaxas(!absorverTaxa);
+        setOverrideAntecipar(ireiAntecipar);
+        setOverrideRepassarAntecipacao(ireiAntecipar ? repassarTaxaAntecipacao : false);
       }
     })();
   }, [selectedProvider]);
@@ -227,6 +257,13 @@ export function ChargeModal({
       // Get current user
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error('Não autenticado');
+
+      // Build per-charge overrides metadata
+      const chargeOverrides = {
+        repassarTaxasProcessamento: overrideRepassarTaxas,
+        anteciparParcelas: overrideAntecipar,
+        repassarTaxaAntecipacao: overrideAntecipar ? overrideRepassarAntecipacao : false,
+      };
 
       // Create cobrança record locally (no Asaas call yet — payment happens on checkout page)
       const { data: cobranca, error: insertError } = await supabase
@@ -391,6 +428,48 @@ export function ChargeModal({
                     onSelect={handleProviderSelect}
                   />
                 </div>
+
+                {/* Per-charge Asaas overrides */}
+                {showAsaasSection && asaasSettings && asaasMode === 'options' && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                        <Settings2 className="h-3 w-3" />
+                        Opções desta cobrança
+                      </Label>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="override-taxas" className="text-sm">Repassar taxas de processamento</Label>
+                          <p className="text-xs text-muted-foreground">Cliente paga as taxas de cartão</p>
+                        </div>
+                        <Switch id="override-taxas" checked={overrideRepassarTaxas} onCheckedChange={setOverrideRepassarTaxas} />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="override-antecipar" className="text-sm">Antecipar parcelas</Label>
+                          <p className="text-xs text-muted-foreground">Solicitar antecipação no Asaas</p>
+                        </div>
+                        <Switch id="override-antecipar" checked={overrideAntecipar} onCheckedChange={(v) => {
+                          setOverrideAntecipar(v);
+                          if (!v) setOverrideRepassarAntecipacao(false);
+                        }} />
+                      </div>
+
+                      {overrideAntecipar && (
+                        <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
+                          <div>
+                            <Label htmlFor="override-repassar-antecipacao" className="text-sm">Repassar antecipação</Label>
+                            <p className="text-xs text-muted-foreground">Inclui taxa no valor do cliente</p>
+                          </div>
+                          <Switch id="override-repassar-antecipacao" checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <Separator />
 
