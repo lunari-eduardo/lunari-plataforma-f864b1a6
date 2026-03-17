@@ -15,7 +15,9 @@ export interface AsaasCheckoutSettings {
   habilitarBoleto: boolean;
   maxParcelas: number;
   absorverTaxa: boolean;
-  incluirTaxaAntecipacao: boolean;
+  ireiAntecipar?: boolean;
+  repassarTaxaAntecipacao?: boolean;
+  incluirTaxaAntecipacao?: boolean;
 }
 
 interface AccountFees {
