@@ -541,7 +541,7 @@ export function ChargeModal({
                   onView={handleViewCharge}
                 />
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
 
           {/* Footer */}
