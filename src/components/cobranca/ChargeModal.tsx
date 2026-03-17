@@ -346,7 +346,7 @@ export function ChargeModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border"
+          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
           overlayClassName="backdrop-blur-sm bg-black/60 z-[59]"
         >
           <DialogHeader className="p-4 pb-2">
@@ -369,7 +369,7 @@ export function ChargeModal({
               </TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="max-h-[calc(90vh-140px)]">
+            <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-180px)]">
               <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
                 {/* Valor da cobrança */}
                 <div className="space-y-3">
