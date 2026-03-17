@@ -88,7 +88,9 @@ interface CheckoutData {
     habilitarBoleto: boolean;
     maxParcelas: number;
     absorverTaxa: boolean;
-    incluirTaxaAntecipacao: boolean;
+    ireiAntecipar?: boolean;
+    repassarTaxaAntecipacao?: boolean;
+    incluirTaxaAntecipacao?: boolean;
   };
   accountFees: AccountFees | null;
 }
