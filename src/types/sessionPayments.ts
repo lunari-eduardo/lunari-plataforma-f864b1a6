@@ -14,6 +14,10 @@ export interface SessionPaymentExtended {
   observacoes?: string;
   valorLiquido?: number;
   taxaTotal?: number;
+  dataCreditoPrevista?: string; // Data prevista de crédito na conta (D+32 cartão)
+  dataCreditoReal?: string; // Data real de crédito (preenchida no PAYMENT_RECEIVED)
+  statusRecebimento?: 'pendente' | 'confirmado' | 'recebido' | 'antecipado'; // Status do recebível
+  taxaAntecipacao?: number;
 }
 
 export interface PaymentAction {

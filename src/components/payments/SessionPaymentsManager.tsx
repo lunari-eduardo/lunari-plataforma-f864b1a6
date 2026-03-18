@@ -111,6 +111,20 @@ export function SessionPaymentsManager({
   // valor_pago is now managed entirely by DB triggers. No frontend sync needed.
 
   const getStatusBadge = (payment: SessionPaymentExtended) => {
+    // Se tem statusRecebimento (parcela Asaas), usar esse status
+    if (payment.statusRecebimento) {
+      switch (payment.statusRecebimento) {
+        case 'confirmado':
+          return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Confirmado</Badge>;
+        case 'recebido':
+          return <Badge className="bg-green-100 text-green-800 border-green-200">Recebido</Badge>;
+        case 'antecipado':
+          return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Antecipado</Badge>;
+        case 'pendente':
+          return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Pendente</Badge>;
+      }
+    }
+
     const { statusPagamento } = payment;
     if (statusPagamento === 'pago') {
       return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
@@ -315,6 +329,17 @@ export function SessionPaymentsManager({
                                 Parcela {payment.numeroParcela}/{payment.totalParcelas}
                               </div>
                             )}
+                            {payment.dataCreditoPrevista && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <DollarSign className="h-3 w-3 text-primary" />
+                                <span>
+                                  {payment.dataCreditoReal 
+                                    ? `Creditado: ${formatDateForDisplay(payment.dataCreditoReal)}`
+                                    : `Crédito: ${formatDateForDisplay(payment.dataCreditoPrevista)}`
+                                  }
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -325,6 +350,9 @@ export function SessionPaymentsManager({
                             <p className="text-xs text-muted-foreground mt-0.5">
                               Líquido: {formatCurrency(payment.valorLiquido)}
                               {payment.taxaTotal != null && ` (taxa: ${formatCurrency(payment.taxaTotal)})`}
+                              {payment.taxaAntecipacao != null && payment.taxaAntecipacao > 0 && (
+                                <span className="block">Antecipação: {formatCurrency(payment.taxaAntecipacao)}</span>
+                              )}
                             </p>
                           )}
                         </TableCell>
