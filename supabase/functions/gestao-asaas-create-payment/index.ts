@@ -355,26 +355,33 @@ Deno.serve(async (req) => {
       console.log(`🔗 Invoice URL: ${invoiceUrl}`);
     }
 
-    // 8. Save cobrança with valor_liquido
+    // 8. Save cobrança with installment data
     const tipoCobranca = billingType === 'UNDEFINED' ? 'link' : billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
 
-    // Calculate valor_liquido: netValue from Asaas or estimate
-    // For PIX: netValue usually available immediately. For credit card: comes via webhook.
+    // For PIX: netValue usually available immediately. For credit card: comes via webhook parcelas.
     const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
+
+    // Resolve installment data
+    const installmentCount = paymentBody.installmentCount as number | undefined;
+    const totalParcelas = installmentCount && installmentCount > 1 ? installmentCount : 1;
+    // Asaas returns installment group ID in paymentData.installment for installment payments
+    const asaasInstallmentId = paymentData.installment || null;
 
     const cobrancaData: Record<string, unknown> = {
       user_id: userId,
       cliente_id: clienteId,
       session_id: sessionId || null,
       valor: valor,
-      valor_liquido: valorLiquido,
+      valor_liquido: totalParcelas > 1 ? null : valorLiquido, // For installments, webhook fills this
       status: isConfirmed ? 'pago' : 'pendente',
       provedor: 'asaas',
       tipo_cobranca: tipoCobranca,
       descricao: descricao || 'Cobrança Asaas',
       mp_payment_id: paymentData.id,
       data_pagamento: isConfirmed ? new Date().toISOString() : null,
+      total_parcelas: totalParcelas,
+      asaas_installment_id: asaasInstallmentId,
     };
 
     if (billingType === 'PIX' && pixData) {
@@ -401,7 +408,6 @@ Deno.serve(async (req) => {
     }
 
     // Transaction creation is handled EXCLUSIVELY by the database trigger
-    // `ensure_transaction_on_cobranca_paid` when cobrancas.status changes to 'pago'.
 
     return new Response(
       JSON.stringify({
