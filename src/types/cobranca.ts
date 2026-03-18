@@ -1,5 +1,5 @@
 export type TipoCobranca = 'pix' | 'link';
-export type StatusCobranca = 'pendente' | 'pago' | 'cancelado' | 'expirado';
+export type StatusCobranca = 'pendente' | 'parcialmente_pago' | 'pago' | 'cancelado' | 'expirado';
 export type ProvedorPagamento = 'mercadopago' | 'infinitepay' | 'pix_manual' | 'asaas';
 
 export interface Cobranca {
@@ -30,6 +30,10 @@ export interface Cobranca {
   valorLiquido?: number;
   createdAt: string;
   updatedAt: string;
+  // Installment fields
+  totalParcelas?: number;
+  parcelasPagas?: number;
+  asaasInstallmentId?: string;
 }
 
 export interface CreateCobrancaRequest {

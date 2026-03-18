@@ -15,7 +15,6 @@ const STORAGE_LIMITS: Record<string, number> = {
   combo_completo: 20 * GB,
 };
 
-// Plans that grant subscription credits per cycle
 const PLAN_SUBSCRIPTION_CREDITS: Record<string, number> = {
   combo_pro_select2k: 2000,
   combo_completo: 2000,
@@ -52,7 +51,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
 
   const userId = subscription.user_id;
 
-  // 1. Cancel old subscription in Asaas
   if (subscription.asaas_subscription_id) {
     const cancelRes = await fetch(
       `${ASAAS_BASE_URL}/v3/subscriptions/${subscription.asaas_subscription_id}`,
@@ -63,7 +61,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
     }
   }
 
-  // 2. Mark old subscription as CANCELLED and clear pending
   await adminClient
     .from("subscriptions_asaas")
     .update({
@@ -73,7 +70,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
     })
     .eq("id", subscription.id);
 
-  // 3. Get customer ID
   const { data: account } = await adminClient
     .from("photographer_accounts")
     .select("asaas_customer_id")
@@ -85,7 +81,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
     return;
   }
 
-  // 4. Create new subscription in Asaas with downgraded plan
   const newPrices = PLAN_PRICES[newPlanType];
   if (!newPrices) {
     console.error("Unknown plan type for pricing:", newPlanType);
@@ -94,7 +89,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
   const newValueCents = newCycle === "YEARLY" ? newPrices.yearly : newPrices.monthly;
   const newValueReais = newValueCents / 100;
 
-  // Use creditCardToken from old subscription metadata for auto-renewal
   const creditCardToken = subscription.metadata?.creditCardToken;
 
   const nextDueDate = new Date();
@@ -127,7 +121,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
     return;
   }
 
-  // 5. Insert new subscription in DB
   await adminClient.from("subscriptions_asaas").insert({
     user_id: userId,
     asaas_customer_id: account.asaas_customer_id,
@@ -143,7 +136,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
     },
   });
 
-  // 6. Check if storage exceeds new limit → activate over-limit mode
   const newLimit = STORAGE_LIMITS[newPlanType] || 0;
 
   const { data: storageData } = await adminClient.rpc("get_transfer_storage_bytes", {
@@ -152,12 +144,11 @@ async function applyDowngrade(adminClient: any, subscription: any) {
   const storageUsed = (storageData as number) || 0;
 
   if (storageUsed > newLimit) {
-    console.log(`OVER LIMIT: ${storageUsed} bytes used, limit is ${newLimit} bytes. Activating over-limit mode.`);
+    console.log(`OVER LIMIT: ${storageUsed} bytes used, limit is ${newLimit} bytes.`);
 
     const deletionDate = new Date();
     deletionDate.setDate(deletionDate.getDate() + 30);
 
-    // Set account over-limit flags
     await adminClient
       .from("photographer_accounts")
       .update({
@@ -167,7 +158,6 @@ async function applyDowngrade(adminClient: any, subscription: any) {
       })
       .eq("user_id", userId);
 
-    // Expire all active Transfer galleries
     await adminClient
       .from("galerias")
       .update({ status: "expired_due_to_plan" })
@@ -176,11 +166,125 @@ async function applyDowngrade(adminClient: any, subscription: any) {
       .in("status", ["enviado", "rascunho"]);
 
     console.log(`All Transfer galleries expired. Deletion scheduled for ${deletionDate.toISOString()}`);
-  } else {
-    console.log(`Storage OK: ${storageUsed} bytes used, limit is ${newLimit} bytes.`);
   }
 
   console.log(`Downgrade complete: new subscription ${newSubData.id}, plan ${newPlanType}`);
+}
+
+async function checkAndLogEvent(
+  adminClient: any,
+  eventType: string,
+  paymentId: string | null,
+  installmentId: string | null,
+  payload: any
+): Promise<boolean> {
+  if (!paymentId) return false; // no payment ID = can't dedup
+
+  // Try insert with ON CONFLICT DO NOTHING
+  const { data, error } = await adminClient
+    .from("asaas_webhook_events")
+    .insert({
+      event_type: eventType,
+      payment_id: paymentId,
+      installment_id: installmentId,
+      payload,
+      processed: false,
+    })
+    .select("id, processed")
+    .maybeSingle();
+
+  if (error) {
+    // Unique constraint violation = duplicate
+    if (error.code === "23505") {
+      // Check if already processed
+      const { data: existing } = await adminClient
+        .from("asaas_webhook_events")
+        .select("processed")
+        .eq("event_type", eventType)
+        .eq("payment_id", paymentId)
+        .maybeSingle();
+
+      if (existing?.processed) {
+        console.log(`⏭️ Event ${eventType}/${paymentId} already processed, skipping`);
+        return true; // already processed
+      }
+      return false; // exists but not processed yet
+    }
+    console.error("Error logging webhook event:", error);
+    return false;
+  }
+
+  return false; // new event, not yet processed
+}
+
+async function markEventProcessed(adminClient: any, eventType: string, paymentId: string) {
+  await adminClient
+    .from("asaas_webhook_events")
+    .update({ processed: true })
+    .eq("event_type", eventType)
+    .eq("payment_id", paymentId);
+}
+
+async function findCobranca(adminClient: any, payment: any) {
+  // Try by asaas_installment_id first (installment group)
+  if (payment?.installment) {
+    const { data } = await adminClient
+      .from("cobrancas")
+      .select("id, status, valor, total_parcelas, asaas_installment_id")
+      .eq("asaas_installment_id", payment.installment)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  // Fallback: by mp_payment_id
+  if (payment?.id) {
+    const { data } = await adminClient
+      .from("cobrancas")
+      .select("id, status, valor, total_parcelas, asaas_installment_id")
+      .eq("mp_payment_id", payment.id)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  return null;
+}
+
+async function upsertParcela(
+  adminClient: any,
+  cobrancaId: string,
+  payment: any,
+  status: string
+) {
+  const valorBruto = payment.value || 0;
+  const valorLiquido = payment.netValue ?? null;
+  const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+
+  const parcelaData: Record<string, unknown> = {
+    cobranca_id: cobrancaId,
+    numero_parcela: payment.installmentNumber || 1,
+    asaas_payment_id: payment.id,
+    valor_bruto: valorBruto,
+    taxa_gateway: taxaGateway,
+    valor_liquido: valorLiquido,
+    status,
+    billing_type: payment.billingType || null,
+    data_vencimento: payment.dueDate || null,
+    data_pagamento: payment.paymentDate || payment.confirmedDate || null,
+    data_credito: payment.creditDate || null,
+    antecipado: payment.anticipated || false,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Upsert by asaas_payment_id
+  const { error } = await adminClient
+    .from("cobranca_parcelas")
+    .upsert(parcelaData, { onConflict: "asaas_payment_id" });
+
+  if (error) {
+    console.error(`Error upserting parcela ${payment.id}:`, error);
+  } else {
+    console.log(`✅ Parcela ${payment.id} → status=${status}, bruto=${valorBruto}, liquido=${valorLiquido}`);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -201,136 +305,161 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Log webhook
+    // Log webhook to webhook_logs
     await adminClient.from("webhook_logs").insert({
       provedor: "asaas",
       event_type: event,
       payload: body,
       headers: Object.fromEntries(req.headers.entries()),
-    }).then(() => {}, (err) => console.error("Log insert error:", err));
+    }).then(() => {}, (err: any) => console.error("Log insert error:", err));
 
-    // Handle payment events
-    if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
-      if (payment?.subscription) {
-        // Fetch subscription first to get billing_cycle
-        const { data: sub } = await adminClient
-          .from("subscriptions_asaas")
-          .select("*")
-          .eq("asaas_subscription_id", payment.subscription)
-          .single();
+    // ==========================================
+    // PAYMENT EVENTS
+    // ==========================================
 
-        // Calculate next period end from TODAY (not payment.dueDate which can be unreliable)
-        const today = new Date();
-        const cycleDays = sub?.billing_cycle === "YEARLY" ? 365 : 30;
-        const nextPeriodEnd = new Date(today);
-        nextPeriodEnd.setDate(nextPeriodEnd.getDate() + cycleDays);
+    const PAYMENT_EVENTS = [
+      "PAYMENT_CONFIRMED",
+      "PAYMENT_RECEIVED",
+      "PAYMENT_ANTICIPATED",
+      "PAYMENT_REFUNDED",
+      "PAYMENT_CHARGEBACK_REQUESTED",
+      "PAYMENT_DELETED",
+    ];
 
-        await adminClient
-          .from("subscriptions_asaas")
-          .update({
-            status: "ACTIVE",
-            next_due_date: nextPeriodEnd.toISOString().split("T")[0],
-          })
-          .eq("asaas_subscription_id", payment.subscription);
+    if (PAYMENT_EVENTS.includes(event) && payment) {
+      if (payment.subscription) {
+        // --- SUBSCRIPTION PAYMENTS (unchanged logic) ---
+        if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
+          const { data: sub } = await adminClient
+            .from("subscriptions_asaas")
+            .select("*")
+            .eq("asaas_subscription_id", payment.subscription)
+            .single();
 
-        console.log("Subscription activated:", payment.subscription, "next_due_date:", nextPeriodEnd.toISOString().split("T")[0]);
+          const today = new Date();
+          const cycleDays = sub?.billing_cycle === "YEARLY" ? 365 : 30;
+          const nextPeriodEnd = new Date(today);
+          nextPeriodEnd.setDate(nextPeriodEnd.getDate() + cycleDays);
 
-        if (sub?.pending_downgrade_plan) {
-          await applyDowngrade(adminClient, sub);
+          await adminClient
+            .from("subscriptions_asaas")
+            .update({
+              status: "ACTIVE",
+              next_due_date: nextPeriodEnd.toISOString().split("T")[0],
+            })
+            .eq("asaas_subscription_id", payment.subscription);
+
+          console.log("Subscription activated:", payment.subscription);
+
+          if (sub?.pending_downgrade_plan) {
+            await applyDowngrade(adminClient, sub);
+          }
         }
       } else {
-        // Non-subscription payment (gestão charges / checkout)
-        // Use installment ID (parent) if present, otherwise payment ID
-        const lookupId = payment?.installment || payment?.id;
-        if (lookupId) {
-          let netValue: number | null = payment?.netValue ?? null;
+        // --- NON-SUBSCRIPTION PAYMENTS (gestão/checkout charges) ---
 
-          // For installment payments, fetch total netValue from all installments
-          if (payment?.installment) {
-            const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-            if (ASAAS_API_KEY) {
-              try {
-                const installmentsRes = await fetch(
-                  `${ASAAS_BASE_URL}/v3/payments?installment=${payment.installment}`,
-                  { headers: { access_token: ASAAS_API_KEY } }
-                );
-                if (installmentsRes.ok) {
-                  const installmentsData = await installmentsRes.json();
-                  const allPayments = installmentsData?.data || [];
-                  if (allPayments.length > 0) {
-                    const totalNet = allPayments.reduce(
-                      (acc: number, p: any) => acc + (p.netValue || 0),
-                      0
-                    );
-                    netValue = Math.round(totalNet * 100) / 100;
-                    console.log(
-                      `Installment ${payment.installment}: ${allPayments.length} parcelas, totalNet=${netValue}`
-                    );
-                  }
-                } else {
-                  console.error(
-                    "Failed to fetch installments from Asaas:",
-                    await installmentsRes.text()
-                  );
-                  netValue = null; // fallback: trigger will use valor bruto
-                }
-              } catch (err) {
-                console.error("Error fetching installments:", err);
-                netValue = null;
-              }
+        // Idempotency check
+        const alreadyProcessed = await checkAndLogEvent(
+          adminClient,
+          event,
+          payment.id,
+          payment.installment || null,
+          body
+        );
+        if (alreadyProcessed) {
+          return new Response(JSON.stringify({ received: true, skipped: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Find the parent cobranca
+        const cobranca = await findCobranca(adminClient, payment);
+
+        if (!cobranca) {
+          console.log(`ℹ️ No cobrança found for payment ${payment.id} (installment=${payment.installment})`);
+        } else {
+          // Handle each event type
+          if (event === "PAYMENT_CONFIRMED") {
+            await upsertParcela(adminClient, cobranca.id, payment, "confirmado");
+          } else if (event === "PAYMENT_RECEIVED") {
+            await upsertParcela(adminClient, cobranca.id, payment, "recebido");
+          } else if (event === "PAYMENT_ANTICIPATED") {
+            // Update parcela with anticipation data
+            const valorBruto = payment.value || 0;
+            const valorLiquido = payment.netValue ?? null;
+            const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+            // For anticipated, the difference between expected net and actual net is anticipation fee
+            // We approximate: taxa_antecipacao comes from the difference
+
+            const { data: existingParcela } = await adminClient
+              .from("cobranca_parcelas")
+              .select("taxa_gateway, valor_liquido")
+              .eq("asaas_payment_id", payment.id)
+              .maybeSingle();
+
+            let taxaAntecipacao = 0;
+            if (existingParcela && existingParcela.valor_liquido != null && valorLiquido != null) {
+              // Anticipation fee = previous net - new net (anticipation reduces net value)
+              taxaAntecipacao = Math.max(0, Math.round((existingParcela.valor_liquido - valorLiquido) * 100) / 100);
             }
-          }
 
-          const { data: cobranca, error: cobrancaErr } = await adminClient
-            .from("cobrancas")
-            .update({
-              status: "pago",
-              data_pagamento: new Date().toISOString(),
-              valor_liquido: netValue,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("mp_payment_id", lookupId)
-            .eq("status", "pendente")
-            .select("id")
-            .maybeSingle();
+            const { error } = await adminClient
+              .from("cobranca_parcelas")
+              .upsert({
+                cobranca_id: cobranca.id,
+                numero_parcela: payment.installmentNumber || 1,
+                asaas_payment_id: payment.id,
+                valor_bruto: valorBruto,
+                taxa_gateway: existingParcela?.taxa_gateway ?? taxaGateway,
+                taxa_antecipacao: taxaAntecipacao,
+                valor_liquido: valorLiquido,
+                status: "antecipado",
+                billing_type: payment.billingType || null,
+                data_vencimento: payment.dueDate || null,
+                data_pagamento: payment.paymentDate || null,
+                data_credito: payment.creditDate || null,
+                antecipado: true,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: "asaas_payment_id" });
 
-          if (cobrancaErr) {
-            console.error("Error updating cobrança from webhook:", cobrancaErr);
-          } else if (cobranca) {
-            console.log(
-              `✅ Cobrança ${cobranca.id} marked as paid via webhook. netValue=${netValue}, lookupId=${lookupId}`
-            );
-          } else {
-            console.log(
-              `ℹ️ No pending cobrança found for lookupId=${lookupId} (payment.id=${payment?.id}, installment=${payment?.installment})`
-            );
+            if (error) {
+              console.error(`Error upserting anticipated parcela:`, error);
+            } else {
+              console.log(`✅ Parcela ${payment.id} anticipated, taxa_antecipacao=${taxaAntecipacao}`);
+            }
+          } else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
+            await upsertParcela(adminClient, cobranca.id, payment, "estornado");
+          } else if (event === "PAYMENT_DELETED") {
+            await upsertParcela(adminClient, cobranca.id, payment, "cancelado");
           }
+        }
+
+        // Mark event as processed
+        if (payment.id) {
+          await markEventProcessed(adminClient, event, payment.id);
         }
       }
     }
 
+    // ==========================================
+    // PAYMENT_OVERDUE (subscription only)
+    // ==========================================
     if (event === "PAYMENT_OVERDUE") {
       if (payment?.subscription) {
         await adminClient
           .from("subscriptions_asaas")
           .update({ status: "OVERDUE" })
           .eq("asaas_subscription_id", payment.subscription);
-
         console.log("Subscription overdue:", payment.subscription);
       }
     }
 
-    if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_DELETED") {
-      if (payment?.subscription) {
-        console.log("Payment refunded/deleted for subscription:", payment.subscription);
-      }
-    }
-
-    // Handle subscription events
+    // ==========================================
+    // SUBSCRIPTION EVENTS (unchanged)
+    // ==========================================
     if (event === "SUBSCRIPTION_DELETED" || event === "SUBSCRIPTION_INACTIVATED") {
       const subId = subscription?.id || body.id;
       if (subId) {
-        // Get subscription before updating status to know the plan
         const { data: sub } = await adminClient
           .from("subscriptions_asaas")
           .select("*")
@@ -344,7 +473,6 @@ Deno.serve(async (req) => {
 
         console.log("Subscription cancelled:", subId);
 
-        // Expire subscription credits if plan included them
         if (sub) {
           const subCredits = PLAN_SUBSCRIPTION_CREDITS[sub.plan_type];
           if (subCredits && subCredits > 0) {
@@ -370,7 +498,6 @@ Deno.serve(async (req) => {
           .eq("asaas_subscription_id", subId)
           .single();
 
-        // Calculate next period end
         const cycleDays = sub?.billing_cycle === "YEARLY" ? 365 : 30;
         const nextPeriodEnd = new Date();
         nextPeriodEnd.setDate(nextPeriodEnd.getDate() + cycleDays);
@@ -383,10 +510,9 @@ Deno.serve(async (req) => {
           })
           .eq("asaas_subscription_id", subId);
 
-        console.log("Subscription renewed:", subId, "next_due_date:", nextPeriodEnd.toISOString().split("T")[0]);
+        console.log("Subscription renewed:", subId);
 
         if (sub) {
-          // Renew subscription credits if plan includes them
           const subCredits = PLAN_SUBSCRIPTION_CREDITS[sub.plan_type];
           if (subCredits && subCredits > 0) {
             const { error: creditError } = await adminClient.rpc("renew_subscription_credits", {
@@ -400,7 +526,6 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Check for pending downgrade on renewal
           if (sub.pending_downgrade_plan) {
             await applyDowngrade(adminClient, sub);
           }
