@@ -28,6 +28,7 @@ const tipoLabels: Record<TipoCobranca, string> = {
 
 const statusBadges: Record<StatusCobranca, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
   pendente: { variant: 'secondary', label: 'Aguardando' },
+  parcialmente_pago: { variant: 'secondary', label: 'Parcial' },
   pago: { variant: 'default', label: 'Pago' },
   cancelado: { variant: 'outline', label: 'Cancelado' },
   expirado: { variant: 'destructive', label: 'Expirado' },
