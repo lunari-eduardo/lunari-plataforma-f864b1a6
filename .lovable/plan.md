@@ -1,81 +1,119 @@
 
-# Reestruturação Financeira Asaas — Parcelas Individuais ✅
 
-## Arquitetura
+# Diagnóstico: Valores de Taxas Não Aparecem no Modal de Pagamentos
 
-### Tabelas
+## Descobertas da Investigação
 
-```text
-cobrancas (existente, atualizada)
-├── valor (bruto total da venda)
-├── valor_liquido (soma dos net de parcelas pagas — trigger calcula)
-├── status: pendente | parcialmente_pago | pago | cancelado | expirado
-├── asaas_installment_id (ID do grupo de parcelas)
-├── total_parcelas (int, default 1)
-└── parcelas_pagas (int, trigger calcula)
+### 1. O Asaas Sandbox FORNECE netValue
+Confirmado nos payloads reais do webhook:
+```
+Parcela 1: value=50, netValue=48.52, creditDate=2026-04-20
+Parcela 2: value=50, netValue=48.52, creditDate=2026-05-21
+```
+Não precisa testar em produção. O sandbox envia todas as informações necessárias.
 
-cobranca_parcelas (NOVA)
-├── cobranca_id → cobrancas.id
-├── numero_parcela (1, 2, 3...)
-├── asaas_payment_id (UNIQUE — proteção contra webhook duplicado)
-├── valor_bruto (value do webhook)
-├── taxa_gateway (value - netValue)
-├── taxa_antecipacao (diferença de net em antecipação)
-├── valor_liquido (netValue do webhook)
-├── status: pendente | confirmado | recebido | antecipado | estornado | cancelado
-├── data_vencimento, data_pagamento, data_credito
-└── antecipado (boolean)
+### 2. A tabela `cobranca_parcelas` está VAZIA
+Apesar de os webhooks terem sido recebidos e marcados como `processed: true`, nenhuma parcela foi criada. O upsert está falhando silenciosamente, mas o código marca o evento como processado de qualquer forma.
 
-asaas_webhook_events (NOVA)
-├── event_type + payment_id (UNIQUE — idempotência)
-├── payload JSONB
-└── processed boolean
+### 3. Causa provável da falha do upsert
+O upsert usa `{ onConflict: "asaas_payment_id" }`, mas na primeira inserção não há conflito. O problema pode ser:
+- O supabase-js pode não retornar o erro corretamente sem `.select()` após o upsert
+- O `markEventProcessed` roda independente do sucesso do upsert
+
+### 4. O modal mostra R$100 (valor bruto) sem taxas
+O `SessionPaymentsManager` exibe `c.valor` (linha 291) da cobrança. Como `valor_liquido` na cobrança é `null` (parcelas não foram criadas, trigger não recalculou), não há informação de taxa para mostrar.
+
+### 5. O valor pendente é calculado corretamente
+O trigger `ensure_transaction_on_cobranca_paid` usa `NEW.valor` (bruto = R$100), que é correto para abater do pendente. O que falta é mostrar ao fotógrafo quanto recebeu de líquido.
+
+## Correções Necessárias
+
+### Etapa 1: Corrigir upsert no webhook (asaas-webhook/index.ts)
+
+1. Adicionar `.select()` ao upsert para garantir execução e captura de erro
+2. Só marcar evento como `processed` se o upsert teve sucesso
+3. Adicionar logs mais detalhados para debug
+
+```typescript
+// Em upsertParcela:
+const { data, error } = await adminClient
+  .from("cobranca_parcelas")
+  .upsert(parcelaData, { onConflict: "asaas_payment_id" })
+  .select()  // CRUCIAL: garante execução
+  .maybeSingle();
 ```
 
-### Triggers
-
-1. **`reconcile_cobranca_from_parcelas`**: Quando parcela muda status, recalcula na cobrança pai:
-   - parcelas_pagas = count(status IN confirmado/recebido/antecipado)
-   - valor_liquido = sum(valor_liquido) das parcelas pagas
-   - status = pago se todas pagas, parcialmente_pago se > 0
-
-2. **`ensure_transaction_on_cobranca_paid`**: Usa `NEW.valor` (bruto) para transação financeira — representa o que o cliente pagou.
-
-### Webhook (`asaas-webhook`)
-
-Eventos tratados para cobranças não-subscription:
-- **PAYMENT_CONFIRMED** → upsert parcela com status `confirmado`
-- **PAYMENT_RECEIVED** → upsert parcela com status `recebido`
-- **PAYMENT_ANTICIPATED** → upsert parcela com `antecipado=true`, calcula `taxa_antecipacao`
-- **PAYMENT_REFUNDED / CHARGEBACK** → marca parcela como `estornado`
-- **PAYMENT_DELETED** → marca parcela como `cancelado`
-
-Idempotência: `asaas_webhook_events` com dedup por (event_type, payment_id).
-
-### Edge Functions de Criação
-
-`gestao-asaas-create-payment` e `checkout-process-payment`:
-- Salvam `total_parcelas` e `asaas_installment_id` na cobrança
-- Para parcelamento: `valor_liquido = null` (webhook preenche via parcelas)
-
-### Frontend
-
-- `StatusCobranca` inclui `parcialmente_pago`
-- `ChargeHistory` mostra progresso: "Parcial (2/3)" ou "Pago (3/3)"
-- `Cobranca` type inclui `totalParcelas`, `parcelasPagas`, `asaasInstallmentId`
-
-## Fluxo
-
-```text
-1. Cobrança R$150 em 3x → total_parcelas=3, status=pendente
-
-2. PAYMENT_CONFIRMED (parcela 1) → parcela confirmada
-   trigger → parcelas_pagas=1, status=parcialmente_pago
-
-3. PAYMENT_CONFIRMED (parcela 2)
-   trigger → parcelas_pagas=2
-
-4. PAYMENT_CONFIRMED (parcela 3)
-   trigger → parcelas_pagas=3, status=pago
-   ensure_transaction → transação R$150 (bruto)
+```typescript
+// No bloco principal: só marcar processed se sucesso
+if (cobranca) {
+  let success = false;
+  // ... handle event ...
+  success = await upsertParcela(...);
+  if (success && payment.id) {
+    await markEventProcessed(adminClient, event, payment.id);
+  }
+}
 ```
+
+### Etapa 2: Reprocessar eventos existentes
+
+Resetar `processed = false` nos eventos que falharam para que possam ser reprocessados:
+```sql
+UPDATE asaas_webhook_events SET processed = false WHERE processed = true;
+```
+Ou criar as parcelas manualmente via SQL com os dados do payload já salvo.
+
+### Etapa 3: Exibir taxas no modal de pagamentos (SessionPaymentsManager)
+
+Quando a cobrança tem `valor_liquido`, mostrar na coluna Valor:
+- Valor bruto (o que o cliente pagou) — usado para cálculo de pendente
+- Valor líquido (o que o fotógrafo recebeu) — informativo
+- Taxa total — informativo
+
+No `useSessionPayments.ts`, ao converter cobranças pagas (linha 289-298):
+```typescript
+allPayments.push({
+  ...
+  valor: Number(c.valor) || 0,  // bruto - abate do pendente
+  valorLiquido: c.valor_liquido ? Number(c.valor_liquido) : undefined,
+  ...
+});
+```
+
+No `SessionPaymentsManager.tsx`, na coluna Valor:
+```tsx
+<span className="font-semibold">{formatCurrency(payment.valor)}</span>
+{payment.valorLiquido != null && payment.valorLiquido !== payment.valor && (
+  <p className="text-xs text-muted-foreground">
+    Líquido: {formatCurrency(payment.valorLiquido)}
+    {' '}(taxa: {formatCurrency(payment.valor - payment.valorLiquido)})
+  </p>
+)}
+```
+
+### Etapa 4: Suporte a pagamento único (1x) no webhook
+
+Para cobranças sem parcelamento (total_parcelas = 1), o webhook também deve criar uma parcela em `cobranca_parcelas` para manter a consistência. O código atual já faz isso (upsertParcela com numero_parcela=1), só precisa funcionar.
+
+## Arquivos Modificados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/functions/asaas-webhook/index.ts` | Adicionar `.select()` no upsert; condicionar `markEventProcessed` ao sucesso |
+| `src/hooks/useSessionPayments.ts` | Passar `valor_liquido` da cobrança para o payment |
+| `src/types/sessionPayments.ts` | Adicionar campo `valorLiquido` ao tipo |
+| `src/components/payments/SessionPaymentsManager.tsx` | Exibir valor líquido e taxa quando disponível |
+| Migration SQL | Reprocessar eventos pendentes |
+
+## Resultado Esperado
+
+```
+Modal de Pagamentos:
+  R$ 100,00
+  Líquido: R$ 97,04 (taxa: R$ 2,96)
+
+Pendente = valor_total - R$ 100,00 (bruto)
+```
+
+O valor bruto abate do pendente. O líquido e taxa são informativos.
+
