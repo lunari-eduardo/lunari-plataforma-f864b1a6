@@ -24,7 +24,8 @@ cobranca_parcelas (NOVA)
 ├── valor_liquido (netValue do webhook)
 ├── status: pendente | confirmado | recebido | antecipado | estornado | cancelado
 ├── data_vencimento, data_pagamento, data_credito
-└── antecipado (boolean)
+├── data_credito_real (preenchido no RECEIVED/ANTICIPATED)
+├── antecipado (boolean)
 
 asaas_webhook_events (NOVA)
 ├── event_type + payment_id (UNIQUE — idempotência)
@@ -39,7 +40,7 @@ asaas_webhook_events (NOVA)
    - valor_liquido = sum(valor_liquido) das parcelas pagas
    - status = pago se todas pagas, parcialmente_pago se > 0
 
-2. **`ensure_transaction_on_cobranca_paid`**: Usa `NEW.valor` (bruto) para transação financeira — representa o que o cliente pagou.
+2. **`ensure_transaction_on_cobranca_paid`**: Usa `NEW.valor` (bruto) para transação financeira — representa o que o cliente pagou. Resiliente a sessões deletadas (pula session_id se FK inválido).
 
 ### Webhook (`asaas-webhook`)
 
@@ -67,6 +68,24 @@ Idempotência: `asaas_webhook_events` com dedup por (event_type, payment_id).
 - `Cobranca` type inclui `totalParcelas`, `parcelasPagas`, `asaasInstallmentId`
 - Modal de pagamentos exibe valor líquido e taxas quando disponível
 
+## Correções Aplicadas (2026-03-18)
+
+### Bug 1: Checkout curto-circuitava parcelas
+**Problema**: checkout setava `status='pago'` diretamente para cartão de crédito.
+**Solução**: Sempre `status='pendente'`. Webhook + triggers determinam status final.
+
+### Bug 2: webhook_logs insert falhava silenciosamente
+**Problema**: Código usava coluna `event_type` que não existe na tabela `webhook_logs`.
+**Solução**: Removido `event_type` do insert, usando apenas `provedor`, `payload`, `headers`.
+
+### Bug 3: CHECK constraint bloqueava parcialmente_pago
+**Problema**: `cobrancas_status_check` não incluía `parcialmente_pago`.
+**Solução**: Constraint atualizado para incluir `parcialmente_pago`.
+
+### Bug 4: Trigger falhava com sessões deletadas
+**Problema**: `ensure_transaction_on_cobranca_paid` tentava inserir transação com `session_id` de sessão deletada, violando FK.
+**Solução**: Trigger agora verifica se sessão existe; se não, cria transação sem `session_id`.
+
 ## Fluxo
 
 ```text
@@ -85,12 +104,3 @@ Idempotência: `asaas_webhook_events` com dedup por (event_type, payment_id).
    trigger → parcelas_pagas=3, status=pago
    ensure_transaction → transação R$150 (bruto)
 ```
-
-## Correção Aplicada (2026-03-18)
-
-**Problema**: checkout setava `status='pago'` diretamente para cartão de crédito, curto-circuitando todo o sistema de parcelas e impedindo o registro de taxas.
-
-**Solução**: 
-- `checkout-process-payment` e `gestao-asaas-create-payment` agora SEMPRE criam cobrança com `status='pendente'`
-- Webhook `asaas-webhook` redesenhado com `.select()` no upsert e conditional `markEventProcessed`
-- Frontend usa `creditCardStatus` para feedback visual sem alterar estado financeiro
