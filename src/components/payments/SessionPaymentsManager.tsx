@@ -78,6 +78,8 @@ export function SessionPaymentsManager({
   const {
     payments,
     totalPago,
+    totalRecebido,
+    totalTaxas,
     totalAgendado,
     totalPendente,
     isLoading,
