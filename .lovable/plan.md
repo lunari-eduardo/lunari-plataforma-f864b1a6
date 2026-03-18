@@ -1,81 +1,94 @@
 
-# Reestruturação Financeira Asaas — Parcelas Individuais ✅
 
-## Arquitetura
+# Diagnóstico Completo: Taxas Não Registradas na Cobrança de R$50
 
-### Tabelas
+## Evidências do Banco de Dados
 
-```text
-cobrancas (existente, atualizada)
-├── valor (bruto total da venda)
-├── valor_liquido (soma dos net de parcelas pagas — trigger calcula)
-├── status: pendente | parcialmente_pago | pago | cancelado | expirado
-├── asaas_installment_id (ID do grupo de parcelas)
-├── total_parcelas (int, default 1)
-└── parcelas_pagas (int, trigger calcula)
+### Dados encontrados:
+- **Cobrança R$50** (8ba54358): `status=pago`, `valor_liquido=null`, `parcelas_pagas=0`
+- **Tabela `cobranca_parcelas`**: VAZIA — nenhuma parcela foi criada
+- **Transação financeira**: Registrou R$50,00 (bruto) — sem informação de taxas
+- **Webhook events**: Os eventos existem com `processed=false`, mas são da cobrança R$100 anterior. Para a cobrança R$50, os logs mostram "Cobrança already paid, skipping"
 
-cobranca_parcelas (NOVA)
-├── cobranca_id → cobrancas.id
-├── numero_parcela (1, 2, 3...)
-├── asaas_payment_id (UNIQUE — proteção contra webhook duplicado)
-├── valor_bruto (value do webhook)
-├── taxa_gateway (value - netValue)
-├── taxa_antecipacao (diferença de net em antecipação)
-├── valor_liquido (netValue do webhook)
-├── status: pendente | confirmado | recebido | antecipado | estornado | cancelado
-├── data_vencimento, data_pagamento, data_credito
-└── antecipado (boolean)
-
-asaas_webhook_events (NOVA)
-├── event_type + payment_id (UNIQUE — idempotência)
-├── payload JSONB
-└── processed boolean
+### Dados do Asaas (do webhook payload):
+```
+Parcela 1: value=25, netValue=24.14 → taxa=0.86
+Parcela 2: value=25, netValue=24.14 → taxa=0.86
+Total: bruto=50, líquido=48.28, taxa_total=1.72
 ```
 
-### Triggers
+O Asaas sandbox **fornece** as taxas corretamente. O problema é que o sistema não as registra.
 
-1. **`reconcile_cobranca_from_parcelas`**: Quando parcela muda status, recalcula na cobrança pai:
-   - parcelas_pagas = count(status IN confirmado/recebido/antecipado)
-   - valor_liquido = sum(valor_liquido) das parcelas pagas
-   - status = pago se todas pagas, parcialmente_pago se > 0
+## Causa Raiz
 
-2. **`ensure_transaction_on_cobranca_paid`**: Usa `NEW.valor` (bruto) para transação financeira — representa o que o cliente pagou.
+O problema está no `checkout-process-payment/index.ts`, **linha 301**:
 
-### Webhook (`asaas-webhook`)
-
-Eventos tratados para cobranças não-subscription:
-- **PAYMENT_CONFIRMED** → upsert parcela com status `confirmado`
-- **PAYMENT_RECEIVED** → upsert parcela com status `recebido`
-- **PAYMENT_ANTICIPATED** → upsert parcela com `antecipado=true`, calcula `taxa_antecipacao`
-- **PAYMENT_REFUNDED / CHARGEBACK** → marca parcela como `estornado`
-- **PAYMENT_DELETED** → marca parcela como `cancelado`
-
-Idempotência: `asaas_webhook_events` com dedup por (event_type, payment_id).
-
-### Edge Functions de Criação
-
-`gestao-asaas-create-payment` e `checkout-process-payment`:
-- Salvam `total_parcelas` e `asaas_installment_id` na cobrança
-- Para parcelamento: `valor_liquido = null` (webhook preenche via parcelas)
-
-### Frontend
-
-- `StatusCobranca` inclui `parcialmente_pago`
-- `ChargeHistory` mostra progresso: "Parcial (2/3)" ou "Pago (3/3)"
-- `Cobranca` type inclui `totalParcelas`, `parcelasPagas`, `asaasInstallmentId`
-
-## Fluxo
-
-```text
-1. Cobrança R$150 em 3x → total_parcelas=3, status=pendente
-
-2. PAYMENT_CONFIRMED (parcela 1) → parcela confirmada
-   trigger → parcelas_pagas=1, status=parcialmente_pago
-
-3. PAYMENT_CONFIRMED (parcela 2)
-   trigger → parcelas_pagas=2
-
-4. PAYMENT_CONFIRMED (parcela 3)
-   trigger → parcelas_pagas=3, status=pago
-   ensure_transaction → transação R$150 (bruto)
+```typescript
+status: isConfirmed ? 'pago' : 'pendente',
 ```
+
+Para cartão de crédito, o Asaas retorna `status: CONFIRMED` imediatamente. O checkout marca a cobrança como `pago` diretamente, o que:
+
+1. Dispara o trigger `ensure_transaction_on_cobranca_paid` → cria transação de R$50 (bruto)
+2. Quando o webhook chega depois, encontra a cobrança já `pago` e pula ("already paid, skipping")
+3. Nenhuma parcela é criada em `cobranca_parcelas`
+4. `valor_liquido` fica `null` — taxas nunca são registradas
+
+**Resumo: O checkout curto-circuita todo o sistema de parcelas.**
+
+## Correções
+
+### 1. `checkout-process-payment/index.ts` — Nunca setar `pago` diretamente
+
+```typescript
+// ANTES (linha 301):
+status: isConfirmed ? 'pago' : 'pendente',
+
+// DEPOIS:
+status: 'pendente', // Webhook + parcelas determinam o status final
+```
+
+Remover também a linha 309 (`data_pagamento`). O fluxo correto é:
+- Checkout cria cobrança com `status=pendente`
+- Webhook recebe PAYMENT_CONFIRMED → cria parcela
+- Trigger `reconcile_cobranca_from_parcelas` → atualiza status para `pago`
+- Trigger `ensure_transaction_on_cobranca_paid` → cria transação com valor bruto
+
+### 2. `asaas-webhook/index.ts` — Redeployar
+
+Os logs mostram que a versão deployada ainda tem código antigo ("Looking for gallery cobrança"). O código-fonte já está correto, mas precisa ser reimplantado.
+
+Também corrigir: quando `findCobranca` encontra uma cobrança com `status=pago`, **não deve pular** — deve criar a parcela mesmo assim (para registrar taxas). Remover qualquer short-circuit de "already paid".
+
+### 3. `gestao-asaas-create-payment` — Mesmo fix
+
+Verificar se também seta `status: 'pago'` diretamente e aplicar a mesma correção.
+
+### 4. Corrigir dados existentes
+
+Para as cobranças já marcadas como `pago` sem parcelas:
+- Usar os payloads salvos em `asaas_webhook_events` e `webhook_logs` para criar as parcelas retroativamente
+- Recalcular `valor_liquido` nas cobranças afetadas
+
+## Impacto Financeiro
+
+| | Sistema atual | Correto |
+|---|---|---|
+| Cobrança R$50 | Recebido: R$50,00 | Recebido: R$48,28 |
+| Taxa gateway | Não informada | R$1,72 |
+| Risco fiscal | **SIM** — receita inflada | Não |
+
+O fotógrafo está vendo que recebeu R$50, mas na realidade recebeu R$48,28. Isso causa:
+- Extrato financeiro incorreto
+- Diferença de R$1,72 sem explicação
+- Risco fiscal ao declarar receita maior que a real
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---|---|
+| `supabase/functions/checkout-process-payment/index.ts` | Nunca setar status='pago'; sempre 'pendente' |
+| `supabase/functions/gestao-asaas-create-payment/index.ts` | Mesmo fix |
+| `supabase/functions/asaas-webhook/index.ts` | Remover skip de "already paid"; redeployar |
+| SQL (dados) | Criar parcelas retroativas para cobranças existentes |
+
