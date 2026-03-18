@@ -292,8 +292,8 @@ Deno.serve(async (req) => {
     const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
 
     // Resolve installment data
-    const installmentCount = paymentBody.installmentCount as number | undefined;
-    const totalParcelas = installmentCount && installmentCount > 1 ? installmentCount : 1;
+    const resolvedInstallmentCount = paymentBody.installmentCount as number | undefined;
+    const totalParcelas = resolvedInstallmentCount && resolvedInstallmentCount > 1 ? resolvedInstallmentCount : 1;
     const asaasInstallmentId = paymentData.installment || null;
 
     const updateData: Record<string, unknown> = {
