@@ -357,10 +357,7 @@ Deno.serve(async (req) => {
 
     // 8. Save cobrança with installment data
     const tipoCobranca = billingType === 'UNDEFINED' ? 'link' : billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
-    const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-
-    // For PIX: netValue usually available immediately. For credit card: comes via webhook parcelas.
-    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
+    // Status always pendente — webhook handles transition via parcelas
 
     // Resolve installment data
     const installmentCount = paymentBody.installmentCount as number | undefined;
