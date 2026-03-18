@@ -1,0 +1,2 @@
+ALTER TABLE public.cobrancas DROP CONSTRAINT cobrancas_status_check;
+ALTER TABLE public.cobrancas ADD CONSTRAINT cobrancas_status_check CHECK (status = ANY (ARRAY['pendente'::text, 'parcialmente_pago'::text, 'pago'::text, 'cancelado'::text, 'expirado'::text]));
