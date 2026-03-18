@@ -32,6 +32,12 @@ const statusConfig: Record<StatusCobranca, {
     colorClass: 'text-muted-foreground',
     bgClass: 'bg-muted',
   },
+  parcialmente_pago: {
+    icon: <Loader2 className="h-5 w-5" />,
+    label: 'Pagamento parcial',
+    colorClass: 'text-amber-600',
+    bgClass: 'bg-amber-100',
+  },
   expirado: {
     icon: <AlertTriangle className="h-5 w-5" />,
     label: 'Cobrança expirada',

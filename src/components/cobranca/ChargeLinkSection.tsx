@@ -8,7 +8,7 @@ import { formatCurrency } from '@/utils/financialUtils';
 interface ChargeLinkSectionProps {
   valor: number;
   paymentLink?: string;
-  status?: 'pendente' | 'pago' | 'cancelado' | 'expirado';
+  status?: 'pendente' | 'parcialmente_pago' | 'pago' | 'cancelado' | 'expirado';
   loading?: boolean;
   checkingStatus?: boolean;
   onGenerate: () => void;

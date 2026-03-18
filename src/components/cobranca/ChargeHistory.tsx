@@ -28,6 +28,7 @@ const tipoLabels: Record<TipoCobranca, string> = {
 
 const statusBadges: Record<StatusCobranca, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
   pendente: { variant: 'secondary', label: 'Aguardando' },
+  parcialmente_pago: { variant: 'secondary', label: 'Parcial' },
   pago: { variant: 'default', label: 'Pago' },
   cancelado: { variant: 'outline', label: 'Cancelado' },
   expirado: { variant: 'destructive', label: 'Expirado' },
@@ -139,9 +140,18 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                   <TableCell>
                     <Badge 
                       variant={statusConfig.variant}
-                      className={cobranca.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' : ''}
+                      className={
+                        cobranca.status === 'pago' ? 'bg-green-100 text-green-800 border-green-200' :
+                        cobranca.status === 'parcialmente_pago' ? 'bg-amber-100 text-amber-800 border-amber-200' : ''
+                      }
                     >
                       {statusConfig.label}
+                      {cobranca.status === 'parcialmente_pago' && cobranca.totalParcelas && cobranca.totalParcelas > 1
+                        ? ` (${cobranca.parcelasPagas || 0}/${cobranca.totalParcelas})`
+                        : cobranca.status === 'pago' && cobranca.totalParcelas && cobranca.totalParcelas > 1
+                        ? ` (${cobranca.totalParcelas}/${cobranca.totalParcelas})`
+                        : ''
+                      }
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">

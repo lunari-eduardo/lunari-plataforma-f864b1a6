@@ -287,15 +287,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7. Update cobrança in database with valor_liquido
+    // 7. Update cobrança in database with installment data
     const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-    // For PIX: netValue is usually available immediately. For credit card: it comes via webhook.
     const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
+
+    // Resolve installment data
+    const installmentCount = paymentBody.installmentCount as number | undefined;
+    const totalParcelas = installmentCount && installmentCount > 1 ? installmentCount : 1;
+    const asaasInstallmentId = paymentData.installment || null;
 
     const updateData: Record<string, unknown> = {
       mp_payment_id: paymentData.id,
       status: isConfirmed ? 'pago' : 'pendente',
-      valor_liquido: valorLiquido,
+      valor_liquido: totalParcelas > 1 ? null : valorLiquido, // For installments, webhook fills this
+      total_parcelas: totalParcelas,
+      asaas_installment_id: asaasInstallmentId,
       updated_at: new Date().toISOString(),
     };
 

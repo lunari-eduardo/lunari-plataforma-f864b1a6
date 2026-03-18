@@ -66,6 +66,10 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         valorLiquido: (c as any).valor_liquido || undefined,
         createdAt: c.created_at,
         updatedAt: c.updated_at,
+        // Installment fields
+        totalParcelas: (c as any).total_parcelas || undefined,
+        parcelasPagas: (c as any).parcelas_pagas || undefined,
+        asaasInstallmentId: (c as any).asaas_installment_id || undefined,
       }));
 
       setCobrancas(mappedCobrancas);
