@@ -153,7 +153,6 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                         : ''
                       }
                     </Badge>
-                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
