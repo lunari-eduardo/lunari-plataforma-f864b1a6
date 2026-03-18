@@ -12,6 +12,8 @@ export interface SessionPaymentExtended {
   editavel: boolean;
   forma_pagamento?: string;
   observacoes?: string;
+  valorLiquido?: number;
+  taxaTotal?: number;
 }
 
 export interface PaymentAction {
