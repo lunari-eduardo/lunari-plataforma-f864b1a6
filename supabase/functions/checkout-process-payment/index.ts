@@ -288,8 +288,7 @@ Deno.serve(async (req) => {
     }
 
     // 7. Update cobrança in database with installment data
-    const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
+    // Status is always 'pendente' — webhook handles transition to 'pago' via parcelas
 
     // Resolve installment data
     const resolvedInstallmentCount = paymentBody.installmentCount as number | undefined;
