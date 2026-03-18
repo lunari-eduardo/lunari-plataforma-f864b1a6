@@ -739,6 +739,7 @@ export type Database = {
           cobranca_id: string
           created_at: string | null
           data_credito: string | null
+          data_credito_real: string | null
           data_pagamento: string | null
           data_vencimento: string | null
           id: string
@@ -757,6 +758,7 @@ export type Database = {
           cobranca_id: string
           created_at?: string | null
           data_credito?: string | null
+          data_credito_real?: string | null
           data_pagamento?: string | null
           data_vencimento?: string | null
           id?: string
@@ -775,6 +777,7 @@ export type Database = {
           cobranca_id?: string
           created_at?: string | null
           data_credito?: string | null
+          data_credito_real?: string | null
           data_pagamento?: string | null
           data_vencimento?: string | null
           id?: string

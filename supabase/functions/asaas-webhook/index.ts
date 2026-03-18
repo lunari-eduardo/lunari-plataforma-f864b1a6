@@ -311,7 +311,6 @@ Deno.serve(async (req) => {
     // Log webhook to webhook_logs
     await adminClient.from("webhook_logs").insert({
       provedor: "asaas",
-      event_type: event,
       payload: body,
       headers: Object.fromEntries(req.headers.entries()),
     }).then(() => {}, (err: any) => console.error("Log insert error:", err));
