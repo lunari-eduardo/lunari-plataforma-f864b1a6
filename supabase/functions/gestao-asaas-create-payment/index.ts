@@ -357,10 +357,7 @@ Deno.serve(async (req) => {
 
     // 8. Save cobrança with installment data
     const tipoCobranca = billingType === 'UNDEFINED' ? 'link' : billingType === 'CREDIT_CARD' ? 'link' : billingType === 'PIX' ? 'pix' : 'link';
-    const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-
-    // For PIX: netValue usually available immediately. For credit card: comes via webhook parcelas.
-    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
+    // Status always pendente — webhook handles transition via parcelas
 
     // Resolve installment data
     const installmentCount = paymentBody.installmentCount as number | undefined;
@@ -373,13 +370,13 @@ Deno.serve(async (req) => {
       cliente_id: clienteId,
       session_id: sessionId || null,
       valor: valor,
-      valor_liquido: totalParcelas > 1 ? null : valorLiquido, // For installments, webhook fills this
-      status: isConfirmed ? 'pago' : 'pendente',
+      valor_liquido: null, // Webhook fills this via cobranca_parcelas
+      status: 'pendente', // Always pendente — webhook + parcelas trigger will set 'pago'
       provedor: 'asaas',
       tipo_cobranca: tipoCobranca,
       descricao: descricao || 'Cobrança Asaas',
       mp_payment_id: paymentData.id,
-      data_pagamento: isConfirmed ? new Date().toISOString() : null,
+      data_pagamento: null, // Webhook sets this when parcelas are confirmed
       total_parcelas: totalParcelas,
       asaas_installment_id: asaasInstallmentId,
     };
@@ -414,7 +411,7 @@ Deno.serve(async (req) => {
         success: true,
         cobrancaId: cobranca?.id,
         asaasPaymentId: paymentData.id,
-        paid: isConfirmed,
+        paid: false, // Always false — webhook confirms payment
         creditCardStatus: billingType === 'CREDIT_CARD' ? paymentData.status : undefined,
         pixQrCode: pixData?.encodedImage,
         pixCopiaECola: pixData?.payload,

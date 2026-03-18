@@ -288,8 +288,7 @@ Deno.serve(async (req) => {
     }
 
     // 7. Update cobrança in database with installment data
-    const isConfirmed = paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED';
-    const valorLiquido = paymentData.netValue != null ? paymentData.netValue : (billingType === 'PIX' && valorFinal !== valor ? valor : null);
+    // Status is always 'pendente' — webhook handles transition to 'pago' via parcelas
 
     // Resolve installment data
     const resolvedInstallmentCount = paymentBody.installmentCount as number | undefined;
@@ -298,16 +297,12 @@ Deno.serve(async (req) => {
 
     const updateData: Record<string, unknown> = {
       mp_payment_id: paymentData.id,
-      status: isConfirmed ? 'pago' : 'pendente',
-      valor_liquido: totalParcelas > 1 ? null : valorLiquido, // For installments, webhook fills this
+      status: 'pendente', // Always pendente — webhook + parcelas trigger will set 'pago'
+      valor_liquido: null, // Webhook fills this via cobranca_parcelas
       total_parcelas: totalParcelas,
       asaas_installment_id: asaasInstallmentId,
       updated_at: new Date().toISOString(),
     };
-
-    if (isConfirmed) {
-      updateData.data_pagamento = new Date().toISOString();
-    }
 
     if (billingType === 'PIX' && pixData) {
       updateData.mp_qr_code_base64 = pixData.encodedImage;
@@ -326,7 +321,7 @@ Deno.serve(async (req) => {
         success: true,
         cobrancaId,
         asaasPaymentId: paymentData.id,
-        paid: isConfirmed,
+        paid: false, // Always false — webhook confirms payment
         creditCardStatus: billingType === 'CREDIT_CARD' ? paymentData.status : undefined,
         pixQrCode: pixData?.encodedImage,
         pixCopiaECola: pixData?.payload,
