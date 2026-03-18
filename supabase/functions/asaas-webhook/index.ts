@@ -278,13 +278,16 @@ async function upsertParcela(
   // Upsert by asaas_payment_id
   const { error } = await adminClient
     .from("cobranca_parcelas")
-    .upsert(parcelaData, { onConflict: "asaas_payment_id" });
+    .upsert(parcelaData, { onConflict: "asaas_payment_id" })
+    .select()
+    .maybeSingle();
 
   if (error) {
     console.error(`Error upserting parcela ${payment.id}:`, error);
-  } else {
-    console.log(`✅ Parcela ${payment.id} → status=${status}, bruto=${valorBruto}, liquido=${valorLiquido}`);
+    return false;
   }
+  console.log(`✅ Parcela ${payment.id} → status=${status}, bruto=${valorBruto}, liquido=${valorLiquido}`);
+  return true;
 }
 
 Deno.serve(async (req) => {

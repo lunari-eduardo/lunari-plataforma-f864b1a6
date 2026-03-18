@@ -286,15 +286,21 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               origem = 'mercadopago';
             }
 
+            const valorBruto = Number(c.valor) || 0;
+            const valorLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
+            const taxaTotal = valorLiq != null ? Math.round((valorBruto - valorLiq) * 100) / 100 : undefined;
+
             allPayments.push({
               id: paymentId,
-              valor: Number(c.valor) || 0,
+              valor: valorBruto,
               data: c.data_pagamento ? c.data_pagamento.split('T')[0] : '',
               tipo: 'pago',
               statusPagamento: 'pago',
               origem,
               editavel: false,
-              observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`
+              observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
+              valorLiquido: valorLiq,
+              taxaTotal,
             });
           }
         }
