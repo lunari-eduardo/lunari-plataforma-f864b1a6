@@ -350,6 +350,9 @@ export function SessionPaymentsManager({
                             <p className="text-xs text-muted-foreground mt-0.5">
                               Líquido: {formatCurrency(payment.valorLiquido)}
                               {payment.taxaTotal != null && ` (taxa: ${formatCurrency(payment.taxaTotal)})`}
+                              {payment.taxaAntecipacao != null && payment.taxaAntecipacao > 0 && (
+                                <span className="block">Antecipação: {formatCurrency(payment.taxaAntecipacao)}</span>
+                              )}
                             </p>
                           )}
                         </TableCell>
