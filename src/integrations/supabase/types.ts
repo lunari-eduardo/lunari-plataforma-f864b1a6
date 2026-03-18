@@ -673,11 +673,14 @@ export type Database = {
           descricao: string | null
           id: string
           session_id: string | null
+          taxa_antecipacao: number | null
+          taxa_gateway: number | null
           tipo: string
           updated_at: string | null
           updated_by: string | null
           user_id: string
           valor: number
+          valor_liquido: number | null
         }
         Insert: {
           cliente_id: string
@@ -687,11 +690,14 @@ export type Database = {
           descricao?: string | null
           id?: string
           session_id?: string | null
+          taxa_antecipacao?: number | null
+          taxa_gateway?: number | null
           tipo: string
           updated_at?: string | null
           updated_by?: string | null
           user_id: string
           valor: number
+          valor_liquido?: number | null
         }
         Update: {
           cliente_id?: string
@@ -701,11 +707,14 @@ export type Database = {
           descricao?: string | null
           id?: string
           session_id?: string | null
+          taxa_antecipacao?: number | null
+          taxa_gateway?: number | null
           tipo?: string
           updated_at?: string | null
           updated_by?: string | null
           user_id?: string
           valor?: number
+          valor_liquido?: number | null
         }
         Relationships: [
           {

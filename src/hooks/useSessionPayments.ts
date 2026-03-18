@@ -226,19 +226,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             // - Pagamentos pagos manuais que NÃO são de integração
             const canEdit = isPending || (!isGateway && isPaid);
             
+            // Calculate valor_liquido and taxas from transaction data
+            const valorBruto = Number(t.valor) || 0;
+            const valorLiq = t.valor_liquido != null ? Number(t.valor_liquido) : undefined;
+            const taxaGw = t.taxa_gateway != null ? Number(t.taxa_gateway) : 0;
+            const taxaAnt = t.taxa_antecipacao != null ? Number(t.taxa_antecipacao) : 0;
+            const taxaTotalCalc = taxaGw + taxaAnt;
+
             allPayments.push({
               id: paymentId,
-              valor: Number(t.valor) || 0,
+              valor: valorBruto,
               data: isPaid ? t.data_transacao : '',
               dataVencimento: t.data_vencimento || undefined,
-              createdAt: t.created_at || undefined, // Timestamp completo para ordenação
+              createdAt: t.created_at || undefined,
               tipo,
               statusPagamento,
               numeroParcela,
               totalParcelas,
               origem: isMercadoPago ? 'mercadopago' : isAsaas ? 'asaas' : isInfinitePay ? 'infinitepay' : 'supabase',
               editavel: canEdit,
-              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
+              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+              valorLiquido: valorLiq,
+              taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
+              taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
             });
           }
         }
@@ -467,10 +477,23 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Remove auto-save useEffect to prevent loops
   // Payments will be saved explicitly in each action function
 
-  // Calcular total pago (apenas pagamentos com status 'pago')
+  // Calcular total pago (bruto - o que o cliente pagou)
   const totalPago = payments
     .filter(p => p.statusPagamento === 'pago')
     .reduce((acc, p) => acc + p.valor, 0);
+
+  // Calcular total recebido (líquido - o que o fotógrafo recebeu de fato)
+  const totalRecebido = payments
+    .filter(p => p.statusPagamento === 'pago')
+    .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0);
+
+  // Calcular total de taxas
+  const totalTaxas = payments
+    .filter(p => p.statusPagamento === 'pago')
+    .reduce((acc, p) => {
+      const taxa = (p.taxaTotal || 0) + (p.taxaAntecipacao || 0);
+      return acc + taxa;
+    }, 0);
 
   // Calcular total agendado (com data de vencimento definida)
   const totalAgendado = payments
@@ -702,6 +725,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   return {
     payments,
     totalPago,
+    totalRecebido,
+    totalTaxas,
     totalAgendado,
     totalPendente,
     isLoading,
@@ -712,7 +737,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     markAsPaid,
     createInstallments,
     schedulePayment,
-    // Função para forçar sincronização manual se necessário
     syncToStorage: () => savePaymentsToStorage(sessionId, payments)
   };
 }
