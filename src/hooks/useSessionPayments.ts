@@ -715,6 +715,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   return {
     payments,
     totalPago,
+    totalRecebido,
+    totalTaxas,
     totalAgendado,
     totalPendente,
     isLoading,
@@ -725,7 +727,6 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     markAsPaid,
     createInstallments,
     schedulePayment,
-    // Função para forçar sincronização manual se necessário
     syncToStorage: () => savePaymentsToStorage(sessionId, payments)
   };
 }
