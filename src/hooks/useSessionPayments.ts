@@ -226,19 +226,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             // - Pagamentos pagos manuais que NÃO são de integração
             const canEdit = isPending || (!isGateway && isPaid);
             
+            // Calculate valor_liquido and taxas from transaction data
+            const valorBruto = Number(t.valor) || 0;
+            const valorLiq = t.valor_liquido != null ? Number(t.valor_liquido) : undefined;
+            const taxaGw = t.taxa_gateway != null ? Number(t.taxa_gateway) : 0;
+            const taxaAnt = t.taxa_antecipacao != null ? Number(t.taxa_antecipacao) : 0;
+            const taxaTotalCalc = taxaGw + taxaAnt;
+
             allPayments.push({
               id: paymentId,
-              valor: Number(t.valor) || 0,
+              valor: valorBruto,
               data: isPaid ? t.data_transacao : '',
               dataVencimento: t.data_vencimento || undefined,
-              createdAt: t.created_at || undefined, // Timestamp completo para ordenação
+              createdAt: t.created_at || undefined,
               tipo,
               statusPagamento,
               numeroParcela,
               totalParcelas,
               origem: isMercadoPago ? 'mercadopago' : isAsaas ? 'asaas' : isInfinitePay ? 'infinitepay' : 'supabase',
               editavel: canEdit,
-              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || ''
+              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+              valorLiquido: valorLiq,
+              taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
+              taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
             });
           }
         }
