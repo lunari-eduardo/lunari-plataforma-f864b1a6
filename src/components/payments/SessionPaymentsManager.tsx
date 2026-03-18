@@ -329,6 +329,17 @@ export function SessionPaymentsManager({
                                 Parcela {payment.numeroParcela}/{payment.totalParcelas}
                               </div>
                             )}
+                            {payment.dataCreditoPrevista && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <DollarSign className="h-3 w-3 text-primary" />
+                                <span>
+                                  {payment.dataCreditoReal 
+                                    ? `Creditado: ${formatDateForDisplay(payment.dataCreditoReal)}`
+                                    : `Crédito: ${formatDateForDisplay(payment.dataCreditoPrevista)}`
+                                  }
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
