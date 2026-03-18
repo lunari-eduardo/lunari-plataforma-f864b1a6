@@ -243,34 +243,38 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           }
         }
 
-        // 5. Processar cobranças pagas (MP e InfinitePay) - NÃO criar transações automaticamente
-        // As transações são criadas pelo WEBHOOK, não pelo frontend
-        // Isso evita loops de reload e duplicação
+        // 5. Processar cobranças pagas (MP, InfinitePay, Asaas)
+        // Para Asaas com parcelas, buscar cobranca_parcelas e exibir cada parcela individualmente
         if (cobrancasPagas && cobrancasPagas.length > 0) {
           console.log('✅ [useSessionPayments] Cobranças pagas encontradas:', cobrancasPagas.length);
 
-          for (const c of cobrancasPagas) {
-            // Gerar ID único baseado no provedor
-            let paymentId: string;
-            if (c.provedor === 'infinitepay') {
-              paymentId = `ip-${c.ip_transaction_nsu || c.id}`;
-            } else if (c.provedor === 'asaas') {
-              paymentId = `asaas-${c.id}`;
-            } else {
-              paymentId = `mp-${c.mp_payment_id || c.id}`;
+          // Buscar parcelas para cobranças Asaas com total_parcelas > 1
+          const asaasCobrancaIds = cobrancasPagas
+            .filter(c => c.provedor === 'asaas' && (c.total_parcelas || 1) > 1)
+            .map(c => c.id);
+
+          let parcelasMap: Record<string, any[]> = {};
+          if (asaasCobrancaIds.length > 0) {
+            const { data: parcelas } = await supabase
+              .from('cobranca_parcelas')
+              .select('*')
+              .in('cobranca_id', asaasCobrancaIds)
+              .order('numero_parcela', { ascending: true });
+
+            if (parcelas) {
+              for (const p of parcelas) {
+                if (!parcelasMap[p.cobranca_id]) parcelasMap[p.cobranca_id] = [];
+                parcelasMap[p.cobranca_id].push(p);
+              }
             }
-            
-            if (addedIds.has(paymentId)) continue;
-            
+          }
+
+          for (const c of cobrancasPagas) {
             // Verificar se já existe uma transação correspondente (by cobranca ID)
             const hasMatchingTransaction = transacoes?.some(t => 
               t.descricao?.includes(`cobranca ${c.id}`)
             );
-            
-            // Se já tem transação, pular (não duplicar no histórico)
             if (hasMatchingTransaction) continue;
-            
-            addedIds.add(paymentId);
 
             // Determinar label do provedor
             let provedorLabel: string;
@@ -285,6 +289,62 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               provedorLabel = `${c.tipo_cobranca === 'pix' ? 'Pix' : 'Link'} Mercado Pago`;
               origem = 'mercadopago';
             }
+
+            // Se Asaas com parcelas detalhadas, mostrar cada parcela individualmente
+            const parcelas = parcelasMap[c.id];
+            if (parcelas && parcelas.length > 0) {
+              for (const parcela of parcelas) {
+                const parcelaId = `asaas-parcela-${parcela.id}`;
+                if (addedIds.has(parcelaId)) continue;
+                addedIds.add(parcelaId);
+
+                const valorBruto = Number(parcela.valor_bruto) || 0;
+                const valorLiq = parcela.valor_liquido != null ? Number(parcela.valor_liquido) : undefined;
+                const taxaGw = parcela.taxa_gateway != null ? Number(parcela.taxa_gateway) : undefined;
+                const taxaAnt = parcela.taxa_antecipacao != null ? Number(parcela.taxa_antecipacao) : 0;
+                const taxaTotalCalc = (taxaGw || 0) + taxaAnt;
+
+                // Mapear status da parcela para statusRecebimento
+                let statusRecebimento: 'pendente' | 'confirmado' | 'recebido' | 'antecipado' = 'pendente';
+                if (parcela.status === 'confirmado') statusRecebimento = 'confirmado';
+                else if (parcela.status === 'recebido') statusRecebimento = 'recebido';
+                else if (parcela.status === 'antecipado') statusRecebimento = 'antecipado';
+
+                allPayments.push({
+                  id: parcelaId,
+                  valor: valorBruto,
+                  data: parcela.data_pagamento ? String(parcela.data_pagamento).split('T')[0] : (c.data_pagamento ? c.data_pagamento.split('T')[0] : ''),
+                  tipo: 'parcelado',
+                  statusPagamento: parcela.status === 'pendente' ? 'pendente' : 'pago',
+                  numeroParcela: parcela.numero_parcela,
+                  totalParcelas: c.total_parcelas || parcelas.length,
+                  origem,
+                  editavel: false,
+                  observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
+                  valorLiquido: valorLiq,
+                  taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
+                  taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
+                  dataCreditoPrevista: parcela.data_credito || undefined,
+                  dataCreditoReal: parcela.data_credito_real ? String(parcela.data_credito_real).split('T')[0] : undefined,
+                  statusRecebimento,
+                  createdAt: parcela.created_at || undefined,
+                });
+              }
+              continue; // Não adicionar a cobrança agregada
+            }
+
+            // Cobrança sem parcelas detalhadas (avulsa ou não-Asaas)
+            let paymentId: string;
+            if (c.provedor === 'infinitepay') {
+              paymentId = `ip-${c.ip_transaction_nsu || c.id}`;
+            } else if (c.provedor === 'asaas') {
+              paymentId = `asaas-${c.id}`;
+            } else {
+              paymentId = `mp-${c.mp_payment_id || c.id}`;
+            }
+            
+            if (addedIds.has(paymentId)) continue;
+            addedIds.add(paymentId);
 
             const valorBruto = Number(c.valor) || 0;
             const valorLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
