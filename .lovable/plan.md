@@ -1,81 +1,38 @@
 
-# Reestruturação Financeira Asaas — Parcelas Individuais ✅
 
-## Arquitetura
+# Fix: `checkout-process-payment` Boot Failure
 
-### Tabelas
+## Problem
 
-```text
-cobrancas (existente, atualizada)
-├── valor (bruto total da venda)
-├── valor_liquido (soma dos net de parcelas pagas — trigger calcula)
-├── status: pendente | parcialmente_pago | pago | cancelado | expirado
-├── asaas_installment_id (ID do grupo de parcelas)
-├── total_parcelas (int, default 1)
-└── parcelas_pagas (int, trigger calcula)
-
-cobranca_parcelas (NOVA)
-├── cobranca_id → cobrancas.id
-├── numero_parcela (1, 2, 3...)
-├── asaas_payment_id (UNIQUE — proteção contra webhook duplicado)
-├── valor_bruto (value do webhook)
-├── taxa_gateway (value - netValue)
-├── taxa_antecipacao (diferença de net em antecipação)
-├── valor_liquido (netValue do webhook)
-├── status: pendente | confirmado | recebido | antecipado | estornado | cancelado
-├── data_vencimento, data_pagamento, data_credito
-└── antecipado (boolean)
-
-asaas_webhook_events (NOVA)
-├── event_type + payment_id (UNIQUE — idempotência)
-├── payload JSONB
-└── processed boolean
+The edge function crashes on boot with:
+```
+Uncaught SyntaxError: Identifier 'installmentCount' has already been declared at line 248
 ```
 
-### Triggers
+`installmentCount` is destructured from the request body (line 39), then redeclared with `const` on line 295. Deno treats this as a duplicate declaration in the same scope, causing a boot failure. Since the function never boots, ALL payment requests fail with a CORS/network error.
 
-1. **`reconcile_cobranca_from_parcelas`**: Quando parcela muda status, recalcula na cobrança pai:
-   - parcelas_pagas = count(status IN confirmado/recebido/antecipado)
-   - valor_liquido = sum(valor_liquido) das parcelas pagas
-   - status = pago se todas pagas, parcialmente_pago se > 0
+## Fix
 
-2. **`ensure_transaction_on_cobranca_paid`**: Usa `NEW.valor` (bruto) para transação financeira — representa o que o cliente pagou.
+**File:** `supabase/functions/checkout-process-payment/index.ts`
 
-### Webhook (`asaas-webhook`)
+Line 295: rename the second variable to avoid the conflict:
 
-Eventos tratados para cobranças não-subscription:
-- **PAYMENT_CONFIRMED** → upsert parcela com status `confirmado`
-- **PAYMENT_RECEIVED** → upsert parcela com status `recebido`
-- **PAYMENT_ANTICIPATED** → upsert parcela com `antecipado=true`, calcula `taxa_antecipacao`
-- **PAYMENT_REFUNDED / CHARGEBACK** → marca parcela como `estornado`
-- **PAYMENT_DELETED** → marca parcela como `cancelado`
+```typescript
+// Before (line 295):
+const installmentCount = paymentBody.installmentCount as number | undefined;
 
-Idempotência: `asaas_webhook_events` com dedup por (event_type, payment_id).
-
-### Edge Functions de Criação
-
-`gestao-asaas-create-payment` e `checkout-process-payment`:
-- Salvam `total_parcelas` e `asaas_installment_id` na cobrança
-- Para parcelamento: `valor_liquido = null` (webhook preenche via parcelas)
-
-### Frontend
-
-- `StatusCobranca` inclui `parcialmente_pago`
-- `ChargeHistory` mostra progresso: "Parcial (2/3)" ou "Pago (3/3)"
-- `Cobranca` type inclui `totalParcelas`, `parcelasPagas`, `asaasInstallmentId`
-
-## Fluxo
-
-```text
-1. Cobrança R$150 em 3x → total_parcelas=3, status=pendente
-
-2. PAYMENT_CONFIRMED (parcela 1) → parcela confirmada
-   trigger → parcelas_pagas=1, status=parcialmente_pago
-
-3. PAYMENT_CONFIRMED (parcela 2)
-   trigger → parcelas_pagas=2
-
-4. PAYMENT_CONFIRMED (parcela 3)
-   trigger → parcelas_pagas=3, status=pago
-   ensure_transaction → transação R$150 (bruto)
+// After:
+const resolvedInstallmentCount = paymentBody.installmentCount as number | undefined;
 ```
+
+Update line 296 to use the new name:
+```typescript
+const totalParcelas = resolvedInstallmentCount && resolvedInstallmentCount > 1 ? resolvedInstallmentCount : 1;
+```
+
+Then redeploy the function.
+
+## Impact
+
+Only `checkout-process-payment` is affected. No other files need changes — this is a single-variable naming collision introduced during the last edit.
+
