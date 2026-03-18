@@ -373,13 +373,13 @@ Deno.serve(async (req) => {
       cliente_id: clienteId,
       session_id: sessionId || null,
       valor: valor,
-      valor_liquido: totalParcelas > 1 ? null : valorLiquido, // For installments, webhook fills this
-      status: isConfirmed ? 'pago' : 'pendente',
+      valor_liquido: null, // Webhook fills this via cobranca_parcelas
+      status: 'pendente', // Always pendente — webhook + parcelas trigger will set 'pago'
       provedor: 'asaas',
       tipo_cobranca: tipoCobranca,
       descricao: descricao || 'Cobrança Asaas',
       mp_payment_id: paymentData.id,
-      data_pagamento: isConfirmed ? new Date().toISOString() : null,
+      data_pagamento: null, // Webhook sets this when parcelas are confirmed
       total_parcelas: totalParcelas,
       asaas_installment_id: asaasInstallmentId,
     };
