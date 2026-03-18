@@ -1,59 +1,81 @@
 
+# Reestruturação Financeira Asaas — Parcelas Individuais ✅
 
-# Asaas Fee Management — Reorganizado ✅
+## Arquitetura
 
-## Mudanças Implementadas
+### Tabelas
 
-### 1. DB: `valor_liquido` na tabela `cobrancas`
-- Coluna `valor_liquido NUMERIC` adicionada
-- Trigger `ensure_transaction_on_cobranca_paid` usa `COALESCE(valor_liquido, valor)` para transações financeiras
-
-### 2. DB: `dados_extras` JSONB na tabela `cobrancas`
-- Coluna para armazenar overrides per-charge (repassarTaxasProcessamento, anteciparParcelas, repassarTaxaAntecipacao)
-
-### 3. Settings Reorganizados (`AsaasCard.tsx`)
 ```text
-Absorver taxas de processamento  [ON/OFF]
-Irei antecipar parcelas          [ON/OFF]
-  └── Repassar taxa de antecipação [ON/OFF]  (só aparece se antecipar=ON)
+cobrancas (existente, atualizada)
+├── valor (bruto total da venda)
+├── valor_liquido (soma dos net de parcelas pagas — trigger calcula)
+├── status: pendente | parcialmente_pago | pago | cancelado | expirado
+├── asaas_installment_id (ID do grupo de parcelas)
+├── total_parcelas (int, default 1)
+└── parcelas_pagas (int, trigger calcula)
+
+cobranca_parcelas (NOVA)
+├── cobranca_id → cobrancas.id
+├── numero_parcela (1, 2, 3...)
+├── asaas_payment_id (UNIQUE — proteção contra webhook duplicado)
+├── valor_bruto (value do webhook)
+├── taxa_gateway (value - netValue)
+├── taxa_antecipacao (diferença de net em antecipação)
+├── valor_liquido (netValue do webhook)
+├── status: pendente | confirmado | recebido | antecipado | estornado | cancelado
+├── data_vencimento, data_pagamento, data_credito
+└── antecipado (boolean)
+
+asaas_webhook_events (NOVA)
+├── event_type + payment_id (UNIQUE — idempotência)
+├── payload JSONB
+└── processed boolean
 ```
 
-### 4. Per-Charge Overrides (`ChargeModal.tsx`)
-- Toggles por cobrança: Repassar taxas, Antecipar, Repassar antecipação
-- Pre-preenchidos das configurações globais
-- **Overrides salvos em `cobrancas.dados_extras`** para checkout ler
+### Triggers
 
-### 5. Edge Functions Atualizadas
-- `gestao-asaas-create-payment`: valor_liquido = null para cartão (vem via webhook)
-- `checkout-process-payment`: lê overrides de `cobranca.dados_extras`, valor_liquido = null para cartão
-- `checkout-get-data`: retorna overrides per-charge sobre settings globais
-- `asaas-webhook`: **agora processa PAYMENT_CONFIRMED/RECEIVED para cobranças não-subscription**, atualiza status=pago + valor_liquido=netValue
+1. **`reconcile_cobranca_from_parcelas`**: Quando parcela muda status, recalcula na cobrança pai:
+   - parcelas_pagas = count(status IN confirmado/recebido/antecipado)
+   - valor_liquido = sum(valor_liquido) das parcelas pagas
+   - status = pago se todas pagas, parcialmente_pago se > 0
 
-### 6. Antecipação via API Asaas
-- Nova edge function `gestao-asaas-anticipation` com ações `simulate` e `request`
-- UI no `ChargeHistory.tsx`: botão de antecipação em cobranças pagas (link/cartão Asaas)
-- Dialog com simulação mostrando valor, taxa e líquido, com botão para confirmar
+2. **`ensure_transaction_on_cobranca_paid`**: Usa `NEW.valor` (bruto) para transação financeira — representa o que o cliente pagou.
 
-### 7. Frontend Fee Calc Atualizado
-- `AsaasCheckoutSection.tsx` e `PublicCheckout.tsx` usam nova lógica
-- `ChargeHistory.tsx` mostra valor líquido quando diferente do bruto
+### Webhook (`asaas-webhook`)
 
-## Fluxo de valor_liquido
+Eventos tratados para cobranças não-subscription:
+- **PAYMENT_CONFIRMED** → upsert parcela com status `confirmado`
+- **PAYMENT_RECEIVED** → upsert parcela com status `recebido`
+- **PAYMENT_ANTICIPATED** → upsert parcela com `antecipado=true`, calcula `taxa_antecipacao`
+- **PAYMENT_REFUNDED / CHARGEBACK** → marca parcela como `estornado`
+- **PAYMENT_DELETED** → marca parcela como `cancelado`
+
+Idempotência: `asaas_webhook_events` com dedup por (event_type, payment_id).
+
+### Edge Functions de Criação
+
+`gestao-asaas-create-payment` e `checkout-process-payment`:
+- Salvam `total_parcelas` e `asaas_installment_id` na cobrança
+- Para parcelamento: `valor_liquido = null` (webhook preenche via parcelas)
+
+### Frontend
+
+- `StatusCobranca` inclui `parcialmente_pago`
+- `ChargeHistory` mostra progresso: "Parcial (2/3)" ou "Pago (3/3)"
+- `Cobranca` type inclui `totalParcelas`, `parcelasPagas`, `asaasInstallmentId`
+
+## Fluxo
 
 ```text
-1. Fotógrafo cria cobrança (absorverTaxa=true)
-   → cobrancas.valor = 100, dados_extras = {overrides...}
-   → valor_liquido = NULL (desconhecido até Asaas confirmar)
+1. Cobrança R$150 em 3x → total_parcelas=3, status=pendente
 
-2. Cliente paga via checkout
-   → checkout-process-payment cria pagamento Asaas por R$100
-   → Asaas retorna paymentId, status=PENDING
-   → cobrancas.status = 'pendente'
+2. PAYMENT_CONFIRMED (parcela 1) → parcela confirmada
+   trigger → parcelas_pagas=1, status=parcialmente_pago
 
-3. Asaas confirma pagamento → webhook dispara
-   → PAYMENT_CONFIRMED com payment.netValue = 94.56
-   → Webhook atualiza: status='pago', valor_liquido=94.56
-   → DB trigger cria transação com R$94.56 (líquido)
+3. PAYMENT_CONFIRMED (parcela 2)
+   trigger → parcelas_pagas=2
 
-4. Fotógrafo vê R$94.56 no histórico financeiro ✓
+4. PAYMENT_CONFIRMED (parcela 3)
+   trigger → parcelas_pagas=3, status=pago
+   ensure_transaction → transação R$150 (bruto)
 ```
