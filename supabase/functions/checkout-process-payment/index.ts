@@ -321,7 +321,7 @@ Deno.serve(async (req) => {
         success: true,
         cobrancaId,
         asaasPaymentId: paymentData.id,
-        paid: isConfirmed,
+        paid: false, // Always false — webhook confirms payment
         creditCardStatus: billingType === 'CREDIT_CARD' ? paymentData.status : undefined,
         pixQrCode: pixData?.encodedImage,
         pixCopiaECola: pixData?.payload,
