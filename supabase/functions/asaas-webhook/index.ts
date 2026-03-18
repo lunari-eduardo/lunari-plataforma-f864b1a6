@@ -381,18 +381,18 @@ Deno.serve(async (req) => {
         if (!cobranca) {
           console.log(`ℹ️ No cobrança found for payment ${payment.id} (installment=${payment.installment})`);
         } else {
+          let upsertSuccess = false;
+
           // Handle each event type
           if (event === "PAYMENT_CONFIRMED") {
-            await upsertParcela(adminClient, cobranca.id, payment, "confirmado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "confirmado");
           } else if (event === "PAYMENT_RECEIVED") {
-            await upsertParcela(adminClient, cobranca.id, payment, "recebido");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "recebido");
           } else if (event === "PAYMENT_ANTICIPATED") {
             // Update parcela with anticipation data
             const valorBruto = payment.value || 0;
             const valorLiquido = payment.netValue ?? null;
             const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
-            // For anticipated, the difference between expected net and actual net is anticipation fee
-            // We approximate: taxa_antecipacao comes from the difference
 
             const { data: existingParcela } = await adminClient
               .from("cobranca_parcelas")
@@ -402,7 +402,6 @@ Deno.serve(async (req) => {
 
             let taxaAntecipacao = 0;
             if (existingParcela && existingParcela.valor_liquido != null && valorLiquido != null) {
-              // Anticipation fee = previous net - new net (anticipation reduces net value)
               taxaAntecipacao = Math.max(0, Math.round((existingParcela.valor_liquido - valorLiquido) * 100) / 100);
             }
 
@@ -423,23 +422,26 @@ Deno.serve(async (req) => {
                 data_credito: payment.creditDate || null,
                 antecipado: true,
                 updated_at: new Date().toISOString(),
-              }, { onConflict: "asaas_payment_id" });
+              }, { onConflict: "asaas_payment_id" })
+              .select()
+              .maybeSingle();
 
             if (error) {
               console.error(`Error upserting anticipated parcela:`, error);
             } else {
               console.log(`✅ Parcela ${payment.id} anticipated, taxa_antecipacao=${taxaAntecipacao}`);
+              upsertSuccess = true;
             }
           } else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
-            await upsertParcela(adminClient, cobranca.id, payment, "estornado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "estornado");
           } else if (event === "PAYMENT_DELETED") {
-            await upsertParcela(adminClient, cobranca.id, payment, "cancelado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "cancelado");
           }
-        }
 
-        // Mark event as processed
-        if (payment.id) {
-          await markEventProcessed(adminClient, event, payment.id);
+          // Only mark as processed if upsert succeeded
+          if (upsertSuccess && payment.id) {
+            await markEventProcessed(adminClient, event, payment.id);
+          }
         }
       }
     }
