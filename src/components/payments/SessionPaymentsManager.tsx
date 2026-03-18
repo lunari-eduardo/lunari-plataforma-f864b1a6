@@ -221,14 +221,21 @@ export function SessionPaymentsManager({
       {/* Financial Summary */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 text-center">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4 text-center">
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
               <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
             </div>
             <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pago</p>
+              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
               <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
+            </div>
+            <div>
+              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Recebido</p>
+              <p className="font-bold text-emerald-700 text-xs sm:text-sm">{formatCurrency(totalRecebido)}</p>
+              {totalTaxas > 0 && (
+                <p className="text-2xs text-red-500">Taxas: -{formatCurrency(totalTaxas)}</p>
+              )}
             </div>
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Agendado</p>
