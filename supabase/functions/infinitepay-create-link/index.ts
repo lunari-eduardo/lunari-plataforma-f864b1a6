@@ -1,3 +1,15 @@
+/**
+ * CONTRATO COMPARTILHADO — NÃO MODIFICAR SEM COORDENAÇÃO
+ * Esta função é chamada internamente por confirm-selection usando SUPABASE_SERVICE_ROLE_KEY (não JWT de usuário).
+ * 
+ * REGRAS IMUTÁVEIS:
+ * 1. NÃO adicionar verificação de JWT (auth.getUser)
+ * 2. userId DEVE ser aceito no body da request
+ * 3. verify_jwt DEVE ser false no config.toml
+ * 4. Autenticação do fotógrafo é via userId no body
+ * 
+ * Projetos: Gallery (Select) + Gestão
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -11,6 +23,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface CreateLinkRequest {
+  userId: string;
   clienteId: string;
   sessionId?: string;
   valor: number;
@@ -18,33 +31,19 @@ interface CreateLinkRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get auth user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Não autorizado");
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    // Validate JWT and get user
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      throw new Error("Usuário não autenticado");
+
+    // userId vem do body (chamada interna via Service Role Key)
+    const { userId, clienteId, sessionId, valor, descricao }: CreateLinkRequest = await req.json();
+
+    if (!userId) {
+      throw new Error("userId é obrigatório no body");
     }
-
-    const userId = user.id;
-
-    // Parse request body
-    const { clienteId, sessionId, valor, descricao }: CreateLinkRequest = await req.json();
-
     if (!clienteId || !valor) {
       throw new Error("clienteId e valor são obrigatórios");
     }
@@ -69,10 +68,9 @@ serve(async (req) => {
       throw new Error("Handle InfinitePay não encontrado");
     }
 
-    // NORMALIZE session_id: buscar o session_id TEXTO correto da tabela
+    // NORMALIZE session_id
     let normalizedSessionId: string | null = null;
     if (sessionId) {
-      // Primeiro tentar buscar pelo session_id texto (formato workflow-*)
       const { data: byText } = await supabase
         .from("clientes_sessoes")
         .select("session_id")
@@ -81,9 +79,7 @@ serve(async (req) => {
       
       if (byText?.session_id) {
         normalizedSessionId = byText.session_id;
-        console.log(`[infinitepay-create-link] Found by text session_id: ${normalizedSessionId}`);
       } else {
-        // Fallback: buscar pelo UUID
         const { data: byUuid } = await supabase
           .from("clientes_sessoes")
           .select("session_id")
@@ -92,22 +88,20 @@ serve(async (req) => {
         
         if (byUuid?.session_id) {
           normalizedSessionId = byUuid.session_id;
-          console.log(`[infinitepay-create-link] Found by UUID, text session_id: ${normalizedSessionId}`);
         } else {
-          // Sessão não existe - NÃO usar sessionId original
           console.warn(`[infinitepay-create-link] Session not found for: ${sessionId}`);
           normalizedSessionId = null;
         }
       }
     }
 
-    // Create cobranca record first to get ID for order_nsu
+    // Create cobranca record
     const { data: cobranca, error: cobError } = await supabase
       .from("cobrancas")
       .insert({
         user_id: userId,
         cliente_id: clienteId,
-        session_id: normalizedSessionId, // USAR session_id NORMALIZADO
+        session_id: normalizedSessionId,
         valor: valor,
         descricao: descricao || "Pagamento via InfinitePay",
         tipo_cobranca: "link",
@@ -124,10 +118,8 @@ serve(async (req) => {
 
     console.log(`[infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}`);
 
-    // Create InfinitePay checkout link
     const valorEmCentavos = Math.round(valor * 100);
     const webhookUrl = `${SUPABASE_URL}/functions/v1/infinitepay-webhook`;
-    // NÃO usar redirect_url - InfinitePay tem sua própria tela de confirmação
 
     const infinitePayPayload = {
       handle: handle,
@@ -138,35 +130,28 @@ serve(async (req) => {
           description: descricao || "Serviço fotográfico",
         },
       ],
-      order_nsu: cobranca.id, // UUID da cobrança como NSU
+      order_nsu: cobranca.id,
       webhook_url: webhookUrl,
-      // redirect_url REMOVIDO - InfinitePay usa tela própria de confirmação
     };
 
     console.log(`[infinitepay-create-link] Calling InfinitePay API with payload:`, JSON.stringify(infinitePayPayload));
 
     const ipResponse = await fetch(INFINITEPAY_API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(infinitePayPayload),
     });
 
     if (!ipResponse.ok) {
       const errorText = await ipResponse.text();
       console.error(`[infinitepay-create-link] InfinitePay API error: ${ipResponse.status} - ${errorText}`);
-      
-      // Delete the cobranca since we couldn't create the link
       await supabase.from("cobrancas").delete().eq("id", cobranca.id);
-      
       throw new Error(`Erro na API InfinitePay: ${ipResponse.status}`);
     }
 
     const ipData = await ipResponse.json();
     console.log(`[infinitepay-create-link] InfinitePay response:`, JSON.stringify(ipData));
 
-    // Extract checkout URL from response
     const checkoutUrl = ipData.checkout_url || ipData.url || ipData.link;
     
     if (!checkoutUrl) {
@@ -175,19 +160,14 @@ serve(async (req) => {
       throw new Error("URL de checkout não retornada pela InfinitePay");
     }
 
-    // Update cobranca with checkout URL
-    const { error: updateError } = await supabase
+    await supabase
       .from("cobrancas")
       .update({
         ip_checkout_url: checkoutUrl,
         ip_order_nsu: cobranca.id,
-        mp_payment_link: checkoutUrl, // Also store in legacy field for compatibility
+        mp_payment_link: checkoutUrl,
       })
       .eq("id", cobranca.id);
-
-    if (updateError) {
-      console.error("[infinitepay-create-link] Error updating cobranca:", updateError);
-    }
 
     console.log(`[infinitepay-create-link] Success! Checkout URL: ${checkoutUrl}`);
 
@@ -198,24 +178,17 @@ serve(async (req) => {
         checkoutUrl: checkoutUrl,
         provedor: "infinitepay",
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
 
   } catch (error) {
     console.error("[infinitepay-create-link] Error:", error);
-    
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : "Erro desconhecido",
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
     );
   }
 });

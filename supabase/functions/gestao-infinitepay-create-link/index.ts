@@ -1,3 +1,7 @@
+/**
+ * FUNÇÃO EXCLUSIVA DO GESTÃO — Usa JWT de usuário (auth.getUser).
+ * NÃO é chamada pelo Gallery. Para Gallery, use infinitepay-create-link (contrato compartilhado).
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
