@@ -1,83 +1,108 @@
 
 
-# Investigação: Bug de valor_pago = 230 (deveria ser 245 ou 115)
+# Plano: Registrar Taxas de Gateway no Mercado Pago + Preparar Gallery
 
-## Causa Raiz Encontrada: Dupla Criação de Transação no InfinitePay Webhook
+## Situação Atual
 
-O webhook do InfinitePay cria transações **DUAS VEZES** para cada pagamento:
+| Provedor | Registra `valor_liquido`? | Registra `taxa_gateway`? |
+|----------|--------------------------|--------------------------|
+| Asaas | Sim (via `netValue` na API) | Sim (calculado no webhook) |
+| InfinitePay | Não | Não |
+| Mercado Pago | Não | Não |
 
-1. **Linha 270-280**: Webhook atualiza `cobrancas.status = 'pago'` → dispara trigger `ensure_transaction_on_cobranca_paid` → cria transação com descrição `Pagamento InfinitePay - cobranca <UUID> ... [auto-reconciled]`
+O trigger `ensure_transaction_on_cobranca_paid` já sabe ler `valor_liquido` da `cobrancas` e calcular taxas automaticamente. O problema é que **nenhum webhook fora o Asaas** grava esses campos na `cobrancas`.
 
-2. **Linha 339-349**: Webhook cria **OUTRA** transação com descrição `Pagamento InfinitePay (Pix) - 5 fotos extras...` (formato diferente, SEM o ID da cobrança)
+## O que a API do Mercado Pago fornece
 
-O trigger de dedup verifica `descricao ILIKE '%cobranca <id>%'`, mas a transação criada pelo webhook (passo 2) usa um formato diferente. Resultado: duas transações de R$115 → `recompute_session_paid` soma 115+115 = **230**.
+No GET `/v1/payments/{id}`, a resposta inclui:
 
-Posteriormente, uma das transações duplicadas foi removida (provavelmente por limpeza manual ou migration), mas sem disparar o trigger de recompute, deixando `valor_pago = 230` congelado.
-
-### Evidências
-
-```text
-Sessão: workflow-1772463411892-lznoi6eru8k
-  valor_total:  245 (130 base + 115 extras)
-  valor_pago:   230 (deveria ser 115 — única transação existente)
-  Transações:   1 × R$115 [auto-reconciled]
-  SUM real:     115
-  
-Cobrança: 0cbec877 (InfinitePay, status=pago, valor=115, PIX)
-  valor_liquido: NULL (PIX não tem taxa)
+```json
+{
+  "transaction_amount": 100.00,
+  "transaction_details": {
+    "net_received_amount": 95.01
+  },
+  "fee_details": [
+    { "type": "mercadopago_fee", "amount": 4.99 }
+  ]
+}
 ```
 
-### Pagamento base (R$130) NUNCA foi registrado
+- `transaction_details.net_received_amount` → valor líquido
+- `fee_details` → array com detalhes das taxas (inclui PIX e cartão)
 
-O fotógrafo não registrou o pagamento do pacote base para esta sessão via `clientes_transacoes`. Isso é um problema separado — o saldo correto deveria ser: R$115 pago, R$130 pendente.
+## Mudanças
 
-## Plano de Correção
+### 1. Webhook Mercado Pago — Gravar taxas na cobrança
 
-### 1. Corrigir dados desta sessão (imediato)
+No `mercadopago-webhook/index.ts`, quando o pagamento é `approved`, extrair dados de taxas da resposta da API e gravá-los na `cobrancas`:
 
-Migration para forçar recalcule de `valor_pago` baseado nas transações reais:
+```typescript
+// Após consultar payment na API do MP
+const netReceived = payment.transaction_details?.net_received_amount ?? null;
+const feeAmount = payment.fee_details?.reduce(
+  (sum, f) => sum + (f.amount || 0), 0
+) ?? 0;
 
-```sql
-SELECT public.recompute_session_paid('workflow-1772463411892-lznoi6eru8k');
+// No UPDATE da cobrança
+.update({
+  status: newStatus,
+  mp_payment_id: String(paymentId),
+  data_pagamento: ...,
+  valor_liquido: netReceived,       // ← NOVO
+  updated_at: ...,
+})
 ```
 
-Isso vai setar valor_pago = 115 (a única transação existente).
+O trigger `ensure_transaction_on_cobranca_paid` já calcula `taxa_gateway = valor - valor_liquido` automaticamente ao criar a transação. Não precisa de mais nada.
 
-### 2. Eliminar dupla criação no InfinitePay Webhook (bug sistêmico)
+### 2. Webhook Mercado Pago — Eliminar criação manual de transação
 
-No `infinitepay-webhook/index.ts`, o bloco de criação de transação (linhas 328-383) é **redundante** com o trigger `ensure_transaction_on_cobranca_paid`. Devemos:
+O webhook atual (linhas 224-297) cria transações manualmente, duplicando o trabalho do trigger. Isso é o **mesmo bug** que corrigimos no InfinitePay. Devemos:
 
-- **Remover** a criação manual de transação no webhook (linhas 339-349)
-- O trigger `ensure_transaction_on_cobranca_paid` já garante a criação da transação quando a cobrança muda para 'pago'
-- Manter apenas o log informativo
+- **Remover** todo o bloco de criação manual de transação (linhas 224-297)
+- Delegar ao trigger `ensure_transaction_on_cobranca_paid` (que já lida com dedup, taxas, e `recompute_session_paid`)
+- Manter apenas um log informativo
 
-### 3. Varredura de outras sessões afetadas
+### 3. InfinitePay — Gravar taxas quando disponíveis
 
-Buscar TODAS as sessões onde `valor_pago ≠ SUM(transações)` e corrigir:
+O InfinitePay não envia dados de taxa no webhook atual. Mas o `paid_amount` (em centavos) representa o valor bruto. Se no futuro a API passar a fornecer valor líquido, o webhook já estará preparado. Por ora, `valor_liquido` ficará NULL para InfinitePay (PIX não tem taxa nesse gateway).
 
-```sql
-WITH expected AS (
-  SELECT session_id, COALESCE(SUM(valor), 0) AS soma
-  FROM clientes_transacoes
-  WHERE tipo = 'pagamento' AND session_id IS NOT NULL
-  GROUP BY session_id
-)
-SELECT cs.session_id, cs.valor_pago AS atual, e.soma AS esperado
-FROM clientes_sessoes cs
-JOIN expected e ON cs.session_id = e.session_id
-WHERE cs.valor_pago != e.soma;
-```
+### 4. Gallery — Funciona automaticamente
 
-Executar `recompute_session_paid` para cada sessão divergente.
+A Edge Function `gallery-create-payment` cria cobranças na tabela `cobrancas` com `provedor = 'mercadopago'` ou `'infinitepay'`. Os webhooks compartilhados (`mercadopago-webhook`, `infinitepay-webhook`) processam essas cobranças igualmente. Ao gravar `valor_liquido` na cobrança, o trigger cria a transação com taxas — independente de quem originou a cobrança (Gestão ou Gallery).
 
-### 4. Integração Gallery → Gestão para taxas
-
-Sobre a questão de taxas vindas do Gallery: como o Gallery usa InfinitePay via `gallery-create-payment`, e o webhook já grava a cobrança com `provedor = 'infinitepay'`, o trigger `ensure_transaction_on_cobranca_paid` já registra `taxa_gateway` e `taxa_antecipacao` corretamente quando `valor_liquido` está presente na cobrança. Para PIX (como este caso), não há taxa — `valor_liquido = NULL` — e isso está correto.
+Não é necessário nenhuma Edge Function separada para o Gallery.
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | Recalcular valor_pago de sessões divergentes |
-| `supabase/functions/infinitepay-webhook/index.ts` | Remover criação duplicada de transação (linhas 328-383), manter apenas o trigger |
+| `supabase/functions/mercadopago-webhook/index.ts` | Extrair `net_received_amount` e `fee_details`, gravar `valor_liquido` na cobrança, remover criação manual de transação |
+
+## Fluxo Corrigido
+
+```text
+Cliente paga R$100 via Cartão no MP (taxa 4,99%):
+
+1. MP envia webhook → mercadopago-webhook
+2. Webhook consulta GET /v1/payments/{id}
+   → transaction_amount: 100
+   → net_received_amount: 95.01
+3. Webhook atualiza cobrança:
+   status='pago', valor_liquido=95.01
+4. Trigger ensure_transaction_on_cobranca_paid:
+   → Cria transação: valor=100, taxa_gateway=4.99
+5. Trigger recompute_session_paid:
+   → valor_pago += 100
+6. Extrato mostra:
+   + R$100,00  Entrada  Pagamento Mercado Pago
+   - R$  4,99  Saída    Taxa Gateway MP
+```
+
+Para PIX (sem taxa ou taxa menor):
+```text
+→ net_received_amount: 100 (ou 99.01)
+→ taxa_gateway = 100 - 100 = 0 (ou 0.99)
+```
 
