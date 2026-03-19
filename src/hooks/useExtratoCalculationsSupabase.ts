@@ -131,7 +131,6 @@ export function useExtratoCalculationsSupabase(
         if (errorDespesas) throw errorDespesas;
 
         if (despesasGrupo && despesasGrupo.length > 0) {
-          // Agrupar por nome do item
           const itensPorNome: Record<string, number> = {};
           
           despesasGrupo.forEach((d: any) => {
@@ -148,6 +147,33 @@ export function useExtratoCalculationsSupabase(
 
           categorias.push({ grupo, itens, total });
         }
+      }
+
+      // TAXAS DE GATEWAY como categoria de despesa
+      const { data: taxasGateway, error: errorTaxas } = await supabase
+        .from('clientes_transacoes')
+        .select('taxa_gateway, taxa_antecipacao')
+        .eq('tipo', 'pagamento')
+        .gte('data_transacao', filtros.dataInicio)
+        .lte('data_transacao', filtros.dataFim);
+
+      if (errorTaxas) throw errorTaxas;
+
+      const totalTaxasGw = (taxasGateway || []).reduce(
+        (sum, t) => sum + Number(t.taxa_gateway || 0), 0);
+      const totalTaxasAnt = (taxasGateway || []).reduce(
+        (sum, t) => sum + Number(t.taxa_antecipacao || 0), 0);
+
+      if (totalTaxasGw + totalTaxasAnt > 0) {
+        const itensTaxas: Array<{ nome: string; valor: number }> = [];
+        if (totalTaxasGw > 0) itensTaxas.push({ nome: 'Taxa Gateway', valor: totalTaxasGw });
+        if (totalTaxasAnt > 0) itensTaxas.push({ nome: 'Taxa Antecipação', valor: totalTaxasAnt });
+
+        categorias.push({
+          grupo: 'Taxas de Gateway',
+          itens: itensTaxas,
+          total: totalTaxasGw + totalTaxasAnt
+        });
       }
 
       const totalReceitas = receitaSessoes + receitaProdutos + receitaNaoOperacional;
