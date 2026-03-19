@@ -1,104 +1,83 @@
 
 
-# Plano: Taxas de Gateway como Despesa no Extrato e Demonstrativo
+# Investigação: Bug de valor_pago = 230 (deveria ser 245 ou 115)
 
-## Regra Financeira (imutável)
+## Causa Raiz Encontrada: Dupla Criação de Transação no InfinitePay Webhook
+
+O webhook do InfinitePay cria transações **DUAS VEZES** para cada pagamento:
+
+1. **Linha 270-280**: Webhook atualiza `cobrancas.status = 'pago'` → dispara trigger `ensure_transaction_on_cobranca_paid` → cria transação com descrição `Pagamento InfinitePay - cobranca <UUID> ... [auto-reconciled]`
+
+2. **Linha 339-349**: Webhook cria **OUTRA** transação com descrição `Pagamento InfinitePay (Pix) - 5 fotos extras...` (formato diferente, SEM o ID da cobrança)
+
+O trigger de dedup verifica `descricao ILIKE '%cobranca <id>%'`, mas a transação criada pelo webhook (passo 2) usa um formato diferente. Resultado: duas transações de R$115 → `recompute_session_paid` soma 115+115 = **230**.
+
+Posteriormente, uma das transações duplicadas foi removida (provavelmente por limpeza manual ou migration), mas sem disparar o trigger de recompute, deixando `valor_pago = 230` congelado.
+
+### Evidências
 
 ```text
-Receita = valor bruto (R$100)    ← valor da venda
-Taxa    = despesa (R$2,95)       ← custo operacional
-Lucro   = 100 - 2,95 = R$97,05
+Sessão: workflow-1772463411892-lznoi6eru8k
+  valor_total:  245 (130 base + 115 extras)
+  valor_pago:   230 (deveria ser 115 — única transação existente)
+  Transações:   1 × R$115 [auto-reconciled]
+  SUM real:     115
+  
+Cobrança: 0cbec877 (InfinitePay, status=pago, valor=115, PIX)
+  valor_liquido: NULL (PIX não tem taxa)
 ```
 
-Receita NUNCA usa `valor_liquido`. O campo `valor` (bruto) já está correto no demonstrativo — não será alterado.
+### Pagamento base (R$130) NUNCA foi registrado
 
-## O que falta hoje
+O fotógrafo não registrou o pagamento do pacote base para esta sessão via `clientes_transacoes`. Isso é um problema separado — o saldo correto deveria ser: R$115 pago, R$130 pendente.
 
-1. A view `extrato_unificado` só mostra pagamentos como entrada. As taxas (`taxa_gateway`, `taxa_antecipacao`) gravadas em `clientes_transacoes` **não aparecem como despesa** em lugar nenhum.
-2. O demonstrativo (`useExtratoCalculationsSupabase`) busca despesas apenas de `fin_transactions`. Taxas de gateway não são consultadas.
-3. Não existe lançamento automático de despesa para taxas — o trigger grava os valores nas colunas informativas mas não gera uma linha de saída.
+## Plano de Correção
 
-## Mudanças
+### 1. Corrigir dados desta sessão (imediato)
 
-### 1. View `extrato_unificado` — Novo bloco UNION ALL para taxas
-
-Adicionar um terceiro bloco que transforma registros de `clientes_transacoes` com taxas > 0 em linhas de saída:
+Migration para forçar recalcule de `valor_pago` baseado nas transações reais:
 
 ```sql
-UNION ALL
-SELECT ct.id,
-  ct.data_transacao AS data,
-  'saida'::text AS tipo,
-  'Taxa Gateway / Antecipação'::text AS descricao,
-  'taxa_gateway'::text AS origem,
-  c.nome AS cliente,
-  cs.pacote AS projeto,
-  cs.categoria AS categoria_session,
-  'Taxas de Gateway'::text AS categoria,
-  NULL::integer, NULL::integer,
-  COALESCE(ct.taxa_gateway, 0) + COALESCE(ct.taxa_antecipacao, 0) AS valor,
-  'Pago'::text AS status,
-  NULL::text, NULL::text,
-  ct.user_id, ct.session_id, ct.created_at
-FROM clientes_transacoes ct
-  LEFT JOIN clientes c ON ct.cliente_id = c.id
-  LEFT JOIN clientes_sessoes cs ON ct.session_id = cs.session_id AND ct.user_id = cs.user_id
-WHERE ct.tipo = 'pagamento'
-  AND (COALESCE(ct.taxa_gateway, 0) + COALESCE(ct.taxa_antecipacao, 0)) > 0
+SELECT public.recompute_session_paid('workflow-1772463411892-lznoi6eru8k');
 ```
 
-### 2. Demonstrativo — Adicionar categoria "Taxas de Gateway"
+Isso vai setar valor_pago = 115 (a única transação existente).
 
-No `useExtratoCalculationsSupabase`, após calcular receitas (que continuam usando `p.valor` bruto), buscar taxas de `clientes_transacoes` e adicioná-las como uma categoria de despesa:
+### 2. Eliminar dupla criação no InfinitePay Webhook (bug sistêmico)
 
-```typescript
-const { data: taxasGateway } = await supabase
-  .from('clientes_transacoes')
-  .select('taxa_gateway, taxa_antecipacao')
-  .eq('tipo', 'pagamento')
-  .gte('data_transacao', filtros.dataInicio)
-  .lte('data_transacao', filtros.dataFim);
+No `infinitepay-webhook/index.ts`, o bloco de criação de transação (linhas 328-383) é **redundante** com o trigger `ensure_transaction_on_cobranca_paid`. Devemos:
 
-const totalTaxasGw = (taxasGateway || []).reduce(
-  (sum, t) => sum + Number(t.taxa_gateway || 0), 0);
-const totalTaxasAnt = (taxasGateway || []).reduce(
-  (sum, t) => sum + Number(t.taxa_antecipacao || 0), 0);
+- **Remover** a criação manual de transação no webhook (linhas 339-349)
+- O trigger `ensure_transaction_on_cobranca_paid` já garante a criação da transação quando a cobrança muda para 'pago'
+- Manter apenas o log informativo
 
-// Adicionar ao array de categorias de despesa
-if (totalTaxasGw + totalTaxasAnt > 0) {
-  categorias.push({
-    grupo: 'Taxas de Gateway',
-    itens: [
-      ...(totalTaxasGw > 0 ? [{ nome: 'Taxa Gateway', valor: totalTaxasGw }] : []),
-      ...(totalTaxasAnt > 0 ? [{ nome: 'Taxa Antecipação', valor: totalTaxasAnt }] : []),
-    ],
-    total: totalTaxasGw + totalTaxasAnt
-  });
-}
+### 3. Varredura de outras sessões afetadas
+
+Buscar TODAS as sessões onde `valor_pago ≠ SUM(transações)` e corrigir:
+
+```sql
+WITH expected AS (
+  SELECT session_id, COALESCE(SUM(valor), 0) AS soma
+  FROM clientes_transacoes
+  WHERE tipo = 'pagamento' AND session_id IS NOT NULL
+  GROUP BY session_id
+)
+SELECT cs.session_id, cs.valor_pago AS atual, e.soma AS esperado
+FROM clientes_sessoes cs
+JOIN expected e ON cs.session_id = e.session_id
+WHERE cs.valor_pago != e.soma;
 ```
 
-### 3. Receita — NÃO alterar
+Executar `recompute_session_paid` para cada sessão divergente.
 
-A receita no demonstrativo já usa `p.valor` (bruto). Isso está correto e não será tocado.
+### 4. Integração Gallery → Gestão para taxas
+
+Sobre a questão de taxas vindas do Gallery: como o Gallery usa InfinitePay via `gallery-create-payment`, e o webhook já grava a cobrança com `provedor = 'infinitepay'`, o trigger `ensure_transaction_on_cobranca_paid` já registra `taxa_gateway` e `taxa_antecipacao` corretamente quando `valor_liquido` está presente na cobrança. Para PIX (como este caso), não há taxa — `valor_liquido = NULL` — e isso está correto.
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | Recriar `extrato_unificado` com bloco de taxas como saída |
-| `src/hooks/useExtratoCalculationsSupabase.ts` | Buscar taxas de `clientes_transacoes` e adicioná-las como categoria de despesa no demonstrativo |
-
-## Resultado esperado
-
-```text
-DEMONSTRATIVO:
-  Receita com sessões:        R$ 100,00  (bruto)
-  TOTAL RECEITAS:             R$ 100,00
-
-  Taxas de Gateway:
-    Taxa Gateway:             R$   2,95
-  TOTAL DESPESAS:             R$   2,95
-
-  Resultado Líquido:          R$  97,05
-```
+| Migration SQL | Recalcular valor_pago de sessões divergentes |
+| `supabase/functions/infinitepay-webhook/index.ts` | Remover criação duplicada de transação (linhas 328-383), manter apenas o trigger |
 
