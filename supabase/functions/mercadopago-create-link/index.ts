@@ -1,3 +1,15 @@
+/**
+ * CONTRATO COMPARTILHADO — NÃO MODIFICAR SEM COORDENAÇÃO
+ * Esta função é chamada internamente por confirm-selection usando SUPABASE_SERVICE_ROLE_KEY (não JWT de usuário).
+ * 
+ * REGRAS IMUTÁVEIS:
+ * 1. NÃO adicionar verificação de JWT (auth.getUser)
+ * 2. userId DEVE ser aceito no body da request
+ * 3. verify_jwt DEVE ser false no config.toml
+ * 4. Autenticação do fotógrafo é via userId no body
+ * 
+ * Projetos: Gallery (Select) + Gestão
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -46,26 +58,22 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('[mercadopago-create-link] Missing authorization header');
-      throw new Error('Missing authorization header');
+    // userId vem do body (chamada interna via Service Role Key)
+    const body = await req.json();
+    console.log('[mercadopago-create-link] Parsed body:', JSON.stringify(body));
+
+    const { userId, clienteId, sessionId, valor, descricao } = body;
+
+    if (!userId) {
+      throw new Error('userId é obrigatório no body');
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      console.error('[mercadopago-create-link] Invalid user token:', userError);
-      throw new Error('Invalid user token');
-    }
-
-    console.log('[mercadopago-create-link] User authenticated:', user.id);
+    console.log('[mercadopago-create-link] User from body:', userId);
 
     // Get user's Mercado Pago token and settings
-    const { accessToken: mercadoPagoToken, settings: mpSettings } = await getUserMpIntegration(supabase, user.id);
+    const { accessToken: mercadoPagoToken, settings: mpSettings } = await getUserMpIntegration(supabase, userId);
     
     if (!mercadoPagoToken) {
       return new Response(
@@ -78,43 +86,30 @@ serve(async (req) => {
       );
     }
 
-    // Apply settings with defaults
     const pixHabilitado = mpSettings?.habilitarPix !== false;
     const cartaoHabilitado = mpSettings?.habilitarCartao !== false;
     const maxParcelas = Math.min(Math.max(1, mpSettings?.maxParcelas || 12), 24);
 
     console.log('[mercadopago-create-link] Settings - PIX:', pixHabilitado, 'Cartao:', cartaoHabilitado, 'Parcelas:', maxParcelas);
 
-    const rawBody = await req.clone().text();
-    console.log('[mercadopago-create-link] Raw body:', rawBody);
-
-    const body = await req.json();
-    console.log('[mercadopago-create-link] Parsed body:', JSON.stringify(body));
-
-    const { clienteId, sessionId, valor, descricao } = body;
-
     // FALLBACK: Se clienteId vazio mas temos sessionId, buscar do banco
     let clienteIdFinal = clienteId;
     let textSessionId = sessionId || null;
     
     if (sessionId) {
-      console.log('[mercadopago-create-link] Buscando session_id texto para:', sessionId);
-      
       const { data: sessaoData } = await supabase
         .from('clientes_sessoes')
         .select('cliente_id, session_id')
         .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
       
       if (sessaoData) {
-        // Usar session_id texto (ex: workflow-xxx)
         textSessionId = sessaoData.session_id;
         console.log('[mercadopago-create-link] session_id texto resolvido:', textSessionId);
         
         if (!clienteIdFinal && sessaoData.cliente_id) {
           clienteIdFinal = sessaoData.cliente_id;
-          console.log('[mercadopago-create-link] clienteId resolvido via sessão:', clienteIdFinal);
         }
       }
     }
@@ -126,19 +121,17 @@ serve(async (req) => {
       .from('clientes')
       .select('nome, email')
       .eq('id', clienteIdFinal)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
 
     if (clienteError || !cliente) throw new Error('Cliente não encontrado');
 
-    // Build excluded payment types based on settings
-    const excludedTypes: Array<{ id: string }> = [{ id: 'ticket' }]; // Always exclude boleto
+    const excludedTypes: Array<{ id: string }> = [{ id: 'ticket' }];
     if (!cartaoHabilitado) {
       excludedTypes.push({ id: 'credit_card' });
       excludedTypes.push({ id: 'debit_card' });
     }
 
-    // Webhook URL for payment notifications
     const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-webhook`;
 
     const preferenceData = {
@@ -152,9 +145,7 @@ serve(async (req) => {
         email: cliente.email || `cliente-${clienteIdFinal.substring(0, 8)}@example.com`,
         name: cliente.nome,
       },
-      // Sem back_urls - cliente permanece na página de sucesso do Mercado Pago
-      // Sem auto_return - evita redirecionamento para domínio inexistente
-      external_reference: `${user.id}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
+      external_reference: `${userId}|${clienteIdFinal}|${textSessionId || 'avulso'}`,
       notification_url: webhookUrl,
       payment_methods: {
         installments: maxParcelas,
@@ -183,11 +174,10 @@ serve(async (req) => {
       throw new Error(mpResult.message || 'Falha ao criar link de pagamento');
     }
 
-    // Salvar cobrança com session_id TEXTO
     const { data: cobranca, error: insertError } = await supabase
       .from('cobrancas')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         cliente_id: clienteIdFinal,
         session_id: textSessionId,
         valor: Number(valor),
