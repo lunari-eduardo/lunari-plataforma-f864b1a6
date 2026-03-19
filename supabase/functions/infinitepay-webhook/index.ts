@@ -181,84 +181,18 @@ serve(async (req) => {
 
     console.log(`[infinitepay-webhook] Found cobranca via ${searchMethod}: ${cobranca.id}, current status: ${cobranca.status}`);
 
-    // If already paid, verify transaction exists (race condition protection)
+    // If already paid, just acknowledge (trigger already handled transaction creation)
     if (cobranca.status === "pago") {
-      console.log("[infinitepay-webhook] Cobranca already paid, checking if transaction exists...");
-      
-      // Check if transaction was created for this cobranca
-      if (cobranca.session_id) {
-        // Find the session (text session_id or UUID)
-        let session = null;
-        const { data: byText } = await supabase
-          .from("clientes_sessoes")
-          .select("session_id, cliente_id, id")
-          .eq("session_id", cobranca.session_id)
-          .maybeSingle();
-        
-        if (byText) {
-          session = byText;
-        } else {
-          const { data: byUuid } = await supabase
-            .from("clientes_sessoes")
-            .select("session_id, cliente_id, id")
-            .eq("id", cobranca.session_id)
-            .maybeSingle();
-          if (byUuid) session = byUuid;
-        }
-
-        if (session) {
-          const textSessionId = session.session_id;
-          
-          // Check if InfinitePay transaction already exists for this session+value
-          const { data: existingTx } = await supabase
-            .from("clientes_transacoes")
-            .select("id")
-            .eq("session_id", textSessionId)
-            .ilike("descricao", "%InfinitePay%")
-            .eq("valor", cobranca.valor)
-            .maybeSingle();
-
-          if (!existingTx) {
-            console.log(`[infinitepay-webhook] Transaction MISSING for already-paid cobranca. Creating retroactively...`);
-            
-            const clienteId = session.cliente_id || cobranca.cliente_id;
-            const captureLabel = capture_method === 'pix' ? 'Pix' : capture_method === 'credit' ? 'Cartão' : 'Link';
-            const descricao = `Pagamento InfinitePay (${captureLabel})${cobranca.descricao ? ` - ${cobranca.descricao}` : ''}`;
-            const now = new Date().toISOString();
-
-            const { error: txError } = await supabase
-              .from("clientes_transacoes")
-              .insert({
-                user_id: cobranca.user_id,
-                cliente_id: clienteId,
-                session_id: textSessionId,
-                valor: cobranca.valor,
-                tipo: "pagamento",
-                data_transacao: now.split("T")[0],
-                descricao: descricao,
-              });
-
-            if (txError) {
-              console.error("[infinitepay-webhook] Error creating retroactive transaction:", txError);
-            } else {
-              console.log(`[infinitepay-webhook] Retroactive transaction created for session ${textSessionId}, valor ${cobranca.valor}`);
-            }
-          } else {
-            console.log("[infinitepay-webhook] Transaction already exists, no action needed");
-          }
-        } else {
-          console.warn(`[infinitepay-webhook] Session not found for already-paid cobranca: ${cobranca.session_id}`);
-        }
-      }
+      console.log("[infinitepay-webhook] Cobranca already paid, no action needed. Transaction was created by DB trigger.");
 
       await supabase
         .from("webhook_logs")
-        .update({ status: "already_paid_verified", error_message: "Already paid - transaction verified" })
+        .update({ status: "already_paid_verified", error_message: "Already paid" })
         .eq("order_nsu", order_nsu)
         .eq("provedor", "infinitepay");
 
       return new Response(
-        JSON.stringify({ success: true, message: "Already processed - transaction verified" }),
+        JSON.stringify({ success: true, message: "Already processed" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
