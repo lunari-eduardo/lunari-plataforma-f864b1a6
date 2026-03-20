@@ -690,8 +690,55 @@ export default function Clientes() {
               </CardContent>
             </Card>)}
           </div>}
-        
-        {/* Empty State */}
+
+        {/* Paginação */}
+        {totalPages > 1 && clientesFiltrados.length > 0 && (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, clientesOrdenados.length)} de {clientesOrdenados.length} clientes
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              
+              {getPageNumbers().map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">…</span>
+                ) : (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="gap-1"
+              >
+                Próximo
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
