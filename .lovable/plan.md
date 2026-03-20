@@ -1,108 +1,29 @@
 
 
-# Plano: Registrar Taxas de Gateway no Mercado Pago + Preparar Gallery
+# Paginação na página CRM (Clientes)
 
-## Situação Atual
+## O que será feito
 
-| Provedor | Registra `valor_liquido`? | Registra `taxa_gateway`? |
-|----------|--------------------------|--------------------------|
-| Asaas | Sim (via `netValue` na API) | Sim (calculado no webhook) |
-| InfinitePay | Não | Não |
-| Mercado Pago | Não | Não |
-
-O trigger `ensure_transaction_on_cobranca_paid` já sabe ler `valor_liquido` da `cobrancas` e calcular taxas automaticamente. O problema é que **nenhum webhook fora o Asaas** grava esses campos na `cobrancas`.
-
-## O que a API do Mercado Pago fornece
-
-No GET `/v1/payments/{id}`, a resposta inclui:
-
-```json
-{
-  "transaction_amount": 100.00,
-  "transaction_details": {
-    "net_received_amount": 95.01
-  },
-  "fee_details": [
-    { "type": "mercadopago_fee", "amount": 4.99 }
-  ]
-}
-```
-
-- `transaction_details.net_received_amount` → valor líquido
-- `fee_details` → array com detalhes das taxas (inclui PIX e cartão)
+Adicionar paginação de 20 clientes por página na página CRM, com navegador inferior funcionando tanto na visualização de cards quanto na de lista (tabela).
 
 ## Mudanças
 
-### 1. Webhook Mercado Pago — Gravar taxas na cobrança
+### `src/pages/Clientes.tsx`
 
-No `mercadopago-webhook/index.ts`, quando o pagamento é `approved`, extrair dados de taxas da resposta da API e gravá-los na `cobrancas`:
+1. Adicionar estado `currentPage` (reseta ao mudar filtros/ordenação)
+2. Criar `clientesPaginados` derivado de `clientesOrdenados` com slice de 20 por página
+3. Usar `clientesPaginados` no lugar de `clientesOrdenados` nos dois renders (cards e list)
+4. Adicionar componente de paginação após ambas as visualizações (antes do empty state), com:
+   - Botões Anterior/Próximo
+   - Números de página
+   - Indicador "Mostrando X-Y de Z clientes"
+5. Resetar `currentPage = 1` quando `clientesFiltrados` mudar (filtro, busca, ordenação)
 
-```typescript
-// Após consultar payment na API do MP
-const netReceived = payment.transaction_details?.net_received_amount ?? null;
-const feeAmount = payment.fee_details?.reduce(
-  (sum, f) => sum + (f.amount || 0), 0
-) ?? 0;
+### Componente de paginação
 
-// No UPDATE da cobrança
-.update({
-  status: newStatus,
-  mp_payment_id: String(paymentId),
-  data_pagamento: ...,
-  valor_liquido: netReceived,       // ← NOVO
-  updated_at: ...,
-})
-```
-
-O trigger `ensure_transaction_on_cobranca_paid` já calcula `taxa_gateway = valor - valor_liquido` automaticamente ao criar a transação. Não precisa de mais nada.
-
-### 2. Webhook Mercado Pago — Eliminar criação manual de transação
-
-O webhook atual (linhas 224-297) cria transações manualmente, duplicando o trabalho do trigger. Isso é o **mesmo bug** que corrigimos no InfinitePay. Devemos:
-
-- **Remover** todo o bloco de criação manual de transação (linhas 224-297)
-- Delegar ao trigger `ensure_transaction_on_cobranca_paid` (que já lida com dedup, taxas, e `recompute_session_paid`)
-- Manter apenas um log informativo
-
-### 3. InfinitePay — Gravar taxas quando disponíveis
-
-O InfinitePay não envia dados de taxa no webhook atual. Mas o `paid_amount` (em centavos) representa o valor bruto. Se no futuro a API passar a fornecer valor líquido, o webhook já estará preparado. Por ora, `valor_liquido` ficará NULL para InfinitePay (PIX não tem taxa nesse gateway).
-
-### 4. Gallery — Funciona automaticamente
-
-A Edge Function `gallery-create-payment` cria cobranças na tabela `cobrancas` com `provedor = 'mercadopago'` ou `'infinitepay'`. Os webhooks compartilhados (`mercadopago-webhook`, `infinitepay-webhook`) processam essas cobranças igualmente. Ao gravar `valor_liquido` na cobrança, o trigger cria a transação com taxas — independente de quem originou a cobrança (Gestão ou Gallery).
-
-Não é necessário nenhuma Edge Function separada para o Gallery.
-
-## Arquivos a modificar
+Usar os componentes `Pagination` já existentes em `src/components/ui/pagination.tsx`. Renderizar apenas quando `clientesFiltrados.length > 20`.
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/mercadopago-webhook/index.ts` | Extrair `net_received_amount` e `fee_details`, gravar `valor_liquido` na cobrança, remover criação manual de transação |
-
-## Fluxo Corrigido
-
-```text
-Cliente paga R$100 via Cartão no MP (taxa 4,99%):
-
-1. MP envia webhook → mercadopago-webhook
-2. Webhook consulta GET /v1/payments/{id}
-   → transaction_amount: 100
-   → net_received_amount: 95.01
-3. Webhook atualiza cobrança:
-   status='pago', valor_liquido=95.01
-4. Trigger ensure_transaction_on_cobranca_paid:
-   → Cria transação: valor=100, taxa_gateway=4.99
-5. Trigger recompute_session_paid:
-   → valor_pago += 100
-6. Extrato mostra:
-   + R$100,00  Entrada  Pagamento Mercado Pago
-   - R$  4,99  Saída    Taxa Gateway MP
-```
-
-Para PIX (sem taxa ou taxa menor):
-```text
-→ net_received_amount: 100 (ou 99.01)
-→ taxa_gateway = 100 - 100 = 0 (ou 0.99)
-```
+| `src/pages/Clientes.tsx` | Estado de paginação, slice dos dados, componente de navegação inferior |
 
