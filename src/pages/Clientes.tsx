@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, useDialogDropdownContext } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { SelectModal as Select, SelectModalContent as SelectContent, SelectModalItem as SelectItem, SelectModalTrigger as SelectTrigger, SelectModalValue as SelectValue } from '@/components/ui/select-in-modal';
-import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake, LayoutGrid, List, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake, LayoutGrid, List, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
@@ -63,6 +63,8 @@ export default function Clientes() {
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   
   // Estados para prevenção de duplicatas
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -308,6 +310,34 @@ export default function Clientes() {
       return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
     });
   }, [clientesFiltrados, sortConfig]);
+
+  // Paginação
+  const totalPages = Math.ceil(clientesOrdenados.length / ITEMS_PER_PAGE);
+  const clientesPaginados = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return clientesOrdenados.slice(start, start + ITEMS_PER_PAGE);
+  }, [clientesOrdenados, currentPage, ITEMS_PER_PAGE]);
+
+  // Reset page when filters/sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [clientesFiltrados.length, sortConfig]);
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
   const handleSort = (key: typeof sortConfig['key']) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -552,7 +582,7 @@ export default function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientesOrdenados.map(cliente => <TableRow key={cliente.id}>
+                {clientesPaginados.map(cliente => <TableRow key={cliente.id}>
                     <TableCell>
                       <Link to={`/app/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
                         {cliente.nome}
@@ -600,7 +630,7 @@ export default function Clientes() {
 
         {/* Grid de Clientes - Cards */}
         {viewMode === 'cards' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clientesOrdenados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
+            {clientesPaginados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 {/* Header do Card */}
                 <div className="flex items-start justify-between mb-3">
@@ -660,8 +690,55 @@ export default function Clientes() {
               </CardContent>
             </Card>)}
           </div>}
-        
-        {/* Empty State */}
+
+        {/* Paginação */}
+        {totalPages > 1 && clientesFiltrados.length > 0 && (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, clientesOrdenados.length)} de {clientesOrdenados.length} clientes
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="gap-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              
+              {getPageNumbers().map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">…</span>
+                ) : (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="gap-1"
+              >
+                Próximo
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
             <User className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
