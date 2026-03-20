@@ -630,7 +630,7 @@ export default function Clientes() {
 
         {/* Grid de Clientes - Cards */}
         {viewMode === 'cards' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clientesOrdenados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
+            {clientesPaginados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 {/* Header do Card */}
                 <div className="flex items-start justify-between mb-3">
