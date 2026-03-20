@@ -310,6 +310,34 @@ export default function Clientes() {
       return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
     });
   }, [clientesFiltrados, sortConfig]);
+
+  // Paginação
+  const totalPages = Math.ceil(clientesOrdenados.length / ITEMS_PER_PAGE);
+  const clientesPaginados = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return clientesOrdenados.slice(start, start + ITEMS_PER_PAGE);
+  }, [clientesOrdenados, currentPage, ITEMS_PER_PAGE]);
+
+  // Reset page when filters/sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [clientesFiltrados.length, sortConfig]);
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
   const handleSort = (key: typeof sortConfig['key']) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
