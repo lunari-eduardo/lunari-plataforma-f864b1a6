@@ -63,6 +63,8 @@ export default function Clientes() {
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
   const [showAniversariantesModal, setShowAniversariantesModal] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   
   // Estados para prevenção de duplicatas
   const [showSuggestions, setShowSuggestions] = useState(true);
