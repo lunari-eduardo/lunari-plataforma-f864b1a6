@@ -582,7 +582,7 @@ export default function Clientes() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientesOrdenados.map(cliente => <TableRow key={cliente.id}>
+                {clientesPaginados.map(cliente => <TableRow key={cliente.id}>
                     <TableCell>
                       <Link to={`/app/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
                         {cliente.nome}
