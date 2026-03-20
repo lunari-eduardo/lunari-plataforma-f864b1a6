@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, useDialogDropdownContext } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { SelectModal as Select, SelectModalContent as SelectContent, SelectModalItem as SelectItem, SelectModalTrigger as SelectTrigger, SelectModalValue as SelectValue } from '@/components/ui/select-in-modal';
-import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake, LayoutGrid, List, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake, LayoutGrid, List, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
