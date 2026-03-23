@@ -822,6 +822,7 @@ export type Database = {
           ip_order_nsu: string | null
           ip_receipt_url: string | null
           ip_transaction_nsu: string | null
+          metodo_manual: string | null
           mp_expiration_date: string | null
           mp_payment_id: string | null
           mp_payment_link: string | null
@@ -829,6 +830,7 @@ export type Database = {
           mp_preference_id: string | null
           mp_qr_code: string | null
           mp_qr_code_base64: string | null
+          obs_manual: string | null
           parcelas_pagas: number | null
           provedor: string | null
           qtd_fotos: number | null
@@ -854,6 +856,7 @@ export type Database = {
           ip_order_nsu?: string | null
           ip_receipt_url?: string | null
           ip_transaction_nsu?: string | null
+          metodo_manual?: string | null
           mp_expiration_date?: string | null
           mp_payment_id?: string | null
           mp_payment_link?: string | null
@@ -861,6 +864,7 @@ export type Database = {
           mp_preference_id?: string | null
           mp_qr_code?: string | null
           mp_qr_code_base64?: string | null
+          obs_manual?: string | null
           parcelas_pagas?: number | null
           provedor?: string | null
           qtd_fotos?: number | null
@@ -886,6 +890,7 @@ export type Database = {
           ip_order_nsu?: string | null
           ip_receipt_url?: string | null
           ip_transaction_nsu?: string | null
+          metodo_manual?: string | null
           mp_expiration_date?: string | null
           mp_payment_id?: string | null
           mp_payment_link?: string | null
@@ -893,6 +898,7 @@ export type Database = {
           mp_preference_id?: string | null
           mp_qr_code?: string | null
           mp_qr_code_base64?: string | null
+          obs_manual?: string | null
           parcelas_pagas?: number | null
           provedor?: string | null
           qtd_fotos?: number | null
@@ -1643,6 +1649,7 @@ export type Database = {
       galeria_fotos: {
         Row: {
           comment: string | null
+          cover_path: string | null
           created_at: string
           file_size: number | null
           filename: string
@@ -1670,6 +1677,7 @@ export type Database = {
         }
         Insert: {
           comment?: string | null
+          cover_path?: string | null
           created_at?: string
           file_size?: number | null
           filename: string
@@ -1697,6 +1705,7 @@ export type Database = {
         }
         Update: {
           comment?: string | null
+          cover_path?: string | null
           created_at?: string
           file_size?: number | null
           filename?: string
@@ -3629,6 +3638,8 @@ export type Database = {
       finalize_gallery_payment: {
         Args: {
           p_cobranca_id: string
+          p_manual_method?: string
+          p_manual_obs?: string
           p_paid_at?: string
           p_receipt_url?: string
         }
