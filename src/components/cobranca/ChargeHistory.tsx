@@ -149,7 +149,7 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                       {cobranca.status === 'parcialmente_pago' && cobranca.totalParcelas && cobranca.totalParcelas > 1
                         ? ` (${cobranca.parcelasPagas || 0}/${cobranca.totalParcelas})`
                         : cobranca.status === 'pago' && cobranca.totalParcelas && cobranca.totalParcelas > 1
-                        ? ` (${cobranca.totalParcelas}/${cobranca.totalParcelas})`
+                        ? ` (${cobranca.parcelasPagas || cobranca.totalParcelas}/${cobranca.totalParcelas})`
                         : ''
                       }
                     </Badge>

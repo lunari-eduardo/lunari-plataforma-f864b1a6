@@ -324,7 +324,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const checkPaymentStatus = useCallback(async (cobrancaId: string): Promise<{ updated: boolean; status?: string }> => {
     try {
       const response = await supabase.functions.invoke('check-payment-status', {
-        body: { cobrancaId, forceUpdate: true },
+        body: { cobrancaId, forceUpdate: false },
       });
 
       if (response.error) throw response.error;
