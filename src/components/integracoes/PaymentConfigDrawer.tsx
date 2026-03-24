@@ -156,6 +156,44 @@ export function PaymentConfigDrawer({
         </SheetHeader>
 
         <div className="space-y-6 pt-2">
+          {/* ── Migration Section (Asaas & MP only) ── */}
+          {(provider === 'asaas' || provider === 'mercadopago') && (() => {
+            const rawExtras = provider === 'asaas' ? asaasDadosExtrasRaw : mpDadosExtrasRaw;
+            const hasGallerySettings = hasOtherContextSettings(rawExtras, 'gallery');
+            const diffs = getDivergenceSummary(rawExtras, provider);
+            
+            if (!hasGallerySettings) return null;
+            
+            return (
+              <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+                <div className="flex items-center gap-2">
+                  <ArrowDownUp className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Migrar configurações</span>
+                </div>
+                {diffs.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Diferenças com a Gallery: {diffs.join(', ')}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Apenas configurações operacionais serão copiadas (parcelas, taxas, antecipação). Credenciais permanecem inalteradas.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => migrateFromGallery.mutate(provider)}
+                  disabled={migrateFromGallery.isPending}
+                >
+                  {migrateFromGallery.isPending ? (
+                    <><Loader2 className="h-3 w-3 animate-spin mr-1" />Migrando...</>
+                  ) : (
+                    'Copiar configurações da Gallery'
+                  )}
+                </Button>
+              </div>
+            );
+          })()}
           {/* ── PIX Manual ── */}
           {provider === 'pix_manual' && (
             <>
