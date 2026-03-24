@@ -1,124 +1,43 @@
 
 
-# Configurações de Pagamento Independentes por Projeto + Migração
+# Fix: 13 Sessions with Incorrect Pending Amount (February Data)
 
-## Problema Atual
+## Root Cause
 
-Ambos os projetos (Gestão e Gallery) leem e escrevem **exatamente o mesmo** `dados_extras` na tabela `usuarios_integracoes`. Qualquer alteração em um projeto afeta imediatamente o outro. Não há como ter configurações diferentes (ex: 12x no Gestão, 6x na Gallery).
+The trigger `ensure_transaction_on_cobranca_paid` (AFTER UPDATE on `cobrancas`) was implemented AFTER these February sessions had their Gallery extra photo payments processed via InfinitePay. At that time, the InfinitePay webhook created cobrancas directly as `'pago'` on INSERT, bypassing the UPDATE-only trigger. Result: cobrancas marked as paid, `status_pagamento_fotos_extra = 'pago'`, but **no corresponding transaction in `clientes_transacoes`** was created, so `valor_pago` was never incremented.
 
-## Arquitetura Proposta
+**Current state (March)**: The trigger works correctly. Recent InfinitePay/Asaas payments create proper `[auto-reconciled]` transactions. Only the admin user (`lisediehlfotos@gmail.com`) has 13 affected sessions from February, totaling R$1,597 in incorrectly pending amounts.
 
-Usar o próprio JSON `dados_extras` para armazenar configurações por contexto, sem alterar o schema do banco:
+## Fix Plan
 
-```text
-dados_extras (atual):
-{
-  "habilitarPix": true,
-  "maxParcelas": 12,
-  "absorverTaxa": false,
-  "ireiAntecipar": true,
-  ...
-}
+### 1. One-time data repair migration
 
-dados_extras (novo):
-{
-  "habilitarPix": true,       ← campos raiz = fallback/legado
-  "maxParcelas": 12,
-  ...
-  "gestao_settings": {        ← override específico do Gestão
-    "maxParcelas": 12,
-    "absorverTaxa": false,
-    "ireiAntecipar": true,
-    "repassarTaxaAntecipacao": false
-  },
-  "gallery_settings": {       ← override específico da Gallery
-    "maxParcelas": 6,
-    "absorverTaxa": true,
-    "ireiAntecipar": false,
-    "repassarTaxaAntecipacao": false
-  }
-}
+Create a migration that inserts the missing `clientes_transacoes` records for each of the 13 orphaned cobrancas. This will trigger `recompute_session_paid` automatically (via existing trigger on `clientes_transacoes`), which will update `valor_pago` and clear the incorrect pending amounts.
+
+The migration will:
+- Find all cobrancas with `status = 'pago'` that have NO matching transaction (using the same logic as the trigger)
+- Insert a `tipo = 'pagamento'` transaction for each
+- The existing `trigger_recompute_session_paid` will automatically recalculate `valor_pago`
+
+### 2. Add INSERT trigger on cobrancas (preventive)
+
+The current trigger only fires on UPDATE. Add it for INSERT too, so if any future code path creates a cobrança directly as `'pago'`, the transaction will still be created.
+
+```sql
+-- Change from AFTER UPDATE to AFTER INSERT OR UPDATE
+DROP TRIGGER IF EXISTS ensure_tx_on_cobranca_paid ON cobrancas;
+CREATE TRIGGER ensure_tx_on_cobranca_paid
+  AFTER INSERT OR UPDATE ON cobrancas
+  FOR EACH ROW EXECUTE FUNCTION ensure_transaction_on_cobranca_paid();
 ```
 
-**Leitura**: Cada projeto lê seu `_settings` sub-objeto; se não existir, faz fallback para os campos raiz (100% backward compatible).
+The function already handles the INSERT case correctly (it checks `NEW.status IN ('pago','pago_manual')` and `OLD.status` with null-safety).
 
-**Escrita**: Cada projeto grava apenas no seu `_settings` sub-objeto + mantém os campos raiz sincronizados com o último save (para webhooks e Edge Functions que leem campos raiz).
+## Files
 
-## Plano de Implementação (Gestão)
+| File | Action |
+|------|--------|
+| New migration SQL | Insert missing transactions for 13 orphaned cobrancas + add INSERT trigger |
 
-### 1. Criar utilitário `src/utils/paymentSettingsContext.ts`
-
-Funções puras para ler/escrever settings por contexto:
-
-```typescript
-type SettingsContext = 'gestao' | 'gallery';
-
-// Extrai settings do contexto, com fallback para raiz
-function getContextSettings(dadosExtras: AsaasData, context: SettingsContext): AsaasSettings
-
-// Mescla settings do contexto de volta no dados_extras
-function setContextSettings(dadosExtras: AsaasData, context: SettingsContext, settings: AsaasSettings): AsaasData
-
-// Copia settings de um contexto para outro
-function migrateSettings(dadosExtras: AsaasData, from: SettingsContext, to: SettingsContext): AsaasData
-```
-
-Campos migráveis (apenas configurações operacionais, nunca credenciais):
-- `maxParcelas`, `absorverTaxa`, `habilitarPix`, `habilitarCartao`, `habilitarBoleto`
-- `ireiAntecipar`, `repassarTaxaAntecipacao`, `incluirTaxaAntecipacao`
-
-Mesma lógica para `MercadoPagoData` (campos: `maxParcelas`, `absorverTaxa`, `habilitarPix`, `habilitarCartao`).
-
-### 2. Atualizar `src/hooks/usePaymentIntegration.ts`
-
-- Leitura: usar `getContextSettings(dados_extras, 'gestao')` ao invés de ler direto
-- Escrita: usar `setContextSettings()` + manter campos raiz atualizados
-- Nova mutation `migrateFromGallery`: chama `migrateSettings(dados_extras, 'gallery', 'gestao')` e salva
-
-### 3. Adicionar botão "Migrar da Gallery" no `PaymentConfigDrawer.tsx`
-
-No drawer do Asaas e MP (quando já configurados), adicionar seção no topo:
-
-```text
-┌──────────────────────────────────┐
-│ 🔄 Migrar configurações         │
-│ Copiar configurações da Gallery  │
-│ [Migrar da Gallery]              │
-│                                  │
-│ ⚠ Apenas configurações opera-   │
-│ cionais serão copiadas (parce-   │
-│ las, taxas, antecipação). Cre-   │
-│ denciais permanecem inalteradas. │
-└──────────────────────────────────┘
-```
-
-O botão aparece apenas se `gallery_settings` existir no `dados_extras` (= Gallery já configurou algo diferente). Caso contrário, mensagem "Configurações sincronizadas com a Gallery".
-
-### 4. Atualizar `PaymentSettings.tsx`
-
-Adicionar indicador sutil quando settings divergem entre projetos:
-- Badge "Configuração independente" ao lado do provider se `gestao_settings !== gallery_settings`
-
-## Documentação para o Projeto Gallery
-
-### 5. Gerar documento `/mnt/documents/gallery-payment-settings-migration.md`
-
-Documento técnico com:
-
-1. **Arquitetura**: Explicação do modelo `dados_extras` com sub-objetos por contexto
-2. **Código a portar**: O utilitário `paymentSettingsContext.ts` (idêntico, apenas muda o contexto de leitura para `'gallery'`)
-3. **Mudanças no hook**: `usePaymentIntegration.ts` do Gallery deve usar `getContextSettings(dados_extras, 'gallery')` para leitura e `setContextSettings(..., 'gallery', ...)` para escrita
-4. **UI**: Adicionar botão "Migrar do Gestão" no `PaymentConfigDrawer.tsx` da Gallery
-5. **Backward compatibility**: Se `gallery_settings` não existir, ler campos raiz (comportamento atual)
-6. **Edge Functions**: Nenhuma mudança necessária — webhooks continuam lendo campos raiz, que são atualizados pelo último save de qualquer projeto
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Ação |
-|---------|------|
-| `src/utils/paymentSettingsContext.ts` | Criar — funções puras para ler/escrever/migrar settings por contexto |
-| `src/hooks/usePaymentIntegration.ts` | Modificar — usar context utils para leitura/escrita, adicionar mutation `migrateFromGallery` |
-| `src/components/integracoes/PaymentConfigDrawer.tsx` | Modificar — adicionar seção "Migrar da Gallery" no drawer |
-| `src/components/integracoes/PaymentSettings.tsx` | Modificar — badge de "configuração independente" |
-| `/mnt/documents/gallery-payment-settings-migration.md` | Criar — documentação completa para o projeto Gallery |
+No frontend changes needed -- `valor_pago` will be automatically recalculated by existing database triggers.
 
