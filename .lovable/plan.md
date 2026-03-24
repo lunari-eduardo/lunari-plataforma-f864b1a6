@@ -1,92 +1,58 @@
 
 
-# Fix: Installment Payment Duplication and Missing Parcelas
+# Melhorias na Aba Extrato + Verificação Gallery
 
-## Root Cause Analysis
+## Análise Gallery (Asaas)
 
-Three distinct issues compound to produce the symptoms:
+A Gallery **está correta**: `asaas-gallery-payment` insere como `'pendente'`, `asaas-gallery-webhook` extrai `netValue`, cria parcelas, e os triggers fazem o resto. Nenhuma correção necessária.
 
-### Bug 1: `check-payment-status` with `forceUpdate: true` bypasses parcela flow
+## Mudanças no Extrato
 
-In `src/hooks/useCobranca.ts` line 327, the photographer's "verificar pagamento" action calls `check-payment-status` with `forceUpdate: true`. This directly sets `cobrancas.status = 'pago'` — completely bypassing the parcela creation and fee tracking flow. For this specific cobrança:
-- `parcelas_pagas = 0` (no parcelas were ever created)
-- `valor_liquido = null` (no fees tracked)
-- `cobranca_parcelas` table is empty for this cobrança
-- Asaas webhook never fired (no entries in `asaas_webhook_events`)
+### 1. Ordenação por data+hora (decrescente)
 
-The cobrança was set to 'pago' solely by the manual verification.
+**Problema**: A view `extrato_unificado` ordena apenas por `data` (tipo `date`, sem hora). Registros do mesmo dia aparecem em ordem arbitrária.
 
-### Bug 2: `valor_pago` inconsistency (200 vs 100)
-
-Database shows:
-- `clientes_transacoes` SUM for this session = R$100 (one auto-reconciled transaction)
-- `clientes_sessoes.valor_pago` = R$200
-
-This mismatch means `recompute_session_paid` ran at a moment when another transaction existed (likely a quick payment that was later deleted, or a duplicate that was cleaned up). Either way, the recompute trigger did not fire on the deletion. This is caused by **duplicate triggers** on `clientes_transacoes`:
-
-```text
-1. recompute_paid_amount         → AFTER INSERT/UPDATE/DELETE
-2. trigger_recompute_session_paid_insert → AFTER INSERT only
+**Solução**: Alterar a query no `useExtratoSupabase.ts` para ordenar por `created_at` (timestamp) como critério secundário:
 ```
-
-These should be consolidated. While the duplicate INSERT trigger isn't the direct cause, it indicates migration cleanup issues.
-
-### Bug 3: ChargeHistory display misleading for parcelas
-
-When status is `'pago'`, the UI hardcodes `(totalParcelas/totalParcelas)` regardless of actual `parcelas_pagas`. Shows "(2/2)" even when `parcelas_pagas = 0`.
-
-## Fix Plan
-
-### 1. Fix `check-payment-status` — Query Asaas API instead of force-updating
-
-The Edge Function should query the Asaas API (`GET /v3/payments/{id}`) to check actual payment status before updating the cobrança. If installments exist, it should also create `cobranca_parcelas` records with fee data from the API response. Remove the blind `forceUpdate` path.
-
-**File:** `supabase/functions/check-payment-status/index.ts`
-
-Changes:
-- When `forceUpdate=true` AND cobrança has `asaas_installment_id` or `mp_payment_id`:
-  - Fetch payment from Asaas API: `GET /v3/payments?installment={installmentId}`
-  - Create/update `cobranca_parcelas` for each payment found
-  - Let the `reconcile_cobranca_from_parcelas` trigger handle status transition naturally
-- Only use the direct `status='pago'` fallback for non-Asaas providers (manual, etc.)
-
-### 2. Fix `useCobranca.ts` — Remove `forceUpdate: true` default
-
-**File:** `src/hooks/useCobranca.ts`
-
-Change `forceUpdate: true` to `forceUpdate: false` for the standard check. The photographer's action should just poll status, not force it. The Edge Function above handles the Asaas API query when needed.
-
-### 3. Database migration — Clean up triggers + data repair
-
-**New migration:**
-
-```sql
--- 1. Remove duplicate trigger
-DROP TRIGGER IF EXISTS trigger_recompute_session_paid_insert ON public.clientes_transacoes;
-
--- 2. Data repair: recompute valor_pago for the affected session
-SELECT public.recompute_session_paid('workflow-1774277716258-xcgajp03wr');
+.order('data', { ascending: false })
+.order('created_at', { ascending: false })
 ```
+E exibir o horário na tabela usando `created_at` quando disponível.
 
-### 4. Fix ChargeHistory display
+### 2. Origem: Gallery vs Gestão + Meio de Pagamento
 
-**File:** `src/components/cobranca/ChargeHistory.tsx`
+**Problema**: A view SQL hardcoda `'workflow'` para todas as `clientes_transacoes`. Não distingue se o pagamento veio do Gallery ou do Gestão, nem qual meio de pagamento (Asaas, InfinitePay, MP, Manual).
 
-Use actual `parcelas_pagas` instead of hardcoding `totalParcelas` when status is `'pago'`:
+**Solução**: Atualizar a view `extrato_unificado` via migration:
+- JOIN com `cobrancas` para extrair `provedor` e `galeria_id`
+- Se `galeria_id IS NOT NULL` → origem = `'gallery'`, senão `'workflow'`  
+- Adicionar coluna `meio_pagamento` (provedor da cobrança)
 
-```tsx
-// Before
-? ` (${cobranca.totalParcelas}/${cobranca.totalParcelas})`
-// After  
-? ` (${cobranca.parcelasPagas || cobranca.totalParcelas}/${cobranca.totalParcelas})`
-```
+Atualizar constantes e UI:
+- Adicionar `gallery` em `ORIGEM_COLORS` e `ORIGEM_LABELS`
+- Exibir meio de pagamento como sub-badge ou texto auxiliar
 
-## Files to Modify
+### 3. Badges verde/vermelho para Entrada/Saída
 
-| File | Change |
-|------|--------|
-| `supabase/functions/check-payment-status/index.ts` | Query Asaas API for installment payments instead of blind force-update |
-| `src/hooks/useCobranca.ts` | Change `forceUpdate: true` to `false` |
-| `src/components/cobranca/ChargeHistory.tsx` | Use actual `parcelas_pagas` in display |
-| New migration SQL | Remove duplicate trigger, repair valor_pago |
+**Problema**: Badges usam `variant="default"` e `variant="secondary"` — sem distinção visual forte.
+
+**Solução**: Aplicar classes diretas:
+- Entrada: `bg-green-500/15 text-green-700 border-green-300`
+- Saída: `bg-red-500/15 text-red-700 border-red-300`
+
+### 4. Remover coluna Parcelas
+
+**Problema**: Parcelas no extrato geral são redundantes (já constam no histórico do cliente).
+
+**Solução**: Remover coluna "Parcela" do `ExtratoTable.tsx` e do header. Manter os dados na view para exportação se necessário.
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| Nova migration SQL | Recriar view `extrato_unificado` com JOIN em `cobrancas` para `provedor` e `galeria_id`, nova coluna `meio_pagamento` |
+| `src/hooks/useExtratoSupabase.ts` | Ordenar por `created_at` como critério secundário, mapear novos campos |
+| `src/components/extrato/ExtratoTable.tsx` | Remover coluna Parcela, badges verde/vermelho, exibir horário, mostrar meio de pagamento |
+| `src/constants/extratoConstants.ts` | Adicionar `gallery` nas cores/labels de origem |
+| `src/types/extrato.ts` | Adicionar `gallery` em `ExtratoOrigem`, adicionar campo `meioPagamento` |
 
