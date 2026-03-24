@@ -28,6 +28,7 @@ function mapLinhasExtrato(data: any[]): LinhaExtrato[] {
     status: row.status as ExtratoStatus,
     observacoes: row.observacoes || undefined,
     cartao: row.cartao || undefined,
+    meioPagamento: row.meio_pagamento || undefined,
     referenciaId: row.id,
     referenciaOrigem: row.origem
   }));
@@ -60,7 +61,8 @@ export function useExtratoSupabase({
       let query = supabase
         .from('extrato_unificado')
         .select('*', { count: 'exact' })
-        .order('data', { ascending: false });
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false });
 
       // Aplicar filtros de período no servidor
       if (dataInicio) {

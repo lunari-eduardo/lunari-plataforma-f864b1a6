@@ -1,5 +1,5 @@
 export type ExtratoTipo = 'entrada' | 'saida';
-export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao';
+export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao' | 'gallery';
 export type ExtratoStatus = 'Pago' | 'Faturado' | 'Agendado';
 
 // Linha unificada do extrato
@@ -20,6 +20,7 @@ export interface LinhaExtrato {
   status: ExtratoStatus;
   observacoes?: string;
   cartao?: string; // Nome do cartão se aplicável
+  meioPagamento?: string; // Provedor (asaas, mercadopago, infinitepay, manual)
   // IDs de referência para drill-down
   referenciaId: string; // ID da transação ou pagamento original
   referenciaOrigem: ExtratoOrigem;

@@ -11,7 +11,8 @@ export const PREFERENCIAS_STORAGE_KEY = 'lunari_extrato_preferencias';
 export const ORIGEM_COLORS = {
   workflow: 'bg-blue-500/10 text-blue-700 border-blue-200',
   financeiro: 'bg-purple-500/10 text-purple-700 border-purple-200',
-  cartao: 'bg-orange-500/10 text-orange-700 border-orange-200'
+  cartao: 'bg-orange-500/10 text-orange-700 border-orange-200',
+  gallery: 'bg-emerald-500/10 text-emerald-700 border-emerald-200'
 } as const;
 
 export const STATUS_COLORS = {
@@ -25,11 +26,24 @@ export const TIPO_COLORS = {
   saida: 'text-red-600'
 } as const;
 
+export const TIPO_BADGE_COLORS = {
+  entrada: 'bg-green-500/15 text-green-700 border-green-300',
+  saida: 'bg-red-500/15 text-red-700 border-red-300'
+} as const;
+
 // ============= MAPEAMENTOS =============
 export const ORIGEM_LABELS = {
-  workflow: 'Workflow',
+  workflow: 'Gestão',
   financeiro: 'Financeiro',
-  cartao: 'Cartão'
+  cartao: 'Cartão',
+  gallery: 'Gallery'
+} as const;
+
+export const MEIO_PAGAMENTO_LABELS: Record<string, string> = {
+  asaas: 'Asaas',
+  mercadopago: 'MercadoPago',
+  infinitepay: 'InfinitePay',
+  manual: 'Manual'
 } as const;
 
 export const TIPO_LABELS = {
