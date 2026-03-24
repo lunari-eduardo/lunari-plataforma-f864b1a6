@@ -1,56 +1,23 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plug, CreditCard, Calendar, Crown, Lock } from 'lucide-react';
+import { Plug, CreditCard, Calendar, Crown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PagamentosTab } from '@/components/integracoes/PagamentosTab';
+import { PaymentSettings } from '@/components/integracoes/PaymentSettings';
 import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
-import { useIntegracoes } from '@/hooks/useIntegracoes';
 import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { useAccessControl } from '@/hooks/useAccessControl';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const {
-    loading,
-    connecting,
-    mercadoPagoStatus,
-    mercadoPagoConnectedAt,
-    mercadoPagoUserId,
-    mercadoPagoSettings,
-    infinitePayStatus,
-    infinitePayHandle,
-    pixManualStatus,
-    pixManualData,
-    asaasStatus,
-    asaasSettings,
-    provedorPadrao,
-    connectMercadoPago,
-    disconnectMercadoPago,
-    handleOAuthCallback,
-    updateMercadoPagoSettings,
-    saveInfinitePayHandle,
-    disconnectInfinitePay,
-    savePixManual,
-    disconnectPixManual,
-    saveAsaas,
-    updateAsaasSettings,
-    disconnectAsaas,
-    setProvedorPadrao,
-  } = useIntegracoes();
-
   const { refetch: refetchGoogleCalendar } = useGoogleCalendarIntegration();
   const { hasPro } = useAccessControl();
 
-  // Handle OAuth callbacks (Mercado Pago and Google Calendar)
+  // Handle Google Calendar OAuth callbacks
   useEffect(() => {
-    const code = searchParams.get('code');
-    const error = searchParams.get('error');
     const googleSuccess = searchParams.get('google_success');
     const googleError = searchParams.get('google_error');
 
-    // Handle Google Calendar callback
     if (googleSuccess) {
       toast.success('Google Calendar conectado com sucesso');
       refetchGoogleCalendar();
@@ -69,36 +36,7 @@ export function IntegracoesTab() {
       setSearchParams({ tab: 'integracoes' });
       return;
     }
-
-    // Handle Mercado Pago callback
-    if (error) {
-      console.error('[IntegracoesTab] OAuth error:', error);
-      setSearchParams({ tab: 'integracoes' });
-      return;
-    }
-
-    if (code) {
-      console.log('[IntegracoesTab] Processing OAuth callback with code');
-      handleOAuthCallback(code).then(() => {
-        setSearchParams({ tab: 'integracoes' });
-      });
-    }
-  }, [searchParams, setSearchParams, handleOAuthCallback, refetchGoogleCalendar]);
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-          <Skeleton className="h-48" />
-        </div>
-      </div>
-    );
-  }
+  }, [searchParams, setSearchParams, refetchGoogleCalendar]);
 
   return (
     <div className="space-y-6">
@@ -144,32 +82,7 @@ export function IntegracoesTab() {
         </TabsList>
 
         <TabsContent value="pagamentos" className="mt-6">
-          <PagamentosTab
-            mercadoPagoStatus={mercadoPagoStatus}
-            mercadoPagoConnectedAt={mercadoPagoConnectedAt}
-            mercadoPagoUserId={mercadoPagoUserId}
-            mercadoPagoSettings={mercadoPagoSettings}
-            onConnectMercadoPago={connectMercadoPago}
-            onDisconnectMercadoPago={disconnectMercadoPago}
-            onUpdateMercadoPagoSettings={updateMercadoPagoSettings}
-            infinitePayStatus={infinitePayStatus}
-            infinitePayHandle={infinitePayHandle}
-            onSaveInfinitePay={saveInfinitePayHandle}
-            onDisconnectInfinitePay={disconnectInfinitePay}
-            pixManualStatus={pixManualStatus}
-            pixManualData={pixManualData}
-            onSavePixManual={savePixManual}
-            onDisconnectPixManual={disconnectPixManual}
-            asaasStatus={asaasStatus}
-            asaasSettings={asaasSettings}
-            onSaveAsaas={saveAsaas}
-            onUpdateAsaasSettings={updateAsaasSettings}
-            onDisconnectAsaas={disconnectAsaas}
-            provedorPadrao={provedorPadrao}
-            onSetProvedorPadrao={setProvedorPadrao}
-            loading={loading}
-            connecting={connecting}
-          />
+          <PaymentSettings />
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">
