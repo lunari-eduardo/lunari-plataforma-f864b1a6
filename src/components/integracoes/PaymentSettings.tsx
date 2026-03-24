@@ -20,6 +20,7 @@ import {
   getProviderLabel,
   getPixKeyTypeLabel,
 } from '@/hooks/usePaymentIntegration';
+import { settingsDiverge } from '@/utils/paymentSettingsContext';
 import { pixLogo, infinitepayLogo, mercadopagoLogo, asaasLogo } from '@/assets/payment-logos';
 import { useAuth } from '@/contexts/AuthContext';
 import { PaymentConfigDrawer } from './PaymentConfigDrawer';
@@ -85,6 +86,7 @@ export function PaymentSettings() {
     updateMercadoPagoSettings,
     getMercadoPagoOAuthUrl,
     mpAppId,
+    migrateFromGallery,
   } = usePaymentIntegration();
 
   // Drawer state
@@ -278,12 +280,18 @@ export function PaymentSettings() {
                 <div key={integration.id} className="flex items-center gap-3 px-4 py-3">
                   <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                   <img src={providerLogos[integration.provedor]} alt={getProviderLabel(integration.provedor)} className="h-6 w-6 object-contain flex-shrink-0" />
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
                     <span className="font-medium text-sm truncate">{getProviderLabel(integration.provedor)}</span>
                     {integration.isDefault && (
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 flex-shrink-0">
                         <Star className="h-2.5 w-2.5" />
                         Padrão
+                      </Badge>
+                    )}
+                    {(integration.provedor === 'asaas' || integration.provedor === 'mercadopago') &&
+                      settingsDiverge(integration.dadosExtrasRaw, integration.provedor) && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 flex-shrink-0 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-600">
+                        Config. independente
                       </Badge>
                     )}
                   </div>
@@ -393,6 +401,9 @@ export function PaymentSettings() {
         updateAsaasSettings={updateAsaasSettings}
         userId={user?.id}
         asaasFees={asaasFees} setAsaasFees={setAsaasFees}
+        migrateFromGallery={migrateFromGallery}
+        asaasDadosExtrasRaw={asaasIntegration?.dadosExtrasRaw}
+        mpDadosExtrasRaw={mpIntegration?.dadosExtrasRaw}
       />
     </div>
   );
