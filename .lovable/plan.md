@@ -1,52 +1,77 @@
 
 
-# CRITICAL FIX: RLS Bypass on `extrato_unificado` View
+# Refatorar Página de Pagamentos para o padrão Gallery
 
-## Root Cause
+## Objetivo
 
-The view `extrato_unificado` is owned by `postgres` and was created **without `security_invoker=on`**. This means:
+Substituir a UI fragmentada de pagamentos do Gestão (cards separados por provedor + modais) pela UI unificada do Gallery (lista compacta + Sheet lateral), mantendo a mesma aparência e comportamento dos screenshots.
 
-- The view executes queries as `postgres` (superuser), which **bypasses ALL RLS policies** on every underlying table
-- Every authenticated user sees **all users' financial data** — not just their own
-- The frontend query in `useExtratoSupabase.ts` does not add a `user_id` filter, trusting RLS to handle isolation
+## Contexto Atual vs Desejado
 
-This is a **complete data exposure vulnerability** affecting all users.
+**Gestão atual**: `PagamentosTab` renderiza `ActiveMethodsList` + 4 cards individuais (`MercadoPagoCard`, `InfinitePayCardNew`, `PixManualCard`, `AsaasCard`) + `MercadoPagoSettingsModal`. Cada card tem seu próprio estado e lógica de formulário.
 
-## Fix Plan
+**Gallery (desejado)**: `PaymentSettings` renderiza duas seções ("Recebimento ativo" + "Outras formas de pagamento") com `PaymentConfigDrawer` (Sheet lateral) que abre o formulário de configuração de cada provedor.
 
-### 1. Database Migration — Recreate view with `security_invoker=on`
+## Plano de Implementação
 
-Recreate the view with the `WITH (security_invoker=on)` option. This makes the view execute queries using the **calling user's permissions**, so RLS policies on `clientes_transacoes`, `fin_transactions`, etc. will apply correctly.
+### 1. Criar `src/hooks/usePaymentIntegration.ts`
 
-```sql
-CREATE OR REPLACE VIEW extrato_unificado
-WITH (security_invoker=on) AS
--- (same view definition, unchanged)
-```
+Novo hook no Gestão, portado do Gallery. Usa `useQuery` + `useMutation` para ler/escrever em `usuarios_integracoes`. Substitui o hook `useIntegracoes` (que é imperativo com `useState`/`useEffect`) por uma abordagem declarativa com React Query.
 
-**Why this works**: With `security_invoker=on`, when user `07diehl` queries the view, PostgreSQL evaluates RLS policies on `clientes_transacoes` using `07diehl`'s `auth.uid()`, so they only see their own rows. Same for `fin_transactions`, `cobrancas`, etc.
+- Adaptar URLs do Supabase para o projeto Gestão
+- Adaptar `redirect_uri` do Mercado Pago OAuth para a URL do Gestão
+- Manter tipos exportados: `PaymentProvider`, `PixKeyType`, `AsaasData`, `MercadoPagoData`, etc.
 
-### 2. Frontend safety net — Add `user_id` filter in query
+### 2. Criar `src/assets/payment-logos/index.ts`
 
-Even with RLS working, add an explicit `.eq('user_id', userId)` filter in `useExtratoSupabase.ts` as defense-in-depth. This prevents any future RLS misconfiguration from leaking data.
-
+Barrel file que re-exporta os logos existentes em `src/assets/`:
 ```typescript
-// After building the query, before .range():
-const { data: { user } } = await supabase.auth.getUser();
-if (!user) throw new Error('Not authenticated');
-query = query.eq('user_id', user.id);
+import pixLogo from '@/assets/pix-logo.png';
+import infinitepayLogo from '@/assets/infinitepay-logo.png';
+import mercadopagoLogo from '@/assets/mercadopago-logo.png';
+import asaasLogo from '@/assets/asaas-logo.png';
+export { pixLogo, infinitepayLogo, mercadopagoLogo, asaasLogo };
 ```
 
-## Files to Modify
+### 3. Criar `src/components/integracoes/PaymentSettings.tsx`
 
-| File | Change |
-|------|--------|
-| New migration SQL | Recreate `extrato_unificado` with `security_invoker=on` |
-| `src/hooks/useExtratoSupabase.ts` | Add explicit `user_id` filter as defense-in-depth |
+Componente portado do Gallery. Renderiza:
+- **Seção "Recebimento ativo"**: Lista com ícone verde, logo, nome, badge "Padrão", summary (PIX + Cartao 12x), botão engrenagem + menu dropdown (Definir padrão / Desativar)
+- **Seção "Outras formas de pagamento"**: Lista com círculo cinza, logo esmaecida, nome, descrição, botão "+ Adicionar"
 
-## Impact
+Usa o novo `usePaymentIntegration` hook.
 
-- Immediately stops cross-user data exposure
-- No functional change for users — they will only see their own data (as intended)
-- No schema changes, no new tables — just the view attribute and a query filter
+### 4. Criar `src/components/integracoes/PaymentConfigDrawer.tsx`
+
+Componente portado do Gallery. Sheet lateral (`SheetContent side="right"`) com formulários por provedor:
+- **PIX Manual**: Tipo de chave (select), chave PIX, nome do titular
+- **InfinitePay**: Handle com prefixo @
+- **Mercado Pago**: Botão conectar OAuth (se desconectado) ou toggles PIX/Cartão + parcelamento (se conectado)
+- **Asaas**: API Key (se novo), ambiente, toggles PIX/Cartão/Boleto, parcelamento, antecipação, ver taxas
+
+### 5. Atualizar `src/components/preferencias/IntegracoesTab.tsx`
+
+Substituir `<PagamentosTab ...>` com dezenas de props por `<PaymentSettings />` auto-contido (sem props — busca dados internamente via hook).
+
+### 6. Manter arquivos antigos (não deletar)
+
+Os componentes antigos (`MercadoPagoCard`, `AsaasCard`, etc.) podem estar sendo usados em outros pontos. Não serão deletados, apenas deixarão de ser importados pela `IntegracoesTab`.
+
+## Arquivos a Criar/Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/hooks/usePaymentIntegration.ts` | Criar — hook React Query portado do Gallery |
+| `src/assets/payment-logos/index.ts` | Criar — barrel de logos |
+| `src/components/integracoes/PaymentSettings.tsx` | Criar — componente principal portado |
+| `src/components/integracoes/PaymentConfigDrawer.tsx` | Criar — drawer lateral portado |
+| `src/components/preferencias/IntegracoesTab.tsx` | Modificar — usar `PaymentSettings` no lugar de `PagamentosTab` |
+
+## Adaptações Gallery → Gestão
+
+- URLs Supabase: usar importação local `supabase` do Gestão
+- Auth context: `useAuth` do Gestão em vez de `useAuthContext` do Gallery
+- OAuth redirect: URL do Gestão em vez de `gallery.lunarihub.com`
+- Logos: reusar os PNGs existentes em `src/assets/`
+- Sheet component: já existe no Gestão (`src/components/ui/sheet.tsx`)
 
