@@ -16,7 +16,9 @@ import {
   ORIGEM_COLORS, 
   STATUS_COLORS, 
   TIPO_LABELS,
-  ORIGEM_LABELS
+  TIPO_BADGE_COLORS,
+  ORIGEM_LABELS,
+  MEIO_PAGAMENTO_LABELS
 } from '@/constants/extratoConstants';
 
 const STATUS_ICONS = {
@@ -44,7 +46,6 @@ export default function ExtratoTable({
   paginacao,
   isLoading
 }: ExtratoTableProps) {
-  // Calcular range de registros exibidos
   const rangeInicio = paginacao ? ((paginacao.page - 1) * paginacao.pageSize) + 1 : 1;
   const rangeFim = paginacao 
     ? Math.min(paginacao.page * paginacao.pageSize, paginacao.totalCount) 
@@ -55,9 +56,7 @@ export default function ExtratoTable({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">
-              Extrato de Movimentações
-            </CardTitle>
+            <CardTitle className="text-lg">Extrato de Movimentações</CardTitle>
             <CardDescription>
               {paginacao 
                 ? `${paginacao.totalCount} registros no total`
@@ -65,7 +64,6 @@ export default function ExtratoTable({
               }
             </CardDescription>
           </div>
-          
           <div className="flex items-center space-x-2">
             <ExportDetalhado dados={dadosExportacao} />
           </div>
@@ -87,7 +85,6 @@ export default function ExtratoTable({
                     <TableHead>Descrição</TableHead>
                     <TableHead>Origem</TableHead>
                     <TableHead>Categoria/Cliente</TableHead>
-                    <TableHead>Parcela</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Saldo</TableHead>
@@ -97,7 +94,7 @@ export default function ExtratoTable({
                 <TableBody>
                   {linhas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         Nenhum registro encontrado para o período selecionado
                       </TableCell>
                     </TableRow>
@@ -111,7 +108,7 @@ export default function ExtratoTable({
                           </TableCell>
                           
                           <TableCell>
-                            <Badge variant={linha.tipo === 'entrada' ? 'default' : 'secondary'}>
+                            <Badge className={TIPO_BADGE_COLORS[linha.tipo]} variant="outline">
                               {TIPO_LABELS[linha.tipo]}
                             </Badge>
                           </TableCell>
@@ -129,6 +126,11 @@ export default function ExtratoTable({
                             <Badge className={ORIGEM_COLORS[linha.origem]}>
                               {ORIGEM_LABELS[linha.origem]}
                             </Badge>
+                            {linha.meioPagamento && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {MEIO_PAGAMENTO_LABELS[linha.meioPagamento] || linha.meioPagamento}
+                              </div>
+                            )}
                           </TableCell>
                           
                           <TableCell>
@@ -143,14 +145,6 @@ export default function ExtratoTable({
                             )}
                             {linha.cartao && (
                               <div className="text-xs text-orange-600">{linha.cartao}</div>
-                            )}
-                          </TableCell>
-                          
-                          <TableCell>
-                            {linha.parcela && (
-                              <Badge variant="outline">
-                                {linha.parcela.atual}/{linha.parcela.total}
-                              </Badge>
                             )}
                           </TableCell>
                           
@@ -182,7 +176,6 @@ export default function ExtratoTable({
               </Table>
             </ScrollArea>
 
-            {/* Controles de Paginação */}
             {paginacao && paginacao.totalPages > 1 && (
               <div className="flex items-center justify-between pt-4 border-t mt-4">
                 <div className="text-sm text-muted-foreground">
