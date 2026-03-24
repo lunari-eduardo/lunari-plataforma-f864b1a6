@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, Eye, EyeOff, ExternalLink, RefreshCw, CheckCircle, AlertTriangle, Link2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ExternalLink, RefreshCw, CheckCircle, AlertTriangle, Link2, ArrowDownUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,8 @@ import {
 } from '@/hooks/usePaymentIntegration';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { hasOtherContextSettings, getDivergenceSummary } from '@/utils/paymentSettingsContext';
 import { ptBR } from 'date-fns/locale';
 
 const providerLogos: Record<PaymentProvider, string> = {
@@ -103,6 +105,11 @@ interface PaymentConfigDrawerProps {
     };
   } | null;
   setAsaasFees: (v: any) => void;
+
+  // Migration
+  migrateFromGallery: { mutate: (provedor: 'asaas' | 'mercadopago') => void; isPending: boolean };
+  asaasDadosExtrasRaw: any;
+  mpDadosExtrasRaw: any;
 }
 
 export function PaymentConfigDrawer({
@@ -121,6 +128,7 @@ export function PaymentConfigDrawer({
   asaasRepassarAntecipacao, setAsaasRepassarAntecipacao,
   handleSaveAsaas, handleSaveAsaasSettings, saveAsaasPending, updateAsaasSettings, userId,
   asaasFees, setAsaasFees,
+  migrateFromGallery, asaasDadosExtrasRaw, mpDadosExtrasRaw,
 }: PaymentConfigDrawerProps) {
   const [asaasShowKey, setAsaasShowKey] = useState(false);
   const [asaasFeesLoading, setAsaasFeesLoading] = useState(false);
