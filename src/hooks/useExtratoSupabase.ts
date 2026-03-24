@@ -53,14 +53,19 @@ export function useExtratoSupabase({
   const { data: resultado, isLoading } = useQuery({
     queryKey: ['extrato-unificado', dataInicio, dataFim, page, pageSize],
     queryFn: async () => {
+      // Defense-in-depth: get user_id for explicit filter
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       // Calcular offset para paginação
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      // Construir query base com contagem
+      // Construir query base com contagem + explicit user_id filter
       let query = supabase
         .from('extrato_unificado')
         .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
         .order('data', { ascending: false })
         .order('created_at', { ascending: false });
 
