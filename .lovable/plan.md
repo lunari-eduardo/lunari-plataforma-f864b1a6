@@ -1,58 +1,52 @@
 
 
-# Melhorias na Aba Extrato + Verificação Gallery
+# CRITICAL FIX: RLS Bypass on `extrato_unificado` View
 
-## Análise Gallery (Asaas)
+## Root Cause
 
-A Gallery **está correta**: `asaas-gallery-payment` insere como `'pendente'`, `asaas-gallery-webhook` extrai `netValue`, cria parcelas, e os triggers fazem o resto. Nenhuma correção necessária.
+The view `extrato_unificado` is owned by `postgres` and was created **without `security_invoker=on`**. This means:
 
-## Mudanças no Extrato
+- The view executes queries as `postgres` (superuser), which **bypasses ALL RLS policies** on every underlying table
+- Every authenticated user sees **all users' financial data** — not just their own
+- The frontend query in `useExtratoSupabase.ts` does not add a `user_id` filter, trusting RLS to handle isolation
 
-### 1. Ordenação por data+hora (decrescente)
+This is a **complete data exposure vulnerability** affecting all users.
 
-**Problema**: A view `extrato_unificado` ordena apenas por `data` (tipo `date`, sem hora). Registros do mesmo dia aparecem em ordem arbitrária.
+## Fix Plan
 
-**Solução**: Alterar a query no `useExtratoSupabase.ts` para ordenar por `created_at` (timestamp) como critério secundário:
+### 1. Database Migration — Recreate view with `security_invoker=on`
+
+Recreate the view with the `WITH (security_invoker=on)` option. This makes the view execute queries using the **calling user's permissions**, so RLS policies on `clientes_transacoes`, `fin_transactions`, etc. will apply correctly.
+
+```sql
+CREATE OR REPLACE VIEW extrato_unificado
+WITH (security_invoker=on) AS
+-- (same view definition, unchanged)
 ```
-.order('data', { ascending: false })
-.order('created_at', { ascending: false })
+
+**Why this works**: With `security_invoker=on`, when user `07diehl` queries the view, PostgreSQL evaluates RLS policies on `clientes_transacoes` using `07diehl`'s `auth.uid()`, so they only see their own rows. Same for `fin_transactions`, `cobrancas`, etc.
+
+### 2. Frontend safety net — Add `user_id` filter in query
+
+Even with RLS working, add an explicit `.eq('user_id', userId)` filter in `useExtratoSupabase.ts` as defense-in-depth. This prevents any future RLS misconfiguration from leaking data.
+
+```typescript
+// After building the query, before .range():
+const { data: { user } } = await supabase.auth.getUser();
+if (!user) throw new Error('Not authenticated');
+query = query.eq('user_id', user.id);
 ```
-E exibir o horário na tabela usando `created_at` quando disponível.
 
-### 2. Origem: Gallery vs Gestão + Meio de Pagamento
+## Files to Modify
 
-**Problema**: A view SQL hardcoda `'workflow'` para todas as `clientes_transacoes`. Não distingue se o pagamento veio do Gallery ou do Gestão, nem qual meio de pagamento (Asaas, InfinitePay, MP, Manual).
+| File | Change |
+|------|--------|
+| New migration SQL | Recreate `extrato_unificado` with `security_invoker=on` |
+| `src/hooks/useExtratoSupabase.ts` | Add explicit `user_id` filter as defense-in-depth |
 
-**Solução**: Atualizar a view `extrato_unificado` via migration:
-- JOIN com `cobrancas` para extrair `provedor` e `galeria_id`
-- Se `galeria_id IS NOT NULL` → origem = `'gallery'`, senão `'workflow'`  
-- Adicionar coluna `meio_pagamento` (provedor da cobrança)
+## Impact
 
-Atualizar constantes e UI:
-- Adicionar `gallery` em `ORIGEM_COLORS` e `ORIGEM_LABELS`
-- Exibir meio de pagamento como sub-badge ou texto auxiliar
-
-### 3. Badges verde/vermelho para Entrada/Saída
-
-**Problema**: Badges usam `variant="default"` e `variant="secondary"` — sem distinção visual forte.
-
-**Solução**: Aplicar classes diretas:
-- Entrada: `bg-green-500/15 text-green-700 border-green-300`
-- Saída: `bg-red-500/15 text-red-700 border-red-300`
-
-### 4. Remover coluna Parcelas
-
-**Problema**: Parcelas no extrato geral são redundantes (já constam no histórico do cliente).
-
-**Solução**: Remover coluna "Parcela" do `ExtratoTable.tsx` e do header. Manter os dados na view para exportação se necessário.
-
-## Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---------|---------|
-| Nova migration SQL | Recriar view `extrato_unificado` com JOIN em `cobrancas` para `provedor` e `galeria_id`, nova coluna `meio_pagamento` |
-| `src/hooks/useExtratoSupabase.ts` | Ordenar por `created_at` como critério secundário, mapear novos campos |
-| `src/components/extrato/ExtratoTable.tsx` | Remover coluna Parcela, badges verde/vermelho, exibir horário, mostrar meio de pagamento |
-| `src/constants/extratoConstants.ts` | Adicionar `gallery` nas cores/labels de origem |
-| `src/types/extrato.ts` | Adicionar `gallery` em `ExtratoOrigem`, adicionar campo `meioPagamento` |
+- Immediately stops cross-user data exposure
+- No functional change for users — they will only see their own data (as intended)
+- No schema changes, no new tables — just the view attribute and a query filter
 
