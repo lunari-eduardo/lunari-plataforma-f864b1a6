@@ -298,8 +298,7 @@ export function usePaymentIntegration() {
 
   const getMercadoPagoOAuthUrl = () => {
     if (!mpAppId) return null;
-    const { getOAuthRedirectUri } = require('@/utils/domainUtils');
-    const redirectUri = `${getOAuthRedirectUri()}?mp_callback=true`;
+    const redirectUri = `${window.location.origin}/app/integracoes?mp_callback=true`;
     return `https://auth.mercadopago.com.br/authorization?client_id=${mpAppId}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
