@@ -157,7 +157,7 @@ export function WorkflowCardCollapsed({
     const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
     const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
     
-    return Math.max(0, total - valorPago);
+    return total - valorPago;
   }, [session]);
 
   const handlePaymentAdd = useCallback(async () => {
@@ -442,11 +442,13 @@ export function WorkflowCardCollapsed({
           </div>
         </div>
 
-        {/* Zona 9: PENDENTE */}
+        {/* Zona 9: PENDENTE / CRÉDITO */}
         <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">Pendente</span>
-          <span className={`text-sm font-bold text-right ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
-            {formatCurrency(pendente)}
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">
+            {pendente < 0 ? 'Crédito' : 'Pendente'}
+          </span>
+          <span className={`text-sm font-bold text-right ${pendente > 0 ? 'text-destructive' : pendente < 0 ? 'text-yellow-500' : 'text-green-600'}`}>
+            {pendente < 0 ? `+${formatCurrency(Math.abs(pendente))}` : formatCurrency(pendente)}
           </span>
         </div>
 
@@ -577,10 +579,10 @@ export function WorkflowCardCollapsed({
           </Button>
         </div>
 
-        {/* Zona 9: PENDENTE */}
+        {/* Zona 9: PENDENTE / CRÉDITO */}
         <div className="flex flex-col items-end">
-          <span className={`text-[11px] font-bold ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
-            {formatCurrency(pendente)}
+          <span className={`text-[11px] font-bold ${pendente > 0 ? 'text-destructive' : pendente < 0 ? 'text-yellow-500' : 'text-green-600'}`}>
+            {pendente < 0 ? `+${formatCurrency(Math.abs(pendente))}` : formatCurrency(pendente)}
           </span>
         </div>
 
@@ -635,9 +637,9 @@ export function WorkflowCardCollapsed({
         {/* Status como pílula */}
         <ColoredStatusBadge status={session.status || ''} showBackground={true} />
 
-        {/* Pendente */}
-        <span className={`text-sm font-bold ${pendente > 0 ? 'text-destructive' : 'text-green-600'}`}>
-          {formatCurrency(pendente)}
+        {/* Pendente / Crédito */}
+        <span className={`text-sm font-bold ${pendente > 0 ? 'text-destructive' : pendente < 0 ? 'text-yellow-500' : 'text-green-600'}`}>
+          {pendente < 0 ? `+${formatCurrency(Math.abs(pendente))}` : formatCurrency(pendente)}
         </span>
 
         {/* Gallery Criar + Ver (Mobile) */}
