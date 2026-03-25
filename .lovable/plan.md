@@ -1,43 +1,62 @@
 
 
-# Fix: 13 Sessions with Incorrect Pending Amount (February Data)
+# Otimizar Métricas do Workflow + Exibir Créditos
 
-## Root Cause
+## Problemas Identificados
 
-The trigger `ensure_transaction_on_cobranca_paid` (AFTER UPDATE on `cobrancas`) was implemented AFTER these February sessions had their Gallery extra photo payments processed via InfinitePay. At that time, the InfinitePay webhook created cobrancas directly as `'pago'` on INSERT, bypassing the UPDATE-only trigger. Result: cobrancas marked as paid, `status_pagamento_fotos_extra = 'pago'`, but **no corresponding transaction in `clientes_transacoes`** was created, so `valor_pago` was never incremented.
+1. **Métricas lentas**: `useWorkflowMetricsRealtime` chama `supabase.auth.getUser()` (requisição HTTP) a cada navegação de mês, depois faz outra query para buscar sessões. São 2 roundtrips por troca de mês. O realtime subscription também dispara `loadMetrics()` sem debounce, causando múltiplas queries simultâneas.
 
-**Current state (March)**: The trigger works correctly. Recent InfinitePay/Asaas payments create proper `[auto-reconciled]` transactions. Only the admin user (`lisediehlfotos@gmail.com`) has 13 affected sessions from February, totaling R$1,597 in incorrectly pending amounts.
+2. **Créditos ocultos**: `calculateRestante()` em `WorkflowCardCollapsed.tsx` e `WorkflowTable.tsx` usa `Math.max(0, total - valorPago)`, eliminando valores negativos (créditos/sobrepagamentos). Na barra de métricas, `aReceber` também pode ser negativo mas não é tratado.
 
-## Fix Plan
+## Plano
 
-### 1. One-time data repair migration
+### 1. Calcular métricas a partir do cache local (eliminar query extra)
 
-Create a migration that inserts the missing `clientes_transacoes` records for each of the 13 orphaned cobrancas. This will trigger `recompute_session_paid` automatically (via existing trigger on `clientes_transacoes`), which will update `valor_pago` and clear the incorrect pending amounts.
+O `WorkflowCacheContext` já carrega todas as sessões do mês via `getSessionsForMonthSync()`. Em vez de fazer uma query separada no `useWorkflowMetricsRealtime`, calcular as métricas diretamente dos dados já em cache.
 
-The migration will:
-- Find all cobrancas with `status = 'pago'` that have NO matching transaction (using the same logic as the trigger)
-- Insert a `tipo = 'pagamento'` transaction for each
-- The existing `trigger_recompute_session_paid` will automatically recalculate `valor_pago`
+**Arquivo**: `src/pages/Workflow.tsx`
+- Remover `useWorkflowMetricsRealtime` do Workflow
+- Calcular `financials` com `useMemo` a partir de `filteredSessions` (que já vêm do cache):
+  ```
+  previsto = sum(valor_total)
+  receita = sum(valor_pago) 
+  aReceber = previsto - receita
+  sessoes = count
+  ```
+- Resultado: 0 queries extras na navegação mensal — métricas instantâneas
 
-### 2. Add INSERT trigger on cobrancas (preventive)
+### 2. Mostrar créditos (valores negativos) nas sessões
 
-The current trigger only fires on UPDATE. Add it for INSERT too, so if any future code path creates a cobrança directly as `'pago'`, the transaction will still be created.
+**Arquivo**: `src/components/workflow/WorkflowCardCollapsed.tsx`
+- Remover `Math.max(0, ...)` do `calculateRestante()`
+- Quando `restante < 0`: exibir em amarelo com prefixo `+` (ex: `+R$ 120,00`) indicando crédito
+- Quando `restante > 0`: manter vermelho (pendente)
+- Quando `restante === 0`: manter verde (R$ 0,00)
 
-```sql
--- Change from AFTER UPDATE to AFTER INSERT OR UPDATE
-DROP TRIGGER IF EXISTS ensure_tx_on_cobranca_paid ON cobrancas;
-CREATE TRIGGER ensure_tx_on_cobranca_paid
-  AFTER INSERT OR UPDATE ON cobrancas
-  FOR EACH ROW EXECUTE FUNCTION ensure_transaction_on_cobranca_paid();
-```
+**Arquivo**: `src/components/workflow/WorkflowTable.tsx`  
+- Mesma lógica: remover `Math.max(0, ...)` do `calculateRestante()`
 
-The function already handles the INSERT case correctly (it checks `NEW.status IN ('pago','pago_manual')` and `OLD.status` with null-safety).
+### 3. Exibir créditos na barra de métricas
 
-## Files
+**Arquivo**: `src/pages/Workflow.tsx`
+- Quando `aReceber < 0`, exibir "Crédito" em amarelo em vez de "A Receber" em laranja
+- Formato: `+R$ 232,00` em amarelo
 
-| File | Action |
-|------|--------|
-| New migration SQL | Insert missing transactions for 13 orphaned cobrancas + add INSERT trigger |
+### 4. Manter `useWorkflowMetricsRealtime` para o Dashboard Financeiro
 
-No frontend changes needed -- `valor_pago` will be automatically recalculated by existing database triggers.
+O hook continua existindo para uso no `useDashboardFinanceiro`, mas o Workflow não o usa mais — ganha velocidade ao ler do cache local.
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/Workflow.tsx` | Calcular métricas do cache local, remover hook de realtime, tratar crédito na barra |
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Remover `Math.max(0,...)`, exibir crédito em amarelo |
+| `src/components/workflow/WorkflowTable.tsx` | Remover `Math.max(0,...)` do `calculateRestante` |
+
+## Impacto
+
+- Navegação mensal: de ~2 queries (800ms+) para 0 queries (instantâneo)
+- Créditos visíveis: sessões com sobrepagamento mostram `+R$ X` em amarelo
+- Sem breaking changes: Dashboard Financeiro continua usando o hook original
 
