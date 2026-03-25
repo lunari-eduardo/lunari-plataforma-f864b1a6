@@ -17,7 +17,6 @@ import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
-import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { toast } from "@/hooks/use-toast";
@@ -496,13 +495,7 @@ export default function Workflow() {
     });
   }, []);
 
-  // ✅ MÉTRICAS EM TEMPO REAL DO SUPABASE
-  const workflowMetrics = useWorkflowMetricsRealtime(
-    currentMonth.year,
-    currentMonth.month
-  );
-
-  // Calculate totals for metrics (mantido para compatibilidade com outras funções)
+  // Calculate totals for metrics
   const calculateTotal = useCallback((session: SessionData) => {
     const valorPacote = Number(session.valorPacote) || 0;
     const valorFotoExtra = Number(session.valorTotalFotoExtra) || 0;
@@ -519,14 +512,17 @@ export default function Workflow() {
     return total - valorPago;
   }, [calculateTotal]);
 
-  // ✅ Financial metrics usando dados em tempo real do Supabase
+  // ✅ Métricas calculadas do cache local (instantâneo, sem queries extras)
   const financials = useMemo(() => {
+    // Usar workflowSessions (dados brutos do Supabase) para cálculo preciso
+    const previsto = workflowSessions.reduce((sum, s) => sum + (Number(s.valor_total) || 0), 0);
+    const receita = workflowSessions.reduce((sum, s) => sum + (Number(s.valor_pago) || 0), 0);
     return {
-      totalMonth: workflowMetrics.previsto,
-      paidMonth: workflowMetrics.receita,
-      remainingMonth: workflowMetrics.aReceber
+      totalMonth: previsto,
+      paidMonth: receita,
+      remainingMonth: previsto - receita
     };
-  }, [workflowMetrics]);
+  }, [workflowSessions]);
 
   // Previous month metrics for comparison
   const prevMonthFinancials = useMemo(() => {
@@ -832,9 +828,11 @@ export default function Workflow() {
             <span className="text-sm font-bold text-blue-500">{formatCurrency(financials.totalMonth)}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-            <span className="text-[11px] text-muted-foreground">A Receber</span>
-            <span className="text-sm font-bold text-orange-500">{formatCurrency(financials.remainingMonth)}</span>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${financials.remainingMonth < 0 ? 'bg-yellow-500' : 'bg-orange-500'}`} />
+            <span className="text-[11px] text-muted-foreground">{financials.remainingMonth < 0 ? 'Crédito' : 'A Receber'}</span>
+            <span className={`text-sm font-bold ${financials.remainingMonth < 0 ? 'text-yellow-500' : 'text-orange-500'}`}>
+              {financials.remainingMonth < 0 ? `+${formatCurrency(Math.abs(financials.remainingMonth))}` : formatCurrency(financials.remainingMonth)}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
