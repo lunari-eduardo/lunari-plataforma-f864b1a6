@@ -17,7 +17,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  * 2º: Fallback por id = identifier
  * 
  * Para cobranças Asaas com parcelas:
- * - Consulta a API do Asaas para obter status real de cada parcela
+ * - Consulta a API do Asaas usando a chave do FOTÓGRAFO (usuarios_integracoes)
  * - Cria/atualiza cobranca_parcelas com dados de taxas
  * - Deixa o trigger reconcile_cobranca_from_parcelas atualizar o status da cobrança
  */
@@ -34,141 +34,44 @@ serve(async (req) => {
     console.log("[check-payment-status] Request:", { cobrancaId, orderNsu, sessionId, forceUpdate });
 
     // RESOLUÇÃO SEGUE MESMA ORDEM DO WEBHOOK: ip_order_nsu → id
-    let cobranca = null;
-    let searchMethod = "";
-
-    // 1. Buscar por cobrancaId (pode ser UUID ou ip_order_nsu)
-    if (cobrancaId) {
-      console.log(`[check-payment-status] 1st search: ip_order_nsu = ${cobrancaId}`);
-      const { data: byNsu, error: nsuError } = await supabase
-        .from("cobrancas")
-        .select("*")
-        .eq("ip_order_nsu", cobrancaId)
-        .maybeSingle();
-
-      if (nsuError) {
-        console.error("[check-payment-status] Error searching by ip_order_nsu:", nsuError);
-      }
-
-      if (byNsu) {
-        cobranca = byNsu;
-        searchMethod = "by_ip_order_nsu";
-        console.log(`[check-payment-status] Found by ip_order_nsu: ${byNsu.id}`);
-      } else {
-        console.log(`[check-payment-status] 2nd search (fallback): id = ${cobrancaId}`);
-        const { data: byId, error: idError } = await supabase
-          .from("cobrancas")
-          .select("*")
-          .eq("id", cobrancaId)
-          .maybeSingle();
-
-        if (idError) {
-          console.error("[check-payment-status] Error searching by id:", idError);
-        }
-
-        if (byId) {
-          cobranca = byId;
-          searchMethod = "by_id";
-          console.log(`[check-payment-status] Found by id: ${byId.id}`);
-        }
-      }
-    }
-
-    // 2. Buscar por orderNsu se não encontrou
-    if (!cobranca && orderNsu) {
-      console.log(`[check-payment-status] Searching by orderNsu: ${orderNsu}`);
-      const { data: byNsu, error: nsuError } = await supabase
-        .from("cobrancas")
-        .select("*")
-        .eq("ip_order_nsu", orderNsu)
-        .maybeSingle();
-
-      if (nsuError) {
-        console.error("[check-payment-status] Error searching by orderNsu:", nsuError);
-      }
-
-      if (byNsu) {
-        cobranca = byNsu;
-        searchMethod = "by_ip_order_nsu_param";
-        console.log(`[check-payment-status] Found by orderNsu: ${byNsu.id}`);
-      }
-    }
-
-    // 3. Buscar por sessionId se não encontrou
-    if (!cobranca && sessionId) {
-      console.log(`[check-payment-status] Searching by sessionId: ${sessionId}`);
-      const { data: bySession, error: sessionError } = await supabase
-        .from("cobrancas")
-        .select("*")
-        .eq("session_id", sessionId)
-        .eq("status", "pendente")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (sessionError) {
-        console.error("[check-payment-status] Error searching by sessionId:", sessionError);
-      }
-
-      if (bySession) {
-        cobranca = bySession;
-        searchMethod = "by_session_id";
-        console.log(`[check-payment-status] Found by sessionId: ${bySession.id}`);
-      }
-    }
+    const cobranca = await findCobranca(supabase, { cobrancaId, orderNsu, sessionId });
 
     if (!cobranca) {
       console.log("[check-payment-status] Cobranca not found");
-      return new Response(
-        JSON.stringify({ found: false, error: "Cobranca not found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
-      );
+      return jsonResponse({ found: false, error: "Cobranca not found" }, 404);
     }
 
-    console.log(`[check-payment-status] Found via ${searchMethod}: ${cobranca.id}, status: ${cobranca.status}, provedor: ${cobranca.provedor}`);
+    console.log(`[check-payment-status] Found: ${cobranca.id}, status: ${cobranca.status}, provedor: ${cobranca.provedor}`);
 
-    // Se já está pago, retornar status
+    // Já pago — retornar
     if (cobranca.status === "pago") {
-      return new Response(
-        JSON.stringify({ 
-          found: true, 
-          status: "pago", 
-          updated: false, 
-          source: "already_paid",
-          cobrancaId: cobranca.id 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ found: true, status: "pago", updated: false, source: "already_paid", cobrancaId: cobranca.id });
     }
 
-    // ==========================================
-    // ASAAS PROVIDER: Query API for real status
-    // ==========================================
-    if (cobranca.provedor === "asaas" && cobranca.asaas_installment_id) {
-      console.log(`[check-payment-status] Asaas installment detected: ${cobranca.asaas_installment_id}`);
-      return await handleAsaasInstallmentCheck(supabase, cobranca);
+    // ASAAS: Query API do fotógrafo para status real
+    if (cobranca.provedor === "asaas") {
+      const asaasConfig = await getPhotographerAsaasConfig(supabase, cobranca.user_id);
+
+      if (!asaasConfig) {
+        console.error("[check-payment-status] No Asaas integration found for user:", cobranca.user_id);
+        return jsonResponse({ found: true, status: cobranca.status, updated: false, error: "No Asaas integration for this photographer" });
+      }
+
+      if (cobranca.asaas_installment_id) {
+        return await handleAsaasInstallmentCheck(supabase, cobranca, asaasConfig);
+      }
+
+      if (cobranca.mp_payment_id) {
+        return await handleAsaasSinglePaymentCheck(supabase, cobranca, asaasConfig);
+      }
     }
 
-    if (cobranca.provedor === "asaas" && cobranca.mp_payment_id) {
-      // Single Asaas payment (no installment)
-      console.log(`[check-payment-status] Asaas single payment detected: ${cobranca.mp_payment_id}`);
-      return await handleAsaasSinglePaymentCheck(supabase, cobranca);
-    }
-
-    // ==========================================
-    // NON-ASAAS PROVIDERS: forceUpdate fallback
-    // ==========================================
+    // NON-ASAAS: forceUpdate fallback
     if (forceUpdate) {
       const now = new Date().toISOString();
-
       const { error: updateError } = await supabase
         .from("cobrancas")
-        .update({
-          status: "pago",
-          data_pagamento: now,
-          ip_transaction_nsu: "manual-verification",
-          updated_at: now,
-        })
+        .update({ status: "pago", data_pagamento: now, ip_transaction_nsu: "manual-verification", updated_at: now })
         .eq("id", cobranca.id);
 
       if (updateError) {
@@ -177,88 +80,104 @@ serve(async (req) => {
       }
 
       console.log(`[check-payment-status] Non-Asaas cobranca ${cobranca.id} updated to 'pago' via forceUpdate`);
-
-      return new Response(
-        JSON.stringify({ 
-          found: true, 
-          status: "pago", 
-          updated: true, 
-          source: "manual_verification",
-          cobrancaId: cobranca.id 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ found: true, status: "pago", updated: true, source: "manual_verification", cobrancaId: cobranca.id });
     }
 
-    // Retornar status atual sem modificar
-    return new Response(
-      JSON.stringify({ 
-        found: true, 
-        status: cobranca.status, 
-        updated: false,
-        cobranca: {
-          id: cobranca.id,
-          valor: cobranca.valor,
-          status: cobranca.status,
-          provedor: cobranca.provedor,
-          createdAt: cobranca.created_at,
-        }
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    // Retornar status atual
+    return jsonResponse({
+      found: true,
+      status: cobranca.status,
+      updated: false,
+      cobranca: { id: cobranca.id, valor: cobranca.valor, status: cobranca.status, provedor: cobranca.provedor, createdAt: cobranca.created_at },
+    });
 
   } catch (error) {
     console.error("[check-payment-status] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
+    return jsonResponse({ success: false, error: error instanceof Error ? error.message : "Unknown error" }, 500);
   }
 });
 
 // ==========================================
-// Asaas API helpers
+// Helpers
 // ==========================================
 
-function getAsaasConfig() {
-  const apiKey = Deno.env.get("ASAAS_API_KEY");
-  const env = Deno.env.get("ASAAS_ENV") || "sandbox";
-  const baseUrl = env === "production"
-    ? "https://api.asaas.com/v3"
-    : "https://sandbox.asaas.com/api/v3";
-  return { apiKey, baseUrl };
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status,
+  });
 }
 
-async function handleAsaasInstallmentCheck(supabase: any, cobranca: any) {
-  const { apiKey, baseUrl } = getAsaasConfig();
+async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId }: any) {
+  // 1. By cobrancaId (ip_order_nsu first, then id)
+  if (cobrancaId) {
+    const { data: byNsu } = await supabase.from("cobrancas").select("*").eq("ip_order_nsu", cobrancaId).maybeSingle();
+    if (byNsu) return byNsu;
 
-  if (!apiKey) {
-    console.error("[check-payment-status] ASAAS_API_KEY not configured");
-    return new Response(
-      JSON.stringify({ found: true, status: cobranca.status, updated: false, error: "ASAAS_API_KEY not configured" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    const { data: byId } = await supabase.from("cobrancas").select("*").eq("id", cobrancaId).maybeSingle();
+    if (byId) return byId;
   }
 
+  // 2. By orderNsu
+  if (orderNsu) {
+    const { data: byNsu } = await supabase.from("cobrancas").select("*").eq("ip_order_nsu", orderNsu).maybeSingle();
+    if (byNsu) return byNsu;
+  }
+
+  // 3. By sessionId
+  if (sessionId) {
+    const { data: bySession } = await supabase
+      .from("cobrancas").select("*").eq("session_id", sessionId).eq("status", "pendente")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (bySession) return bySession;
+  }
+
+  return null;
+}
+
+/** Get Asaas API config from the photographer's integration (not platform env var) */
+async function getPhotographerAsaasConfig(supabase: any, userId: string) {
+  const { data: integracao, error } = await supabase
+    .from("usuarios_integracoes")
+    .select("access_token, dados_extras")
+    .eq("user_id", userId)
+    .eq("provedor", "asaas")
+    .eq("status", "ativo")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[check-payment-status] Error fetching photographer integration:", error);
+    return null;
+  }
+
+  if (!integracao?.access_token) {
+    // Fallback to platform env var (for backwards compat / platform-owned accounts)
+    const platformKey = Deno.env.get("ASAAS_API_KEY");
+    if (!platformKey) return null;
+    const env = Deno.env.get("ASAAS_ENV") || "sandbox";
+    const baseUrl = env === "production" ? "https://api.asaas.com/v3" : "https://sandbox.asaas.com/api/v3";
+    console.log("[check-payment-status] Using platform ASAAS_API_KEY as fallback");
+    return { apiKey: platformKey, baseUrl };
+  }
+
+  const env = integracao.dados_extras?.environment || integracao.dados_extras?.gestao_settings?.environment || "sandbox";
+  const baseUrl = env === "production" ? "https://api.asaas.com/v3" : "https://sandbox.asaas.com/api/v3";
+
+  console.log(`[check-payment-status] Using photographer's Asaas key (env: ${env})`);
+  return { apiKey: integracao.access_token, baseUrl };
+}
+
+async function handleAsaasInstallmentCheck(supabase: any, cobranca: any, config: { apiKey: string; baseUrl: string }) {
   try {
-    // Fetch all payments for this installment from Asaas API
-    const url = `${baseUrl}/payments?installment=${cobranca.asaas_installment_id}&limit=100`;
+    const url = `${config.baseUrl}/payments?installment=${cobranca.asaas_installment_id}&limit=100`;
     console.log(`[check-payment-status] Fetching Asaas installment payments: ${url}`);
 
-    const response = await fetch(url, {
-      headers: { "access_token": apiKey },
-    });
+    const response = await fetch(url, { headers: { "access_token": config.apiKey } });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[check-payment-status] Asaas API error: ${response.status} ${errorText}`);
-      return new Response(
-        JSON.stringify({ found: true, status: cobranca.status, updated: false, error: `Asaas API error: ${response.status}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ found: true, status: cobranca.status, updated: false, error: `Asaas API error: ${response.status}` });
     }
 
     const data = await response.json();
@@ -270,39 +189,32 @@ async function handleAsaasInstallmentCheck(supabase: any, cobranca: any) {
 
     for (const payment of payments) {
       const isPaid = ["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"].includes(payment.status);
-      const parcelaStatus = payment.status === "CONFIRMED" ? "confirmado"
-        : payment.status === "RECEIVED" ? "recebido"
-        : payment.status === "RECEIVED_IN_CASH" ? "recebido"
+      const parcelaStatus = isPaid
+        ? (payment.status === "CONFIRMED" ? "confirmado" : "recebido")
         : "pendente";
 
       if (isPaid) parcelasPagas++;
 
       const valorBruto = payment.value || 0;
       const valorLiquido = payment.netValue ?? null;
-      const taxaGateway = valorLiquido != null
-        ? Math.round((valorBruto - valorLiquido) * 100) / 100
-        : 0;
-
-      const parcelaData = {
-        cobranca_id: cobranca.id,
-        numero_parcela: payment.installmentNumber || 1,
-        asaas_payment_id: payment.id,
-        valor_bruto: valorBruto,
-        valor_liquido: valorLiquido,
-        taxa_gateway: taxaGateway,
-        status: parcelaStatus,
-        billing_type: payment.billingType || null,
-        data_pagamento: isPaid ? (payment.paymentDate || new Date().toISOString()) : null,
-        data_vencimento: payment.dueDate || null,
-        data_credito: payment.creditDate || null,
-        updated_at: new Date().toISOString(),
-      };
-
-      console.log(`[check-payment-status] Upserting parcela ${payment.installmentNumber}: ${payment.id} status=${parcelaStatus} bruto=${valorBruto} liquido=${valorLiquido}`);
+      const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
 
       const { error: upsertError } = await supabase
         .from("cobranca_parcelas")
-        .upsert(parcelaData, { onConflict: "asaas_payment_id" });
+        .upsert({
+          cobranca_id: cobranca.id,
+          numero_parcela: payment.installmentNumber || 1,
+          asaas_payment_id: payment.id,
+          valor_bruto: valorBruto,
+          valor_liquido: valorLiquido,
+          taxa_gateway: taxaGateway,
+          status: parcelaStatus,
+          billing_type: payment.billingType || null,
+          data_pagamento: isPaid ? (payment.paymentDate || new Date().toISOString()) : null,
+          data_vencimento: payment.dueDate || null,
+          data_credito: payment.creditDate || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "asaas_payment_id" });
 
       if (upsertError) {
         console.error(`[check-payment-status] Error upserting parcela:`, upsertError);
@@ -311,13 +223,7 @@ async function handleAsaasInstallmentCheck(supabase: any, cobranca: any) {
       }
     }
 
-    // The reconcile_cobranca_from_parcelas trigger handles:
-    // - Updating cobrancas.parcelas_pagas
-    // - Updating cobrancas.valor_liquido
-    // - Updating cobrancas.status to 'pago' when all parcelas are paid
-    // - Which then fires ensure_transaction_on_cobranca_paid → creates clientes_transacoes
-
-    // Re-fetch cobranca to get updated status (after triggers)
+    // Re-fetch cobranca to get trigger-updated status
     const { data: updatedCobranca } = await supabase
       .from("cobrancas")
       .select("status, parcelas_pagas, total_parcelas, valor_liquido")
@@ -325,60 +231,35 @@ async function handleAsaasInstallmentCheck(supabase: any, cobranca: any) {
       .single();
 
     const finalStatus = updatedCobranca?.status || cobranca.status;
-    const wasUpdated = finalStatus !== cobranca.status;
 
-    console.log(`[check-payment-status] Asaas check complete: ${parcelasCreated} parcelas upserted, ${parcelasPagas} paid. Final status: ${finalStatus}`);
+    console.log(`[check-payment-status] Asaas installment check complete: ${parcelasCreated} parcelas upserted, ${parcelasPagas} paid. Final status: ${finalStatus}`);
 
-    return new Response(
-      JSON.stringify({
-        found: true,
-        status: finalStatus,
-        updated: wasUpdated,
-        source: "asaas_api_check",
-        cobrancaId: cobranca.id,
-        parcelas: {
-          total: payments.length,
-          pagas: parcelasPagas,
-          synced: parcelasCreated,
-        },
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    return jsonResponse({
+      found: true,
+      status: finalStatus,
+      updated: finalStatus !== cobranca.status,
+      source: "asaas_api_check",
+      cobrancaId: cobranca.id,
+      parcelas: { total: payments.length, pagas: parcelasPagas, synced: parcelasCreated },
+    });
   } catch (error) {
     console.error("[check-payment-status] Error checking Asaas API:", error);
-    return new Response(
-      JSON.stringify({ found: true, status: cobranca.status, updated: false, error: error.message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    return jsonResponse({ found: true, status: cobranca.status, updated: false, error: error.message });
   }
 }
 
-async function handleAsaasSinglePaymentCheck(supabase: any, cobranca: any) {
-  const { apiKey, baseUrl } = getAsaasConfig();
-
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ found: true, status: cobranca.status, updated: false, error: "ASAAS_API_KEY not configured" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
-  }
-
+async function handleAsaasSinglePaymentCheck(supabase: any, cobranca: any, config: { apiKey: string; baseUrl: string }) {
   try {
     const paymentId = cobranca.mp_payment_id;
-    const url = `${baseUrl}/payments/${paymentId}`;
+    const url = `${config.baseUrl}/payments/${paymentId}`;
     console.log(`[check-payment-status] Fetching Asaas single payment: ${url}`);
 
-    const response = await fetch(url, {
-      headers: { "access_token": apiKey },
-    });
+    const response = await fetch(url, { headers: { "access_token": config.apiKey } });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[check-payment-status] Asaas API error: ${response.status} ${errorText}`);
-      return new Response(
-        JSON.stringify({ found: true, status: cobranca.status, updated: false, error: `Asaas API error: ${response.status}` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ found: true, status: cobranca.status, updated: false, error: `Asaas API error: ${response.status}` });
     }
 
     const payment = await response.json();
@@ -386,18 +267,13 @@ async function handleAsaasSinglePaymentCheck(supabase: any, cobranca: any) {
 
     if (!isPaid) {
       console.log(`[check-payment-status] Asaas payment ${paymentId} not yet paid: ${payment.status}`);
-      return new Response(
-        JSON.stringify({ found: true, status: cobranca.status, updated: false, source: "asaas_api_check" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-      );
+      return jsonResponse({ found: true, status: cobranca.status, updated: false, source: "asaas_api_check" });
     }
 
     // Create parcela for fee tracking
     const valorBruto = payment.value || cobranca.valor;
     const valorLiquido = payment.netValue ?? null;
-    const taxaGateway = valorLiquido != null
-      ? Math.round((valorBruto - valorLiquido) * 100) / 100
-      : 0;
+    const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
     const parcelaStatus = payment.status === "CONFIRMED" ? "confirmado" : "recebido";
 
     const { error: upsertError } = await supabase
@@ -432,21 +308,15 @@ async function handleAsaasSinglePaymentCheck(supabase: any, cobranca: any) {
 
     console.log(`[check-payment-status] Asaas single payment check: status=${finalStatus}, liquido=${valorLiquido}`);
 
-    return new Response(
-      JSON.stringify({
-        found: true,
-        status: finalStatus,
-        updated: finalStatus !== cobranca.status,
-        source: "asaas_api_check",
-        cobrancaId: cobranca.id,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    return jsonResponse({
+      found: true,
+      status: finalStatus,
+      updated: finalStatus !== cobranca.status,
+      source: "asaas_api_check",
+      cobrancaId: cobranca.id,
+    });
   } catch (error) {
     console.error("[check-payment-status] Error checking Asaas single payment:", error);
-    return new Response(
-      JSON.stringify({ found: true, status: cobranca.status, updated: false, error: error.message }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
+    return jsonResponse({ found: true, status: cobranca.status, updated: false, error: error.message });
   }
 }
