@@ -231,16 +231,29 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
             return;
           }
           console.log('🔄 [Agenda] Mudança em appointments:', payload.eventType);
-          // Reload current loaded range
+          // Reload current loaded range and MERGE with existing state
           const now = new Date();
           const rangeStart = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM-dd');
           const rangeEnd = format(endOfMonth(addMonths(now, 1)), 'yyyy-MM-dd');
           agendaService.loadAppointmentsByRange(rangeStart, rangeEnd).then(apps => {
-            if (isMounted) setAppointments(apps);
+            if (!isMounted) return;
+            setAppointments(prev => {
+              // Keep appointments OUTSIDE the reloaded range (other months)
+              const kept = prev.filter(a => {
+                const d = a.date instanceof Date ? a.date : new Date(a.date);
+                const dateStr = format(d, 'yyyy-MM-dd');
+                return dateStr < rangeStart || dateStr > rangeEnd;
+              });
+              return [...kept, ...apps];
+            });
           });
         })
         .subscribe((status) => {
           console.log(`📡 [Agenda] appointments subscription: ${status}`);
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('⚠️ [Agenda] Realtime channel error — reloading data');
+            if (isMounted) loadData();
+          }
         });
 
       cleanupRealtime = () => {
@@ -431,7 +444,10 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     
     // Adicionar ao lock
     deletionInProgressRef.current.add(id);
-    console.log('🗑️ [AgendaContext] Iniciando deleção:', { 
+    
+    // ✅ Bloquear real-time durante operação manual (mesmo padrão de addAppointment)
+    isManualOperationRef.current = true;
+    console.log('🔒🗑️ [AgendaContext] Iniciando deleção (real-time bloqueado):', { 
       id, 
       preservePayments,
       timestamp: new Date().toISOString() 
@@ -461,7 +477,9 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       // ✅ FASE 4: Remover do lock após um delay para evitar race conditions
       setTimeout(() => {
         deletionInProgressRef.current.delete(id);
-      }, 2000);
+        isManualOperationRef.current = false;
+        console.log('🔓 [AgendaContext] deleteAppointment - real-time reabilitado');
+      }, 1500);
     }
   }, [appointments]);
 
