@@ -216,6 +216,10 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
         })
         .subscribe((status) => {
           console.log(`📡 [Agenda] availability_slots subscription: ${status}`);
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('⚠️ [Agenda] Availability realtime error — reloading');
+            if (isMounted) loadData();
+          }
         });
 
       const appointmentsChannel = supabase
