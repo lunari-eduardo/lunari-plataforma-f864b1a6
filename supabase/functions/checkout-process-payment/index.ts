@@ -287,22 +287,69 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7. Update cobrança in database with installment data
-    // Status is always 'pendente' — webhook handles transition to 'pago' via parcelas
-
-    // Resolve installment data
+    // 7. Resolve installment data
     const resolvedInstallmentCount = paymentBody.installmentCount as number | undefined;
     const totalParcelas = resolvedInstallmentCount && resolvedInstallmentCount > 1 ? resolvedInstallmentCount : 1;
     const asaasInstallmentId = paymentData.installment || null;
 
+    // 8. If credit card CONFIRMED immediately, create parcela to trigger reconciliation
+    let paid = false;
+    if (billingType === 'CREDIT_CARD' && paymentData.status === 'CONFIRMED') {
+      try {
+        // Fetch full payment details to get netValue
+        const detailResp = await fetch(`${asaasBaseUrl}/v3/payments/${paymentData.id}`, {
+          headers: { access_token: asaasApiKey },
+        });
+
+        if (detailResp.ok) {
+          const detail = await detailResp.json();
+          const netValue = detail.netValue ?? valorFinal;
+          const taxaGateway = Math.round((valorFinal - netValue) * 100) / 100;
+
+          console.log(`💰 CC CONFIRMED immediately: netValue=${netValue}, taxa=${taxaGateway}`);
+
+          // Create cobranca_parcelas — triggers will reconcile cobranca to 'pago'
+          const { error: parcelaError } = await supabase
+            .from('cobranca_parcelas')
+            .upsert({
+              cobranca_id: cobrancaId,
+              asaas_payment_id: paymentData.id,
+              numero_parcela: 1,
+              valor_bruto: valorFinal,
+              valor_liquido: netValue,
+              taxa_gateway: taxaGateway,
+              status: 'confirmado',
+              billing_type: 'CREDIT_CARD',
+              data_pagamento: new Date().toISOString().split('T')[0],
+              data_vencimento: paymentData.dueDate || new Date().toISOString().split('T')[0],
+            }, { onConflict: 'cobranca_id,asaas_payment_id' })
+            .select();
+
+          if (parcelaError) {
+            console.error('Error creating parcela for CONFIRMED CC:', parcelaError);
+          } else {
+            paid = true;
+          }
+        } else {
+          console.warn('Could not fetch payment details for CONFIRMED CC, falling back to pendente');
+        }
+      } catch (detailErr) {
+        console.warn('Error fetching CC payment details:', detailErr);
+      }
+    }
+
+    // 9. Update cobrança in database
     const updateData: Record<string, unknown> = {
       mp_payment_id: paymentData.id,
-      status: 'pendente', // Always pendente — webhook + parcelas trigger will set 'pago'
-      valor_liquido: null, // Webhook fills this via cobranca_parcelas
       total_parcelas: totalParcelas,
       asaas_installment_id: asaasInstallmentId,
       updated_at: new Date().toISOString(),
     };
+
+    // Only set pendente if we didn't already create a parcela (trigger sets pago)
+    if (!paid) {
+      updateData.status = 'pendente';
+    }
 
     if (billingType === 'PIX' && pixData) {
       updateData.mp_qr_code_base64 = pixData.encodedImage;
@@ -314,14 +361,12 @@ Deno.serve(async (req) => {
       .update(updateData)
       .eq('id', cobrancaId);
 
-    // Transaction creation is handled EXCLUSIVELY by the database trigger
-
     return new Response(
       JSON.stringify({
         success: true,
         cobrancaId,
         asaasPaymentId: paymentData.id,
-        paid: false, // Always false — webhook confirms payment
+        paid,
         creditCardStatus: billingType === 'CREDIT_CARD' ? paymentData.status : undefined,
         pixQrCode: pixData?.encodedImage,
         pixCopiaECola: pixData?.payload,
