@@ -366,7 +366,7 @@ export default function AppointmentForm({
         clientPhone: formData.newClientPhone,
         clientEmail: formData.newClientEmail
       };
-      toast.success('Novo cliente adicionado ao CRM automaticamente');
+      
     } else {
       // Usando cliente existente
       const selectedClient = clientes.find(c => c.id === formData.clientId);
