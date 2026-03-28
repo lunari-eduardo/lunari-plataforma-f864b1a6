@@ -137,6 +137,9 @@ export default function PublicCheckout() {
       .then(result => {
         if (result.success) {
           setData(result);
+        } else if (result.code === 'INVALID_STATUS' && result.error?.includes('já foi paga')) {
+          // Cobrança already paid — show confirmation screen
+          setCardSuccess(true);
         } else {
           setError(result.error || 'Cobrança não encontrada');
         }
@@ -254,6 +257,28 @@ export default function PublicCheckout() {
       if (result.paid || result.creditCardStatus === 'CONFIRMED') {
         setCardSuccess(true);
         toast.success('Pagamento aprovado!');
+
+        // Start polling as safety net in case parcela creation failed
+        if (!result.paid) {
+          pollStartRef.current = Date.now();
+          pollRef.current = setInterval(async () => {
+            if (Date.now() - pollStartRef.current > POLL_MAX) {
+              if (pollRef.current) clearInterval(pollRef.current);
+              return;
+            }
+            try {
+              const pollRes = await fetch(`${SUPABASE_URL}/functions/v1/check-payment-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cobrancaId, forceUpdate: true }),
+              });
+              const pollData = await pollRes.json();
+              if (pollData.status === 'pago' || pollData.updated) {
+                if (pollRef.current) clearInterval(pollRef.current);
+              }
+            } catch { /* retry */ }
+          }, POLL_INTERVAL);
+        }
       } else {
         throw new Error('Pagamento não aprovado. Tente outro cartão.');
       }
