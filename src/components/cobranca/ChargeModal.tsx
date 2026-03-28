@@ -385,10 +385,12 @@ export function ChargeModal({
                       </span>
                       <Input
                         type="number"
-                        value={valor}
-                        onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
+                        value={valor || ''}
+                        onChange={(e) => setValor(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                        onFocus={(e) => { if (valor === 0) e.target.value = ''; }}
                         className="pl-10 h-10 text-lg font-semibold"
                         disabled={valorType === 'total'}
+                        placeholder="0"
                       />
                     </div>
                     
