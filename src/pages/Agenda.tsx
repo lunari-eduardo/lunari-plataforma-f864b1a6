@@ -146,13 +146,13 @@ export default function Agenda() {
     try {
       if (editingAppointment) {
         updateAppointment(editingAppointment.id, appointmentData);
-        toast.success("Agendamento atualizado com sucesso");
+        
       } else if (viewingAppointment) {
         updateAppointment(viewingAppointment.id, appointmentData);
         setIsDetailsOpen(false);
       } else {
         addAppointment(appointmentData);
-        toast.success("Novo agendamento criado");
+        
       }
       setIsAppointmentDialogOpen(false);
     } catch (error: any) {

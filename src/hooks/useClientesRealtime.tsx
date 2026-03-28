@@ -152,7 +152,7 @@ export const useClientesRealtime = () => {
       if (error) throw error;
 
       const novoCliente = mapSupabaseToCliente(data);
-      toast.success('Cliente adicionado com sucesso');
+      
       
       return novoCliente;
     } catch (error) {

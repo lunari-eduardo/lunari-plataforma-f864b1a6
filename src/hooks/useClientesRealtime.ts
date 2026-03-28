@@ -168,7 +168,7 @@ export function useClientesRealtime() {
 
       if (error) throw error;
       
-      toast.success('Cliente adicionado com sucesso');
+      
       return data;
     } catch (error) {
       console.error('❌ Error adding client:', error);

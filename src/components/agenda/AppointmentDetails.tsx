@@ -139,12 +139,12 @@ export default function AppointmentDetails({
     };
     
     onSave(appointmentData);
-    toast.success('Agendamento atualizado com sucesso');
+    
   };
 
   const handleDeleteConfirm = (preservePayments: boolean) => {
     onDelete(appointment.id, preservePayments);
-    toast.success(preservePayments ? 'Agendamento cancelado - histórico preservado' : 'Agendamento excluído completamente');
+    
   };
 
   // Lazy load history when opened
