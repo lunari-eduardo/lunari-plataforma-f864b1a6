@@ -53,7 +53,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       const mercadoPago = integrationData.find(i => i.provedor === 'mercadopago');
       if (mercadoPago) {
         const settings = mercadoPago.dados_extras || {};
-        const isDefault = settings.is_default === true;
+        const isDefault = mercadoPago.is_default === true;
         const habilitarPix = settings.habilitarPix !== false;
         const habilitarCartao = settings.habilitarCartao !== false;
         const maxParcelas = (settings.maxParcelas as number) || 12;
