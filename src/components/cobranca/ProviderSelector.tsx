@@ -105,7 +105,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       const asaas = integrationData.find(i => i.provedor === 'asaas');
       if (asaas) {
         const settings = asaas.dados_extras || {};
-        const isDefault = settings.is_default === true;
+        const isDefault = asaas.is_default === true;
         const methods: string[] = [];
         if (settings.habilitarPix !== false) methods.push('Pix');
         if (settings.habilitarCartao !== false) methods.push('Cartão');
