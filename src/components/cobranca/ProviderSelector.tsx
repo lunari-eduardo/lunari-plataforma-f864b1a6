@@ -76,7 +76,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       // Check for InfinitePay
       const infinitePay = integrationData.find(i => i.provedor === 'infinitepay');
       if (infinitePay) {
-        const isDefault = infinitePay.dados_extras?.is_default === true;
+        const isDefault = infinitePay.is_default === true;
         available.push({
           id: 'infinitepay',
           name: 'InfinitePay',
