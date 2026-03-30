@@ -1,173 +1,148 @@
 
-# Correção profunda: taxas Asaas repassadas não podem virar desconto do fotógrafo
 
-## O que encontrei de fato
+# Revisão Completa: Sistema de Pagamentos Asaas — Debug e Validação
 
-Há mais de um problema, e o principal não é só “cálculo errado”: é uma combinação de **ordem de gravação**, **modelo financeiro inconsistente** e **lógicas duplicadas**.
+## Diagnóstico Atual (dados reais do banco)
 
-### Raiz principal do erro atual
-No fluxo do modal de cobrança:
+Após auditoria completa, o estado atual do banco está **parcialmente correto**:
 
-1. `ChargeModal` cria uma cobrança local `pendente` **sem** `total_parcelas` real.
-2. Depois, no checkout interno, `checkout-process-payment` cria o pagamento Asaas.
-3. Se o cartão volta `CONFIRMED` na hora, a função **insere parcelas antes de atualizar a cobrança pai** com `total_parcelas = 2`.
-4. O trigger `reconcile_cobranca_from_parcelas` ainda enxerga `total_parcelas = 1`, então a **primeira parcela já parece quitação total**.
-5. Isso dispara `ensure_transaction_on_cobranca_paid`, que cria `clientes_transacoes` com:
-   - `valor = 50`
-   - `valor_liquido = 25,61`
-   - `taxa_gateway = 24,39`
-6. Depois a segunda parcela entra e a cobrança pai é corrigida para `valor_liquido = 51,22`, **mas a transação errada já ficou criada**.
+### O que JÁ funciona ✅
+- **Parcelas (`cobranca_parcelas`)**: `valor_bruto` correto (nominal/parcelas), `taxa_gateway = 0` quando repasse ativo
+- **Trigger `ensure_transaction_on_cobranca_paid`**: já respeita flags de repasse e zera taxas corretamente
+- **`clientes_transacoes`** recentes: `valor=50, valor_liquido=50, taxa_gateway=0` para repasse ✅
+- **Edge Functions**: `checkout-process-payment`, `check-payment-status`, `asaas-webhook` usam `cobranca.valor / total_parcelas` como base
 
-Isso bate exatamente com o caso que vimos no banco:
-- `cobranca_parcelas` está correta para a cobrança `afe7...`: 2x `valor_bruto 25`, `valor_liquido 25,61`, `taxa_gateway 0`
-- mas `clientes_transacoes` ficou **totalmente errada**: `valor_liquido 25,61` e `taxa_gateway 24,39`
+### O que está QUEBRADO ❌
 
-### Onde a correção anterior deixou escapar
-1. Corrigimos `check-payment-status` e parte do checkout, mas **não eliminamos a corrida** entre:
-   - atualização da cobrança pai
-   - criação das parcelas
-   - trigger de criação da transação
-2. O `asaas-webhook` ainda usa `payment.value` como `valor_bruto`, o que contamina casos com repasse.
-3. O trigger `ensure_transaction_on_cobranca_paid` ainda deriva taxa pela conta:
-   `NEW.valor - NEW.valor_liquido`
-   Isso é estruturalmente errado quando há repasse ao cliente.
-4. A UI ainda confia em `cobrancas.valor_liquido` bruto do gateway em pontos como histórico, o que mostra líquido indevido.
+**1. `cobranca.valor_liquido` armazena o netValue do gateway, não a perspectiva do fotógrafo**
 
-## Regra correta que vou aplicar
+O trigger `reconcile_cobranca_from_parcelas` faz `SUM(parcelas.valor_liquido)`. Para repasse:
+- Parcelas: `valor_liquido = 25.61` (netValue do Asaas, > valor_bruto pois cliente pagou a mais)
+- Cobrança: `valor_liquido = 51.22` (soma) para um `valor = 50`
 
-Para o fotógrafo, a base financeira da sessão deve ser sempre o **valor nominal acordado**.
+Resultado: `ChargeHistory` exibe "Líquido: R$ 51,22" — enganoso e incorreto do ponto de vista do fotógrafo.
+
+**2. `useSessionPayments` calcula `taxaTotal` inline como `valor - valorLiquido`**
+
+Linha 361: `const taxaTotal = valorLiq != null ? Math.round((valorBruto - valorLiq) * 100) / 100 : undefined;`
+
+Para repasse: `50 - 51.22 = -1.22` → mostra valor negativo ou confuso.
+
+**3. `SessionPaymentsManager` mostra "Líquido" quando `valorLiquido !== valor`**
+
+Linha 358: quando `valorLiquido > valor` (repasse), aparece "Líquido: R$51,22" — o fotógrafo não deveria ver isso.
+
+**4. `ChargeHistory` exibe "Líquido" sem filtrar por flags de repasse**
+
+Linha 127: `cobranca.valorLiquido != null && cobranca.valorLiquido !== cobranca.valor` — sempre mostra para Asaas com parcelas.
+
+**5. `totalRecebido` usa `valorLiquido` do gateway, não do fotógrafo**
+
+`useSessionPayments` linha 487-488: `p.valorLiquido` vem do gateway netValue. Para repasse, isso é > valor, inflando "Recebido".
+
+## Regra Financeira Definitiva
 
 ```text
-valor nominal da sessão/cobrança = 50,00
+FOTÓGRAFO vê:
+  valor_cobrado = cobranca.valor (sempre o valor nominal)
+  
+  se repassarTaxasProcessamento = true:
+    taxa_gateway_fotografo = 0
+  senão:
+    taxa_gateway_fotografo = SUM(parcelas.taxa_gateway)
 
-se taxa de processamento é repassada:
-  taxa_gateway do fotógrafo = 0
+  se repassarTaxaAntecipacao = true:
+    taxa_antecipacao_fotografo = 0
+  senão:
+    taxa_antecipacao_fotografo = SUM(parcelas.taxa_antecipacao)
 
-se taxa de antecipação é repassada:
-  taxa_antecipacao do fotógrafo = 0
-
-valor_liquido exibido ao fotógrafo =
-  valor nominal
-  - taxas que ELE absorve
+  valor_liquido_fotografo = valor_cobrado - taxa_gateway_fotografo - taxa_antecipacao_fotografo
+  
+  Se tudo repassado: Cobrado=50, Recebido=50, Taxas=0
+  Se tudo absorvido: Cobrado=50, Recebido=48.28, Taxas=1.72
 ```
 
-Ou seja:
+## Plano de Correção
 
-- se tudo é repassado, o fotógrafo vê:
-  - Cobrado: 50,00
-  - Recebido: 50,00
-  - Taxas: 0,00
+### 1. Trigger `reconcile_cobranca_from_parcelas` — Calcular `valor_liquido` na perspectiva do fotógrafo
 
-O `netValue` do Asaas continua útil como **dado técnico/auditoria**, mas não pode sozinho definir o resultado financeiro do fotógrafo quando a taxa foi repassada.
+Atualmente soma raw gateway netValue. Deve:
+- Ler `dados_extras` da cobrança (flags de repasse)
+- Se `repassarTaxasProcessamento = true`: `valor_liquido = cobranca.valor` (ignora gateway netValue)
+- Se `repassarTaxasProcessamento = false`: `valor_liquido = SUM(parcelas.valor_liquido)` (mantém lógica atual)
+- Tratar antecipação da mesma forma
 
-## Plano de implementação
+Isso faz `cobranca.valor_liquido` representar sempre a perspectiva do fotógrafo, não do gateway.
 
-### 1. Blindar a ordem do fluxo de confirmação
-Ajustar `checkout-process-payment` para:
+### 2. `useSessionPayments` — Ajustar cálculos de líquido e taxas para repasse
 
-- atualizar a cobrança pai com:
-  - `mp_payment_id`
-  - `asaas_installment_id`
-  - `total_parcelas`
-  - snapshot das flags de taxa
-- **antes** de inserir/upsertar `cobranca_parcelas`
+Ao construir entries de pagamentos a partir de `cobranca_parcelas`:
+- Buscar `dados_extras` da cobrança pai (já disponível via join)
+- Se `repassarTaxasProcessamento = true`:
+  - `valorLiquido` = `valor_bruto` (fotógrafo recebe integral)
+  - `taxaTotal` = 0
+- Se false: manter cálculo atual
 
-Objetivo: impedir que a primeira parcela faça o trigger acreditar que a cobrança já está totalmente paga.
+Para cobranças sem parcelas (avulsas):
+- Mesma regra usando `cobranca.dados_extras`
 
-### 2. Reescrever a origem da verdade da transação financeira
-Revisar `ensure_transaction_on_cobranca_paid` para Asaas:
+### 3. `SessionPaymentsManager` — Ocultar "Líquido" quando fotógrafo não tem desconto
 
-- parar de calcular taxa por `NEW.valor - NEW.valor_liquido`
-- buscar as parcelas da cobrança
-- somar taxas por tipo
-- zerar as taxas repassadas conforme `dados_extras`
-- gravar em `clientes_transacoes`:
-  - `valor = valor nominal`
-  - `taxa_gateway = somente o que o fotógrafo absorve`
-  - `taxa_antecipacao = somente o que o fotógrafo absorve`
-  - `valor_liquido = valor nominal - taxas absorvidas`
+Linha 358: só mostrar "Líquido" quando `valorLiquido < valor` (fotógrafo absorveu taxa). Nunca quando `valorLiquido >= valor`.
 
-Isso corrige:
-- SessionPaymentsManager
-- extrato
-- linhas virtuais de taxa no `extrato_unificado`
+### 4. `ChargeHistory` — Ocultar "Líquido" quando repasse ativo
 
-### 3. Corrigir todos os caminhos Asaas, não só um
-Aplicar a mesma regra em todos os pontos:
+- Mapear `dados_extras` no fetch de cobranças (`useCobranca.ts`)
+- Adicionar campo `dadosExtras` ao tipo `Cobranca`
+- No ChargeHistory: ocultar linha "Líquido" quando `repassarTaxasProcessamento = true` OU quando `valorLiquido >= valor`
 
-- `checkout-process-payment`
-- `check-payment-status`
-- `asaas-webhook`
-- `gestao-asaas-create-payment`
-- `checkout-get-data`
-- UI de preview de parcelas/taxas
+### 5. `useSessionPayments` totais — Usar perspectiva do fotógrafo
 
-Hoje a lógica está duplicada em vários lugares; vou centralizar a regra para não escapar de novo.
+- `totalRecebido`: somar `valorLiquido` já ajustado (após item 2)
+- `totalTaxas`: somar taxas efetivas (0 quando repassado)
 
-### 4. Corrigir o webhook Asaas que ainda está contaminando `valor_bruto`
-No `asaas-webhook`, trocar o uso de `payment.value` como base financeira nominal.
+### 6. Webhooks/Edge Functions — Validar que não duplicam parcelas
 
-Para parcelas:
-- `valor_bruto` deve continuar sendo o **nominal da cobrança/parcela**
-- `payment.value` passa a ser só referência do valor cobrado no gateway, se precisarmos guardar isso separadamente
+Auditado: OK ✅ — `asaas-webhook` usa `upsert` com `onConflict: 'asaas_payment_id'`. Não cria duplicatas.
 
-### 5. Ajustar a UI para não exibir líquido indevido
-Revisar:
+### 7. Backfill — Recalcular `cobranca.valor_liquido` para cobranças com repasse
 
-- `ChargeHistory`
-- `useSessionPayments`
-- `SessionPaymentsManager`
+Atualizar `cobranca.valor_liquido` para cobranças Asaas pagas onde repasse estava ativo, definindo `valor_liquido = valor`.
 
-Para que:
-- quando taxa é repassada, não apareça desconto do fotógrafo
-- “Recebido” use o **líquido efetivo do fotógrafo**, não o `netValue` bruto do gateway
-- o histórico não mostre `Líquido: 51,22` para uma cobrança nominal de `50,00` nesse cenário
+### 8. Snapshot de configuração — Garantir que dados_extras contenha flags
 
-### 6. Fazer backfill dos dados já corrompidos
-Criar migração para recalcular registros Asaas já afetados:
+Auditado: OK ✅ — `ChargeModal.handleAsaasGenerateLink()` já grava `repassarTaxasProcessamento`, `anteciparParcelas`, `repassarTaxaAntecipacao` em `dados_extras` no momento da criação.
 
-- localizar cobranças com `dados_extras.repassarTaxasProcessamento = true` e/ou `repassarTaxaAntecipacao = true`
-- recalcular `clientes_transacoes`
-- corrigir taxas virtuais no extrato
-- corrigir especificamente o caso já quebrado (`afe7...`) e demais equivalentes
+## Arquivos a Modificar
 
-Se necessário, também recalculo cobranças pagas recentes desse usuário para garantir consistência histórica.
+| Arquivo | Mudança |
+|---------|---------|
+| Nova migração SQL | Reescrever `reconcile_cobranca_from_parcelas` para respeitar flags de repasse; backfill `cobranca.valor_liquido` |
+| `src/hooks/useSessionPayments.ts` | Buscar `dados_extras` das cobranças; ajustar `valorLiquido` e `taxaTotal` por parcela para repasse |
+| `src/components/payments/SessionPaymentsManager.tsx` | Ocultar "Líquido" quando `valorLiquido >= valor` |
+| `src/types/cobranca.ts` | Adicionar `dadosExtras?: Record<string, any>` |
+| `src/hooks/useCobranca.ts` | Mapear `dados_extras` → `dadosExtras` |
+| `src/components/cobranca/ChargeHistory.tsx` | Ocultar "Líquido" quando repasse ativo ou `valorLiquido >= valor` |
 
-## Arquivos / áreas que precisam entrar nessa revisão
+## O que NÃO será alterado (já está correto)
 
-- `supabase/functions/checkout-process-payment/index.ts`
-- `supabase/functions/check-payment-status/index.ts`
-- `supabase/functions/asaas-webhook/index.ts`
-- `supabase/functions/gestao-asaas-create-payment/index.ts`
-- `supabase/functions/checkout-get-data/index.ts`
-- `src/hooks/useSessionPayments.ts`
-- `src/components/payments/SessionPaymentsManager.tsx`
-- `src/components/cobranca/ChargeHistory.tsx`
-- nova migração SQL para:
-  - `ensure_transaction_on_cobranca_paid`
-  - backfill/correção de transações já quebradas
-  - eventual endurecimento da reconciliação
+- `checkout-process-payment`: ordem de gravação (cobrança pai antes de parcelas) ✅
+- `check-payment-status`: usa `cobranca.valor / total_parcelas` como `valor_bruto` ✅
+- `asaas-webhook`: `upsertParcela` com `cobranca.valor` nominal ✅
+- `ensure_transaction_on_cobranca_paid`: respeita flags de repasse ✅
+- `gestao-asaas-create-payment`: snapshot de overrides ✅
 
-## Validação que vou considerar obrigatória
-
-Vou validar fim a fim estes cenários:
-
-1. Sem repasse, sem antecipação
-2. Repasse de processamento ligado
-3. Repasse de processamento + antecipação repassada
-4. Antecipação ativa, mas absorvida pelo fotógrafo
-5. Checkout interno com confirmação imediata
-6. Fallback por `check-payment-status`
-7. Reflexo correto em:
-   - histórico do modal de cobrança
-   - Gerenciamento de Pagamentos
-   - extrato
-
-## Resultado esperado após a correção
+## Resultado Esperado
 
 Para cobranças com repasse ao cliente:
-- fotógrafo **não verá taxa descontada**
-- `Recebido` ficará em **R$ 50,00**, não `25,61` nem `51,22`
-- extrato não criará saída falsa de taxa
-- primeira parcela não vai mais disparar quitação total por engano
-- a lógica ficará consistente entre modal, checkout, webhook e conferência manual
+- **Cobrado**: R$ 50,00
+- **Recebido**: R$ 50,00
+- **Taxas**: R$ 0,00
+- **Líquido**: NÃO exibido (pois = cobrado)
+
+Para cobranças sem repasse:
+- **Cobrado**: R$ 50,00
+- **Recebido**: R$ 48,28
+- **Taxas**: R$ 1,72
+- **Líquido**: R$ 48,28
+
