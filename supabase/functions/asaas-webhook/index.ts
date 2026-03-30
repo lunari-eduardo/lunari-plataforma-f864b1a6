@@ -230,7 +230,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.installment) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id")
+      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras")
       .eq("asaas_installment_id", payment.installment)
       .maybeSingle();
     if (data) return data;
@@ -240,7 +240,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.id) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id")
+      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras")
       .eq("mp_payment_id", payment.id)
       .maybeSingle();
     if (data) return data;
@@ -253,11 +253,22 @@ async function upsertParcela(
   adminClient: any,
   cobrancaId: string,
   payment: any,
-  status: string
+  status: string,
+  cobranca?: { valor: number; total_parcelas: number | null }
 ) {
-  const valorBruto = payment.value || 0;
+  // REGRA: valor_bruto = valor nominal do fotógrafo por parcela, NUNCA payment.value (que pode estar inflado)
+  let valorBruto: number;
+  if (cobranca && cobranca.valor > 0) {
+    const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
+    valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
+  } else {
+    // Fallback: use payment.value only if we don't have cobranca data
+    valorBruto = payment.value || 0;
+  }
+
   const valorLiquido = payment.netValue ?? null;
-  const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+  // When repassarTaxas=true, netValue > valorBruto → taxa = 0 (fotógrafo não paga)
+  const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
 
   const parcelaData: Record<string, unknown> = {
     cobranca_id: cobrancaId,
@@ -286,7 +297,7 @@ async function upsertParcela(
     console.error(`Error upserting parcela ${payment.id}:`, error);
     return false;
   }
-  console.log(`✅ Parcela ${payment.id} → status=${status}, bruto=${valorBruto}, liquido=${valorLiquido}`);
+  console.log(`✅ Parcela ${payment.id} → status=${status}, bruto=${valorBruto}, liquido=${valorLiquido}, taxa=${taxaGateway}`);
   return true;
 }
 
@@ -384,14 +395,16 @@ Deno.serve(async (req) => {
 
           // Handle each event type
           if (event === "PAYMENT_CONFIRMED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "confirmado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "confirmado", cobranca);
           } else if (event === "PAYMENT_RECEIVED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "recebido");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "recebido", cobranca);
           } else if (event === "PAYMENT_ANTICIPATED") {
             // Update parcela with anticipation data
-            const valorBruto = payment.value || 0;
+            // REGRA: valor_bruto = valor nominal do fotógrafo por parcela
+            const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
+            const valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
             const valorLiquido = payment.netValue ?? null;
-            const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+            const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
 
             const { data: existingParcela } = await adminClient
               .from("cobranca_parcelas")
@@ -432,9 +445,9 @@ Deno.serve(async (req) => {
               upsertSuccess = true;
             }
           } else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "estornado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "estornado", cobranca);
           } else if (event === "PAYMENT_DELETED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "cancelado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "cancelado", cobranca);
           }
 
           // Only mark as processed if upsert succeeded

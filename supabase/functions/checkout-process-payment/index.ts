@@ -292,9 +292,33 @@ Deno.serve(async (req) => {
     const totalParcelas = resolvedInstallmentCount && resolvedInstallmentCount > 1 ? resolvedInstallmentCount : 1;
     const asaasInstallmentId = paymentData.installment || null;
 
-    // 8. If credit card CONFIRMED immediately, create parcelas to trigger reconciliation
-    // REGRA: valor_bruto = cobranca.valor / totalParcelas (valor original do fotógrafo)
-    // taxa_gateway = max(0, valor_bruto - valor_liquido) — se repassar, taxa = 0
+    // ========================================================
+    // CRITICAL FIX: Update cobrança pai FIRST (before parcelas)
+    // This prevents the reconcile trigger from thinking 1 parcela = full payment
+    // ========================================================
+    const updateData: Record<string, unknown> = {
+      mp_payment_id: paymentData.id,
+      total_parcelas: totalParcelas,
+      asaas_installment_id: asaasInstallmentId,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (billingType === 'PIX' && pixData) {
+      updateData.mp_qr_code_base64 = pixData.encodedImage;
+      updateData.mp_pix_copia_cola = pixData.payload;
+    }
+
+    // Always update cobrança BEFORE creating parcelas
+    await supabase
+      .from('cobrancas')
+      .update(updateData)
+      .eq('id', cobrancaId);
+
+    console.log(`📋 Cobrança ${cobrancaId} updated: total_parcelas=${totalParcelas}, mp_payment_id=${paymentData.id}`);
+
+    // 8. If credit card CONFIRMED immediately, create parcelas
+    // REGRA: valor_bruto = cobranca.valor / totalParcelas (valor original do fotógrafo, NUNCA o inflado)
+    // taxa_gateway = max(0, valor_bruto - netValue) — quando repassar, netValue > bruto → taxa = 0
     let paid = false;
     if (billingType === 'CREDIT_CARD' && paymentData.status === 'CONFIRMED') {
       try {
@@ -315,6 +339,7 @@ Deno.serve(async (req) => {
             let allOk = true;
             for (const p of payments) {
               const netValue = p.netValue ?? valorBrutoParcela;
+              // When repassarTaxas=true, netValue > valorBruto → taxa = 0
               const taxaGateway = Math.max(0, Math.round((valorBrutoParcela - netValue) * 100) / 100);
               const isPaid = ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(p.status);
 
@@ -332,7 +357,9 @@ Deno.serve(async (req) => {
                   data_pagamento: isPaid ? (p.paymentDate || new Date().toISOString().split('T')[0]) : null,
                   data_vencimento: p.dueDate || null,
                   data_credito: p.creditDate || null,
-                }, { onConflict: 'asaas_payment_id' });
+                }, { onConflict: 'asaas_payment_id' })
+                .select()
+                .maybeSingle();
 
               if (parcelaError) {
                 console.error(`Error creating parcela ${p.installmentNumber}:`, parcelaError);
@@ -371,7 +398,9 @@ Deno.serve(async (req) => {
                 billing_type: 'CREDIT_CARD',
                 data_pagamento: new Date().toISOString().split('T')[0],
                 data_vencimento: paymentData.dueDate || new Date().toISOString().split('T')[0],
-              }, { onConflict: 'asaas_payment_id' });
+              }, { onConflict: 'asaas_payment_id' })
+              .select()
+              .maybeSingle();
 
             if (parcelaError) {
               console.error('Error creating parcela for CONFIRMED CC:', parcelaError);
@@ -386,29 +415,6 @@ Deno.serve(async (req) => {
         console.warn('Error in CC confirmation flow:', detailErr);
       }
     }
-
-    // 9. Update cobrança in database
-    const updateData: Record<string, unknown> = {
-      mp_payment_id: paymentData.id,
-      total_parcelas: totalParcelas,
-      asaas_installment_id: asaasInstallmentId,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Only set pendente if we didn't already create a parcela (trigger sets pago)
-    if (!paid) {
-      updateData.status = 'pendente';
-    }
-
-    if (billingType === 'PIX' && pixData) {
-      updateData.mp_qr_code_base64 = pixData.encodedImage;
-      updateData.mp_pix_copia_cola = pixData.payload;
-    }
-
-    await supabase
-      .from('cobrancas')
-      .update(updateData)
-      .eq('id', cobrancaId);
 
     return new Response(
       JSON.stringify({
