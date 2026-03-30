@@ -90,7 +90,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       // Check for PIX Manual
       const pixManual = integrationData.find(i => i.provedor === 'pix_manual');
       if (pixManual) {
-        const isDefault = pixManual.dados_extras?.is_default === true;
+        const isDefault = pixManual.is_default === true;
         available.push({
           id: 'pix_manual',
           name: 'PIX Manual',
