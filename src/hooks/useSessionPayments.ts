@@ -258,6 +258,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         if (cobrancasPagas && cobrancasPagas.length > 0) {
           console.log('✅ [useSessionPayments] Cobranças pagas encontradas:', cobrancasPagas.length);
 
+          // Build a map of dados_extras for repasse flags
+          const dadosExtrasMap: Record<string, any> = {};
+          for (const c of cobrancasPagas) {
+            if (c.dados_extras) {
+              dadosExtrasMap[c.id] = typeof c.dados_extras === 'string' ? JSON.parse(c.dados_extras) : c.dados_extras;
+            }
+          }
+
           // Buscar parcelas para cobranças Asaas com total_parcelas > 1
           const asaasCobrancaIds = cobrancasPagas
             .filter(c => c.provedor === 'asaas' && (c.total_parcelas || 1) > 1)
@@ -303,16 +311,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             // Se Asaas com parcelas detalhadas, mostrar cada parcela individualmente
             const parcelas = parcelasMap[c.id];
             if (parcelas && parcelas.length > 0) {
+              // Get repasse flags for this cobrança
+              const extras = dadosExtrasMap[c.id] || {};
+              const repassarProcessamento = extras.repassarTaxasProcessamento === true;
+              const repassarAntecipacao = extras.repassarTaxaAntecipacao === true;
+
               for (const parcela of parcelas) {
                 const parcelaId = `asaas-parcela-${parcela.id}`;
                 if (addedIds.has(parcelaId)) continue;
                 addedIds.add(parcelaId);
 
                 const valorBruto = Number(parcela.valor_bruto) || 0;
-                const valorLiq = parcela.valor_liquido != null ? Number(parcela.valor_liquido) : undefined;
-                const taxaGw = parcela.taxa_gateway != null ? Number(parcela.taxa_gateway) : undefined;
-                const taxaAnt = parcela.taxa_antecipacao != null ? Number(parcela.taxa_antecipacao) : 0;
-                const taxaTotalCalc = (taxaGw || 0) + taxaAnt;
+                
+                // Apply repasse logic: if taxes are passed to client, photographer sees no deduction
+                const rawLiq = parcela.valor_liquido != null ? Number(parcela.valor_liquido) : undefined;
+                const rawTaxaGw = parcela.taxa_gateway != null ? Number(parcela.taxa_gateway) : 0;
+                const rawTaxaAnt = parcela.taxa_antecipacao != null ? Number(parcela.taxa_antecipacao) : 0;
+                
+                const taxaGwEfetiva = repassarProcessamento ? 0 : rawTaxaGw;
+                const taxaAntEfetiva = repassarAntecipacao ? 0 : rawTaxaAnt;
+                const valorLiq = (repassarProcessamento && repassarAntecipacao) 
+                  ? valorBruto 
+                  : (valorBruto - taxaGwEfetiva - taxaAntEfetiva);
+                const taxaTotalCalc = taxaGwEfetiva + taxaAntEfetiva;
 
                 // Mapear status da parcela para statusRecebimento
                 let statusRecebimento: 'pendente' | 'confirmado' | 'recebido' | 'antecipado' = 'pendente';
@@ -331,9 +352,9 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                   origem,
                   editavel: false,
                   observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
-                  valorLiquido: valorLiq,
+                  valorLiquido: taxaTotalCalc > 0 ? valorLiq : undefined,
                   taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
-                  taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
+                  taxaAntecipacao: taxaAntEfetiva > 0 ? taxaAntEfetiva : undefined,
                   dataCreditoPrevista: parcela.data_credito || undefined,
                   dataCreditoReal: parcela.data_credito_real ? String(parcela.data_credito_real).split('T')[0] : undefined,
                   statusRecebimento,
@@ -357,8 +378,24 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             addedIds.add(paymentId);
 
             const valorBruto = Number(c.valor) || 0;
-            const valorLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
-            const taxaTotal = valorLiq != null ? Math.round((valorBruto - valorLiq) * 100) / 100 : undefined;
+            const extras = dadosExtrasMap[c.id] || {};
+            const repassarProc = extras.repassarTaxasProcessamento === true;
+            let valorLiq: number | undefined;
+            let taxaTotal: number | undefined;
+            
+            if (repassarProc) {
+              // Taxes passed to client - photographer receives full nominal
+              valorLiq = undefined;
+              taxaTotal = undefined;
+            } else {
+              const rawLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
+              valorLiq = rawLiq;
+              taxaTotal = rawLiq != null ? Math.round((valorBruto - rawLiq) * 100) / 100 : undefined;
+              if (taxaTotal != null && taxaTotal <= 0) {
+                taxaTotal = undefined;
+                valorLiq = undefined;
+              }
+            }
 
             allPayments.push({
               id: paymentId,
