@@ -292,49 +292,98 @@ Deno.serve(async (req) => {
     const totalParcelas = resolvedInstallmentCount && resolvedInstallmentCount > 1 ? resolvedInstallmentCount : 1;
     const asaasInstallmentId = paymentData.installment || null;
 
-    // 8. If credit card CONFIRMED immediately, create parcela to trigger reconciliation
+    // 8. If credit card CONFIRMED immediately, create parcelas to trigger reconciliation
+    // REGRA: valor_bruto = cobranca.valor / totalParcelas (valor original do fotógrafo)
+    // taxa_gateway = max(0, valor_bruto - valor_liquido) — se repassar, taxa = 0
     let paid = false;
     if (billingType === 'CREDIT_CARD' && paymentData.status === 'CONFIRMED') {
       try {
-        // Fetch full payment details to get netValue
-        const detailResp = await fetch(`${asaasBaseUrl}/v3/payments/${paymentData.id}`, {
-          headers: { access_token: asaasApiKey },
-        });
+        const valorBrutoParcela = Math.round((valor / totalParcelas) * 100) / 100;
 
-        if (detailResp.ok) {
-          const detail = await detailResp.json();
-          const netValue = detail.netValue ?? valorFinal;
-          const taxaGateway = Math.round((valorFinal - netValue) * 100) / 100;
+        if (totalParcelas > 1 && asaasInstallmentId) {
+          // Parcelado: buscar TODOS os payments do installment
+          const installmentsResp = await fetch(
+            `${asaasBaseUrl}/v3/payments?installment=${asaasInstallmentId}&limit=100`,
+            { headers: { access_token: asaasApiKey } }
+          );
 
-          console.log(`💰 CC CONFIRMED immediately: netValue=${netValue}, taxa=${taxaGateway}`);
+          if (installmentsResp.ok) {
+            const installmentsData = await installmentsResp.json();
+            const payments = installmentsData.data || [];
+            console.log(`💰 CC CONFIRMED (installment): ${payments.length} payments found`);
 
-          // Create cobranca_parcelas — triggers will reconcile cobranca to 'pago'
-          const { error: parcelaError } = await supabase
-            .from('cobranca_parcelas')
-            .upsert({
-              cobranca_id: cobrancaId,
-              asaas_payment_id: paymentData.id,
-              numero_parcela: 1,
-              valor_bruto: valorFinal,
-              valor_liquido: netValue,
-              taxa_gateway: taxaGateway,
-              status: 'confirmado',
-              billing_type: 'CREDIT_CARD',
-              data_pagamento: new Date().toISOString().split('T')[0],
-              data_vencimento: paymentData.dueDate || new Date().toISOString().split('T')[0],
-            }, { onConflict: 'cobranca_id,asaas_payment_id' })
-            .select();
+            let allOk = true;
+            for (const p of payments) {
+              const netValue = p.netValue ?? valorBrutoParcela;
+              const taxaGateway = Math.max(0, Math.round((valorBrutoParcela - netValue) * 100) / 100);
+              const isPaid = ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(p.status);
 
-          if (parcelaError) {
-            console.error('Error creating parcela for CONFIRMED CC:', parcelaError);
+              const { error: parcelaError } = await supabase
+                .from('cobranca_parcelas')
+                .upsert({
+                  cobranca_id: cobrancaId,
+                  asaas_payment_id: p.id,
+                  numero_parcela: p.installmentNumber || 1,
+                  valor_bruto: valorBrutoParcela,
+                  valor_liquido: netValue,
+                  taxa_gateway: taxaGateway,
+                  status: isPaid ? (p.status === 'CONFIRMED' ? 'confirmado' : 'recebido') : 'pendente',
+                  billing_type: 'CREDIT_CARD',
+                  data_pagamento: isPaid ? (p.paymentDate || new Date().toISOString().split('T')[0]) : null,
+                  data_vencimento: p.dueDate || null,
+                  data_credito: p.creditDate || null,
+                }, { onConflict: 'asaas_payment_id' });
+
+              if (parcelaError) {
+                console.error(`Error creating parcela ${p.installmentNumber}:`, parcelaError);
+                allOk = false;
+              }
+            }
+            if (allOk && payments.length > 0) paid = true;
           } else {
-            paid = true;
+            console.warn('Could not fetch installment payments, falling back to single parcela');
           }
-        } else {
-          console.warn('Could not fetch payment details for CONFIRMED CC, falling back to pendente');
+        }
+
+        // Single payment (or fallback)
+        if (!paid) {
+          const detailResp = await fetch(`${asaasBaseUrl}/v3/payments/${paymentData.id}`, {
+            headers: { access_token: asaasApiKey },
+          });
+
+          if (detailResp.ok) {
+            const detail = await detailResp.json();
+            const netValue = detail.netValue ?? valorBrutoParcela;
+            const taxaGateway = Math.max(0, Math.round((valorBrutoParcela - netValue) * 100) / 100);
+
+            console.log(`💰 CC CONFIRMED: bruto=${valorBrutoParcela}, netValue=${netValue}, taxa=${taxaGateway}`);
+
+            const { error: parcelaError } = await supabase
+              .from('cobranca_parcelas')
+              .upsert({
+                cobranca_id: cobrancaId,
+                asaas_payment_id: paymentData.id,
+                numero_parcela: 1,
+                valor_bruto: valorBrutoParcela,
+                valor_liquido: netValue,
+                taxa_gateway: taxaGateway,
+                status: 'confirmado',
+                billing_type: 'CREDIT_CARD',
+                data_pagamento: new Date().toISOString().split('T')[0],
+                data_vencimento: paymentData.dueDate || new Date().toISOString().split('T')[0],
+              }, { onConflict: 'asaas_payment_id' });
+
+            if (parcelaError) {
+              console.error('Error creating parcela for CONFIRMED CC:', parcelaError);
+            } else {
+              paid = true;
+            }
+          } else {
+            console.warn('Could not fetch payment details for CONFIRMED CC');
+          }
         }
       } catch (detailErr) {
-        console.warn('Error fetching CC payment details:', detailErr);
+        console.warn('Error in CC confirmation flow:', detailErr);
       }
     }
 

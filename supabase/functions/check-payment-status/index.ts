@@ -195,9 +195,12 @@ async function handleAsaasInstallmentCheck(supabase: any, cobranca: any, config:
 
       if (isPaid) parcelasPagas++;
 
-      const valorBruto = payment.value || 0;
+      // REGRA: valor_bruto = valor original do fotógrafo por parcela (não o inflado do Asaas)
+      const valorBruto = cobranca.total_parcelas > 0
+        ? Math.round((cobranca.valor / cobranca.total_parcelas) * 100) / 100
+        : cobranca.valor;
       const valorLiquido = payment.netValue ?? null;
-      const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+      const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
 
       const { error: upsertError } = await supabase
         .from("cobranca_parcelas")
@@ -271,9 +274,10 @@ async function handleAsaasSinglePaymentCheck(supabase: any, cobranca: any, confi
     }
 
     // Create parcela for fee tracking
-    const valorBruto = payment.value || cobranca.valor;
+    // REGRA: valor_bruto = valor original do fotógrafo (não o inflado do Asaas)
+    const valorBruto = cobranca.valor;
     const valorLiquido = payment.netValue ?? null;
-    const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+    const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
     const parcelaStatus = payment.status === "CONFIRMED" ? "confirmado" : "recebido";
 
     const { error: upsertError } = await supabase
