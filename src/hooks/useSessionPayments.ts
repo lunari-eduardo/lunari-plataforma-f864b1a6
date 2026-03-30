@@ -378,8 +378,24 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             addedIds.add(paymentId);
 
             const valorBruto = Number(c.valor) || 0;
-            const valorLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
-            const taxaTotal = valorLiq != null ? Math.round((valorBruto - valorLiq) * 100) / 100 : undefined;
+            const extras = dadosExtrasMap[c.id] || {};
+            const repassarProc = extras.repassarTaxasProcessamento === true;
+            let valorLiq: number | undefined;
+            let taxaTotal: number | undefined;
+            
+            if (repassarProc) {
+              // Taxes passed to client - photographer receives full nominal
+              valorLiq = undefined;
+              taxaTotal = undefined;
+            } else {
+              const rawLiq = c.valor_liquido ? Number(c.valor_liquido) : undefined;
+              valorLiq = rawLiq;
+              taxaTotal = rawLiq != null ? Math.round((valorBruto - rawLiq) * 100) / 100 : undefined;
+              if (taxaTotal != null && taxaTotal <= 0) {
+                taxaTotal = undefined;
+                valorLiq = undefined;
+              }
+            }
 
             allPayments.push({
               id: paymentId,
