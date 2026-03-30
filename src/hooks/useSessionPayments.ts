@@ -258,6 +258,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         if (cobrancasPagas && cobrancasPagas.length > 0) {
           console.log('✅ [useSessionPayments] Cobranças pagas encontradas:', cobrancasPagas.length);
 
+          // Build a map of dados_extras for repasse flags
+          const dadosExtrasMap: Record<string, any> = {};
+          for (const c of cobrancasPagas) {
+            if (c.dados_extras) {
+              dadosExtrasMap[c.id] = typeof c.dados_extras === 'string' ? JSON.parse(c.dados_extras) : c.dados_extras;
+            }
+          }
+
           // Buscar parcelas para cobranças Asaas com total_parcelas > 1
           const asaasCobrancaIds = cobrancasPagas
             .filter(c => c.provedor === 'asaas' && (c.total_parcelas || 1) > 1)
