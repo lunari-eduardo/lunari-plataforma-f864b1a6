@@ -395,14 +395,16 @@ Deno.serve(async (req) => {
 
           // Handle each event type
           if (event === "PAYMENT_CONFIRMED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "confirmado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "confirmado", cobranca);
           } else if (event === "PAYMENT_RECEIVED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "recebido");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "recebido", cobranca);
           } else if (event === "PAYMENT_ANTICIPATED") {
             // Update parcela with anticipation data
-            const valorBruto = payment.value || 0;
+            // REGRA: valor_bruto = valor nominal do fotógrafo por parcela
+            const totalParcelas = cobranca.total_parcelas && cobranca.total_parcelas > 0 ? cobranca.total_parcelas : 1;
+            const valorBruto = Math.round((cobranca.valor / totalParcelas) * 100) / 100;
             const valorLiquido = payment.netValue ?? null;
-            const taxaGateway = valorLiquido != null ? Math.round((valorBruto - valorLiquido) * 100) / 100 : 0;
+            const taxaGateway = valorLiquido != null ? Math.max(0, Math.round((valorBruto - valorLiquido) * 100) / 100) : 0;
 
             const { data: existingParcela } = await adminClient
               .from("cobranca_parcelas")
@@ -443,9 +445,9 @@ Deno.serve(async (req) => {
               upsertSuccess = true;
             }
           } else if (event === "PAYMENT_REFUNDED" || event === "PAYMENT_CHARGEBACK_REQUESTED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "estornado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "estornado", cobranca);
           } else if (event === "PAYMENT_DELETED") {
-            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "cancelado");
+            upsertSuccess = await upsertParcela(adminClient, cobranca.id, payment, "cancelado", cobranca);
           }
 
           // Only mark as processed if upsert succeeded
