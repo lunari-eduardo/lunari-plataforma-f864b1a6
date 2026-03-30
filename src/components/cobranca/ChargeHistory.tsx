@@ -124,7 +124,8 @@ export function ChargeHistory({ cobrancas, onCancel, onView }: ChargeHistoryProp
                   <TableCell>
                     <div>
                       <span className="font-medium">{formatCurrency(cobranca.valor)}</span>
-                      {cobranca.valorLiquido != null && cobranca.valorLiquido !== cobranca.valor && (
+                      {cobranca.valorLiquido != null && cobranca.valorLiquido !== cobranca.valor && 
+                       !(cobranca.dadosExtras?.repassarTaxasProcessamento === true) && (
                         <p className="text-xs text-muted-foreground">
                           Líquido: {formatCurrency(cobranca.valorLiquido)}
                         </p>

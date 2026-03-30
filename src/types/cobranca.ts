@@ -34,6 +34,7 @@ export interface Cobranca {
   totalParcelas?: number;
   parcelasPagas?: number;
   asaasInstallmentId?: string;
+  dadosExtras?: Record<string, unknown>;
 }
 
 export interface CreateCobrancaRequest {
