@@ -70,6 +70,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         totalParcelas: (c as any).total_parcelas || undefined,
         parcelasPagas: (c as any).parcelas_pagas || undefined,
         asaasInstallmentId: (c as any).asaas_installment_id || undefined,
+        dadosExtras: (c.dados_extras as Record<string, unknown>) || undefined,
       }));
 
       setCobrancas(mappedCobrancas);
