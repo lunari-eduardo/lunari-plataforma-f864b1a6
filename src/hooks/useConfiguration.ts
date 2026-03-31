@@ -190,7 +190,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     setProdutos(prev => prev.map(prod => 
       prod.id === id ? { ...prod, ...dados } : prod
     ));
-    toast.success('Produto atualizado com sucesso!');
   }, []);
 
   const removerProduto = useCallback(async (id: string): Promise<boolean> => {
