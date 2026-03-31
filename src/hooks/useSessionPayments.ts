@@ -35,7 +35,7 @@ const saveSinglePaymentToSupabase = async (
       return;
     }
 
-    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
     
     // Usar método rastreado para evitar duplicação
     await PaymentSupabaseService.saveSinglePaymentTracked(sessionId, paymentId, {
