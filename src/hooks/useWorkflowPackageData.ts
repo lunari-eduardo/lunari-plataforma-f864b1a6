@@ -25,7 +25,7 @@ export const useWorkflowPackageData = () => {
           packageValue: frozenPackage.valorBase,
           packageFotoExtraValue: frozenPackage.valorFotoExtra,
           fotosIncluidas: frozenPackage.fotosIncluidas || 0,
-          categoria: frozenPackage.categoria || session.categoria
+          categoria: session.categoria || frozenPackage.categoria
         };
       }
       
@@ -101,7 +101,7 @@ export const useWorkflowPackageData = () => {
         status: session.status,
         whatsapp: session.clientes?.telefone || session.clientes?.whatsapp || '',
         // CORREÇÃO: Usar categoria resolvida ou manter original
-        categoria: packageData.categoria || session.categoria || '',
+        categoria: session.categoria || packageData.categoria || '',
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
         pacote: packageData.packageName || session.pacote || '',
         valorPacote: `R$ ${valorBasePacoteNum.toFixed(2).replace('.', ',')}`,
