@@ -203,7 +203,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deleteProdutoById(id);
       // Only update local state after successful Supabase deletion
       setProdutos(prev => prev.filter(prod => prod.id !== id));
-      toast.success('Produto removido com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting produto:', error);
