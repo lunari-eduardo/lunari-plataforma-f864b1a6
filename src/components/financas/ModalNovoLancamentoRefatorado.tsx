@@ -20,6 +20,7 @@ interface ModalNovoLancamentoRefatoradoProps {
   obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
   grupoAtivo: GrupoPrincipal;
   tipoLancamento?: TipoLancamento;
+  filtrarApenasGrupo?: boolean;
 }
 
 export default function ModalNovoLancamentoRefatorado({
