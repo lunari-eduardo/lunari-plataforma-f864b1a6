@@ -740,7 +740,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       // Salvar agendamento pendente no Supabase
       (async () => {
-        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.savePendingPayments(
           sessionId,
           [{
