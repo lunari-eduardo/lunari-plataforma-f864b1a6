@@ -16,6 +16,46 @@ export const GROUP_COLORS: Record<GrupoPrincipal, string> = {
   'Receita Operacional': 'bg-lunar-success/10 text-lunar-success border-lunar-success/20'
 };
 
+export interface MacroGroup {
+  label: string;
+  icon: string;
+  color: string;
+  borderColor: string;
+  groups: { key: GrupoPrincipal; label: string }[];
+}
+
+export const MACRO_GROUPS: MacroGroup[] = [
+  {
+    label: 'Despesas',
+    icon: '🔴',
+    color: 'text-destructive',
+    borderColor: 'border-destructive/30',
+    groups: [
+      { key: 'Despesa Fixa', label: 'Fixas' },
+      { key: 'Despesa Variável', label: 'Variáveis' },
+    ],
+  },
+  {
+    label: 'Receitas',
+    icon: '🟢',
+    color: 'text-lunar-success',
+    borderColor: 'border-lunar-success/30',
+    groups: [
+      { key: 'Receita Operacional', label: 'Operacionais' },
+      { key: 'Receita Não Operacional', label: 'Não Operacionais' },
+    ],
+  },
+  {
+    label: 'Investimentos',
+    icon: '🟣',
+    color: 'text-primary',
+    borderColor: 'border-primary/30',
+    groups: [
+      { key: 'Investimento', label: 'Investimentos' },
+    ],
+  },
+];
+
 export const POLLING_INTERVAL = 2000;
 
 export const TOAST_MESSAGES = {
