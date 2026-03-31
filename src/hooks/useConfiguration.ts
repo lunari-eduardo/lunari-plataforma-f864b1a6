@@ -184,7 +184,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setProdutos(prev => [...prev, novoProduto]);
-    toast.success('Produto adicionado com sucesso!');
   }, []);
 
   const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>): Promise<void> => {
