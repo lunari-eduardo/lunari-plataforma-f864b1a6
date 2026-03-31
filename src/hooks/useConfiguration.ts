@@ -161,7 +161,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deletePacoteById(id);
       // Only update local state after successful Supabase deletion
       setPacotes(prev => prev.filter(pac => pac.id !== id));
-      toast.success('Pacote removido com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting pacote:', error);
