@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, Save, X, RefreshCw } from 'lucide-react';
+import { Trash2, Save, X, RefreshCw, ChevronDown } from 'lucide-react';
 import { ItemFinanceiro, GrupoPrincipal } from '@/types/financas';
-import { FINANCIAL_GROUPS, GROUP_COLORS } from '@/constants/financialConstants';
+import { MACRO_GROUPS } from '@/constants/financialConstants';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ItemsListProps {
   itensPorGrupo: Record<GrupoPrincipal, ItemFinanceiro[]>;
@@ -19,6 +21,129 @@ interface ItemsListProps {
   onNomeEditandoChange: (nome: string) => void;
 }
 
+function ItemRow({
+  item,
+  isEditing,
+  nomeEditando,
+  onClickName,
+  onSaveEdit,
+  onCancelEdit,
+  onDeleteItem,
+  onNomeEditandoChange,
+}: {
+  item: ItemFinanceiro;
+  isEditing: boolean;
+  nomeEditando: string;
+  onClickName: () => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onDeleteItem: () => void;
+  onNomeEditandoChange: (nome: string) => void;
+}) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') onSaveEdit();
+    if (e.key === 'Escape') onCancelEdit();
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2 py-1.5 px-2">
+        <Input
+          value={nomeEditando}
+          onChange={e => onNomeEditandoChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="flex-1 h-8 text-sm"
+          autoFocus
+        />
+        <Button size="sm" onClick={onSaveEdit} className="h-7 w-7 p-0" variant="ghost">
+          <Save className="h-3.5 w-3.5 text-lunar-success" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancelEdit} className="h-7 w-7 p-0">
+          <X className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex items-center gap-2 py-1.5 px-2 hover:bg-muted/30 transition-colors rounded-sm">
+      <span
+        onClick={onClickName}
+        className="text-sm text-foreground flex-1 min-w-0 truncate cursor-pointer hover:text-primary transition-colors"
+        title="Clique para editar"
+      >
+        {item?.nome || 'Item sem nome'}
+      </span>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onDeleteItem}
+          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SubSection({
+  label,
+  items,
+  itemEditando,
+  nomeEditando,
+  onEditItem,
+  onSaveEdit,
+  onCancelEdit,
+  onDeleteItem,
+  onNomeEditandoChange,
+  syncButton,
+}: {
+  label: string;
+  items: ItemFinanceiro[];
+  itemEditando: string | null;
+  nomeEditando: string;
+  onEditItem: (item: ItemFinanceiro) => void;
+  onSaveEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onDeleteItem: (id: string, nome: string) => void;
+  onNomeEditandoChange: (nome: string) => void;
+  syncButton?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center justify-between px-2 py-1">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          {label}
+        </span>
+        {syncButton}
+      </div>
+      <div className="divide-y divide-border/20">
+        {items.length === 0 ? (
+          <p className="text-muted-foreground text-xs italic px-2 py-3">
+            Nenhum item ainda. Adicione um usando o campo acima.
+          </p>
+        ) : (
+          items.map(item => (
+            <ItemRow
+              key={item.id}
+              item={item}
+              isEditing={itemEditando === item.id}
+              nomeEditando={nomeEditando}
+              onClickName={() => onEditItem(item)}
+              onSaveEdit={() => onSaveEdit(item.id)}
+              onCancelEdit={onCancelEdit}
+              onDeleteItem={() => onDeleteItem(item.id, item?.nome || 'Item sem nome')}
+              onNomeEditandoChange={onNomeEditandoChange}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ItemsList({
   itensPorGrupo,
   itemEditando,
@@ -31,117 +156,109 @@ export function ItemsList({
   onOpenSyncModal,
   onNomeEditandoChange
 }: ItemsListProps) {
-  const handleKeyPress = (e: React.KeyboardEvent, itemId: string) => {
-    if (e.key === 'Enter') {
-      onSaveEdit(itemId);
-    }
+  const isMobile = useIsMobile();
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(MACRO_GROUPS.map(g => [g.label, true]))
+  );
+
+  const toggleSection = (label: string) => {
+    setOpenSections(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
-  const getCorGrupo = (grupo: GrupoPrincipal) => {
-    return GROUP_COLORS[grupo] || 'bg-muted text-foreground border-border';
+  const getSyncButton = (groupKey: GrupoPrincipal) => {
+    if (groupKey !== 'Despesa Fixa' || custosDisponiveis <= 0) return undefined;
+    return (
+      <div className="flex items-center gap-1.5">
+        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+          {custosDisponiveis} na Precificação
+        </Badge>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onOpenSyncModal}
+          className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+        >
+          <RefreshCw className="h-3 w-3 mr-1" />
+          Sincronizar
+        </Button>
+      </div>
+    );
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {FINANCIAL_GROUPS.map(grupo => (
-        <Card key={grupo} className="h-fit rounded-lg bg-card">
-          <CardHeader className="py-2 px-3">
-            <CardTitle className="text-sm">
-              <div className="flex items-center justify-between">
-                <Badge className={`${getCorGrupo(grupo)} text-xs font-medium`}>
-                  {grupo}
-                </Badge>
-                {grupo === 'Despesa Fixa' && (
-                  <div className="flex items-center gap-2">
-                    {custosDisponiveis > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {custosDisponiveis} na Precificação
-                      </Badge>
-                    )}
-                    {custosDisponiveis > 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={onOpenSyncModal}
-                        className="h-6 px-2 text-xs"
-                      >
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        Sincronizar
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 px-3 pb-3">
-            {itensPorGrupo[grupo].length === 0 ? (
-              <p className="text-lunar-textSecondary text-xs italic text-center py-2">
-                Nenhum item cadastrado neste grupo.
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {itensPorGrupo[grupo].map(item => (
-                  <div 
-                    key={item.id} 
-                    className="flex items-center gap-2 p-1.5 bg-lunar-surface/50 border border-lunar-border/30 rounded-md hover:bg-lunar-surface/80 transition-colors"
-                  >
-                    {itemEditando === item.id ? (
-                      <div className="flex items-center gap-2 flex-1">
-                        <Input 
-                          value={nomeEditando} 
-                          onChange={e => onNomeEditandoChange(e.target.value)} 
-                          className="flex-1 text-sm" 
-                          onKeyPress={e => handleKeyPress(e, item.id)}
-                        />
-                        <Button 
-                          size="sm" 
-                          onClick={() => onSaveEdit(item.id)} 
-                          className="h-8 w-8 p-0"
-                        >
-                          <Save className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={onCancelEdit} 
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-lunar-text text-xs font-medium flex-1 min-w-0 truncate">
-                          {item?.nome || 'Item sem nome'}
-                        </span>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => onEditItem(item)} 
-                            className="h-8 w-8 p-0 hover:bg-lunar-accent/20"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => onDeleteItem(item.id, item?.nome || 'Item sem nome')} 
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-6">
+      {MACRO_GROUPS.map(macro => {
+        const totalItems = macro.groups.reduce(
+          (sum, g) => sum + (itensPorGrupo[g.key]?.length || 0), 0
+        );
+
+        const content = (
+          <div className="space-y-4">
+            {macro.groups.map(sub => (
+              <SubSection
+                key={sub.key}
+                label={sub.label}
+                items={itensPorGrupo[sub.key] || []}
+                itemEditando={itemEditando}
+                nomeEditando={nomeEditando}
+                onEditItem={onEditItem}
+                onSaveEdit={onSaveEdit}
+                onCancelEdit={onCancelEdit}
+                onDeleteItem={onDeleteItem}
+                onNomeEditandoChange={onNomeEditandoChange}
+                syncButton={getSyncButton(sub.key)}
+              />
+            ))}
+          </div>
+        );
+
+        if (isMobile) {
+          return (
+            <Collapsible
+              key={macro.label}
+              open={openSections[macro.label]}
+              onOpenChange={() => toggleSection(macro.label)}
+            >
+              <CollapsibleTrigger className="flex items-center justify-between w-full py-2 px-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{macro.icon}</span>
+                  <span className={`text-sm font-semibold ${macro.color}`}>
+                    {macro.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({totalItems})
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                    openSections[macro.label] ? 'rotate-180' : ''
+                  }`}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pl-1 pt-1">
+                {content}
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        }
+
+        return (
+          <div key={macro.label}>
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <span className="text-sm">{macro.icon}</span>
+              <span className={`text-sm font-semibold ${macro.color}`}>
+                {macro.label}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({totalItems})
+              </span>
+            </div>
+            <div className={`border-l-2 ${macro.borderColor} pl-3 ml-2`}>
+              {content}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
