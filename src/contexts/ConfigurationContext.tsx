@@ -508,7 +508,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Pacote excluído com sucesso');
     console.log('✅ [removerPacote] Exclusão confirmada', id);
     return true;
   }, [pacotesOps, suppress]);
