@@ -127,30 +127,45 @@ export default function ModalNovoLancamentoRefatorado({
                 <SelectValue placeholder="Selecione um item..." />
               </SelectTrigger>
               <SelectContent>
-                {/* Priorizar itens do grupo ativo */}
-                {itensGrupoAtivo.length > 0 && (
+                {filtrarApenasGrupo ? (
                   <>
+                    {itensGrupoAtivo.length > 0 ? (
+                      itensGrupoAtivo.map(item => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item?.nome || 'Item sem nome'}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                        Nenhum item cadastrado para {grupoAtivo}.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {itensGrupoAtivo.length > 0 && (
+                      <>
+                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
+                          {grupoAtivo} (Recomendado)
+                        </div>
+                        {itensGrupoAtivo.map(item => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item?.nome || 'Item sem nome'}
+                          </SelectItem>
+                        ))}
+                        <div className="border-t my-1"></div>
+                      </>
+                    )}
                     <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
-                      {grupoAtivo} (Recomendado)
+                      Todos os Itens
                     </div>
-                    {itensGrupoAtivo.map(item => (
+                    {todosItens.map(item => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item?.nome || 'Item sem nome'}
+                        {item?.nome || 'Item sem nome'} <span className="text-xs text-muted-foreground">({item?.grupo_principal || 'N/A'})</span>
                       </SelectItem>
                     ))}
-                    <div className="border-t my-1"></div>
                   </>
                 )}
-                
-                {/* Outros itens */}
-                <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
-                  Todos os Itens
-                </div>
-                {todosItens.map(item => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item?.nome || 'Item sem nome'} <span className="text-xs text-muted-foreground">({item?.grupo_principal || 'N/A'})</span>
-                  </SelectItem>
-                ))}
               </SelectContent>
             </Select>
           </div>

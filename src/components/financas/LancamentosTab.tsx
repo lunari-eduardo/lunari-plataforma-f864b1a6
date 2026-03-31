@@ -248,6 +248,7 @@ const LancamentosTab = memo(function LancamentosTab({
         obterItensPorGrupo={obterItensPorGrupo}
         grupoAtivo={modalGrupo}
         tipoLancamento={modalTipo}
+        filtrarApenasGrupo={modalFiltrarApenas}
       />
     </div>
   );
