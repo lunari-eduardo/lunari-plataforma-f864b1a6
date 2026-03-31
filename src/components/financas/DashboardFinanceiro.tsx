@@ -33,7 +33,7 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
   } = useDashboardFinanceiro();
 
   return (
-    <div className="min-h-screen bg-lunar-bg">
+    <div className="min-h-screen">
       <div className="p-6 space-y-6 py-0 my-0">
         {/* Hero Section */}
         <section aria-label="Dashboard Header" className="animate-fade-in">
