@@ -1,27 +1,32 @@
-import { useState, memo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useMemo, memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Receipt, CreditCard, PiggyBank, TrendingUp } from 'lucide-react';
+import { Plus, Minus, TrendingDown, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
 import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro } from '@/types/financas';
 import { formatCurrency } from '@/utils/financialUtils';
-import { GRUPOS_ORDEM, getInfoPorGrupo } from '@/utils/financialGroupUtils';
+import { GRUPOS_CONFIG, getInfoPorGrupo } from '@/utils/financialGroupUtils';
 import TabelaLancamentos from './TabelaLancamentos';
 import TabelaLancamentosMobile from './TabelaLancamentosMobile';
 import ModalNovoLancamentoRefatorado from './ModalNovoLancamentoRefatorado';
 import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+// Ordem das seções na vista unificada
+const SECOES_ORDEM: { grupo: GrupoPrincipal; label: string }[] = [
+  { grupo: 'Despesa Fixa', label: 'Despesas Fixas' },
+  { grupo: 'Despesa Variável', label: 'Despesas Variáveis' },
+  { grupo: 'Investimento', label: 'Investimentos' },
+  { grupo: 'Receita Operacional', label: 'Receitas Operacionais' },
+  { grupo: 'Receita Não Operacional', label: 'Receitas Extras' },
+];
+
 interface LancamentosTabProps {
-  filtroMesAno: {
-    mes: number;
-    ano: number;
-  };
-  setFiltroMesAno: (filtro: {
-    mes: number;
-    ano: number;
-  }) => void;
+  filtroMesAno: { mes: number; ano: number };
+  setFiltroMesAno: (filtro: { mes: number; ano: number }) => void;
   transacoesPorGrupo: Record<GrupoPrincipal, TransacaoComItem[]>;
   resumoFinanceiro: any;
   calcularMetricasPorGrupo: (grupo: GrupoPrincipal) => any;
@@ -32,6 +37,7 @@ interface LancamentosTabProps {
   marcarComoPago: (id: string) => void;
   createTransactionEngine?: (input: CreateTransactionInput) => void;
 }
+
 const LancamentosTab = memo(function LancamentosTab({
   filtroMesAno,
   setFiltroMesAno,
@@ -44,158 +50,205 @@ const LancamentosTab = memo(function LancamentosTab({
   marcarComoPago,
   createTransactionEngine
 }: LancamentosTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<GrupoPrincipal>('Despesa Fixa');
-  const [modalNovoLancamentoAberto, setModalNovoLancamentoAberto] = useState(false);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [modalTipo, setModalTipo] = useState<'despesa' | 'receita'>('despesa');
+  const [modalGrupo, setModalGrupo] = useState<GrupoPrincipal>('Despesa Variável');
+  const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    SECOES_ORDEM.forEach(s => { initial[s.grupo] = true; });
+    return initial;
+  });
   const isMobile = useIsMobile();
-  const metricas = calcularMetricasPorGrupo(activeSubTab);
-  const infoGrupo = getInfoPorGrupo(activeSubTab);
-  return <div className="space-y-6">
-      {/* Linha 1: Barra de Totais */}
-      <div className="rounded-lg border border-border p-4 shadow-sm bg-lunar-bg py-[4px]">
-        <div className="flex flex-wrap items-center gap-6 text-sm">
-          <div className="flex items-center gap-1">
-            <span className="font-medium text-foreground">Total:</span>
-            <span className="font-bold text-foreground">{formatCurrency(metricas.total)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-lunar-success rounded-full"></div>
-            <span className="text-muted-foreground">Pago:</span>
-            <span className="font-semibold text-lunar-success">{formatCurrency(metricas.pago)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-lunar-error rounded-full"></div>
-            <span className="text-muted-foreground">Faturado:</span>
-            <span className="font-semibold text-lunar-error">{formatCurrency(metricas.faturado)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-lunar-warning rounded-full"></div>
-            <span className="text-muted-foreground">Agendado:</span>
-            <span className="font-semibold text-lunar-warning">{formatCurrency(metricas.agendado)}</span>
-          </div>
+
+  // Calcular resumo geral
+  const resumo = useMemo(() => {
+    let totalReceitas = 0;
+    let totalDespesas = 0;
+
+    SECOES_ORDEM.forEach(({ grupo }) => {
+      const metricas = calcularMetricasPorGrupo(grupo);
+      if (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') {
+        totalReceitas += metricas.total || 0;
+      } else {
+        totalDespesas += metricas.total || 0;
+      }
+    });
+
+    return { totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
+  }, [calcularMetricasPorGrupo, transacoesPorGrupo]);
+
+  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal) => {
+    setModalTipo(tipo);
+    setModalGrupo(grupo || (tipo === 'receita' ? 'Receita Não Operacional' : 'Despesa Variável'));
+    setModalAberto(true);
+  };
+
+  const toggleSecao = (grupo: string) => {
+    setSecoesAbertas(prev => ({ ...prev, [grupo]: !prev[grupo] }));
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header: Navegador + Botões rápidos */}
+      <div className="flex items-center justify-between gap-3">
+        <MonthYearNavigator
+          filtroMesAno={filtroMesAno}
+          setFiltroMesAno={setFiltroMesAno}
+          size={isMobile ? 'sm' : 'md'}
+          className={isMobile ? 'flex-1' : ''}
+        />
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => abrirModal('despesa')}
+            variant="outline"
+            size={isMobile ? 'sm' : 'default'}
+            className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Minus className="h-4 w-4 mr-1" />
+            {!isMobile && 'Despesa'}
+          </Button>
+          <Button
+            onClick={() => abrirModal('receita')}
+            variant="outline"
+            size={isMobile ? 'sm' : 'default'}
+            className="border-lunar-success/30 text-lunar-success hover:bg-lunar-success/10 hover:text-lunar-success"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {!isMobile && 'Receita'}
+          </Button>
         </div>
       </div>
 
-      {/* Linha 2: Barra de Controles */}
-      <div className="space-y-4">
-        {/* Desktop Layout */}
-        {!isMobile && <div className="flex items-center justify-between gap-4">
-            {/* Espaço para equilibrar o botão da direita */}
-            <div className="w-[140px]" />
-            
-            {/* Sub-abas Centralizadas */}
-            <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)} className="flex-1 flex justify-center">
-              <TabsList className="inline-flex h-10 p-1 bg-card border border-border rounded-lg py-0 px-0">
-                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-destructive py-[7px] text-xs">
-                  <Receipt className="h-4 w-4" />
-                  Fixas
-                </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-warning py-[5px] text-xs">
-                  <CreditCard className="h-4 w-4" />
-                  Variáveis
-                </TabsTrigger>
-                <TabsTrigger value="Investimento" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-primary py-[5px] text-xs">
-                  <TrendingUp className="h-4 w-4" />
-                  Investimentos
-                </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-2 px-4 data-[state=active]:bg-muted data-[state=active]:text-lunar-success py-[5px] text-xs">
-                  <PiggyBank className="h-4 w-4" />
-                  Receitas
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Grupo da Direita: Botão Novo Lançamento */}
-            <Button onClick={() => setModalNovoLancamentoAberto(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs py-0">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Lançamento
-            </Button>
-          </div>}
-
-        {/* Mobile Layout */}
-        {isMobile && <div className="space-y-4">
-            {/* Sub-abas para Mobile */}
-            <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
-              <TabsList className="grid grid-cols-2 h-10 p-1 bg-card border border-border rounded-lg w/full py-0">
-                <TabsTrigger value="Despesa Fixa" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-destructive px-0 py-[2px]">
-                  <Receipt className="h-3 w-3" />
-                  Fixas
-                </TabsTrigger>
-                <TabsTrigger value="Despesa Variável" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-lunar-warning py-[3px] px-0">
-                  <CreditCard className="h-3 w-3" />
-                  Variáveis
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsList className="grid grid-cols-2 h-10 p-1 bg-card border border-border rounded-lg w-full py-0 px-[4px]">
-                <TabsTrigger value="Investimento" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-primary px-0 py-[2px]">
-                  <TrendingUp className="h-3 w-3" />
-                  Investimentos
-                </TabsTrigger>
-                <TabsTrigger value="Receita Não Operacional" className="flex items-center gap-1 text-xs data-[state=active]:bg-muted data-[state=active]:text-lunar-success py-[2px] px-0">
-                  <PiggyBank className="h-3 w-3" />
-                  Receitas
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Navegador de Mês/Ano e Botão de Novo Lançamento para Mobile */}
-            <div className="flex items-center justify-between gap-3">
-              <MonthYearNavigator 
-                filtroMesAno={filtroMesAno}
-                setFiltroMesAno={setFiltroMesAno}
-                size="sm"
-                className="flex-1 max-w-64"
-              />
-
-              {/* Botão de Novo Lançamento Compacto */}
-              <Button 
-                onClick={() => setModalNovoLancamentoAberto(true)} 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-3" 
-                size="sm"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>}
+      {/* Resumo simplificado */}
+      <div className="flex items-center gap-4 text-sm px-1">
+        <div className="flex items-center gap-1.5">
+          <TrendingUp className="h-3.5 w-3.5 text-lunar-success" />
+          <span className="text-muted-foreground">Receitas</span>
+          <span className="font-semibold text-lunar-success">{formatCurrency(resumo.totalReceitas)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+          <span className="text-muted-foreground">Despesas</span>
+          <span className="font-semibold text-destructive">{formatCurrency(resumo.totalDespesas)}</span>
+        </div>
+        <div className="hidden sm:flex items-center gap-1.5 ml-auto">
+          <span className="text-muted-foreground">Saldo</span>
+          <span className={`font-bold ${resumo.saldo >= 0 ? 'text-lunar-success' : 'text-destructive'}`}>
+            {formatCurrency(resumo.saldo)}
+          </span>
+        </div>
       </div>
 
-      {/* Conteúdo das Sub-abas */}
-      <Tabs value={activeSubTab} onValueChange={value => setActiveSubTab(value as GrupoPrincipal)}>
-        {GRUPOS_ORDEM.map(grupo => <TabsContent key={grupo} value={grupo} className="mt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-1 h-6 rounded bg-primary"></div>
-                  <h3 className={`text-lg font-semibold ${infoGrupo.corTema}`}>
-                    {infoGrupo.titulo} - {meses[filtroMesAno.mes - 1]} {filtroMesAno.ano}
-                  </h3>
+      {/* Seções unificadas */}
+      <div className="space-y-1">
+        {SECOES_ORDEM.map(({ grupo, label }) => {
+          const transacoes = transacoesPorGrupo[grupo] || [];
+          const info = getInfoPorGrupo(grupo);
+          const metricas = calcularMetricasPorGrupo(grupo);
+          const isOpen = secoesAbertas[grupo] ?? true;
+          const temDados = transacoes.length > 0;
+
+          return (
+            <Collapsible
+              key={grupo}
+              open={isOpen}
+              onOpenChange={() => toggleSecao(grupo)}
+            >
+              {/* Header da seção */}
+              <CollapsibleTrigger className="w-full">
+                <div className={`flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 transition-colors ${!temDados && !isOpen ? 'opacity-60' : ''}`}>
+                  <div className="flex items-center gap-2">
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className={`text-sm font-semibold ${info.corTema}`}>
+                      {label}
+                    </span>
+                    {temDados && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                        {transacoes.length}
+                      </Badge>
+                    )}
+                  </div>
+                  {temDados && (
+                    <span className={`text-sm font-medium ${info.corTema}`}>
+                      {formatCurrency(metricas.total || 0)}
+                    </span>
+                  )}
                 </div>
-                
-                {/* Navegador de Mês/Ano para Desktop/Tablet */}
-                {!isMobile && (
-                  <MonthYearNavigator 
-                    filtroMesAno={filtroMesAno}
-                    setFiltroMesAno={setFiltroMesAno}
-                  />
-                )}
-              </div>
+              </CollapsibleTrigger>
 
-              {isMobile ? <TabelaLancamentosMobile transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} /> : <TabelaLancamentos transacoes={transacoesPorGrupo[grupo]} onAtualizarTransacao={atualizarTransacao} onRemoverTransacao={removerTransacao} onMarcarComoPago={marcarComoPago} grupoAtivo={grupo} obterItensPorGrupo={obterItensPorGrupo} onAdicionarTransacao={adicionarTransacao} createTransactionEngine={createTransactionEngine} filtroMesAno={filtroMesAno} />}
-            </div>
-          </TabsContent>)}
-      </Tabs>
+              <CollapsibleContent>
+                <div className="pl-2 pr-1 pb-2">
+                  {temDados ? (
+                    isMobile ? (
+                      <TabelaLancamentosMobile
+                        transacoes={transacoes}
+                        onAtualizarTransacao={atualizarTransacao}
+                        onRemoverTransacao={removerTransacao}
+                        onMarcarComoPago={marcarComoPago}
+                        grupoAtivo={grupo}
+                        obterItensPorGrupo={obterItensPorGrupo}
+                      />
+                    ) : (
+                      <TabelaLancamentos
+                        transacoes={transacoes}
+                        onAtualizarTransacao={atualizarTransacao}
+                        onRemoverTransacao={removerTransacao}
+                        onMarcarComoPago={marcarComoPago}
+                        grupoAtivo={grupo}
+                        obterItensPorGrupo={obterItensPorGrupo}
+                      />
+                    )
+                  ) : (
+                    <p className="text-xs text-muted-foreground py-3 pl-7">
+                      Nenhum lançamento neste mês.
+                    </p>
+                  )}
 
+                  {/* Botão contextual de adicionar */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const tipo = (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') ? 'receita' : 'despesa';
+                      abrirModal(tipo, grupo);
+                    }}
+                    className={`flex items-center gap-1 text-xs ${info.corTema} opacity-60 hover:opacity-100 transition-opacity pl-7 py-1.5`}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Adicionar {label.toLowerCase().replace('receitas', 'receita').replace('despesas', 'despesa').replace('investimentos', 'investimento')}
+                  </button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
+      </div>
 
-      {/* Modal de Novo Lançamento */}
-      <ModalNovoLancamentoRefatorado 
-        aberto={modalNovoLancamentoAberto} 
-        onFechar={() => setModalNovoLancamentoAberto(false)} 
-        createTransactionEngine={createTransactionEngine} 
-        obterItensPorGrupo={obterItensPorGrupo} 
-        grupoAtivo={activeSubTab} 
-        tipoLancamento={activeSubTab === 'Receita Não Operacional' ? 'receita' : 'despesa'} 
+      {/* Saldo mobile (bottom) */}
+      {isMobile && (
+        <div className="flex items-center justify-center gap-1.5 text-sm pt-2 border-t border-border">
+          <span className="text-muted-foreground">Saldo</span>
+          <span className={`font-bold ${resumo.saldo >= 0 ? 'text-lunar-success' : 'text-destructive'}`}>
+            {formatCurrency(resumo.saldo)}
+          </span>
+        </div>
+      )}
+
+      {/* Modal */}
+      <ModalNovoLancamentoRefatorado
+        aberto={modalAberto}
+        onFechar={() => setModalAberto(false)}
+        createTransactionEngine={createTransactionEngine}
+        obterItensPorGrupo={obterItensPorGrupo}
+        grupoAtivo={modalGrupo}
+        tipoLancamento={modalTipo}
       />
-    </div>;
+    </div>
+  );
 });
 
 export default LancamentosTab;
