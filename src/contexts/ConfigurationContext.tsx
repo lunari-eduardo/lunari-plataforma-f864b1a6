@@ -4,6 +4,7 @@ import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useOptimisticConfiguration } from '@/hooks/useOptimisticConfiguration';
 import { useAuth } from '@/contexts/AuthContext';
 import { realtimeSubscriptionManager } from '@/services/RealtimeSubscriptionManager';
+import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 import { toast } from 'sonner';
 import type { Categoria, Pacote, Produto, EtapaTrabalho } from '@/types/configuration';
 
