@@ -53,6 +53,7 @@ const LancamentosTab = memo(function LancamentosTab({
   const [modalAberto, setModalAberto] = useState(false);
   const [modalTipo, setModalTipo] = useState<'despesa' | 'receita'>('despesa');
   const [modalGrupo, setModalGrupo] = useState<GrupoPrincipal>('Despesa Variável');
+  const [modalFiltrarApenas, setModalFiltrarApenas] = useState(false);
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     SECOES_ORDEM.forEach(s => { initial[s.grupo] = true; });
@@ -77,9 +78,10 @@ const LancamentosTab = memo(function LancamentosTab({
     return { totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
   }, [calcularMetricasPorGrupo, transacoesPorGrupo]);
 
-  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal) => {
+  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal, filtrarApenas = false) => {
     setModalTipo(tipo);
     setModalGrupo(grupo || (tipo === 'receita' ? 'Receita Não Operacional' : 'Despesa Variável'));
+    setModalFiltrarApenas(filtrarApenas);
     setModalAberto(true);
   };
 
@@ -214,7 +216,7 @@ const LancamentosTab = memo(function LancamentosTab({
                     onClick={(e) => {
                       e.stopPropagation();
                       const tipo = (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') ? 'receita' : 'despesa';
-                      abrirModal(tipo, grupo);
+                      abrirModal(tipo, grupo, true);
                     }}
                     className={`flex items-center gap-1 text-xs ${info.corTema} opacity-60 hover:opacity-100 transition-opacity pl-7 py-1.5`}
                   >
@@ -246,6 +248,7 @@ const LancamentosTab = memo(function LancamentosTab({
         obterItensPorGrupo={obterItensPorGrupo}
         grupoAtivo={modalGrupo}
         tipoLancamento={modalTipo}
+        filtrarApenasGrupo={modalFiltrarApenas}
       />
     </div>
   );
