@@ -147,7 +147,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setPacotes(prev => [...prev, novoPacote]);
-    toast.success('Pacote adicionado com sucesso!');
   }, []);
 
   const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>): Promise<void> => {
