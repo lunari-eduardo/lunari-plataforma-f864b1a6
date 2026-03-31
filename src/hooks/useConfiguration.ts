@@ -124,7 +124,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deleteCategoriaById(id);
       // Only update local state after successful Supabase deletion
       setCategorias(prev => prev.filter(cat => cat.id !== id));
-      toast.success('Categoria removida com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting categoria:', error);
