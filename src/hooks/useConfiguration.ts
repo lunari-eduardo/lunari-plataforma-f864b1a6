@@ -242,7 +242,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deleteEtapaById(id);
       // Only update local state after successful Supabase deletion
       setEtapas(prev => prev.filter(etapa => etapa.id !== id));
-      toast.success('Etapa removida com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting etapa:', error);
