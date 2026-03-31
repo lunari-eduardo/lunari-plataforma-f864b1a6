@@ -94,7 +94,7 @@ const LancamentosTab = memo(function LancamentosTab({
         <MonthYearNavigator
           filtroMesAno={filtroMesAno}
           setFiltroMesAno={setFiltroMesAno}
-          size={isMobile ? 'sm' : 'default'}
+          size={isMobile ? 'sm' : 'md'}
           className={isMobile ? 'flex-1' : ''}
         />
 
