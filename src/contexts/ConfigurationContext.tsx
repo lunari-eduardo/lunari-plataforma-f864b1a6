@@ -423,7 +423,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Categoria excluída com sucesso');
     console.log('✅ [removerCategoria] Exclusão confirmada', id);
     return true;
   }, [categoriasOps, suppress]);

@@ -96,7 +96,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setCategorias(prev => [...prev, novaCategoria]);
-    toast.success('Categoria adicionada com sucesso!');
   }, []);
 
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>): Promise<void> => {
