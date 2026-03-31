@@ -80,7 +80,7 @@ const updatePaymentInSupabase = async (
 // Deletar pagamento do Supabase
 const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
   try {
-    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
     await PaymentSupabaseService.deletePaymentFromSupabase(sessionId, paymentId);
     console.log('✅ Pagamento deletado do Supabase:', paymentId);
   } catch (error) {
