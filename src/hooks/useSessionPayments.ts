@@ -58,7 +58,7 @@ const updatePaymentInSupabase = async (
   payment: SessionPaymentExtended
 ) => {
   try {
-    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
     
     const success = await PaymentSupabaseService.updateSinglePayment(sessionId, paymentId, {
       valor: payment.valor,
