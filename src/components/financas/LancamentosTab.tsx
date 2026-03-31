@@ -78,9 +78,10 @@ const LancamentosTab = memo(function LancamentosTab({
     return { totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
   }, [calcularMetricasPorGrupo, transacoesPorGrupo]);
 
-  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal) => {
+  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal, filtrarApenas = false) => {
     setModalTipo(tipo);
     setModalGrupo(grupo || (tipo === 'receita' ? 'Receita Não Operacional' : 'Despesa Variável'));
+    setModalFiltrarApenas(filtrarApenas);
     setModalAberto(true);
   };
 
