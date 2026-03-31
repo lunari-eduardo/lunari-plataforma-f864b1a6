@@ -234,7 +234,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     setEtapas(prev => prev.map(etapa => 
       etapa.id === id ? { ...etapa, ...dados } : etapa
     ));
-    toast.success('Etapa atualizada com sucesso!');
   }, []);
 
   const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
