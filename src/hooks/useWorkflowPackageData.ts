@@ -25,7 +25,7 @@ export const useWorkflowPackageData = () => {
           packageValue: frozenPackage.valorBase,
           packageFotoExtraValue: frozenPackage.valorFotoExtra,
           fotosIncluidas: frozenPackage.fotosIncluidas || 0,
-          categoria: frozenPackage.categoria || session.categoria
+          categoria: session.categoria || frozenPackage.categoria
         };
       }
       
