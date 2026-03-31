@@ -53,6 +53,7 @@ const LancamentosTab = memo(function LancamentosTab({
   const [modalAberto, setModalAberto] = useState(false);
   const [modalTipo, setModalTipo] = useState<'despesa' | 'receita'>('despesa');
   const [modalGrupo, setModalGrupo] = useState<GrupoPrincipal>('Despesa Variável');
+  const [modalFiltrarApenas, setModalFiltrarApenas] = useState(false);
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     SECOES_ORDEM.forEach(s => { initial[s.grupo] = true; });
