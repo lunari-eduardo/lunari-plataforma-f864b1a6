@@ -812,7 +812,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     try {
       // FASE 5: Importar serviço primeiro
-      const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+      const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
       
       // FASE 5: Verificar se a sessão existe antes de prosseguir
       const binding = await PaymentSupabaseService.getSessionBinding(id);

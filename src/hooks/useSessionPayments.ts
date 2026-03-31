@@ -35,7 +35,7 @@ const saveSinglePaymentToSupabase = async (
       return;
     }
 
-    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
     
     // Usar método rastreado para evitar duplicação
     await PaymentSupabaseService.saveSinglePaymentTracked(sessionId, paymentId, {
@@ -58,7 +58,7 @@ const updatePaymentInSupabase = async (
   payment: SessionPaymentExtended
 ) => {
   try {
-    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
     
     const success = await PaymentSupabaseService.updateSinglePayment(sessionId, paymentId, {
       valor: payment.valor,
@@ -80,7 +80,7 @@ const updatePaymentInSupabase = async (
 // Deletar pagamento do Supabase
 const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
   try {
-    const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
     await PaymentSupabaseService.deletePaymentFromSupabase(sessionId, paymentId);
     console.log('✅ Pagamento deletado do Supabase:', paymentId);
   } catch (error) {
@@ -590,7 +590,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       } else {
         // UPDATE pagamento pendente (agendado/parcelado)
         (async () => {
-          const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+          const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
           await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
             valor: finalPayment.valor,
             dataVencimento: finalPayment.dataVencimento,
@@ -638,7 +638,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       // Atualizar no Supabase (de pendente para pago) com fallback
       (async () => {
-        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.markPaymentAsPaid(
           sessionId, 
           paymentId, 
@@ -687,7 +687,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       // Salvar parcelas pendentes no Supabase
       (async () => {
-        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.savePendingPayments(
           sessionId,
           newInstallments.map(p => ({
@@ -740,7 +740,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       // Salvar agendamento pendente no Supabase
       (async () => {
-        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.savePendingPayments(
           sessionId,
           [{
