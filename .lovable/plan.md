@@ -1,148 +1,58 @@
 
 
-# Revisão Completa: Sistema de Pagamentos Asaas — Debug e Validação
+# Renomeação Global de Categorias + Feedback Visual
 
-## Diagnóstico Atual (dados reais do banco)
+## Situação Atual
 
-Após auditoria completa, o estado atual do banco está **parcialmente correto**:
+- `clientes_sessoes.categoria` armazena o **nome da categoria como texto**, não um FK para `categorias.id`
+- Quando o fotógrafo renomeia uma categoria (ex: "Ensaio gestante" → "Gestante Premium"), o nome atualiza na tabela `categorias` mas **sessões, orçamentos e relatórios continuam com o nome antigo**
+- A edição inline já existe no componente `Categorias.tsx` mas o feedback visual pode não ser imediato dependendo do realtime
 
-### O que JÁ funciona ✅
-- **Parcelas (`cobranca_parcelas`)**: `valor_bruto` correto (nominal/parcelas), `taxa_gateway = 0` quando repasse ativo
-- **Trigger `ensure_transaction_on_cobranca_paid`**: já respeita flags de repasse e zera taxas corretamente
-- **`clientes_transacoes`** recentes: `valor=50, valor_liquido=50, taxa_gateway=0` para repasse ✅
-- **Edge Functions**: `checkout-process-payment`, `check-payment-status`, `asaas-webhook` usam `cobranca.valor / total_parcelas` como base
+## Regra de Negócio
 
-### O que está QUEBRADO ❌
+- **Categoria = identidade editável** — pode ser renomeada a qualquer momento
+- **Regras de preço = congeladas na sessão** — via `regras_congeladas` em `clientes_sessoes`, nunca muda após criação
+- Renomear categoria **NÃO altera** valores, pacotes, modelos de preço ou dados financeiros das sessões
 
-**1. `cobranca.valor_liquido` armazena o netValue do gateway, não a perspectiva do fotógrafo**
+## Plano
 
-O trigger `reconcile_cobranca_from_parcelas` faz `SUM(parcelas.valor_liquido)`. Para repasse:
-- Parcelas: `valor_liquido = 25.61` (netValue do Asaas, > valor_bruto pois cliente pagou a mais)
-- Cobrança: `valor_liquido = 51.22` (soma) para um `valor = 50`
+### 1. Trigger SQL: Propagar renomeação automaticamente
 
-Resultado: `ChargeHistory` exibe "Líquido: R$ 51,22" — enganoso e incorreto do ponto de vista do fotógrafo.
+Criar trigger `on_categoria_renamed` na tabela `categorias` (AFTER UPDATE) que:
 
-**2. `useSessionPayments` calcula `taxaTotal` inline como `valor - valorLiquido`**
+- Detecta quando `OLD.nome != NEW.nome`
+- Atualiza `clientes_sessoes.categoria = NEW.nome` WHERE `categoria = OLD.nome AND user_id = NEW.user_id`
+- Isso garante que sessões, workflow, relatórios e CRM reflitam o novo nome instantaneamente
+- **Não toca em** `regras_congeladas`, `valor_base_pacote`, `valor_foto_extra` — esses ficam intactos
 
-Linha 361: `const taxaTotal = valorLiq != null ? Math.round((valorBruto - valorLiq) * 100) / 100 : undefined;`
+### 2. Feedback visual imediato na UI
 
-Para repasse: `50 - 51.22 = -1.22` → mostra valor negativo ou confuso.
+O componente `Categorias.tsx` já faz update otimista via `categoriasOps.update()`. Vou garantir que:
 
-**3. `SessionPaymentsManager` mostra "Líquido" quando `valorLiquido !== valor`**
+- Após `save()`, o `editNome` local e o `categoria.nome` da prop fiquem sincronizados
+- O componente use `categoria.nome` atualizado após o save (não precisa esperar realtime)
+- Remover o toast redundante "Categoria atualizada com sucesso!" (seguindo o padrão já estabelecido de eliminar toasts desnecessários)
 
-Linha 358: quando `valorLiquido > valor` (repasse), aparece "Líquido: R$51,22" — o fotógrafo não deveria ver isso.
+### 3. Remover toasts de sucesso em Categorias e Etapas
 
-**4. `ChargeHistory` exibe "Líquido" sem filtrar por flags de repasse**
+Seguindo o padrão já aprovado de remover notificações redundantes quando a UI mostra resposta visual:
 
-Linha 127: `cobranca.valorLiquido != null && cobranca.valorLiquido !== cobranca.valor` — sempre mostra para Asaas com parcelas.
-
-**5. `totalRecebido` usa `valorLiquido` do gateway, não do fotógrafo**
-
-`useSessionPayments` linha 487-488: `p.valorLiquido` vem do gateway netValue. Para repasse, isso é > valor, inflando "Recebido".
-
-## Regra Financeira Definitiva
-
-```text
-FOTÓGRAFO vê:
-  valor_cobrado = cobranca.valor (sempre o valor nominal)
-  
-  se repassarTaxasProcessamento = true:
-    taxa_gateway_fotografo = 0
-  senão:
-    taxa_gateway_fotografo = SUM(parcelas.taxa_gateway)
-
-  se repassarTaxaAntecipacao = true:
-    taxa_antecipacao_fotografo = 0
-  senão:
-    taxa_antecipacao_fotografo = SUM(parcelas.taxa_antecipacao)
-
-  valor_liquido_fotografo = valor_cobrado - taxa_gateway_fotografo - taxa_antecipacao_fotografo
-  
-  Se tudo repassado: Cobrado=50, Recebido=50, Taxas=0
-  Se tudo absorvido: Cobrado=50, Recebido=48.28, Taxas=1.72
-```
-
-## Plano de Correção
-
-### 1. Trigger `reconcile_cobranca_from_parcelas` — Calcular `valor_liquido` na perspectiva do fotógrafo
-
-Atualmente soma raw gateway netValue. Deve:
-- Ler `dados_extras` da cobrança (flags de repasse)
-- Se `repassarTaxasProcessamento = true`: `valor_liquido = cobranca.valor` (ignora gateway netValue)
-- Se `repassarTaxasProcessamento = false`: `valor_liquido = SUM(parcelas.valor_liquido)` (mantém lógica atual)
-- Tratar antecipação da mesma forma
-
-Isso faz `cobranca.valor_liquido` representar sempre a perspectiva do fotógrafo, não do gateway.
-
-### 2. `useSessionPayments` — Ajustar cálculos de líquido e taxas para repasse
-
-Ao construir entries de pagamentos a partir de `cobranca_parcelas`:
-- Buscar `dados_extras` da cobrança pai (já disponível via join)
-- Se `repassarTaxasProcessamento = true`:
-  - `valorLiquido` = `valor_bruto` (fotógrafo recebe integral)
-  - `taxaTotal` = 0
-- Se false: manter cálculo atual
-
-Para cobranças sem parcelas (avulsas):
-- Mesma regra usando `cobranca.dados_extras`
-
-### 3. `SessionPaymentsManager` — Ocultar "Líquido" quando fotógrafo não tem desconto
-
-Linha 358: só mostrar "Líquido" quando `valorLiquido < valor` (fotógrafo absorveu taxa). Nunca quando `valorLiquido >= valor`.
-
-### 4. `ChargeHistory` — Ocultar "Líquido" quando repasse ativo
-
-- Mapear `dados_extras` no fetch de cobranças (`useCobranca.ts`)
-- Adicionar campo `dadosExtras` ao tipo `Cobranca`
-- No ChargeHistory: ocultar linha "Líquido" quando `repassarTaxasProcessamento = true` OU quando `valorLiquido >= valor`
-
-### 5. `useSessionPayments` totais — Usar perspectiva do fotógrafo
-
-- `totalRecebido`: somar `valorLiquido` já ajustado (após item 2)
-- `totalTaxas`: somar taxas efetivas (0 quando repassado)
-
-### 6. Webhooks/Edge Functions — Validar que não duplicam parcelas
-
-Auditado: OK ✅ — `asaas-webhook` usa `upsert` com `onConflict: 'asaas_payment_id'`. Não cria duplicatas.
-
-### 7. Backfill — Recalcular `cobranca.valor_liquido` para cobranças com repasse
-
-Atualizar `cobranca.valor_liquido` para cobranças Asaas pagas onde repasse estava ativo, definindo `valor_liquido = valor`.
-
-### 8. Snapshot de configuração — Garantir que dados_extras contenha flags
-
-Auditado: OK ✅ — `ChargeModal.handleAsaasGenerateLink()` já grava `repassarTaxasProcessamento`, `anteciparParcelas`, `repassarTaxaAntecipacao` em `dados_extras` no momento da criação.
+- `useConfiguration.ts` / `ConfigurationContext.tsx`: remover `toast.success` de `atualizarCategoria`, `adicionarCategoria`, `removerCategoria`
+- Idem para etapas: `adicionarEtapa`, `atualizarEtapa`, `removerEtapa`
+- Manter `toast.error` para falhas
 
 ## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Nova migração SQL | Reescrever `reconcile_cobranca_from_parcelas` para respeitar flags de repasse; backfill `cobranca.valor_liquido` |
-| `src/hooks/useSessionPayments.ts` | Buscar `dados_extras` das cobranças; ajustar `valorLiquido` e `taxaTotal` por parcela para repasse |
-| `src/components/payments/SessionPaymentsManager.tsx` | Ocultar "Líquido" quando `valorLiquido >= valor` |
-| `src/types/cobranca.ts` | Adicionar `dadosExtras?: Record<string, any>` |
-| `src/hooks/useCobranca.ts` | Mapear `dados_extras` → `dadosExtras` |
-| `src/components/cobranca/ChargeHistory.tsx` | Ocultar "Líquido" quando repasse ativo ou `valorLiquido >= valor` |
+| Nova migração SQL | Trigger `on_categoria_renamed` para propagar nome em `clientes_sessoes` |
+| `src/contexts/ConfigurationContext.tsx` | Remover toasts de sucesso em operações de categorias e etapas |
+| `src/hooks/useConfiguration.ts` | Remover toasts de sucesso em operações de categorias e etapas |
 
-## O que NÃO será alterado (já está correto)
+## O que NÃO muda
 
-- `checkout-process-payment`: ordem de gravação (cobrança pai antes de parcelas) ✅
-- `check-payment-status`: usa `cobranca.valor / total_parcelas` como `valor_bruto` ✅
-- `asaas-webhook`: `upsertParcela` com `cobranca.valor` nominal ✅
-- `ensure_transaction_on_cobranca_paid`: respeita flags de repasse ✅
-- `gestao-asaas-create-payment`: snapshot de overrides ✅
-
-## Resultado Esperado
-
-Para cobranças com repasse ao cliente:
-- **Cobrado**: R$ 50,00
-- **Recebido**: R$ 50,00
-- **Taxas**: R$ 0,00
-- **Líquido**: NÃO exibido (pois = cobrado)
-
-Para cobranças sem repasse:
-- **Cobrado**: R$ 50,00
-- **Recebido**: R$ 48,28
-- **Taxas**: R$ 1,72
-- **Líquido**: R$ 48,28
+- `regras_congeladas` nas sessões — ficam intactas
+- Valores financeiros — nenhum recálculo
+- Estrutura de pacotes — continuam referenciando `categoria_id` (FK), sem problema
+- Modelos de preço — `tabelas_precos` usa `categoria_id`, não nome
 
