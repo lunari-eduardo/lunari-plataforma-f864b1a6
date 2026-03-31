@@ -685,7 +685,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Etapa excluída com sucesso');
     console.log('✅ [removerEtapa] Exclusão confirmada', id);
     return true;
   }, [etapasOps, suppress]);

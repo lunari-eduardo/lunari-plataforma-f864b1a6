@@ -272,7 +272,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     // Reorganiza o array baseado na nova ordem
     etapasAtualizadas.sort((a, b) => a.ordem - b.ordem);
     setEtapas(etapasAtualizadas);
-    toast.success('Ordem das etapas atualizada');
   }, [etapas]);
 
   // ============= RETORNO DO HOOK =============
