@@ -1,123 +1,107 @@
 
 
-# Redesign: Configurações Financeiras — UI Premium (Notion/Stripe style)
+# Redesign: Aba Lançamentos — UI moderna, rápida e intuitiva
 
-## Visão Geral
+## Problemas identificados
 
-Transformar a página de configurações financeiras de "cards pesados com grid aleatório" para uma interface limpa, hierárquica e rápida, inspirada em Notion/Stripe.
+1. **Seletor de grupo no meio da tela** (Fixas/Variáveis/Investimentos/Receitas) quebra o fluxo — obriga o usuário a escolher antes de ver qualquer dado
+2. **Botão "Novo Lançamento" genérico** — não diferencia despesa vs receita
+3. **Tela "morta"** quando vazia — não convida à ação
+4. **Linha de input na tabela** (data/select/valor/obs) é confusa e pesada visualmente
+5. **Métricas no topo** (Total/Pago/Faturado/Agendado) pouco claras para quem não é contador
 
-## Mudanças Principais
-
-### 1. Barra de criação inline (substituir card pesado)
-
-Remover o Card com borda dupla/gradiente. Substituir por uma barra inline leve:
-
-```text
-[ Digite um novo item financeiro... ] [ Despesa Fixa ▼ ] [ + Adicionar ]
-```
-
-- Sem Card, sem CardHeader, sem borda pesada
-- Uma única linha horizontal com input + select + botão
-- Fundo sutil (`bg-muted/30`) com borda fina (`border border-border/50`)
-- Padding mínimo (`p-3`)
-
-### 2. Agrupamento por tipo principal (hierarquia visual)
-
-Reorganizar os 5 grupos em 3 seções macro:
+## Nova estrutura
 
 ```text
-🔴 DESPESAS
-  ── Fixas ──────────────────────
-  Adobe                    ✏️ 🗑️
-  Água                     ✏️ 🗑️
-  
-  ── Variáveis ──────────────────
-  Alimentação              ✏️ 🗑️
-  Combustível              ✏️ 🗑️
-
-🟢 RECEITAS
-  ── Operacionais ───────────────
-  (vazio: "Nenhum item ainda.")
-  
-  ── Não Operacionais ───────────
-  Receita Extra            ✏️ 🗑️
-
-🟣 INVESTIMENTOS
-  Acervo/Cenário           ✏️ 🗑️
-  Equipamentos             ✏️ 🗑️
+┌─────────────────────────────────────────────────────────────────┐
+│  < Mar 2026 >          [+ Despesa] [+ Receita]                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Resumo: Receitas R$5.000  •  Despesas R$2.650  •  Saldo R$2.350│
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  🔴 DESPESAS FIXAS                                               │
+│  ─────────────────────────────────────────────────────────────── │
+│  01/03  Adobe          R$ 50,00   Pago     [editar] [excluir]   │
+│  05/03  Internet       R$ 100,00  Agendado [editar] [excluir]   │
+│  + Adicionar despesa fixa                                        │
+│                                                                  │
+│  🟠 DESPESAS VARIÁVEIS                                           │
+│  ─────────────────────────────────────────────────────────────── │
+│  10/03  Combustível    R$ 200,00  Pago                          │
+│  + Adicionar despesa variável                                    │
+│                                                                  │
+│  🟣 INVESTIMENTOS                                                │
+│  ─────────────────────────────────────────────────────────────── │
+│  (Nenhum investimento neste mês)                                 │
+│                                                                  │
+│  🟢 RECEITAS                                                     │
+│  ─────────────────────────────────────────────────────────────── │
+│  15/03  Ensaio Maria   R$ 800,00  Pago                          │
+│  + Adicionar receita                                             │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-- Seções macro com título colorido (não badge, apenas texto com cor)
-- Sub-seções com separador simples (linha fina + label)
-- Sem cards ao redor dos itens
-- Layout vertical single-column (não grid 3 colunas)
+## Mudanças principais
 
-### 3. Edição inline ao clicar no nome
+### 1. Header com botões rápidos separados
+- Remover o seletor de abas Fixas/Variáveis/Investimentos/Receitas
+- Adicionar **dois botões** no topo: `+ Despesa` (vermelho suave) e `+ Receita` (verde suave)
+- Navegador de mês/ano à esquerda
+- No mobile: botão FAB flutuante com menu (Despesa/Receita)
 
-- Clicar no nome do item → transforma em input editável inline
-- Enter salva, Escape cancela
-- Sem botão "Editar" separado — o nome É o trigger
-- Ícones de ação (editar/excluir) aparecem **apenas no hover** da linha
+### 2. Vista unificada por seções (sem abas)
+- Mostrar **todas as transações do mês** agrupadas por tipo em seções colapsáveis
+- Ordem: Despesas Fixas → Variáveis → Investimentos → Receitas
+- Cada seção tem título colorido + contagem + total
+- Seções sem dados ficam colapsadas com mensagem orientativa
 
-### 4. Linhas limpas sem boxes
+### 3. Resumo simplificado
+- Trocar "Total/Pago/Faturado/Agendado" por **"Receitas / Despesas / Saldo"**
+- Cores claras: verde para receitas, vermelho para despesas, destaque para saldo
 
-Cada item será uma linha simples:
+### 4. Botões "Adicionar" contextuais dentro de cada seção
+- No fim de cada seção: `+ Adicionar despesa fixa` / `+ Adicionar receita`
+- Ao clicar, abre o **modal já pré-configurado** com o grupo correto
 
-```text
-<nome>                                    [ações no hover]
-```
+### 5. Modal inteligente melhorado
+- Ao clicar `+ Despesa` no header: modal com seletor de tipo (Fixa/Variável/Investimento)
+- Ao clicar `+ Receita` no header: modal já como receita
+- Ao clicar `+ Adicionar` dentro da seção: modal já com grupo definido
+- Data já vem preenchida com **hoje** (não primeiro dia do mês)
 
-- Sem `bg-lunar-surface/50`, sem `border`, sem `rounded-md` por item
-- Apenas `border-b border-border/20` entre itens (separador sutil)
-- Hover: `bg-muted/30` suave
-- Ações (editar/excluir) com `opacity-0 group-hover:opacity-100`
+### 6. Tabela mais limpa
+- Remover a **linha de input** do topo da tabela (substituída pelos botões + modal)
+- Linhas simples: Data | Descrição | Valor + Status | Ações (hover)
+- Remover colunas "Parcela" e "Opções" da visualização principal (mostrar parcela como badge inline quando existir)
 
-### 5. Estados vazios úteis
+### 7. Mobile
+- Botão FAB flutuante `+` no canto inferior direito
+- Ao clicar: popover com "Nova Despesa" / "Nova Receita"
+- Seções como acordeão (já usando Collapsible)
 
-De: `"Nenhum item cadastrado neste grupo."`
-Para: `"Nenhum item ainda. Adicione um usando o campo acima."`
-
-### 6. Mobile: Seções colapsáveis (acordeão)
-
-- Em mobile (`< 768px`), cada seção macro (Despesas, Receitas, Investimentos) vira um acordeão
-- Usar `Collapsible` do Radix (já existe no projeto)
-- Sub-seções ficam sempre abertas dentro do acordeão expandido
-
-### 7. Cartões de Crédito — mesma filosofia
-
-- Remover Card pesado do formulário → inline leve
-- Lista de cartões: linhas simples em vez de cards
-- Remover card "Como funciona?" (mover para tooltip ou texto discreto)
-
-## Arquivos a Modificar
+## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/financas/configuracoes/AddItemForm.tsx` | Reescrever: barra inline sem Card |
-| `src/components/financas/configuracoes/ItemsList.tsx` | Reescrever: seções macro, linhas limpas, hover actions, edição inline por clique |
-| `src/components/financas/ConfiguracaoCartoes.tsx` | Simplificar: formulário inline, lista sem cards |
-| `src/constants/financialConstants.ts` | Adicionar agrupamento macro (DESPESAS/RECEITAS/INVESTIMENTOS) |
-| `src/components/financas/configuracoes/FinancialConfigHeader.tsx` | Manter simples, sem mudanças |
-
-## Detalhes Técnicos
-
-- Agrupamento macro definido como constante:
-  ```ts
-  const MACRO_GROUPS = [
-    { label: 'Despesas', color: 'text-destructive', groups: ['Despesa Fixa', 'Despesa Variável'] },
-    { label: 'Receitas', color: 'text-lunar-success', groups: ['Receita Operacional', 'Receita Não Operacional'] },
-    { label: 'Investimentos', color: 'text-primary', groups: ['Investimento'] },
-  ];
-  ```
-- Edição inline: ao clicar no nome, `onEditItem(item)` já existe — apenas mudar o trigger de botão para o texto
-- Mobile accordion: usar `Collapsible` + `CollapsibleTrigger` + `CollapsibleContent` (já importado no projeto)
-- Animações: `transition-all duration-200` para hover e expand
+| `src/components/financas/LancamentosTab.tsx` | Reescrever: remover abas de grupo, adicionar header com botões rápidos, vista unificada por seções |
+| `src/components/financas/TabelaLancamentos.tsx` | Simplificar: remover linha de input do topo, limpar colunas |
+| `src/components/financas/TabelaLancamentosMobile.tsx` | Adaptar para nova estrutura de seções |
+| `src/components/financas/ModalNovoLancamentoRefatorado.tsx` | Adicionar prop para pré-selecionar grupo, melhorar seletor de tipo |
 
 ## O que NÃO muda
 
-- Lógica de CRUD (hooks, services, Supabase) — intacta
-- `useFinancialItemsManagement` — sem alteração
-- Props e interface do `ConfiguracoesFinanceirasTab` — sem alteração
-- Funcionalidade de sync com precificação — mantida
-- Confirm dialog para exclusão — mantido
+- Hooks (`useNovoFinancas`, `useFinancialTransactionsSupabase`) — intactos
+- CRUD de transações — mesma lógica
+- `createTransactionEngine` — continua sendo usado
+- Abas principais (Lançamentos/Dashboard/Extrato/Configurações) — mantidas
+- Modal de opções (recorrente, cartão) — mantido dentro do modal
+
+## Detalhes técnicos
+
+- Usar `GRUPOS_ORDEM` e `GRUPOS_CONFIG` já existentes para iterar as seções
+- Cada seção renderiza uma mini-tabela (desktop) ou lista de cards (mobile)
+- Estado `modalGrupoPreSelecionado` controla qual grupo o modal abre
+- Resumo calculado somando `calcularMetricasPorGrupo` de todos os grupos
+- Seções colapsáveis com `Collapsible` (Radix) — já no projeto
 
