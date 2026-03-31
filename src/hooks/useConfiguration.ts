@@ -106,7 +106,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       setCategorias(prev => prev.map(cat => 
         cat.id === id ? { ...cat, ...dados } : cat
       ));
-      toast.success('Categoria atualizada com sucesso!');
     } catch (error) {
       console.error('Error updating categoria:', error);
       toast.error('Erro ao atualizar categoria');
