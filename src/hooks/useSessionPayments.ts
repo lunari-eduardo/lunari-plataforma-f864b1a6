@@ -590,7 +590,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       } else {
         // UPDATE pagamento pendente (agendado/parcelado)
         (async () => {
-          const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+          const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
           await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
             valor: finalPayment.valor,
             dataVencimento: finalPayment.dataVencimento,
