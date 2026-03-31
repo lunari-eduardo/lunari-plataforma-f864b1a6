@@ -379,6 +379,13 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         // Use the specific update method that persists to Supabase
         await configurationService.updateCategoriaById(id, dados);
         console.log('✅ [atualizarCategoria] Salvo:', { id, dados });
+        
+        // Se o nome da categoria mudou, invalidar cache do workflow
+        // para que sessões reflitam o novo nome (trigger SQL propaga no banco)
+        if (dados.nome && dados.nome !== currentItem.nome) {
+          console.log('🔄 [atualizarCategoria] Nome alterado, invalidando cache do workflow');
+          workflowCacheManager.clearAllCache();
+        }
       }
     );
   }, [suppress]);

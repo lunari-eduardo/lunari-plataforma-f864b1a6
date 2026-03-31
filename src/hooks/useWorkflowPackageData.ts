@@ -101,7 +101,7 @@ export const useWorkflowPackageData = () => {
         status: session.status,
         whatsapp: session.clientes?.telefone || session.clientes?.whatsapp || '',
         // CORREÇÃO: Usar categoria resolvida ou manter original
-        categoria: packageData.categoria || session.categoria || '',
+        categoria: session.categoria || packageData.categoria || '',
         // CORREÇÃO: Usar packageName resolvido mas manter referência original se necessário  
         pacote: packageData.packageName || session.pacote || '',
         valorPacote: `R$ ${valorBasePacoteNum.toFixed(2).replace('.', ',')}`,
