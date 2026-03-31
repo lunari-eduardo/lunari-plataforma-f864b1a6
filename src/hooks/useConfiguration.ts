@@ -153,7 +153,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     setPacotes(prev => prev.map(pac => 
       pac.id === id ? { ...pac, ...dados } : pac
     ));
-    toast.success('Pacote atualizado com sucesso!');
   }, []);
 
   const removerPacote = useCallback(async (id: string): Promise<boolean> => {
