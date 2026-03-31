@@ -96,7 +96,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setCategorias(prev => [...prev, novaCategoria]);
-    toast.success('Categoria adicionada com sucesso!');
   }, []);
 
   const atualizarCategoria = useCallback(async (id: string, dados: Partial<Categoria>): Promise<void> => {
@@ -107,7 +106,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       setCategorias(prev => prev.map(cat => 
         cat.id === id ? { ...cat, ...dados } : cat
       ));
-      toast.success('Categoria atualizada com sucesso!');
     } catch (error) {
       console.error('Error updating categoria:', error);
       toast.error('Erro ao atualizar categoria');
@@ -126,7 +124,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deleteCategoriaById(id);
       // Only update local state after successful Supabase deletion
       setCategorias(prev => prev.filter(cat => cat.id !== id));
-      toast.success('Categoria removida com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting categoria:', error);
@@ -150,14 +147,12 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setPacotes(prev => [...prev, novoPacote]);
-    toast.success('Pacote adicionado com sucesso!');
   }, []);
 
   const atualizarPacote = useCallback(async (id: string, dados: Partial<Pacote>): Promise<void> => {
     setPacotes(prev => prev.map(pac => 
       pac.id === id ? { ...pac, ...dados } : pac
     ));
-    toast.success('Pacote atualizado com sucesso!');
   }, []);
 
   const removerPacote = useCallback(async (id: string): Promise<boolean> => {
@@ -166,7 +161,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deletePacoteById(id);
       // Only update local state after successful Supabase deletion
       setPacotes(prev => prev.filter(pac => pac.id !== id));
-      toast.success('Pacote removido com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting pacote:', error);
@@ -190,14 +184,12 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setProdutos(prev => [...prev, novoProduto]);
-    toast.success('Produto adicionado com sucesso!');
   }, []);
 
   const atualizarProduto = useCallback(async (id: string, dados: Partial<Produto>): Promise<void> => {
     setProdutos(prev => prev.map(prod => 
       prod.id === id ? { ...prod, ...dados } : prod
     ));
-    toast.success('Produto atualizado com sucesso!');
   }, []);
 
   const removerProduto = useCallback(async (id: string): Promise<boolean> => {
@@ -211,7 +203,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deleteProdutoById(id);
       // Only update local state after successful Supabase deletion
       setProdutos(prev => prev.filter(prod => prod.id !== id));
-      toast.success('Produto removido com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting produto:', error);
@@ -237,14 +228,12 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setEtapas(prev => [...prev, novaEtapa]);
-    toast.success('Etapa adicionada com sucesso!');
   }, [etapas]);
 
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>): Promise<void> => {
     setEtapas(prev => prev.map(etapa => 
       etapa.id === id ? { ...etapa, ...dados } : etapa
     ));
-    toast.success('Etapa atualizada com sucesso!');
   }, []);
 
   const removerEtapa = useCallback(async (id: string): Promise<boolean> => {
@@ -253,7 +242,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
       await configurationService.deleteEtapaById(id);
       // Only update local state after successful Supabase deletion
       setEtapas(prev => prev.filter(etapa => etapa.id !== id));
-      toast.success('Etapa removida com sucesso!');
       return true;
     } catch (error) {
       console.error('Error deleting etapa:', error);
@@ -284,7 +272,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     // Reorganiza o array baseado na nova ordem
     etapasAtualizadas.sort((a, b) => a.ordem - b.ordem);
     setEtapas(etapasAtualizadas);
-    toast.success('Ordem das etapas atualizada');
   }, [etapas]);
 
   // ============= RETORNO DO HOOK =============

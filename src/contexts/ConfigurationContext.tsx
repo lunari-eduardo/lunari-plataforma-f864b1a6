@@ -423,7 +423,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Categoria excluída com sucesso');
     console.log('✅ [removerCategoria] Exclusão confirmada', id);
     return true;
   }, [categoriasOps, suppress]);
@@ -509,7 +508,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Pacote excluído com sucesso');
     console.log('✅ [removerPacote] Exclusão confirmada', id);
     return true;
   }, [pacotesOps, suppress]);
@@ -600,7 +598,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Produto excluído com sucesso');
     console.log('✅ [removerProduto] Exclusão confirmada', id);
     return true;
   }, [produtosOps, suppress]);
@@ -688,7 +685,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Etapa excluída com sucesso');
     console.log('✅ [removerEtapa] Exclusão confirmada', id);
     return true;
   }, [etapasOps, suppress]);
