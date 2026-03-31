@@ -29,7 +29,8 @@ export default function ModalNovoLancamentoRefatorado({
   createTransactionEngine,
   obterItensPorGrupo,
   grupoAtivo,
-  tipoLancamento = 'despesa'
+  tipoLancamento = 'despesa',
+  filtrarApenasGrupo = false
 }: ModalNovoLancamentoRefatoradoProps) {
   const [formData, setFormData] = useState({
     item_id: '',
