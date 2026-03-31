@@ -228,7 +228,6 @@ export function useConfiguration(): ConfigurationState & ConfigurationActions {
     };
 
     setEtapas(prev => [...prev, novaEtapa]);
-    toast.success('Etapa adicionada com sucesso!');
   }, [etapas]);
 
   const atualizarEtapa = useCallback(async (id: string, dados: Partial<EtapaTrabalho>): Promise<void> => {
