@@ -39,7 +39,7 @@ export default function AnaliseVendas() {
   } = useSalesAnalytics(selectedYear, selectedMonth, selectedCategory);
 
   return (
-    <div className="min-h-screen bg-lunar-bg">
+    <div className="min-h-screen">
       {/* Filtros Sticky - Compactos */}
       <SalesMonthYearFilter 
         selectedYear={selectedYear} 

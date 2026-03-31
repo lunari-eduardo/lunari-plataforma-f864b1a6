@@ -41,8 +41,8 @@ const NovaFinancas = memo(function NovaFinancas() {
   });
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="min-h-screen bg-lunar-bg pr-4">
-        <div className="p-2 sm:p-4 lg:p-6 space-y-1 sm:space-y-6 bg-lunar-bg py-0 my-0">
+      <div className="min-h-screen pr-4">
+        <div className="p-2 sm:p-4 lg:p-6 space-y-1 sm:space-y-6 py-0 my-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full h-10 p-1 text-sm bg-card border border-border py-0 grid-cols-4">
               <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">

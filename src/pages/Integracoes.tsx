@@ -3,7 +3,7 @@ import { IntegracoesTab } from '@/components/preferencias/IntegracoesTab';
 
 export default function Integracoes() {
   return (
-    <div className="min-h-screen bg-lunar-bg">
+    <div className="min-h-screen">
       <ScrollArea className="h-screen">
         <div className="container mx-auto p-4 max-w-4xl">
           <div className="mb-6">
