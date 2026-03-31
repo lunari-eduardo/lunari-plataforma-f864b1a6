@@ -638,7 +638,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       
       // Atualizar no Supabase (de pendente para pago) com fallback
       (async () => {
-        const { PaymentSupabaseService } = await import('@/services/PaymentSupabaseService');
+        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
         await PaymentSupabaseService.markPaymentAsPaid(
           sessionId, 
           paymentId, 
