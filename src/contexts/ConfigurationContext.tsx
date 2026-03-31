@@ -598,7 +598,6 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     
-    toast.success('Produto excluído com sucesso');
     console.log('✅ [removerProduto] Exclusão confirmada', id);
     return true;
   }, [produtosOps, suppress]);
