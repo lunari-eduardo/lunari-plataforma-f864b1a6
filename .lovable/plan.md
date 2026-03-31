@@ -1,58 +1,51 @@
 
 
-# Renomeação Global de Categorias + Feedback Visual
+# Correção: Filtro de categoria no Workflow não encontra sessões após renomeação
 
-## Situação Atual
+## Causa Raiz
 
-- `clientes_sessoes.categoria` armazena o **nome da categoria como texto**, não um FK para `categorias.id`
-- Quando o fotógrafo renomeia uma categoria (ex: "Ensaio gestante" → "Gestante Premium"), o nome atualiza na tabela `categorias` mas **sessões, orçamentos e relatórios continuam com o nome antigo**
-- A edição inline já existe no componente `Categorias.tsx` mas o feedback visual pode não ser imediato dependendo do realtime
+O trigger `on_categoria_renamed` atualiza corretamente `clientes_sessoes.categoria` no banco. Porém, ao converter sessões para exibição, o código prioriza o nome da categoria dos **dados congelados** (`regras_congeladas.pacote.categoria`), que mantém o nome antigo.
 
-## Regra de Negócio
+Em `useWorkflowPackageData.ts`:
+- Linha 28: `categoria: frozenPackage.categoria || session.categoria` — dados congelados vencem
+- Linha 104: `categoria: packageData.categoria || session.categoria` — propaga o nome antigo
 
-- **Categoria = identidade editável** — pode ser renomeada a qualquer momento
-- **Regras de preço = congeladas na sessão** — via `regras_congeladas` em `clientes_sessoes`, nunca muda após criação
-- Renomear categoria **NÃO altera** valores, pacotes, modelos de preço ou dados financeiros das sessões
+O filtro do Workflow compara `session.categoria === categoryFilter`, mas `categoryOptions` vem da configuração atual (nome novo). Resultado: nome novo no dropdown, nome antigo nas sessões → zero matches.
 
-## Plano
+Além disso, o cache do Workflow pode não refletir a atualização do trigger imediatamente.
 
-### 1. Trigger SQL: Propagar renomeação automaticamente
+## Correção
 
-Criar trigger `on_categoria_renamed` na tabela `categorias` (AFTER UPDATE) que:
+### 1. `useWorkflowPackageData.ts` — Categoria de exibição sempre do banco
 
-- Detecta quando `OLD.nome != NEW.nome`
-- Atualiza `clientes_sessoes.categoria = NEW.nome` WHERE `categoria = OLD.nome AND user_id = NEW.user_id`
-- Isso garante que sessões, workflow, relatórios e CRM reflitam o novo nome instantaneamente
-- **Não toca em** `regras_congeladas`, `valor_base_pacote`, `valor_foto_extra` — esses ficam intactos
+Na linha 104, inverter a prioridade: usar `session.categoria` (atualizado pelo trigger) como fonte para o **nome de exibição**, ignorando o nome congelado:
 
-### 2. Feedback visual imediato na UI
+```ts
+// ANTES
+categoria: packageData.categoria || session.categoria || '',
 
-O componente `Categorias.tsx` já faz update otimista via `categoriasOps.update()`. Vou garantir que:
+// DEPOIS  
+categoria: session.categoria || packageData.categoria || '',
+```
 
-- Após `save()`, o `editNome` local e o `categoria.nome` da prop fiquem sincronizados
-- O componente use `categoria.nome` atualizado após o save (não precisa esperar realtime)
-- Remover o toast redundante "Categoria atualizada com sucesso!" (seguindo o padrão já estabelecido de eliminar toasts desnecessários)
+E na linha 28 do `resolvePackageData`, o `frozenPackage.categoria` continua disponível como fallback, mas não deve sobrescrever o valor atualizado do banco. Ajustar para não retornar `categoria` do frozen data como prioridade.
 
-### 3. Remover toasts de sucesso em Categorias e Etapas
+### 2. Invalidar cache do Workflow quando categoria é renomeada
 
-Seguindo o padrão já aprovado de remover notificações redundantes quando a UI mostra resposta visual:
+Na `ConfigurationContext.tsx`, após uma categoria ser atualizada com sucesso (operação `update`), disparar invalidação do cache do Workflow para forçar reload com os nomes atualizados.
 
-- `useConfiguration.ts` / `ConfigurationContext.tsx`: remover `toast.success` de `atualizarCategoria`, `adicionarCategoria`, `removerCategoria`
-- Idem para etapas: `adicionarEtapa`, `atualizarEtapa`, `removerEtapa`
-- Manter `toast.error` para falhas
+Usar `workflowCacheManager.invalidateAll()` ou disparar evento customizado que o `useWorkflowData` já escuta para forçar refresh.
 
 ## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Nova migração SQL | Trigger `on_categoria_renamed` para propagar nome em `clientes_sessoes` |
-| `src/contexts/ConfigurationContext.tsx` | Remover toasts de sucesso em operações de categorias e etapas |
-| `src/hooks/useConfiguration.ts` | Remover toasts de sucesso em operações de categorias e etapas |
+| `src/hooks/useWorkflowPackageData.ts` | Linha 104: `session.categoria` como prioridade sobre `packageData.categoria` |
+| `src/contexts/ConfigurationContext.tsx` | Após update de categoria: invalidar cache do workflow |
 
 ## O que NÃO muda
 
-- `regras_congeladas` nas sessões — ficam intactas
-- Valores financeiros — nenhum recálculo
-- Estrutura de pacotes — continuam referenciando `categoria_id` (FK), sem problema
-- Modelos de preço — `tabelas_precos` usa `categoria_id`, não nome
+- `regras_congeladas` continua intacto (preços congelados preservados)
+- Trigger `on_categoria_renamed` já funciona corretamente
+- Filtros da página de análise já funcionam
 
