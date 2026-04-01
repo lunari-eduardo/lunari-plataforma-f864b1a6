@@ -1,21 +1,20 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 import type { MetaPersonalizada, MetaResolvidaParaPeriodo } from '@/types/metas';
 
 export function useMetasPersonalizadas(ano: number) {
   const [metas, setMetas] = useState<MetaPersonalizada[]>([]);
+  const [metasPorCategoria, setMetasPorCategoria] = useState<MetaPersonalizada[]>([]);
   const [usarPersonalizadas, setUsarPersonalizadasState] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Carregar metas e configuração
   useEffect(() => {
     const load = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Buscar config
         const { data: config } = await supabase
           .from('pricing_configuracoes')
           .select('usar_metas_personalizadas')
@@ -24,16 +23,16 @@ export function useMetasPersonalizadas(ano: number) {
 
         setUsarPersonalizadasState(config?.usar_metas_personalizadas ?? false);
 
-        // Buscar metas do ano
         const { data: metasData } = await supabase
           .from('metas_personalizadas' as any)
           .select('*')
           .eq('user_id', user.id)
           .eq('ano', ano)
-          .is('categoria', null)
           .order('mes');
 
-        setMetas((metasData as any[]) || []);
+        const all = (metasData as any[]) || [];
+        setMetas(all.filter(m => m.categoria === '__geral__'));
+        setMetasPorCategoria(all.filter(m => m.categoria !== '__geral__'));
       } catch (err) {
         console.error('Erro ao carregar metas:', err);
       } finally {
@@ -67,9 +66,9 @@ export function useMetasPersonalizadas(ano: number) {
         mes,
         meta_faturamento: metaFaturamento,
         meta_lucro: metaLucro,
-        categoria: null
+        categoria: '__geral__'
       } as any, {
-        onConflict: 'user_id,ano,mes'
+        onConflict: 'user_id,ano,mes,categoria'
       })
       .select()
       .single();
@@ -98,21 +97,68 @@ export function useMetasPersonalizadas(ano: number) {
       mes: m.mes,
       meta_faturamento: m.meta_faturamento,
       meta_lucro: m.meta_lucro,
-      categoria: null
+      categoria: '__geral__'
     }));
 
     const { data, error } = await supabase
       .from('metas_personalizadas' as any)
-      .upsert(rows as any[], { onConflict: 'user_id,ano,mes' })
+      .upsert(rows as any[], { onConflict: 'user_id,ano,mes,categoria' })
       .select();
 
     if (!error && data) {
-      setMetas((data as any[]).sort((a: any, b: any) => a.mes - b.mes));
+      setMetas((data as any[]).filter((m: any) => m.categoria === '__geral__').sort((a: any, b: any) => a.mes - b.mes));
     }
     return { data, error };
   }, [ano]);
 
-  // Resolver meta para um mês específico
+  const salvarMetaCategoria = useCallback(async (mes: number, categoriaId: string, metaFaturamento: number, metaLucro: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('metas_personalizadas' as any)
+      .upsert({
+        user_id: user.id,
+        ano,
+        mes,
+        meta_faturamento: metaFaturamento,
+        meta_lucro: metaLucro,
+        categoria: categoriaId
+      } as any, {
+        onConflict: 'user_id,ano,mes,categoria'
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setMetasPorCategoria(prev => {
+        const idx = prev.findIndex(m => m.mes === mes && m.categoria === categoriaId);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = data as any;
+          return updated;
+        }
+        return [...prev, data as any];
+      });
+    }
+    return { data, error };
+  }, [ano]);
+
+  const removerMetaCategoria = useCallback(async (mes: number, categoriaId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from('metas_personalizadas' as any)
+      .delete()
+      .eq('user_id', user.id)
+      .eq('ano', ano)
+      .eq('mes', mes)
+      .eq('categoria', categoriaId);
+
+    setMetasPorCategoria(prev => prev.filter(m => !(m.mes === mes && m.categoria === categoriaId)));
+  }, [ano]);
+
   const getMetaParaMes = useCallback((mes: number): MetaResolvidaParaPeriodo => {
     if (usarPersonalizadas) {
       const metaCustom = metas.find(m => m.mes === mes);
@@ -124,7 +170,6 @@ export function useMetasPersonalizadas(ano: number) {
         };
       }
     }
-    // Fallback: precificação / 12
     const annual = GoalsIntegrationService.getAnnualGoals();
     return {
       metaFaturamento: annual.revenue / 12,
@@ -133,7 +178,6 @@ export function useMetasPersonalizadas(ano: number) {
     };
   }, [usarPersonalizadas, metas]);
 
-  // Resolver meta anual (soma dos 12 meses)
   const getMetaAnual = useCallback((): MetaResolvidaParaPeriodo => {
     if (usarPersonalizadas && metas.length > 0) {
       const totalFat = metas.reduce((s, m) => s + Number(m.meta_faturamento), 0);
@@ -156,11 +200,14 @@ export function useMetasPersonalizadas(ano: number) {
 
   return {
     metas,
+    metasPorCategoria,
     usarPersonalizadas,
     loading,
     toggleUsarPersonalizadas,
     salvarMeta,
     salvarTodasMetas,
+    salvarMetaCategoria,
+    removerMetaCategoria,
     getMetaParaMes,
     getMetaAnual
   };

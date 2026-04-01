@@ -2295,7 +2295,7 @@ export type Database = {
       metas_personalizadas: {
         Row: {
           ano: number
-          categoria: string | null
+          categoria: string
           created_at: string | null
           id: string
           mes: number
@@ -2306,7 +2306,7 @@ export type Database = {
         }
         Insert: {
           ano: number
-          categoria?: string | null
+          categoria?: string
           created_at?: string | null
           id?: string
           mes: number
@@ -2317,7 +2317,7 @@ export type Database = {
         }
         Update: {
           ano?: number
-          categoria?: string | null
+          categoria?: string
           created_at?: string | null
           id?: string
           mes?: number
