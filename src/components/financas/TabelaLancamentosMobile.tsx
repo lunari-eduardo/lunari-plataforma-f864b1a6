@@ -98,7 +98,7 @@ export default function TabelaLancamentosMobile({
   };
   if (transacoes.length === 0) {
     return <div className="text-center py-8">
-        <div className="text-gray-400 mb-4">
+        <div className="text-muted-foreground mb-4">
           <Calendar className="h-12 w-12 mx-auto" />
         </div>
         <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</h3>

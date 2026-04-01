@@ -224,7 +224,9 @@ const LancamentosTab = memo(function LancamentosTab({
                     Adicionar {label.toLowerCase().replace('receitas', 'receita').replace('despesas', 'despesa').replace('investimentos', 'investimento')}
                   </button>
                 </div>
-              </CollapsibleContent>
+                  </div>
+                </CollapsibleContent>
+              </div>
             </Collapsible>
           );
         })}

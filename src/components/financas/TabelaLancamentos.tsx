@@ -148,13 +148,13 @@ export default function TabelaLancamentos({
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-1.5 text-right">
-                    <span className="text-sm font-medium text-foreground tabular-nums">{formatCurrency(t.valor)}</span>
+                  <td className="px-3 py-2.5 text-right">
+                    <span className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(t.valor)}</span>
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2.5">
                     {getStatusBadge(t.status, t.status === 'Faturado' ? () => onMarcarComoPago(t.id) : undefined)}
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button size="sm" variant="ghost" onClick={() => iniciarEdicao(t)} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
                         <Edit className="h-3.5 w-3.5" />
