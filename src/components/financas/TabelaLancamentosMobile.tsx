@@ -40,16 +40,16 @@ export default function TabelaLancamentosMobile({
   const getStatusBadge = (status: string, onMarcarPago?: () => void) => {
     switch (status) {
       case 'Agendado':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Agendado</Badge>;
+        return <Badge className="bg-primary/15 text-primary border-primary/20">Agendado</Badge>;
       case 'Faturado':
         return <div className="flex items-center gap-2">
-            <Badge className="bg-red-100 text-red-800 border-red-200">Faturado</Badge>
-            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500" title="Marcar como pago" />}
+            <Badge className="bg-destructive/15 text-destructive border-destructive/20">Faturado</Badge>
+            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-lunar-success bg-muted border-border rounded focus:ring-lunar-success" title="Marcar como pago" />}
           </div>;
       case 'Pago':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
+        return <Badge className="bg-lunar-success/15 text-lunar-success border-lunar-success/20">Pago</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">-</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border-border">-</Badge>;
     }
   };
   const startEdit = (transacao: TransacaoComItem) => {
