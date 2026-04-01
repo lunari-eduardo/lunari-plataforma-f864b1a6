@@ -1,34 +1,34 @@
 
 
-# Correção: Salvar metas + Layout 25% + Metas por categoria
+# Metas: Modo exclusivo (Meses OU Categorias) + Remover meta de faturamento
 
-## Problema 1: Metas não salvam (erro no upsert)
+## Mudanças
 
-**Causa raiz**: O unique index usa expressão `COALESCE(categoria, '__geral__')`, mas PostgREST não suporta `onConflict` com expression-based indexes. O upsert falha silenciosamente.
+### 1. Modo exclusivo: Meses ou Categorias
 
-**Solução**: Criar uma nova migration que:
-- Remove o index com expressão
-- Adiciona um unique constraint simples em `(user_id, ano, mes, categoria)` com `categoria` tendo default `'__geral__'` em vez de `NULL`
-- OU: criar uma constraint simples `UNIQUE(user_id, ano, mes)` para metas gerais e manter categoria separadamente
+Adicionar um seletor de modo logo após o toggle "Usar metas personalizadas":
+- **Por Meses**: define meta de lucro para cada mês do ano (comportamento atual, sem faturamento)
+- **Por Categorias**: define meta de lucro anual por categoria de sessão (Newborn, Família, etc.) — sem vínculo com mês
 
-A abordagem mais limpa: trocar `categoria NULL` por `categoria TEXT NOT NULL DEFAULT '__geral__'` e criar `UNIQUE(user_id, ano, mes, categoria)` como constraint real (não index). Assim o `onConflict: 'user_id,ano,mes,categoria'` funciona.
+Quando o usuário escolhe um modo, o outro fica inativo. O modo selecionado é salvo no banco.
 
-Atualizar o hook para incluir `categoria: '__geral__'` (em vez de `null`) e `onConflict: 'user_id,ano,mes,categoria'`.
+### 2. Remover campo "Meta de Faturamento"
 
-## Problema 2: Layout — lista de meses ocupa 25% à esquerda
+Em todos os lugares (meses e categorias), remover o campo de faturamento. Manter apenas **Meta de Lucro**.
 
-Redesenhar `MetasConfigTab.tsx` para layout de 2 colunas em desktop:
-- **Coluna esquerda (25%)**: lista dos 12 meses como navegação vertical (mês selecionado fica highlighted)
-- **Coluna direita (75%)**: formulário do mês selecionado + resumo anual
+### 3. Modo "Por Categorias" — layout
 
-Isso melhora a UX — o usuário clica no mês e edita na direita, sem scroll de 12 linhas.
+- Lista das categorias configuradas no sistema
+- Para cada uma: campo "Meta de Lucro (anual)"
+- Botão "Adicionar categoria" se nem todas estão listadas
+- Salvar com `mes = 0` (ou valor fixo) na tabela `metas_personalizadas` para indicar meta anual por categoria
 
-## Problema 3: Metas por categoria
+### 4. Hook — ajustes
 
-Adicionar suporte a metas por categoria de sessão (ex: Newborn, Família, Infantil etc.):
-- No formulário de cada mês, além da meta geral, permitir adicionar metas por categoria
-- Usar as categorias já existentes no sistema (`useRealtimeConfiguration` → `categorias`)
-- Salvar na mesma tabela `metas_personalizadas` com campo `categoria` preenchido
+- Novo campo `modo_metas: 'mensal' | 'categoria'` salvo em `pricing_configuracoes`
+- `salvarMetaCategoria`: usar `mes = 0` para metas anuais por categoria
+- `getMetaParaMes`: quando modo = categoria, ignorar mês e buscar por categoria
+- Remover `meta_faturamento` dos upserts (setar sempre 0)
 
 ---
 
@@ -36,31 +36,16 @@ Adicionar suporte a metas por categoria de sessão (ex: Newborn, Família, Infan
 
 | Arquivo | Mudança |
 |---------|---------|
-| Nova migration SQL | Trocar index por constraint real; default `'__geral__'` |
-| `src/hooks/useMetasPersonalizadas.ts` | `onConflict` corrigido; `categoria: '__geral__'`; suporte a metas por categoria |
-| `src/components/financas/MetasConfigTab.tsx` | Layout 2 colunas (25%/75%); navegação por mês; seção de metas por categoria |
-| `src/types/metas.ts` | Ajustar tipo para default `'__geral__'` |
+| `src/components/financas/MetasConfigTab.tsx` | Seletor de modo; remover inputs de faturamento; modo categorias com layout simples |
+| `src/hooks/useMetasPersonalizadas.ts` | Novo campo `modoMetas`; salvar/ler modo; categoria com `mes=0`; remover faturamento |
+| `src/types/metas.ts` | Adicionar `modo_metas` ao tipo |
+| Migration SQL | Adicionar `modo_metas TEXT DEFAULT 'mensal'` em `pricing_configuracoes` |
 
 ## Detalhes técnicos
 
-**Migration SQL**:
-```sql
--- Remover index antigo com expressão
-DROP INDEX IF EXISTS idx_metas_personalizadas_unique;
-
--- Converter NULLs existentes
-UPDATE public.metas_personalizadas SET categoria = '__geral__' WHERE categoria IS NULL;
-
--- Alterar default
-ALTER TABLE public.metas_personalizadas ALTER COLUMN categoria SET DEFAULT '__geral__';
-ALTER TABLE public.metas_personalizadas ALTER COLUMN categoria SET NOT NULL;
-
--- Constraint real que PostgREST entende
-ALTER TABLE public.metas_personalizadas 
-  ADD CONSTRAINT metas_personalizadas_unique UNIQUE (user_id, ano, mes, categoria);
-```
-
-**Hook**: `onConflict: 'user_id,ano,mes,categoria'` com `categoria: '__geral__'` para metas gerais.
-
-**Layout**: `grid grid-cols-[25%_1fr]` em desktop, coluna única em mobile. Lista à esquerda com meses clicáveis, formulário à direita com inputs de faturamento/lucro + seção expansível "Metas por categoria" onde o usuário pode adicionar categorias específicas.
+- `pricing_configuracoes.modo_metas`: `'mensal'` ou `'categoria'`
+- Metas por categoria: salvam com `mes = 0`, `categoria = <id>`, `meta_faturamento = 0`, `meta_lucro = valor`
+- Metas por mês: salvam com `mes = 1..12`, `categoria = '__geral__'`, `meta_faturamento = 0`, `meta_lucro = valor`
+- Referência da precificação no header: remover "Meta anual" (faturamento), manter apenas "Lucro anual" e "Lucro mensal"
+- Resumo Anual: mostrar apenas total de lucro
 
