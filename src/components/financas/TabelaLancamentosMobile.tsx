@@ -101,8 +101,8 @@ export default function TabelaLancamentosMobile({
         <div className="text-gray-400 mb-4">
           <Calendar className="h-12 w-12 mx-auto" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma transação encontrada</h3>
-        <p className="text-gray-500">Use o botão + para adicionar uma transação.</p>
+        <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</h3>
+        <p className="text-muted-foreground">Use o botão + para adicionar uma transação.</p>
       </div>;
   }
   return <div className="space-y-3">
