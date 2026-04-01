@@ -1,0 +1,1 @@
+ALTER TABLE public.pricing_configuracoes ADD COLUMN IF NOT EXISTS modo_metas TEXT DEFAULT 'mensal';
