@@ -2292,6 +2292,42 @@ export type Database = {
           },
         ]
       }
+      metas_personalizadas: {
+        Row: {
+          ano: number
+          categoria: string | null
+          created_at: string | null
+          id: string
+          mes: number
+          meta_faturamento: number
+          meta_lucro: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ano: number
+          categoria?: string | null
+          created_at?: string | null
+          id?: string
+          mes: number
+          meta_faturamento?: number
+          meta_lucro?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ano?: number
+          categoria?: string | null
+          created_at?: string | null
+          id?: string
+          mes?: number
+          meta_faturamento?: number
+          meta_lucro?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       modelo_de_preco: {
         Row: {
           created_at: string
@@ -2591,6 +2627,7 @@ export type Database = {
           meta_lucro_anual: number | null
           percentual_pro_labore: number | null
           updated_at: string | null
+          usar_metas_personalizadas: boolean | null
           user_id: string
         }
         Insert: {
@@ -2604,6 +2641,7 @@ export type Database = {
           meta_lucro_anual?: number | null
           percentual_pro_labore?: number | null
           updated_at?: string | null
+          usar_metas_personalizadas?: boolean | null
           user_id: string
         }
         Update: {
@@ -2617,6 +2655,7 @@ export type Database = {
           meta_lucro_anual?: number | null
           percentual_pro_labore?: number | null
           updated_at?: string | null
+          usar_metas_personalizadas?: boolean | null
           user_id?: string
         }
         Relationships: []
