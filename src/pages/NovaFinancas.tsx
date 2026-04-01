@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from '@/hooks/use-mobile';
 import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
+import MetasConfigTab from '@/components/financas/MetasConfigTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
 import ExtratoTab from '@/components/financas/ExtratoTab';
 const NovaFinancas = memo(function NovaFinancas() {
