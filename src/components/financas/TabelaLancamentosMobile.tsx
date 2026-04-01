@@ -40,16 +40,16 @@ export default function TabelaLancamentosMobile({
   const getStatusBadge = (status: string, onMarcarPago?: () => void) => {
     switch (status) {
       case 'Agendado':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Agendado</Badge>;
+        return <Badge className="bg-primary/15 text-primary border-primary/20">Agendado</Badge>;
       case 'Faturado':
         return <div className="flex items-center gap-2">
-            <Badge className="bg-red-100 text-red-800 border-red-200">Faturado</Badge>
-            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500" title="Marcar como pago" />}
+            <Badge className="bg-destructive/15 text-destructive border-destructive/20">Faturado</Badge>
+            {onMarcarPago && <input type="checkbox" onChange={onMarcarPago} className="w-4 h-4 text-lunar-success bg-muted border-border rounded focus:ring-lunar-success" title="Marcar como pago" />}
           </div>;
       case 'Pago':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
+        return <Badge className="bg-lunar-success/15 text-lunar-success border-lunar-success/20">Pago</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">-</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border-border">-</Badge>;
     }
   };
   const startEdit = (transacao: TransacaoComItem) => {
@@ -98,11 +98,11 @@ export default function TabelaLancamentosMobile({
   };
   if (transacoes.length === 0) {
     return <div className="text-center py-8">
-        <div className="text-gray-400 mb-4">
+        <div className="text-muted-foreground mb-4">
           <Calendar className="h-12 w-12 mx-auto" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma transação encontrada</h3>
-        <p className="text-gray-500">Use o botão + para adicionar uma transação.</p>
+        <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma transação encontrada</h3>
+        <p className="text-muted-foreground">Use o botão + para adicionar uma transação.</p>
       </div>;
   }
   return <div className="space-y-3">
@@ -110,7 +110,7 @@ export default function TabelaLancamentosMobile({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900">{transacao.item?.nome || 'Item não encontrado'}</h3>
+                <h3 className="font-semibold text-foreground text-base">{transacao.item?.nome || 'Item não encontrado'}</h3>
                 {getStatusBadge(transacao.status, transacao.status === 'Faturado' && onMarcarComoPago ? () => onMarcarComoPago(transacao.id) : undefined)}
               </div>
               <div className="flex items-center gap-1">

@@ -143,7 +143,7 @@ const LancamentosTab = memo(function LancamentosTab({
       </div>
 
       {/* Seções unificadas */}
-      <div className="space-y-1">
+      <div className="space-y-3">
         {SECOES_ORDEM.map(({ grupo, label }) => {
           const transacoes = transacoesPorGrupo[grupo] || [];
           const info = getInfoPorGrupo(grupo);
@@ -157,74 +157,76 @@ const LancamentosTab = memo(function LancamentosTab({
               open={isOpen}
               onOpenChange={() => toggleSecao(grupo)}
             >
-              {/* Header da seção */}
-              <CollapsibleTrigger className="w-full">
-                <div className={`flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 transition-colors ${!temDados && !isOpen ? 'opacity-60' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    {isOpen ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className={`text-sm font-semibold ${info.corTema}`}>
-                      {label}
-                    </span>
+              <div className={`border-l-[3px] rounded-lg ${info.corBorda} ${!temDados && !isOpen ? 'opacity-50' : ''}`}>
+                {/* Header da seção */}
+                <CollapsibleTrigger className="w-full">
+                  <div className="flex items-center justify-between px-4 py-2.5 rounded-r-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className={`text-base font-bold ${info.corTema}`}>
+                        {label}
+                      </span>
+                      {temDados && (
+                        <Badge variant="secondary" className="text-[11px] px-1.5 py-0 h-5 font-normal">
+                          {transacoes.length}
+                        </Badge>
+                      )}
+                    </div>
                     {temDados && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
-                        {transacoes.length}
-                      </Badge>
+                      <span className={`text-sm font-semibold ${info.corTema}`}>
+                        {formatCurrency(metricas.total || 0)}
+                      </span>
                     )}
                   </div>
-                  {temDados && (
-                    <span className={`text-sm font-medium ${info.corTema}`}>
-                      {formatCurrency(metricas.total || 0)}
-                    </span>
-                  )}
-                </div>
-              </CollapsibleTrigger>
+                </CollapsibleTrigger>
 
-              <CollapsibleContent>
-                <div className="pl-2 pr-1 pb-2">
-                  {temDados ? (
-                    isMobile ? (
-                      <TabelaLancamentosMobile
-                        transacoes={transacoes}
-                        onAtualizarTransacao={atualizarTransacao}
-                        onRemoverTransacao={removerTransacao}
-                        onMarcarComoPago={marcarComoPago}
-                        grupoAtivo={grupo}
-                        obterItensPorGrupo={obterItensPorGrupo}
-                      />
+                <CollapsibleContent>
+                  <div className="pl-3 pr-1 pb-2 pt-1">
+                    {temDados ? (
+                      isMobile ? (
+                        <TabelaLancamentosMobile
+                          transacoes={transacoes}
+                          onAtualizarTransacao={atualizarTransacao}
+                          onRemoverTransacao={removerTransacao}
+                          onMarcarComoPago={marcarComoPago}
+                          grupoAtivo={grupo}
+                          obterItensPorGrupo={obterItensPorGrupo}
+                        />
+                      ) : (
+                        <TabelaLancamentos
+                          transacoes={transacoes}
+                          onAtualizarTransacao={atualizarTransacao}
+                          onRemoverTransacao={removerTransacao}
+                          onMarcarComoPago={marcarComoPago}
+                          grupoAtivo={grupo}
+                          obterItensPorGrupo={obterItensPorGrupo}
+                        />
+                      )
                     ) : (
-                      <TabelaLancamentos
-                        transacoes={transacoes}
-                        onAtualizarTransacao={atualizarTransacao}
-                        onRemoverTransacao={removerTransacao}
-                        onMarcarComoPago={marcarComoPago}
-                        grupoAtivo={grupo}
-                        obterItensPorGrupo={obterItensPorGrupo}
-                      />
-                    )
-                  ) : (
-                    <p className="text-xs text-muted-foreground py-3 pl-7">
-                      Nenhum lançamento neste mês.
-                    </p>
-                  )}
+                      <p className="text-xs text-muted-foreground py-3 pl-7">
+                        Nenhum lançamento neste mês.
+                      </p>
+                    )}
 
-                  {/* Botão contextual de adicionar */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const tipo = (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') ? 'receita' : 'despesa';
-                      abrirModal(tipo, grupo, true);
-                    }}
-                    className={`flex items-center gap-1 text-xs ${info.corTema} opacity-60 hover:opacity-100 transition-opacity pl-7 py-1.5`}
-                  >
-                    <Plus className="h-3 w-3" />
-                    Adicionar {label.toLowerCase().replace('receitas', 'receita').replace('despesas', 'despesa').replace('investimentos', 'investimento')}
-                  </button>
-                </div>
-              </CollapsibleContent>
+                    {/* Botão contextual de adicionar */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const tipo = (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') ? 'receita' : 'despesa';
+                        abrirModal(tipo, grupo, true);
+                      }}
+                      className={`flex items-center gap-1 text-xs ${info.corTema} opacity-60 hover:opacity-100 transition-opacity pl-7 py-1.5`}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Adicionar {label.toLowerCase().replace('receitas', 'receita').replace('despesas', 'despesa').replace('investimentos', 'investimento')}
+                    </button>
+                  </div>
+                </CollapsibleContent>
+              </div>
             </Collapsible>
           );
         })}

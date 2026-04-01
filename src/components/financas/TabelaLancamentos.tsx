@@ -91,16 +91,16 @@ export default function TabelaLancamentos({
       <table className="w-full">
         <thead>
           <tr className="border-b border-border/50">
-            <th className="px-3 py-1.5 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-16">Data</th>
-            <th className="px-3 py-1.5 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Descrição</th>
-            <th className="px-3 py-1.5 text-right text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-28">Valor</th>
-            <th className="px-3 py-1.5 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-24">Status</th>
-            <th className="px-3 py-1.5 text-right text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-20">Ações</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">Data</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descrição</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">Valor</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">Status</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-20">Ações</th>
           </tr>
         </thead>
         <tbody>
           {transacoes.map(t => (
-            <tr key={t.id} className="group border-b border-border/20 hover:bg-muted/30 transition-colors">
+            <tr key={t.id} className="group border-b border-border/40 hover:bg-muted/30 transition-colors">
               {editandoId === t.id ? (
                 <>
                   <td className="px-3 py-1.5">
@@ -130,12 +130,12 @@ export default function TabelaLancamentos({
                 </>
               ) : (
                 <>
-                  <td className="px-3 py-1.5 text-xs text-muted-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground tabular-nums">
                     {formatarData(t.data_vencimento)}
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-foreground">{t.item?.nome || 'Item não encontrado'}</span>
+                      <span className="text-base text-foreground">{t.item?.nome || 'Item não encontrado'}</span>
                       {(t.parcelas || t.parcelaInfo) && (
                         <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0 rounded">
                           {t.parcelas?.atual || t.parcelaInfo?.atual || 1}/{t.parcelas?.total || t.parcelaInfo?.total || 1}
@@ -148,13 +148,13 @@ export default function TabelaLancamentos({
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-1.5 text-right">
-                    <span className="text-sm font-medium text-foreground tabular-nums">{formatCurrency(t.valor)}</span>
+                  <td className="px-3 py-2.5 text-right">
+                    <span className="text-sm font-semibold text-foreground tabular-nums">{formatCurrency(t.valor)}</span>
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2.5">
                     {getStatusBadge(t.status, t.status === 'Faturado' ? () => onMarcarComoPago(t.id) : undefined)}
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button size="sm" variant="ghost" onClick={() => iniciarEdicao(t)} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
                         <Edit className="h-3.5 w-3.5" />
