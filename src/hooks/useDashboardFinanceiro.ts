@@ -313,7 +313,10 @@ export function useDashboardFinanceiro() {
   const workflowMetricsByYear = useWorkflowMetricsByYear(ano);
   
   // Hook de métricas em tempo real (para KPIs dinâmicos)
-  const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero);
+  // Se período personalizado, passar datas diretamente
+  const customStart = mesSelecionado === 'personalizado' && dataInicio ? dataInicio : undefined;
+  const customEnd = mesSelecionado === 'personalizado' && dataFim ? dataFim : undefined;
+  const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero, customStart, customEnd);
 
   // Calcular período anterior para comparação
   const periodoAnterior = useMemo(() => {
