@@ -91,11 +91,11 @@ export default function TabelaLancamentos({
       <table className="w-full">
         <thead>
           <tr className="border-b border-border/50">
-            <th className="px-3 py-1.5 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-16">Data</th>
-            <th className="px-3 py-1.5 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Descrição</th>
-            <th className="px-3 py-1.5 text-right text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-28">Valor</th>
-            <th className="px-3 py-1.5 text-left text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-24">Status</th>
-            <th className="px-3 py-1.5 text-right text-[10px] font-medium text-muted-foreground uppercase tracking-wider w-20">Ações</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-16">Data</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Descrição</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-28">Valor</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-24">Status</th>
+            <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider w-20">Ações</th>
           </tr>
         </thead>
         <tbody>
