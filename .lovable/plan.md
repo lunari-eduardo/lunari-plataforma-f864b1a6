@@ -1,113 +1,66 @@
 
 
-# Metas Personalizadas + Correção de Filtros no Dashboard Financeiro
+# Correção: Salvar metas + Layout 25% + Metas por categoria
 
-## Problemas identificados
+## Problema 1: Metas não salvam (erro no upsert)
 
-1. **Filtro "De-Até" não filtra receita/previsto** — `useWorkflowMetricsRealtime` só aceita `year` + `month`, não datas arbitrárias. Quando o período é "personalizado", as métricas de workflow (receita, previsto, a receber) continuam mostrando o ano inteiro.
+**Causa raiz**: O unique index usa expressão `COALESCE(categoria, '__geral__')`, mas PostgREST não suporta `onConflict` com expression-based indexes. O upsert falha silenciosamente.
 
-2. **Metas no dashboard usam valores incorretos** — busca de `HISTORICAL_GOALS` no localStorage (que pode estar vazio ou desatualizado), com fallback para `GoalsIntegrationService` (precificação). Quando seleciona "De-Até", divide meta anual por 12, o que não faz sentido para um range arbitrário.
+**Solução**: Criar uma nova migration que:
+- Remove o index com expressão
+- Adiciona um unique constraint simples em `(user_id, ano, mes, categoria)` com `categoria` tendo default `'__geral__'` em vez de `NULL`
+- OU: criar uma constraint simples `UNIQUE(user_id, ano, mes)` para metas gerais e manter categoria separadamente
 
-3. **Metas de precificação sendo usadas como metas reais** — precificação é referência teórica, não objetivo estratégico.
+A abordagem mais limpa: trocar `categoria NULL` por `categoria TEXT NOT NULL DEFAULT '__geral__'` e criar `UNIQUE(user_id, ano, mes, categoria)` como constraint real (não index). Assim o `onConflict: 'user_id,ano,mes,categoria'` funciona.
 
-4. **SalesGoalsCard usa dados fake** (multiplicadores 0.85, 2.8, 0.75) e mostra meta trimestral que deve ser removida.
+Atualizar o hook para incluir `categoria: '__geral__'` (em vez de `null`) e `onConflict: 'user_id,ano,mes,categoria'`.
+
+## Problema 2: Layout — lista de meses ocupa 25% à esquerda
+
+Redesenhar `MetasConfigTab.tsx` para layout de 2 colunas em desktop:
+- **Coluna esquerda (25%)**: lista dos 12 meses como navegação vertical (mês selecionado fica highlighted)
+- **Coluna direita (75%)**: formulário do mês selecionado + resumo anual
+
+Isso melhora a UX — o usuário clica no mês e edita na direita, sem scroll de 12 linhas.
+
+## Problema 3: Metas por categoria
+
+Adicionar suporte a metas por categoria de sessão (ex: Newborn, Família, Infantil etc.):
+- No formulário de cada mês, além da meta geral, permitir adicionar metas por categoria
+- Usar as categorias já existentes no sistema (`useRealtimeConfiguration` → `categorias`)
+- Salvar na mesma tabela `metas_personalizadas` com campo `categoria` preenchido
 
 ---
 
-## Solução em 4 partes
+## Arquivos a modificar
 
-### Parte 1: Nova tabela `metas_personalizadas` (Supabase)
+| Arquivo | Mudança |
+|---------|---------|
+| Nova migration SQL | Trocar index por constraint real; default `'__geral__'` |
+| `src/hooks/useMetasPersonalizadas.ts` | `onConflict` corrigido; `categoria: '__geral__'`; suporte a metas por categoria |
+| `src/components/financas/MetasConfigTab.tsx` | Layout 2 colunas (25%/75%); navegação por mês; seção de metas por categoria |
+| `src/types/metas.ts` | Ajustar tipo para default `'__geral__'` |
 
+## Detalhes técnicos
+
+**Migration SQL**:
 ```sql
-CREATE TABLE public.metas_personalizadas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  ano INTEGER NOT NULL,
-  mes INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
-  meta_faturamento NUMERIC(12,2) NOT NULL DEFAULT 0,
-  meta_lucro NUMERIC(12,2) NOT NULL DEFAULT 0,
-  categoria TEXT DEFAULT NULL, -- futuro: metas por categoria
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(user_id, ano, mes, COALESCE(categoria, '__geral__'))
-);
--- RLS + trigger updated_at
+-- Remover index antigo com expressão
+DROP INDEX IF EXISTS idx_metas_personalizadas_unique;
+
+-- Converter NULLs existentes
+UPDATE public.metas_personalizadas SET categoria = '__geral__' WHERE categoria IS NULL;
+
+-- Alterar default
+ALTER TABLE public.metas_personalizadas ALTER COLUMN categoria SET DEFAULT '__geral__';
+ALTER TABLE public.metas_personalizadas ALTER COLUMN categoria SET NOT NULL;
+
+-- Constraint real que PostgREST entende
+ALTER TABLE public.metas_personalizadas 
+  ADD CONSTRAINT metas_personalizadas_unique UNIQUE (user_id, ano, mes, categoria);
 ```
 
-Tipo de uso (auto vs personalizado) será salvo em `pricing_configuracoes` como novo campo `usar_metas_personalizadas BOOLEAN DEFAULT FALSE`.
+**Hook**: `onConflict: 'user_id,ano,mes,categoria'` com `categoria: '__geral__'` para metas gerais.
 
-### Parte 2: Correção do filtro "De-Até" no Dashboard
-
-**`src/hooks/useWorkflowMetricsRealtime.ts`**
-- Adicionar overload que aceita `startDate` + `endDate` strings em vez de `year`+`month`
-- Quando `mesSelecionado === 'personalizado'`, o hook recebe as datas diretamente e filtra `data_sessao` por range
-
-**`src/hooks/useDashboardFinanceiro.ts`**
-- Criar nova instância do hook de workflow para período personalizado
-- Metas no modo "personalizado": **não dividir por 12** — usar meta anual da precificação sem ajuste (o dashboard sempre mostra meta da precificação conforme requisito)
-
-### Parte 3: Nova aba "Metas" em Configurações Financeiras
-
-**Novo componente: `src/components/financas/MetasConfigTab.tsx`**
-
-Conteúdo:
-- **Toggle**: "Usar metas automáticas da precificação" vs "Usar metas personalizadas"
-- Quando personalizado ativo, exibir **lista dos 12 meses** com campos:
-  - Meta de Faturamento (input monetário)
-  - Meta de Lucro (input monetário)
-- **Botão "Preencher com base na precificação"** — copia valores atuais de `pricing_configuracoes` dividido por 12
-- **Botão "Aplicar mesmo valor para todos os meses"** — replica o mês atual para os 11 restantes
-- Salvar em `metas_personalizadas` no Supabase
-
-**`src/pages/NovaFinancas.tsx`**
-- Adicionar nova aba "Metas" (ícone Target) ao TabsList (grid-cols-4 → grid-cols-5)
-
-**Novo hook: `src/hooks/useMetasPersonalizadas.ts`**
-- CRUD no Supabase para `metas_personalizadas`
-- Método `getMetaParaPeriodo(ano, mes)` com lógica de prioridade:
-  1. Se `usar_metas_personalizadas = true` e existe registro → usar personalizada
-  2. Senão → fallback para precificação (`pricing_configuracoes` / 12)
-
-### Parte 4: Ajustes na Análise de Vendas
-
-**`src/components/analise-vendas/SalesGoalsCard.tsx`**
-- Remover meta **trimestral** (manter apenas mensal e anual)
-- Remover dados fake (multiplicadores 0.85, 2.8, 0.75) — usar dados reais do workflow
-- Usar `useMetasPersonalizadas` para buscar a meta correta
-- Adicionar indicador visual: "Meta baseada na precificação" ou "Meta personalizada" (badge pequeno)
-- Cores: vermelho (abaixo mínimo), amarelo (entre mínimo e meta), verde (acima da meta)
-- Receber `selectedYear` e `selectedMonth` como props para reagir aos filtros
-
-**`src/pages/AnaliseVendas.tsx`**
-- Passar ano/mês selecionados para `SalesGoalsCard`
-
-### Dashboard Financeiro — Metas (sem mudança conceitual)
-
-**`src/hooks/useDashboardFinanceiro.ts` — `metasData`**
-- Continua usando **apenas** metas da precificação (conforme requisito)
-- Corrigir: quando "personalizado", manter meta anual fixa (não dividir por período arbitrário)
-- Remover fallback hardcoded `metaReceita = 100000; metaLucro = 30000`
-
----
-
-## Arquivos a criar/modificar
-
-| Arquivo | Ação |
-|---------|------|
-| `supabase/migrations/xxx_metas_personalizadas.sql` | Nova tabela + campo em pricing_configuracoes |
-| `src/hooks/useMetasPersonalizadas.ts` | Novo hook CRUD + lógica de prioridade |
-| `src/components/financas/MetasConfigTab.tsx` | Nova aba de configuração de metas |
-| `src/pages/NovaFinancas.tsx` | Adicionar aba "Metas" |
-| `src/hooks/useWorkflowMetricsRealtime.ts` | Suportar filtro por date range |
-| `src/hooks/useDashboardFinanceiro.ts` | Corrigir filtro personalizado + metas fixas da precificação |
-| `src/components/analise-vendas/SalesGoalsCard.tsx` | Remover trimestral, usar dados reais, indicador de origem |
-| `src/pages/AnaliseVendas.tsx` | Passar filtros para SalesGoalsCard |
-| `src/types/precificacao.ts` | Adicionar tipo MetaPersonalizada |
-
-## O que NÃO muda
-
-- Página de precificação — continua calculando metas teóricas normalmente
-- `GoalsIntegrationService` — continua existindo como fonte de metas de precificação
-- Gráficos do dashboard (receita vs lucro mensal, composição de despesas) — continuam anuais
-- Lógica de workflow, pagamentos, sessões — intacta
+**Layout**: `grid grid-cols-[25%_1fr]` em desktop, coluna única em mobile. Lista à esquerda com meses clicáveis, formulário à direita com inputs de faturamento/lucro + seção expansível "Metas por categoria" onde o usuário pode adicionar categorias específicas.
 
