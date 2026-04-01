@@ -100,7 +100,7 @@ export default function TabelaLancamentos({
         </thead>
         <tbody>
           {transacoes.map(t => (
-            <tr key={t.id} className="group border-b border-border/20 hover:bg-muted/30 transition-colors">
+            <tr key={t.id} className="group border-b border-border/40 hover:bg-muted/30 transition-colors">
               {editandoId === t.id ? (
                 <>
                   <td className="px-3 py-1.5">
