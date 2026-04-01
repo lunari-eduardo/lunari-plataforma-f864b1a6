@@ -313,7 +313,10 @@ export function useDashboardFinanceiro() {
   const workflowMetricsByYear = useWorkflowMetricsByYear(ano);
   
   // Hook de métricas em tempo real (para KPIs dinâmicos)
-  const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero);
+  // Se período personalizado, passar datas diretamente
+  const customStart = mesSelecionado === 'personalizado' && dataInicio ? dataInicio : undefined;
+  const customEnd = mesSelecionado === 'personalizado' && dataFim ? dataFim : undefined;
+  const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero, customStart, customEnd);
 
   // Calcular período anterior para comparação
   const periodoAnterior = useMemo(() => {
@@ -467,37 +470,27 @@ export function useDashboardFinanceiro() {
     };
   }, [anoSelecionado, mesSelecionado, kpisData, transacoesDoAno, workflowMetricsAnterior, periodoAnterior]);
 
-  // ============= METAS =============
+  // ============= METAS (sempre da precificação no dashboard) =============
   
   const metasData = useMemo((): MetasData => {
-    const anoSelecionadoNum = parseInt(anoSelecionado);
-    
-    const historicalGoals: HistoricalGoal[] = storage.load(STORAGE_KEYS.HISTORICAL_GOALS, []);
-    const metaDoAno = historicalGoals.find(goal => goal.ano === anoSelecionadoNum);
-    
+    // Dashboard financeiro SEMPRE usa metas da precificação (referência de saúde do negócio)
     let metaReceita = 0;
     let metaLucro = 0;
     
-    if (metaDoAno) {
-      metaReceita = metaDoAno.metaFaturamento;
-      metaLucro = metaDoAno.metaLucro;
-    } else {
-      try {
-        const goalsData = GoalsIntegrationService.getAnnualGoals();
-        metaReceita = goalsData.revenue;
-        metaLucro = goalsData.profit;
-      } catch (error) {
-        console.warn('Erro ao carregar metas da precificação:', error);
-        metaReceita = 100000;
-        metaLucro = 30000;
-      }
+    try {
+      const goalsData = GoalsIntegrationService.getAnnualGoals();
+      metaReceita = goalsData.revenue;
+      metaLucro = goalsData.profit;
+    } catch (error) {
+      console.warn('Erro ao carregar metas da precificação:', error);
     }
     
-    // Ajustar metas se filtro de mês específico
-    if (mesSelecionado && mesSelecionado !== 'ano-completo') {
+    // Ajustar metas se filtro de mês específico (dividir por 12)
+    if (mesSelecionado && mesSelecionado !== 'ano-completo' && mesSelecionado !== 'personalizado') {
       metaReceita = metaReceita / 12;
       metaLucro = metaLucro / 12;
     }
+    // Para período personalizado: manter meta anual fixa (não dividir)
     
     return {
       metaReceita,
@@ -505,7 +498,7 @@ export function useDashboardFinanceiro() {
       receitaAtual: kpisData.totalReceita,
       lucroAtual: kpisData.totalLucro
     };
-  }, [kpisData, anoSelecionado, mesSelecionado]);
+  }, [kpisData, mesSelecionado]);
 
   // ============= DADOS PARA GRÁFICOS (SEMPRE ANUAIS) =============
   

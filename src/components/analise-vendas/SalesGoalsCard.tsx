@@ -2,77 +2,85 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Target, Settings } from 'lucide-react';
-import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 import { EmptyGoalsState } from '@/components/shared/EmptyGoalsState';
 import { useNavigate } from 'react-router-dom';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { useMetasPersonalizadas } from '@/hooks/useMetasPersonalizadas';
+import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
+import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 
-export function SalesGoalsCard() {
+interface SalesGoalsCardProps {
+  selectedYear: number;
+  selectedMonth: number | null;
+}
+
+export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardProps) {
   const navigate = useNavigate();
   
+  const { getMetaParaMes, getMetaAnual, loading } = useMetasPersonalizadas(selectedYear);
+  
+  // Métricas reais do workflow - período selecionado
+  const workflowMetrics = useWorkflowMetricsRealtime(
+    selectedYear, 
+    selectedMonth || undefined
+  );
+
+  // Métricas anuais (para meta anual)
+  const receitaAnualMetrics = useWorkflowMetricsRealtime(selectedYear);
+
   const configStatus = useMemo(() => 
     GoalsIntegrationService.getConfigurationStatus(), 
     []
   );
 
-  if (!configStatus.hasConfiguredGoals) {
+  // Meta mensal
+  const metaMensal = useMemo(() => {
+    const mes = selectedMonth || new Date().getMonth() + 1;
+    return getMetaParaMes(mes);
+  }, [selectedMonth, getMetaParaMes]);
+
+  // Meta anual
+  const metaAnual = useMemo(() => getMetaAnual(), [getMetaAnual]);
+
+  if (!configStatus.hasConfiguredGoals && !loading) {
     return (
       <EmptyGoalsState 
         title="Metas de Vendas"
-        description="Configure suas metas na precificação para acompanhar o progresso"
+        description="Configure suas metas na precificação ou em Finanças > Metas"
         className="h-auto py-6"
       />
     );
   }
 
-  const annualGoals = useMemo(() => 
-    GoalsIntegrationService.getAnnualGoals(), 
-    []
-  );
-  
-  const monthlyGoals = useMemo(() => 
-    GoalsIntegrationService.getMonthlyGoals(), 
-    []
-  );
+  const receitaAtual = workflowMetrics.receita;
+  const receitaAnual = receitaAnualMetrics.receita;
 
   const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentYear = currentDate.getFullYear();
-  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-  const daysLeft = daysInMonth - currentDate.getDate();
-  
-  const currentMonthRevenue = monthlyGoals.revenue * 0.85;
-  const currentQuarterRevenue = monthlyGoals.revenue * 2.8;
-  const currentAnnualRevenue = annualGoals.revenue * 0.75;
-  
+  const currentMonth = selectedMonth || currentDate.getMonth() + 1;
+  const daysInMonth = new Date(selectedYear, currentMonth, 0).getDate();
+  const daysLeft = selectedYear === currentDate.getFullYear() && currentMonth === currentDate.getMonth() + 1
+    ? daysInMonth - currentDate.getDate()
+    : daysInMonth;
+
+  const daysLeftYear = selectedYear === currentDate.getFullYear()
+    ? Math.floor((new Date(selectedYear, 11, 31).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+    : 365;
+
   const goals = [
     {
       title: 'Mensal',
-      current: currentMonthRevenue,
-      target: monthlyGoals.revenue,
-      daysLeft: daysLeft,
-      status: GoalsIntegrationService.getProgressStatus(
-        GoalsIntegrationService.calculateProgress(currentMonthRevenue, monthlyGoals.revenue)
-      )
-    },
-    {
-      title: 'Trimestral',
-      current: currentQuarterRevenue,
-      target: monthlyGoals.revenue * 3,
-      daysLeft: daysLeft,
-      status: GoalsIntegrationService.getProgressStatus(
-        GoalsIntegrationService.calculateProgress(currentQuarterRevenue, monthlyGoals.revenue * 3)
-      )
+      current: receitaAtual,
+      target: metaMensal.metaFaturamento,
+      daysLeft,
+      origem: metaMensal.origem
     },
     {
       title: 'Anual',
-      current: currentAnnualRevenue,
-      target: annualGoals.revenue,
-      daysLeft: Math.floor((new Date(currentYear, 11, 31).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)),
-      status: GoalsIntegrationService.getProgressStatus(
-        GoalsIntegrationService.calculateProgress(currentAnnualRevenue, annualGoals.revenue)
-      )
+      current: receitaAnual,
+      target: metaAnual.metaFaturamento,
+      daysLeft: daysLeftYear,
+      origem: metaAnual.origem
     }
   ];
 
@@ -88,73 +96,63 @@ export function SalesGoalsCard() {
     }).format(value);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'on-track':
-        return { text: 'No caminho', variant: 'default' as const };
-      case 'behind':
-        return { text: 'Atrasado', variant: 'destructive' as const };
-      default:
-        return { text: 'Atenção', variant: 'secondary' as const };
-    }
+  const getStatusInfo = (progress: number) => {
+    if (progress >= 100) return { color: 'text-green-600', bgColor: '[&>div]:bg-green-500' };
+    if (progress >= 70) return { color: 'text-yellow-600', bgColor: '[&>div]:bg-yellow-500' };
+    return { color: 'text-red-600', bgColor: '[&>div]:bg-destructive' };
   };
 
   return (
-    <div className="bg-lunar-surface/50 rounded-xl p-4 border border-lunar-border/30">
+    <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Target className="h-3.5 w-3.5 text-lunar-textSecondary" />
-          <span className="text-xs font-medium text-lunar-textSecondary">Metas</span>
+          <Target className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">Metas</span>
         </div>
         <Button 
           variant="ghost" 
           size="sm" 
           className="h-6 text-2xs px-2"
-          onClick={() => navigate('/app/precificacao')}
+          onClick={() => navigate('/app/financas?tab=metas')}
         >
           <Settings className="h-3 w-3 mr-1" />
           Configurar
         </Button>
       </div>
       
-      {/* Goals List - Horizontal Lines */}
+      {/* Goals List */}
       <div className="space-y-2.5">
         {goals.map((goal, index) => {
-          const progress = Math.min((goal.current / goal.target) * 100, 100);
-          const statusBadge = getStatusBadge(goal.status);
+          const progress = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;
+          const statusInfo = getStatusInfo(progress);
           
           return (
             <div key={index} className="flex items-center gap-3">
-              {/* Label */}
-              <span className="text-2xs text-lunar-textSecondary w-16 shrink-0">
+              <span className="text-2xs text-muted-foreground w-16 shrink-0">
                 {goal.title}
               </span>
               
-              {/* Progress Bar */}
               <div className="flex-1 min-w-0">
                 <Progress 
                   value={progress} 
-                  className={cn(
-                    "h-1.5",
-                    goal.status === 'behind' && "[&>div]:bg-destructive",
-                    goal.status === 'ahead' && "[&>div]:bg-yellow-500"
-                  )} 
+                  className={cn("h-1.5", statusInfo.bgColor)} 
                 />
               </div>
               
-              {/* Percentage */}
-              <span className="text-2xs font-medium text-lunar-text w-10 text-right">
+              <span className={cn("text-2xs font-medium w-10 text-right", statusInfo.color)}>
                 {progress.toFixed(0)}%
               </span>
               
-              {/* Status Badge - Hidden on mobile */}
-              <Badge 
-                variant={statusBadge.variant} 
-                className="text-2xs h-5 hidden sm:flex"
-              >
-                {goal.daysLeft}d
-              </Badge>
+              <div className="items-center gap-1 hidden sm:flex">
+                <Badge 
+                  variant="outline" 
+                  className="text-2xs h-5 px-1.5"
+                  title={goal.origem === 'personalizada' ? 'Meta personalizada' : 'Meta da precificação'}
+                >
+                  {goal.origem === 'personalizada' ? '🎯' : '📊'} {goal.daysLeft}d
+                </Badge>
+              </div>
             </div>
           );
         })}

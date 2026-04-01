@@ -1,11 +1,12 @@
 import { useState, memo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusSquare, BarChart3, List, Settings } from 'lucide-react';
+import { PlusSquare, BarChart3, List, Settings, Target } from 'lucide-react';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from '@/hooks/use-mobile';
 import LancamentosTab from '@/components/financas/LancamentosTab';
 import ConfiguracoesFinanceirasTab from '@/components/financas/ConfiguracoesFinanceirasTab';
+import MetasConfigTab from '@/components/financas/MetasConfigTab';
 import DashboardFinanceiro from '@/components/financas/DashboardFinanceiro';
 import ExtratoTab from '@/components/financas/ExtratoTab';
 const NovaFinancas = memo(function NovaFinancas() {
@@ -44,7 +45,7 @@ const NovaFinancas = memo(function NovaFinancas() {
       <div className="min-h-screen pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-1 sm:space-y-6 py-0 my-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full h-10 p-1 text-sm bg-card border border-border py-0 grid-cols-4">
+            <TabsList className="grid w-full h-10 p-1 text-sm bg-card border border-border py-0 grid-cols-5">
               <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
                 <PlusSquare className="h-4 w-4" />
                 {!isMobile && "Lançamentos"}
@@ -56,6 +57,10 @@ const NovaFinancas = memo(function NovaFinancas() {
               <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
                 <List className="h-4 w-4" />
                 {!isMobile && "Extrato"}
+              </TabsTrigger>
+              <TabsTrigger value="metas" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                {!isMobile && "Metas"}
               </TabsTrigger>
               <TabsTrigger value="configuracoes" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
                 <Settings className="h-4 w-4" />
@@ -85,6 +90,10 @@ const NovaFinancas = memo(function NovaFinancas() {
 
             <TabsContent value="extrato" className="mt-6">
               <ExtratoTab />
+            </TabsContent>
+
+            <TabsContent value="metas" className="mt-6">
+              <MetasConfigTab />
             </TabsContent>
 
             <TabsContent value="configuracoes" className="mt-6">
