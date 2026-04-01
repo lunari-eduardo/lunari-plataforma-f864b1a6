@@ -1,41 +1,35 @@
 
 
-# Filtro contextual no modal + rolagem nativa no Select
+# Melhorar visualização da lista de lançamentos
 
-## Problema 1: Itens não filtrados por contexto
-O modal sempre mostra "grupo ativo + todos os itens". Quando clicado em "Adicionar despesa fixa", deveria mostrar **apenas** itens de Despesa Fixa. Os botões do header devem mostrar todos.
+## Problema
+A lista está visualmente apagada no modo light: fontes pequenas, sem separadores visuais entre seções, e sem contraste suficiente para leitura rápida.
 
-## Problema 2: Rolagem só funciona nas setas
-O `SelectContent` do Radix usa `overflow-hidden` e depende dos `ScrollUpButton`/`ScrollDownButton`. Isso impede scroll normal com roda do mouse ou touch.
+## Mudanças
 
-## Solução
+### 1. Seções com separadores visuais (`LancamentosTab.tsx`)
+- Adicionar uma **borda lateral colorida** (left border 3px) em cada seção usando `info.corBorda` do `GRUPOS_CONFIG`
+- Aumentar spacing entre seções: `space-y-1` → `space-y-3`
+- Header da seção: fonte `text-sm` → `text-base font-bold`
+- Adicionar um fundo sutil no header: `bg-muted/30 rounded-lg`
+- Seções vazias colapsadas: manter com opacidade reduzida
 
-### 1. Modal: nova prop `filtrarApenasGrupo` (boolean)
-- Botões do header: `filtrarApenasGrupo = false` → mostra todos os itens agrupados
-- Botões contextuais das seções: `filtrarApenasGrupo = true` → mostra **apenas** itens do `grupoAtivo`
+### 2. Tabela desktop mais legível (`TabelaLancamentos.tsx`)
+- Fontes maiores: `text-xs` → `text-sm` nas colunas Data e Status; `text-sm` → `text-base` na Descrição
+- Headers da tabela: `text-[10px]` → `text-xs`
+- Padding das células: `px-3 py-1.5` → `px-3 py-2.5`
+- Separadores entre linhas: `border-border/20` → `border-border/40`
+- Valor em `font-semibold` em vez de `font-medium`
 
-**`src/components/financas/LancamentosTab.tsx`**
-- Adicionar estado `modalFiltrarApenas: boolean`
-- `abrirModal` dos botões do header: `setModalFiltrarApenas(false)`
-- `abrirModal` dos botões contextuais: `setModalFiltrarApenas(true)`
-- Passar nova prop ao modal
+### 3. Mobile mais legível (`TabelaLancamentosMobile.tsx`)
+- Trocar cores hardcoded (`text-gray-900`, `bg-gray-100`) por tokens do tema (`text-foreground`, `bg-muted`)
+- Aumentar padding e fonte do nome do item
 
-**`src/components/financas/ModalNovoLancamentoRefatorado.tsx`**
-- Nova prop `filtrarApenasGrupo?: boolean`
-- Quando `true`: mostrar apenas `itensGrupoAtivo` (sem seção "Todos os Itens")
-- Quando `false`: mostrar todos os itens organizados por grupo (comportamento atual dos botões do header)
-
-### 2. Select: habilitar rolagem nativa
-
-**`src/components/ui/select.tsx`**
-- No `SelectPrimitive.Viewport`: adicionar `overflow-y-auto max-h-[300px]` (ou similar) para scroll nativo
-- Isso é um fix conhecido do Radix Select — basta trocar `overflow-hidden` por `overflow-auto` no Content e garantir que o Viewport tenha `max-height`
-
-## Arquivos a modificar
+## Arquivos
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/financas/LancamentosTab.tsx` | Adicionar estado `modalFiltrarApenas`, passar ao modal |
-| `src/components/financas/ModalNovoLancamentoRefatorado.tsx` | Nova prop `filtrarApenasGrupo`, lógica de filtro condicional |
-| `src/components/ui/select.tsx` | Habilitar scroll nativo no Viewport |
+| `src/components/financas/LancamentosTab.tsx` | Spacing entre seções, borda lateral colorida, header maior |
+| `src/components/financas/TabelaLancamentos.tsx` | Fontes maiores, padding maior, separadores mais visíveis |
+| `src/components/financas/TabelaLancamentosMobile.tsx` | Trocar cores hardcoded por tokens do tema |
 
