@@ -7,6 +7,7 @@ export function useMetasPersonalizadas(ano: number) {
   const [metas, setMetas] = useState<MetaPersonalizada[]>([]);
   const [metasPorCategoria, setMetasPorCategoria] = useState<MetaPersonalizada[]>([]);
   const [usarPersonalizadas, setUsarPersonalizadasState] = useState(false);
+  const [modoMetas, setModoMetasState] = useState<'mensal' | 'categoria'>('mensal');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,11 +18,12 @@ export function useMetasPersonalizadas(ano: number) {
 
         const { data: config } = await supabase
           .from('pricing_configuracoes')
-          .select('usar_metas_personalizadas')
+          .select('usar_metas_personalizadas, modo_metas')
           .eq('user_id', user.id)
           .maybeSingle();
 
         setUsarPersonalizadasState(config?.usar_metas_personalizadas ?? false);
+        setModoMetasState((config as any)?.modo_metas ?? 'mensal');
 
         const { data: metasData } = await supabase
           .from('metas_personalizadas' as any)
@@ -45,13 +47,21 @@ export function useMetasPersonalizadas(ano: number) {
   const toggleUsarPersonalizadas = useCallback(async (valor: boolean) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     await supabase
       .from('pricing_configuracoes')
       .update({ usar_metas_personalizadas: valor } as any)
       .eq('user_id', user.id);
-
     setUsarPersonalizadasState(valor);
+  }, []);
+
+  const setModoMetas = useCallback(async (modo: 'mensal' | 'categoria') => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from('pricing_configuracoes')
+      .update({ modo_metas: modo } as any)
+      .eq('user_id', user.id);
+    setModoMetasState(modo);
   }, []);
 
   const salvarMeta = useCallback(async (mes: number, metaFaturamento: number, metaLucro: number) => {
@@ -161,14 +171,17 @@ export function useMetasPersonalizadas(ano: number) {
 
   const getMetaParaMes = useCallback((mes: number): MetaResolvidaParaPeriodo => {
     if (usarPersonalizadas) {
-      const metaCustom = metas.find(m => m.mes === mes);
-      if (metaCustom && (metaCustom.meta_faturamento > 0 || metaCustom.meta_lucro > 0)) {
-        return {
-          metaFaturamento: metaCustom.meta_faturamento,
-          metaLucro: metaCustom.meta_lucro,
-          origem: 'personalizada'
-        };
+      if (modoMetas === 'mensal') {
+        const metaCustom = metas.find(m => m.mes === mes);
+        if (metaCustom && metaCustom.meta_lucro > 0) {
+          return {
+            metaFaturamento: 0,
+            metaLucro: metaCustom.meta_lucro,
+            origem: 'personalizada'
+          };
+        }
       }
+      // In category mode, no per-month custom goal
     }
     const annual = GoalsIntegrationService.getAnnualGoals();
     return {
@@ -176,18 +189,29 @@ export function useMetasPersonalizadas(ano: number) {
       metaLucro: annual.profit / 12,
       origem: 'precificacao'
     };
-  }, [usarPersonalizadas, metas]);
+  }, [usarPersonalizadas, modoMetas, metas]);
 
   const getMetaAnual = useCallback((): MetaResolvidaParaPeriodo => {
-    if (usarPersonalizadas && metas.length > 0) {
-      const totalFat = metas.reduce((s, m) => s + Number(m.meta_faturamento), 0);
-      const totalLuc = metas.reduce((s, m) => s + Number(m.meta_lucro), 0);
-      if (totalFat > 0 || totalLuc > 0) {
-        return {
-          metaFaturamento: totalFat,
-          metaLucro: totalLuc,
-          origem: 'personalizada'
-        };
+    if (usarPersonalizadas) {
+      if (modoMetas === 'mensal' && metas.length > 0) {
+        const totalLuc = metas.reduce((s, m) => s + Number(m.meta_lucro), 0);
+        if (totalLuc > 0) {
+          return {
+            metaFaturamento: 0,
+            metaLucro: totalLuc,
+            origem: 'personalizada'
+          };
+        }
+      }
+      if (modoMetas === 'categoria' && metasPorCategoria.length > 0) {
+        const totalLuc = metasPorCategoria.filter(m => m.mes === 0).reduce((s, m) => s + Number(m.meta_lucro), 0);
+        if (totalLuc > 0) {
+          return {
+            metaFaturamento: 0,
+            metaLucro: totalLuc,
+            origem: 'personalizada'
+          };
+        }
       }
     }
     const annual = GoalsIntegrationService.getAnnualGoals();
@@ -196,14 +220,16 @@ export function useMetasPersonalizadas(ano: number) {
       metaLucro: annual.profit,
       origem: 'precificacao'
     };
-  }, [usarPersonalizadas, metas]);
+  }, [usarPersonalizadas, modoMetas, metas, metasPorCategoria]);
 
   return {
     metas,
     metasPorCategoria,
     usarPersonalizadas,
+    modoMetas,
     loading,
     toggleUsarPersonalizadas,
+    setModoMetas,
     salvarMeta,
     salvarTodasMetas,
     salvarMetaCategoria,
