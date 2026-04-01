@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusSquare, BarChart3, List, Settings } from 'lucide-react';
+import { PlusSquare, BarChart3, List, Settings, Target } from 'lucide-react';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from '@/hooks/use-mobile';
