@@ -20,16 +20,28 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
   
   const { getMetaParaMes, getMetaAnual, loading } = useMetasPersonalizadas(selectedYear);
   
-  // Métricas reais do workflow
+  // Métricas reais do workflow - período selecionado
   const workflowMetrics = useWorkflowMetricsRealtime(
     selectedYear, 
     selectedMonth || undefined
   );
 
+  // Métricas anuais (para meta anual)
+  const receitaAnualMetrics = useWorkflowMetricsRealtime(selectedYear);
+
   const configStatus = useMemo(() => 
     GoalsIntegrationService.getConfigurationStatus(), 
     []
   );
+
+  // Meta mensal
+  const metaMensal = useMemo(() => {
+    const mes = selectedMonth || new Date().getMonth() + 1;
+    return getMetaParaMes(mes);
+  }, [selectedMonth, getMetaParaMes]);
+
+  // Meta anual
+  const metaAnual = useMemo(() => getMetaAnual(), [getMetaAnual]);
 
   if (!configStatus.hasConfiguredGoals && !loading) {
     return (
@@ -41,20 +53,7 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
     );
   }
 
-  // Dados reais
   const receitaAtual = workflowMetrics.receita;
-
-  // Meta mensal
-  const metaMensal = useMemo(() => {
-    const mes = selectedMonth || new Date().getMonth() + 1;
-    return getMetaParaMes(mes);
-  }, [selectedMonth, getMetaParaMes]);
-
-  // Meta anual
-  const metaAnual = useMemo(() => getMetaAnual(), [getMetaAnual]);
-
-  // Receita anual (se filtrando por mês, mostramos a receita do mês)
-  const receitaAnualMetrics = useWorkflowMetricsRealtime(selectedYear);
   const receitaAnual = receitaAnualMetrics.receita;
 
   const currentDate = new Date();
@@ -71,7 +70,7 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
   const goals = [
     {
       title: 'Mensal',
-      current: selectedMonth ? receitaAtual : receitaAtual, // receita do período selecionado
+      current: receitaAtual,
       target: metaMensal.metaFaturamento,
       daysLeft,
       origem: metaMensal.origem
@@ -98,9 +97,9 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
   };
 
   const getStatusInfo = (progress: number) => {
-    if (progress >= 100) return { text: 'Acima', color: 'text-green-600', bgColor: '[&>div]:bg-green-500' };
-    if (progress >= 70) return { text: 'No caminho', color: 'text-yellow-600', bgColor: '[&>div]:bg-yellow-500' };
-    return { text: 'Abaixo', color: 'text-red-600', bgColor: '[&>div]:bg-destructive' };
+    if (progress >= 100) return { color: 'text-green-600', bgColor: '[&>div]:bg-green-500' };
+    if (progress >= 70) return { color: 'text-yellow-600', bgColor: '[&>div]:bg-yellow-500' };
+    return { color: 'text-red-600', bgColor: '[&>div]:bg-destructive' };
   };
 
   return (
@@ -130,12 +129,10 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
           
           return (
             <div key={index} className="flex items-center gap-3">
-              {/* Label */}
               <span className="text-2xs text-muted-foreground w-16 shrink-0">
                 {goal.title}
               </span>
               
-              {/* Progress Bar */}
               <div className="flex-1 min-w-0">
                 <Progress 
                   value={progress} 
@@ -143,13 +140,11 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
                 />
               </div>
               
-              {/* Percentage */}
               <span className={cn("text-2xs font-medium w-10 text-right", statusInfo.color)}>
                 {progress.toFixed(0)}%
               </span>
               
-              {/* Origin indicator + days */}
-              <div className="flex items-center gap-1 hidden sm:flex">
+              <div className="items-center gap-1 hidden sm:flex">
                 <Badge 
                   variant="outline" 
                   className="text-2xs h-5 px-1.5"
