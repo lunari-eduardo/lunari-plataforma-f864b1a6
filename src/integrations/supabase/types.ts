@@ -2625,6 +2625,7 @@ export type Database = {
           margem_lucro_desejada: number | null
           meta_faturamento_anual: number | null
           meta_lucro_anual: number | null
+          modo_metas: string | null
           percentual_pro_labore: number | null
           updated_at: string | null
           usar_metas_personalizadas: boolean | null
@@ -2639,6 +2640,7 @@ export type Database = {
           margem_lucro_desejada?: number | null
           meta_faturamento_anual?: number | null
           meta_lucro_anual?: number | null
+          modo_metas?: string | null
           percentual_pro_labore?: number | null
           updated_at?: string | null
           usar_metas_personalizadas?: boolean | null
@@ -2653,6 +2655,7 @@ export type Database = {
           margem_lucro_desejada?: number | null
           meta_faturamento_anual?: number | null
           meta_lucro_anual?: number | null
+          modo_metas?: string | null
           percentual_pro_labore?: number | null
           updated_at?: string | null
           usar_metas_personalizadas?: boolean | null
