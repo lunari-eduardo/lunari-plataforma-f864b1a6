@@ -92,6 +92,10 @@ const NovaFinancas = memo(function NovaFinancas() {
               <ExtratoTab />
             </TabsContent>
 
+            <TabsContent value="metas" className="mt-6">
+              <MetasConfigTab />
+            </TabsContent>
+
             <TabsContent value="configuracoes" className="mt-6">
               <ConfiguracoesFinanceirasTab 
                 itensFinanceiros={itensFinanceiros} 
