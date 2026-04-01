@@ -5,7 +5,7 @@ export interface MetaPersonalizada {
   mes: number;
   meta_faturamento: number;
   meta_lucro: number;
-  categoria?: string | null;
+  categoria: string; // '__geral__' for general goals, or category ID
   created_at?: string;
   updated_at?: string;
 }
