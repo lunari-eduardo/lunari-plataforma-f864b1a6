@@ -130,12 +130,12 @@ export default function TabelaLancamentos({
                 </>
               ) : (
                 <>
-                  <td className="px-3 py-1.5 text-xs text-muted-foreground tabular-nums">
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground tabular-nums">
                     {formatarData(t.data_vencimento)}
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-foreground">{t.item?.nome || 'Item não encontrado'}</span>
+                      <span className="text-base text-foreground">{t.item?.nome || 'Item não encontrado'}</span>
                       {(t.parcelas || t.parcelaInfo) && (
                         <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0 rounded">
                           {t.parcelas?.atual || t.parcelaInfo?.atual || 1}/{t.parcelas?.total || t.parcelaInfo?.total || 1}
