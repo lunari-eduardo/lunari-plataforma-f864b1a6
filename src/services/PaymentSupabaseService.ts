@@ -633,7 +633,63 @@ export class PaymentSupabaseService {
   }
 
   /**
-   * Salvar um único pagamento específico (evita duplicação)
+   * Estornar um pagamento: cria uma transação de estorno referenciando o original
+   * O pagamento original é mantido intacto para auditoria
+   */
+  static async refundPayment(
+    sessionKey: string,
+    paymentId: string,
+    valor: number,
+    motivo?: string
+  ): Promise<boolean> {
+    try {
+      console.log('🔄 Estornando pagamento:', { sessionKey, paymentId, valor, motivo });
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ User not authenticated');
+        return false;
+      }
+
+      const binding = await this.getSessionBinding(sessionKey);
+      if (!binding) {
+        console.error('❌ Session not found:', sessionKey);
+        return false;
+      }
+
+      const descricao = `Estorno${motivo ? `: ${motivo}` : ''} [REF:${paymentId}]`;
+
+      const { error } = await supabase
+        .from('clientes_transacoes')
+        .insert({
+          user_id: user.id,
+          cliente_id: binding.cliente_id,
+          session_id: binding.session_id,
+          tipo: 'estorno',
+          valor: valor,
+          data_transacao: new Date().toISOString().split('T')[0],
+          descricao,
+          updated_by: user.id
+        });
+
+      if (error) {
+        console.error('❌ Erro ao criar estorno:', error);
+        return false;
+      }
+
+      console.log('✅ Estorno criado com sucesso:', { paymentId, valor });
+
+      window.dispatchEvent(new CustomEvent('payment-refunded', {
+        detail: { sessionId: binding.session_id, paymentId, valor }
+      }));
+
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao estornar pagamento:', error);
+      return false;
+    }
+  }
+
    * Agora aceita paymentId para rastreamento
    */
   static async saveSinglePaymentTracked(

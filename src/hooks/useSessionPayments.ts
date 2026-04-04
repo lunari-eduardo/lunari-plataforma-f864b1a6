@@ -77,7 +77,7 @@ const updatePaymentInSupabase = async (
   }
 };
 
-// Deletar pagamento do Supabase
+// Deletar pagamento do Supabase (apenas para pendentes)
 const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
   try {
     const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
@@ -85,6 +85,21 @@ const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) =
     console.log('✅ Pagamento deletado do Supabase:', paymentId);
   } catch (error) {
     console.error('❌ Erro ao deletar pagamento do Supabase:', error);
+  }
+};
+
+// Estornar pagamento no Supabase (para pagos)
+const refundPaymentInSupabase = async (sessionId: string, paymentId: string, valor: number, motivo?: string) => {
+  try {
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
+    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo);
+    if (success) {
+      console.log('✅ Pagamento estornado no Supabase:', paymentId);
+    }
+    return success;
+  } catch (error) {
+    console.error('❌ Erro ao estornar pagamento no Supabase:', error);
+    return false;
   }
 };
 
