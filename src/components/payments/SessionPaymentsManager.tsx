@@ -80,6 +80,7 @@ export function SessionPaymentsManager({
   const {
     payments,
     totalPago,
+    totalEstornado,
     totalRecebido,
     totalTaxas,
     totalAgendado,
@@ -88,6 +89,7 @@ export function SessionPaymentsManager({
     addPayment,
     editPayment,
     deletePayment,
+    refundPayment,
     markAsPaid,
     createInstallments,
     schedulePayment
