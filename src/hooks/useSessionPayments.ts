@@ -653,6 +653,28 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     });
   }, [sessionId]);
 
+  // Estornar pagamento pago (cria registro de estorno, mantém original)
+  const refundPayment = useCallback(async (paymentId: string, motivo?: string) => {
+    const payment = payments.find(p => p.id === paymentId);
+    if (!payment) return false;
+
+    const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivo);
+    if (success) {
+      // Adicionar estorno à lista local
+      const estorno: SessionPaymentExtended = {
+        id: `refund-${Date.now()}`,
+        valor: payment.valor,
+        data: new Date().toISOString().split('T')[0],
+        tipo: 'estorno',
+        statusPagamento: 'estornado',
+        origem: 'supabase',
+        editavel: false,
+        observacoes: `Estorno${motivo ? `: ${motivo}` : ''}`
+      };
+      setPayments(prev => [...prev, estorno]);
+    }
+    return success;
+
   // Marcar como pago (atualiza de pendente para pago no Supabase)
   const markAsPaid = useCallback(async (paymentId: string) => {
     const dataPagamento = formatDateForStorage(new Date());
