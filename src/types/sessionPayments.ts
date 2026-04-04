@@ -21,6 +21,12 @@ export interface SessionPaymentExtended {
 }
 
 export interface PaymentAction {
-  type: 'add' | 'edit' | 'delete' | 'mark_paid';
+  type: 'add' | 'edit' | 'delete' | 'mark_paid' | 'refund';
   payment: Partial<SessionPaymentExtended>;
+}
+
+export interface RefundData {
+  originalPaymentId: string;
+  valor: number;
+  motivo?: string;
 }
