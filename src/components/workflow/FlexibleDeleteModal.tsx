@@ -112,7 +112,7 @@ export function FlexibleDeleteModal({
           >
             <Trash2 className="h-4 w-4" />
             Excluir
-            {includePayments && paymentCount > 0 && " Tudo"}
+            {includeRefund && paymentCount > 0 && " + Estornar"}
           </Button>
         </DialogFooter>
       </DialogContent>
