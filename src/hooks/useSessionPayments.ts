@@ -209,6 +209,23 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
             const isPaid = t.tipo === 'pagamento';
             const isPending = t.tipo === 'ajuste';
+            const isEstorno = t.tipo === 'estorno';
+
+            // Estornos aparecem como tipo especial
+            if (isEstorno) {
+              allPayments.push({
+                id: t.id,
+                valor: Number(t.valor) || 0,
+                data: t.data_transacao || '',
+                createdAt: t.created_at || undefined,
+                tipo: 'estorno',
+                statusPagamento: 'estornado',
+                origem: 'supabase',
+                editavel: false,
+                observacoes: t.descricao?.replace(/\s*\[REF:[^\]]+\]/, '') || 'Estorno',
+              });
+              continue;
+            }
 
             const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
             const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
