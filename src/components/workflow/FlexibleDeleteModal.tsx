@@ -26,12 +26,12 @@ export function FlexibleDeleteModal({
   sessionTitle,
   paymentCount
 }: FlexibleDeleteModalProps) {
-  const [includePayments, setIncludePayments] = useState(false);
+  const [includeRefund, setIncludeRefund] = useState(false);
 
   const handleConfirm = () => {
-    onConfirm(includePayments);
+    onConfirm(includeRefund ? 'refund' : 'preserve');
     onClose();
-    setIncludePayments(false); // Reset for next time
+    setIncludeRefund(false);
   };
 
   return (
