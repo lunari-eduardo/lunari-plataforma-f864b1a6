@@ -33,6 +33,8 @@ export function SessionPaymentsManager({
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
+  const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
+  const [refundMotivo, setRefundMotivo] = useState('');
 
   // Convert existing payments to extended format
   const convertExistingPayments = (payments: any[]): SessionPaymentExtended[] => {
