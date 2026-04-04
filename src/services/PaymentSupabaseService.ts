@@ -690,6 +690,8 @@ export class PaymentSupabaseService {
     }
   }
 
+  /**
+   * Salvar um único pagamento específico (evita duplicação)
    * Agora aceita paymentId para rastreamento
    */
   static async saveSinglePaymentTracked(
