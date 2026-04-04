@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 
 export interface DeletionOptions {
-  includePayments: boolean;
+  paymentAction: 'preserve' | 'refund';
   userId: string;
 }
 
