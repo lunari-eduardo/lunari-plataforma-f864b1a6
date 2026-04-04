@@ -674,6 +674,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       setPayments(prev => [...prev, estorno]);
     }
     return success;
+  }, [sessionId, payments]);
 
   // Marcar como pago (atualiza de pendente para pago no Supabase)
   const markAsPaid = useCallback(async (paymentId: string) => {
