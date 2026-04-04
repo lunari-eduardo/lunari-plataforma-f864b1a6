@@ -14,7 +14,7 @@ import { AlertTriangle, Trash2, CreditCard } from 'lucide-react';
 interface FlexibleDeleteModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (includePayments: boolean) => void;
+  onConfirm: (paymentAction: 'preserve' | 'refund') => void;
   sessionTitle: string;
   paymentCount: number;
 }
