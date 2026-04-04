@@ -820,6 +820,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   return {
     payments,
     totalPago,
+    totalEstornado,
     totalRecebido,
     totalTaxas,
     totalAgendado,
@@ -829,6 +830,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     addPayment,
     editPayment,
     deletePayment,
+    refundPayment,
     markAsPaid,
     createInstallments,
     schedulePayment,
