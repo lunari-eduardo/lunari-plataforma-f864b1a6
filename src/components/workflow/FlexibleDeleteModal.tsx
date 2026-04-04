@@ -78,20 +78,20 @@ export function FlexibleDeleteModal({
 
               <div className="flex items-start space-x-2">
                 <Checkbox
-                  id="include-payments"
-                  checked={includePayments}
-                  onCheckedChange={(checked) => setIncludePayments(checked as boolean)}
+                  id="include-refund"
+                  checked={includeRefund}
+                  onCheckedChange={(checked) => setIncludeRefund(checked as boolean)}
                 />
                 <div className="grid gap-1.5 leading-none">
                   <label
-                    htmlFor="include-payments"
+                    htmlFor="include-refund"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    Excluir também os pagamentos
+                    Estornar pagamentos
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    {includePayments 
-                      ? "⚠️ Os pagamentos serão permanentemente excluídos"
+                    {includeRefund 
+                      ? "⚠️ Será registrado um estorno para cada pagamento pago (histórico preservado)"
                       : "✅ Os pagamentos serão mantidos para auditoria (sem vínculo com sessão)"
                     }
                   </p>
