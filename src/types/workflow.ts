@@ -16,8 +16,8 @@ export interface SessionPayment {
   forma_pagamento?: string;
   observacoes?: string;
   // Novos campos para upgrade
-  tipo: 'pago' | 'agendado' | 'parcelado';
-  statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
+  tipo: 'pago' | 'agendado' | 'parcelado' | 'estorno';
+  statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' | 'estornado';
   dataVencimento?: string;
   numeroParcela?: number;
   totalParcelas?: number;

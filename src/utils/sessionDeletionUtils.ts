@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 
 export interface DeletionOptions {
-  includePayments: boolean;
+  paymentAction: 'preserve' | 'refund';
   userId: string;
 }
 
@@ -69,43 +69,61 @@ export async function deleteSessionWithOptions(
   sessionId: string,
   options: DeletionOptions
 ) {
-  const { includePayments, userId } = options;
+  const { paymentAction, userId } = options;
 
   try {
-    if (includePayments) {
-      // Delete payments first, then session
-      const { error: paymentsError } = await supabase
+    if (paymentAction === 'refund') {
+      // Buscar pagamentos pagos da sessão para estornar
+      const { data: paidPayments, error: fetchError } = await supabase
         .from('clientes_transacoes')
-        .delete()
+        .select('id, valor, descricao')
         .eq('session_id', sessionId)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('tipo', 'pagamento');
 
-      if (paymentsError) {
-        console.error('❌ Error deleting payments:', paymentsError);
-        throw new Error('Falha ao excluir pagamentos');
-      }
-      
-      console.log('✅ Payments deleted for session:', sessionId);
-
-      // Now delete the session
-      const { error: sessionError } = await supabase
-        .from('clientes_sessoes')
-        .delete()
-        .eq('session_id', sessionId)
-        .eq('user_id', userId);
-
-      if (sessionError) {
-        console.error('❌ Error deleting session:', sessionError);
-        throw new Error('Falha ao excluir sessão');
+      if (fetchError) {
+        console.error('❌ Error fetching payments for refund:', fetchError);
+        throw new Error('Falha ao buscar pagamentos para estorno');
       }
 
-      console.log('✅ Session deleted:', sessionId);
-      
-      return {
-        success: true,
-        deletedPayments: true,
-        sessionId
-      };
+      // Criar estorno para cada pagamento pago
+      if (paidPayments && paidPayments.length > 0) {
+        const refundRecords = paidPayments.map(p => ({
+          user_id: userId,
+          cliente_id: '', // Will be resolved below
+          session_id: sessionId,
+          tipo: 'estorno',
+          valor: Number(p.valor),
+          data_transacao: new Date().toISOString().split('T')[0],
+          descricao: `Estorno por exclusão de sessão [REF:${p.id}]`,
+          updated_by: userId
+        }));
+
+        // Get cliente_id from session
+        const { data: sessaoData } = await supabase
+          .from('clientes_sessoes')
+          .select('cliente_id')
+          .eq('session_id', sessionId)
+          .maybeSingle();
+
+        if (sessaoData?.cliente_id) {
+          refundRecords.forEach(r => r.cliente_id = sessaoData.cliente_id);
+        }
+
+        const { error: refundError } = await supabase
+          .from('clientes_transacoes')
+          .insert(refundRecords);
+
+        if (refundError) {
+          console.error('❌ Error creating refunds:', refundError);
+          throw new Error('Falha ao criar estornos');
+        }
+
+        console.log(`✅ ${paidPayments.length} estorno(s) criado(s) para sessão:`, sessionId);
+      }
+
+      // Orphan payments then delete session
+      return await orphanPaymentsThenDeleteSession(userId, sessionId);
     } else {
       // Preserve payments by orphaning them first
       return await orphanPaymentsThenDeleteSession(userId, sessionId);

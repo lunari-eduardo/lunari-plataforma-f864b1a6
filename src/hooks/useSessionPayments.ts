@@ -77,7 +77,7 @@ const updatePaymentInSupabase = async (
   }
 };
 
-// Deletar pagamento do Supabase
+// Deletar pagamento do Supabase (apenas para pendentes)
 const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) => {
   try {
     const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
@@ -85,6 +85,21 @@ const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) =
     console.log('✅ Pagamento deletado do Supabase:', paymentId);
   } catch (error) {
     console.error('❌ Erro ao deletar pagamento do Supabase:', error);
+  }
+};
+
+// Estornar pagamento no Supabase (para pagos)
+const refundPaymentInSupabase = async (sessionId: string, paymentId: string, valor: number, motivo?: string) => {
+  try {
+    const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
+    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo);
+    if (success) {
+      console.log('✅ Pagamento estornado no Supabase:', paymentId);
+    }
+    return success;
+  } catch (error) {
+    console.error('❌ Erro ao estornar pagamento no Supabase:', error);
+    return false;
   }
 };
 
@@ -194,6 +209,23 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
 
             const isPaid = t.tipo === 'pagamento';
             const isPending = t.tipo === 'ajuste';
+            const isEstorno = t.tipo === 'estorno';
+
+            // Estornos aparecem como tipo especial
+            if (isEstorno) {
+              allPayments.push({
+                id: t.id,
+                valor: Number(t.valor) || 0,
+                data: t.data_transacao || '',
+                createdAt: t.created_at || undefined,
+                tipo: 'estorno',
+                statusPagamento: 'estornado',
+                origem: 'supabase',
+                editavel: false,
+                observacoes: t.descricao?.replace(/\s*\[REF:[^\]]+\]/, '') || 'Estorno',
+              });
+              continue;
+            }
 
             const parcelaMatch = t.descricao?.match(/Parcela (\d+)\/(\d+)/);
             const numeroParcela = parcelaMatch ? parseInt(parcelaMatch[1]) : undefined;
@@ -514,15 +546,19 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Remove auto-save useEffect to prevent loops
   // Payments will be saved explicitly in each action function
 
-  // Calcular total pago (bruto - o que o cliente pagou)
+  // Calcular total pago (bruto - o que o cliente pagou) - subtrair estornos
+  const totalEstornado = payments
+    .filter(p => p.tipo === 'estorno')
+    .reduce((acc, p) => acc + p.valor, 0);
+
   const totalPago = payments
     .filter(p => p.statusPagamento === 'pago')
-    .reduce((acc, p) => acc + p.valor, 0);
+    .reduce((acc, p) => acc + p.valor, 0) - totalEstornado;
 
   // Calcular total recebido (líquido - o que o fotógrafo recebeu de fato)
   const totalRecebido = payments
     .filter(p => p.statusPagamento === 'pago')
-    .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0);
+    .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0) - totalEstornado;
 
   // Calcular total de taxas
   const totalTaxas = payments
@@ -616,6 +652,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       return updated;
     });
   }, [sessionId]);
+
+  // Estornar pagamento pago (cria registro de estorno, mantém original)
+  const refundPayment = useCallback(async (paymentId: string, motivo?: string) => {
+    const payment = payments.find(p => p.id === paymentId);
+    if (!payment) return false;
+
+    const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivo);
+    if (success) {
+      // Adicionar estorno à lista local
+      const estorno: SessionPaymentExtended = {
+        id: `refund-${Date.now()}`,
+        valor: payment.valor,
+        data: new Date().toISOString().split('T')[0],
+        tipo: 'estorno',
+        statusPagamento: 'estornado',
+        origem: 'supabase',
+        editavel: false,
+        observacoes: `Estorno${motivo ? `: ${motivo}` : ''}`
+      };
+      setPayments(prev => [...prev, estorno]);
+    }
+    return success;
+  }, [sessionId, payments]);
 
   // Marcar como pago (atualiza de pendente para pago no Supabase)
   const markAsPaid = useCallback(async (paymentId: string) => {
@@ -762,6 +821,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   return {
     payments,
     totalPago,
+    totalEstornado,
     totalRecebido,
     totalTaxas,
     totalAgendado,
@@ -771,6 +831,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     addPayment,
     editPayment,
     deletePayment,
+    refundPayment,
     markAsPaid,
     createInstallments,
     schedulePayment,

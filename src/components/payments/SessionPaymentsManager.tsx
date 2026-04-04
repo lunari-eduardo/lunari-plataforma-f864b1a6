@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2 } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
@@ -33,6 +33,8 @@ export function SessionPaymentsManager({
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
+  const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
+  const [refundMotivo, setRefundMotivo] = useState('');
 
   // Convert existing payments to extended format
   const convertExistingPayments = (payments: any[]): SessionPaymentExtended[] => {
@@ -78,6 +80,7 @@ export function SessionPaymentsManager({
   const {
     payments,
     totalPago,
+    totalEstornado,
     totalRecebido,
     totalTaxas,
     totalAgendado,
@@ -86,6 +89,7 @@ export function SessionPaymentsManager({
     addPayment,
     editPayment,
     deletePayment,
+    refundPayment,
     markAsPaid,
     createInstallments,
     schedulePayment
@@ -128,6 +132,9 @@ export function SessionPaymentsManager({
     }
 
     const { statusPagamento } = payment;
+    if (statusPagamento === 'estornado') {
+      return <Badge className="bg-red-100 text-red-800 border-red-200">Estornado</Badge>;
+    }
     if (statusPagamento === 'pago') {
       return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
     }
@@ -352,8 +359,11 @@ export function SessionPaymentsManager({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`font-semibold ${payment.statusPagamento === 'pago' ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {formatCurrency(payment.valor)}
+                          <span className={`font-semibold ${
+                            payment.tipo === 'estorno' ? 'text-red-600 line-through' : 
+                            payment.statusPagamento === 'pago' ? 'text-green-600' : 'text-yellow-600'
+                          }`}>
+                            {payment.tipo === 'estorno' ? '-' : ''}{formatCurrency(payment.valor)}
                           </span>
                           {payment.valorLiquido != null && payment.valorLiquido < payment.valor && (
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -393,7 +403,7 @@ export function SessionPaymentsManager({
                                 <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                               </Button>
                             )}
-                            {payment.editavel && (
+                            {payment.editavel && payment.statusPagamento !== 'pago' && (
                               <>
                                 <Button
                                   size="sm"
@@ -406,19 +416,44 @@ export function SessionPaymentsManager({
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => {
-                                    // Se pagamento já está pago, pedir confirmação
-                                    if (payment.statusPagamento === 'pago') {
-                                      setPaymentToDelete(payment);
-                                    } else {
-                                      deletePayment(payment.id);
-                                    }
-                                  }}
+                                  onClick={() => deletePayment(payment.id)}
                                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                                 </Button>
                               </>
+                            )}
+                            {payment.statusPagamento === 'pago' && payment.editavel && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingPayment(payment)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setPaymentToRefund(payment)}
+                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                                  title="Estornar pagamento"
+                                >
+                                  <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {payment.statusPagamento === 'pago' && !payment.editavel && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setPaymentToRefund(payment)}
+                                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                                title="Estornar pagamento"
+                              >
+                                <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
                             )}
                           </div>
                         </TableCell>
@@ -457,28 +492,51 @@ export function SessionPaymentsManager({
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+      {/* Refund Confirmation Dialog */}
+      <AlertDialog open={!!paymentToRefund} onOpenChange={(open) => {
+        if (!open) {
+          setPaymentToRefund(null);
+          setRefundMotivo('');
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir pagamento confirmado?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Este pagamento de <strong>{paymentToDelete ? formatCurrency(paymentToDelete.valor) : ''}</strong> já foi marcado como pago.
-              Tem certeza que deseja excluí-lo? Esta ação não pode ser desfeita e o valor será removido do total pago.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-orange-600" />
+              Estornar pagamento?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Será registrado um estorno de <strong>{paymentToRefund ? formatCurrency(paymentToRefund.valor) : ''}</strong>.
+                  O pagamento original será mantido para auditoria.
+                </p>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Motivo (opcional)</label>
+                  <input
+                    type="text"
+                    value={refundMotivo}
+                    onChange={(e) => setRefundMotivo(e.target.value)}
+                    placeholder="Ex: Cliente desistiu, erro de cobrança..."
+                    className="w-full mt-1 px-3 py-2 border rounded-md text-sm bg-background"
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange-600 text-white hover:bg-orange-700"
               onClick={() => {
-                if (paymentToDelete) {
-                  deletePayment(paymentToDelete.id);
-                  setPaymentToDelete(null);
+                if (paymentToRefund) {
+                  refundPayment(paymentToRefund.id, refundMotivo || undefined);
+                  setPaymentToRefund(null);
+                  setRefundMotivo('');
                 }
               }}
             >
-              Excluir Pagamento
+              Confirmar Estorno
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

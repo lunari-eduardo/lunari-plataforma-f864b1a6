@@ -14,7 +14,7 @@ import { AlertTriangle, Trash2, CreditCard } from 'lucide-react';
 interface FlexibleDeleteModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (includePayments: boolean) => void;
+  onConfirm: (paymentAction: 'preserve' | 'refund') => void;
   sessionTitle: string;
   paymentCount: number;
 }
@@ -26,12 +26,12 @@ export function FlexibleDeleteModal({
   sessionTitle,
   paymentCount
 }: FlexibleDeleteModalProps) {
-  const [includePayments, setIncludePayments] = useState(false);
+  const [includeRefund, setIncludeRefund] = useState(false);
 
   const handleConfirm = () => {
-    onConfirm(includePayments);
+    onConfirm(includeRefund ? 'refund' : 'preserve');
     onClose();
-    setIncludePayments(false); // Reset for next time
+    setIncludeRefund(false);
   };
 
   return (
@@ -78,20 +78,20 @@ export function FlexibleDeleteModal({
 
               <div className="flex items-start space-x-2">
                 <Checkbox
-                  id="include-payments"
-                  checked={includePayments}
-                  onCheckedChange={(checked) => setIncludePayments(checked as boolean)}
+                  id="include-refund"
+                  checked={includeRefund}
+                  onCheckedChange={(checked) => setIncludeRefund(checked as boolean)}
                 />
                 <div className="grid gap-1.5 leading-none">
                   <label
-                    htmlFor="include-payments"
+                    htmlFor="include-refund"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    Excluir também os pagamentos
+                    Estornar pagamentos
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    {includePayments 
-                      ? "⚠️ Os pagamentos serão permanentemente excluídos"
+                    {includeRefund 
+                      ? "⚠️ Será registrado um estorno para cada pagamento pago (histórico preservado)"
                       : "✅ Os pagamentos serão mantidos para auditoria (sem vínculo com sessão)"
                     }
                   </p>
@@ -112,7 +112,7 @@ export function FlexibleDeleteModal({
           >
             <Trash2 className="h-4 w-4" />
             Excluir
-            {includePayments && paymentCount > 0 && " Tudo"}
+            {includeRefund && paymentCount > 0 && " + Estornar"}
           </Button>
         </DialogFooter>
       </DialogContent>

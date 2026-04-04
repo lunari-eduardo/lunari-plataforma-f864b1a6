@@ -4,8 +4,8 @@ export interface SessionPaymentExtended {
   data: string;
   dataVencimento?: string;
   createdAt?: string; // Timestamp completo para ordenação e exibição (YYYY-MM-DDTHH:MM:SS)
-  tipo: 'pago' | 'agendado' | 'parcelado';
-  statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
+  tipo: 'pago' | 'agendado' | 'parcelado' | 'estorno';
+  statusPagamento: 'pendente' | 'pago' | 'atrasado' | 'cancelado' | 'estornado';
   numeroParcela?: number;
   totalParcelas?: number;
   origem: 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado' | 'supabase' | 'mercadopago' | 'infinitepay' | 'asaas';
@@ -21,6 +21,12 @@ export interface SessionPaymentExtended {
 }
 
 export interface PaymentAction {
-  type: 'add' | 'edit' | 'delete' | 'mark_paid';
+  type: 'add' | 'edit' | 'delete' | 'mark_paid' | 'refund';
   payment: Partial<SessionPaymentExtended>;
+}
+
+export interface RefundData {
+  originalPaymentId: string;
+  valor: number;
+  motivo?: string;
 }
