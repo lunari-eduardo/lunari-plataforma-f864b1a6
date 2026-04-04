@@ -132,6 +132,9 @@ export function SessionPaymentsManager({
     }
 
     const { statusPagamento } = payment;
+    if (statusPagamento === 'estornado') {
+      return <Badge className="bg-red-100 text-red-800 border-red-200">Estornado</Badge>;
+    }
     if (statusPagamento === 'pago') {
       return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
     }
