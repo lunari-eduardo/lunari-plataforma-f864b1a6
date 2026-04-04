@@ -492,28 +492,51 @@ export function SessionPaymentsManager({
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+      {/* Refund Confirmation Dialog */}
+      <AlertDialog open={!!paymentToRefund} onOpenChange={(open) => {
+        if (!open) {
+          setPaymentToRefund(null);
+          setRefundMotivo('');
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir pagamento confirmado?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Este pagamento de <strong>{paymentToDelete ? formatCurrency(paymentToDelete.valor) : ''}</strong> já foi marcado como pago.
-              Tem certeza que deseja excluí-lo? Esta ação não pode ser desfeita e o valor será removido do total pago.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5 text-orange-600" />
+              Estornar pagamento?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Será registrado um estorno de <strong>{paymentToRefund ? formatCurrency(paymentToRefund.valor) : ''}</strong>.
+                  O pagamento original será mantido para auditoria.
+                </p>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Motivo (opcional)</label>
+                  <input
+                    type="text"
+                    value={refundMotivo}
+                    onChange={(e) => setRefundMotivo(e.target.value)}
+                    placeholder="Ex: Cliente desistiu, erro de cobrança..."
+                    className="w-full mt-1 px-3 py-2 border rounded-md text-sm bg-background"
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-orange-600 text-white hover:bg-orange-700"
               onClick={() => {
-                if (paymentToDelete) {
-                  deletePayment(paymentToDelete.id);
-                  setPaymentToDelete(null);
+                if (paymentToRefund) {
+                  refundPayment(paymentToRefund.id, refundMotivo || undefined);
+                  setPaymentToRefund(null);
+                  setRefundMotivo('');
                 }
               }}
             >
-              Excluir Pagamento
+              Confirmar Estorno
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
