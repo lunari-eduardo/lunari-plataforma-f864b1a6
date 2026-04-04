@@ -20,13 +20,11 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
   
   const { getMetaParaMes, getMetaAnual, loading } = useMetasPersonalizadas(selectedYear);
   
-  // Métricas reais do workflow - período selecionado
   const workflowMetrics = useWorkflowMetricsRealtime(
     selectedYear, 
     selectedMonth || undefined
   );
 
-  // Métricas anuais (para meta anual)
   const receitaAnualMetrics = useWorkflowMetricsRealtime(selectedYear);
 
   const configStatus = useMemo(() => 
@@ -104,7 +102,6 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
 
   return (
     <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
-      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Target className="h-3.5 w-3.5 text-muted-foreground" />
@@ -121,7 +118,6 @@ export function SalesGoalsCard({ selectedYear, selectedMonth }: SalesGoalsCardPr
         </Button>
       </div>
       
-      {/* Goals List */}
       <div className="space-y-2.5">
         {goals.map((goal, index) => {
           const progress = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;

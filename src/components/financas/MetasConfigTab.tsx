@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,45 @@ const MESES_CURTO = [
   'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
   'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
 ];
+
+/** Format number to BRL display (without R$): 1234.5 → "1.234,50" */
+function formatToBRL(value: number): string {
+  if (!value || value === 0) return '';
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+/** Parse BRL formatted string to number: "1.234,50" → 1234.5 */
+function parseBRL(formatted: string): number {
+  if (!formatted) return 0;
+  const clean = formatted.replace(/\./g, '').replace(',', '.');
+  return parseFloat(clean) || 0;
+}
+
+/** Handle BRL input masking in real-time */
+function maskBRLInput(raw: string): string {
+  // Remove everything except digits and comma
+  let cleaned = raw.replace(/[^\d,]/g, '');
+  
+  // Only allow one comma
+  const parts = cleaned.split(',');
+  if (parts.length > 2) {
+    cleaned = parts[0] + ',' + parts.slice(1).join('');
+  }
+  
+  // Limit decimal to 2 digits
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleaned = parts[0] + ',' + parts[1].slice(0, 2);
+  }
+  
+  // Add thousand separators to integer part
+  const [intPart, decPart] = cleaned.split(',');
+  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  
+  return decPart !== undefined ? `${formatted},${decPart}` : formatted;
+}
 
 export default function MetasConfigTab() {
   const currentYear = new Date().getFullYear();
@@ -41,21 +80,21 @@ export default function MetasConfigTab() {
     removerMetaCategoria
   } = useMetasPersonalizadas(anoSelecionado);
 
-  // Monthly goals local state (only lucro now)
-  const [metasLocal, setMetasLocal] = useState<{ lucro: string }[]>(
-    Array.from({ length: 12 }, () => ({ lucro: '' }))
+  // Monthly goals local state (faturamento only)
+  const [metasLocal, setMetasLocal] = useState<{ faturamento: string }[]>(
+    Array.from({ length: 12 }, () => ({ faturamento: '' }))
   );
   const [saving, setSaving] = useState(false);
 
   // Category goals local state (annual, mes=0)
-  const [catGoalsLocal, setCatGoalsLocal] = useState<{ categoriaId: string; lucro: string }[]>([]);
+  const [catGoalsLocal, setCatGoalsLocal] = useState<{ categoriaId: string; faturamento: string }[]>([]);
 
   // Sync monthly goals
   useEffect(() => {
     const novoLocal = Array.from({ length: 12 }, (_, i) => {
       const meta = metas.find(m => m.mes === i + 1);
       return {
-        lucro: meta ? String(Number(meta.meta_lucro)) : ''
+        faturamento: meta ? formatToBRL(Number(meta.meta_faturamento)) : ''
       };
     });
     setMetasLocal(novoLocal);
@@ -66,15 +105,15 @@ export default function MetasConfigTab() {
     const catMetas = metasPorCategoria.filter(m => m.mes === 0);
     setCatGoalsLocal(catMetas.map(m => ({
       categoriaId: m.categoria,
-      lucro: String(Number(m.meta_lucro))
+      faturamento: formatToBRL(Number(m.meta_faturamento))
     })));
   }, [metasPorCategoria]);
 
   const preencherComPrecificacao = () => {
     const annual = GoalsIntegrationService.getAnnualGoals();
-    const lucMensal = Math.round((annual.profit / 12) * 100) / 100;
+    const fatMensal = Math.round((annual.revenue / 12) * 100) / 100;
     setMetasLocal(prev => prev.map(() => ({
-      lucro: String(lucMensal)
+      faturamento: formatToBRL(fatMensal)
     })));
   };
 
@@ -88,8 +127,8 @@ export default function MetasConfigTab() {
     try {
       const metasArray = metasLocal.map((m, i) => ({
         mes: i + 1,
-        meta_faturamento: 0,
-        meta_lucro: parseFloat(m.lucro) || 0
+        meta_faturamento: parseBRL(m.faturamento),
+        meta_lucro: 0
       }));
       const result = await salvarTodasMetas(metasArray);
       if (result?.error) {
@@ -106,7 +145,7 @@ export default function MetasConfigTab() {
     setSaving(true);
     try {
       for (const cg of catGoalsLocal) {
-        await salvarMetaCategoria(0, cg.categoriaId, 0, parseFloat(cg.lucro) || 0);
+        await salvarMetaCategoria(0, cg.categoriaId, parseBRL(cg.faturamento), 0);
       }
       toast({ title: 'Metas por categoria salvas!' });
     } finally {
@@ -124,13 +163,13 @@ export default function MetasConfigTab() {
   };
 
   const annualGoals = GoalsIntegrationService.getAnnualGoals();
-  const hasGoals = annualGoals.profit > 0;
+  const hasGoals = annualGoals.revenue > 0;
 
   const addCategoriaGoal = () => {
     const usedIds = catGoalsLocal.map(c => c.categoriaId);
     const available = categorias.filter(c => !usedIds.includes(c.id));
     if (available.length === 0) return;
-    setCatGoalsLocal(prev => [...prev, { categoriaId: available[0].id, lucro: '' }]);
+    setCatGoalsLocal(prev => [...prev, { categoriaId: available[0].id, faturamento: '' }]);
   };
 
   const removeCategoriaGoal = async (index: number) => {
@@ -147,8 +186,8 @@ export default function MetasConfigTab() {
     );
   }
 
-  const totalAnualLuc = metasLocal.reduce((s, m) => s + (parseFloat(m.lucro) || 0), 0);
-  const totalCatLuc = catGoalsLocal.reduce((s, c) => s + (parseFloat(c.lucro) || 0), 0);
+  const totalAnualFat = metasLocal.reduce((s, m) => s + parseBRL(m.faturamento), 0);
+  const totalCatFat = catGoalsLocal.reduce((s, c) => s + parseBRL(c.faturamento), 0);
 
   return (
     <div className="space-y-6">
@@ -156,7 +195,7 @@ export default function MetasConfigTab() {
       <div className="flex items-center gap-3">
         <Target className="h-5 w-5 text-primary" />
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Metas de Lucro</h2>
+          <h2 className="text-lg font-semibold text-foreground">Metas de Faturamento</h2>
           <p className="text-sm text-muted-foreground">
             Configure suas metas mensais ou por categoria
           </p>
@@ -169,12 +208,12 @@ export default function MetasConfigTab() {
           <p className="text-xs font-medium text-muted-foreground mb-2">📊 Referência da precificação</p>
           <div className="flex gap-6 text-sm flex-wrap">
             <div>
-              <span className="text-muted-foreground">Lucro anual: </span>
-              <span className="font-semibold text-foreground">{formatCurrency(annualGoals.profit)}</span>
+              <span className="text-muted-foreground">Faturamento anual: </span>
+              <span className="font-semibold text-foreground">{formatCurrency(annualGoals.revenue)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground">Lucro mensal: </span>
-              <span className="font-semibold text-foreground">{formatCurrency(annualGoals.profit / 12)}</span>
+              <span className="text-muted-foreground">Faturamento mensal: </span>
+              <span className="font-semibold text-foreground">{formatCurrency(annualGoals.revenue / 12)}</span>
             </div>
           </div>
         </div>
@@ -258,7 +297,7 @@ export default function MetasConfigTab() {
                   </div>
                   <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-x-visible">
                     {MESES.map((nome, i) => {
-                      const hasValue = !!(parseFloat(metasLocal[i].lucro));
+                      const hasValue = parseBRL(metasLocal[i].faturamento) > 0;
                       return (
                         <button
                           key={i}
@@ -288,18 +327,24 @@ export default function MetasConfigTab() {
                       {MESES[mesSelecionado]} {anoSelecionado}
                     </h3>
                     <div className="space-y-1.5 max-w-xs">
-                      <Label className="text-xs text-muted-foreground">Meta de Lucro</Label>
-                      <Input
-                        type="number"
-                        placeholder="0,00"
-                        value={metasLocal[mesSelecionado].lucro}
-                        onChange={(e) => {
-                          const novo = [...metasLocal];
-                          novo[mesSelecionado] = { lucro: e.target.value };
-                          setMetasLocal(novo);
-                        }}
-                        className="text-sm"
-                      />
+                      <Label className="text-xs text-muted-foreground">Meta de Faturamento</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          value={metasLocal[mesSelecionado].faturamento}
+                          onChange={(e) => {
+                            const masked = maskBRLInput(e.target.value);
+                            const novo = [...metasLocal];
+                            novo[mesSelecionado] = { faturamento: masked };
+                            setMetasLocal(novo);
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          className="text-sm pl-9"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -307,8 +352,8 @@ export default function MetasConfigTab() {
                   <div className="bg-muted/20 border border-border/50 rounded-lg p-4">
                     <p className="text-xs font-medium text-muted-foreground mb-2">Resumo Anual</p>
                     <div className="text-sm">
-                      <span className="text-muted-foreground">Total de Lucro: </span>
-                      <span className="font-semibold text-foreground">{formatCurrency(totalAnualLuc)}</span>
+                      <span className="text-muted-foreground">Total de Faturamento: </span>
+                      <span className="font-semibold text-foreground">{formatCurrency(totalAnualFat)}</span>
                     </div>
                   </div>
 
@@ -331,7 +376,7 @@ export default function MetasConfigTab() {
                   <div>
                     <h3 className="text-base font-semibold text-foreground">Metas por Categoria</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Defina a meta de lucro anual para cada tipo de sessão
+                      Defina a meta de faturamento anual para cada tipo de sessão
                     </p>
                   </div>
                   <Button
@@ -374,19 +419,25 @@ export default function MetasConfigTab() {
                           ))}
                         </select>
                       </div>
-                      <div className="space-y-1.5 w-36">
-                        <Label className="text-xs text-muted-foreground">Meta de Lucro (anual)</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={cg.lucro}
-                          onChange={(e) => {
-                            const updated = [...catGoalsLocal];
-                            updated[idx] = { ...updated[idx], lucro: e.target.value };
-                            setCatGoalsLocal(updated);
-                          }}
-                          className="text-sm"
-                        />
+                      <div className="space-y-1.5 w-44">
+                        <Label className="text-xs text-muted-foreground">Meta de Faturamento (anual)</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={cg.faturamento}
+                            onChange={(e) => {
+                              const masked = maskBRLInput(e.target.value);
+                              const updated = [...catGoalsLocal];
+                              updated[idx] = { ...updated[idx], faturamento: masked };
+                              setCatGoalsLocal(updated);
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            className="text-sm pl-9"
+                          />
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
@@ -405,8 +456,8 @@ export default function MetasConfigTab() {
               <div className="bg-muted/20 border border-border/50 rounded-lg p-4">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Resumo</p>
                 <div className="text-sm">
-                  <span className="text-muted-foreground">Total de Lucro (categorias): </span>
-                  <span className="font-semibold text-foreground">{formatCurrency(totalCatLuc)}</span>
+                  <span className="text-muted-foreground">Total de Faturamento (categorias): </span>
+                  <span className="font-semibold text-foreground">{formatCurrency(totalCatFat)}</span>
                 </div>
               </div>
 

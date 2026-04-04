@@ -173,20 +173,19 @@ export function useMetasPersonalizadas(ano: number) {
     if (usarPersonalizadas) {
       if (modoMetas === 'mensal') {
         const metaCustom = metas.find(m => m.mes === mes);
-        if (metaCustom && metaCustom.meta_lucro > 0) {
+        if (metaCustom && metaCustom.meta_faturamento > 0) {
           return {
-            metaFaturamento: 0,
-            metaLucro: metaCustom.meta_lucro,
+            metaFaturamento: metaCustom.meta_faturamento,
+            metaLucro: 0,
             origem: 'personalizada'
           };
         }
       }
-      // In category mode, no per-month custom goal
     }
     const annual = GoalsIntegrationService.getAnnualGoals();
     return {
       metaFaturamento: annual.revenue / 12,
-      metaLucro: annual.profit / 12,
+      metaLucro: 0,
       origem: 'precificacao'
     };
   }, [usarPersonalizadas, modoMetas, metas]);
@@ -194,21 +193,21 @@ export function useMetasPersonalizadas(ano: number) {
   const getMetaAnual = useCallback((): MetaResolvidaParaPeriodo => {
     if (usarPersonalizadas) {
       if (modoMetas === 'mensal' && metas.length > 0) {
-        const totalLuc = metas.reduce((s, m) => s + Number(m.meta_lucro), 0);
-        if (totalLuc > 0) {
+        const totalFat = metas.reduce((s, m) => s + Number(m.meta_faturamento), 0);
+        if (totalFat > 0) {
           return {
-            metaFaturamento: 0,
-            metaLucro: totalLuc,
+            metaFaturamento: totalFat,
+            metaLucro: 0,
             origem: 'personalizada'
           };
         }
       }
       if (modoMetas === 'categoria' && metasPorCategoria.length > 0) {
-        const totalLuc = metasPorCategoria.filter(m => m.mes === 0).reduce((s, m) => s + Number(m.meta_lucro), 0);
-        if (totalLuc > 0) {
+        const totalFat = metasPorCategoria.filter(m => m.mes === 0).reduce((s, m) => s + Number(m.meta_faturamento), 0);
+        if (totalFat > 0) {
           return {
-            metaFaturamento: 0,
-            metaLucro: totalLuc,
+            metaFaturamento: totalFat,
+            metaLucro: 0,
             origem: 'personalizada'
           };
         }
@@ -217,7 +216,7 @@ export function useMetasPersonalizadas(ano: number) {
     const annual = GoalsIntegrationService.getAnnualGoals();
     return {
       metaFaturamento: annual.revenue,
-      metaLucro: annual.profit,
+      metaLucro: 0,
       origem: 'precificacao'
     };
   }, [usarPersonalizadas, modoMetas, metas, metasPorCategoria]);
