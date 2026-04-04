@@ -1,51 +1,100 @@
 
 
-# Reverter: Metas de Lucro → Metas de Faturamento + Máscara BRL
+# Sistema de Estorno + Correção de Cascatas Perigosas
 
-## Resumo
+## Problemas Críticos Encontrados
 
-Trocar todas as referências de "Meta de Lucro" para "Meta de Faturamento" no sistema de metas personalizadas. O campo `meta_faturamento` já existe na tabela — basta usá-lo em vez de `meta_lucro`. Adicionar máscara de formatação em Real (R$ 1.234,56) nos inputs de valor.
+### 1. CASCADE perigoso: Excluir galeria apaga cobranças
+`cobrancas.galeria_id → galerias.id ON DELETE CASCADE` — ao excluir uma galeria, **todas as cobranças vinculadas são apagadas**, incluindo parcelas (outro CASCADE). Isso destrói todo o histórico financeiro silenciosamente.
 
-## Mudanças
+### 2. Excluir sessão + galeria vinculada
+Hoje, `clientes_sessoes.galeria_id → galerias.id ON DELETE SET NULL` — se a galeria é excluída, o vínculo é removido. Porém se a sessão for excluída pelo Workflow, o código em `sessionDeletionUtils.ts` pode excluir transações (`clientes_transacoes`) sem registro de estorno. A galeria permanece intacta (não há cascade de sessão → galeria).
 
-### 1. `MetasConfigTab.tsx` — Trocar campo usado + máscara BRL
+### 3. Pagamentos são deletados sem rastro
+`PaymentSupabaseService.deletePaymentFromSupabase()` faz `DELETE` direto na tabela `clientes_transacoes`. O trigger `recompute_session_paid` recalcula o saldo — mas o registro financeiro desaparece completamente. Não há auditoria.
 
-- Trocar todos os `lucro` no estado local para `faturamento`
-- Labels: "Meta de Lucro" → "Meta de Faturamento"
-- Header: "Metas de Lucro" → "Metas de Faturamento"
-- Referência: "Lucro anual/mensal" → "Faturamento anual/mensal" (usar `annualGoals.revenue` em vez de `annualGoals.profit`)
-- Resumo: "Total de Lucro" → "Total de Faturamento"
-- Nos `handleSalvarMensal` e `handleSalvarCategorias`: salvar em `meta_faturamento` (com `meta_lucro: 0`)
-- Adicionar função de máscara BRL: ao digitar, formatar como "1.234,56" em tempo real; ao salvar, converter de volta para número
+### 4. `recompute_session_paid` ignora estornos
+A função soma apenas `tipo = 'pagamento'`. Precisará considerar `tipo = 'estorno'` como valor negativo.
 
-### 2. `useMetasPersonalizadas.ts` — Inverter campo de referência
+---
 
-- `getMetaParaMes`: retornar `metaFaturamento` da meta personalizada (em vez de `metaLucro`); `metaLucro: 0`
-- `getMetaAnual`: somar `meta_faturamento` em vez de `meta_lucro`
-- Fallback precificação: usar `annual.revenue` em vez de `annual.profit`
+## Plano de Implementação
 
-### 3. `SalesGoalsCard.tsx` — Usar metaFaturamento
+### Fase 1: Migration SQL — Corrigir cascatas e suportar estorno
 
-- As barras de progresso devem comparar receita realizada vs `metaFaturamento` (não `metaLucro`)
-- Ajustar labels correspondentes
+**A) Trocar CASCADE por SET NULL em `cobrancas.galeria_id`**
+```sql
+ALTER TABLE cobrancas DROP CONSTRAINT cobrancas_galeria_id_fkey;
+ALTER TABLE cobrancas ADD CONSTRAINT cobrancas_galeria_id_fkey 
+  FOREIGN KEY (galeria_id) REFERENCES galerias(id) ON DELETE SET NULL;
+```
+Isso garante que excluir uma galeria **preserva** as cobranças (ficam órfãs mas auditáveis).
 
-### 4. Máscara de moeda BRL (função utilitária)
+**B) Atualizar `recompute_session_paid` para considerar estornos**
+```sql
+UPDATE clientes_sessoes SET valor_pago = (
+  SELECT COALESCE(SUM(
+    CASE WHEN tipo = 'estorno' THEN -valor ELSE valor END
+  ), 0)
+  FROM clientes_transacoes
+  WHERE session_id = p_session_id AND tipo IN ('pagamento', 'estorno')
+)
+```
 
-Criar helper `formatCurrencyInput(value: string): string` e `parseCurrencyInput(formatted: string): number`:
-- Entrada: digitar "10000" → exibir "10.000"
-- Digitar "10000,50" → exibir "10.000,50"
-- Ao salvar: converter "10.000,50" → 10000.50
+### Fase 2: Lógica de estorno no código
 
-Aplicar nos inputs de:
-- Meta mensal (modo meses)
-- Meta por categoria (modo categorias)
+**A) `PaymentSupabaseService.ts` — Nova função `refundPayment`**
+Em vez de deletar a transação original, criar uma nova transação com:
+- `tipo: 'estorno'`
+- `valor`: valor estornado (positivo na tabela, tratado como negativo pelo trigger)
+- `descricao`: referência ao pagamento original
+- `data_transacao`: data atual
+- Manter a transação original intacta
+
+**B) `useSessionPayments.ts` — Substituir `deletePayment` por `refundPayment`**
+- Pagamentos **pendentes/agendados**: podem ser excluídos normalmente (ainda não foram pagos)
+- Pagamentos **pagos**: criar estorno em vez de excluir
+- Pagamentos de **gateway** (InfinitePay, Asaas, MP): não editáveis, estorno apenas registra internamente
+
+**C) `SessionPaymentsManager.tsx` — Trocar botão de excluir por estornar**
+- Para pagamentos pagos: ícone de estorno (RotateCcw) em vez de lixeira
+- Modal de confirmação: "Estornar pagamento de R$ X?" com campo opcional de motivo
+- Pagamento estornado aparece na lista com badge "Estornado" e valor em vermelho
+
+**D) `sessionDeletionUtils.ts` — FlexibleDeleteModal**
+- Trocar opção "Excluir pagamentos" por "Estornar pagamentos"
+- Ao excluir sessão com estorno: criar transação de estorno para cada pagamento pago, depois excluir sessão
+- Opção "Preservar pagamentos" continua orphanando (session_id = null)
+
+### Fase 3: Exibição de estornos
+
+**A) `SessionPaymentExtended` — Novo tipo**
+Adicionar `'estorno'` ao tipo de pagamento e `'estornado'` ao status.
+
+**B) Cálculos atualizados em `useSessionPayments.ts`**
+- `totalPago`: soma pagamentos pagos — soma estornos
+- `totalEstornado`: soma de estornos (novo campo)
+
+**C) Extrato unificado (`extrato_unificado` view)**
+Verificar se a view já trata `tipo = 'estorno'`. Se não, atualizar para exibi-lo corretamente.
+
+---
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/financas/MetasConfigTab.tsx` | Trocar lucro→faturamento em labels, estado, save; adicionar máscara BRL |
-| `src/hooks/useMetasPersonalizadas.ts` | Inverter campo principal para faturamento |
-| `src/components/analise-vendas/SalesGoalsCard.tsx` | Usar metaFaturamento nas comparações |
-| `src/types/metas.ts` | Sem mudança estrutural (ambos campos já existem) |
+| Migration SQL | Trocar CASCADE por SET NULL em `cobrancas.galeria_id`; atualizar `recompute_session_paid` |
+| `src/services/PaymentSupabaseService.ts` | Nova função `refundPayment`; manter `deletePayment` apenas para pendentes |
+| `src/hooks/useSessionPayments.ts` | Lógica de estorno vs exclusão; novo cálculo `totalEstornado` |
+| `src/components/payments/SessionPaymentsManager.tsx` | Botão estorno para pagos; badge "Estornado"; exibição de estornos na lista |
+| `src/types/sessionPayments.ts` | Adicionar `'estorno'` ao tipo |
+| `src/utils/sessionDeletionUtils.ts` | Opção de estornar em vez de excluir |
+| `src/components/workflow/FlexibleDeleteModal.tsx` | Trocar label "Excluir pagamentos" → "Estornar pagamentos" |
+
+## Ações necessárias no projeto Gallery
+
+1. **Verificar se Gallery exclui galerias diretamente** — após a migration, excluir galeria não apagará cobranças (SET NULL), então o Gallery deve tratar cobranças órfãs ou impedir exclusão de galerias com cobranças pagas
+2. **Webhooks de gateway** — nenhuma mudança necessária (continuam criando transações normalmente)
+3. **UI de exclusão de galeria no Gallery** — adicionar aviso se galeria possui cobranças pagas, oferecendo opção de estorno antes da exclusão
 
