@@ -403,7 +403,7 @@ export function SessionPaymentsManager({
                                 <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                               </Button>
                             )}
-                            {payment.editavel && (
+                            {payment.editavel && payment.statusPagamento !== 'pago' && (
                               <>
                                 <Button
                                   size="sm"
@@ -416,19 +416,44 @@ export function SessionPaymentsManager({
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => {
-                                    // Se pagamento já está pago, pedir confirmação
-                                    if (payment.statusPagamento === 'pago') {
-                                      setPaymentToDelete(payment);
-                                    } else {
-                                      deletePayment(payment.id);
-                                    }
-                                  }}
+                                  onClick={() => deletePayment(payment.id)}
                                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                 >
                                   <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                                 </Button>
                               </>
+                            )}
+                            {payment.statusPagamento === 'pago' && payment.editavel && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingPayment(payment)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setPaymentToRefund(payment)}
+                                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                                  title="Estornar pagamento"
+                                >
+                                  <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {payment.statusPagamento === 'pago' && !payment.editavel && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setPaymentToRefund(payment)}
+                                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                                title="Estornar pagamento"
+                              >
+                                <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
                             )}
                           </div>
                         </TableCell>
