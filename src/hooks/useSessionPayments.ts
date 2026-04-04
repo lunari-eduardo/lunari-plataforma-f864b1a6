@@ -546,15 +546,19 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Remove auto-save useEffect to prevent loops
   // Payments will be saved explicitly in each action function
 
-  // Calcular total pago (bruto - o que o cliente pagou)
+  // Calcular total pago (bruto - o que o cliente pagou) - subtrair estornos
+  const totalEstornado = payments
+    .filter(p => p.tipo === 'estorno')
+    .reduce((acc, p) => acc + p.valor, 0);
+
   const totalPago = payments
     .filter(p => p.statusPagamento === 'pago')
-    .reduce((acc, p) => acc + p.valor, 0);
+    .reduce((acc, p) => acc + p.valor, 0) - totalEstornado;
 
   // Calcular total recebido (líquido - o que o fotógrafo recebeu de fato)
   const totalRecebido = payments
     .filter(p => p.statusPagamento === 'pago')
-    .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0);
+    .reduce((acc, p) => acc + (p.valorLiquido != null ? p.valorLiquido : p.valor), 0) - totalEstornado;
 
   // Calcular total de taxas
   const totalTaxas = payments
