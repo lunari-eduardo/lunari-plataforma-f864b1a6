@@ -359,8 +359,11 @@ export function SessionPaymentsManager({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`font-semibold ${payment.statusPagamento === 'pago' ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {formatCurrency(payment.valor)}
+                          <span className={`font-semibold ${
+                            payment.tipo === 'estorno' ? 'text-red-600 line-through' : 
+                            payment.statusPagamento === 'pago' ? 'text-green-600' : 'text-yellow-600'
+                          }`}>
+                            {payment.tipo === 'estorno' ? '-' : ''}{formatCurrency(payment.valor)}
                           </span>
                           {payment.valorLiquido != null && payment.valorLiquido < payment.valor && (
                             <p className="text-xs text-muted-foreground mt-0.5">
