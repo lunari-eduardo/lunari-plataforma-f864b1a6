@@ -782,7 +782,7 @@ export const useWorkflowRealtime = () => {
   }, [sessions]);
 
   // Delete session with flexible options
-  const deleteSession = useCallback(async (id: string, includePayments: boolean = false) => {
+  const deleteSession = useCallback(async (id: string, paymentAction: 'preserve' | 'refund' = 'preserve') => {
     try {
       const { data: { session: authSession } } = await supabase.auth.getSession();
       if (!authSession?.user) throw new Error('User not authenticated');
@@ -796,7 +796,7 @@ export const useWorkflowRealtime = () => {
       const { deleteSessionWithOptions } = await import('@/utils/sessionDeletionUtils');
       
       await deleteSessionWithOptions(session.session_id, {
-        includePayments,
+        paymentAction,
         userId: user.user.id
       });
 
@@ -804,8 +804,8 @@ export const useWorkflowRealtime = () => {
       
       toast({
         title: "Sessão excluída",
-        description: includePayments ? 
-          "Sessão e pagamentos excluídos com sucesso." :
+        description: paymentAction === 'refund' ? 
+          "Sessão excluída e pagamentos estornados com sucesso." :
           "Sessão excluída. Pagamentos mantidos para auditoria.",
       });
     } catch (err) {
