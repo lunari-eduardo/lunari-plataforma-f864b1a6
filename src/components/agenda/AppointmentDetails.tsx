@@ -142,9 +142,8 @@ export default function AppointmentDetails({
     
   };
 
-  const handleDeleteConfirm = (preservePayments: boolean) => {
-    onDelete(appointment.id, preservePayments);
-    
+  const handleDeleteConfirm = (action: 'preserve' | 'refund' | 'remove') => {
+    onDelete(appointment.id, action);
   };
 
   // Lazy load history when opened

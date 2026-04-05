@@ -165,15 +165,22 @@ export default function Agenda() {
     }
   }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
-  // Handle appointment deletion - FASE 5: Adicionar feedback visual
-  const handleDeleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
+  // Handle appointment deletion
+  const handleDeleteAppointment = useCallback(async (id: string, action?: 'preserve' | 'refund' | 'remove') => {
     try {
-      await deleteAppointment(id, preservePayments);
+      await deleteAppointment(id, action);
       
-      if (preservePayments) {
-        toast.success('Agendamento cancelado com sucesso! Histórico de pagamentos preservado.');
-      } else {
-        toast.success('Agendamento e todos os dados relacionados foram excluídos permanentemente.');
+      switch (action) {
+        case 'preserve':
+          toast.success('Agendamento cancelado com sucesso! Histórico de pagamentos preservado.');
+          break;
+        case 'refund':
+          toast.success('Pagamentos estornados e agendamento excluído com sucesso.');
+          break;
+        case 'remove':
+        default:
+          toast.success('Agendamento e todos os dados relacionados foram excluídos permanentemente.');
+          break;
       }
       
       setIsDetailsOpen(false);
