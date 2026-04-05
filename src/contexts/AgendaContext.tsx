@@ -21,7 +21,7 @@ interface AgendaContextType {
   appointments: Appointment[];
   addAppointment: (appointmentData: Omit<Appointment, 'id'>) => Promise<Appointment>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
-  deleteAppointment: (id: string, preservePayments?: boolean) => Promise<void>;
+  deleteAppointment: (id: string, action?: 'preserve' | 'refund' | 'remove') => Promise<void>;
   loadMonthData: (year: number, month: number) => Promise<void>;
   
   // Availability
