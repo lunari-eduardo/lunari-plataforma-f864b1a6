@@ -1,100 +1,79 @@
 
 
-# Sistema de Estorno + Correção de Cascatas Perigosas
+# Correção: Estornos + Modal Agenda + Restaurar exclusão manual
 
-## Problemas Críticos Encontrados
+## Causa raiz do estorno falhando (400 Bad Request)
 
-### 1. CASCADE perigoso: Excluir galeria apaga cobranças
-`cobrancas.galeria_id → galerias.id ON DELETE CASCADE` — ao excluir uma galeria, **todas as cobranças vinculadas são apagadas**, incluindo parcelas (outro CASCADE). Isso destrói todo o histórico financeiro silenciosamente.
-
-### 2. Excluir sessão + galeria vinculada
-Hoje, `clientes_sessoes.galeria_id → galerias.id ON DELETE SET NULL` — se a galeria é excluída, o vínculo é removido. Porém se a sessão for excluída pelo Workflow, o código em `sessionDeletionUtils.ts` pode excluir transações (`clientes_transacoes`) sem registro de estorno. A galeria permanece intacta (não há cascade de sessão → galeria).
-
-### 3. Pagamentos são deletados sem rastro
-`PaymentSupabaseService.deletePaymentFromSupabase()` faz `DELETE` direto na tabela `clientes_transacoes`. O trigger `recompute_session_paid` recalcula o saldo — mas o registro financeiro desaparece completamente. Não há auditoria.
-
-### 4. `recompute_session_paid` ignora estornos
-A função soma apenas `tipo = 'pagamento'`. Precisará considerar `tipo = 'estorno'` como valor negativo.
-
----
-
-## Plano de Implementação
-
-### Fase 1: Migration SQL — Corrigir cascatas e suportar estorno
-
-**A) Trocar CASCADE por SET NULL em `cobrancas.galeria_id`**
+A tabela `clientes_transacoes` possui um CHECK constraint na coluna `tipo`:
 ```sql
-ALTER TABLE cobrancas DROP CONSTRAINT cobrancas_galeria_id_fkey;
-ALTER TABLE cobrancas ADD CONSTRAINT cobrancas_galeria_id_fkey 
-  FOREIGN KEY (galeria_id) REFERENCES galerias(id) ON DELETE SET NULL;
+tipo text NOT NULL CHECK (tipo IN ('pagamento', 'desconto', 'ajuste'))
 ```
-Isso garante que excluir uma galeria **preserva** as cobranças (ficam órfãs mas auditáveis).
+O valor `'estorno'` **não está na lista permitida**. Toda tentativa de INSERT com `tipo = 'estorno'` resulta em erro 400. A migration anterior atualizou os triggers (`recompute_session_paid`) para tratar estornos, mas **esqueceu de atualizar o CHECK constraint**.
 
-**B) Atualizar `recompute_session_paid` para considerar estornos**
+## Problemas identificados
+
+1. **CHECK constraint bloqueia estorno** — precisa incluir `'estorno'` na lista
+2. **Modal da agenda (`AppointmentDeleteConfirmModal`)** — ainda mostra "Excluir tudo permanentemente" com texto sobre excluir pagamentos, sem opção de estorno
+3. **RPC `delete_appointment_cascade`** — faz `DELETE FROM clientes_transacoes` direto, sem criar estornos
+4. **Botão de exclusão removido para pagamentos pagos manuais** — o usuário quer manter a opção de excluir pagamentos manuais pagos (ex: lançamento acidental), além do estorno
+
+## Plano de implementação
+
+### 1. Migration SQL — Atualizar CHECK constraint
+
 ```sql
-UPDATE clientes_sessoes SET valor_pago = (
-  SELECT COALESCE(SUM(
-    CASE WHEN tipo = 'estorno' THEN -valor ELSE valor END
-  ), 0)
-  FROM clientes_transacoes
-  WHERE session_id = p_session_id AND tipo IN ('pagamento', 'estorno')
-)
+ALTER TABLE public.clientes_transacoes 
+  DROP CONSTRAINT clientes_transacoes_tipo_check;
+ALTER TABLE public.clientes_transacoes 
+  ADD CONSTRAINT clientes_transacoes_tipo_check 
+  CHECK (tipo IN ('pagamento', 'desconto', 'ajuste', 'estorno'));
 ```
 
-### Fase 2: Lógica de estorno no código
+### 2. `AppointmentDeleteConfirmModal.tsx` — Adicionar opção de estorno
 
-**A) `PaymentSupabaseService.ts` — Nova função `refundPayment`**
-Em vez de deletar a transação original, criar uma nova transação com:
-- `tipo: 'estorno'`
-- `valor`: valor estornado (positivo na tabela, tratado como negativo pelo trigger)
-- `descricao`: referência ao pagamento original
-- `data_transacao`: data atual
-- Manter a transação original intacta
+Quando `hasPayments === true`, oferecer **3 opções** (RadioGroup):
+- **Preservar histórico** (atual) — cancela agendamento, sessão vira histórico, pagamentos mantidos
+- **Estornar pagamentos** (nova) — cria registros de estorno para cada pagamento pago, depois exclui sessão
+- **Excluir tudo permanentemente** (atual) — deleta tudo incluindo pagamentos
 
-**B) `useSessionPayments.ts` — Substituir `deletePayment` por `refundPayment`**
-- Pagamentos **pendentes/agendados**: podem ser excluídos normalmente (ainda não foram pagos)
-- Pagamentos **pagos**: criar estorno em vez de excluir
-- Pagamentos de **gateway** (InfinitePay, Asaas, MP): não editáveis, estorno apenas registra internamente
+Ajustar a prop `onConfirm` para aceitar `'preserve' | 'refund' | 'remove'` em vez de `boolean`.
 
-**C) `SessionPaymentsManager.tsx` — Trocar botão de excluir por estornar**
-- Para pagamentos pagos: ícone de estorno (RotateCcw) em vez de lixeira
-- Modal de confirmação: "Estornar pagamento de R$ X?" com campo opcional de motivo
-- Pagamento estornado aparece na lista com badge "Estornado" e valor em vermelho
+### 3. `SupabaseAgendaAdapter.ts` + `AgendaContext` — Propagar opção de estorno
 
-**D) `sessionDeletionUtils.ts` — FlexibleDeleteModal**
-- Trocar opção "Excluir pagamentos" por "Estornar pagamentos"
-- Ao excluir sessão com estorno: criar transação de estorno para cada pagamento pago, depois excluir sessão
-- Opção "Preservar pagamentos" continua orphanando (session_id = null)
+- `deleteAppointment(id, action: 'preserve' | 'refund' | 'remove')` em vez de `boolean`
+- Quando `action === 'refund'`: usar `deleteSessionWithOptions` com `paymentAction: 'refund'` antes de excluir o appointment
+- Quando `action === 'remove'`: manter RPC cascade atual
+- Quando `action === 'preserve'`: manter fluxo legado atual
 
-### Fase 3: Exibição de estornos
+### 4. `SessionPaymentsManager.tsx` — Restaurar botão de excluir para manuais pagos
 
-**A) `SessionPaymentExtended` — Novo tipo**
-Adicionar `'estorno'` ao tipo de pagamento e `'estornado'` ao status.
+Para pagamentos **pagos + editáveis** (manuais), exibir **ambos** botões:
+- Editar (lápis)
+- Excluir (lixeira) — exclusão direta do registro
+- Estornar (RotateCcw) — cria registro de estorno
 
-**B) Cálculos atualizados em `useSessionPayments.ts`**
-- `totalPago`: soma pagamentos pagos — soma estornos
-- `totalEstornado`: soma de estornos (novo campo)
+Isso dá controle total ao usuário: se foi lançado por engano, exclui; se foi pago de verdade mas precisa devolver, estorna.
 
-**C) Extrato unificado (`extrato_unificado` view)**
-Verificar se a view já trata `tipo = 'estorno'`. Se não, atualizar para exibi-lo corretamente.
+### 5. `Agenda.tsx` — Atualizar handler de exclusão
 
----
+Ajustar `handleDeleteAppointment` para receber o tipo de ação e exibir toast adequado para cada caso.
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | Trocar CASCADE por SET NULL em `cobrancas.galeria_id`; atualizar `recompute_session_paid` |
-| `src/services/PaymentSupabaseService.ts` | Nova função `refundPayment`; manter `deletePayment` apenas para pendentes |
-| `src/hooks/useSessionPayments.ts` | Lógica de estorno vs exclusão; novo cálculo `totalEstornado` |
-| `src/components/payments/SessionPaymentsManager.tsx` | Botão estorno para pagos; badge "Estornado"; exibição de estornos na lista |
-| `src/types/sessionPayments.ts` | Adicionar `'estorno'` ao tipo |
-| `src/utils/sessionDeletionUtils.ts` | Opção de estornar em vez de excluir |
-| `src/components/workflow/FlexibleDeleteModal.tsx` | Trocar label "Excluir pagamentos" → "Estornar pagamentos" |
+| Migration SQL | Adicionar `'estorno'` ao CHECK constraint de `clientes_transacoes.tipo` |
+| `AppointmentDeleteConfirmModal.tsx` | 3 opções (preservar/estornar/excluir); nova prop `onConfirm(action)` |
+| `AppointmentDetails.tsx` | Propagar novo tipo de ação |
+| `SupabaseAgendaAdapter.ts` | Aceitar `'preserve' | 'refund' | 'remove'`; chamar estorno quando necessário |
+| `AgendaContext.tsx` | Ajustar tipo do parâmetro |
+| `Agenda.tsx` | Ajustar handler e toasts |
+| `SessionPaymentsManager.tsx` | Restaurar botão de excluir para pagamentos manuais pagos |
 
-## Ações necessárias no projeto Gallery
+## O que NÃO muda
 
-1. **Verificar se Gallery exclui galerias diretamente** — após a migration, excluir galeria não apagará cobranças (SET NULL), então o Gallery deve tratar cobranças órfãs ou impedir exclusão de galerias com cobranças pagas
-2. **Webhooks de gateway** — nenhuma mudança necessária (continuam criando transações normalmente)
-3. **UI de exclusão de galeria no Gallery** — adicionar aviso se galeria possui cobranças pagas, oferecendo opção de estorno antes da exclusão
+- `PaymentSupabaseService.refundPayment()` — lógica já está correta, só falhava pelo CHECK
+- `sessionDeletionUtils.ts` — fluxo de estorno em massa já funciona
+- `FlexibleDeleteModal.tsx` (workflow) — já atualizado corretamente
+- Triggers `recompute_session_paid` — já tratam estornos como negativos
 
