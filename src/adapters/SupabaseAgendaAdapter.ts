@@ -478,25 +478,21 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     }
   }
 
-  async deleteAppointment(id: string, preservePayments?: boolean): Promise<void> {
+  async deleteAppointment(id: string, action?: 'preserve' | 'refund' | 'remove'): Promise<void> {
     const { data: { session: authSess } } = await supabase.auth.getSession();
     if (!authSess?.user) throw new Error('User not authenticated');
+
+    const effectiveAction = action || 'remove';
 
     // ✅ FASE 5: Log estruturado no início
     console.log('🗑️ [DELETE-START]', {
       timestamp: new Date().toISOString(),
       appointmentId: id,
-      preservePayments: preservePayments ?? false
+      action: effectiveAction
     });
 
-    // FASE 3: Validar parâmetro
-    if (preservePayments !== undefined && typeof preservePayments !== 'boolean') {
-      console.error('❌ Parâmetro preservePayments inválido:', preservePayments);
-      throw new Error('preservePayments deve ser boolean (true/false)');
-    }
-
-    // ✅ FASE 3 (ESCABILIDADE): Usar RPC atômica para exclusão simples
-    if (!preservePayments) {
+    // ✅ Ação 'remove': exclusão em cascata via RPC
+    if (effectiveAction === 'remove') {
       console.log('🚀 [DeleteAppointment] Usando RPC atômica para exclusão em cascata');
       
       // Primeiro, buscar appointment para Google Calendar sync
@@ -534,6 +530,92 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         result: result
       });
       
+      return;
+    }
+
+    // ✅ Ação 'refund': estornar pagamentos e depois excluir sessão
+    if (effectiveAction === 'refund') {
+      console.log('🔄 [DeleteAppointment] Estornando pagamentos antes de excluir');
+      
+      // Buscar appointment
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', authSess.user.id)
+        .single();
+      
+      if (appointmentError || !appointment) throw appointmentError || new Error('Appointment not found');
+      
+      // Buscar sessão
+      const { data: workflowSession } = await supabase
+        .from('clientes_sessoes')
+        .select('*')
+        .eq('user_id', authSess.user.id)
+        .eq('appointment_id', id)
+        .maybeSingle();
+      
+      if (workflowSession) {
+        const sessionId = workflowSession.session_id;
+        
+        // Buscar pagamentos pagos da sessão
+        const { data: paidTransactions } = await supabase
+          .from('clientes_transacoes')
+          .select('*')
+          .eq('session_id', sessionId)
+          .eq('user_id', authSess.user.id)
+          .eq('tipo', 'pagamento');
+        
+        // Criar estornos para cada pagamento pago
+        if (paidTransactions && paidTransactions.length > 0) {
+          const refunds = paidTransactions.map(t => ({
+            user_id: authSess.user.id,
+            cliente_id: t.cliente_id,
+            session_id: t.session_id,
+            valor: t.valor,
+            tipo: 'estorno' as const,
+            data_transacao: new Date().toISOString().split('T')[0],
+            descricao: `Estorno: ${t.descricao || 'Pagamento'} (agendamento excluído)`,
+          }));
+          
+          const { error: refundError } = await supabase
+            .from('clientes_transacoes')
+            .insert(refunds);
+          
+          if (refundError) {
+            console.error('❌ Erro ao criar estornos:', refundError);
+            throw new Error(`Falha ao estornar pagamentos: ${refundError.message}`);
+          }
+          
+          console.log(`✅ ${refunds.length} estornos criados`);
+        }
+        
+        // Excluir sessão
+        await supabase
+          .from('clientes_sessoes')
+          .delete()
+          .eq('id', workflowSession.id)
+          .eq('user_id', authSess.user.id);
+      }
+      
+      // Google Calendar sync
+      if (appointment.google_event_id) {
+        try {
+          const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
+          await syncAppointmentToGoogleCalendar(id, 'delete');
+        } catch (syncError) {
+          console.warn('⚠️ Google Calendar delete sync failed (non-fatal):', syncError);
+        }
+      }
+      
+      // Excluir appointment
+      await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', authSess.user.id);
+      
+      console.log('✅ [DELETE-COMPLETE-REFUND]', { timestamp: new Date().toISOString() });
       return;
     }
 
