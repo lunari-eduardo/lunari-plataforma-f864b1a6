@@ -23,7 +23,7 @@ interface AppointmentDetailsProps {
   appointment: Appointment;
   onSave: (appointmentData: any) => void;
   onCancel: () => void;
-  onDelete: (id: string, preservePayments?: boolean) => void;
+  onDelete: (id: string, action?: 'preserve' | 'refund' | 'remove') => void;
 }
 
 export default function AppointmentDetails({
