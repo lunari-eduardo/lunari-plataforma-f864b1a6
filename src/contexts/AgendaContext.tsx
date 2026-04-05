@@ -439,7 +439,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
   // ✅ FASE 4: Lock para prevenir deleções duplicadas
   const deletionInProgressRef = useRef<Set<string>>(new Set());
   
-  const deleteAppointment = useCallback(async (id: string, preservePayments?: boolean) => {
+  const deleteAppointment = useCallback(async (id: string, action?: 'preserve' | 'refund' | 'remove') => {
     // ✅ FASE 4: Verificar se já está deletando este appointment
     if (deletionInProgressRef.current.has(id)) {
       console.warn(`⚠️ [AgendaContext] Deleção já em andamento para ${id} - ignorando chamada duplicada`);
@@ -449,19 +449,18 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     // Adicionar ao lock
     deletionInProgressRef.current.add(id);
     
-    // ✅ Bloquear real-time durante operação manual (mesmo padrão de addAppointment)
+    // ✅ Bloquear real-time durante operação manual
     isManualOperationRef.current = true;
     console.log('🔒🗑️ [AgendaContext] Iniciando deleção (real-time bloqueado):', { 
       id, 
-      preservePayments,
+      action: action ?? 'remove',
       timestamp: new Date().toISOString() 
     });
     
     try {
-      // FASE 2: Buscar dados antes de deletar
       const appointment = appointments.find(app => app.id === id);
       
-      await agendaService.deleteAppointment(id, preservePayments);
+      await agendaService.deleteAppointment(id, action);
       
       // FASE 2: Liberar slot se era confirmado (opcional - comentado)
       // if (appointment?.status === 'confirmado') {
