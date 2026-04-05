@@ -1,79 +1,60 @@
 
 
-# Correção: Estornos + Modal Agenda + Restaurar exclusão manual
+# Correção: Metas personalizadas não persistem
 
-## Causa raiz do estorno falhando (400 Bad Request)
+## Diagnóstico
 
-A tabela `clientes_transacoes` possui um CHECK constraint na coluna `tipo`:
+Após análise do banco e do código:
+
+1. **Tabela e tipos existem corretamente** — `metas_personalizadas` está no schema, com unique constraint `(user_id, ano, mes, categoria)` e RLS policy funcional.
+
+2. **`as any` casts desnecessários** — A tabela `metas_personalizadas` e o campo `modo_metas` já existem nos tipos gerados do Supabase. Os casts `as any` em todo o hook estão **mascarando erros de resposta** do Supabase (se houver falha no upsert, o TypeScript não consegue inferir o tipo do erro).
+
+3. **Sem log de erros no save** — `salvarTodasMetas` e `salvarMetaCategoria` não logam erros. Se o upsert falhar, o erro é engolido silenciosamente.
+
+4. **`config.modo_metas` usa cast desnecessário** — `(config as any)?.modo_metas` quando o campo já está nos tipos. O `select()` pode não inferir `modo_metas` porque a query especifica colunas como string.
+
+5. **`updated_at` não atualiza no upsert** — Sem trigger, `updated_at` fica com o valor do INSERT original, o que é confuso mas não impede o funcionamento.
+
+## Plano
+
+### 1. `useMetasPersonalizadas.ts` — Remover `as any` e adicionar logs
+
+- Trocar `supabase.from('metas_personalizadas' as any)` por `supabase.from('metas_personalizadas')` em todas as ocorrências
+- Remover todos os `as any` desnecessários nos payloads e respostas
+- Trocar `(config as any)?.modo_metas` por acesso direto (campo está nos tipos)
+- Adicionar `console.error` em todos os pontos de save quando `error` existir
+- Na query de config, usar `.select('*')` para garantir que todos os campos são retornados corretamente tipados (ou selecionar `modo_metas` explicitamente)
+- Após cada upsert, fazer `console.log` do resultado para debug
+
+### 2. Migration SQL — Trigger para `updated_at`
+
+Criar trigger simples para atualizar `updated_at` automaticamente:
+
 ```sql
-tipo text NOT NULL CHECK (tipo IN ('pagamento', 'desconto', 'ajuste'))
-```
-O valor `'estorno'` **não está na lista permitida**. Toda tentativa de INSERT com `tipo = 'estorno'` resulta em erro 400. A migration anterior atualizou os triggers (`recompute_session_paid`) para tratar estornos, mas **esqueceu de atualizar o CHECK constraint**.
+CREATE OR REPLACE FUNCTION update_metas_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-## Problemas identificados
-
-1. **CHECK constraint bloqueia estorno** — precisa incluir `'estorno'` na lista
-2. **Modal da agenda (`AppointmentDeleteConfirmModal`)** — ainda mostra "Excluir tudo permanentemente" com texto sobre excluir pagamentos, sem opção de estorno
-3. **RPC `delete_appointment_cascade`** — faz `DELETE FROM clientes_transacoes` direto, sem criar estornos
-4. **Botão de exclusão removido para pagamentos pagos manuais** — o usuário quer manter a opção de excluir pagamentos manuais pagos (ex: lançamento acidental), além do estorno
-
-## Plano de implementação
-
-### 1. Migration SQL — Atualizar CHECK constraint
-
-```sql
-ALTER TABLE public.clientes_transacoes 
-  DROP CONSTRAINT clientes_transacoes_tipo_check;
-ALTER TABLE public.clientes_transacoes 
-  ADD CONSTRAINT clientes_transacoes_tipo_check 
-  CHECK (tipo IN ('pagamento', 'desconto', 'ajuste', 'estorno'));
+CREATE TRIGGER trg_metas_updated_at
+BEFORE UPDATE ON public.metas_personalizadas
+FOR EACH ROW EXECUTE FUNCTION update_metas_updated_at();
 ```
 
-### 2. `AppointmentDeleteConfirmModal.tsx` — Adicionar opção de estorno
+### 3. `MetasConfigTab.tsx` — Feedback de erro visível
 
-Quando `hasPayments === true`, oferecer **3 opções** (RadioGroup):
-- **Preservar histórico** (atual) — cancela agendamento, sessão vira histórico, pagamentos mantidos
-- **Estornar pagamentos** (nova) — cria registros de estorno para cada pagamento pago, depois exclui sessão
-- **Excluir tudo permanentemente** (atual) — deleta tudo incluindo pagamentos
-
-Ajustar a prop `onConfirm` para aceitar `'preserve' | 'refund' | 'remove'` em vez de `boolean`.
-
-### 3. `SupabaseAgendaAdapter.ts` + `AgendaContext` — Propagar opção de estorno
-
-- `deleteAppointment(id, action: 'preserve' | 'refund' | 'remove')` em vez de `boolean`
-- Quando `action === 'refund'`: usar `deleteSessionWithOptions` com `paymentAction: 'refund'` antes de excluir o appointment
-- Quando `action === 'remove'`: manter RPC cascade atual
-- Quando `action === 'preserve'`: manter fluxo legado atual
-
-### 4. `SessionPaymentsManager.tsx` — Restaurar botão de excluir para manuais pagos
-
-Para pagamentos **pagos + editáveis** (manuais), exibir **ambos** botões:
-- Editar (lápis)
-- Excluir (lixeira) — exclusão direta do registro
-- Estornar (RotateCcw) — cria registro de estorno
-
-Isso dá controle total ao usuário: se foi lançado por engano, exclui; se foi pago de verdade mas precisa devolver, estorna.
-
-### 5. `Agenda.tsx` — Atualizar handler de exclusão
-
-Ajustar `handleDeleteAppointment` para receber o tipo de ação e exibir toast adequado para cada caso.
+- No `handleSalvarMensal` e `handleSalvarCategorias`, logar o erro completo no console
+- Garantir que toast de erro mostra a mensagem real do Supabase
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | Adicionar `'estorno'` ao CHECK constraint de `clientes_transacoes.tipo` |
-| `AppointmentDeleteConfirmModal.tsx` | 3 opções (preservar/estornar/excluir); nova prop `onConfirm(action)` |
-| `AppointmentDetails.tsx` | Propagar novo tipo de ação |
-| `SupabaseAgendaAdapter.ts` | Aceitar `'preserve' | 'refund' | 'remove'`; chamar estorno quando necessário |
-| `AgendaContext.tsx` | Ajustar tipo do parâmetro |
-| `Agenda.tsx` | Ajustar handler e toasts |
-| `SessionPaymentsManager.tsx` | Restaurar botão de excluir para pagamentos manuais pagos |
-
-## O que NÃO muda
-
-- `PaymentSupabaseService.refundPayment()` — lógica já está correta, só falhava pelo CHECK
-- `sessionDeletionUtils.ts` — fluxo de estorno em massa já funciona
-- `FlexibleDeleteModal.tsx` (workflow) — já atualizado corretamente
-- Triggers `recompute_session_paid` — já tratam estornos como negativos
+| `src/hooks/useMetasPersonalizadas.ts` | Remover `as any`, adicionar error logging |
+| Migration SQL | Trigger `updated_at` |
+| `src/components/financas/MetasConfigTab.tsx` | Melhorar feedback de erro |
 
