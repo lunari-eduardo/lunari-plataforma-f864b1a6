@@ -442,6 +442,15 @@ export function SessionPaymentsManager({
                                 >
                                   <RotateCcw className="h-3 w-3 md:h-4 md:w-4" />
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => deletePayment(payment.id)}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  title="Excluir registro (lançamento manual)"
+                                >
+                                  <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                                </Button>
                               </>
                             )}
                             {payment.statusPagamento === 'pago' && !payment.editavel && (
