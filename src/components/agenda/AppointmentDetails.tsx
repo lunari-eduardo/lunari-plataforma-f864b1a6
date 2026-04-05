@@ -23,7 +23,7 @@ interface AppointmentDetailsProps {
   appointment: Appointment;
   onSave: (appointmentData: any) => void;
   onCancel: () => void;
-  onDelete: (id: string, preservePayments?: boolean) => void;
+  onDelete: (id: string, action?: 'preserve' | 'refund' | 'remove') => void;
 }
 
 export default function AppointmentDetails({
@@ -142,9 +142,8 @@ export default function AppointmentDetails({
     
   };
 
-  const handleDeleteConfirm = (preservePayments: boolean) => {
-    onDelete(appointment.id, preservePayments);
-    
+  const handleDeleteConfirm = (action: 'preserve' | 'refund' | 'remove') => {
+    onDelete(appointment.id, action);
   };
 
   // Lazy load history when opened

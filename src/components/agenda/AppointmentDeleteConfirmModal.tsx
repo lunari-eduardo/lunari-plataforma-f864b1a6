@@ -3,13 +3,15 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Trash2, X, RotateCcw, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+export type DeleteAction = 'preserve' | 'refund' | 'remove';
 
 interface AppointmentDeleteConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (preservePayments: boolean) => void;
+  onConfirm: (action: DeleteAction) => void;
   appointmentData: {
     id: string;
     sessionId?: string;
@@ -27,7 +29,7 @@ export function AppointmentDeleteConfirmModal({
   onConfirm,
   appointmentData
 }: AppointmentDeleteConfirmModalProps) {
-  const [preservePayments, setPreservePayments] = useState<'preserve' | 'remove'>('preserve');
+  const [action, setAction] = useState<DeleteAction>('preserve');
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
@@ -35,8 +37,7 @@ export function AppointmentDeleteConfirmModal({
     
     setLoading(true);
     try {
-      const shouldPreserve = preservePayments === 'preserve';
-      onConfirm(shouldPreserve);
+      onConfirm(action);
       onClose();
     } finally {
       setLoading(false);
@@ -48,7 +49,6 @@ export function AppointmentDeleteConfirmModal({
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onClose}>
       <DialogPrimitive.Portal>
-        {/* Overlay com z-index alto para sobrepor modal pai */}
         <DialogPrimitive.Overlay 
           className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" 
         />
@@ -110,26 +110,49 @@ export function AppointmentDeleteConfirmModal({
             )}
             
             {appointmentData.hasWorkflowSession ? (
-              <RadioGroup value={preservePayments} onValueChange={(value) => setPreservePayments(value as 'preserve' | 'remove')}>
+              <RadioGroup value={action} onValueChange={(value) => setAction(value as DeleteAction)}>
                 <div className="flex items-center space-x-2 p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
                   <RadioGroupItem value="preserve" id="preserve" />
                   <Label htmlFor="preserve" className="flex-1 cursor-pointer">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-lunar-text">Cancelar agendamento (preservar histórico)</p>
+                      <p className="text-sm font-medium text-lunar-text flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5 text-blue-500" />
+                        Cancelar agendamento (preservar histórico)
+                      </p>
                       <p className="text-xs text-lunar-textSecondary">
                         Remove o agendamento e oculta a sessão do workflow. Os valores pagos e dados da sessão ficam preservados no histórico do cliente (somente leitura)
                       </p>
                     </div>
                   </Label>
                 </div>
+
+                {appointmentData.hasPayments && (
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/30">
+                    <RadioGroupItem value="refund" id="refund" />
+                    <Label htmlFor="refund" className="flex-1 cursor-pointer">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-lunar-text flex items-center gap-1.5">
+                          <RotateCcw className="h-3.5 w-3.5 text-orange-500" />
+                          Estornar pagamentos e excluir
+                        </p>
+                        <p className="text-xs text-lunar-textSecondary">
+                          Cria registros de estorno para cada pagamento realizado, depois exclui a sessão. O histórico financeiro fica preservado para auditoria.
+                        </p>
+                      </div>
+                    </Label>
+                  </div>
+                )}
                 
                 <div className="flex items-center space-x-2 p-3 rounded-lg border border-destructive/20 bg-destructive/5">
                   <RadioGroupItem value="remove" id="remove" />
                   <Label htmlFor="remove" className="flex-1 cursor-pointer">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-lunar-text">Excluir tudo permanentemente</p>
+                      <p className="text-sm font-medium text-lunar-text flex items-center gap-1.5">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        Excluir tudo permanentemente
+                      </p>
                       <p className="text-xs text-lunar-textSecondary">
-                        Remove agendamento, sessão do workflow e todos os pagamentos relacionados
+                        Remove agendamento, sessão do workflow e todos os pagamentos relacionados permanentemente
                       </p>
                     </div>
                   </Label>
@@ -160,9 +183,17 @@ export function AppointmentDeleteConfirmModal({
                 'Processando...'
               ) : (
                 <>
-                  <Trash2 className="h-4 w-4" />
+                  {action === 'refund' ? (
+                    <RotateCcw className="h-4 w-4" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                   {appointmentData.hasWorkflowSession 
-                    ? (preservePayments === 'preserve' ? 'Cancelar Agendamento' : 'Excluir Tudo')
+                    ? action === 'preserve' 
+                      ? 'Cancelar Agendamento' 
+                      : action === 'refund'
+                        ? 'Estornar e Excluir'
+                        : 'Excluir Tudo'
                     : 'Confirmar Exclusão'
                   }
                 </>

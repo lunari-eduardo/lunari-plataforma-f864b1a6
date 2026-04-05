@@ -12,7 +12,7 @@ export abstract class AgendaStorageAdapter {
   abstract loadAppointmentsByRange(startDate: string, endDate: string): Promise<Appointment[]>;
   abstract saveAppointment(appointment: Appointment): Promise<Appointment>;
   abstract updateAppointment(id: string, updates: Partial<Appointment>): Promise<void>;
-  abstract deleteAppointment(id: string, preservePayments?: boolean): Promise<void>;
+  abstract deleteAppointment(id: string, action?: 'preserve' | 'refund' | 'remove'): Promise<void>;
 
   // Availability
   abstract loadAvailabilitySlots(): Promise<AvailabilitySlot[]>;
