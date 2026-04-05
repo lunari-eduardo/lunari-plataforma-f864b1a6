@@ -132,10 +132,14 @@ export default function MetasConfigTab() {
       }));
       const result = await salvarTodasMetas(metasArray);
       if (result?.error) {
-        toast({ title: 'Erro ao salvar metas', variant: 'destructive' });
+        console.error('[MetasConfig] Erro ao salvar metas mensais:', result.error);
+        toast({ title: 'Erro ao salvar metas', description: String(result.error.message || result.error), variant: 'destructive' });
       } else {
         toast({ title: 'Metas salvas com sucesso!' });
       }
+    } catch (err) {
+      console.error('[MetasConfig] Exceção ao salvar metas:', err);
+      toast({ title: 'Erro inesperado ao salvar', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -144,10 +148,22 @@ export default function MetasConfigTab() {
   const handleSalvarCategorias = async () => {
     setSaving(true);
     try {
+      let hasError = false;
       for (const cg of catGoalsLocal) {
-        await salvarMetaCategoria(0, cg.categoriaId, parseBRL(cg.faturamento), 0);
+        const result = await salvarMetaCategoria(0, cg.categoriaId, parseBRL(cg.faturamento), 0);
+        if (result?.error) {
+          console.error('[MetasConfig] Erro ao salvar meta categoria:', result.error);
+          hasError = true;
+        }
       }
-      toast({ title: 'Metas por categoria salvas!' });
+      if (hasError) {
+        toast({ title: 'Erro ao salvar algumas metas', variant: 'destructive' });
+      } else {
+        toast({ title: 'Metas por categoria salvas!' });
+      }
+    } catch (err) {
+      console.error('[MetasConfig] Exceção ao salvar categorias:', err);
+      toast({ title: 'Erro inesperado ao salvar', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
