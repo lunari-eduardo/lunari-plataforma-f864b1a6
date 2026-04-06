@@ -1,80 +1,56 @@
 
 
-# Correção: Metas inteligentes na Análise de Vendas
+# Correção: Metas na Análise de Vendas — 3 problemas
 
-## Problema
+## Problemas identificados
 
-O `SalesGoalsCard` **não recebe `selectedCategory`** e usa `useWorkflowMetricsRealtime` que **não filtra por categoria**. Resultado: quando o usuário filtra "Dia das Mães", a receita mostrada nos KPIs (R$ 80) vem do `salesMetrics` (filtrado), mas a meta compara contra o valor total sem filtro — ou pior, a receita da meta vem do hook sem filtro, mostrando 100% incorretamente.
+### 1. Categoria não mostra meta (Empty state)
+**Causa**: Metas por categoria são salvas com `categoria = UUID` (ex: `"a1b2c3..."`), mas o filtro da Análise de Vendas passa o **nome** da categoria (ex: `"Gestantes"`). `getMetaParaCategoria("Gestantes")` nunca encontra match porque compara nome com UUID.
 
-Além disso, sempre mostra Mensal + Anual independente do contexto de filtro.
+### 2. Meta anual mostra 78% em vez de ~23%
+**Causa**: `getMetaAnual()` quando `modoMetas === 'categoria'` soma as metas por categoria (35k + 25k = 60k). R$ 47.065 / R$ 60.000 = 78%. Mas o usuário espera que a visão "ano todo" use a meta da precificação (R$ 200k). R$ 47.065 / R$ 200.173 = ~23%.
 
-## Regras de comportamento
+### 3. Falta valor R$ nas métricas
+Atualmente mostra apenas "78%" — precisa mostrar também "R$ 47k / R$ 200k".
 
-| Filtro ativo | Meta exibida |
-|---|---|
-| Ano todo, sem categoria | **Anual** — soma de metas mensais ou meta da precificação |
-| Mês específico, sem categoria | **Mensal** — meta do mês ou precificação/12 |
-| Categoria específica (qualquer mês) | **Categoria** — meta cadastrada para aquela categoria (modo categorias) |
-| Mês + Categoria | **Categoria** — meta da categoria (ignora mês, pois metas por categoria são anuais) |
+## Plano
 
-Quando progresso > 100%, mostrar valor e % excedente (ex: "120% · +R$ 5k").
+### 1. `SalesGoalsCard.tsx` — Resolver mismatch nome/UUID
 
-## Mudanças
+O card precisa converter o nome da categoria para UUID antes de chamar `getMetaParaCategoria`. Duas opções:
+- **Opção A**: Passar as categorias com IDs do MetasConfigTab — complexo, envolve vários componentes
+- **Opção B (escolhida)**: Buscar as categorias de sessão no hook e fazer lookup por nome
 
-### 1. `AnaliseVendas.tsx` — Passar `selectedCategory` ao `SalesGoalsCard`
+Adicionar ao `useMetasPersonalizadas` um método que aceita nome e faz o match interno, ou carregar as categorias no `SalesGoalsCard` para converter nome→ID.
 
-```tsx
-<SalesGoalsCard 
-  selectedYear={selectedYear} 
-  selectedMonth={selectedMonth} 
-  selectedCategory={selectedCategory}
-/>
+**Solução mais simples**: Alterar `getMetaParaCategoria` para aceitar tanto nome quanto ID. O hook já tem `metasPorCategoria` com os IDs. Precisamos carregar a lista de categorias de sessão no hook para fazer o mapeamento.
+
+Na prática: no `SalesGoalsCard`, carregar categorias de sessão e converter `selectedCategory` (nome) para UUID antes de chamar `getMetaParaCategoria`.
+
+### 2. `useMetasPersonalizadas.ts` — `getMetaAnual` usar precificação sempre
+
+Quando o filtro é "ano todo" sem categoria, a meta deve ser sempre da precificação (referência base do negócio), independente do modo ativo. Alterar `getMetaAnual`:
+
+```
+getMetaAnual():
+  → Sempre retornar GoalsIntegrationService.getAnnualGoals().revenue
+  → Origem: 'precificacao'
 ```
 
-### 2. `SalesGoalsCard.tsx` — Refatorar lógica de metas
+Metas personalizadas (mensal ou categoria) só se aplicam quando há filtro específico ativo.
 
-- Receber `selectedCategory` como prop
-- **Não usar mais `useWorkflowMetricsRealtime`** para receita — receber `currentRevenue` do `salesMetrics.totalRevenue` (já filtrado por categoria/mês)
-- Lógica condicional:
-  - Se `selectedCategory !== 'all'` → buscar meta da categoria via `getMetaParaCategoria(categoriaId)` (novo método no hook)
-  - Se `selectedMonth !== null` e categoria é "all" → mostrar apenas meta mensal
-  - Se `selectedMonth === null` e categoria é "all" → mostrar apenas meta anual
-- Remover `Math.min(..., 100)` no progress — permitir > 100%
-- Quando > 100%: mostrar "120%" em verde + badge "+R$ Xk" com valor excedente
+### 3. `SalesGoalsCard.tsx` — Mostrar valor R$ junto à porcentagem
 
-### 3. `useMetasPersonalizadas.ts` — Adicionar `getMetaParaCategoria`
+Alterar a linha de cada meta para exibir: `R$ 47k / R$ 200k` antes da porcentagem. Layout:
 
-Novo método:
-```ts
-getMetaParaCategoria(categoriaName: string): MetaResolvidaParaPeriodo
 ```
-- Se `modoMetas === 'categoria'` e `usarPersonalizadas`: buscar em `metasPorCategoria` onde `categoria === categoriaName` e `mes === 0`
-- Fallback: sem meta (retorna 0, sem barra)
-
-### 4. `AnaliseVendas.tsx` — Passar `salesMetrics.totalRevenue` ao `SalesGoalsCard`
-
-Para evitar duplicar queries de receita, passar a receita já calculada:
-```tsx
-<SalesGoalsCard 
-  selectedYear={selectedYear} 
-  selectedMonth={selectedMonth} 
-  selectedCategory={selectedCategory}
-  currentRevenue={salesMetrics.totalRevenue}
-/>
+Anual  ████████░░░░░░░░░░  R$ 47k / R$ 200k  23%  📊 268d
 ```
-
-### 5. UI do excedente
-
-Quando `progress > 100`:
-- Barra cheia em verde
-- Texto: "132%" em verde
-- Badge extra: "+R$ 8k" mostrando o valor acima da meta
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
-|---|---|
-| `src/pages/AnaliseVendas.tsx` | Passar `selectedCategory` e `currentRevenue` |
-| `src/components/analise-vendas/SalesGoalsCard.tsx` | Lógica condicional de meta, remover hooks de métricas duplicados, UI excedente |
-| `src/hooks/useMetasPersonalizadas.ts` | Adicionar `getMetaParaCategoria()` |
+|---------|---------|
+| `src/components/analise-vendas/SalesGoalsCard.tsx` | Carregar categorias de sessão, converter nome→UUID, adicionar R$ atual/meta |
+| `src/hooks/useMetasPersonalizadas.ts` | Simplificar `getMetaAnual` para sempre usar precificação |
 
