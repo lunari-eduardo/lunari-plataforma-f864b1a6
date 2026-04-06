@@ -1,72 +1,53 @@
 
 
-# Correção: Origem "Supabase" no modal + Estornos no extrato + Data/hora do estorno
+# Correção: Descrição de estornos no extrato mostra IDs técnicos
 
-## Problemas identificados
+## Problema
 
-### 1. Modal "Editar Pagamento" mostra "Origem: Supabase"
-O card de origem exibe o valor cru do campo `origem` (ex: "supabase"). Isso é um detalhe técnico interno sem valor para o usuário.
+Estornos aparecem no extrato com descrições como `Estorno [REF:ab209502-da04-4eba-a47e-949a73b49097]` — o sufixo `[REF:...]` é referência interna sem valor para o usuário.
 
-### 2. Estornos não aparecem no extrato financeiro
-A view `extrato_unificado` filtra `WHERE ct.tipo = 'pagamento'` (linha 179 da migration mais recente). Estornos (`tipo = 'estorno'`) são **completamente excluídos** do extrato.
+## Causa
 
-### 3. Data e hora do estorno não aparecem no histórico de pagamentos
-O `SessionPaymentsManager` só renderiza data quando `statusPagamento === 'pago'` (linha 329). Estornos têm `statusPagamento: 'estornado'`, então a coluna de data fica vazia.
+1. `PaymentSupabaseService.refundPayment()` salva `descricao = "Estorno [REF:paymentId]"` no banco
+2. `sessionDeletionUtils.ts` salva `descricao = "Estorno por exclusão de sessão [REF:id]"`
+3. A view `extrato_unificado` usa `COALESCE(ct.descricao, 'Estorno')` que exibe o texto cru
+4. O hook `useSessionPayments` já limpa o REF com regex no histórico de pagamentos, mas o extrato não faz isso
 
-## Plano
+## Solução
 
-### 1. `EditPaymentModal.tsx` — Remover card de origem/tipo
+### 1. View SQL — Limpar `[REF:...]` na descrição do estorno
 
-Remover completamente o card que exibe "Origem" e "Tipo" (linhas 101-121). Essa informação é técnica e irrelevante para o usuário. O título "Editar Pagamento" já é suficiente.
-
-### 2. Migration SQL — Adicionar estornos ao `extrato_unificado`
-
-Recriar a view adicionando um novo bloco `UNION ALL` para estornos:
+Alterar o bloco de estornos na view `extrato_unificado` para remover o sufixo técnico:
 
 ```sql
-UNION ALL
-SELECT 
-  ct.id::text AS id,
-  ct.data_transacao AS data,
-  'saida'::text AS tipo,
-  COALESCE(ct.descricao, 'Estorno') AS descricao,
-  'workflow'::text AS origem,
-  c.nome AS cliente,
-  cs.pacote AS projeto,
-  cs.categoria AS categoria_session,
-  'Estorno'::text AS categoria,
-  NULL::integer, NULL::integer,
-  ct.valor,
-  'Pago'::text AS status,
-  NULL::text AS cartao,
-  ct.descricao AS observacoes,
-  ct.user_id,
-  ct.session_id,
-  ct.created_at,
-  'estorno'::text AS meio_pagamento
-FROM clientes_transacoes ct
-LEFT JOIN clientes c ON ct.cliente_id = c.id
-LEFT JOIN clientes_sessoes cs ON ct.session_id = cs.session_id AND ct.user_id = cs.user_id
-WHERE ct.tipo = 'estorno'
+COALESCE(
+  regexp_replace(ct.descricao, '\s*\[REF:[^\]]+\]', '', 'g'),
+  'Estorno'
+) AS descricao
 ```
 
-Estornos aparecerão como **saída** no extrato, com categoria "Estorno" e meio de pagamento "estorno".
+E usar o mesmo valor limpo para `observacoes`.
 
-### 3. `SessionPaymentsManager.tsx` — Mostrar data/hora em estornos
+### 2. Também melhorar descrição no serviço (futuro)
 
-Expandir a condição de renderização de data (linha 329) para incluir estornos:
+Alterar `PaymentSupabaseService.refundPayment()` para salvar uma descrição mais amigável:
 
-```tsx
-{(payment.statusPagamento === 'pago' || payment.tipo === 'estorno') && (payment.createdAt || payment.data) && (
+```ts
+const descricao = `Estorno${motivo ? `: ${motivo}` : ''}`;
 ```
 
-E usar ícone diferente para estorno (RotateCcw vermelho em vez de CheckCircle2 verde).
+O `[REF:paymentId]` pode ser salvo em um campo separado ou simplesmente removido — o vínculo já é rastreável pelo `session_id` e `cliente_id`.
+
+Mesma limpeza em `sessionDeletionUtils.ts`:
+```ts
+descricao: `Estorno por exclusão de sessão`
+```
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/crm/EditPaymentModal.tsx` | Remover card de Origem/Tipo |
-| Migration SQL | Adicionar estornos ao `extrato_unificado` |
-| `src/components/payments/SessionPaymentsManager.tsx` | Mostrar data/hora para estornos |
+| Migration SQL | `regexp_replace` na descrição de estornos na view |
+| `src/services/PaymentSupabaseService.ts` | Remover `[REF:]` da descrição salva |
+| `src/utils/sessionDeletionUtils.ts` | Remover `[REF:]` da descrição salva |
 
