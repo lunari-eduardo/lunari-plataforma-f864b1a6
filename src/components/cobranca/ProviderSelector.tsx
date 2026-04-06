@@ -35,7 +35,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
 
       const { data: integracoes, error } = await supabase
         .from('usuarios_integracoes')
-        .select('provedor, status, dados_extras')
+        .select('provedor, status, dados_extras, is_default')
         .eq('user_id', user.id)
         .eq('status', 'ativo');
 
