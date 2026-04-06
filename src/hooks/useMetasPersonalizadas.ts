@@ -287,6 +287,7 @@ export function useMetasPersonalizadas(ano: number) {
     salvarMetaCategoria,
     removerMetaCategoria,
     getMetaParaMes,
-    getMetaAnual
+    getMetaAnual,
+    getMetaParaCategoria
   };
 }
