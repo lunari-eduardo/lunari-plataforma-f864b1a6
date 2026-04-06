@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Target, Settings } from 'lucide-react';
 import { EmptyGoalsState } from '@/components/shared/EmptyGoalsState';
 import { useNavigate } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useMetasPersonalizadas } from '@/hooks/useMetasPersonalizadas';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SalesGoalsCardProps {
   selectedYear: number;
@@ -17,16 +18,33 @@ interface SalesGoalsCardProps {
 
 export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory = 'all', currentRevenue = 0 }: SalesGoalsCardProps) {
   const navigate = useNavigate();
+  const [categorias, setCategorias] = useState<{ id: string; nome: string }[]>([]);
   
   const { getMetaParaMes, getMetaAnual, getMetaParaCategoria, loading } = useMetasPersonalizadas(selectedYear);
+
+  // Load session categories for name→UUID mapping
+  useEffect(() => {
+    const loadCategorias = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('categorias')
+        .select('id, nome')
+        .eq('user_id', user.id);
+      if (data) setCategorias(data);
+    };
+    loadCategorias();
+  }, []);
 
   const goals = useMemo(() => {
     const result: { title: string; current: number; target: number; daysLeft: number; origem: string }[] = [];
     const currentDate = new Date();
 
     if (selectedCategory !== 'all') {
-      // Category filter active → show category goal only
-      const meta = getMetaParaCategoria(selectedCategory);
+      // Category filter active → find UUID by name and show category goal
+      const cat = categorias.find(c => c.nome === selectedCategory);
+      const catId = cat?.id || selectedCategory;
+      const meta = getMetaParaCategoria(catId);
       if (meta.metaFaturamento <= 0) return result; // no goal configured
       const daysLeftYear = selectedYear === currentDate.getFullYear()
         ? Math.floor((new Date(selectedYear, 11, 31).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -53,7 +71,7 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
         origem: meta.origem
       });
     } else {
-      // Year total, no category → show annual goal only
+      // Year total, no category → show annual goal only (always from pricing)
       const meta = getMetaAnual();
       const daysLeftYear = selectedYear === currentDate.getFullYear()
         ? Math.floor((new Date(selectedYear, 11, 31).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -68,7 +86,7 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
     }
 
     return result;
-  }, [selectedYear, selectedMonth, selectedCategory, currentRevenue, getMetaParaMes, getMetaAnual, getMetaParaCategoria]);
+  }, [selectedYear, selectedMonth, selectedCategory, currentRevenue, getMetaParaMes, getMetaAnual, getMetaParaCategoria, categorias]);
 
   if (loading) return null;
 
@@ -128,39 +146,49 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
           const excedente = goal.current - goal.target;
           
           return (
-            <div key={index} className="flex items-center gap-3">
-              <span className="text-2xs text-muted-foreground w-16 shrink-0">
-                {goal.title}
-              </span>
-              
-              <div className="flex-1 min-w-0">
-                <Progress 
-                  value={progressClamped} 
-                  className={cn("h-1.5", statusInfo.bgColor)} 
-                />
+            <div key={index} className="space-y-1">
+              <div className="flex items-center gap-3">
+                <span className="text-2xs text-muted-foreground w-16 shrink-0">
+                  {goal.title}
+                </span>
+                
+                <div className="flex-1 min-w-0">
+                  <Progress 
+                    value={progressClamped} 
+                    className={cn("h-1.5", statusInfo.bgColor)} 
+                  />
+                </div>
+                
+                <span className={cn("text-2xs font-medium w-12 text-right", statusInfo.color)}>
+                  {progress.toFixed(0)}%
+                </span>
+                
+                <div className="items-center gap-1 hidden sm:flex">
+                  {progress > 100 && excedente > 0 ? (
+                    <Badge 
+                      variant="outline" 
+                      className="text-2xs h-5 px-1.5 text-green-600 border-green-300"
+                    >
+                      +{formatCurrency(excedente)}
+                    </Badge>
+                  ) : (
+                    <Badge 
+                      variant="outline" 
+                      className="text-2xs h-5 px-1.5"
+                      title={goal.origem === 'personalizada' ? 'Meta personalizada' : 'Meta da precificação'}
+                    >
+                      {goal.origem === 'personalizada' ? '🎯' : '📊'} {goal.daysLeft}d
+                    </Badge>
+                  )}
+                </div>
               </div>
               
-              <span className={cn("text-2xs font-medium w-12 text-right", statusInfo.color)}>
-                {progress.toFixed(0)}%
-              </span>
-              
-              <div className="items-center gap-1 hidden sm:flex">
-                {progress > 100 && excedente > 0 ? (
-                  <Badge 
-                    variant="outline" 
-                    className="text-2xs h-5 px-1.5 text-green-600 border-green-300"
-                  >
-                    +{formatCurrency(excedente)}
-                  </Badge>
-                ) : (
-                  <Badge 
-                    variant="outline" 
-                    className="text-2xs h-5 px-1.5"
-                    title={goal.origem === 'personalizada' ? 'Meta personalizada' : 'Meta da precificação'}
-                  >
-                    {goal.origem === 'personalizada' ? '🎯' : '📊'} {goal.daysLeft}d
-                  </Badge>
-                )}
+              {/* R$ values row */}
+              <div className="flex items-center gap-3">
+                <span className="w-16 shrink-0" />
+                <span className="text-2xs text-muted-foreground">
+                  {formatCurrency(goal.current)} / {formatCurrency(goal.target)}
+                </span>
               </div>
             </div>
           );
