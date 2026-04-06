@@ -17,6 +17,7 @@ interface IntegrationData {
   provedor: string;
   status: string;
   dados_extras: Record<string, unknown>;
+  is_default: boolean;
 }
 
 export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelectorProps) {
