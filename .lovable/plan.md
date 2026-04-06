@@ -1,60 +1,46 @@
 
 
-# Correção: Metas personalizadas não persistem
+# Correção: Metas não salvam — trigger bloqueia `mes = 0`
 
-## Diagnóstico
+## Causa raiz
 
-Após análise do banco e do código:
+O erro **"mes must be between 1 and 12"** vem do trigger `validate_metas_personalizadas` que rejeita qualquer valor fora de 1-12. Metas por **categoria** usam `mes = 0` (indicando meta anual, sem mês específico), o que viola essa validação.
 
-1. **Tabela e tipos existem corretamente** — `metas_personalizadas` está no schema, com unique constraint `(user_id, ano, mes, categoria)` e RLS policy funcional.
-
-2. **`as any` casts desnecessários** — A tabela `metas_personalizadas` e o campo `modo_metas` já existem nos tipos gerados do Supabase. Os casts `as any` em todo o hook estão **mascarando erros de resposta** do Supabase (se houver falha no upsert, o TypeScript não consegue inferir o tipo do erro).
-
-3. **Sem log de erros no save** — `salvarTodasMetas` e `salvarMetaCategoria` não logam erros. Se o upsert falhar, o erro é engolido silenciosamente.
-
-4. **`config.modo_metas` usa cast desnecessário** — `(config as any)?.modo_metas` quando o campo já está nos tipos. O `select()` pode não inferir `modo_metas` porque a query especifica colunas como string.
-
-5. **`updated_at` não atualiza no upsert** — Sem trigger, `updated_at` fica com o valor do INSERT original, o que é confuso mas não impede o funcionamento.
+Além disso, há dois triggers duplicados para `updated_at`:
+- `set_metas_personalizadas_updated_at` (usa `handle_updated_at()`)
+- `trg_metas_updated_at` (usa `update_metas_updated_at()`)
 
 ## Plano
 
-### 1. `useMetasPersonalizadas.ts` — Remover `as any` e adicionar logs
+### 1. Migration SQL — Corrigir validação e limpar duplicatas
 
-- Trocar `supabase.from('metas_personalizadas' as any)` por `supabase.from('metas_personalizadas')` em todas as ocorrências
-- Remover todos os `as any` desnecessários nos payloads e respostas
-- Trocar `(config as any)?.modo_metas` por acesso direto (campo está nos tipos)
-- Adicionar `console.error` em todos os pontos de save quando `error` existir
-- Na query de config, usar `.select('*')` para garantir que todos os campos são retornados corretamente tipados (ou selecionar `modo_metas` explicitamente)
-- Após cada upsert, fazer `console.log` do resultado para debug
-
-### 2. Migration SQL — Trigger para `updated_at`
-
-Criar trigger simples para atualizar `updated_at` automaticamente:
+- Atualizar `validate_metas_personalizadas` para aceitar `mes = 0` (categoria anual) além de 1-12
+- Remover trigger duplicado `trg_metas_updated_at` (manter apenas `set_metas_personalizadas_updated_at`)
 
 ```sql
-CREATE OR REPLACE FUNCTION update_metas_updated_at()
+CREATE OR REPLACE FUNCTION validate_metas_personalizadas()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.updated_at = now();
+  IF NEW.mes < 0 OR NEW.mes > 12 THEN
+    RAISE EXCEPTION 'mes must be between 0 and 12';
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_metas_updated_at
-BEFORE UPDATE ON public.metas_personalizadas
-FOR EACH ROW EXECUTE FUNCTION update_metas_updated_at();
+DROP TRIGGER IF EXISTS trg_metas_updated_at ON public.metas_personalizadas;
+DROP FUNCTION IF EXISTS update_metas_updated_at();
 ```
 
-### 3. `MetasConfigTab.tsx` — Feedback de erro visível
+### 2. Verificação de ano no hook
 
-- No `handleSalvarMensal` e `handleSalvarCategorias`, logar o erro completo no console
-- Garantir que toast de erro mostra a mensagem real do Supabase
+O hook `useMetasPersonalizadas` já recebe `ano` como parâmetro e filtra corretamente com `.eq('ano', ano)`. O `MetasConfigTab` já tem seletor de ano. Sem mudança necessária aqui.
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useMetasPersonalizadas.ts` | Remover `as any`, adicionar error logging |
-| Migration SQL | Trigger `updated_at` |
-| `src/components/financas/MetasConfigTab.tsx` | Melhorar feedback de erro |
+| Migration SQL | Alterar trigger para aceitar `mes = 0`; remover trigger duplicado |
+
+Nenhuma mudança em código TypeScript necessária — o problema é exclusivamente no banco.
 
