@@ -1,56 +1,72 @@
 
 
-# Correção: Metas na Análise de Vendas — 3 problemas
+# Correção: Origem "Supabase" no modal + Estornos no extrato + Data/hora do estorno
 
 ## Problemas identificados
 
-### 1. Categoria não mostra meta (Empty state)
-**Causa**: Metas por categoria são salvas com `categoria = UUID` (ex: `"a1b2c3..."`), mas o filtro da Análise de Vendas passa o **nome** da categoria (ex: `"Gestantes"`). `getMetaParaCategoria("Gestantes")` nunca encontra match porque compara nome com UUID.
+### 1. Modal "Editar Pagamento" mostra "Origem: Supabase"
+O card de origem exibe o valor cru do campo `origem` (ex: "supabase"). Isso é um detalhe técnico interno sem valor para o usuário.
 
-### 2. Meta anual mostra 78% em vez de ~23%
-**Causa**: `getMetaAnual()` quando `modoMetas === 'categoria'` soma as metas por categoria (35k + 25k = 60k). R$ 47.065 / R$ 60.000 = 78%. Mas o usuário espera que a visão "ano todo" use a meta da precificação (R$ 200k). R$ 47.065 / R$ 200.173 = ~23%.
+### 2. Estornos não aparecem no extrato financeiro
+A view `extrato_unificado` filtra `WHERE ct.tipo = 'pagamento'` (linha 179 da migration mais recente). Estornos (`tipo = 'estorno'`) são **completamente excluídos** do extrato.
 
-### 3. Falta valor R$ nas métricas
-Atualmente mostra apenas "78%" — precisa mostrar também "R$ 47k / R$ 200k".
+### 3. Data e hora do estorno não aparecem no histórico de pagamentos
+O `SessionPaymentsManager` só renderiza data quando `statusPagamento === 'pago'` (linha 329). Estornos têm `statusPagamento: 'estornado'`, então a coluna de data fica vazia.
 
 ## Plano
 
-### 1. `SalesGoalsCard.tsx` — Resolver mismatch nome/UUID
+### 1. `EditPaymentModal.tsx` — Remover card de origem/tipo
 
-O card precisa converter o nome da categoria para UUID antes de chamar `getMetaParaCategoria`. Duas opções:
-- **Opção A**: Passar as categorias com IDs do MetasConfigTab — complexo, envolve vários componentes
-- **Opção B (escolhida)**: Buscar as categorias de sessão no hook e fazer lookup por nome
+Remover completamente o card que exibe "Origem" e "Tipo" (linhas 101-121). Essa informação é técnica e irrelevante para o usuário. O título "Editar Pagamento" já é suficiente.
 
-Adicionar ao `useMetasPersonalizadas` um método que aceita nome e faz o match interno, ou carregar as categorias no `SalesGoalsCard` para converter nome→ID.
+### 2. Migration SQL — Adicionar estornos ao `extrato_unificado`
 
-**Solução mais simples**: Alterar `getMetaParaCategoria` para aceitar tanto nome quanto ID. O hook já tem `metasPorCategoria` com os IDs. Precisamos carregar a lista de categorias de sessão no hook para fazer o mapeamento.
+Recriar a view adicionando um novo bloco `UNION ALL` para estornos:
 
-Na prática: no `SalesGoalsCard`, carregar categorias de sessão e converter `selectedCategory` (nome) para UUID antes de chamar `getMetaParaCategoria`.
-
-### 2. `useMetasPersonalizadas.ts` — `getMetaAnual` usar precificação sempre
-
-Quando o filtro é "ano todo" sem categoria, a meta deve ser sempre da precificação (referência base do negócio), independente do modo ativo. Alterar `getMetaAnual`:
-
+```sql
+UNION ALL
+SELECT 
+  ct.id::text AS id,
+  ct.data_transacao AS data,
+  'saida'::text AS tipo,
+  COALESCE(ct.descricao, 'Estorno') AS descricao,
+  'workflow'::text AS origem,
+  c.nome AS cliente,
+  cs.pacote AS projeto,
+  cs.categoria AS categoria_session,
+  'Estorno'::text AS categoria,
+  NULL::integer, NULL::integer,
+  ct.valor,
+  'Pago'::text AS status,
+  NULL::text AS cartao,
+  ct.descricao AS observacoes,
+  ct.user_id,
+  ct.session_id,
+  ct.created_at,
+  'estorno'::text AS meio_pagamento
+FROM clientes_transacoes ct
+LEFT JOIN clientes c ON ct.cliente_id = c.id
+LEFT JOIN clientes_sessoes cs ON ct.session_id = cs.session_id AND ct.user_id = cs.user_id
+WHERE ct.tipo = 'estorno'
 ```
-getMetaAnual():
-  → Sempre retornar GoalsIntegrationService.getAnnualGoals().revenue
-  → Origem: 'precificacao'
+
+Estornos aparecerão como **saída** no extrato, com categoria "Estorno" e meio de pagamento "estorno".
+
+### 3. `SessionPaymentsManager.tsx` — Mostrar data/hora em estornos
+
+Expandir a condição de renderização de data (linha 329) para incluir estornos:
+
+```tsx
+{(payment.statusPagamento === 'pago' || payment.tipo === 'estorno') && (payment.createdAt || payment.data) && (
 ```
 
-Metas personalizadas (mensal ou categoria) só se aplicam quando há filtro específico ativo.
-
-### 3. `SalesGoalsCard.tsx` — Mostrar valor R$ junto à porcentagem
-
-Alterar a linha de cada meta para exibir: `R$ 47k / R$ 200k` antes da porcentagem. Layout:
-
-```
-Anual  ████████░░░░░░░░░░  R$ 47k / R$ 200k  23%  📊 268d
-```
+E usar ícone diferente para estorno (RotateCcw vermelho em vez de CheckCircle2 verde).
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/analise-vendas/SalesGoalsCard.tsx` | Carregar categorias de sessão, converter nome→UUID, adicionar R$ atual/meta |
-| `src/hooks/useMetasPersonalizadas.ts` | Simplificar `getMetaAnual` para sempre usar precificação |
+| `src/components/crm/EditPaymentModal.tsx` | Remover card de Origem/Tipo |
+| Migration SQL | Adicionar estornos ao `extrato_unificado` |
+| `src/components/payments/SessionPaymentsManager.tsx` | Mostrar data/hora para estornos |
 
