@@ -244,35 +244,14 @@ export function useMetasPersonalizadas(ano: number) {
   }, [usarPersonalizadas, modoMetas, metasPorCategoria]);
 
   const getMetaAnual = useCallback((): MetaResolvidaParaPeriodo => {
-    if (usarPersonalizadas) {
-      if (modoMetas === 'mensal' && metas.length > 0) {
-        const totalFat = metas.reduce((s, m) => s + Number(m.meta_faturamento), 0);
-        if (totalFat > 0) {
-          return {
-            metaFaturamento: totalFat,
-            metaLucro: 0,
-            origem: 'personalizada'
-          };
-        }
-      }
-      if (modoMetas === 'categoria' && metasPorCategoria.length > 0) {
-        const totalFat = metasPorCategoria.filter(m => m.mes === 0).reduce((s, m) => s + Number(m.meta_faturamento), 0);
-        if (totalFat > 0) {
-          return {
-            metaFaturamento: totalFat,
-            metaLucro: 0,
-            origem: 'personalizada'
-          };
-        }
-      }
-    }
+    // Visão "ano todo" sempre usa meta da precificação (referência base do negócio)
     const annual = GoalsIntegrationService.getAnnualGoals();
     return {
       metaFaturamento: annual.revenue,
       metaLucro: 0,
       origem: 'precificacao'
     };
-  }, [usarPersonalizadas, modoMetas, metas, metasPorCategoria]);
+  }, []);
 
   return {
     metas,
