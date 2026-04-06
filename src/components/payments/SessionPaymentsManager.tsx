@@ -326,9 +326,13 @@ export function SessionPaymentsManager({
                       <TableRow key={payment.id}>
                         <TableCell>
                           <div className="space-y-1">
-                            {payment.statusPagamento === 'pago' && (payment.createdAt || payment.data) && (
+                            {(payment.statusPagamento === 'pago' || payment.tipo === 'estorno') && (payment.createdAt || payment.data) && (
                               <div className="flex items-center gap-1 text-sm">
-                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                {payment.tipo === 'estorno' ? (
+                                  <RotateCcw className="h-3 w-3 text-destructive" />
+                                ) : (
+                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                )}
                                 <span className="font-medium">
                                   {formatDateTimeForDisplay(payment.createdAt || payment.data)}
                                 </span>

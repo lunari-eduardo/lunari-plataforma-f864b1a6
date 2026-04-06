@@ -98,28 +98,12 @@ export function EditPaymentModal({ payment, onClose, onSave }: EditPaymentModalP
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Informações da Origem */}
-          <Card className="bg-muted/30">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Origem</p>
-                  <p className="font-medium capitalize">
-                    {payment.origem.replace('_', ' ')}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Tipo</p>
-                  <p className="font-medium capitalize">{payment.tipo}</p>
-                </div>
-              </div>
-              {payment.numeroParcela && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Parcela {payment.numeroParcela} de {payment.totalParcelas}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          {/* Informações de parcela (se aplicável) */}
+          {payment.numeroParcela && (
+            <p className="text-xs text-muted-foreground">
+              Parcela {payment.numeroParcela} de {payment.totalParcelas}
+            </p>
+          )}
 
           {/* Limitações de Edição */}
           {!canEditAll && (
