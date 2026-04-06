@@ -53,7 +53,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       const mercadoPago = integrationData.find(i => i.provedor === 'mercadopago');
       if (mercadoPago) {
         const settings = mercadoPago.dados_extras || {};
-        const isDefault = settings.is_default === true;
+        const isDefault = mercadoPago.is_default === true;
         const habilitarPix = settings.habilitarPix !== false;
         const habilitarCartao = settings.habilitarCartao !== false;
         const maxParcelas = (settings.maxParcelas as number) || 12;
@@ -76,7 +76,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       // Check for InfinitePay
       const infinitePay = integrationData.find(i => i.provedor === 'infinitepay');
       if (infinitePay) {
-        const isDefault = infinitePay.dados_extras?.is_default === true;
+        const isDefault = infinitePay.is_default === true;
         available.push({
           id: 'infinitepay',
           name: 'InfinitePay',
@@ -90,7 +90,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       // Check for PIX Manual
       const pixManual = integrationData.find(i => i.provedor === 'pix_manual');
       if (pixManual) {
-        const isDefault = pixManual.dados_extras?.is_default === true;
+        const isDefault = pixManual.is_default === true;
         available.push({
           id: 'pix_manual',
           name: 'PIX Manual',
@@ -105,7 +105,7 @@ export function ProviderSelector({ selectedProvider, onSelect }: ProviderSelecto
       const asaas = integrationData.find(i => i.provedor === 'asaas');
       if (asaas) {
         const settings = asaas.dados_extras || {};
-        const isDefault = settings.is_default === true;
+        const isDefault = asaas.is_default === true;
         const methods: string[] = [];
         if (settings.habilitarPix !== false) methods.push('Pix');
         if (settings.habilitarCartao !== false) methods.push('Cartão');
