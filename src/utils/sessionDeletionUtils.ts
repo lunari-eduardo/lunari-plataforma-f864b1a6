@@ -95,7 +95,7 @@ export async function deleteSessionWithOptions(
           tipo: 'estorno',
           valor: Number(p.valor),
           data_transacao: new Date().toISOString().split('T')[0],
-          descricao: `Estorno por exclusão de sessão [REF:${p.id}]`,
+          descricao: `Estorno por exclusão de sessão`,
           updated_by: userId
         }));
 
