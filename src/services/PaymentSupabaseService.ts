@@ -657,7 +657,7 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      const descricao = `Estorno${motivo ? `: ${motivo}` : ''} [REF:${paymentId}]`;
+      const descricao = `Estorno${motivo ? `: ${motivo}` : ''}`;
 
       const { error } = await supabase
         .from('clientes_transacoes')
