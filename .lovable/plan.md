@@ -1,53 +1,54 @@
 
 
-# Correção: Descrição de estornos no extrato mostra IDs técnicos
+# Correção: Provedor padrão não pré-selecionado no modal de cobrança
 
-## Problema
+## Causa raiz
 
-Estornos aparecem no extrato com descrições como `Estorno [REF:ab209502-da04-4eba-a47e-949a73b49097]` — o sufixo `[REF:...]` é referência interna sem valor para o usuário.
-
-## Causa
-
-1. `PaymentSupabaseService.refundPayment()` salva `descricao = "Estorno [REF:paymentId]"` no banco
-2. `sessionDeletionUtils.ts` salva `descricao = "Estorno por exclusão de sessão [REF:id]"`
-3. A view `extrato_unificado` usa `COALESCE(ct.descricao, 'Estorno')` que exibe o texto cru
-4. O hook `useSessionPayments` já limpa o REF com regex no histórico de pagamentos, mas o extrato não faz isso
-
-## Solução
-
-### 1. View SQL — Limpar `[REF:...]` na descrição do estorno
-
-Alterar o bloco de estornos na view `extrato_unificado` para remover o sufixo técnico:
-
-```sql
-COALESCE(
-  regexp_replace(ct.descricao, '\s*\[REF:[^\]]+\]', '', 'g'),
-  'Estorno'
-) AS descricao
-```
-
-E usar o mesmo valor limpo para `observacoes`.
-
-### 2. Também melhorar descrição no serviço (futuro)
-
-Alterar `PaymentSupabaseService.refundPayment()` para salvar uma descrição mais amigável:
+O `ProviderSelector.tsx` lê `is_default` de dentro do JSON `dados_extras`:
 
 ```ts
-const descricao = `Estorno${motivo ? `: ${motivo}` : ''}`;
+// Linha 55 — Mercado Pago
+const isDefault = settings.is_default === true;
+
+// Linha 78 — InfinitePay
+const isDefault = infinitePay.dados_extras?.is_default === true;
 ```
 
-O `[REF:paymentId]` pode ser salvo em um campo separado ou simplesmente removido — o vínculo já é rastreável pelo `session_id` e `cliente_id`.
+Porém, o campo `is_default` é uma **coluna da tabela** `usuarios_integracoes`, não um campo dentro do JSON `dados_extras`. O banco confirma: InfinitePay tem `is_default = true` na coluna, mas `dados_extras->>'is_default'` é `NULL`.
 
-Mesma limpeza em `sessionDeletionUtils.ts`:
+Resultado: nenhum provedor é marcado como `isDefault`, então o auto-select na linha 127 pega `available[0]` — que é Mercado Pago (primeiro a ser processado no código).
+
+## Correção
+
+### `ProviderSelector.tsx`
+
+1. Incluir `is_default` no SELECT do Supabase (linha 37):
 ```ts
-descricao: `Estorno por exclusão de sessão`
+.select('provedor, status, dados_extras, is_default')
 ```
 
-## Arquivos a modificar
+2. Atualizar `IntegrationData` para incluir `is_default: boolean`
+
+3. Usar a coluna em vez do JSON para cada provedor:
+```ts
+// Mercado Pago
+const isDefault = mercadoPago.is_default === true;
+
+// InfinitePay
+const isDefault = infinitePay.is_default === true;
+
+// PIX Manual
+const isDefault = pixManual.is_default === true;
+
+// Asaas
+const isDefault = asaas.is_default === true;
+```
+
+Isso faz com que InfinitePay (que tem `is_default = true` no banco) seja corretamente detectado e pré-selecionado.
+
+## Arquivo a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | `regexp_replace` na descrição de estornos na view |
-| `src/services/PaymentSupabaseService.ts` | Remover `[REF:]` da descrição salva |
-| `src/utils/sessionDeletionUtils.ts` | Remover `[REF:]` da descrição salva |
+| `src/components/cobranca/ProviderSelector.tsx` | Ler `is_default` da coluna, não do JSON |
 
