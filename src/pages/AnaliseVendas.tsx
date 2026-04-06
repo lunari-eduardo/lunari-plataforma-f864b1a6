@@ -63,7 +63,12 @@ export default function AnaliseVendas() {
           <SalesMetricsCards metrics={salesMetrics} />
           
           {/* Metas Horizontais Compactas */}
-          <SalesGoalsCard selectedYear={selectedYear} selectedMonth={selectedMonth} />
+          <SalesGoalsCard 
+            selectedYear={selectedYear} 
+            selectedMonth={selectedMonth} 
+            selectedCategory={selectedCategory}
+            currentRevenue={salesMetrics.totalRevenue}
+          />
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}

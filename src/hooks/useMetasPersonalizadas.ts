@@ -225,6 +225,24 @@ export function useMetasPersonalizadas(ano: number) {
     };
   }, [usarPersonalizadas, modoMetas, metas]);
 
+  const getMetaParaCategoria = useCallback((categoriaName: string): MetaResolvidaParaPeriodo => {
+    if (usarPersonalizadas && modoMetas === 'categoria') {
+      const metaCat = metasPorCategoria.find(m => m.categoria === categoriaName && m.mes === 0);
+      if (metaCat && metaCat.meta_faturamento > 0) {
+        return {
+          metaFaturamento: metaCat.meta_faturamento,
+          metaLucro: 0,
+          origem: 'personalizada'
+        };
+      }
+    }
+    return {
+      metaFaturamento: 0,
+      metaLucro: 0,
+      origem: 'precificacao'
+    };
+  }, [usarPersonalizadas, modoMetas, metasPorCategoria]);
+
   const getMetaAnual = useCallback((): MetaResolvidaParaPeriodo => {
     if (usarPersonalizadas) {
       if (modoMetas === 'mensal' && metas.length > 0) {
@@ -269,6 +287,7 @@ export function useMetasPersonalizadas(ano: number) {
     salvarMetaCategoria,
     removerMetaCategoria,
     getMetaParaMes,
-    getMetaAnual
+    getMetaAnual,
+    getMetaParaCategoria
   };
 }
