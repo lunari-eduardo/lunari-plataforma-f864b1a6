@@ -1,46 +1,80 @@
 
 
-# Correção: Metas não salvam — trigger bloqueia `mes = 0`
+# Correção: Metas inteligentes na Análise de Vendas
 
-## Causa raiz
+## Problema
 
-O erro **"mes must be between 1 and 12"** vem do trigger `validate_metas_personalizadas` que rejeita qualquer valor fora de 1-12. Metas por **categoria** usam `mes = 0` (indicando meta anual, sem mês específico), o que viola essa validação.
+O `SalesGoalsCard` **não recebe `selectedCategory`** e usa `useWorkflowMetricsRealtime` que **não filtra por categoria**. Resultado: quando o usuário filtra "Dia das Mães", a receita mostrada nos KPIs (R$ 80) vem do `salesMetrics` (filtrado), mas a meta compara contra o valor total sem filtro — ou pior, a receita da meta vem do hook sem filtro, mostrando 100% incorretamente.
 
-Além disso, há dois triggers duplicados para `updated_at`:
-- `set_metas_personalizadas_updated_at` (usa `handle_updated_at()`)
-- `trg_metas_updated_at` (usa `update_metas_updated_at()`)
+Além disso, sempre mostra Mensal + Anual independente do contexto de filtro.
 
-## Plano
+## Regras de comportamento
 
-### 1. Migration SQL — Corrigir validação e limpar duplicatas
+| Filtro ativo | Meta exibida |
+|---|---|
+| Ano todo, sem categoria | **Anual** — soma de metas mensais ou meta da precificação |
+| Mês específico, sem categoria | **Mensal** — meta do mês ou precificação/12 |
+| Categoria específica (qualquer mês) | **Categoria** — meta cadastrada para aquela categoria (modo categorias) |
+| Mês + Categoria | **Categoria** — meta da categoria (ignora mês, pois metas por categoria são anuais) |
 
-- Atualizar `validate_metas_personalizadas` para aceitar `mes = 0` (categoria anual) além de 1-12
-- Remover trigger duplicado `trg_metas_updated_at` (manter apenas `set_metas_personalizadas_updated_at`)
+Quando progresso > 100%, mostrar valor e % excedente (ex: "120% · +R$ 5k").
 
-```sql
-CREATE OR REPLACE FUNCTION validate_metas_personalizadas()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.mes < 0 OR NEW.mes > 12 THEN
-    RAISE EXCEPTION 'mes must be between 0 and 12';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+## Mudanças
 
-DROP TRIGGER IF EXISTS trg_metas_updated_at ON public.metas_personalizadas;
-DROP FUNCTION IF EXISTS update_metas_updated_at();
+### 1. `AnaliseVendas.tsx` — Passar `selectedCategory` ao `SalesGoalsCard`
+
+```tsx
+<SalesGoalsCard 
+  selectedYear={selectedYear} 
+  selectedMonth={selectedMonth} 
+  selectedCategory={selectedCategory}
+/>
 ```
 
-### 2. Verificação de ano no hook
+### 2. `SalesGoalsCard.tsx` — Refatorar lógica de metas
 
-O hook `useMetasPersonalizadas` já recebe `ano` como parâmetro e filtra corretamente com `.eq('ano', ano)`. O `MetasConfigTab` já tem seletor de ano. Sem mudança necessária aqui.
+- Receber `selectedCategory` como prop
+- **Não usar mais `useWorkflowMetricsRealtime`** para receita — receber `currentRevenue` do `salesMetrics.totalRevenue` (já filtrado por categoria/mês)
+- Lógica condicional:
+  - Se `selectedCategory !== 'all'` → buscar meta da categoria via `getMetaParaCategoria(categoriaId)` (novo método no hook)
+  - Se `selectedMonth !== null` e categoria é "all" → mostrar apenas meta mensal
+  - Se `selectedMonth === null` e categoria é "all" → mostrar apenas meta anual
+- Remover `Math.min(..., 100)` no progress — permitir > 100%
+- Quando > 100%: mostrar "120%" em verde + badge "+R$ Xk" com valor excedente
+
+### 3. `useMetasPersonalizadas.ts` — Adicionar `getMetaParaCategoria`
+
+Novo método:
+```ts
+getMetaParaCategoria(categoriaName: string): MetaResolvidaParaPeriodo
+```
+- Se `modoMetas === 'categoria'` e `usarPersonalizadas`: buscar em `metasPorCategoria` onde `categoria === categoriaName` e `mes === 0`
+- Fallback: sem meta (retorna 0, sem barra)
+
+### 4. `AnaliseVendas.tsx` — Passar `salesMetrics.totalRevenue` ao `SalesGoalsCard`
+
+Para evitar duplicar queries de receita, passar a receita já calculada:
+```tsx
+<SalesGoalsCard 
+  selectedYear={selectedYear} 
+  selectedMonth={selectedMonth} 
+  selectedCategory={selectedCategory}
+  currentRevenue={salesMetrics.totalRevenue}
+/>
+```
+
+### 5. UI do excedente
+
+Quando `progress > 100`:
+- Barra cheia em verde
+- Texto: "132%" em verde
+- Badge extra: "+R$ 8k" mostrando o valor acima da meta
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
-|---------|---------|
-| Migration SQL | Alterar trigger para aceitar `mes = 0`; remover trigger duplicado |
-
-Nenhuma mudança em código TypeScript necessária — o problema é exclusivamente no banco.
+|---|---|
+| `src/pages/AnaliseVendas.tsx` | Passar `selectedCategory` e `currentRevenue` |
+| `src/components/analise-vendas/SalesGoalsCard.tsx` | Lógica condicional de meta, remover hooks de métricas duplicados, UI excedente |
+| `src/hooks/useMetasPersonalizadas.ts` | Adicionar `getMetaParaCategoria()` |
 
