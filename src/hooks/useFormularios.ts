@@ -237,7 +237,7 @@ export function useFormularioRespostaPublica(token: string | undefined, enabled:
         .rpc('get_formulario_resposta_publica', { p_token: token });
       
       if (error) throw error;
-      return data as {
+      return data as unknown as {
         respostas: Record<string, any>;
         respondente_nome: string | null;
         respondente_email: string | null;
