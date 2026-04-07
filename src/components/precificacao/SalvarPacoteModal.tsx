@@ -60,6 +60,11 @@ export function SalvarPacoteModal({
     onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: value }))
   });
 
+  const fotosIncluidasInput = useNumberInput({
+    value: formData.fotos_incluidas,
+    onChange: (value) => setFormData(prev => ({ ...prev, fotos_incluidas: parseInt(value) || 0 }))
+  });
+
   // Atualizar valor base quando precoFinal mudar
   useEffect(() => {
     setFormData(prev => ({
