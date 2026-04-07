@@ -1,69 +1,35 @@
 
-# Melhoria UI do Editor de Templates + Fix "Adicionar campo"
+
+# Fix: Modal do editor de templates — labels, scroll e aproveitamento de tela
 
 ## Problemas
 
-1. **"Adicionar campo" não funciona**: O `DropdownMenu` com `modal={false}` dentro de um `Dialog` (que é modal) causa conflito — o Dialog captura os cliques e impede que o DropdownMenuItem dispare o `onClick`. O `z-[9999]` não resolve porque o problema é de evento, não de camada visual.
-
-2. **UI verbosa**: Cada campo ocupa muito espaço vertical com bordas grossas, labels separados e inputs grandes. A hierarquia visual é fraca.
+1. **Sem labels visíveis**: Os campos Nome, Categoria, Descrição e Tempo têm labels `text-xs text-muted-foreground` muito discretos — parecem invisíveis no fundo claro do modal
+2. **Sem scroll**: `ScrollArea` (Radix) dentro de flex container com `max-h-[90vh]` não funciona corretamente — mesmo problema já documentado no modal de cobranças. Conteúdo fica cortado sem possibilidade de rolar
+3. **Modal estreito**: `max-w-3xl` (48rem) não aproveita bem telas desktop de 1532px
 
 ## Correções
 
-### 1. Fix "Adicionar campo"
+### 1. Labels visíveis com hierarquia clara
 
-Trocar o `DropdownMenu` por um `Popover` (do Radix) que funciona melhor dentro de Dialogs modais. O Popover usa Portal e não tem o conflito de modal nesting. Alternativamente, usar `DropdownMenu` **sem** `modal={false}` (removendo essa prop) e adicionando `onCloseAutoFocus={(e) => e.preventDefault()}` para evitar o refocus.
+Trocar os labels de `text-xs text-muted-foreground` para `text-sm font-medium` — visíveis e com contraste adequado. Manter o padrão existente de `<Label>` acima do input.
 
-**Solução escolhida**: Remover `modal={false}` do DropdownMenu. O padrão `modal={true}` funciona corretamente dentro de Dialogs porque cria sua própria camada modal.
+### 2. Substituir ScrollArea por div nativa com overflow
 
-### 2. UI compacta dos campos
-
-Redesenhar o `SortableCampoItem` com layout mais denso:
-
-**Antes** (atual):
+Mesmo padrão já aplicado no ChargeModal (documentado na memória):
 ```
-┌─────────────────────────────────────────┐
-│ ⠿ TEXTO CURTO          Obrigatório 🔘 🗑│
-│                                         │
-│ Pergunta                                │
-│ ┌─────────────────────────────────────┐ │
-│ │ Nome do bebê                        │ │
-│ └─────────────────────────────────────┘ │
-│ Placeholder                             │
-│ ┌─────────────────────────────────────┐ │
-│ │ Ex: Sofia                           │ │
-│ └─────────────────────────────────────┘ │
-│ Texto de ajuda (opcional)               │
-│ ┌─────────────────────────────────────┐ │
-│ │ Pode ser deixado em branco...       │ │
-│ └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
+ScrollArea className="flex-1 pr-4"
+→
+div className="flex-1 min-h-0 overflow-y-auto pr-4"
 ```
 
-**Depois** (compacto):
-```
-┌ ⠿ TEXTO CURTO              Obrigatório 🔘 🗑
-│
-│ [Pergunta___________] [Placeholder______]
-│ [Texto de ajuda (opcional)_______________]
-└─────────────────────────────────────────────
-```
+### 3. Ampliar largura do modal
 
-Mudanças específicas:
-- Remover `<Label>` separado de cada input — usar apenas `placeholder` nos inputs como label contextual
-- Borda esquerda sutil (como o block hierarchy pattern) em vez de borda completa com `rounded-lg border`
-- Padding reduzido: `p-4` → `pl-3 pr-2 py-2`
-- Pergunta e Placeholder lado a lado em **todos** os tamanhos (não só `sm:grid-cols-2`)
-- Texto de ajuda: input menor, `h-8` com `text-xs`
-- Para campos de seleção (opções): inputs de opção inline menores com `h-8`
-
-### 3. Cabeçalho do modal mais compacto
-
-- Nome + Categoria na mesma linha (já está)
-- Descrição + Tempo estimado: Descrição ocupa mais espaço (3/4), tempo estimado compacto (1/4)
-- Reduzir `space-y-6` → `space-y-4` no container geral
+Trocar `max-w-3xl` por `max-w-4xl` para aproveitar melhor a tela no desktop (1532px viewport).
 
 ## Arquivo a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/configuracoes/FormularioTemplateEditor.tsx` | Fix dropdown, redesign compacto dos campos |
+| `src/components/configuracoes/FormularioTemplateEditor.tsx` | Substituir ScrollArea por div nativa, melhorar labels, ampliar max-w |
+
