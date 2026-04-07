@@ -49,20 +49,15 @@ export function SalvarPacoteModal({
     observacoes: ''
   });
 
-  // Hooks para inputs numéricos com auto-seleção
-  const valorBaseInput = useNumberInput({
+  // Hooks para inputs monetários com máscara BRL
+  const valorBaseInput = useCurrencyInput({
     value: formData.valor_base,
-    onChange: (value) => setFormData(prev => ({ ...prev, valor_base: parseFloat(value) || 0 }))
+    onChange: (value) => setFormData(prev => ({ ...prev, valor_base: value }))
   });
 
-  const valorFotoExtraInput = useNumberInput({
+  const valorFotoExtraInput = useCurrencyInput({
     value: formData.valor_foto_extra,
-    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(value) || 0 }))
-  });
-
-  const fotosIncluidasInput = useNumberInput({
-    value: formData.fotos_incluidas,
-    onChange: (value) => setFormData(prev => ({ ...prev, fotos_incluidas: parseInt(value) || 0 }))
+    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: value }))
   });
 
   // Atualizar valor base quando precoFinal mudar
@@ -216,12 +211,7 @@ export function SalvarPacoteModal({
             <Label htmlFor="valor_base">Valor Base do Pacote</Label>
             <Input
               id="valor_base"
-              type="number"
-              min="0"
-              step="0.01"
-              value={valorBaseInput.displayValue}
-              onChange={valorBaseInput.handleChange}
-              onFocus={valorBaseInput.handleFocus}
+              {...valorBaseInput.inputProps}
               placeholder="0,00"
               className="mt-1"
             />
@@ -232,12 +222,8 @@ export function SalvarPacoteModal({
             <Label htmlFor="valor_foto_extra">Valor Foto Extra</Label>
             <Input
               id="valor_foto_extra"
-              type="number"
-              min="0"
-              step="0.01"
-              value={valorFotoExtraInput.displayValue}
-              onChange={valorFotoExtraInput.handleChange}
-              onFocus={valorFotoExtraInput.handleFocus}
+              {...valorFotoExtraInput.inputProps}
+              placeholder="0,00"
               className="mt-1"
             />
           </div>

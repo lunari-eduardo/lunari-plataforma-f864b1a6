@@ -46,6 +46,16 @@ export default function Produtos({ pacotes }: ProdutosProps) {
     preco_custo: 0,
     preco_venda: 0
   });
+
+  const custoInput = useCurrencyInput({
+    value: novoProduto.preco_custo,
+    onChange: (v) => setNovoProduto(prev => ({ ...prev, preco_custo: v }))
+  });
+
+  const vendaInput = useCurrencyInput({
+    value: novoProduto.preco_venda,
+    onChange: (v) => setNovoProduto(prev => ({ ...prev, preco_venda: v }))
+  });
   
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
   const [modalEditOpen, setModalEditOpen] = useState(false);
@@ -110,7 +120,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
           />
         </div>
         
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[140px] max-w-[180px] space-y-1.5">
             <label htmlFor="produto-custo" className="text-sm font-medium text-foreground">
               Preço de Custo
@@ -121,10 +131,8 @@ export default function Produtos({ pacotes }: ProdutosProps) {
               </span>
               <Input
                 id="produto-custo"
-                type="number"
+                {...custoInput.inputProps}
                 placeholder="0,00"
-                value={novoProduto.preco_custo || ''}
-                onChange={e => setNovoProduto({ ...novoProduto, preco_custo: Number(e.target.value) })}
                 className="h-10 pl-8"
               />
             </div>
@@ -140,17 +148,13 @@ export default function Produtos({ pacotes }: ProdutosProps) {
               </span>
               <Input
                 id="produto-venda"
-                type="number"
+                {...vendaInput.inputProps}
                 placeholder="0,00"
-                value={novoProduto.preco_venda || ''}
-                onChange={e => setNovoProduto({ ...novoProduto, preco_venda: Number(e.target.value) })}
                 className="h-10 pl-8"
               />
             </div>
           </div>
-        </div>
-        
-        <div className="flex justify-end">
+
           <Button
             onClick={handleAdicionarProduto}
             disabled={isLoading || novoProduto.nome.trim() === ''}

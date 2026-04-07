@@ -31,6 +31,16 @@ export default function ProdutoFormModal({
     preco_venda: 0
   });
 
+  const custoInput = useCurrencyInput({
+    value: formData.preco_custo,
+    onChange: (v) => setFormData(prev => ({ ...prev, preco_custo: v }))
+  });
+
+  const vendaInput = useCurrencyInput({
+    value: formData.preco_venda,
+    onChange: (v) => setFormData(prev => ({ ...prev, preco_venda: v }))
+  });
+
   useEffect(() => {
     if (produto && open) {
       setFormData({
@@ -87,14 +97,7 @@ export default function ProdutoFormModal({
               <Label htmlFor="custo">Preço de Custo (R$)</Label>
               <Input
                 id="custo"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.preco_custo || ''}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  preco_custo: Number(e.target.value) 
-                }))}
+                {...custoInput.inputProps}
                 placeholder="0,00"
               />
             </div>
@@ -103,14 +106,7 @@ export default function ProdutoFormModal({
               <Label htmlFor="venda">Preço de Venda (R$)</Label>
               <Input
                 id="venda"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.preco_venda || ''}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  preco_venda: Number(e.target.value) 
-                }))}
+                {...vendaInput.inputProps}
                 placeholder="0,00"
               />
             </div>
