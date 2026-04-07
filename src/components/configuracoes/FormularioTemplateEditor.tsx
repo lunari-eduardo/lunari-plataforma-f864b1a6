@@ -42,7 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { useFormularioTemplates } from '@/hooks/useFormularioTemplates';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import {
