@@ -256,20 +256,7 @@ export function useSubmitFormularioResposta() {
       
       if (respostaError) throw respostaError;
       
-      // Atualizar status do formulário para respondido
-      const { error: updateError } = await supabase
-        .from('formularios')
-        .update({ 
-          status_envio: 'respondido',
-          respondido_em: new Date().toISOString(),
-        })
-        .eq('id', formulario.id);
-      
-      if (updateError) {
-        console.error('Erro ao atualizar status do formulário:', updateError);
-        // Não falhar se o update não funcionar (resposta já foi salva)
-      }
-      
+      // Status é atualizado automaticamente via trigger no banco
       return resposta;
     },
   });
