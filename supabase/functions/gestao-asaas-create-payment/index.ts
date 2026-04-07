@@ -379,6 +379,11 @@ Deno.serve(async (req) => {
       data_pagamento: null, // Webhook sets this when parcelas are confirmed
       total_parcelas: totalParcelas,
       asaas_installment_id: asaasInstallmentId,
+      dados_extras: {
+        repassarTaxasProcessamento: repassarTaxas,
+        anteciparParcelas: antecipar,
+        repassarTaxaAntecipacao: repassarAntecipacao,
+      },
     };
 
     if (billingType === 'PIX' && pixData) {
