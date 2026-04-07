@@ -1,96 +1,104 @@
 
-## Diagnóstico confirmado
+# Recuperação das rotas públicas no domínio Vercel
 
-- A rota pública **existe** em `src/App.tsx` (`/formulario/:token`). Então o problema não é “falta de rota”.
-- O link do formulário está sendo montado com `window.location.origin` em `SendBriefingModal.tsx` e `ClienteFormulariosList.tsx`. Em preview/editor isso pode gerar **URL errada para compartilhamento**, levando o cliente para um host inadequado.
-- O PWA ainda está configurado de forma arriscada para esse fluxo: `vite.config.ts` está com `devOptions.enabled: true`, e o cleanup atual do SW em `usePWAUpdate.ts` roda **tarde demais**.
-- `FormularioPublico.tsx` usa o estado local `submitted` para o sucesso, mas ao recarregar/reabrir o link esse estado se perde. Hoje a página pública **não sabe persistentemente** que o formulário já foi respondido.
-- O fluxo atual ainda permite inconsistência de múltiplas respostas: a UI do fotógrafo lê “a resposta mais recente”, sinal de que o sistema ainda não está travando **uma única submissão por formulário**.
-- O blur do modal filho foi ajustado, mas o modal pai continua visualmente “ativo”. Em modal aninhado, não basta subir `z-index` do filho; o pai também precisa entrar em estado de fundo.
+## Diagnóstico validado
+- As rotas React existem e estão corretas em `src/App.tsx` (`/formulario/:token`, `/checkout/:cobrancaId`, `/auth`, `/app`).
+- A validação externa mostra que no domínio real `app.lunarihub.com` as URLs profundas (`/app`, `/auth`, `/formulario/...`, `/checkout/...`) renderizam a Landing, enquanto no domínio Lovable o formulário abre corretamente.
+- O ponto crítico é a combinação atual de Vercel + fallback legado:
+  - não há configuração versionada de rewrite SPA para Vercel
+  - `public/404.html` redireciona para `/?redirect=...`
+  - `BuildMonitor` faz `history.replaceState` tarde demais, depois que o app já renderizou `/`
+  - resultado: a URL vira `/formulario/...`, mas o conteúdo continua sendo a Landing
+- Além disso, houve regressões de domínio:
+  - `getPublicShareBaseUrl()` passou a usar `lunari-plataforma.lovable.app`
+  - `ChargeModal` ainda cria checkout com `window.location.origin`
+  - isso explica links públicos abrindo no domínio errado
+
+## Objetivo
+Restaurar `https://app.lunarihub.com` como domínio canônico de produção para todo link público e fazer com que qualquer deep link funcione direto no Vercel, sem cair na Landing.
 
 ## Plano de correção
 
-### 1. Corrigir a URL pública compartilhada
-- Criar um utilitário central para links públicos, por exemplo `getPublicShareBaseUrl()`.
-- Em preview/localhost/editor/iframe, esse utilitário deve usar o **domínio publicado/canônico** do app, nunca `window.location.origin`.
-- Substituir a montagem manual de URL em:
+### 1. Corrigir a infraestrutura de roteamento no Vercel
+- Adicionar um `vercel.json` versionado no projeto com rewrites de SPA para as famílias de rota públicas e protegidas:
+  - `/app/:path*`
+  - `/auth`
+  - `/reset-password`
+  - `/formulario/:path*`
+  - `/checkout/:path*`
+  - `/conteudos/:path*`
+  - `/ajuda/:path*`
+  - `/escolher-plano/:path*`
+  - `/minha-assinatura`
+  - `/onboarding`
+  - `/landing`
+- Garantir que assets reais fiquem fora do rewrite (`/lovable-uploads`, favicon, robots, version, ícones etc.).
+- Isso elimina a dependência do `404.html` para deep links no domínio customizado.
+
+### 2. Remover o fallback legado que mascara erro de rota
+- Remover do `BuildMonitor` a lógica de `?redirect=` + `replaceState`.
+- Ajustar `public/404.html` para deixar de ser um “redirector” universal e voltar a ser uma página 404 real.
+- Se precisarmos manter compatibilidade temporária com links antigos, tratar `redirect` antes do mount em `src/main.tsx`, nunca depois do app já renderizado.
+
+### 3. Recentralizar o domínio canônico
+- Usar `VITE_SITE_URL=https://app.lunarihub.com` como fonte única para links públicos.
+- Refatorar `src/utils/domainUtils.ts` para separar:
+  - domínio canônico de produção
+  - origem atual apenas quando ela for realmente necessária
+- Regra nova: formulário, checkout transparente e demais links compartilhados para cliente sempre saem com `app.lunarihub.com`.
+- O domínio Lovable deixa de ser fallback para links de produção.
+
+### 4. Corrigir todos os geradores de links públicos
+- Revisar e ajustar:
   - `src/components/formularios/SendBriefingModal.tsx`
   - `src/components/formularios/ClienteFormulariosList.tsx`
+  - `src/components/cobranca/ChargeModal.tsx`
+- Auditar outros usos de `window.location.origin` e manter isso apenas onde o host atual é proposital, como callbacks de integração.
+- Garantir que checkout transparente nunca mais saia com `lovable.app`.
 
-### 2. Blindar preview + PWA para não interceptar rotas públicas
-- Em `src/main.tsx`, antes de montar o React, desregistrar service workers e limpar caches quando:
-  - estiver em preview (`id-preview--...`)
-  - estiver dentro do editor/iframe
-  - estiver em rota pública (`/formulario/*`, `/checkout/*`)
-- Em `src/hooks/usePWAUpdate.ts`, manter o guard para não registrar SW nesses contextos.
-- Em `vite.config.ts`, desligar PWA em dev/preview (`devOptions.enabled: false`) e manter a `navigateFallbackDenylist`.
-- Não depender de ajuste em arquivo gerado (`dev-dist/sw.js`); a correção deve ficar só na origem do comportamento.
+### 5. Estabilizar PWA/cache sem interferir nas rotas públicas
+- Revisar `src/main.tsx`, `src/hooks/usePWAUpdate.ts` e `vite.config.ts`.
+- Nesta fase de recuperação, simplificar o comportamento:
+  - não usar service worker como parte da solução de roteamento
+  - evitar limpezas agressivas de cache como “correção” de rota
+- Se o PWA não for essencial, a abordagem mais segura é desativar o SW e manter só o app web normal.
 
-### 3. Tornar o link público estado-aware
-- O carregamento público deve passar a distinguir:
-  - disponível para responder
-  - já respondido
-  - expirado
-  - inválido/indisponível
-- `useFormularioPublico` deve considerar `status_envio`, `expires_at` e o estado real do formulário, não só `status = publicado`.
-- `FormularioPublico.tsx` deixa de depender apenas do `submitted` local.
+### 6. Revisão completa de todas as rotas públicas
+Validar acesso direto e refresh no domínio `app.lunarihub.com` para:
+- `/`
+- `/auth`
+- `/reset-password`
+- `/formulario/:token`
+- `/checkout/:id`
+- `/conteudos`
+- `/conteudos/:slug`
+- `/app`
+- `/app/*`
+- `/onboarding`
+- `/escolher-plano`
+- `/minha-assinatura`
 
-### 4. Impedir segunda resposta do mesmo formulário
-- No banco, travar **uma única resposta por `formulario_id`** com abordagem segura:
-  - constraint/índice único em `formulario_respostas(formulario_id)`
-  - validação de inserção para barrar novo envio quando já houver resposta
-- Fazer migration segura: se existir duplicidade histórica, preservar o histórico antes de impor a trava, sem apagar silenciosamente.
+### 7. QA orientada ao negócio
+- Criar um formulário pela agenda/CRM, copiar link e abrir em aba anônima.
+- Gerar uma cobrança por checkout transparente, copiar link e abrir fora da sessão autenticada.
+- Testar abertura direta, refresh, nova aba e envio por WhatsApp.
+- Confirmar que nenhum link novo usa `lovable.app`.
+- Revisar também links públicos correlatos do ecossistema, especialmente fluxos que conversam com Gallery.
 
-### 5. Permitir reabertura somente em modo visualização
-- Após o envio:
-  - cliente não pode mais editar nem reenviar
-  - ao abrir o link novamente, vê apenas a resposta salva em modo leitura
-  - fotógrafo continua vendo a mesma resposta no painel
-- Para isso, criar uma leitura pública segura da resposta via `public_token` (RPC/view/função segura), sem afrouxar RLS da tabela inteira.
-- Reaproveitar a mesma base visual de `FormularioRespostasView` para manter consistência entre cliente e fotógrafo.
-
-### 6. Melhorar UX da página pública pós-resposta
-- Adicionar estado visual claro:
-  - “Questionário finalizado”
-  - data/hora da resposta
-  - dados do respondente, se houver
-- Desabilitar completamente inputs, upload e botão de envio no modo finalizado.
-- Tratar também o estado expirado com tela própria, sem permitir edição.
-
-### 7. Corrigir o destaque do modal dentro do modal da agenda
-- O filho já tem overlay próprio, mas o pai ainda não reage.
-- Em `src/components/agenda/AppointmentDetails.tsx`, enquanto `sendBriefingOpen` estiver ativo:
-  - aplicar leve blur/escurecimento/opacidade reduzida no conteúdo do modal pai
-  - bloquear interação visual do pai
-- Manter contraste mais forte no modal filho, mas a correção principal é o **pai entrar em estado de fundo**.
-
-## Arquivos envolvidos
-
+## Arquivos principais envolvidos
+- `vercel.json` (novo)
 - `src/main.tsx`
-- `src/hooks/usePWAUpdate.ts`
-- `vite.config.ts`
-- `src/utils/domainUtils.ts` ou novo utilitário de URL pública
+- `src/components/shared/BuildMonitor.tsx`
+- `public/404.html`
+- `src/utils/domainUtils.ts`
 - `src/components/formularios/SendBriefingModal.tsx`
 - `src/components/formularios/ClienteFormulariosList.tsx`
-- `src/hooks/useFormularios.ts`
-- `src/pages/FormularioPublico.tsx`
-- `src/components/formularios/FormularioRespostasView.tsx` ou renderer compartilhado
-- `src/components/agenda/AppointmentDetails.tsx`
-- migration SQL para resposta única + leitura pública segura
+- `src/components/cobranca/ChargeModal.tsx`
+- `src/hooks/usePWAUpdate.ts`
+- `vite.config.ts`
 
-## QA que precisa ser feita após a correção
-
-- Criar formulário pela agenda e pelo CRM
-- Copiar link e validar que aponta para o domínio público correto
-- Abrir o link direto em aba anônima/dispositivo sem login
-- Responder uma vez, recarregar e confirmar modo somente leitura
-- Tentar reenviar e validar bloqueio
-- Testar preview/editor, reload, mobile e expirado sem cair na landing
-
-## Resumo da causa raiz
-
-O problema não é ausência de rota pública. É a combinação de:
-1. geração do link com origem errada,
-2. PWA/SW interferindo em preview e rotas públicas,
-3. falta de persistência do estado “já respondido”,
-4. ausência de trava robusta para resposta única.
+## Resumo técnico
+Há 2 falhas diferentes acontecendo ao mesmo tempo:
+1. o Vercel não está resolvendo deep links da SPA corretamente no domínio customizado;
+2. parte da geração de links públicos foi desviada para `lovable.app` ou para a origem errada.
+A correção robusta precisa atacar as duas frentes juntas, senão o sistema continua inconsistente.
