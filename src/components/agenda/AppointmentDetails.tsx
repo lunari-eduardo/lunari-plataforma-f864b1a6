@@ -21,6 +21,7 @@ import { FormularioRespostasView } from '@/components/formularios/FormularioResp
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
