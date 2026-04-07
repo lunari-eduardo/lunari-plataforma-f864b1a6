@@ -1,97 +1,66 @@
 
 
-# Sistema de Envio e Respostas de Formulários
+# Correções: Formulário Público — 401 no envio, redirect e modal sem destaque
 
-## Visão geral
+## Problemas identificados
 
-O banco de dados já tem toda a estrutura pronta (`formularios` com `cliente_id`, `session_id`, `public_token`, `status_envio`; `formulario_respostas` com `respostas` JSONB). A página pública (`/formulario/:token`) já funciona para submissão. O que falta é:
+### 1. ERRO 401 ao submeter formulário (CRÍTICO)
+**Causa**: A tabela `formularios` tem política de UPDATE restrita a `authenticated` com `auth.uid() = user_id`. Quando o cliente (anônimo) submete o formulário, o hook `useSubmitFormularioResposta` faz:
+1. INSERT em `formulario_respostas` → funciona (política `anon` com `WITH CHECK (true)`)
+2. UPDATE em `formularios` para mudar `status_envio = 'respondido'` → **FALHA 401** porque o cliente não está autenticado
 
-1. **Criar formulário a partir de um template** — vinculado a cliente/sessão
-2. **Enviar link** — via WhatsApp/copiar link, direto dos modais da Agenda e do CRM
-3. **Visualizar respostas** — página dedicada para o fotógrafo ver as respostas
+**Solução**: Criar uma política RLS que permita `anon` e `authenticated` fazerem UPDATE **apenas nos campos de status** de formulários publicados com token público. Alternativamente (mais seguro), usar uma database function `SECURITY DEFINER` que atualiza o status após inserção da resposta, via trigger.
 
----
+**Abordagem escolhida**: Trigger `AFTER INSERT ON formulario_respostas` que automaticamente atualiza o status do formulário para "respondido". Assim o código frontend remove a chamada de UPDATE direta, eliminando o erro 401.
 
-## Etapas
+### 2. Redirect para Landing Page no primeiro acesso
+**Causa**: O service worker (PWA) cacheia a SPA e, no primeiro acesso a `/formulario/:token`, serve o HTML cacheado da rota `/`. Na segunda carga, o SW já resolveu a rota corretamente.
 
-### 1. Componente "Enviar Briefing" (reutilizável)
+**Solução**: Adicionar `/formulario/` ao `navigateFallbackDenylist` na config do PWA, ou garantir que o SW não intercepte rotas públicas. Alternativa mais simples: no `vite.config.ts`, configurar o `workbox` para excluir essas rotas do cache de navegação.
 
-Novo componente `SendBriefingModal` que:
-- Lista os templates disponíveis (sistema + customizados)
-- Ao selecionar, cria um `formulario` vinculado ao `cliente_id` e `session_id` (se disponível)
-- Publica automaticamente (status = `publicado`, status_envio = `enviado`)
-- Gera o link público (`/formulario/{public_token}`)
-- Oferece 2 ações: **Copiar link** e **Enviar via WhatsApp** (abre `wa.me/{telefone}?text=...`)
+### 3. Modal "Briefing Criado" não destaca do modal pai
+**Causa**: O `SendBriefingModal` usa `Dialog` dentro de outro `Dialog` (AppointmentDetails). Ambos compartilham o mesmo overlay, então o modal filho não se distingue visualmente.
 
-### 2. Integração na Agenda — AppointmentDetails
-
-No modal de detalhes do agendamento (`AppointmentDetails.tsx`), adicionar um botão/seção colapsável **"📋 Enviar Briefing"** abaixo das Observações e acima do Histórico da Sessão. O botão:
-- Abre o `SendBriefingModal` passando `clienteId` e `sessionId` (do appointment)
-- Mostra badge se já existe formulário enviado/respondido para essa sessão
-- Se já respondido, abre a visualização das respostas
-
-### 3. Integração no CRM — ClienteDetalhe (aba Documentos)
-
-Na aba "Documentos" do perfil do cliente (`DocumentosTab.tsx`), adicionar uma seção **"Formulários / Briefings"** que:
-- Lista todos os formulários vinculados a esse cliente (com status de envio)
-- Botão "Enviar novo briefing" que abre o `SendBriefingModal` com `clienteId`
-- Cada formulário mostra: título, data de envio, status (badge colorido), e botão para ver respostas
-
-### 4. Página de Visualização de Respostas
-
-Novo componente `FormularioRespostasView` (pode ser modal ou página inline) que:
-- Recebe `formularioId`
-- Usa `useFormularioRespostas` (já existe) para buscar respostas
-- Renderiza cada campo com a pergunta original (do JSON `campos`) e a resposta correspondente
-- Para campos de upload, mostra preview das imagens
-- Para seleção de cores, mostra as cores selecionadas
-- Para múltipla escolha, mostra as opções marcadas
-- Header com: nome do cliente, data de resposta, status
-
-### 5. Lista geral de formulários (na aba Documentos do CRM)
-
-Seção que mostra todos os briefings do cliente com status visual:
-```
-┌──────────────────────────────────────────┐
-│ 📋 Briefing Gestante                     │
-│ Enviado em 05/04 • ● Aguardando resposta │
-│                        [Copiar link] [👁] │
-├──────────────────────────────────────────┤
-│ 📋 Briefing Newborn                      │  
-│ Respondido em 06/04 • ✅ Respondido      │
-│                         [Ver respostas]  │
-└──────────────────────────────────────────┘
-```
+**Solução**: Passar `overlayClassName="backdrop-blur-sm bg-black/40"` no `DialogContent` do `SendBriefingModal` para criar uma camada visual de desfoque sobre o modal pai.
 
 ---
 
-## Arquivos a criar
+## Etapas de implementação
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/formularios/SendBriefingModal.tsx` | Modal para selecionar template e enviar briefing |
-| `src/components/formularios/FormularioRespostasView.tsx` | Visualização das respostas recebidas |
-| `src/components/formularios/ClienteFormulariosList.tsx` | Lista de formulários de um cliente |
+### Etapa 1 — Migration: Trigger para atualizar status automaticamente
+Criar trigger `AFTER INSERT ON formulario_respostas` com function `SECURITY DEFINER`:
+```sql
+CREATE OR REPLACE FUNCTION update_formulario_status_on_resposta()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE formularios 
+  SET status_envio = 'respondido', respondido_em = NOW()
+  WHERE id = NEW.formulario_id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_update_formulario_on_resposta
+AFTER INSERT ON formulario_respostas
+FOR EACH ROW
+EXECUTE FUNCTION update_formulario_status_on_resposta();
+```
+
+### Etapa 2 — Remover UPDATE do frontend
+Em `useFormularios.ts` → `useSubmitFormularioResposta`, remover o bloco que faz `supabase.from('formularios').update(...)` após inserir a resposta — o trigger cuida disso automaticamente.
+
+### Etapa 3 — Fix redirect PWA
+No `vite.config.ts`, adicionar `navigateFallbackDenylist: [/^\/formulario\//,  /^\/checkout\//]` na config do workbox para que o SW não intercepte rotas públicas.
+
+### Etapa 4 — Desfoque no modal filho
+Em `SendBriefingModal.tsx`, adicionar `overlayClassName` ao `DialogContent` para criar backdrop blur quando aberto sobre outro modal.
 
 ## Arquivos a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/agenda/AppointmentDetails.tsx` | Adicionar botão/seção "Enviar Briefing" |
-| `src/components/cliente-detalhe/tabs/DocumentosTab.tsx` | Adicionar seção de Formulários/Briefings |
-| `src/hooks/useFormularios.ts` | Adicionar query `useFormulariosByCliente` e `useFormulariosBySession` |
-
-## Fluxo completo
-
-```text
-Fotógrafo abre Agenda → Detalhes do Agendamento
-  └→ Clica "Enviar Briefing"
-     └→ Seleciona template (ex: Gestante)
-        └→ Sistema cria formulário + publica
-           └→ Copia link ou envia WhatsApp
-              └→ Cliente abre link no celular
-                 └→ Responde o formulário
-                    └→ Status muda para "Respondido"
-                       └→ Fotógrafo vê respostas no CRM ou Agenda
-```
+| Migration SQL | Trigger `update_formulario_status_on_resposta` |
+| `src/hooks/useFormularios.ts` | Remover UPDATE manual no `useSubmitFormularioResposta` |
+| `vite.config.ts` | Excluir rotas públicas do SW |
+| `src/components/formularios/SendBriefingModal.tsx` | Adicionar backdrop blur no overlay |
 
