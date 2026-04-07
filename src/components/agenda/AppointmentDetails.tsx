@@ -318,7 +318,61 @@ export default function AppointmentDetails({
         />
       </div>
 
-      {/* BLOCO 4: Histórico da Sessão (Colapsável) */}
+      {/* BLOCO 4: Briefing */}
+      <div className="bg-lunar-surface/30 rounded-lg p-4 border border-lunar-border/20">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-lunar-accent" /> Briefing
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setSendBriefingOpen(true)}
+          >
+            <Send className="h-3 w-3 mr-1" />
+            Enviar
+          </Button>
+        </div>
+        {sessionFormularios.length > 0 ? (
+          <div className="space-y-1.5">
+            {sessionFormularios.map((form) => (
+              <div key={form.id} className="flex items-center justify-between text-sm py-1">
+                <span className="text-lunar-text truncate">{form.titulo}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {form.status_envio === 'respondido' ? (
+                    <>
+                      <Badge className="bg-lunar-success/20 text-lunar-success border-lunar-success/30 text-[10px]">
+                        ✅ Respondido
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => setViewRespostas({
+                          id: form.id,
+                          titulo: form.titulo,
+                          campos: form.campos,
+                        })}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Badge className="bg-lunar-warning/20 text-lunar-warning border-lunar-warning/30 text-[10px]">
+                      ⏳ Aguardando
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-lunar-muted">Nenhum briefing enviado</p>
+        )}
+      </div>
+
+      {/* BLOCO 5: Histórico da Sessão (Colapsável) */}
       <Collapsible open={historyOpen} onOpenChange={handleHistoryToggle}>
         <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-4 text-sm font-medium text-lunar-text bg-lunar-surface/30 rounded-lg border border-lunar-border/20 hover:bg-lunar-surface/50 transition-colors">
           <ChevronRight className={`h-4 w-4 transition-transform ${historyOpen ? 'rotate-90' : ''}`} />
