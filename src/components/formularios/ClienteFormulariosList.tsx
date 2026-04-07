@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { FileText, Send, Copy, Eye, Clock, Loader2, Plus } from 'lucide-react';
-import { useFormulariosByCliente } from '@/hooks/useFormularios';
+import { useFormulariosByCliente } from '@/hooks/useFormulariosByCliente';
 import { SendBriefingModal } from './SendBriefingModal';
 import { FormularioRespostasView } from './FormularioRespostasView';
 import { STATUS_ENVIO_LABELS, FormularioCampo } from '@/types/formulario';
