@@ -42,7 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { useFormularioTemplates } from '@/hooks/useFormularioTemplates';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import {
@@ -167,19 +167,19 @@ export default function FormularioTemplateEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             {template ? 'Editar Template' : 'Novo Template de Formulário'}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-4">
           <div className="space-y-4 py-3">
             {/* Informações básicas */}
             <div className="grid gap-3 grid-cols-2">
               <div className="space-y-1">
-                <Label htmlFor="nome" className="text-xs text-muted-foreground">Nome *</Label>
+                <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
                 <Input
                   id="nome"
                   value={nome}
@@ -189,7 +189,7 @@ export default function FormularioTemplateEditor({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="categoria" className="text-xs text-muted-foreground">Categoria</Label>
+                <Label htmlFor="categoria" className="text-sm font-medium">Categoria</Label>
                 {isLoadingCategorias ? (
                   <div className="h-9 bg-muted animate-pulse rounded-md" />
                 ) : (
@@ -218,7 +218,7 @@ export default function FormularioTemplateEditor({
 
             <div className="grid gap-3 grid-cols-[1fr_auto]">
               <div className="space-y-1">
-                <Label htmlFor="descricao" className="text-xs text-muted-foreground">Descrição</Label>
+                <Label htmlFor="descricao" className="text-sm font-medium">Descrição</Label>
                 <Input
                   id="descricao"
                   value={descricao}
@@ -228,7 +228,7 @@ export default function FormularioTemplateEditor({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="tempo" className="text-xs text-muted-foreground">Tempo (min)</Label>
+                <Label htmlFor="tempo" className="text-sm font-medium">Tempo (min)</Label>
                 <Input
                   id="tempo"
                   type="number"
@@ -292,7 +292,7 @@ export default function FormularioTemplateEditor({
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
