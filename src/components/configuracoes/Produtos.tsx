@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';

@@ -9,6 +9,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import { storage } from '@/utils/localStorage';
 import { configurationService } from '@/services/ConfigurationService';
+import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import { useNumberInput } from '@/hooks/useNumberInput';
 
 interface ProdutoAdicional {

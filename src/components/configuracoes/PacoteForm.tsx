@@ -8,6 +8,7 @@ import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
 import { ProductSearchCombobox } from '@/components/ui/product-search-combobox';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, ChevronUp } from 'lucide-react';
+import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import { useNumberInput } from '@/hooks/useNumberInput';
 import { 
   Categoria, 
@@ -44,20 +45,20 @@ export default function PacoteForm({
   const configPrecificacao = obterConfiguracaoPrecificacao();
   const isFixedPricing = configPrecificacao.modelo === 'fixo';
 
-  // Hooks para inputs numéricos com auto-seleção
-  const valorBaseInput = useNumberInput({
+  // Hooks para inputs monetários com máscara BRL
+  const valorBaseInput = useCurrencyInput({
     value: formData.valor_base,
     onChange: (value) => {
-      setFormData(prev => ({ ...prev, valor_base: parseFloat(value) || 0 }));
+      setFormData(prev => ({ ...prev, valor_base: value }));
       if (errors.valor_base) {
         setErrors(prev => ({ ...prev, valor_base: '' }));
       }
     }
   });
 
-  const valorFotoExtraInput = useNumberInput({
+  const valorFotoExtraInput = useCurrencyInput({
     value: formData.valor_foto_extra,
-    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: parseFloat(value) || 0 }))
+    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: value }))
   });
 
   const fotosIncluidasInput = useNumberInput({
@@ -216,12 +217,7 @@ export default function PacoteForm({
             </span>
             <Input
               id="valor_base"
-              type="number"
-              step="0.01"
-              min="0"
-              value={valorBaseInput.displayValue}
-              onChange={valorBaseInput.handleChange}
-              onFocus={valorBaseInput.handleFocus}
+              {...valorBaseInput.inputProps}
               placeholder="0,00"
               className={cn(
                 "h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
@@ -245,12 +241,7 @@ export default function PacoteForm({
             </span>
             <Input
               id="valor_foto_extra"
-              type="number"
-              step="0.01"
-              min="0"
-              value={valorFotoExtraInput.displayValue}
-              onChange={valorFotoExtraInput.handleChange}
-              onFocus={valorFotoExtraInput.handleFocus}
+              {...valorFotoExtraInput.inputProps}
               placeholder="0,00"
               className="h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { calcularMargemLucro } from '@/utils/productUtils';
 import { formatarMoeda } from '@/utils/precificacaoUtils';
+import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import type { Produto } from '@/types/configuration';
 
 interface ProdutoFormModalProps {
