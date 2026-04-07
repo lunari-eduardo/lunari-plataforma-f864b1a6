@@ -13,6 +13,12 @@ window.addEventListener('vite:preloadError', () => {
   }
 });
 
+// Handle legacy ?redirect= URLs from old 404.html before React mounts
+const legacyRedirect = new URLSearchParams(window.location.search).get('redirect');
+if (legacyRedirect) {
+  window.history.replaceState({}, '', legacyRedirect);
+}
+
 // Limpar SW e caches em rotas públicas, preview ou iframe ANTES de montar React
 const isPublicRoute = /^\/(formulario|checkout)\//.test(window.location.pathname);
 const isPreviewHost = window.location.hostname.includes('id-preview--');

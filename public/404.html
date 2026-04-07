@@ -3,18 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Redirecionando... - Lunari 2.0</title>
-    <script>
-      // Simplified SPA fallback - redirect 404s to index.html
-      var l = window.location;
-      var redirect = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + '/';
-      if (l.pathname !== '/') {
-        redirect += '?redirect=' + encodeURIComponent(l.pathname + l.search + l.hash);
-      }
-      window.location.replace(redirect);
-    </script>
+    <title>Página não encontrada - Lunari 2.0</title>
+    <style>
+      body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0A0A0A; color: #fff; }
+      .container { text-align: center; }
+      h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+      p { color: #888; }
+      a { color: #9b87f5; text-decoration: none; }
+    </style>
   </head>
   <body>
-    <p>Redirecionando...</p>
+    <div class="container">
+      <h1>404</h1>
+      <p>Página não encontrada.</p>
+      <p><a href="/">Voltar ao início</a></p>
+    </div>
   </body>
 </html>

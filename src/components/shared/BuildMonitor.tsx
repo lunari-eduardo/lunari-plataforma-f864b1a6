@@ -12,15 +12,7 @@ export function BuildMonitor() {
     console.log('🔧 [BuildMonitor] Modo:', import.meta.env.MODE);
     console.log('🌐 [BuildMonitor] Base URL:', import.meta.env.BASE_URL);
     
-    // Check if we have a redirect from 404.html
-    const urlParams = new URLSearchParams(window.location.search);
-    const redirectPath = urlParams.get('redirect');
-    if (redirectPath) {
-      console.log('🔄 [BuildMonitor] Redirecionamento detectado:', redirectPath);
-      // Remove the redirect parameter and navigate to the intended path
-      const newUrl = window.location.origin + redirectPath;
-      window.history.replaceState({}, '', newUrl);
-    }
+    // Legacy redirect handling removed — Vercel rewrites handle SPA routing
     
     // Monitor critical resources
     const checkResources = () => {

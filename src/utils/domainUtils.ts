@@ -1,7 +1,10 @@
 /**
  * Utilitários para detecção de domínio e URLs de redirect
- * Suporta migração de domínios: lunariplataforma.com.br -> lunarihub.com
+ * Domínio canônico de produção: app.lunarihub.com (via Vercel)
  */
+
+/** Domínio canônico de produção — fonte única de verdade */
+const CANONICAL_PRODUCTION_URL = import.meta.env.VITE_SITE_URL || 'https://app.lunarihub.com';
 
 /**
  * Detecta se está em ambiente de produção (novos ou antigos domínios)
@@ -15,33 +18,29 @@ export function isProductionDomain(): boolean {
 
 /**
  * Obtém a URL base do app Gestão baseado no domínio atual
- * Prioriza novos domínios, mantém fallback para antigos
  */
 export function getAppBaseUrl(): string {
   const hostname = window.location.hostname;
   
-  // Novos domínios têm prioridade
   if (hostname.includes('lunarihub')) {
     return 'https://app.lunarihub.com';
   }
   
-  // Domínios antigos (transição)
   if (hostname.includes('lunariplataforma')) {
     return 'https://www.lunariplataforma.com.br';
   }
   
-  // Preview/desenvolvimento
+  // Preview/desenvolvimento — usa origem atual para navegação interna
   if (hostname.includes('lovable.app')) {
     return window.location.origin;
   }
   
-  // Localhost ou outros
   return window.location.origin;
 }
 
 /**
  * Obtém a URL de redirect para OAuth (MP, Google Calendar)
- * Retorna URL completa para página de integrações
+ * OAuth callbacks DEVEM usar a origem real do navegador, não o canônico
  */
 export function getOAuthRedirectUri(): string {
   return `${getAppBaseUrl()}/app/integracoes`;
@@ -53,12 +52,10 @@ export function getOAuthRedirectUri(): string {
 export function getGalleryBaseUrl(): string {
   const hostname = window.location.hostname;
   
-  // Novos domínios
   if (hostname.includes('lunarihub')) {
     return 'https://gallery.lunarihub.com';
   }
   
-  // Antigo domínio do Gallery
   return 'https://lunari-gallery.lovable.app';
 }
 
@@ -66,42 +63,14 @@ export function getGalleryBaseUrl(): string {
  * Obtém URL canônica para SEO baseado no domínio atual
  */
 export function getCanonicalBaseUrl(): string {
-  const hostname = window.location.hostname;
-  
-  // Novos domínios
-  if (hostname.includes('lunarihub')) {
-    return 'https://app.lunarihub.com';
-  }
-  
-  // Domínios antigos ou produção
-  return 'https://www.lunariplataforma.com.br';
+  return CANONICAL_PRODUCTION_URL;
 }
 
 /**
  * Obtém a URL base para links públicos compartilháveis (formulários, checkout).
- * Em preview/localhost/iframe, usa o domínio publicado canônico.
- * Em produção, usa a origem atual.
+ * SEMPRE usa o domínio canônico de produção, independente do ambiente atual.
+ * Isso garante que links enviados a clientes funcionem em qualquer contexto.
  */
 export function getPublicShareBaseUrl(): string {
-  const hostname = window.location.hostname;
-  
-  // Produção — domínios reais
-  if (hostname.includes('lunarihub')) {
-    return 'https://app.lunarihub.com';
-  }
-  if (hostname.includes('lunariplataforma')) {
-    return 'https://www.lunariplataforma.com.br';
-  }
-  
-  // Preview/editor/lovable.app — usar domínio publicado
-  if (hostname.includes('lovable.app')) {
-    return 'https://lunari-plataforma.lovable.app';
-  }
-  
-  // Localhost — usar domínio publicado
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'https://lunari-plataforma.lovable.app';
-  }
-  
-  return window.location.origin;
+  return CANONICAL_PRODUCTION_URL;
 }
