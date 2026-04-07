@@ -7,6 +7,7 @@ import { useFormulariosByCliente } from '@/hooks/useFormulariosByCliente';
 import { SendBriefingModal } from './SendBriefingModal';
 import { FormularioRespostasView } from './FormularioRespostasView';
 import { STATUS_ENVIO_LABELS, FormularioCampo } from '@/types/formulario';
+import { getPublicShareBaseUrl } from '@/utils/domainUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -30,7 +31,7 @@ export function ClienteFormulariosList({
   } | null>(null);
 
   const handleCopyLink = (token: string) => {
-    const link = `${window.location.origin}/formulario/${token}`;
+    const link = `${getPublicShareBaseUrl()}/formulario/${token}`;
     navigator.clipboard.writeText(link);
     toast({ title: 'Link copiado!' });
   };
