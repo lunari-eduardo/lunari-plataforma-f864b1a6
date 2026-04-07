@@ -170,7 +170,7 @@ export default function AppointmentDetails({
   const isPendente = saldo > 0;
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4 transition-all duration-200", sendBriefingOpen && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
       <div className="border-b border-lunar-border/30 pb-4">
         <div className="flex items-center gap-2">
