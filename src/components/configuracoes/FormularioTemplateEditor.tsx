@@ -91,7 +91,6 @@ export default function FormularioTemplateEditor({
     })
   );
 
-  // Reset form when opening/closing or template changes
   useEffect(() => {
     if (open) {
       if (template) {
@@ -176,26 +175,27 @@ export default function FormularioTemplateEditor({
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6 py-4">
+          <div className="space-y-4 py-3">
             {/* Informações básicas */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome do template *</Label>
+            <div className="grid gap-3 grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="nome" className="text-xs text-muted-foreground">Nome *</Label>
                 <Input
                   id="nome"
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Briefing Ensaio Gestante"
+                  className="h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="categoria">Categoria</Label>
+              <div className="space-y-1">
+                <Label htmlFor="categoria" className="text-xs text-muted-foreground">Categoria</Label>
                 {isLoadingCategorias ? (
-                  <div className="h-10 bg-muted animate-pulse rounded-md" />
+                  <div className="h-9 bg-muted animate-pulse rounded-md" />
                 ) : (
                   <Select value={categoria} onValueChange={setCategoria}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="geral">Geral</SelectItem>
@@ -216,19 +216,19 @@ export default function FormularioTemplateEditor({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea
+            <div className="grid gap-3 grid-cols-[1fr_auto]">
+              <div className="space-y-1">
+                <Label htmlFor="descricao" className="text-xs text-muted-foreground">Descrição</Label>
+                <Input
                   id="descricao"
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Breve descrição do uso deste template"
-                  rows={2}
+                  className="h-9"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="tempo">Tempo estimado (minutos)</Label>
+              <div className="space-y-1">
+                <Label htmlFor="tempo" className="text-xs text-muted-foreground">Tempo (min)</Label>
                 <Input
                   id="tempo"
                   type="number"
@@ -236,23 +236,24 @@ export default function FormularioTemplateEditor({
                   max={30}
                   value={tempoEstimado}
                   onChange={(e) => setTempoEstimado(parseInt(e.target.value) || 3)}
+                  className="h-9 w-20"
                 />
               </div>
             </div>
 
             {/* Lista de campos */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Campos do formulário</Label>
-                <DropdownMenu modal={false}>
+                <Label className="text-xs text-muted-foreground">Campos do formulário</Label>
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Plus className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                      <Plus className="h-3.5 w-3.5" />
                       Adicionar campo
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="z-[9999]">
+                  <DropdownMenuContent align="end" onCloseAutoFocus={(e) => e.preventDefault()}>
                     {CAMPO_TIPOS.map((tipo) => (
                       <DropdownMenuItem key={tipo} onClick={() => addCampo(tipo)}>
                         {CAMPO_TIPO_LABELS[tipo]}
@@ -276,7 +277,7 @@ export default function FormularioTemplateEditor({
                     items={campos.map((c) => c.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {campos.map((campo) => (
                         <SortableCampoItem
                           key={campo.id}
@@ -349,110 +350,100 @@ function SortableCampoItem({ campo, onUpdate, onRemove }: SortableCampoItemProps
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-lg border bg-card p-4 space-y-3"
+      className="border-l-2 border-primary/20 pl-3 pr-1 py-2 bg-muted/30 rounded-r-md"
     >
-      <div className="flex items-start gap-3">
+      {/* Header: tipo + obrigatório + delete */}
+      <div className="flex items-center gap-2 mb-2">
         <button
           type="button"
-          className="mt-2 cursor-grab touch-none text-muted-foreground hover:text-foreground"
+          className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-3.5 w-3.5" />
         </button>
-
-        <div className="flex-1 space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {CAMPO_TIPO_LABELS[campo.tipo]}
-            </span>
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
-              <Label htmlFor={`obrigatorio-${campo.id}`} className="text-xs">
-                Obrigatório
-              </Label>
-              <Switch
-                id={`obrigatorio-${campo.id}`}
-                checked={campo.obrigatorio}
-                onCheckedChange={(checked) => onUpdate({ obrigatorio: checked })}
-              />
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={onRemove}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className={showPlaceholder ? "grid gap-3 sm:grid-cols-2" : ""}>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Pergunta</Label>
-              <Input
-                value={campo.label}
-                onChange={(e) => onUpdate({ label: e.target.value })}
-                placeholder="Ex: Qual seu nome?"
-              />
-            </div>
-            {showPlaceholder && (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Placeholder</Label>
-                <Input
-                  value={campo.placeholder || ''}
-                  onChange={(e) => onUpdate({ placeholder: e.target.value })}
-                  placeholder="Ex: Digite seu nome"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Texto de ajuda (opcional)</Label>
-            <Input
-              value={campo.descricao || ''}
-              onChange={(e) => onUpdate({ descricao: e.target.value })}
-              placeholder="Informação adicional para o cliente"
-            />
-          </div>
-
-          {/* Opções para campos de seleção */}
-          {(campo.tipo === 'selecao_unica' || campo.tipo === 'multipla_escolha') && (
-            <div className="space-y-2">
-              <Label className="text-xs">Opções</Label>
-              {(campo.opcoes || []).map((opcao, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <Input
-                    value={opcao}
-                    onChange={(e) => handleOpcoesChange(e.target.value, idx)}
-                    placeholder={`Opção ${idx + 1}`}
-                  />
-                  {(campo.opcoes || []).length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => removeOpcao(idx)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={addOpcao}
-                className="w-full"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Adicionar opção
-              </Button>
-            </div>
-          )}
+        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+          {CAMPO_TIPO_LABELS[campo.tipo]}
+        </span>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-muted-foreground">Obrigatório</span>
+          <Switch
+            checked={campo.obrigatorio}
+            onCheckedChange={(checked) => onUpdate({ obrigatorio: checked })}
+            className="scale-75"
+          />
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-destructive hover:text-destructive"
+          onClick={onRemove}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
+
+      {/* Inputs: Pergunta + Placeholder lado a lado */}
+      <div className={showPlaceholder ? "grid grid-cols-2 gap-2 mb-1.5" : "mb-1.5"}>
+        <Input
+          value={campo.label}
+          onChange={(e) => onUpdate({ label: e.target.value })}
+          placeholder="Pergunta"
+          className="h-8 text-sm"
+        />
+        {showPlaceholder && (
+          <Input
+            value={campo.placeholder || ''}
+            onChange={(e) => onUpdate({ placeholder: e.target.value })}
+            placeholder="Placeholder"
+            className="h-8 text-sm"
+          />
+        )}
+      </div>
+
+      {/* Texto de ajuda */}
+      <Input
+        value={campo.descricao || ''}
+        onChange={(e) => onUpdate({ descricao: e.target.value })}
+        placeholder="Texto de ajuda (opcional)"
+        className="h-7 text-xs text-muted-foreground"
+      />
+
+      {/* Opções para campos de seleção */}
+      {(campo.tipo === 'selecao_unica' || campo.tipo === 'multipla_escolha') && (
+        <div className="mt-2 space-y-1">
+          {(campo.opcoes || []).map((opcao, idx) => (
+            <div key={idx} className="flex items-center gap-1.5">
+              <Input
+                value={opcao}
+                onChange={(e) => handleOpcoesChange(e.target.value, idx)}
+                placeholder={`Opção ${idx + 1}`}
+                className="h-7 text-xs"
+              />
+              {(campo.opcoes || []).length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={() => removeOpcao(idx)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={addOpcao}
+            className="h-7 text-xs w-full text-muted-foreground"
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Adicionar opção
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
