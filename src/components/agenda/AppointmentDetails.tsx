@@ -517,7 +517,7 @@ export default function AppointmentDetails({
         onOpenChange={setSendBriefingOpen}
         clienteId={appointment.clienteId || ''}
         clienteNome={appointment.client}
-        clienteTelefone={appointment.clienteTelefone}
+        clienteTelefone={appointment.whatsapp}
         sessionId={appointment.sessionId}
       />
 
