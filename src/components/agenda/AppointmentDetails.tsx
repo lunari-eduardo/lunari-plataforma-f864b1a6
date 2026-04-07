@@ -486,7 +486,9 @@ export default function AppointmentDetails({
           </Button>
         </div>
       </div>
+      </div>
 
+      {/* Modais fora do container com blur */}
       <AppointmentDeleteConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
@@ -532,6 +534,6 @@ export default function AppointmentDetails({
           campos={viewRespostas.campos}
         />
       )}
-    </div>
+    </>
   );
 }
