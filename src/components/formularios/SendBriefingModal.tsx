@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Copy, Send, FileText, Clock, Loader2, Check } from 'lucide-react';
 import { useFormularioTemplates } from '@/hooks/useFormularioTemplates';
 import { useFormularios } from '@/hooks/useFormularios';
+import { getPublicShareBaseUrl } from '@/utils/domainUtils';
 import type { FormularioTemplate } from '@/types/formulario';
 
 interface SendBriefingModalProps {
@@ -47,8 +48,7 @@ export function SendBriefingModal({
       if (formulario?.id) {
         await publishFormulario(formulario.id);
         const token = formulario.public_token;
-        const baseUrl = window.location.origin;
-        const link = `${baseUrl}/formulario/${token}`;
+        const link = `${getPublicShareBaseUrl()}/formulario/${token}`;
         setCreatedLink(link);
         setCreatedToken(token);
       }

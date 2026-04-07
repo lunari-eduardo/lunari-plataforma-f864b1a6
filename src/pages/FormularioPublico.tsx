@@ -1,23 +1,31 @@
 import { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, Clock, Upload, X, Loader2 } from 'lucide-react';
+import { Check, Clock, Upload, X, Loader2, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { useFormularioPublico, useSubmitFormularioResposta } from '@/hooks/useFormularios';
+import { useFormularioPublico, useSubmitFormularioResposta, useFormularioRespostaPublica } from '@/hooks/useFormularios';
 import { FormularioCampo } from '@/types/formulario';
 import { supabase } from '@/integrations/supabase/client';
 import { useDropzone } from 'react-dropzone';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function FormularioPublico() {
   const { token } = useParams<{ token: string }>();
   const { data: formulario, isLoading, error } = useFormularioPublico(token);
   const submitMutation = useSubmitFormularioResposta();
+
+  const isRespondido = formulario?.status_envio === 'respondido';
+  const isExpirado = formulario?.expires_at && new Date(formulario.expires_at) < new Date();
+  const isDisponivel = formulario?.status === 'publicado' && !isRespondido && !isExpirado;
+
+  // Buscar resposta existente se já respondido
+  const { data: respostaExistente } = useFormularioRespostaPublica(token, isRespondido === true);
 
   const [respostas, setRespostas] = useState<Record<string, any>>({});
   const [respondenteName, setRespondenteName] = useState('');
@@ -31,28 +39,21 @@ export default function FormularioPublico() {
 
   const handleFileUpload = async (campoId: string, files: File[]) => {
     if (files.length === 0) return;
-
     setUploading((prev) => ({ ...prev, [campoId]: true }));
     const uploadedUrls: string[] = respostas[campoId] || [];
-
     try {
       for (const file of files) {
         const fileName = `${Date.now()}_${file.name}`;
         const filePath = `${token}/${campoId}/${fileName}`;
-
         const { error: uploadError } = await supabase.storage
           .from('formulario-uploads')
           .upload(filePath, file);
-
         if (uploadError) throw uploadError;
-
         const { data: urlData } = supabase.storage
           .from('formulario-uploads')
           .getPublicUrl(filePath);
-
         uploadedUrls.push(urlData.publicUrl);
       }
-
       handleChange(campoId, uploadedUrls);
     } catch (err) {
       console.error('Erro no upload:', err);
@@ -69,8 +70,7 @@ export default function FormularioPublico() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formulario) return;
-
+    if (!formulario || !isDisponivel) return;
     try {
       await submitMutation.mutateAsync({
         formulario,
@@ -84,7 +84,7 @@ export default function FormularioPublico() {
     }
   };
 
-  // Loading state
+  // Loading
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -96,7 +96,7 @@ export default function FormularioPublico() {
     );
   }
 
-  // Error state
+  // Not found
   if (error || !formulario) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -113,23 +113,107 @@ export default function FormularioPublico() {
     );
   }
 
-  // Success state
-  if (submitted) {
+  // Expirado
+  if (isExpirado) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-in zoom-in-50">
-            <Check className="h-10 w-10 text-primary" />
+        <div className="text-center space-y-3 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+            <Clock className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h1 className="text-2xl font-semibold">Enviado com sucesso!</h1>
-          <p className="text-muted-foreground">
-            {formulario.mensagem_conclusao}
+          <h1 className="text-xl font-semibold">Formulário expirado</h1>
+          <p className="text-sm text-muted-foreground">
+            O prazo para responder este formulário já passou. Entre em contato com o fotógrafo.
           </p>
         </div>
       </div>
     );
   }
 
+  // Já respondido — modo visualização
+  if (isRespondido || submitted) {
+    const respostasData = respostaExistente?.respostas;
+    const camposData = respostaExistente?.campos || formulario.campos;
+    const submittedAt = respostaExistente?.submitted_at;
+
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <h1 className="text-lg font-semibold">
+              {respostaExistente?.titulo || formulario.titulo_cliente || formulario.titulo}
+            </h1>
+          </div>
+        </header>
+        <main className="max-w-2xl mx-auto px-4 py-8">
+          <div className="text-center space-y-4 mb-8">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <FileCheck className="h-10 w-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-semibold">Formulário já respondido</h2>
+            <p className="text-muted-foreground">
+              {respostaExistente?.mensagem_conclusao || formulario.mensagem_conclusao}
+            </p>
+            {submittedAt && (
+              <p className="text-xs text-muted-foreground">
+                Enviado em {format(new Date(submittedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </p>
+            )}
+          </div>
+
+          {/* Respostas em modo leitura */}
+          {respostasData && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground">Suas respostas:</h3>
+              {(camposData as FormularioCampo[])
+                .sort((a, b) => a.ordem - b.ordem)
+                .map((campo) => {
+                  const valor = (respostasData as Record<string, any>)[campo.id];
+                  if (valor === undefined || valor === '' || (Array.isArray(valor) && valor.length === 0)) return null;
+                  return (
+                    <div key={campo.id} className="border rounded-lg p-3 space-y-1">
+                      <p className="text-sm font-medium">{campo.label}</p>
+                      {Array.isArray(valor) ? (
+                        campo.tipo === 'upload_imagem' || campo.tipo === 'upload_referencia' ? (
+                          <div className="flex flex-wrap gap-2">
+                            {valor.map((url: string, i: number) => (
+                              <img key={i} src={url} alt="" className="w-16 h-16 rounded object-cover border" />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">{valor.join(', ')}</p>
+                        )
+                      ) : (
+                        <p className="text-sm text-muted-foreground">{String(valor)}</p>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // Formulário não publicado
+  if (formulario.status !== 'publicado') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-3 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+            <X className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-xl font-semibold">Formulário indisponível</h1>
+          <p className="text-sm text-muted-foreground">
+            Este formulário ainda não está disponível para preenchimento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Formulário disponível para resposta
   const camposOrdenados = [...formulario.campos].sort((a, b) => a.ordem - b.ordem);
   const camposObrigatorios = camposOrdenados.filter((c) => c.obrigatorio);
   const camposRespondidos = camposObrigatorios.filter((c) => {
@@ -142,7 +226,6 @@ export default function FormularioPublico() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <h1 className="text-lg font-semibold">
@@ -158,7 +241,6 @@ export default function FormularioPublico() {
             </span>
           </div>
         </div>
-        {/* Progress bar */}
         <div className="h-1 bg-muted">
           <div
             className="h-full bg-primary transition-all duration-300"
@@ -167,10 +249,8 @@ export default function FormularioPublico() {
         </div>
       </header>
 
-      {/* Form */}
       <main className="max-w-2xl mx-auto px-4 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Optional: Respondent info */}
           <div className="space-y-4 p-4 rounded-lg border bg-card">
             <p className="text-sm font-medium">Suas informações (opcional)</p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -196,7 +276,6 @@ export default function FormularioPublico() {
             </div>
           </div>
 
-          {/* Dynamic fields */}
           {camposOrdenados.map((campo, idx) => (
             <CampoRenderer
               key={campo.id}
@@ -211,7 +290,6 @@ export default function FormularioPublico() {
             />
           ))}
 
-          {/* Submit */}
           <div className="pt-4">
             <Button
               type="submit"
@@ -235,6 +313,8 @@ export default function FormularioPublico() {
   );
 }
 
+// ---- CampoRenderer ----
+
 interface CampoRendererProps {
   campo: FormularioCampo;
   index: number;
@@ -247,14 +327,7 @@ interface CampoRendererProps {
 }
 
 function CampoRenderer({
-  campo,
-  index,
-  total,
-  value,
-  onChange,
-  onFileUpload,
-  onRemoveFile,
-  isUploading,
+  campo, index, total, value, onChange, onFileUpload, onRemoveFile, isUploading,
 }: CampoRendererProps) {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     onFileUpload(acceptedFiles);
@@ -272,65 +345,33 @@ function CampoRenderer({
   return (
     <div className="space-y-3">
       <div className="flex items-baseline gap-2">
-        <span className="text-xs text-muted-foreground">
-          {index}/{total}
-        </span>
+        <span className="text-xs text-muted-foreground">{index}/{total}</span>
         <Label className="text-base">
           {campo.label}
           {campo.obrigatorio && <span className="text-destructive ml-1">*</span>}
         </Label>
       </div>
+      {campo.descricao && <p className="text-sm text-muted-foreground">{campo.descricao}</p>}
 
-      {campo.descricao && (
-        <p className="text-sm text-muted-foreground">{campo.descricao}</p>
-      )}
-
-      {/* Texto curto */}
       {campo.tipo === 'texto_curto' && (
-        <Input
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={campo.placeholder}
-          required={campo.obrigatorio}
-        />
+        <Input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={campo.placeholder} required={campo.obrigatorio} />
       )}
-
-      {/* Texto longo */}
       {campo.tipo === 'texto_longo' && (
-        <Textarea
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={campo.placeholder}
-          required={campo.obrigatorio}
-          rows={4}
-        />
+        <Textarea value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={campo.placeholder} required={campo.obrigatorio} rows={4} />
       )}
-
-      {/* Data */}
       {campo.tipo === 'data' && (
-        <Input
-          type="date"
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          required={campo.obrigatorio}
-        />
+        <Input type="date" value={value || ''} onChange={(e) => onChange(e.target.value)} required={campo.obrigatorio} />
       )}
-
-      {/* Seleção única */}
       {campo.tipo === 'selecao_unica' && (
         <RadioGroup value={value || ''} onValueChange={onChange}>
           {(campo.opcoes || []).map((opcao, idx) => (
             <div key={idx} className="flex items-center space-x-2">
               <RadioGroupItem value={opcao} id={`${campo.id}-${idx}`} />
-              <Label htmlFor={`${campo.id}-${idx}`} className="font-normal">
-                {opcao}
-              </Label>
+              <Label htmlFor={`${campo.id}-${idx}`} className="font-normal">{opcao}</Label>
             </div>
           ))}
         </RadioGroup>
       )}
-
-      {/* Múltipla escolha */}
       {campo.tipo === 'multipla_escolha' && (
         <div className="space-y-2">
           {(campo.opcoes || []).map((opcao, idx) => {
@@ -342,32 +383,22 @@ function CampoRenderer({
                   checked={checked}
                   onCheckedChange={(c) => {
                     const current = value || [];
-                    if (c) {
-                      onChange([...current, opcao]);
-                    } else {
-                      onChange(current.filter((v: string) => v !== opcao));
-                    }
+                    onChange(c ? [...current, opcao] : current.filter((v: string) => v !== opcao));
                   }}
                 />
-                <Label htmlFor={`${campo.id}-${idx}`} className="font-normal">
-                  {opcao}
-                </Label>
+                <Label htmlFor={`${campo.id}-${idx}`} className="font-normal">{opcao}</Label>
               </div>
             );
           })}
         </div>
       )}
-
-      {/* Upload de imagem / referência */}
       {(campo.tipo === 'upload_imagem' || campo.tipo === 'upload_referencia') && (
         <div className="space-y-3">
           <div
             {...getRootProps()}
             className={cn(
               'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
-              isDragActive
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-primary/50'
+              isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
             )}
           >
             <input {...getInputProps()} />
@@ -377,30 +408,17 @@ function CampoRenderer({
               <>
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  {isDragActive
-                    ? 'Solte os arquivos aqui...'
-                    : 'Arraste arquivos ou clique para selecionar'}
+                  {isDragActive ? 'Solte os arquivos aqui...' : 'Arraste arquivos ou clique para selecionar'}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Imagens (JPG, PNG) ou PDF
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">Imagens (JPG, PNG) ou PDF</p>
               </>
             )}
           </div>
-
-          {/* Preview uploaded files */}
           {(value || []).length > 0 && (
             <div className="flex flex-wrap gap-2">
               {(value as string[]).map((url, idx) => (
-                <div
-                  key={idx}
-                  className="relative group w-20 h-20 rounded-lg overflow-hidden border"
-                >
-                  <img
-                    src={url}
-                    alt={`Upload ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                <div key={idx} className="relative group w-20 h-20 rounded-lg overflow-hidden border">
+                  <img src={url} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => onRemoveFile(idx)}
@@ -414,14 +432,8 @@ function CampoRenderer({
           )}
         </div>
       )}
-
-      {/* Seleção de cores */}
       {campo.tipo === 'selecao_cores' && (
-        <Input
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={campo.placeholder || 'Ex: azul, verde, tons terrosos'}
-        />
+        <Input value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={campo.placeholder || 'Ex: azul, verde, tons terrosos'} />
       )}
     </div>
   );

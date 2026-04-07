@@ -13,6 +13,20 @@ window.addEventListener('vite:preloadError', () => {
   }
 });
 
+// Limpar SW e caches em rotas públicas, preview ou iframe ANTES de montar React
+const isPublicRoute = /^\/(formulario|checkout)\//.test(window.location.pathname);
+const isPreviewHost = window.location.hostname.includes('id-preview--');
+const isInIframe = (() => {
+  try { return window.self !== window.top; } catch { return true; }
+})();
+
+if ((isPublicRoute || isPreviewHost || isInIframe) && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs =>
+    regs.forEach(r => r.unregister())
+  );
+  caches.keys().then(names => names.forEach(n => caches.delete(n)));
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

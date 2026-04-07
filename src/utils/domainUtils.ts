@@ -76,3 +76,32 @@ export function getCanonicalBaseUrl(): string {
   // Domínios antigos ou produção
   return 'https://www.lunariplataforma.com.br';
 }
+
+/**
+ * Obtém a URL base para links públicos compartilháveis (formulários, checkout).
+ * Em preview/localhost/iframe, usa o domínio publicado canônico.
+ * Em produção, usa a origem atual.
+ */
+export function getPublicShareBaseUrl(): string {
+  const hostname = window.location.hostname;
+  
+  // Produção — domínios reais
+  if (hostname.includes('lunarihub')) {
+    return 'https://app.lunarihub.com';
+  }
+  if (hostname.includes('lunariplataforma')) {
+    return 'https://www.lunariplataforma.com.br';
+  }
+  
+  // Preview/editor/lovable.app — usar domínio publicado
+  if (hostname.includes('lovable.app')) {
+    return 'https://lunari-plataforma.lovable.app';
+  }
+  
+  // Localhost — usar domínio publicado
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'https://lunari-plataforma.lovable.app';
+  }
+  
+  return window.location.origin;
+}

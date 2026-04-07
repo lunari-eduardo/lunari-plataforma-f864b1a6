@@ -21,6 +21,7 @@ import { FormularioRespostasView } from '@/components/formularios/FormularioResp
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
@@ -170,7 +171,8 @@ export default function AppointmentDetails({
   const isPendente = saldo > 0;
 
   return (
-    <div className="space-y-4">
+    <>
+    <div className={cn("space-y-4 transition-all duration-200", sendBriefingOpen && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
       <div className="border-b border-lunar-border/30 pb-4">
         <div className="flex items-center gap-2">
@@ -484,7 +486,9 @@ export default function AppointmentDetails({
           </Button>
         </div>
       </div>
+      </div>
 
+      {/* Modais fora do container com blur */}
       <AppointmentDeleteConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
@@ -530,6 +534,6 @@ export default function AppointmentDetails({
           campos={viewRespostas.campos}
         />
       )}
-    </div>
+    </>
   );
 }

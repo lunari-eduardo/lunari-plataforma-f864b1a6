@@ -212,7 +212,6 @@ export function useFormularioPublico(token: string | undefined) {
         .from('formularios')
         .select('*')
         .eq('public_token', token)
-        .eq('status', 'publicado')
         .single();
       
       if (error) throw error;
@@ -223,6 +222,32 @@ export function useFormularioPublico(token: string | undefined) {
       } as Formulario;
     },
     enabled: !!token,
+    retry: false,
+  });
+}
+
+// Hook para buscar resposta pública via RPC (sem auth)
+export function useFormularioRespostaPublica(token: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['formulario-resposta-publica', token],
+    queryFn: async () => {
+      if (!token) throw new Error('Token não fornecido');
+      
+      const { data, error } = await supabase
+        .rpc('get_formulario_resposta_publica', { p_token: token });
+      
+      if (error) throw error;
+      return data as unknown as {
+        respostas: Record<string, any>;
+        respondente_nome: string | null;
+        respondente_email: string | null;
+        submitted_at: string | null;
+        campos: FormularioCampo[];
+        titulo: string;
+        mensagem_conclusao: string;
+      } | null;
+    },
+    enabled: !!token && enabled,
     retry: false,
   });
 }
