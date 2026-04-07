@@ -511,6 +511,25 @@ export default function AppointmentDetails({
           }
         }}
       />
+
+      <SendBriefingModal
+        open={sendBriefingOpen}
+        onOpenChange={setSendBriefingOpen}
+        clienteId={appointment.clienteId || ''}
+        clienteNome={appointment.client}
+        clienteTelefone={appointment.clienteTelefone}
+        sessionId={appointment.sessionId}
+      />
+
+      {viewRespostas && (
+        <FormularioRespostasView
+          open={!!viewRespostas}
+          onOpenChange={(open) => !open && setViewRespostas(null)}
+          formularioId={viewRespostas.id}
+          titulo={viewRespostas.titulo}
+          campos={viewRespostas.campos}
+        />
+      )}
     </div>
   );
 }
