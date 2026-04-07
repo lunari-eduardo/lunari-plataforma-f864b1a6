@@ -284,9 +284,8 @@ export function ChargeModal({
 
       if (insertError || !cobranca) throw new Error('Erro ao criar cobrança');
 
-      // Generate internal checkout URL using canonical domain
-      const { getPublicShareBaseUrl } = await import('@/utils/domainUtils');
-      const checkoutUrl = `${getPublicShareBaseUrl()}/checkout/${cobranca.id}`;
+      // Generate internal checkout URL
+      const checkoutUrl = `${window.location.origin}/checkout/${cobranca.id}`;
 
       setCurrentCharge({
         paymentLink: checkoutUrl,

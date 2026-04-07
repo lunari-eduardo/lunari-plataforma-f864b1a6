@@ -83,8 +83,25 @@ export function getCanonicalBaseUrl(): string {
  * Em produção, usa a origem atual.
  */
 export function getPublicShareBaseUrl(): string {
-  // Sempre usar o domínio publicado e funcional para links compartilháveis.
-  // O custom domain app.lunarihub.com está com deploy incorreto (serve landing),
-  // então forçamos o domínio .lovable.app até revalidação.
-  return 'https://lunari-plataforma.lovable.app';
+  const hostname = window.location.hostname;
+  
+  // Produção — domínios reais
+  if (hostname.includes('lunarihub')) {
+    return 'https://app.lunarihub.com';
+  }
+  if (hostname.includes('lunariplataforma')) {
+    return 'https://www.lunariplataforma.com.br';
+  }
+  
+  // Preview/editor/lovable.app — usar domínio publicado
+  if (hostname.includes('lovable.app')) {
+    return 'https://lunari-plataforma.lovable.app';
+  }
+  
+  // Localhost — usar domínio publicado
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'https://lunari-plataforma.lovable.app';
+  }
+  
+  return window.location.origin;
 }

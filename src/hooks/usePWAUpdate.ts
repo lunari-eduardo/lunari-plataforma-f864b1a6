@@ -17,12 +17,9 @@ export function usePWAUpdate() {
       return;
     }
 
-    // Não registrar SW em rotas públicas, preview ou iframe
+    // Não registrar SW em rotas públicas (formulário, checkout)
     const isPublicRoute = /^\/(formulario|checkout)\//.test(window.location.pathname);
-    const isPreviewHost = window.location.hostname.includes('id-preview--');
-    const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
-
-    if (isPublicRoute || isPreviewHost || isInIframe) {
+    if (isPublicRoute) {
       navigator.serviceWorker.getRegistrations().then(regs =>
         regs.forEach(r => r.unregister())
       );
