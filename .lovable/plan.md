@@ -1,96 +1,96 @@
 
-## Diagnóstico confirmado
+## Diagnóstico real
 
-- A rota pública **existe** em `src/App.tsx` (`/formulario/:token`). Então o problema não é “falta de rota”.
-- O link do formulário está sendo montado com `window.location.origin` em `SendBriefingModal.tsx` e `ClienteFormulariosList.tsx`. Em preview/editor isso pode gerar **URL errada para compartilhamento**, levando o cliente para um host inadequado.
-- O PWA ainda está configurado de forma arriscada para esse fluxo: `vite.config.ts` está com `devOptions.enabled: true`, e o cleanup atual do SW em `usePWAUpdate.ts` roda **tarde demais**.
-- `FormularioPublico.tsx` usa o estado local `submitted` para o sucesso, mas ao recarregar/reabrir o link esse estado se perde. Hoje a página pública **não sabe persistentemente** que o formulário já foi respondido.
-- O fluxo atual ainda permite inconsistência de múltiplas respostas: a UI do fotógrafo lê “a resposta mais recente”, sinal de que o sistema ainda não está travando **uma única submissão por formulário**.
-- O blur do modal filho foi ajustado, mas o modal pai continua visualmente “ativo”. Em modal aninhado, não basta subir `z-index` do filho; o pai também precisa entrar em estado de fundo.
+- Validei o comportamento fora do preview. O resultado foi decisivo:
+  - `https://lunari-plataforma.lovable.app/formulario/fDf6sMQEoEdd` abre o formulário correto
+  - `https://app.lunarihub.com/formulario/fDf6sMQEoEdd` abre a landing
+  - `https://app.lunarihub.com/app` também abre a landing
+  - `https://app.lunarihub.com/auth` também abre a landing
+- Isso prova que o problema principal agora não é a rota React nem o PWA. O domínio `app.lunarihub.com` está servindo a experiência errada/stale para caminhos que deveriam abrir o app.
+- O que agravou o cenário foi a regra atual de compartilhamento: `getPublicShareBaseUrl()` hoje prioriza `https://app.lunarihub.com` em host `lunarihub`. Como esse domínio está incorreto, os links passaram a sair quebrados.
+- O blur do modal da agenda também não ficou resolvido de verdade: hoje o estado `sendBriefingOpen` só afeta o conteúdo interno de `AppointmentDetails`, mas o `DialogContent` pai continua visualmente forte.
 
 ## Plano de correção
 
-### 1. Corrigir a URL pública compartilhada
-- Criar um utilitário central para links públicos, por exemplo `getPublicShareBaseUrl()`.
-- Em preview/localhost/editor/iframe, esse utilitário deve usar o **domínio publicado/canônico** do app, nunca `window.location.origin`.
-- Substituir a montagem manual de URL em:
+### 1. Conter imediatamente o compartilhamento quebrado
+- Parar de gerar links públicos com `app.lunarihub.com` até esse domínio ser revalidado.
+- Fazer `getPublicShareBaseUrl()` usar uma base pública explícita e segura:
+  - temporariamente `https://lunari-plataforma.lovable.app`
+  - depois voltar para `app.lunarihub.com` só após smoke test do domínio
+- Aplicar isso em:
   - `src/components/formularios/SendBriefingModal.tsx`
   - `src/components/formularios/ClienteFormulariosList.tsx`
+- Revisar também links públicos correlatos, principalmente checkout em `src/components/cobranca/ChargeModal.tsx`, para não repetir o mesmo bug.
 
-### 2. Blindar preview + PWA para não interceptar rotas públicas
-- Em `src/main.tsx`, antes de montar o React, desregistrar service workers e limpar caches quando:
-  - estiver em preview (`id-preview--...`)
-  - estiver dentro do editor/iframe
-  - estiver em rota pública (`/formulario/*`, `/checkout/*`)
-- Em `src/hooks/usePWAUpdate.ts`, manter o guard para não registrar SW nesses contextos.
-- Em `vite.config.ts`, desligar PWA em dev/preview (`devOptions.enabled: false`) e manter a `navigateFallbackDenylist`.
-- Não depender de ajuste em arquivo gerado (`dev-dist/sw.js`); a correção deve ficar só na origem do comportamento.
+### 2. Corrigir a causa raiz no domínio/publicação
+Essa parte não é só código; é domínio + publish.
+- Validar em Publish/Domains se `app.lunarihub.com` está ligado a este projeto correto.
+- Confirmar se não existe outro projeto/deploy de landing ocupando esse domínio.
+- Publicar novamente a versão atual do frontend (“Update”), porque frontend só entra no domínio publicado após update.
+- Se houver proxy/CDN externo, revisar para que `/app`, `/auth`, `/formulario/*` e `/checkout/*` apontem para esta app, não para a landing.
+- Revalidar no domínio:
+  - `/`
+  - `/auth`
+  - `/app`
+  - `/formulario/:token`
 
-### 3. Tornar o link público estado-aware
-- O carregamento público deve passar a distinguir:
-  - disponível para responder
-  - já respondido
-  - expirado
-  - inválido/indisponível
-- `useFormularioPublico` deve considerar `status_envio`, `expires_at` e o estado real do formulário, não só `status = publicado`.
-- `FormularioPublico.tsx` deixa de depender apenas do `submitted` local.
+### 3. Manter a blindagem das rotas públicas
+Mesmo com o domínio sendo o problema central, a proteção do app deve continuar:
+- manter bypass de SW/PWA em `/formulario/*` e `/checkout/*`
+- manter `devOptions.enabled: false`
+- manter `navigateFallbackDenylist`
+- revisar `main.tsx` e `usePWAUpdate.ts` para garantir que preview/iframe/rotas públicas não registrem ou reaproveitem SW
 
-### 4. Impedir segunda resposta do mesmo formulário
-- No banco, travar **uma única resposta por `formulario_id`** com abordagem segura:
-  - constraint/índice único em `formulario_respostas(formulario_id)`
-  - validação de inserção para barrar novo envio quando já houver resposta
-- Fazer migration segura: se existir duplicidade histórica, preservar o histórico antes de impor a trava, sem apagar silenciosamente.
+### 4. Fechar corretamente o fluxo pós-resposta
+Após o envio, o cliente não pode mais editar nem reenviar; o link passa a abrir só em visualização.
+- `FormularioPublico.tsx` deve depender do estado persistente do banco, não apenas de `submitted` local
+- reabertura do link:
+  - `respondido` → visualização somente leitura
+  - `expirado` → tela própria
+  - inválido/indisponível → tela própria
+- desabilitar completamente inputs, upload e botão de envio no modo finalizado
+- manter a mesma resposta disponível para o fotógrafo no painel
 
-### 5. Permitir reabertura somente em modo visualização
-- Após o envio:
-  - cliente não pode mais editar nem reenviar
-  - ao abrir o link novamente, vê apenas a resposta salva em modo leitura
-  - fotógrafo continua vendo a mesma resposta no painel
-- Para isso, criar uma leitura pública segura da resposta via `public_token` (RPC/view/função segura), sem afrouxar RLS da tabela inteira.
-- Reaproveitar a mesma base visual de `FormularioRespostasView` para manter consistência entre cliente e fotógrafo.
+### 5. Garantir resposta única sem risco
+- Manter a trava de uma resposta por `formulario_id`
+- Tratar duplicidade no frontend com mensagem amigável
+- Revisar a migration recente `20260407183746...`, porque hoje ela apaga duplicados silenciosamente
+  - se já foi aplicada, criar nova migration defensiva
+  - se não foi aplicada, substituir por estratégia sem perda silenciosa de histórico
 
-### 6. Melhorar UX da página pública pós-resposta
-- Adicionar estado visual claro:
-  - “Questionário finalizado”
-  - data/hora da resposta
-  - dados do respondente, se houver
-- Desabilitar completamente inputs, upload e botão de envio no modo finalizado.
-- Tratar também o estado expirado com tela própria, sem permitir edição.
+### 6. Corrigir de verdade o modal dentro do modal da agenda
+- Subir o estado do briefing para `AgendaModals` ou expor esse estado ao modal pai
+- Enquanto o briefing estiver aberto:
+  - reduzir opacidade do `DialogContent` pai
+  - aplicar blur/scale leves no modal pai inteiro
+  - bloquear interação do pai
+- manter o modal filho com overlay e z-index fortes
+- objetivo: o pai inteiro entrar em estado de fundo, não só o conteúdo interno
 
-### 7. Corrigir o destaque do modal dentro do modal da agenda
-- O filho já tem overlay próprio, mas o pai ainda não reage.
-- Em `src/components/agenda/AppointmentDetails.tsx`, enquanto `sendBriefingOpen` estiver ativo:
-  - aplicar leve blur/escurecimento/opacidade reduzida no conteúdo do modal pai
-  - bloquear interação visual do pai
-- Manter contraste mais forte no modal filho, mas a correção principal é o **pai entrar em estado de fundo**.
-
-## Arquivos envolvidos
-
+## Arquivos/frentes envolvidas
+- `src/utils/domainUtils.ts`
+- `src/components/formularios/SendBriefingModal.tsx`
+- `src/components/formularios/ClienteFormulariosList.tsx`
+- `src/components/cobranca/ChargeModal.tsx`
 - `src/main.tsx`
 - `src/hooks/usePWAUpdate.ts`
 - `vite.config.ts`
-- `src/utils/domainUtils.ts` ou novo utilitário de URL pública
-- `src/components/formularios/SendBriefingModal.tsx`
-- `src/components/formularios/ClienteFormulariosList.tsx`
-- `src/hooks/useFormularios.ts`
 - `src/pages/FormularioPublico.tsx`
-- `src/components/formularios/FormularioRespostasView.tsx` ou renderer compartilhado
+- `src/hooks/useFormularios.ts`
 - `src/components/agenda/AppointmentDetails.tsx`
-- migration SQL para resposta única + leitura pública segura
+- `src/components/agenda/AgendaModals.tsx`
+- migration SQL de ajuste seguro para resposta única/histórico
 
-## QA que precisa ser feita após a correção
+## Ordem recomendada
+1. Contenção: voltar os links públicos para o domínio publicado que funciona
+2. Corrigir `app.lunarihub.com` no domínio/publicação
+3. Ajustar modal pai/filho da agenda
+4. Fechar modo somente leitura + bloqueio amigável de segunda resposta
+5. QA completo e só então reativar `app.lunarihub.com` nos links públicos
 
-- Criar formulário pela agenda e pelo CRM
-- Copiar link e validar que aponta para o domínio público correto
-- Abrir o link direto em aba anônima/dispositivo sem login
+## QA obrigatória
+- Copiar link novo de briefing e abrir em aba anônima
+- Validar `/auth`, `/app` e `/formulario/:token` no custom domain
 - Responder uma vez, recarregar e confirmar modo somente leitura
-- Tentar reenviar e validar bloqueio
-- Testar preview/editor, reload, mobile e expirado sem cair na landing
-
-## Resumo da causa raiz
-
-O problema não é ausência de rota pública. É a combinação de:
-1. geração do link com origem errada,
-2. PWA/SW interferindo em preview e rotas públicas,
-3. falta de persistência do estado “já respondido”,
-4. ausência de trava robusta para resposta única.
+- Tentar reenviar e validar bloqueio amigável
+- Abrir briefing pela agenda e confirmar destaque visual claro do modal filho sobre o pai
