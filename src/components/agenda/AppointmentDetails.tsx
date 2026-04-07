@@ -37,9 +37,16 @@ export default function AppointmentDetails({
 }: AppointmentDetailsProps) {
   const { pacotes } = useOrcamentos();
   const { workflowInfo, sessionDetails, loadingDetails, fetchSessionDetails } = useAppointmentWorkflowInfo(appointment.id);
+  const { data: sessionFormularios = [] } = useFormulariosBySession(appointment.sessionId);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showClientEditModal, setShowClientEditModal] = useState(false);
+  const [sendBriefingOpen, setSendBriefingOpen] = useState(false);
+  const [viewRespostas, setViewRespostas] = useState<{
+    id: string;
+    titulo: string;
+    campos: any[];
+  } | null>(null);
   const [formData, setFormData] = useState({
     date: appointment.date,
     time: appointment.time,
