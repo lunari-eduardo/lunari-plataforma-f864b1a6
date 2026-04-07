@@ -89,7 +89,7 @@ export function SendBriefingModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[80vh] flex flex-col" overlayClassName="backdrop-blur-sm bg-black/40">
+      <DialogContent className="z-[70] max-w-lg max-h-[80vh] flex flex-col" overlayClassName="z-[60] backdrop-blur-md bg-black/60">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />

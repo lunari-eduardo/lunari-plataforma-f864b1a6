@@ -13,9 +13,17 @@ import { toast } from 'sonner';
  */
 export function usePWAUpdate() {
   useEffect(() => {
-    // Verificar se estamos em ambiente com suporte a SW
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-      console.warn('⚠️ [PWA] Service Workers não suportados');
+      return;
+    }
+
+    // Não registrar SW em rotas públicas (formulário, checkout)
+    const isPublicRoute = /^\/(formulario|checkout)\//.test(window.location.pathname);
+    if (isPublicRoute) {
+      navigator.serviceWorker.getRegistrations().then(regs =>
+        regs.forEach(r => r.unregister())
+      );
+      caches.keys().then(names => names.forEach(n => caches.delete(n)));
       return;
     }
 
