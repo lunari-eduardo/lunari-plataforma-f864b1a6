@@ -1,63 +1,69 @@
 
+# Melhoria UI do Editor de Templates + Fix "Adicionar campo"
 
-# Máscara BRL nos campos monetários + Botão produto na mesma linha
+## Problemas
 
-## Problema
+1. **"Adicionar campo" não funciona**: O `DropdownMenu` com `modal={false}` dentro de um `Dialog` (que é modal) causa conflito — o Dialog captura os cliques e impede que o DropdownMenuItem dispare o `onClick`. O `z-[9999]` não resolve porque o problema é de evento, não de camada visual.
 
-1. Campos de valor em Pacotes (`valor_base`, `valor_foto_extra`) e Produtos (`preco_custo`, `preco_venda`) usam `type="number"` sem formatação — o usuário vê "2222" em vez de "2.222,00"
-2. O botão "Adicionar Produto" ocupa uma linha inteira sozinho, desperdiçando espaço vertical
+2. **UI verbosa**: Cada campo ocupa muito espaço vertical com bordas grossas, labels separados e inputs grandes. A hierarquia visual é fraca.
 
-## Solução
+## Correções
 
-### 1. Criar hook `useCurrencyInput`
+### 1. Fix "Adicionar campo"
 
-Novo hook em `src/hooks/useCurrencyInput.ts` que:
-- Recebe `value: number` e `onChange: (num: number) => void`
-- Mantém estado interno de string formatada (ex: "1.234,56")
-- Formata em tempo real enquanto o usuário digita (remove não-numéricos, insere pontos e vírgula)
-- Usa `inputMode="decimal"` para teclado numérico no mobile
-- Retorna `{ displayValue, handleChange, handleFocus, handleBlur, inputProps }`
-- No blur, normaliza o valor e persiste via `onChange`
+Trocar o `DropdownMenu` por um `Popover` (do Radix) que funciona melhor dentro de Dialogs modais. O Popover usa Portal e não tem o conflito de modal nesting. Alternativamente, usar `DropdownMenu` **sem** `modal={false}` (removendo essa prop) e adicionando `onCloseAutoFocus={(e) => e.preventDefault()}` para evitar o refocus.
 
-Lógica de formatação:
+**Solução escolhida**: Remover `modal={false}` do DropdownMenu. O padrão `modal={true}` funciona corretamente dentro de Dialogs porque cria sua própria camada modal.
+
+### 2. UI compacta dos campos
+
+Redesenhar o `SortableCampoItem` com layout mais denso:
+
+**Antes** (atual):
 ```
-Input: "1234" → Display: "1.234,00" (on blur)
-Input: "1234,5" → Display: "1.234,50" (on blur)  
-Typing: keystroke-by-keystroke formatting of digits only
+┌─────────────────────────────────────────┐
+│ ⠿ TEXTO CURTO          Obrigatório 🔘 🗑│
+│                                         │
+│ Pergunta                                │
+│ ┌─────────────────────────────────────┐ │
+│ │ Nome do bebê                        │ │
+│ └─────────────────────────────────────┘ │
+│ Placeholder                             │
+│ ┌─────────────────────────────────────┐ │
+│ │ Ex: Sofia                           │ │
+│ └─────────────────────────────────────┘ │
+│ Texto de ajuda (opcional)               │
+│ ┌─────────────────────────────────────┐ │
+│ │ Pode ser deixado em branco...       │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
 ```
 
-### 2. `PacoteForm.tsx` — Substituir `useNumberInput` por `useCurrencyInput`
-
-Nos campos `valor_base` e `valor_foto_extra`:
-- Trocar `type="number"` por `type="text"` com `inputMode="decimal"`
-- Usar o novo hook para formatação automática
-- Campo `fotos_incluidas` permanece como está (é quantidade, não moeda)
-
-### 3. `Produtos.tsx` — Máscara + botão na mesma linha
-
-**Campos monetários**: Usar `useCurrencyInput` em `preco_custo` e `preco_venda`
-
-**Layout do botão**: Mover o botão "Adicionar Produto" para a mesma linha dos campos de preço:
+**Depois** (compacto):
 ```
-[Preço de Custo] [Preço de Venda] [+ Adicionar Produto]
+┌ ⠿ TEXTO CURTO              Obrigatório 🔘 🗑
+│
+│ [Pergunta___________] [Placeholder______]
+│ [Texto de ajuda (opcional)_______________]
+└─────────────────────────────────────────────
 ```
-Remover o `<div className="flex justify-end">` separado e colocar o botão como terceiro item no `flex-wrap gap-4`, com `self-end` para alinhar na base.
 
-### 4. `ProdutoFormModal.tsx` — Verificar e aplicar máscara
+Mudanças específicas:
+- Remover `<Label>` separado de cada input — usar apenas `placeholder` nos inputs como label contextual
+- Borda esquerda sutil (como o block hierarchy pattern) em vez de borda completa com `rounded-lg border`
+- Padding reduzido: `p-4` → `pl-3 pr-2 py-2`
+- Pergunta e Placeholder lado a lado em **todos** os tamanhos (não só `sm:grid-cols-2`)
+- Texto de ajuda: input menor, `h-8` com `text-xs`
+- Para campos de seleção (opções): inputs de opção inline menores com `h-8`
 
-Verificar se o modal de edição de produto também usa inputs de valor sem máscara e aplicar o mesmo hook.
+### 3. Cabeçalho do modal mais compacto
 
-### 5. `SalvarPacoteModal.tsx` — Aplicar máscara
+- Nome + Categoria na mesma linha (já está)
+- Descrição + Tempo estimado: Descrição ocupa mais espaço (3/4), tempo estimado compacto (1/4)
+- Reduzir `space-y-6` → `space-y-4` no container geral
 
-Campos `valor_base` e `valor_foto_extra` já usam `useNumberInput` — substituir por `useCurrencyInput`.
-
-## Arquivos a criar/modificar
+## Arquivo a modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useCurrencyInput.ts` | Novo hook de máscara BRL |
-| `src/components/configuracoes/PacoteForm.tsx` | Usar `useCurrencyInput` nos campos monetários |
-| `src/components/configuracoes/Produtos.tsx` | Máscara + botão na linha dos preços |
-| `src/components/configuracoes/ProdutoFormModal.tsx` | Aplicar máscara se necessário |
-| `src/components/precificacao/SalvarPacoteModal.tsx` | Aplicar máscara nos campos monetários |
-
+| `src/components/configuracoes/FormularioTemplateEditor.tsx` | Fix dropdown, redesign compacto dos campos |
