@@ -13,11 +13,14 @@ import { toast } from 'sonner';
 import { useNumberInput } from '@/hooks/useNumberInput';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { useAppointmentWorkflowInfo } from '@/hooks/useAppointmentWorkflowInfo';
+import { useFormulariosBySession } from '@/hooks/useFormulariosByCliente';
 import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 import { ClientEditModal } from './ClientEditModal';
+import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
+import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send } from 'lucide-react';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
