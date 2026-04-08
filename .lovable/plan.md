@@ -1,39 +1,39 @@
 
 
-# Correção: Persistir flags de repasse em `dados_extras` da cobrança
+# Workflow: Layout único desktop em todos os dispositivos
 
 ## Problema
+O `WorkflowCardCollapsed` tem 3 layouts separados: desktop (`lg:`), tablet (`md:`-`lg:`) e mobile (`<md`). No mobile, o layout é simplificado e desorganizado. No tablet, há pequenos erros como botão "Criar" fora de posição.
 
-O trigger `reconcile_cobranca_from_parcelas` lê as flags `repassarTaxasProcessamento`, `anteciparParcelas` e `repassarTaxaAntecipacao` de `cobrancas.dados_extras` (linhas 38-39) para decidir se o fotógrafo absorve ou repassa taxas. Porém, a Edge Function `gestao-asaas-create-payment` calcula essas flags (linhas 219-221) mas **nunca as salva** no campo `dados_extras` da cobrança inserida (linhas 368-382).
+O `WorkflowCardExpanded` também tem uma seção `md:hidden` exclusiva para mobile com layout diferente do desktop.
 
-Resultado: o trigger sempre vê `false` para ambas as flags, e registra despesa de gateway mesmo quando o cliente deveria pagar as taxas. Exatamente o bug reportado pela Gallery.
+## Solução
+Remover os layouts tablet e mobile, manter **apenas o layout desktop** em todos os breakpoints. O container pai (`WorkflowCardList`) já tem `overflow-x-auto` e `min-w-[900px]`, garantindo rolagem horizontal em telas menores.
 
-## Correção
+## Mudanças
 
-### Arquivo: `supabase/functions/gestao-asaas-create-payment/index.ts`
+### 1. `WorkflowCardCollapsed.tsx`
+- **Remover** o bloco tablet (linhas 462-593): `hidden md:grid lg:hidden grid-cols-[...]`
+- **Remover** o bloco mobile (linhas 595-647): `flex md:hidden items-center gap-2 flex-wrap`
+- **Alterar** o bloco desktop (linha 311): trocar `hidden lg:grid` por apenas `grid` — visível sempre
+- Labels de coluna (`Descrição`, `Pacote`, `Status`, etc.) permanecem intactos
 
-Após a linha 381 (`asaas_installment_id`), adicionar `dados_extras` ao objeto `cobrancaData`:
+### 2. `WorkflowCardExpanded.tsx`
+- **Remover** a seção mobile exclusiva (linhas 173-266): `md:hidden space-y-4` com "Editar Sessão"
+- O grid de 3 blocos (linha 269) já funciona bem; trocar `grid-cols-1 md:grid-cols-3` por `grid-cols-3` fixo
 
-```typescript
-const cobrancaData: Record<string, unknown> = {
-  // ... campos existentes ...
-  asaas_installment_id: asaasInstallmentId,
-  dados_extras: {
-    repassarTaxasProcessamento: repassarTaxas,
-    anteciparParcelas: antecipar,
-    repassarTaxaAntecipacao: repassarAntecipacao,
-  },
-};
-```
+### 3. `WorkflowCardList.tsx`
+- Manter `min-w-[900px]` e `overflow-x-auto` no container — sem mudanças necessárias
 
-Isso garante que:
-1. O trigger `reconcile_cobranca_from_parcelas` lê os flags corretos e calcula `valor_liquido` na perspectiva do fotógrafo
-2. As funções `checkout-get-data` e `checkout-process-payment` (que já leem `cobranca.dados_extras`) recebem os overrides corretos
-3. O extrato mostra `taxa_gateway = 0` quando o cliente paga as taxas
+## Resultado
+- Smartphone e tablet mostram exatamente o mesmo layout do desktop
+- Rolagem horizontal natural para telas menores
+- Sem zoom artificial nem media queries diferentes
+- Card expandido também mantém layout de 3 colunas
 
-## Impacto
-
-- Apenas 1 arquivo modificado
-- Sem migration necessária (a coluna `dados_extras` já existe como JSONB)
-- Cobranças futuras terão os flags corretos; cobranças antigas sem o campo continuam com o comportamento atual (fallback para global settings)
+## Arquivos
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Remover layouts tablet/mobile, tornar desktop visível sempre |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Remover seção mobile, fixar grid em 3 colunas |
 
