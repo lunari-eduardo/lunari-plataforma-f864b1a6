@@ -2,17 +2,17 @@ import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
-import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
+
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
 
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
 import { useSessionPayments } from "@/hooks/useSessionPayments";
-import { CreditCard, Plus, Package, Send } from "lucide-react";
+import { CreditCard, Plus, Send } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 
