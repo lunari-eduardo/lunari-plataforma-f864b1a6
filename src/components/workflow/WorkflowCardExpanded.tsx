@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { WorkflowPackageCombobox } from "./WorkflowPackageCombobox";
 import { ColoredStatusBadge } from "./ColoredStatusBadge";
-import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
+
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
