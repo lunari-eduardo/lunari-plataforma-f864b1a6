@@ -1,4 +1,4 @@
-import { MoreVertical, Clock, Ban, Trash2 } from 'lucide-react';
+import { MoreVertical, Clock, Ban, Trash2, Unlock } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +10,16 @@ interface TimeSlotOptionsMenuProps {
   onAvailable: () => void;
   onBlock: () => void;
   onRemove: () => void;
+  isBlocked?: boolean;
+  onUnblock?: () => void;
 }
 
 export default function TimeSlotOptionsMenu({
   onAvailable,
   onBlock,
   onRemove,
+  isBlocked,
+  onUnblock,
 }: TimeSlotOptionsMenuProps) {
   return (
     <DropdownMenu>
@@ -33,10 +37,17 @@ export default function TimeSlotOptionsMenu({
           <Clock className="h-4 w-4 mr-2 text-emerald-500" />
           Disponível
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onBlock(); }}>
-          <Ban className="h-4 w-4 mr-2 text-destructive" />
-          Bloquear
-        </DropdownMenuItem>
+        {isBlocked && onUnblock ? (
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onUnblock(); }}>
+            <Unlock className="h-4 w-4 mr-2 text-blue-500" />
+            Desbloquear
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onBlock(); }}>
+            <Ban className="h-4 w-4 mr-2 text-destructive" />
+            Bloquear
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-destructive focus:text-destructive">
           <Trash2 className="h-4 w-4 mr-2" />
           Excluir horário

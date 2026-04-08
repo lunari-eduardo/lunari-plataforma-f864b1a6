@@ -130,6 +130,7 @@ export default function DailyView({
       duration: 60,
       label,
       color,
+      typeId: tipo?.id,
     }]);
     toast.success('Horário marcado como disponível');
   };
@@ -375,8 +376,10 @@ export default function DailyView({
                           handleRemoveAvailability(time);
                           if (onOpenAvailability) onOpenAvailability(date, time);
                         }}
-                        onBlock={() => {}} 
+                        onBlock={() => {}}
                         onRemove={() => handleRemoveTimeSlot(time)}
+                        isBlocked={true}
+                        onUnblock={() => handleUnblockSlot(time)}
                       />
                     </div>
                   </div>
