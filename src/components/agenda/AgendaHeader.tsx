@@ -151,21 +151,8 @@ export default function AgendaHeader({
 
         {/* Day Title for Daily View */}
         {view === 'day' && (
-          <div className="flex items-center justify-between w-full">
-            <div className="text-lg font-medium text-lunar-textSecondary">
-              {formatDayTitle(date)}
-            </div>
-            {onOpenShare && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={onOpenShare}
-                aria-label="Compartilhar horários do dia"
-                title="Compartilhar horários do dia"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            )}
+          <div className="text-lg font-medium text-lunar-textSecondary">
+            {formatDayTitle(date)}
           </div>
         )}
       </div>
@@ -188,21 +175,8 @@ export default function AgendaHeader({
 
         {/* Day Title for Daily View */}
         {view === 'day' && (
-          <div className="flex items-center justify-between w-full">
-            <div className="text-lg font-medium text-lunar-textSecondary">
-              {formatDayTitle(date)}
-            </div>
-            {onOpenShare && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={onOpenShare}
-                aria-label="Compartilhar horários do dia"
-                title="Compartilhar horários do dia"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            )}
+          <div className="text-lg font-medium text-lunar-textSecondary">
+            {formatDayTitle(date)}
           </div>
         )}
       </div>
@@ -222,23 +196,9 @@ export default function AgendaHeader({
         <ManageButton />
       </div>
 
-      {/* Day Title for Daily View */}
       {view === 'day' && (
-        <div className="flex items-center justify-between w-full">
-          <div className="text-lg font-medium text-lunar-textSecondary">
-            {formatDayTitle(date)}
-          </div>
-          {onOpenShare && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={onOpenShare}
-              aria-label="Compartilhar horários do dia"
-              title="Compartilhar horários do dia"
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          )}
+        <div className="text-lg font-medium text-lunar-textSecondary">
+          {formatDayTitle(date)}
         </div>
       )}
     </div>
