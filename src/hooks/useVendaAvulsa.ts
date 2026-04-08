@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 export interface VendaAvulsaInput {
   clienteId: string;
   data: string; // YYYY-MM-DD
-  categoria: string;
+  categoria?: string;
   pacote?: string;
   valorBasePacote?: number;
   desconto?: number;
@@ -26,6 +26,7 @@ export function useVendaAvulsa() {
       if (!user) throw new Error('Usuário não autenticado');
 
       const sessionId = `VA-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const categoria = input.categoria || 'Venda Avulsa';
 
       // 1. Insert clientes_sessoes
       const { data: sessao, error: errSessao } = await supabase
@@ -36,7 +37,7 @@ export function useVendaAvulsa() {
           cliente_id: input.clienteId,
           data_sessao: input.data,
           hora_sessao: '00:00',
-          categoria: input.categoria,
+          categoria,
           pacote: input.pacote || null,
           valor_base_pacote: input.valorBasePacote || 0,
           desconto: input.desconto || 0,
@@ -65,7 +66,7 @@ export function useVendaAvulsa() {
             tipo: 'pagamento',
             valor: input.valorTotal,
             valor_liquido: input.valorTotal,
-            descricao: `Venda avulsa - ${input.descricao || input.categoria}`,
+            descricao: `Venda avulsa - ${input.descricao || categoria}`,
             data_transacao: input.data,
             taxa_gateway: 0,
             taxa_antecipacao: 0,
@@ -73,7 +74,6 @@ export function useVendaAvulsa() {
 
         if (errTransacao) {
           console.error('Erro ao criar transação:', errTransacao);
-          // Session was created, warn but don't fail entirely
           toast.warning('Venda registrada, mas houve um erro ao registrar o pagamento');
           return sessao;
         }
