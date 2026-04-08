@@ -1,12 +1,13 @@
 import { useState, useMemo, memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Minus, TrendingDown, TrendingUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Minus, TrendingDown, TrendingUp, ChevronDown, ChevronRight, ShoppingBag } from 'lucide-react';
 import { TransacaoComItem, GrupoPrincipal, NovaTransacaoFinanceira, ItemFinanceiro } from '@/types/financas';
 import { formatCurrency } from '@/utils/financialUtils';
 import { GRUPOS_CONFIG, getInfoPorGrupo } from '@/utils/financialGroupUtils';
 import TabelaLancamentos from './TabelaLancamentos';
 import TabelaLancamentosMobile from './TabelaLancamentosMobile';
 import ModalNovoLancamentoRefatorado from './ModalNovoLancamentoRefatorado';
+import ModalVendaAvulsa from './ModalVendaAvulsa';
 import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
@@ -51,6 +52,7 @@ const LancamentosTab = memo(function LancamentosTab({
   createTransactionEngine
 }: LancamentosTabProps) {
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalVendaAvulsa, setModalVendaAvulsa] = useState(false);
   const [modalTipo, setModalTipo] = useState<'despesa' | 'receita'>('despesa');
   const [modalGrupo, setModalGrupo] = useState<GrupoPrincipal>('Despesa Variável');
   const [modalFiltrarApenas, setModalFiltrarApenas] = useState(false);
@@ -118,6 +120,15 @@ const LancamentosTab = memo(function LancamentosTab({
           >
             <Plus className="h-4 w-4 mr-1" />
             {!isMobile && 'Receita'}
+          </Button>
+          <Button
+            onClick={() => setModalVendaAvulsa(true)}
+            variant="outline"
+            size={isMobile ? 'sm' : 'default'}
+            className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+          >
+            <ShoppingBag className="h-4 w-4 mr-1" />
+            {!isMobile && 'Venda'}
           </Button>
         </div>
       </div>
@@ -251,6 +262,11 @@ const LancamentosTab = memo(function LancamentosTab({
         grupoAtivo={modalGrupo}
         tipoLancamento={modalTipo}
         filtrarApenasGrupo={modalFiltrarApenas}
+      />
+
+      <ModalVendaAvulsa
+        aberto={modalVendaAvulsa}
+        onFechar={() => setModalVendaAvulsa(false)}
       />
     </div>
   );
