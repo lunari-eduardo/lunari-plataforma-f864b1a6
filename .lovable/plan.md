@@ -1,55 +1,106 @@
 
 
-# Proteção de dados existentes ao configurar disponibilidade
+# Vendas Avulsas: Lançamento de receitas com pacote/produto sem Workflow
 
-## Problema
-Ao usar o modal de configurar disponibilidade, as ações "Substituir existentes" e "Bloquear" removem slots de disponibilidade/bloqueio já configurados sem verificação. O usuário quer garantir que agendamentos, bloqueios e disponibilidades manuais existentes nunca sejam sobrescritos automaticamente.
+## Contexto
 
-Atualmente:
-- **Bloquear dia inteiro** (linha 160): remove TODOS os slots existentes do dia, incluindo disponibilidades manuais
-- **Liberar modo "replace"** (linhas 229-233): remove slots existentes nos horários alvo, incluindo bloqueios
-- **Horários padrão** (`defaultTimeSlots`): já são seguros — apenas definem a grade visual, não apagam dados
+Hoje, toda receita de venda passa pelo Workflow (`clientes_sessoes` → `clientes_transacoes`). Não existe caminho para registrar uma venda avulsa (ex: venda de álbum, produto físico, sessão rápida sem fluxo completo) que apareça corretamente em:
+- Extrato financeiro
+- Dashboard financeiro
+- Análise de vendas
 
-## Correções
+## Abordagem escolhida
 
-### Arquivo: `src/components/agenda/AvailabilityConfigModal.tsx`
+**Usar `clientes_sessoes` como registro da venda avulsa**, com um campo marcador para diferenciar de sessões do workflow. Isso garante que a Análise de Vendas (que lê exclusivamente de `clientes_sessoes`) capture automaticamente, sem duplicar lógica.
 
-**1. `handleBloquear` — Proteger slots com agendamentos**
-- No modo `fullDay` (linha 160), antes de remover slots existentes, pular os que têm agendamentos no mesmo horário (já verifica para `specific`, mas não para `fullDay`)
-- Adicionar aviso se houver agendamentos no dia: "X agendamentos mantidos"
+A entrada do pagamento segue o fluxo normal: `clientes_transacoes` (que já alimenta o extrato). Os triggers existentes de `valor_pago` / `valor_total` continuam funcionando.
 
-**2. `handleLiberar` modo `replace` — Não remover bloqueios**
-- Na lógica de replace (linhas 229-233), ao remover slots existentes, pular os que são `label === 'Bloqueado'` — bloqueios devem ser removidos manualmente
-- Adicionar toast informativo: "Y bloqueios mantidos"
+### Por que não usar `fin_transactions`?
 
-**3. Texto da UI — Esclarecer comportamento**
-- "Substituir existentes" → mudar descrição para "Recria horários disponíveis (bloqueios são preservados)"
-- "Criar novos horários" → mudar descrição para "Adiciona onde não houver disponibilidade ou bloqueio"
-- Modo `create` (linha 243): além de pular existentes, também pular horários que estão bloqueados
+O módulo de `fin_transactions` é para despesas/receitas financeiras genéricas. A análise de vendas não lê dele. Colocar vendas avulsas lá criaria uma fonte de dados paralela, exigindo refatoração pesada do domínio de vendas.
 
-### Arquivo: `src/components/agenda/DailyView.tsx`
+## Plano de implementação
 
-**4. `handleMarkAvailable` — Não sobrescrever bloqueio**
-- Na linha 122-124, antes de remover existing, verificar se é bloqueio. Se for, exibir toast "Desbloqueie primeiro" e retornar sem alterar
+### 1. Migration: adicionar campo `tipo_registro` em `clientes_sessoes`
 
-**5. `handleBlockSlot` — Não sobrescrever disponibilidade marcada manualmente**
-- Comportamento atual está correto (remove disponibilidade e cria bloqueio), pois bloquear é ação intencional. Manter como está.
+```sql
+ALTER TABLE clientes_sessoes 
+ADD COLUMN tipo_registro text NOT NULL DEFAULT 'workflow';
+```
 
-## Resumo de proteções
+Valores: `'workflow'` (padrão, sessões normais) | `'venda_avulsa'`
 
-| Ação | Agendamentos | Bloqueios | Disponibilidades |
-|------|-------------|-----------|------------------|
-| Bloquear dia inteiro | ✅ Preserva | ✅ Preserva (atualiza) | ⚠️ Remove (intencional) |
-| Bloquear horário | ✅ Pula | ✅ Atualiza | ⚠️ Remove (intencional) |
-| Liberar (criar) | ✅ Pula | ✅ Preserva | ✅ Pula existente |
-| Liberar (substituir) | ✅ Pula | ✅ Preserva | 🔄 Recria |
-| Marcar disponível (menu) | ✅ N/A | ✅ Preserva (toast) | 🔄 Recria |
-| Horários padrão | ✅ Não toca | ✅ Não toca | ✅ Não toca |
+Isso permite filtrar vendas avulsas no Workflow (para não poluir a tabela de gestão) e incluí-las na Análise de Vendas.
 
-## Arquivos modificados
+### 2. Componente: Modal de Venda Avulsa
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/agenda/AvailabilityConfigModal.tsx` | Proteger bloqueios no modo replace; proteger agendamentos no fullDay; textos descritivos |
-| `src/components/agenda/DailyView.tsx` | `handleMarkAvailable` não sobrescreve bloqueios |
+Novo modal acessível no painel **Financeiro** (aba Lançamentos), com botão dedicado "+ Venda Avulsa" ao lado dos botões de receita/despesa.
+
+Campos do modal:
+- **Cliente** (combobox dos clientes existentes, ou campo texto para nome avulso)
+- **Data** (date picker)
+- **Categoria** (select das categorias do usuário)
+- **Pacote** (opcional, select dos pacotes configurados)
+- **Produtos** (opcional, multi-select dos produtos configurados)
+- **Valor** (calculado automaticamente se pacote selecionado, editável)
+- **Desconto** (opcional)
+- **Descrição/Observações**
+- **Registrar pagamento?** (checkbox — se sim, cria transação de pagamento junto)
+
+### 3. Hook: `useVendaAvulsa`
+
+Responsável por:
+1. Inserir registro em `clientes_sessoes` com `tipo_registro = 'venda_avulsa'`, `session_id` gerado (prefixo `VA-`), `hora_sessao = '00:00'`
+2. Se pagamento marcado: inserir em `clientes_transacoes` com tipo `'pagamento'`
+3. Os triggers de banco atualizam `valor_total` e `valor_pago` automaticamente
+
+### 4. Filtro no Workflow
+
+O `SupabaseSalesDataSource` (análise de vendas) **não precisa de mudança** — já lê todas as `clientes_sessoes` com `status != 'cancelado'`.
+
+O **Workflow** (gestão de sessões) precisa filtrar `tipo_registro = 'workflow'` para não exibir vendas avulsas na tabela de gestão.
+
+### 5. Extrato
+
+Já funciona automaticamente: `clientes_transacoes` alimenta `extrato_unificado`. A venda avulsa terá `session_id` com prefixo `VA-`, permitindo identificação visual.
+
+### 6. Análise de Vendas
+
+Funciona automaticamente via `clientes_sessoes`. Para diferenciar visualmente, adicionar `'Venda Avulsa'` como possível valor de `origin` no `SalesOriginData`.
+
+## Arquivos a criar/modificar
+
+| Arquivo | Ação |
+|---------|------|
+| Migration SQL | Adicionar coluna `tipo_registro` |
+| `src/components/financas/ModalVendaAvulsa.tsx` | **Novo** — Modal de venda avulsa |
+| `src/hooks/useVendaAvulsa.ts` | **Novo** — Lógica de inserção |
+| `src/components/financas/LancamentosTab.tsx` | Adicionar botão "+ Venda Avulsa" |
+| `src/domain/sales/SupabaseSalesDataSource.ts` | Mapear `tipo_registro` no campo `source` |
+| Workflow query (onde busca sessões) | Filtrar `tipo_registro = 'workflow'` |
+
+## Fluxo resumido
+
+```text
+Fotógrafo clica "+ Venda Avulsa" no Financeiro
+          ↓
+  Preenche modal (cliente, categoria, pacote, valor)
+          ↓
+  INSERT clientes_sessoes (tipo_registro='venda_avulsa')
+  INSERT clientes_transacoes (se pagamento imediato)
+          ↓
+  Triggers atualizam valor_total / valor_pago
+          ↓
+  ✅ Aparece na Análise de Vendas (clientes_sessoes)
+  ✅ Aparece no Extrato (clientes_transacoes → extrato_unificado)
+  ✅ Aparece no Dashboard Financeiro
+  ✅ NÃO aparece no Workflow (filtrado por tipo_registro)
+```
+
+## Riscos mitigados
+
+- **Sem duplicação**: usa as mesmas tabelas e triggers existentes
+- **Sem quebra**: campo tem default `'workflow'`, registros existentes não são afetados
+- **Sem refatoração da view**: `extrato_unificado` já lê de `clientes_transacoes`
+- **Análise de vendas**: funciona sem mudança na query principal
 
