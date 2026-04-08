@@ -32,19 +32,15 @@ export default function ShareAvailabilityModal({
     let dates: string[] = [];
     
     if ('day' in period) {
-      // Validate that period.day is a valid Date
       if (period.day && period.day instanceof Date && !isNaN(period.day.getTime())) {
         dates = [formatDateForStorage(period.day)];
       } else {
-        console.warn('Invalid day in period:', period.day);
         return [];
       }
     } else {
-      // Validate that period.start and period.end are valid Dates
       if (!period.start || !period.end || 
           !(period.start instanceof Date) || !(period.end instanceof Date) ||
           isNaN(period.start.getTime()) || isNaN(period.end.getTime())) {
-        console.warn('Invalid start/end dates in period:', period);
         return [];
       }
       
@@ -56,13 +52,27 @@ export default function ShareAvailabilityModal({
       }
     }
 
-    const slotsInPeriod = availability.filter(slot => dates.includes(slot.date));
+    // Filter out blocked slots
+    const slotsInPeriod = availability.filter(
+      slot => dates.includes(slot.date) && slot.label !== 'Bloqueado'
+    );
+    
+    if (slotsInPeriod.length === 0) return [];
+
     const typeIds = Array.from(new Set(slotsInPeriod.map(slot => slot.typeId || 'default')));
     
-    return typeIds
-      .map(typeId => availabilityTypes.find(type => type.id === typeId))
+    const result = typeIds
+      .map(typeId => {
+        if (typeId === 'default') {
+          // Fallback for slots without typeId
+          return { id: 'default', name: 'Disponível', color: '#10b981' };
+        }
+        return availabilityTypes.find(type => type.id === typeId);
+      })
       .filter(Boolean)
       .map(type => type!);
+    
+    return result;
   };
 
   const availableTypes = getAvailableTypes();

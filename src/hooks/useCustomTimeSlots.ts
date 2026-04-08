@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { CustomTimeSlotsService } from '@/services/CustomTimeSlotsService';
 import { toast } from 'sonner';
 
-const DEFAULT_TIME_SLOTS = [
+const FALLBACK_TIME_SLOTS = [
   "08:00", "09:00", "10:00", "11:00", "13:00", 
   "14:00", "15:00", "16:00", "17:00", "18:00"
 ];
 
-export const useCustomTimeSlots = (date: Date) => {
+export const useCustomTimeSlots = (date: Date, userDefaultSlots?: string[]) => {
+  const DEFAULT_TIME_SLOTS = userDefaultSlots && userDefaultSlots.length > 0 
+    ? userDefaultSlots 
+    : FALLBACK_TIME_SLOTS;
   const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_TIME_SLOTS);
   const [isLoading, setIsLoading] = useState(true);
   const [hasCustomSlots, setHasCustomSlots] = useState(false);

@@ -243,6 +243,7 @@ export default function AvailabilityConfigModal({
           duration: 60,
           label,
           color,
+          typeId: availabilityTypes[0]?.id,
         });
       }
     }
