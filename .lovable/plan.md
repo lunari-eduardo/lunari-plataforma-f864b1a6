@@ -1,70 +1,55 @@
 
 
-# Correções de Disponibilidade + Horários de Trabalho Padrão
+# Proteção de dados existentes ao configurar disponibilidade
 
-## Problemas identificados
+## Problema
+Ao usar o modal de configurar disponibilidade, as ações "Substituir existentes" e "Bloquear" removem slots de disponibilidade/bloqueio já configurados sem verificação. O usuário quer garantir que agendamentos, bloqueios e disponibilidades manuais existentes nunca sejam sobrescritos automaticamente.
 
-### 1. Sem opção de desbloquear horário bloqueado
-No `DailyView.tsx` (linha 373), quando o slot está bloqueado, o `TimeSlotOptionsMenu` recebe `onBlock={() => {}}` — um no-op. Não existe opção "Desbloquear" no menu. O clique no card abre um `AlertDialog` de confirmação (`unlockConfirmTime`), mas o menu de 3 pontos não oferece essa ação.
+Atualmente:
+- **Bloquear dia inteiro** (linha 160): remove TODOS os slots existentes do dia, incluindo disponibilidades manuais
+- **Liberar modo "replace"** (linhas 229-233): remove slots existentes nos horários alvo, incluindo bloqueios
+- **Horários padrão** (`defaultTimeSlots`): já são seguros — apenas definem a grade visual, não apagam dados
 
-**Correção**: Adicionar prop `onUnblock` ao `TimeSlotOptionsMenu` e exibi-la condicionalmente no lugar de "Bloquear" quando o slot já está bloqueado. No card bloqueado, trocar o menu atual por um que tenha "Desbloquear" e "Excluir horário".
+## Correções
 
-### 2. Compartilhar diz "não há horários disponíveis"
-**Causa raiz**: `handleMarkAvailable()` (linha 127) cria slots sem `typeId`. O `ShareAvailabilityModal` filtra por `slot.typeId || 'default'` e depois tenta encontrar esse ID em `availabilityTypes`. Como nenhum tipo real tem id `'default'`, `getAvailableTypes()` retorna array vazio → mostra "Não há horários disponíveis".
+### Arquivo: `src/components/agenda/AvailabilityConfigModal.tsx`
 
-**Correção**: Incluir `typeId: tipo?.id` ao criar slots de disponibilidade em `handleMarkAvailable`. Também ajustar o `ShareAvailabilityModal` para tratar slots sem `typeId` como "Disponível" genérico (fallback), garantindo que sempre apareçam no compartilhamento.
+**1. `handleBloquear` — Proteger slots com agendamentos**
+- No modo `fullDay` (linha 160), antes de remover slots existentes, pular os que têm agendamentos no mesmo horário (já verifica para `specific`, mas não para `fullDay`)
+- Adicionar aviso se houver agendamentos no dia: "X agendamentos mantidos"
 
-### 3. Horários de trabalho padrão (nova funcionalidade)
-Atualmente cada dia usa `DEFAULT_TIME_SLOTS` hardcoded ou slots customizados por data. O usuário quer definir **uma vez** seus horários de trabalho (ex: 10, 11, 14, 15, 16h) e que esses sejam o padrão para todos os dias futuros.
+**2. `handleLiberar` modo `replace` — Não remover bloqueios**
+- Na lógica de replace (linhas 229-233), ao remover slots existentes, pular os que são `label === 'Bloqueado'` — bloqueios devem ser removidos manualmente
+- Adicionar toast informativo: "Y bloqueios mantidos"
 
-**Solução**: Estender `AgendaSettings` com campo `defaultTimeSlots: string[]`. Esse array substitui o `DEFAULT_TIME_SLOTS` hardcoded. Quando um dia não tem `custom_time_slots`, usa os `defaultTimeSlots` das settings. O modal de disponibilidade ganha um submodal/seção para configurar esses horários padrão.
+**3. Texto da UI — Esclarecer comportamento**
+- "Substituir existentes" → mudar descrição para "Recria horários disponíveis (bloqueios são preservados)"
+- "Criar novos horários" → mudar descrição para "Adiciona onde não houver disponibilidade ou bloqueio"
+- Modo `create` (linha 243): além de pular existentes, também pular horários que estão bloqueados
 
-## Plano de implementação
+### Arquivo: `src/components/agenda/DailyView.tsx`
 
-### Passo 1: Corrigir menu de desbloqueio
-**Arquivo**: `src/components/agenda/TimeSlotOptionsMenu.tsx`
-- Adicionar prop opcional `isBlocked?: boolean` e `onUnblock?: () => void`
-- Quando `isBlocked`, mostrar "Desbloquear" (com ícone unlock) no lugar de "Bloquear"
+**4. `handleMarkAvailable` — Não sobrescrever bloqueio**
+- Na linha 122-124, antes de remover existing, verificar se é bloqueio. Se for, exibir toast "Desbloqueie primeiro" e retornar sem alterar
 
-**Arquivo**: `src/components/agenda/DailyView.tsx`
-- No bloco de slot bloqueado (linha 373), passar `isBlocked={true}` e `onUnblock={() => handleUnblockSlot(time)}` ao `TimeSlotOptionsMenu`
+**5. `handleBlockSlot` — Não sobrescrever disponibilidade marcada manualmente**
+- Comportamento atual está correto (remove disponibilidade e cria bloqueio), pois bloquear é ação intencional. Manter como está.
 
-### Passo 2: Corrigir compartilhamento
-**Arquivo**: `src/components/agenda/DailyView.tsx`
-- Em `handleMarkAvailable`, adicionar `typeId: tipo?.id` ao objeto do slot
+## Resumo de proteções
 
-**Arquivo**: `src/components/agenda/ShareAvailabilityModal.tsx`
-- Em `getAvailableTypes()`, incluir slots sem `typeId` como tipo genérico "Disponível" com cor padrão `#10b981`, para que não sejam ignorados
-- Garantir que slots com `label === 'Bloqueado'` sejam excluídos do compartilhamento
-
-**Arquivo**: `src/components/agenda/AvailabilityConfigModal.tsx`
-- Na ação "liberar", também incluir `typeId` dos tipos ao criar slots
-
-### Passo 3: Horários de trabalho padrão
-**Arquivo**: `src/types/agenda-supabase.ts`
-- Adicionar `defaultTimeSlots?: string[]` à interface `AgendaSettings`
-
-**Arquivo**: `src/hooks/useCustomTimeSlots.ts`
-- Receber `defaultTimeSlots` das settings como fallback em vez do array hardcoded
-- Quando não houver custom slots para a data, usar `defaultTimeSlots` (se configurado) ou o fallback atual
-
-**Arquivo**: `src/components/agenda/AvailabilityConfigModal.tsx`
-- Adicionar aba/seção "Horários de Trabalho" no modal de configurar disponibilidade
-- Interface com chips dos horários selecionados, botão para adicionar/remover horário
-- Ao salvar, persiste via `updateSettings` no `AgendaSettings`
-
-**Arquivo**: `src/hooks/useAgendaSettings.ts`
-- Adicionar `setDefaultTimeSlots` como convenience setter
+| Ação | Agendamentos | Bloqueios | Disponibilidades |
+|------|-------------|-----------|------------------|
+| Bloquear dia inteiro | ✅ Preserva | ✅ Preserva (atualiza) | ⚠️ Remove (intencional) |
+| Bloquear horário | ✅ Pula | ✅ Atualiza | ⚠️ Remove (intencional) |
+| Liberar (criar) | ✅ Pula | ✅ Preserva | ✅ Pula existente |
+| Liberar (substituir) | ✅ Pula | ✅ Preserva | 🔄 Recria |
+| Marcar disponível (menu) | ✅ N/A | ✅ Preserva (toast) | 🔄 Recria |
+| Horários padrão | ✅ Não toca | ✅ Não toca | ✅ Não toca |
 
 ## Arquivos modificados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/agenda/TimeSlotOptionsMenu.tsx` | Prop `isBlocked` + opção "Desbloquear" |
-| `src/components/agenda/DailyView.tsx` | Passar `isBlocked`/`onUnblock` + adicionar `typeId` no `handleMarkAvailable` |
-| `src/components/agenda/ShareAvailabilityModal.tsx` | Fallback para slots sem `typeId`, excluir bloqueados |
-| `src/components/agenda/AvailabilityConfigModal.tsx` | Incluir `typeId` ao liberar + seção "Horários de Trabalho" |
-| `src/types/agenda-supabase.ts` | `defaultTimeSlots` em `AgendaSettings` |
-| `src/hooks/useCustomTimeSlots.ts` | Usar `defaultTimeSlots` das settings como fallback |
-| `src/hooks/useAgendaSettings.ts` | `setDefaultTimeSlots` convenience setter |
+| `src/components/agenda/AvailabilityConfigModal.tsx` | Proteger bloqueios no modo replace; proteger agendamentos no fullDay; textos descritivos |
+| `src/components/agenda/DailyView.tsx` | `handleMarkAvailable` não sobrescreve bloqueios |
 
