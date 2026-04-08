@@ -9,7 +9,7 @@ import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
 import { ShoppingBag, Loader2, X } from 'lucide-react';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
 import PackageSearchCombobox from '@/components/agenda/PackageSearchCombobox';
-import { SimpleProductSelector, type NormalizedProduct } from '@/components/precificacao/SimpleProductSelector';
+import ProductSearchCombobox, { type ProductComboboxItem } from '@/components/agenda/ProductSearchCombobox';
 
 interface ModalVendaAvulsaProps {
   aberto: boolean;
@@ -92,7 +92,7 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
     }
   };
 
-  const handleProdutoSelect = (product: NormalizedProduct | null) => {
+  const handleProdutoSelect = (product: ProductComboboxItem | null) => {
     if (!product) return;
     const existing = produtos.find(p => p.id === product.id);
     if (existing) {
@@ -181,9 +181,9 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm">Produtos</Label>
-              <SimpleProductSelector
-                value=""
+              <ProductSearchCombobox
                 onSelect={handleProdutoSelect}
+                placeholder="Buscar produto..."
               />
             </div>
           </div>
