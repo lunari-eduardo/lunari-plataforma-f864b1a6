@@ -3,13 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
 import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
-import { ShoppingBag, Loader2 } from 'lucide-react';
-import { formatDateForStorage } from '@/utils/dateUtils';
+import { ShoppingBag, Loader2, X } from 'lucide-react';
+import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
+import PackageSearchCombobox from '@/components/agenda/PackageSearchCombobox';
+import { SimpleProductSelector, type NormalizedProduct } from '@/components/precificacao/SimpleProductSelector';
 
 interface ModalVendaAvulsaProps {
   aberto: boolean;
@@ -17,63 +17,45 @@ interface ModalVendaAvulsaProps {
   onSucesso?: () => void;
 }
 
-interface ClienteOption {
+interface ProdutoSelecionado {
   id: string;
   nome: string;
-}
-
-interface CategoriaOption {
-  id: string;
-  nome: string;
+  valorVenda: number;
+  quantidade: number;
 }
 
 export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalVendaAvulsaProps) {
   const { criarVendaAvulsa, loading } = useVendaAvulsa();
 
-  // Form state
   const [clienteId, setClienteId] = useState('');
   const [data, setData] = useState(() => {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
   });
-  const [categoria, setCategoria] = useState('');
-  const [pacote, setPacote] = useState('');
+  const [pacoteId, setPacoteId] = useState('');
+  const [pacoteNome, setPacoteNome] = useState('');
+  const [valorBasePacote, setValorBasePacote] = useState(0);
+  const [pacoteCategoria, setPacoteCategoria] = useState('');
+  const [produtos, setProdutos] = useState<ProdutoSelecionado[]>([]);
   const [valorTotal, setValorTotal] = useState('');
+  const [valorManualEditado, setValorManualEditado] = useState(false);
   const [desconto, setDesconto] = useState('');
   const [descricao, setDescricao] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [registrarPagamento, setRegistrarPagamento] = useState(true);
 
-  // Data lists
-  const [clientes, setClientes] = useState<ClienteOption[]>([]);
-  const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
-  const [clienteSearch, setClienteSearch] = useState('');
+  // Auto-calc valor total
+  const valorCalculado = useMemo(() => {
+    const totalProdutos = produtos.reduce((sum, p) => sum + p.valorVenda * p.quantidade, 0);
+    return valorBasePacote + totalProdutos;
+  }, [valorBasePacote, produtos]);
 
-  // Load data
+  // Update valor total when auto-calc changes (unless manually edited)
   useEffect(() => {
-    if (!aberto) return;
-
-    const loadData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const [clientesRes, categoriasRes] = await Promise.all([
-        supabase.from('clientes').select('id, nome').eq('user_id', user.id).order('nome'),
-        supabase.from('categorias').select('id, nome').eq('user_id', user.id).order('nome'),
-      ]);
-
-      if (clientesRes.data) setClientes(clientesRes.data);
-      if (categoriasRes.data) setCategorias(categoriasRes.data);
-    };
-
-    loadData();
-  }, [aberto]);
-
-  const clientesFiltrados = useMemo(() => {
-    if (!clienteSearch.trim()) return clientes;
-    const search = clienteSearch.toLowerCase();
-    return clientes.filter(c => c.nome.toLowerCase().includes(search));
-  }, [clientes, clienteSearch]);
+    if (!valorManualEditado && valorCalculado > 0) {
+      setValorTotal(valorCalculado.toFixed(2));
+    }
+  }, [valorCalculado, valorManualEditado]);
 
   const valorFinal = useMemo(() => {
     const total = parseFloat(valorTotal) || 0;
@@ -83,25 +65,61 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
 
   const resetForm = () => {
     setClienteId('');
-    setCategoria('');
-    setPacote('');
+    setPacoteId('');
+    setPacoteNome('');
+    setValorBasePacote(0);
+    setPacoteCategoria('');
+    setProdutos([]);
     setValorTotal('');
+    setValorManualEditado(false);
     setDesconto('');
     setDescricao('');
     setObservacoes('');
     setRegistrarPagamento(true);
-    setClienteSearch('');
+  };
+
+  const handlePacoteSelect = (id: string, pacoteData?: any) => {
+    setPacoteId(id);
+    if (pacoteData) {
+      setPacoteNome(pacoteData.nome || '');
+      setValorBasePacote(pacoteData.valor_base || 0);
+      setPacoteCategoria(pacoteData.categoria_id || '');
+      setValorManualEditado(false);
+    } else {
+      setPacoteNome('');
+      setValorBasePacote(0);
+      setPacoteCategoria('');
+    }
+  };
+
+  const handleProdutoSelect = (product: NormalizedProduct | null) => {
+    if (!product) return;
+    const existing = produtos.find(p => p.id === product.id);
+    if (existing) {
+      setProdutos(produtos.map(p => p.id === product.id ? { ...p, quantidade: p.quantidade + 1 } : p));
+    } else {
+      setProdutos([...produtos, { id: product.id, nome: product.nome, valorVenda: product.valorVenda, quantidade: 1 }]);
+    }
+    setValorManualEditado(false);
+  };
+
+  const removeProduto = (id: string) => {
+    setProdutos(produtos.filter(p => p.id !== id));
+    setValorManualEditado(false);
   };
 
   const handleSubmit = async () => {
-    if (!clienteId || !categoria || !valorTotal) return;
+    if (!clienteId || valorFinal <= 0) return;
+
+    const categoria = pacoteCategoria || 'Venda Avulsa';
 
     try {
       await criarVendaAvulsa({
         clienteId,
         data,
         categoria,
-        pacote: pacote || undefined,
+        pacote: pacoteNome || undefined,
+        valorBasePacote: valorBasePacote || undefined,
         valorTotal: valorFinal,
         desconto: parseFloat(desconto) || 0,
         descricao: descricao || undefined,
@@ -117,11 +135,11 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
     }
   };
 
-  const isValid = clienteId && categoria && parseFloat(valorTotal) > 0;
+  const isValid = clienteId && (parseFloat(valorTotal) > 0 || valorCalculado > 0);
 
   return (
     <Dialog open={aberto} onOpenChange={(open) => { if (!open) onFechar(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-primary" />
@@ -133,59 +151,64 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
           {/* Cliente */}
           <div className="space-y-1.5">
             <Label className="text-sm">Cliente *</Label>
-            <Select value={clienteId} onValueChange={setClienteId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um cliente" />
-              </SelectTrigger>
-              <SelectContent>
-                <div className="px-2 pb-2">
-                  <Input
-                    placeholder="Buscar cliente..."
-                    value={clienteSearch}
-                    onChange={(e) => setClienteSearch(e.target.value)}
-                    className="h-8 text-sm"
-                  />
-                </div>
-                {clientesFiltrados.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                ))}
-                {clientesFiltrados.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-2">Nenhum cliente encontrado</p>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Data + Categoria */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-sm">Data *</Label>
-              <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-sm">Categoria *</Label>
-              <Select value={categoria} onValueChange={setCategoria}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categorias.map(c => (
-                    <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Pacote (optional text) */}
-          <div className="space-y-1.5">
-            <Label className="text-sm">Pacote / Produto (opcional)</Label>
-            <Input
-              placeholder="Ex: Álbum 30x30, Ensaio Express..."
-              value={pacote}
-              onChange={(e) => setPacote(e.target.value)}
+            <ClientSearchCombobox
+              value={clienteId}
+              onSelect={setClienteId}
+              placeholder="Buscar cliente por nome, email ou telefone..."
             />
           </div>
+
+          {/* Data */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Data *</Label>
+            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+          </div>
+
+          {/* Pacote + Produtos em 2 colunas */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Pacote</Label>
+              <PackageSearchCombobox
+                value={pacoteId}
+                onSelect={handlePacoteSelect}
+                placeholder="Buscar pacote..."
+              />
+              {pacoteId && valorBasePacote > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Valor base: R$ {valorBasePacote.toFixed(2)}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Produtos</Label>
+              <SimpleProductSelector
+                value=""
+                onSelect={handleProdutoSelect}
+              />
+            </div>
+          </div>
+
+          {/* Produtos selecionados como chips */}
+          {produtos.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {produtos.map(p => (
+                <span
+                  key={p.id}
+                  className="inline-flex items-center gap-1 bg-muted text-foreground text-xs px-2 py-1 rounded-md"
+                >
+                  {p.nome} {p.quantidade > 1 && `×${p.quantidade}`}
+                  <span className="text-muted-foreground">R$ {(p.valorVenda * p.quantidade).toFixed(2)}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeProduto(p.id)}
+                    className="ml-0.5 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Valor + Desconto */}
           <div className="grid grid-cols-2 gap-3">
@@ -197,7 +220,10 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
                 step="0.01"
                 placeholder="0,00"
                 value={valorTotal}
-                onChange={(e) => setValorTotal(e.target.value)}
+                onChange={(e) => {
+                  setValorTotal(e.target.value);
+                  setValorManualEditado(true);
+                }}
               />
             </div>
             <div className="space-y-1.5">
