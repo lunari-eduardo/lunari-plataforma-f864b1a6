@@ -45,6 +45,8 @@ export default function AvailabilityConfigModal({
   } = useAvailability();
   const { appointments } = useAgenda();
 
+  const { defaultTimeSlots, setDefaultTimeSlots } = useAgendaSettings();
+
   // === State ===
   const [action, setAction] = useState<Action>('liberar');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: date, to: date });
@@ -54,6 +56,9 @@ export default function AvailabilityConfigModal({
   const [liberarMode, setLiberarMode] = useState<LiberarMode>('create');
   const [timeSlots, setTimeSlots] = useState<{ start: string; end?: string }[]>([]);
   const [fullDayDescription, setFullDayDescription] = useState('');
+  const [showWorkingHours, setShowWorkingHours] = useState(false);
+  const [workingHoursInput, setWorkingHoursInput] = useState('');
+  const [editingWorkingHours, setEditingWorkingHours] = useState<string[]>([]);
 
   const weekDaysLabels = useMemo(() => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'], []);
 
