@@ -150,10 +150,6 @@ export default function WeeklyView({
   return <div className={`pb-4 scrollbar-elegant ${isMobile ? 'overflow-x-auto' : ''}`}>
       <div className={`${isMobile ? 'min-w-[960px]' : 'w-full'}`}>
         <div className="flex items-center justify-between mb-2">
-          
-          <Button variant="ghost" size="icon" onClick={handleShareWeek} aria-label="Compartilhar horários da semana" title="Compartilhar horários da semana">
-            <Share2 className="h-4 w-4" />
-          </Button>
         </div>
         <div className="grid grid-cols-8 gap-px bg-white/20 dark:bg-white/[0.03]">
           {/* First cell empty - for time labels */}

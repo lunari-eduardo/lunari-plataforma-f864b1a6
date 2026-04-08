@@ -79,17 +79,12 @@ export default function ActionChoiceModal({
   return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-2">
-            <div>
+          <div>
               
               <DialogDescription className="text-sm font-semibold text-foreground">
                 Escolha o tipo de compromisso que deseja agendar para {date.toLocaleDateString('pt-BR')} às {time}.
               </DialogDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleShareDay} aria-label="Compartilhar horários do dia" title="Compartilhar horários do dia" className="px-[8px] py-[2px] my-[9px] text-muted-foreground">
-              <Share2 className="h-4 w-4" />
-            </Button>
-          </div>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 mt-4">
