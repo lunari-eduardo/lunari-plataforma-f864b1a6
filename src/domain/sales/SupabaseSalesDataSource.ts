@@ -220,7 +220,7 @@ export class SupabaseSalesDataSource implements SalesDataSource {
         remaining: valorTotal - valorPago,
         source: 'agenda' as const,
         clientId: item.cliente_id,
-        origin: item.clientes?.origem || 'nao-especificado',
+        origin: item.tipo_registro === 'venda_avulsa' ? 'venda-avulsa' : (item.clientes?.origem || 'nao-especificado'),
         month,
         year,
         parsedDate
