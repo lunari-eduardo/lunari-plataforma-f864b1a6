@@ -1,35 +1,27 @@
 
 
-# Unificar dropdown de Produtos com o estilo do PackageSearchCombobox
+# Fix: Erro ao registrar venda avulsa
 
-## Problema
-O seletor de Produtos usa `Popover + Command` (botão trigger), enquanto o de Pacotes usa um `Input` com dropdown manual que permite digitar e pesquisar diretamente. A experiência visual e funcional é inconsistente.
+## Causa raiz
 
-## Solução
-Criar um novo componente `ProductSearchCombobox` seguindo exatamente o mesmo padrão do `PackageSearchCombobox`:
-- Input de texto com busca em tempo real (digitável)
-- Dropdown absoluto com lista filtrada
-- Ícone ChevronDown à direita
-- Busca normalizada (sem acentos)
-- Ao selecionar, exibe nome + valor no input
-- Botão X para limpar seleção
+A coluna `status_financeiro` em `clientes_sessoes` é uma **coluna gerada** (GENERATED ALWAYS) — calculada automaticamente pelo banco com base em `valor_pago` e `valor_total`. O hook `useVendaAvulsa.ts` tenta inserir um valor explícito nessa coluna (linha 50), o que causa o erro 400 do Postgres: `cannot insert a non-DEFAULT value into column "status_financeiro"`.
 
-## Arquivo: `src/components/agenda/ProductSearchCombobox.tsx` (novo)
-- Cópia estrutural do `PackageSearchCombobox`, adaptado para buscar da tabela `produtos`
-- Carrega produtos via Supabase (`produtos` table, filtrado por `user_id`)
-- Exibe `nome` + `R$ valor_venda` em cada item
-- `onSelect(product)` retorna `{ id, nome, custo, valorVenda }` ou `null`
-- Busca accent-insensitive via `normalizeText`
+## Correção
 
-## Arquivo: `src/components/financas/ModalVendaAvulsa.tsx`
-- Substituir `SimpleProductSelector` por `ProductSearchCombobox`
-- Adaptar `handleProdutoSelect` para receber o novo formato de callback
-- Manter lógica de chips e multi-seleção igual
+Remover `status_financeiro` do objeto de INSERT no `useVendaAvulsa.ts` (linha 50). O banco já calcula o valor correto automaticamente:
+- Se `valor_pago >= valor_total` → `'pago'`
+- Se `valor_pago > 0` → `'parcial'`
+- Senão → `'pendente'`
 
-## Arquivos
+Como o hook já define `valor_pago` corretamente (igual a `valorTotal` quando pagamento imediato, ou 0 quando não), o `status_financeiro` será preenchido automaticamente com o valor certo.
 
-| Arquivo | Ação |
+## Arquivo modificado
+
+| Arquivo | Mudança |
 |---------|---------|
-| `src/components/agenda/ProductSearchCombobox.tsx` | Novo — mesmo padrão visual do PackageSearchCombobox |
-| `src/components/financas/ModalVendaAvulsa.tsx` | Trocar SimpleProductSelector pelo novo componente |
+| `src/hooks/useVendaAvulsa.ts` | Remover linha `status_financeiro` do INSERT |
+
+## Impacto
+- 1 linha removida
+- Sem efeitos colaterais — o valor já era redundante com a coluna gerada
 
