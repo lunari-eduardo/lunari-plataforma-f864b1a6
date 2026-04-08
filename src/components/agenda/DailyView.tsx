@@ -119,6 +119,13 @@ export default function DailyView({
   };
 
   const handleMarkAvailable = async (time: string) => {
+    // Check if slot is blocked — must unblock first
+    const blocked = availability.find(s => s.date === dateKey && s.time === time && s.label === 'Bloqueado');
+    if (blocked) {
+      toast.error('Desbloqueie o horário primeiro antes de marcá-lo como disponível');
+      return;
+    }
+
     // Remove existing availability for this time first
     const existing = availability.filter(s => s.date === dateKey && s.time === time && !s.isFullDay);
     existing.forEach(s => deleteAvailabilitySlot(s.id));

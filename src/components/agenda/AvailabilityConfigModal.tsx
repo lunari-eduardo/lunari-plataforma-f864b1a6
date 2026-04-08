@@ -156,8 +156,21 @@ export default function AvailabilityConfigModal({
       const ds = format(d, 'yyyy-MM-dd');
 
       if (blockMode === 'fullDay') {
-        // Remove existing slots for this day
-        availability.filter(a => a.date === ds).forEach(a => deleteAvailabilitySlot(a.id));
+        // Remove existing slots for this day, but preserve those with appointments
+        const dayAppointmentTimes = new Set(
+          [...appointmentKeys].filter(k => k.startsWith(`${ds}|`)).map(k => k.split('|')[1])
+        );
+        let preservedCount = 0;
+        availability.filter(a => a.date === ds).forEach(a => {
+          if (dayAppointmentTimes.has(a.time)) {
+            preservedCount++;
+            return;
+          }
+          deleteAvailabilitySlot(a.id);
+        });
+        if (preservedCount > 0) {
+          toast.info(`${preservedCount} horário(s) com agendamentos preservado(s)`);
+        }
         
         toAdd.push({
           id: '',
@@ -227,9 +240,19 @@ export default function AvailabilityConfigModal({
       const ds = format(d, 'yyyy-MM-dd');
 
       if (liberarMode === 'replace') {
-        // Remove existing availability for these times
+        // Remove existing availability for these times, but preserve blocked slots
+        let blocksPreserved = 0;
         for (const t of uniqueTimes) {
-          availability.filter(a => a.date === ds && a.time === t).forEach(a => deleteAvailabilitySlot(a.id));
+          availability.filter(a => a.date === ds && a.time === t).forEach(a => {
+            if (a.label === 'Bloqueado') {
+              blocksPreserved++;
+              return;
+            }
+            deleteAvailabilitySlot(a.id);
+          });
+        }
+        if (blocksPreserved > 0) {
+          toast.info(`${blocksPreserved} bloqueio(s) preservado(s)`);
         }
       }
 
@@ -241,6 +264,10 @@ export default function AvailabilityConfigModal({
         }
 
         if (liberarMode === 'create' && existingSet.has(key)) continue;
+
+        // In both modes, skip blocked slots — must be unblocked manually
+        const isBlocked = availability.some(a => a.date === ds && a.time === t && a.label === 'Bloqueado');
+        if (isBlocked) continue;
 
         toAdd.push({
           id: '',
@@ -461,7 +488,7 @@ export default function AvailabilityConfigModal({
                     />
                     <div>
                       <span className="text-sm">Criar novos horários</span>
-                      <p className="text-xs text-muted-foreground">Adiciona onde não houver</p>
+                      <p className="text-xs text-muted-foreground">Adiciona onde não houver disponibilidade ou bloqueio</p>
                     </div>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -474,7 +501,7 @@ export default function AvailabilityConfigModal({
                     />
                     <div>
                       <span className="text-sm">Substituir existentes</span>
-                      <p className="text-xs text-muted-foreground">Recria os horários no período</p>
+                      <p className="text-xs text-muted-foreground">Recria horários disponíveis (bloqueios são preservados)</p>
                     </div>
                   </label>
                 </div>
