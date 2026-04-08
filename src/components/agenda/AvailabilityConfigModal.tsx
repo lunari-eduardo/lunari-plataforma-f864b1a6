@@ -10,10 +10,11 @@ import { ptBR } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useAgenda } from '@/hooks/useAgenda';
+import { useAgendaSettings } from '@/hooks/useAgendaSettings';
 import type { AvailabilitySlot } from '@/types/availability';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Clock, Settings } from 'lucide-react';
 import { formatDateForInput } from '@/utils/dateUtils';
 import type { DateRange } from 'react-day-picker';
 
