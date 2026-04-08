@@ -507,6 +507,114 @@ export default function AvailabilityConfigModal({
           </div>
         </div>
 
+        {/* === Seção: Horários de Trabalho Padrão === */}
+        <div className="border-t pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              setShowWorkingHours(!showWorkingHours);
+              if (!showWorkingHours) {
+                setEditingWorkingHours(defaultTimeSlots || []);
+                setWorkingHoursInput('');
+              }
+            }}
+            className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors w-full"
+          >
+            <Settings className="h-4 w-4" />
+            Horários de trabalho padrão
+            <span className="text-xs text-muted-foreground ml-auto">
+              {defaultTimeSlots && defaultTimeSlots.length > 0 
+                ? `${defaultTimeSlots.length} horários` 
+                : 'Não configurado'}
+            </span>
+          </button>
+
+          {showWorkingHours && (
+            <div className="mt-3 space-y-3 p-3 rounded-lg bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10">
+              <p className="text-xs text-muted-foreground">
+                Defina os horários padrão que aparecerão na agenda para todos os dias sem personalização.
+              </p>
+
+              {/* Chips dos horários */}
+              <div className="flex flex-wrap gap-1.5">
+                {editingWorkingHours.sort().map(time => (
+                  <span
+                    key={time}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                  >
+                    <Clock className="h-3 w-3" />
+                    {time}
+                    <button
+                      type="button"
+                      onClick={() => setEditingWorkingHours(prev => prev.filter(t => t !== time))}
+                      className="hover:text-destructive transition-colors ml-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                {editingWorkingHours.length === 0 && (
+                  <span className="text-xs text-muted-foreground italic">Nenhum horário definido</span>
+                )}
+              </div>
+
+              {/* Adicionar horário */}
+              <div className="flex items-center gap-2">
+                <div className="w-24">
+                  <TimeInput
+                    value={workingHoursInput}
+                    onChange={setWorkingHoursInput}
+                    placeholder="HH:mm"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs gap-1"
+                  onClick={() => {
+                    if (!workingHoursInput || !/^([01]?\d|2[0-3]):[0-5]\d$/.test(workingHoursInput)) {
+                      toast.error('Formato inválido');
+                      return;
+                    }
+                    if (editingWorkingHours.includes(workingHoursInput)) {
+                      toast.error('Horário já adicionado');
+                      return;
+                    }
+                    setEditingWorkingHours(prev => [...prev, workingHoursInput]);
+                    setWorkingHoursInput('');
+                  }}
+                >
+                  <Plus className="h-3 w-3" />
+                  Adicionar
+                </Button>
+              </div>
+
+              {/* Salvar horários padrão */}
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setShowWorkingHours(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  className="text-xs"
+                  onClick={async () => {
+                    await setDefaultTimeSlots(editingWorkingHours);
+                    toast.success('Horários de trabalho salvos');
+                    setShowWorkingHours(false);
+                  }}
+                >
+                  Salvar padrão
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* === Footer === */}
         <div className="flex items-center justify-between pt-4">
           <button
