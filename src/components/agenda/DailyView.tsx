@@ -8,6 +8,7 @@ import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useCustomTimeSlots } from '@/hooks/useCustomTimeSlots';
+import { useAgendaSettings } from '@/hooks/useAgendaSettings';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -55,6 +56,8 @@ export default function DailyView({
     deleteAvailabilitySlot
   } = useAvailability();
 
+  const { defaultTimeSlots } = useAgendaSettings();
+
   // Usar hook customizado para horários personalizados
   const {
     timeSlots: customSlots,
@@ -64,7 +67,7 @@ export default function DailyView({
     editTimeSlot,
     removeTimeSlot,
     resetToDefault
-  } = useCustomTimeSlots(date);
+  } = useCustomTimeSlots(date, defaultTimeSlots);
 
   // Verificar se existe slot de "dia todo" para a data atual
   const fullDaySlot = availability.find(
@@ -130,6 +133,7 @@ export default function DailyView({
       duration: 60,
       label,
       color,
+      typeId: tipo?.id,
     }]);
     toast.success('Horário marcado como disponível');
   };
@@ -375,8 +379,10 @@ export default function DailyView({
                           handleRemoveAvailability(time);
                           if (onOpenAvailability) onOpenAvailability(date, time);
                         }}
-                        onBlock={() => {}} 
+                        onBlock={() => {}}
                         onRemove={() => handleRemoveTimeSlot(time)}
+                        isBlocked={true}
+                        onUnblock={() => handleUnblockSlot(time)}
                       />
                     </div>
                   </div>

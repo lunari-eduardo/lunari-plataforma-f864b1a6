@@ -58,4 +58,5 @@ export interface AgendaSettings {
     end: string;
   };
   autoConfirmAppointments: boolean;
+  defaultTimeSlots?: string[];
 }

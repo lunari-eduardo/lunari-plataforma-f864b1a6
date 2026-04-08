@@ -40,6 +40,15 @@ export const useAgendaSettings = () => {
         ...context.settings,
         autoConfirmAppointments: autoConfirm
       });
+    },
+    
+    defaultTimeSlots: context.settings.defaultTimeSlots,
+    
+    setDefaultTimeSlots: async (slots: string[]) => {
+      await context.updateSettings({
+        ...context.settings,
+        defaultTimeSlots: slots.sort()
+      });
     }
   };
 };
