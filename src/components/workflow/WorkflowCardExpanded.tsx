@@ -170,106 +170,11 @@ export function WorkflowCardExpanded({
 
   return (
     <div className="bg-gradient-to-br from-transparent via-gray-50/10 to-stone-50/10 dark:from-transparent dark:via-[#1f1f1f]/30 dark:to-[#1a1a1a]/30 px-4 py-5 md:px-6">
-      {/* MOBILE: Seção de Edição Rápida (visível apenas em mobile) */}
-      <div className="md:hidden space-y-4 pb-4 border-b border-border/20 mb-4">
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Editar Sessão
-        </h4>
-        
-        <div className="grid grid-cols-2 gap-3">
-          {/* Pacote */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground uppercase">Pacote</span>
-            <WorkflowPackageCombobox
-              key={`package-mobile-${session.id}-${session.pacote}`}
-              value={session.pacote}
-              displayName={displayPackageName}
-              onValueChange={(packageData) => {
-                onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
-              }}
-            />
-            {/* Tag informativa - Fotos Incluídas */}
-            {session.regras_congeladas?.pacote?.fotosIncluidas > 0 && (
-              <span className="text-[10px] text-primary/80 font-medium">
-                ({session.regras_congeladas.pacote.fotosIncluidas} fotos incluídas)
-              </span>
-            )}
-          </div>
-          
-          {/* Status */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground uppercase">Status</span>
-            <Select
-              value={session.status || ''}
-              onValueChange={handleStatusChange}
-            >
-              <SelectTrigger className="h-8 text-xs border border-border/50 rounded bg-background/50">
-                <SelectValue placeholder="Status">
-                  {session.status ? (
-                    <ColoredStatusBadge status={session.status} showBackground={true} />
-                  ) : (
-                    <span className="text-muted-foreground italic text-xs">Sem status</span>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-popover border shadow-lg z-50">
-                <SelectItem value="__CLEAR__" className="text-muted-foreground italic">
-                  Limpar status
-                </SelectItem>
-                {statusOptions.map(status => (
-                  <SelectItem key={status} value={status}>
-                    <ColoredStatusBadge status={status} showBackground={true} />
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Fotos Extras */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground uppercase">Fotos extras</span>
-            <Input 
-              type="number" 
-              value={session.qtdFotosExtra || ''} 
-              onChange={(e) => onFieldUpdate(session.id, 'qtdFotosExtra', parseInt(e.target.value) || 0)}
-              className="h-8 text-xs p-2 text-center border border-border/50 rounded bg-background/50 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              placeholder="0"
-            />
-          </div>
-          
-          {/* Produtos */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground uppercase">Produtos</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setProdutosModalOpen(true)}
-              className="h-8 text-xs border rounded bg-background hover:bg-muted justify-start"
-            >
-              <Package className={`h-3.5 w-3.5 mr-1.5 ${hasProdutos ? 'text-primary' : 'text-muted-foreground'}`} />
-              Gerenciar ({hasProdutos ? session.produtosList.length : 0})
-            </Button>
-          </div>
-        </div>
-        
-        {/* Descrição (full width) */}
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-muted-foreground uppercase">Descrição</span>
-          <Input
-            value={descriptionValue}
-            onChange={(e) => setDescriptionValue(e.target.value)}
-            onBlur={handleDescriptionBlur}
-            placeholder="Descrição da sessão..."
-            className="h-8 text-xs border border-border/50 rounded bg-background/50"
-          />
-        </div>
-      </div>
-
       {/* Grid de 3 blocos com divisórias */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         
         {/* BLOCO 1 - Dados da Sessão */}
-        <div className="space-y-3 md:border-r md:border-border/20 md:pr-6">
+        <div className="space-y-3 border-r border-border/20 pr-6">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Dados da Sessão
           </h4>
@@ -305,7 +210,7 @@ export function WorkflowCardExpanded({
         </div>
 
         {/* BLOCO 2 - Adicionais */}
-        <div className="space-y-3 md:border-r md:border-border/20 md:pr-6">
+        <div className="space-y-3 border-r border-border/20 pr-6">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Adicionais
           </h4>
