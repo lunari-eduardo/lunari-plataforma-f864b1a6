@@ -1,37 +1,35 @@
 
 
-# Refatorar Modal de Venda Avulsa
+# Unificar dropdown de Produtos com o estilo do PackageSearchCombobox
 
-## Mudanças
+## Problema
+O seletor de Produtos usa `Popover + Command` (botão trigger), enquanto o de Pacotes usa um `Input` com dropdown manual que permite digitar e pesquisar diretamente. A experiência visual e funcional é inconsistente.
 
-### 1. Cliente: trocar Select por `ClientSearchCombobox`
-Substituir o dropdown Select atual pelo componente `ClientSearchCombobox` (já existente em `src/components/agenda/ClientSearchCombobox.tsx`), que permite digitar e pesquisar por nome, email ou telefone.
+## Solução
+Criar um novo componente `ProductSearchCombobox` seguindo exatamente o mesmo padrão do `PackageSearchCombobox`:
+- Input de texto com busca em tempo real (digitável)
+- Dropdown absoluto com lista filtrada
+- Ícone ChevronDown à direita
+- Busca normalizada (sem acentos)
+- Ao selecionar, exibe nome + valor no input
+- Botão X para limpar seleção
 
-### 2. Pacote e Produtos: duas colunas com combobox
-- Remover campo "Categoria" (pacote já possui categoria vinculada)
-- Substituir input texto de "Pacote" pelo `PackageSearchCombobox` (já existente em `src/components/agenda/PackageSearchCombobox.tsx`), que busca pacotes cadastrados e retorna `valor_base`
-- Adicionar coluna "Produtos" com `SimpleProductSelector` (já existente em `src/components/precificacao/SimpleProductSelector.tsx`), permitindo adicionar múltiplos produtos com valor de venda
-- Layout em `grid-cols-2`: Pacote à esquerda, Produtos à direita
-- Ao selecionar pacote ou produtos, o valor total é preenchido automaticamente (soma do valor_base do pacote + valorVenda dos produtos), mas permanece editável
-- Produtos selecionados aparecem como chips removíveis abaixo do seletor
+## Arquivo: `src/components/agenda/ProductSearchCombobox.tsx` (novo)
+- Cópia estrutural do `PackageSearchCombobox`, adaptado para buscar da tabela `produtos`
+- Carrega produtos via Supabase (`produtos` table, filtrado por `user_id`)
+- Exibe `nome` + `R$ valor_venda` em cada item
+- `onSelect(product)` retorna `{ id, nome, custo, valorVenda }` ou `null`
+- Busca accent-insensitive via `normalizeText`
 
-### 3. Valor Total: auto-cálculo
-- `valorTotal = (pacote?.valor_base || 0) + soma(produtos.valorVenda * quantidade)`
-- Usuário pode editar manualmente após auto-preenchimento
-- Categoria é derivada do pacote selecionado (para salvar em `clientes_sessoes.categoria`)
+## Arquivo: `src/components/financas/ModalVendaAvulsa.tsx`
+- Substituir `SimpleProductSelector` por `ProductSearchCombobox`
+- Adaptar `handleProdutoSelect` para receber o novo formato de callback
+- Manter lógica de chips e multi-seleção igual
 
-### 4. Hook `useVendaAvulsa`: ajustar input
-- Remover campo `categoria` obrigatório do input — derivar do pacote ou usar "Venda Avulsa" como fallback
-- Adicionar campo `produtos` opcional ao input para registro
+## Arquivos
 
-### 5. Validação
-- Obrigatório: Cliente + (Pacote OU Produto OU valor manual > 0)
-- Categoria não é mais exibida — vem do pacote ou fallback "Venda Avulsa"
-
-## Arquivos modificados
-
-| Arquivo | Mudança |
+| Arquivo | Ação |
 |---------|---------|
-| `src/components/financas/ModalVendaAvulsa.tsx` | Refatorar com ClientSearchCombobox, PackageSearchCombobox, SimpleProductSelector em 2 colunas; remover Categoria |
-| `src/hooks/useVendaAvulsa.ts` | Tornar `categoria` opcional com fallback; adicionar campo `produtos` |
+| `src/components/agenda/ProductSearchCombobox.tsx` | Novo — mesmo padrão visual do PackageSearchCombobox |
+| `src/components/financas/ModalVendaAvulsa.tsx` | Trocar SimpleProductSelector pelo novo componente |
 
