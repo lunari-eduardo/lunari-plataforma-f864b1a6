@@ -6,10 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
-import { ShoppingBag, Loader2, X } from 'lucide-react';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
+import { ShoppingBag, Loader2, X, UserPlus } from 'lucide-react';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
 import PackageSearchCombobox from '@/components/agenda/PackageSearchCombobox';
 import ProductSearchCombobox, { type ProductComboboxItem } from '@/components/agenda/ProductSearchCombobox';
+import { toast } from 'sonner';
 
 interface ModalVendaAvulsaProps {
   aberto: boolean;
@@ -26,8 +28,14 @@ interface ProdutoSelecionado {
 
 export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalVendaAvulsaProps) {
   const { criarVendaAvulsa, loading } = useVendaAvulsa();
+  const { adicionarCliente } = useClientesRealtime();
 
   const [clienteId, setClienteId] = useState('');
+  const [showNovoCliente, setShowNovoCliente] = useState(false);
+  const [novoClienteNome, setNovoClienteNome] = useState('');
+  const [novoClienteTelefone, setNovoClienteTelefone] = useState('');
+  const [novoClienteEmail, setNovoClienteEmail] = useState('');
+  const [salvandoCliente, setSalvandoCliente] = useState(false);
   const [data, setData] = useState(() => {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
@@ -151,11 +159,83 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
           {/* Cliente */}
           <div className="space-y-1.5">
             <Label className="text-sm">Cliente *</Label>
-            <ClientSearchCombobox
-              value={clienteId}
-              onSelect={setClienteId}
-              placeholder="Buscar cliente por nome, email ou telefone..."
-            />
+            {!showNovoCliente ? (
+              <ClientSearchCombobox
+                value={clienteId}
+                onSelect={setClienteId}
+                placeholder="Buscar cliente por nome, email ou telefone..."
+                onAddNew={() => setShowNovoCliente(true)}
+              />
+            ) : (
+              <div className="space-y-2 p-3 border border-border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium flex items-center gap-1.5">
+                    <UserPlus className="h-3.5 w-3.5 text-primary" />
+                    Novo Cliente
+                  </span>
+                  <button type="button" onClick={() => setShowNovoCliente(false)} className="text-muted-foreground hover:text-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <Input
+                  placeholder="Nome *"
+                  value={novoClienteNome}
+                  onChange={(e) => setNovoClienteNome(e.target.value)}
+                  className="text-xs"
+                  autoComplete="off"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Telefone"
+                    value={novoClienteTelefone}
+                    onChange={(e) => setNovoClienteTelefone(e.target.value)}
+                    className="text-xs"
+                    autoComplete="off"
+                  />
+                  <Input
+                    placeholder="Email"
+                    value={novoClienteEmail}
+                    onChange={(e) => setNovoClienteEmail(e.target.value)}
+                    className="text-xs"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setShowNovoCliente(false)} className="text-xs h-7">
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs h-7"
+                    disabled={!novoClienteNome.trim() || salvandoCliente}
+                    onClick={async () => {
+                      setSalvandoCliente(true);
+                      try {
+                        const novo = await adicionarCliente({
+                          nome: novoClienteNome.trim(),
+                          telefone: novoClienteTelefone.trim() || null,
+                          email: novoClienteEmail.trim() || null,
+                        });
+                        if (novo?.id) {
+                          setClienteId(novo.id);
+                          toast.success('Cliente cadastrado!');
+                        }
+                        setShowNovoCliente(false);
+                        setNovoClienteNome('');
+                        setNovoClienteTelefone('');
+                        setNovoClienteEmail('');
+                      } catch {
+                        // error handled in hook
+                      } finally {
+                        setSalvandoCliente(false);
+                      }
+                    }}
+                  >
+                    {salvandoCliente ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Salvar'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Data */}
