@@ -47,7 +47,7 @@ export function useVendaAvulsa() {
           valor_total: input.valorTotal,
           valor_pago: input.registrarPagamento ? input.valorTotal : 0,
           status: input.registrarPagamento ? 'concluido' : 'agendado',
-          status_financeiro: input.registrarPagamento ? 'pago' : 'pendente',
+          
           tipo_registro: 'venda_avulsa',
         })
         .select()
