@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Check, ChevronDown, User } from 'lucide-react';
+import { Check, ChevronDown, User, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 
@@ -25,6 +25,7 @@ interface ClientSearchComboboxProps {
   value?: string;
   onSelect: (clientId: string) => void;
   placeholder?: string;
+  onAddNew?: () => void;
 }
 
 // Integrado com hook real de clientes do Supabase
@@ -32,7 +33,8 @@ interface ClientSearchComboboxProps {
 export default function ClientSearchCombobox({
   value,
   onSelect,
-  placeholder = "Buscar cliente..."
+  placeholder = "Buscar cliente...",
+  onAddNew
 }: ClientSearchComboboxProps) {
   const { clientes, isLoading } = useClientesRealtime();
   const [isOpen, setIsOpen] = useState(false);
@@ -121,8 +123,9 @@ export default function ClientSearchCombobox({
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           placeholder={isLoading ? "Carregando clientes..." : placeholder}
-          className="pr-16 text-xs"
+          className={cn("pr-16 text-xs", onAddNew && "pr-20")}
           disabled={isLoading}
+          autoComplete="off"
         />
         {selectedClient && !isEditing && (
           <button
@@ -133,6 +136,16 @@ export default function ClientSearchCombobox({
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
             </svg>
+          </button>
+        )}
+        {onAddNew && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAddNew(); }}
+            className="absolute right-7 top-1/2 transform -translate-y-1/2 h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+            title="Novo cliente"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
           </button>
         )}
         <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
