@@ -1,27 +1,33 @@
 
 
-# Fix: Erro ao registrar venda avulsa
+# Botão "Novo Cliente" e desativar autocomplete no modal de Venda Avulsa
 
-## Causa raiz
+## Problemas
+1. O modal não oferece opção de cadastrar um novo cliente rapidamente — o usuário precisa sair do fluxo
+2. O input de busca de cliente dispara sugestões de preenchimento automático do navegador (autocomplete)
 
-A coluna `status_financeiro` em `clientes_sessoes` é uma **coluna gerada** (GENERATED ALWAYS) — calculada automaticamente pelo banco com base em `valor_pago` e `valor_total`. O hook `useVendaAvulsa.ts` tenta inserir um valor explícito nessa coluna (linha 50), o que causa o erro 400 do Postgres: `cannot insert a non-DEFAULT value into column "status_financeiro"`.
+## Solução
 
-## Correção
+### 1. Botão "+" para novo cliente ao lado do combobox
+- Adicionar um botão "+" (ícone `UserPlus`) ao lado direito do `ClientSearchCombobox` no modal
+- Ao clicar, abrir um mini-formulário inline (ou sub-dialog) com campos: Nome, Telefone, Email
+- Ao salvar, usar `adicionarCliente` do `useClientesRealtime` para cadastrar no Supabase
+- Após cadastro, selecionar automaticamente o novo cliente no combobox
 
-Remover `status_financeiro` do objeto de INSERT no `useVendaAvulsa.ts` (linha 50). O banco já calcula o valor correto automaticamente:
-- Se `valor_pago >= valor_total` → `'pago'`
-- Se `valor_pago > 0` → `'parcial'`
-- Senão → `'pendente'`
+### 2. Desativar autocomplete do navegador
+- Adicionar `autoComplete="off"` no `<Input>` do `ClientSearchCombobox` (e nos outros comboboxes para consistência)
+- Isso impede sugestões de email/endereço do navegador ao focar o campo
 
-Como o hook já define `valor_pago` corretamente (igual a `valorTotal` quando pagamento imediato, ou 0 quando não), o `status_financeiro` será preenchido automaticamente com o valor certo.
-
-## Arquivo modificado
+## Arquivos modificados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useVendaAvulsa.ts` | Remover linha `status_financeiro` do INSERT |
+| `src/components/financas/ModalVendaAvulsa.tsx` | Adicionar botão "+" ao lado do combobox; mini-dialog de novo cliente com `useClientesRealtime().adicionarCliente`; auto-selecionar após criar |
+| `src/components/agenda/ClientSearchCombobox.tsx` | Adicionar `autoComplete="off"` no Input; aceitar prop `onAddNew` opcional para exibir botão "+" integrado |
 
-## Impacto
-- 1 linha removida
-- Sem efeitos colaterais — o valor já era redundante com a coluna gerada
+## Detalhes da implementação
+
+O `ClientSearchCombobox` receberá uma prop opcional `onAddNew?: () => void`. Quando presente, exibe um botão "+" com ícone `UserPlus` à direita do input (antes do ChevronDown). O modal controla o state do sub-dialog de cadastro.
+
+O sub-dialog terá 3 campos (Nome*, Telefone, Email), botões Cancelar/Salvar, e ao salvar chama `adicionarCliente({ nome, telefone, email })`, retornando o ID para auto-seleção via `onSelect`.
 
