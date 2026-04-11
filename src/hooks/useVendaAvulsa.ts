@@ -2,6 +2,12 @@ import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface VendaAvulsaProduto {
+  nome: string;
+  quantidade: number;
+  valorUnitario: number;
+}
+
 export interface VendaAvulsaInput {
   clienteId: string;
   data: string; // YYYY-MM-DD
@@ -9,11 +15,11 @@ export interface VendaAvulsaInput {
   pacote?: string;
   valorBasePacote?: number;
   desconto?: number;
-  valorAdicional?: number;
   descricao?: string;
   observacoes?: string;
   valorTotal: number;
   registrarPagamento: boolean;
+  produtos?: VendaAvulsaProduto[];
 }
 
 export function useVendaAvulsa() {
@@ -28,6 +34,26 @@ export function useVendaAvulsa() {
       const sessionId = `VA-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const categoria = input.categoria || 'Venda Avulsa';
 
+      // Convert products to produtos_incluidos JSONB format
+      const produtosIncluidos = (input.produtos || []).map(p => ({
+        nome: p.nome,
+        quantidade: p.quantidade,
+        valorUnitario: p.valorUnitario,
+        tipo: 'manual' as const,
+      }));
+
+      // Calculate component totals
+      const valorBase = input.valorBasePacote || 0;
+      const totalProdutos = produtosIncluidos.reduce(
+        (sum, p) => sum + p.quantidade * p.valorUnitario, 0
+      );
+      const descontoVal = input.desconto || 0;
+
+      // The DB trigger calculates: valor_base_pacote + produtos_manuais + valor_adicional - desconto
+      // We need valor_adicional as adjustment so the trigger arrives at the user's desired total
+      const componentSum = valorBase + totalProdutos;
+      const valorAdicional = input.valorTotal - componentSum + descontoVal;
+
       // 1. Insert clientes_sessoes
       const { data: sessao, error: errSessao } = await supabase
         .from('clientes_sessoes')
@@ -39,15 +65,14 @@ export function useVendaAvulsa() {
           hora_sessao: '00:00',
           categoria,
           pacote: input.pacote || null,
-          valor_base_pacote: input.valorBasePacote || 0,
-          desconto: input.desconto || 0,
-          valor_adicional: input.valorAdicional || 0,
+          valor_base_pacote: valorBase,
+          desconto: descontoVal,
+          valor_adicional: Math.max(0, valorAdicional),
           descricao: input.descricao || 'Venda avulsa',
           observacoes: input.observacoes || null,
-          valor_total: input.valorTotal,
+          produtos_incluidos: produtosIncluidos,
           valor_pago: input.registrarPagamento ? input.valorTotal : 0,
           status: input.registrarPagamento ? 'concluido' : 'agendado',
-          
           tipo_registro: 'venda_avulsa',
         })
         .select()
