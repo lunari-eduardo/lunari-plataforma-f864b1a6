@@ -1,59 +1,99 @@
 
 
-# Fix: Venda Avulsa sem valor total no Workflow + melhorias
+# Fix: Formulário de briefing falha ao enviar (401) e mostra 404 ao reabrir
 
-## Diagnóstico da causa raiz
+## Causa raiz
 
-O trigger `recalculate_session_valor_total` recalcula `valor_total` em todo INSERT/UPDATE como:
+O erro 401 ocorre porque o hook `useSubmitFormularioResposta` faz:
 
-```text
-valor_total = valor_base_pacote + valor_total_foto_extra + produtos_manuais + valor_adicional - desconto
+```typescript
+.insert({...}).select().single()
 ```
 
-O hook `useVendaAvulsa` envia `valor_total: 96` mas o trigger **sobrescreve** para `0` porque todos os componentes estão zerados:
-- `valor_base_pacote = 0` (nenhum pacote selecionado)
-- `produtos_incluidos = []` (produtos NÃO são salvos no JSONB)
-- `valor_adicional = 0`
+O `.select().single()` exige uma **policy SELECT para `anon`** na tabela `formulario_respostas`. Mas a única policy SELECT existente é para `authenticated` com `auth.uid() = user_id`. Como o cliente do formulário público usa a role `anon`, o PostgREST retorna **401 Unauthorized** ao tentar ler de volta o registro inserido.
 
-Resultado: `valor_total = 0`, mas `valor_pago = 96` (inserido via trigger de transações), gerando um crédito falso de +R$ 96.
+O INSERT em si funciona (a policy de INSERT para anon existe com `with_check: true`), mas o `.select()` encadeado falha, causando o throw do erro — e o `setSubmitted(true)` nunca é chamado.
 
-## Solução
+O **404 ao reabrir** acontece porque:
+1. O insert falha no `.select()`, mas o registro JÁ foi inserido no banco
+2. O trigger `update_formulario_status_on_resposta` JÁ rodou e marcou `status_envio = 'respondido'`
+3. Na próxima abertura, `useFormularioPublico` busca o formulário e encontra `status_envio = 'respondido'`
+4. O hook `useFormularioRespostaPublica` é ativado para buscar a resposta via RPC
+5. Mas o formulário mostra a tela de "já respondido" — o 404 pode ser um erro de roteamento no domínio customizado ou o RPC retornando null
 
-### 1. Hook `useVendaAvulsa.ts` - Salvar produtos e descrição corretamente
+## Correção
 
-- Aceitar novo campo `produtos` no input (array de `{nome, quantidade, valorUnitario}`)
-- Converter para formato `produtos_incluidos` JSONB com `tipo: 'manual'` para que o trigger do banco contabilize corretamente
-- Se o usuário editou o valor manualmente e ele difere da soma dos componentes, colocar a diferença em `valor_adicional` (para que o trigger recalcule corretamente)
-- Montar `descricao` detalhada incluindo nomes dos produtos e pacote
+### 1. Remover `.select().single()` do insert (causa principal)
 
-### 2. Modal `ModalVendaAvulsa.tsx` - Quantidade de produtos + descrição rica
+**Arquivo:** `src/hooks/useFormularios.ts`
 
-- Adicionar controle de quantidade (+/-) nos chips de produtos (como no workflow)
-- No submit, enviar array de produtos para o hook
-- Montar descrição automática: "Pacote X + Produto Y (x2) + Produto Z"
-- Permitir o usuário complementar com texto livre
+O retorno do insert não é usado para nada — o trigger já atualiza o status. Basta remover o `.select().single()`:
 
-### 3. Lógica de valor_adicional como "ajuste"
+```typescript
+const { error: respostaError } = await supabase
+  .from('formulario_respostas')
+  .insert({
+    formulario_id: formulario.id,
+    user_id: formulario.user_id,
+    respostas,
+    respondente_nome: respondente_nome || null,
+    respondente_email: respondente_email || null,
+  });
 
-Quando o valor manual difere da soma calculada (pacote + produtos):
-
-```text
-valor_adicional = valorFinalUsuario - (valorBasePacote + totalProdutos) + desconto
+if (respostaError) throw respostaError;
+return { success: true };
 ```
 
-Isso garante que o trigger recalcule `valor_total` para o valor correto que o usuário definiu.
+### 2. Adicionar tratamento de erro robusto no submit
 
-## Arquivos
+**Arquivo:** `src/pages/FormularioPublico.tsx`
+
+Adicionar toast de erro visível ao usuário e tratamento para erro de duplicidade (unique constraint em `formulario_id`):
+
+```typescript
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!formulario || !isDisponivel) return;
+  try {
+    await submitMutation.mutateAsync({...});
+    setSubmitted(true);
+  } catch (err: any) {
+    // Se erro de unique constraint = já foi respondido
+    if (err?.code === '23505') {
+      setSubmitted(true); // Mostrar tela de sucesso
+      return;
+    }
+    toast.error('Erro ao enviar formulário. Tente novamente.');
+  }
+};
+```
+
+### 3. Adicionar policy SELECT para anon (segurança futura)
+
+Mesmo removendo `.select()`, é prudente adicionar uma policy SELECT limitada para anon, caso futuramente precisemos ler dados após insert:
+
+```sql
+CREATE POLICY "Anon can read own submitted resposta"
+ON public.formulario_respostas FOR SELECT TO anon
+USING (
+  formulario_id IN (
+    SELECT id FROM public.formularios 
+    WHERE public_token IS NOT NULL AND status = 'publicado'
+  )
+);
+```
+
+## Arquivos modificados
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useVendaAvulsa.ts` | Aceitar `produtos[]`, salvar em `produtos_incluidos` JSONB, calcular `valor_adicional` como ajuste |
-| `src/components/financas/ModalVendaAvulsa.tsx` | Controles de quantidade nos chips, enviar produtos ao hook, descrição automática |
+| `src/hooks/useFormularios.ts` | Remover `.select().single()` do insert na mutação |
+| `src/pages/FormularioPublico.tsx` | Tratamento de erro com toast + handling de duplicidade |
+| Migration SQL | Policy SELECT para anon em `formulario_respostas` (opcional, defensivo) |
 
-## Resultado esperado
+## Resultado
 
-- Venda avulsa sem pacote com produto de R$ 96 → `produtos_incluidos` JSONB com o produto → trigger calcula `valor_total = 96`
-- Com pagamento imediato: `valor_pago = 96`, `status_financeiro = 'pago'`
-- Sem pagamento: `valor_pago = 0`, `status_financeiro = 'pendente'`, valor pendente visível no workflow
-- Workflow mostra descrição: "Venda avulsa - Album Premium (x2)"
+- Cliente submete → INSERT funciona → trigger atualiza status → tela de sucesso
+- Se tentar submeter 2x → unique constraint detectado → mostra tela de sucesso
+- Sem 401, sem 404, sem estado inconsistente
 
