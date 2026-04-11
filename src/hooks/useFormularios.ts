@@ -266,8 +266,7 @@ export function useSubmitFormularioResposta() {
       respondente_nome?: string;
       respondente_email?: string;
     }) => {
-      // Inserir resposta
-      const { data: resposta, error: respostaError } = await supabase
+      const { error: respostaError } = await supabase
         .from('formulario_respostas')
         .insert({
           formulario_id: formulario.id,
@@ -275,14 +274,12 @@ export function useSubmitFormularioResposta() {
           respostas,
           respondente_nome: respondente_nome || null,
           respondente_email: respondente_email || null,
-        })
-        .select()
-        .single();
+        });
       
       if (respostaError) throw respostaError;
       
       // Status é atualizado automaticamente via trigger no banco
-      return resposta;
+      return { success: true };
     },
   });
 }

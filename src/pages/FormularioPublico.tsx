@@ -79,8 +79,15 @@ export default function FormularioPublico() {
         respondente_email: respondenteEmail || undefined,
       });
       setSubmitted(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao enviar formulário:', err);
+      // Unique constraint = já foi respondido anteriormente
+      if (err?.code === '23505') {
+        setSubmitted(true);
+        return;
+      }
+      // Mostrar erro visível ao usuário
+      alert('Erro ao enviar formulário. Por favor, tente novamente.');
     }
   };
 
