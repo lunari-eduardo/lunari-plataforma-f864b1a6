@@ -172,7 +172,7 @@ export default function AppointmentDetails({
 
   return (
     <>
-    <div className={cn("space-y-4 transition-all duration-200", sendBriefingOpen && "opacity-40 blur-[2px] pointer-events-none")}>
+    <div className={cn("space-y-4 transition-all duration-200", (sendBriefingOpen || viewRespostas) && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
       <div className="border-b border-lunar-border/30 pb-4">
         <div className="flex items-center gap-2">
