@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
-import { ShoppingBag, Loader2, X, UserPlus } from 'lucide-react';
+import { ShoppingBag, Loader2, X, UserPlus, Plus, Minus } from 'lucide-react';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
 import PackageSearchCombobox from '@/components/agenda/PackageSearchCombobox';
 import ProductSearchCombobox, { type ProductComboboxItem } from '@/components/agenda/ProductSearchCombobox';
@@ -48,7 +48,7 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
   const [valorTotal, setValorTotal] = useState('');
   const [valorManualEditado, setValorManualEditado] = useState(false);
   const [desconto, setDesconto] = useState('');
-  const [descricao, setDescricao] = useState('');
+  const [descricaoExtra, setDescricaoExtra] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [registrarPagamento, setRegistrarPagamento] = useState(true);
 
@@ -71,6 +71,23 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
     return Math.max(0, total - desc);
   }, [valorTotal, desconto]);
 
+  // Auto-generate description
+  const descricaoAutomatica = useMemo(() => {
+    const partes: string[] = [];
+    if (pacoteNome) partes.push(pacoteNome);
+    produtos.forEach(p => {
+      partes.push(p.quantidade > 1 ? `${p.nome} (x${p.quantidade})` : p.nome);
+    });
+    return partes.length > 0 ? partes.join(' + ') : '';
+  }, [pacoteNome, produtos]);
+
+  const descricaoFinal = useMemo(() => {
+    const parts: string[] = [];
+    if (descricaoAutomatica) parts.push(descricaoAutomatica);
+    if (descricaoExtra.trim()) parts.push(descricaoExtra.trim());
+    return parts.join(' — ') || 'Venda avulsa';
+  }, [descricaoAutomatica, descricaoExtra]);
+
   const resetForm = () => {
     setClienteId('');
     setPacoteId('');
@@ -81,7 +98,7 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
     setValorTotal('');
     setValorManualEditado(false);
     setDesconto('');
-    setDescricao('');
+    setDescricaoExtra('');
     setObservacoes('');
     setRegistrarPagamento(true);
   };
@@ -111,6 +128,15 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
     setValorManualEditado(false);
   };
 
+  const updateQuantidade = (id: string, delta: number) => {
+    setProdutos(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const novaQtd = Math.max(1, p.quantidade + delta);
+      return { ...p, quantidade: novaQtd };
+    }));
+    setValorManualEditado(false);
+  };
+
   const removeProduto = (id: string) => {
     setProdutos(produtos.filter(p => p.id !== id));
     setValorManualEditado(false);
@@ -130,9 +156,14 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
         valorBasePacote: valorBasePacote || undefined,
         valorTotal: valorFinal,
         desconto: parseFloat(desconto) || 0,
-        descricao: descricao || undefined,
+        descricao: descricaoFinal,
         observacoes: observacoes || undefined,
         registrarPagamento,
+        produtos: produtos.map(p => ({
+          nome: p.nome,
+          quantidade: p.quantidade,
+          valorUnitario: p.valorVenda,
+        })),
       });
 
       resetForm();
@@ -268,25 +299,51 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
             </div>
           </div>
 
-          {/* Produtos selecionados como chips */}
+          {/* Produtos selecionados com controles de quantidade */}
           {produtos.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-1.5">
               {produtos.map(p => (
-                <span
+                <div
                   key={p.id}
-                  className="inline-flex items-center gap-1 bg-muted text-foreground text-xs px-2 py-1 rounded-md"
+                  className="flex items-center justify-between bg-muted text-foreground text-xs px-2.5 py-1.5 rounded-md"
                 >
-                  {p.nome} {p.quantidade > 1 && `×${p.quantidade}`}
-                  <span className="text-muted-foreground">R$ {(p.valorVenda * p.quantidade).toFixed(2)}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeProduto(p.id)}
-                    className="ml-0.5 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
+                  <span className="flex-1 truncate">{p.nome}</span>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <button
+                      type="button"
+                      onClick={() => updateQuantidade(p.id, -1)}
+                      className="h-5 w-5 flex items-center justify-center rounded hover:bg-background"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-5 text-center font-medium">{p.quantidade}</span>
+                    <button
+                      type="button"
+                      onClick={() => updateQuantidade(p.id, 1)}
+                      className="h-5 w-5 flex items-center justify-center rounded hover:bg-background"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                    <span className="text-muted-foreground ml-1 min-w-[60px] text-right">
+                      R$ {(p.valorVenda * p.quantidade).toFixed(2)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeProduto(p.id)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
               ))}
+            </div>
+          )}
+
+          {/* Descrição automática preview */}
+          {descricaoAutomatica && (
+            <div className="text-[11px] text-muted-foreground px-1">
+              📋 {descricaoAutomatica}
             </div>
           )}
 
@@ -326,13 +383,13 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
             </div>
           )}
 
-          {/* Descrição */}
+          {/* Descrição complementar */}
           <div className="space-y-1.5">
-            <Label className="text-sm">Descrição</Label>
+            <Label className="text-sm">Observações adicionais</Label>
             <Textarea
-              placeholder="Detalhes da venda..."
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Detalhes extras da venda..."
+              value={descricaoExtra}
+              onChange={(e) => setDescricaoExtra(e.target.value)}
               rows={2}
               className="resize-none"
             />
