@@ -101,12 +101,26 @@ export function WorkflowCardExpanded({
     onFieldUpdate(session.id, 'desconto', formatted);
   }, [descontoValue, session.id, onFieldUpdate, parseCurrency, formatCurrency]);
 
+  const handleDescontoKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }, []);
+
   const handleAdicionalBlur = useCallback(() => {
     const numValue = parseCurrency(adicionalValue);
     const formatted = formatCurrency(numValue);
     setAdicionalValue(formatted);
     onFieldUpdate(session.id, 'valorAdicional', formatted);
   }, [adicionalValue, session.id, onFieldUpdate, parseCurrency, formatCurrency]);
+
+  const handleAdicionalKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }, []);
 
   const handleObsBlur = useCallback(() => {
     if (obsValue !== session.observacoes) {
