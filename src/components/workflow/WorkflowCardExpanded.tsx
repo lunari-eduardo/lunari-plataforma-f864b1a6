@@ -101,12 +101,26 @@ export function WorkflowCardExpanded({
     onFieldUpdate(session.id, 'desconto', formatted);
   }, [descontoValue, session.id, onFieldUpdate, parseCurrency, formatCurrency]);
 
+  const handleDescontoKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }, []);
+
   const handleAdicionalBlur = useCallback(() => {
     const numValue = parseCurrency(adicionalValue);
     const formatted = formatCurrency(numValue);
     setAdicionalValue(formatted);
     onFieldUpdate(session.id, 'valorAdicional', formatted);
   }, [adicionalValue, session.id, onFieldUpdate, parseCurrency, formatCurrency]);
+
+  const handleAdicionalKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }, []);
 
   const handleObsBlur = useCallback(() => {
     if (obsValue !== session.observacoes) {
@@ -196,6 +210,7 @@ export function WorkflowCardExpanded({
                 value={descontoValue}
                 onChange={(e) => setDescontoValue(e.target.value)}
                 onBlur={handleDescontoBlur}
+                onKeyDown={handleDescontoKeyDown}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
                 className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
@@ -235,6 +250,7 @@ export function WorkflowCardExpanded({
                 value={adicionalValue}
                 onChange={(e) => setAdicionalValue(e.target.value)}
                 onBlur={handleAdicionalBlur}
+                onKeyDown={handleAdicionalKeyDown}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
                 className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
