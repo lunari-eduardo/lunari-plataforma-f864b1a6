@@ -250,6 +250,7 @@ export function WorkflowCardExpanded({
                 value={adicionalValue}
                 onChange={(e) => setAdicionalValue(e.target.value)}
                 onBlur={handleAdicionalBlur}
+                onKeyDown={handleAdicionalKeyDown}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
                 className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
