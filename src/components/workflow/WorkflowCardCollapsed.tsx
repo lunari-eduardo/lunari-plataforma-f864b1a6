@@ -121,6 +121,7 @@ export function WorkflowCardCollapsed({
   const [modalAberto, setModalAberto] = useState(false);
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState(session.descricao || '');
   
   // Sync description when session changes
