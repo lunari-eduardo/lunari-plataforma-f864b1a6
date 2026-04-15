@@ -541,6 +541,24 @@ export function WorkflowCardCollapsed({
         isOpen={galleryModalOpen}
         onClose={() => setGalleryModalOpen(false)}
       />
+
+      {/* Modal de Confirmação de Exclusão */}
+      <WorkflowDeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={(deleteAction) => {
+          if (onDeleteSession) {
+            const paymentCount = session.pagamentos?.length || 0;
+            onDeleteSession(session.id, session.nome, paymentCount, deleteAction);
+          }
+        }}
+        sessionData={{
+          id: session.id,
+          clientName: session.nome,
+          date: formatDate(session.data),
+          hasPayments: (session.pagamentos?.length || 0) > 0 || parseFloat(String(session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) > 0,
+        }}
+      />
     </div>
   );
 }
