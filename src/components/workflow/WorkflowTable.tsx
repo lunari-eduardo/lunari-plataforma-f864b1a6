@@ -147,7 +147,7 @@ interface WorkflowTableProps {
   onStatusChange: (id: string, newStatus: string) => void;
   onEditSession: (id: string) => void;
   onAddPayment: (id: string) => void;
-  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
+  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number, action?: string) => void;
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
   visibleColumns: Record<string, boolean>;
   columnWidths: Record<string, number>;

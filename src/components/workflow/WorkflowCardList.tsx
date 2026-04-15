@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { WorkflowCard } from "./WorkflowCard";
 import type { SessionData } from "@/types/workflow";
+import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
 
 interface WorkflowCardListProps {
   sessions: SessionData[];
@@ -11,7 +12,7 @@ interface WorkflowCardListProps {
   onStatusChange: (id: string, newStatus: string) => void;
   onEditSession: (id: string) => void;
   onAddPayment: (id: string) => void;
-  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
+  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number, action: DeleteAction) => void;
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
 }
 

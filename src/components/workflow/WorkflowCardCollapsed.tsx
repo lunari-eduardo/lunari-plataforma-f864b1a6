@@ -9,7 +9,7 @@ import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { GalleryUpgradeModal } from "./GalleryUpgradeModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Eye, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Eye, Image as ImageIcon, ExternalLink, Trash2 } from "lucide-react";
 import { EXTERNAL_URLS } from "@/config/externalUrls";
 import { Link } from "react-router-dom";
 import { formatToDayMonth } from "@/utils/dateUtils";
@@ -20,6 +20,7 @@ import { buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
+import { WorkflowDeleteConfirmModal, type DeleteAction } from "./WorkflowDeleteConfirmModal";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
@@ -30,7 +31,7 @@ interface WorkflowCardCollapsedProps {
   productOptions: any[];
   onStatusChange: (id: string, newStatus: string) => void;
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
-  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
+  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number, action: DeleteAction) => void;
 }
 
 // Input de fotos extras memoizado (mesma lógica do WorkflowTable)
@@ -109,6 +110,7 @@ export function WorkflowCardCollapsed({
   productOptions,
   onStatusChange,
   onFieldUpdate,
+  onDeleteSession,
 }: WorkflowCardCollapsedProps) {
   const { addPayment } = useAppContext();
   const { hasGaleryAccess, accessState } = useAccessControl();
@@ -118,6 +120,7 @@ export function WorkflowCardCollapsed({
   const [modalAberto, setModalAberto] = useState(false);
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState(session.descricao || '');
   
   // Sync description when session changes
@@ -308,7 +311,7 @@ export function WorkflowCardCollapsed({
     <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
       {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
-        className="grid grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto] gap-3 items-start"
+        className="grid grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto_32px] gap-3 items-start"
       >
         
         {/* Zona 1: Expand */}
@@ -457,6 +460,17 @@ export function WorkflowCardCollapsed({
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Galerias</span>
           <GalleryButtons />
         </div>
+
+        {/* Zona 11: Delete */}
+        <div className="flex items-center justify-center pt-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setDeleteModalOpen(true)}
+            className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-destructive/10 transition-all"
+            title="Excluir sessão"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </button>
+        </div>
       </div>
 
 
@@ -525,6 +539,24 @@ export function WorkflowCardCollapsed({
       <GalleryUpgradeModal
         isOpen={galleryModalOpen}
         onClose={() => setGalleryModalOpen(false)}
+      />
+
+      {/* Modal de Confirmação de Exclusão */}
+      <WorkflowDeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={(deleteAction) => {
+          if (onDeleteSession) {
+            const paymentCount = session.pagamentos?.length || 0;
+            onDeleteSession(session.id, session.nome, paymentCount, deleteAction);
+          }
+        }}
+        sessionData={{
+          id: session.id,
+          clientName: session.nome,
+          date: formatToDayMonth(session.data),
+          hasPayments: (session.pagamentos?.length || 0) > 0 || parseFloat(String(session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) > 0,
+        }}
       />
     </div>
   );
