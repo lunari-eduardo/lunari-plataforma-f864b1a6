@@ -31,7 +31,7 @@ export function WorkflowCard({
     <div
       data-card-id={session.id}
       className={cn(
-        "rounded-2xl transition-all duration-200 ease-in-out w-full",
+        "group rounded-2xl transition-all duration-200 ease-in-out w-full",
         // Collapsed: transparent by default, glass on hover
         !isExpanded && [
           "bg-transparent",
