@@ -1,0 +1,2 @@
+ALTER TABLE public.clientes_transacoes
+  DROP CONSTRAINT clientes_transacoes_session_id_fkey;
