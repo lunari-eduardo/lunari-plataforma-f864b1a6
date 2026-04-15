@@ -701,38 +701,66 @@ export default function Workflow() {
           .eq('id', sessionId);
         if (updateError) throw updateError;
       } else if (deleteAction === 'refund') {
-        // Create refund transactions, then delete
-        const { data: transacoes } = await supabase
-          .from('clientes_transacoes')
-          .select('*')
-          .eq('session_id', (await supabase.from('clientes_sessoes').select('session_id').eq('id', sessionId).single()).data?.session_id)
-          .eq('tipo', 'receita');
-        
-        if (transacoes && transacoes.length > 0) {
-          const estornos = transacoes.map(t => ({
-            cliente_id: t.cliente_id,
-            user_id: t.user_id,
-            session_id: t.session_id,
-            valor: t.valor,
-            tipo: 'estorno' as const,
-            data_transacao: new Date().toISOString().split('T')[0],
-            descricao: `Estorno: ${t.descricao || 'Pagamento'}`,
-          }));
-          
-          const { error: estornoError } = await supabase
+        // Get session_id (text) for transaction lookup
+        const { data: sessaoData } = await supabase
+          .from('clientes_sessoes')
+          .select('session_id')
+          .eq('id', sessionId)
+          .single();
+        const sessionTextId = sessaoData?.session_id;
+
+        if (sessionTextId) {
+          // Create refund transactions
+          const { data: transacoes } = await supabase
             .from('clientes_transacoes')
-            .insert(estornos);
-          if (estornoError) throw estornoError;
+            .select('*')
+            .eq('session_id', sessionTextId)
+            .eq('tipo', 'receita');
+          
+          if (transacoes && transacoes.length > 0) {
+            const estornos = transacoes.map(t => ({
+              cliente_id: t.cliente_id,
+              user_id: t.user_id,
+              session_id: t.session_id,
+              valor: t.valor,
+              tipo: 'estorno' as const,
+              data_transacao: new Date().toISOString().split('T')[0],
+              descricao: `Estorno: ${t.descricao || 'Pagamento'}`,
+            }));
+            
+            const { error: estornoError } = await supabase
+              .from('clientes_transacoes')
+              .insert(estornos);
+            if (estornoError) throw estornoError;
+          }
+
+          // Decouple transactions before delete (defensive)
+          await supabase
+            .from('clientes_transacoes')
+            .update({ session_id: null })
+            .eq('session_id', sessionTextId);
         }
         
-        // Then delete the session
         const { error: deleteError } = await supabase
           .from('clientes_sessoes')
           .delete()
           .eq('id', sessionId);
         if (deleteError) throw deleteError;
       } else {
-        // remove: hard delete
+        // remove: hard delete — decouple transactions first
+        const { data: sessaoData } = await supabase
+          .from('clientes_sessoes')
+          .select('session_id')
+          .eq('id', sessionId)
+          .single();
+        
+        if (sessaoData?.session_id) {
+          await supabase
+            .from('clientes_transacoes')
+            .update({ session_id: null })
+            .eq('session_id', sessaoData.session_id);
+        }
+
         const { error: deleteError } = await supabase
           .from('clientes_sessoes')
           .delete()
