@@ -689,10 +689,65 @@ export default function Workflow() {
     console.log('Add payment to session:', sessionId);
   }, []);
 
-  const handleDeleteSession = useCallback((sessionId: string, sessionTitle: string, paymentCount: number) => {
-    // For now, delete without including payments (user can choose via modal)
-    deleteWorkflowSession(sessionId, false);
-  }, [deleteWorkflowSession]);
+  const handleDeleteSession = useCallback(async (sessionId: string, sessionTitle: string, paymentCount: number, action?: string) => {
+    const deleteAction = action || 'remove';
+    
+    try {
+      if (deleteAction === 'preserve') {
+        // Soft delete: mark as hidden/historico
+        const { error: updateError } = await supabase
+          .from('clientes_sessoes')
+          .update({ status: 'historico' })
+          .eq('id', sessionId);
+        if (updateError) throw updateError;
+      } else if (deleteAction === 'refund') {
+        // Create refund transactions, then delete
+        const { data: transacoes } = await supabase
+          .from('clientes_transacoes')
+          .select('*')
+          .eq('session_id', (await supabase.from('clientes_sessoes').select('session_id').eq('id', sessionId).single()).data?.session_id)
+          .eq('tipo', 'receita');
+        
+        if (transacoes && transacoes.length > 0) {
+          const estornos = transacoes.map(t => ({
+            cliente_id: t.cliente_id,
+            user_id: t.user_id,
+            session_id: t.session_id,
+            valor: t.valor,
+            tipo: 'estorno' as const,
+            data_transacao: new Date().toISOString().split('T')[0],
+            descricao: `Estorno: ${t.descricao || 'Pagamento'}`,
+          }));
+          
+          const { error: estornoError } = await supabase
+            .from('clientes_transacoes')
+            .insert(estornos);
+          if (estornoError) throw estornoError;
+        }
+        
+        // Then delete the session
+        const { error: deleteError } = await supabase
+          .from('clientes_sessoes')
+          .delete()
+          .eq('id', sessionId);
+        if (deleteError) throw deleteError;
+      } else {
+        // remove: hard delete
+        const { error: deleteError } = await supabase
+          .from('clientes_sessoes')
+          .delete()
+          .eq('id', sessionId);
+        if (deleteError) throw deleteError;
+      }
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a sessão.",
+        variant: "destructive",
+      });
+    }
+  }, []);
 
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
     return updateSession(sessionId, { [field]: value }, silent);
