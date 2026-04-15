@@ -1,44 +1,49 @@
 
 
-# Adicionar botão de excluir sessão no card do Workflow
+# Fix: Erro 409 ao excluir sessão do Workflow
 
-## Contexto
+## Causa raiz
 
-O prop `onDeleteSession` já é passado até `WorkflowCardCollapsed`, mas nunca é renderizado como botão. A exclusão atual em `Workflow.tsx` faz um delete simples sem opções (preserve/refund/remove). A Agenda já tem o modal `AppointmentDeleteConfirmModal` com tri-state que deve ser replicado.
+Existem **duas foreign keys duplicadas** na coluna `session_id` da tabela `clientes_transacoes` apontando para `clientes_sessoes(session_id)`:
 
-## Plano
+| FK | Regra |
+|----|-------|
+| `clientes_transacoes_session_id_fkey` | **RESTRICT** (padrão) — **bloqueia DELETE** |
+| `fk_transacoes_session_id` | `ON DELETE SET NULL` (correto) |
 
-### 1. Adicionar botão de excluir no `WorkflowCardCollapsed.tsx`
+A FK com RESTRICT impede qualquer exclusão de sessão que tenha transações vinculadas, gerando o erro **409 Conflict**.
 
-- Adicionar ícone `Trash2` como último elemento do grid (nova zona após Galerias)
-- Botão aparece com opacidade reduzida, visível no hover do card (`group` + `group-hover:opacity-100`)
-- Ao clicar, abre o modal de confirmação de exclusão
-- Atualizar grid template para incluir a nova coluna: `grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto_32px]`
+## Correção
 
-### 2. Criar `WorkflowDeleteConfirmModal.tsx`
+### Migration SQL (única alteração necessária)
 
-Reutilizar o mesmo padrão visual do `AppointmentDeleteConfirmModal` mas adaptado para o contexto do workflow:
-- Se a sessão tem pagamentos → mostra as 3 opções (preservar como histórico, estornar e excluir, excluir tudo)
-- Se não tem pagamentos → confirmação simples de exclusão
-- Recebe `sessionData` com: id, nome do cliente, data, tem pagamentos (baseado em `session.pagamentos?.length > 0` ou `session.valorPago > 0`)
+Remover a foreign key duplicada restritiva:
 
-### 3. Atualizar `Workflow.tsx` — `handleDeleteSession`
+```sql
+ALTER TABLE public.clientes_transacoes
+  DROP CONSTRAINT clientes_transacoes_session_id_fkey;
+```
 
-Alterar para aceitar o `DeleteAction` e executar a lógica correspondente:
-- **preserve**: Marcar `status = 'historico'` em vez de deletar (soft delete)
-- **refund**: Criar transações de estorno via `clientes_transacoes` para cada pagamento, depois deletar a sessão
-- **remove**: Delete completo (comportamento atual)
+A FK `fk_transacoes_session_id` já faz `ON DELETE SET NULL`, que é o comportamento correto — ao excluir uma sessão, as transações ficam órfãs (preservando o histórico financeiro).
 
-### 4. Atualizar `WorkflowCard.tsx`
+### Código (`Workflow.tsx`)
 
-Adicionar classe `group` no wrapper div para que o botão de delete responda ao hover do card.
+O `handleDeleteSession` nos casos `refund` e `remove` faz `.delete()` direto sem primeiro desvincular transações. Com a FK corrigida isso funcionará automaticamente via `SET NULL`. Porém, para robustez, adicionar tratamento para desvincular transações **antes** do delete nos casos `refund` e `remove`:
 
-## Arquivos modificados
+```typescript
+// Antes do delete, set session_id = null nas transações
+await supabase
+  .from('clientes_transacoes')
+  .update({ session_id: null })
+  .eq('session_id', sessionTextId);
+```
+
+Isso garante compatibilidade mesmo que a FK mude no futuro.
+
+## Arquivos
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/workflow/WorkflowDeleteConfirmModal.tsx` | Novo — modal de confirmação com tri-state |
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Botão Trash2 na última coluna do grid, estado do modal |
-| `src/components/workflow/WorkflowCard.tsx` | Adicionar classe `group` no wrapper |
-| `src/pages/Workflow.tsx` | Atualizar `handleDeleteSession` para suportar as 3 ações |
+| Migration SQL | `DROP CONSTRAINT clientes_transacoes_session_id_fkey` |
+| `src/pages/Workflow.tsx` | Desvincular transações antes do delete (defensivo) |
 
