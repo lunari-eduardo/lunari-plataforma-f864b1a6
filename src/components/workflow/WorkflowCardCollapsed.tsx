@@ -312,7 +312,7 @@ export function WorkflowCardCollapsed({
     <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
       {/* Grid DESKTOP (≥1024px) - Layout completo */}
       <div 
-        className="grid grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto] gap-3 items-start"
+        className="grid grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto_32px] gap-3 items-start"
       >
         
         {/* Zona 1: Expand */}
@@ -460,6 +460,17 @@ export function WorkflowCardCollapsed({
         <div className="flex flex-col gap-0.5">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Galerias</span>
           <GalleryButtons />
+        </div>
+
+        {/* Zona 11: Delete */}
+        <div className="flex items-center justify-center pt-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setDeleteModalOpen(true)}
+            className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-destructive/10 transition-all"
+            title="Excluir sessão"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </button>
         </div>
       </div>
 
