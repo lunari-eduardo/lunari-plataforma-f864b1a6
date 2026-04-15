@@ -554,7 +554,7 @@ export function WorkflowCardCollapsed({
         sessionData={{
           id: session.id,
           clientName: session.nome,
-          date: formatDate(session.data),
+          date: formatToDayMonth(session.data),
           hasPayments: (session.pagamentos?.length || 0) > 0 || parseFloat(String(session.valorPago || '0').replace(/[^\d,]/g, '').replace(',', '.')) > 0,
         }}
       />
