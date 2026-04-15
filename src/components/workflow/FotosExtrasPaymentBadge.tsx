@@ -2,14 +2,14 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock } from "lucide-react";
 
 interface FotosExtrasPaymentBadgeProps {
-  status: 'sem_vendas' | 'pendente' | 'pago' | undefined;
+  status: 'sem_vendas' | 'pendente' | 'pago' | 'pago_manual' | undefined;
 }
 
 export function FotosExtrasPaymentBadge({ status }: FotosExtrasPaymentBadgeProps) {
-  // Não mostrar badge se não há vendas
   if (!status || status === 'sem_vendas') return null;
   
-  const config = status === 'pago' 
+  const isPago = status === 'pago' || status === 'pago_manual';
+  const config = isPago 
     ? { 
         icon: CheckCircle2, 
         className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-500/30', 
