@@ -2,6 +2,7 @@ import React from "react";
 import { WorkflowCardCollapsed } from "./WorkflowCardCollapsed";
 import { WorkflowCardExpanded } from "./WorkflowCardExpanded";
 import type { SessionData } from "@/types/workflow";
+import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
 import { cn } from "@/lib/utils";
 
 interface WorkflowCardProps {
@@ -13,7 +14,7 @@ interface WorkflowCardProps {
   productOptions: any[];
   onStatusChange: (id: string, newStatus: string) => void;
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
-  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
+  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number, action: DeleteAction) => void;
 }
 
 export function WorkflowCard({

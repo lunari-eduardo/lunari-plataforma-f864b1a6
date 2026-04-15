@@ -32,7 +32,7 @@ interface WorkflowCardCollapsedProps {
   productOptions: any[];
   onStatusChange: (id: string, newStatus: string) => void;
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
-  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number) => void;
+  onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number, action: DeleteAction) => void;
 }
 
 // Input de fotos extras memoizado (mesma lógica do WorkflowTable)
