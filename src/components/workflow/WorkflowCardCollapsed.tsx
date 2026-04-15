@@ -9,7 +9,7 @@ import { GerenciarProdutosModal } from "./GerenciarProdutosModal";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { GalleryUpgradeModal } from "./GalleryUpgradeModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Eye, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronUp, Package, Plus, CreditCard, Eye, Image as ImageIcon, ExternalLink, Trash2 } from "lucide-react";
 import { EXTERNAL_URLS } from "@/config/externalUrls";
 import { Link } from "react-router-dom";
 import { formatToDayMonth } from "@/utils/dateUtils";
@@ -20,6 +20,8 @@ import { buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
+import { WorkflowDeleteConfirmModal, type DeleteAction } from "./WorkflowDeleteConfirmModal";
+import { formatToDayMonth as formatDate } from "@/utils/dateUtils";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
@@ -109,6 +111,7 @@ export function WorkflowCardCollapsed({
   productOptions,
   onStatusChange,
   onFieldUpdate,
+  onDeleteSession,
 }: WorkflowCardCollapsedProps) {
   const { addPayment } = useAppContext();
   const { hasGaleryAccess, accessState } = useAccessControl();
