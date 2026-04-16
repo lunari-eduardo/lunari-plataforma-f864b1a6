@@ -554,6 +554,18 @@ export default function AppointmentDetails({
           campos={viewRespostas.campos}
         />
       )}
+
+      {showChargeModal && appointment.clienteId && (
+        <ChargeModal
+          isOpen={showChargeModal}
+          onClose={() => setShowChargeModal(false)}
+          clienteId={appointment.clienteId}
+          clienteNome={appointment.client}
+          clienteWhatsapp={appointment.whatsapp}
+          sessionId={appointment.sessionId}
+          valorSugerido={valorTotal}
+        />
+      )}
     </>
   );
 }
