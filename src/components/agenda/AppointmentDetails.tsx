@@ -313,7 +313,7 @@ export default function AppointmentDetails({
           </div>
         </div>
 
-        {formData.status === 'a confirmar' && appointment.clienteId && (
+        {formData.status === 'a confirmar' && resolvedClienteId && (
           <div className="pt-2 border-t border-lunar-border/20">
             <Button
               type="button"
@@ -337,7 +337,7 @@ export default function AppointmentDetails({
           </div>
         )}
 
-        {formData.status === 'a confirmar' && !appointment.clienteId && (
+        {formData.status === 'a confirmar' && !resolvedClienteId && (
           <div className="pt-2 border-t border-lunar-border/20">
             <p className="text-[11px] text-lunar-muted text-center italic">
               Vincule um cliente do CRM para habilitar cobrança via link.
@@ -548,7 +548,7 @@ export default function AppointmentDetails({
       <ClientEditModal
         open={showClientEditModal}
         onOpenChange={setShowClientEditModal}
-        clienteId={appointment.clienteId || ''}
+        clienteId={resolvedClienteId || ''}
         clienteNome={appointment.client}
         onSuccess={(novoNome) => {
           if (novoNome) {
@@ -560,7 +560,7 @@ export default function AppointmentDetails({
       <SendBriefingModal
         open={sendBriefingOpen}
         onOpenChange={setSendBriefingOpen}
-        clienteId={appointment.clienteId || ''}
+        clienteId={resolvedClienteId || ''}
         clienteNome={appointment.client}
         clienteTelefone={appointment.whatsapp}
         sessionId={appointment.sessionId}
@@ -576,11 +576,11 @@ export default function AppointmentDetails({
         />
       )}
 
-      {showChargeModal && appointment.clienteId && (
+      {showChargeModal && resolvedClienteId && (
         <ChargeModal
           isOpen={showChargeModal}
           onClose={() => setShowChargeModal(false)}
-          clienteId={appointment.clienteId}
+          clienteId={resolvedClienteId}
           clienteNome={appointment.client}
           clienteWhatsapp={appointment.whatsapp}
           sessionId={appointment.sessionId}
