@@ -412,7 +412,7 @@ export default function AppointmentForm({
         paidAmount: formData.paidAmount,
         valorPacote: formData.valorPacote,
         client: clientInfo.client,
-        clientId: clientInfo.clientId,
+        clienteId: clientInfo.clientId,
         whatsapp: clientInfo.clientPhone,
         email: clientInfo.clientEmail,
         clientPhone: clientInfo.clientPhone,
