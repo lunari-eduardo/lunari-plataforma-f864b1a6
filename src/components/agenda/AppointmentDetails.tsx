@@ -18,9 +18,10 @@ import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
+import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AppointmentDetailsProps {
