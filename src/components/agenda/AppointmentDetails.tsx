@@ -306,20 +306,34 @@ export default function AppointmentDetails({
           </div>
         </div>
 
-        {formData.status === 'a confirmar' && appointment.clienteId && valorTotal > 0 && (
+        {formData.status === 'a confirmar' && appointment.clienteId && (
           <div className="pt-2 border-t border-lunar-border/20">
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="w-full h-8 text-xs gap-1.5"
-              onClick={() => setShowChargeModal(true)}
+              onClick={() => {
+                if (valorTotal <= 0 && formData.paidAmount <= 0) {
+                  toast.info('Selecione um pacote ou informe um valor de entrada para cobrar.');
+                  return;
+                }
+                setShowChargeModal(true);
+              }}
             >
               <CreditCard className="h-3.5 w-3.5" />
               Cobrar cliente via link
             </Button>
             <p className="text-[10px] text-lunar-muted mt-1.5 text-center">
               Quando o cliente pagar, o agendamento será confirmado automaticamente.
+            </p>
+          </div>
+        )}
+
+        {formData.status === 'a confirmar' && !appointment.clienteId && (
+          <div className="pt-2 border-t border-lunar-border/20">
+            <p className="text-[11px] text-lunar-muted text-center italic">
+              Vincule um cliente do CRM para habilitar cobrança via link.
             </p>
           </div>
         )}
@@ -563,7 +577,7 @@ export default function AppointmentDetails({
           clienteNome={appointment.client}
           clienteWhatsapp={appointment.whatsapp}
           sessionId={appointment.sessionId}
-          valorSugerido={valorTotal}
+          valorSugerido={valorTotal > 0 ? valorTotal : (formData.paidAmount || 0)}
         />
       )}
     </>
