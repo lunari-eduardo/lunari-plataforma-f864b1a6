@@ -18,9 +18,10 @@ import { AppointmentDeleteConfirmModal } from './AppointmentDeleteConfirmModal';
 import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
+import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AppointmentDetailsProps {
@@ -43,6 +44,7 @@ export default function AppointmentDetails({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showClientEditModal, setShowClientEditModal] = useState(false);
   const [sendBriefingOpen, setSendBriefingOpen] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
   const [viewRespostas, setViewRespostas] = useState<{
     id: string;
     titulo: string;
@@ -172,7 +174,7 @@ export default function AppointmentDetails({
 
   return (
     <>
-    <div className={cn("space-y-4 transition-all duration-200", (sendBriefingOpen || viewRespostas) && "opacity-40 blur-[2px] pointer-events-none")}>
+    <div className={cn("space-y-4 transition-all duration-200", (sendBriefingOpen || viewRespostas || showChargeModal) && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
       <div className="border-b border-lunar-border/30 pb-4">
         <div className="flex items-center gap-2">
@@ -303,6 +305,24 @@ export default function AppointmentDetails({
             />
           </div>
         </div>
+
+        {formData.status === 'a confirmar' && appointment.clienteId && valorTotal > 0 && (
+          <div className="pt-2 border-t border-lunar-border/20">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs gap-1.5"
+              onClick={() => setShowChargeModal(true)}
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Cobrar cliente via link
+            </Button>
+            <p className="text-[10px] text-lunar-muted mt-1.5 text-center">
+              Quando o cliente pagar, o agendamento será confirmado automaticamente.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* BLOCO 3: Observações */}
@@ -532,6 +552,18 @@ export default function AppointmentDetails({
           formularioId={viewRespostas.id}
           titulo={viewRespostas.titulo}
           campos={viewRespostas.campos}
+        />
+      )}
+
+      {showChargeModal && appointment.clienteId && (
+        <ChargeModal
+          isOpen={showChargeModal}
+          onClose={() => setShowChargeModal(false)}
+          clienteId={appointment.clienteId}
+          clienteNome={appointment.client}
+          clienteWhatsapp={appointment.whatsapp}
+          sessionId={appointment.sessionId}
+          valorSugerido={valorTotal}
         />
       )}
     </>
