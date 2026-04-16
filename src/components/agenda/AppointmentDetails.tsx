@@ -577,7 +577,7 @@ export default function AppointmentDetails({
           clienteNome={appointment.client}
           clienteWhatsapp={appointment.whatsapp}
           sessionId={appointment.sessionId}
-          valorSugerido={valorTotal}
+          valorSugerido={valorTotal > 0 ? valorTotal : (formData.paidAmount || 0)}
         />
       )}
     </>
