@@ -19,6 +19,7 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
@@ -38,8 +39,14 @@ export default function AppointmentDetails({
   onDelete
 }: AppointmentDetailsProps) {
   const { pacotes } = useOrcamentos();
+  const { clientes } = useClientesRealtime();
   const { workflowInfo, sessionDetails, loadingDetails, fetchSessionDetails } = useAppointmentWorkflowInfo(appointment.id);
   const { data: sessionFormularios = [] } = useFormulariosBySession(appointment.sessionId);
+
+  // Resolver clienteId via fallback por nome para agendamentos legados (cliente_id NULL no DB)
+  const resolvedClienteId = appointment.clienteId
+    || clientes.find(c => c.nome?.trim().toLowerCase() === appointment.title?.trim().toLowerCase())?.id
+    || null;
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showClientEditModal, setShowClientEditModal] = useState(false);
