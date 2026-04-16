@@ -19,6 +19,7 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
@@ -38,8 +39,14 @@ export default function AppointmentDetails({
   onDelete
 }: AppointmentDetailsProps) {
   const { pacotes } = useOrcamentos();
+  const { clientes } = useClientesRealtime();
   const { workflowInfo, sessionDetails, loadingDetails, fetchSessionDetails } = useAppointmentWorkflowInfo(appointment.id);
   const { data: sessionFormularios = [] } = useFormulariosBySession(appointment.sessionId);
+
+  // Resolver clienteId via fallback por nome para agendamentos legados (cliente_id NULL no DB)
+  const resolvedClienteId = appointment.clienteId
+    || clientes.find(c => c.nome?.trim().toLowerCase() === appointment.title?.trim().toLowerCase())?.id
+    || null;
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [showClientEditModal, setShowClientEditModal] = useState(false);
@@ -306,7 +313,7 @@ export default function AppointmentDetails({
           </div>
         </div>
 
-        {formData.status === 'a confirmar' && appointment.clienteId && (
+        {formData.status === 'a confirmar' && resolvedClienteId && (
           <div className="pt-2 border-t border-lunar-border/20">
             <Button
               type="button"
@@ -330,7 +337,7 @@ export default function AppointmentDetails({
           </div>
         )}
 
-        {formData.status === 'a confirmar' && !appointment.clienteId && (
+        {formData.status === 'a confirmar' && !resolvedClienteId && (
           <div className="pt-2 border-t border-lunar-border/20">
             <p className="text-[11px] text-lunar-muted text-center italic">
               Vincule um cliente do CRM para habilitar cobrança via link.
@@ -541,7 +548,7 @@ export default function AppointmentDetails({
       <ClientEditModal
         open={showClientEditModal}
         onOpenChange={setShowClientEditModal}
-        clienteId={appointment.clienteId || ''}
+        clienteId={resolvedClienteId || ''}
         clienteNome={appointment.client}
         onSuccess={(novoNome) => {
           if (novoNome) {
@@ -553,7 +560,7 @@ export default function AppointmentDetails({
       <SendBriefingModal
         open={sendBriefingOpen}
         onOpenChange={setSendBriefingOpen}
-        clienteId={appointment.clienteId || ''}
+        clienteId={resolvedClienteId || ''}
         clienteNome={appointment.client}
         clienteTelefone={appointment.whatsapp}
         sessionId={appointment.sessionId}
@@ -569,11 +576,11 @@ export default function AppointmentDetails({
         />
       )}
 
-      {showChargeModal && appointment.clienteId && (
+      {showChargeModal && resolvedClienteId && (
         <ChargeModal
           isOpen={showChargeModal}
           onClose={() => setShowChargeModal(false)}
-          clienteId={appointment.clienteId}
+          clienteId={resolvedClienteId}
           clienteNome={appointment.client}
           clienteWhatsapp={appointment.whatsapp}
           sessionId={appointment.sessionId}

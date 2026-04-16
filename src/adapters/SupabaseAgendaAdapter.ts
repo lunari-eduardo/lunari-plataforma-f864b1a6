@@ -123,7 +123,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         paid_amount: appointment.paidAmount || 0,
         orcamento_id: appointment.orcamentoId,
         origem: appointment.origem || 'agenda',
-        cliente_id: appointment.clienteId
+        cliente_id: appointment.clienteId || (appointment as any).clientId || null
       })
       .select()
       .single();
@@ -137,7 +137,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       // ✅ Higienização: Adicionar campos snake_case esperados pelo WorkflowSupabaseService
       package_id: appointment.packageId,
       paid_amount: appointment.paidAmount,
-      cliente_id: appointment.clienteId
+      cliente_id: appointment.clienteId || (appointment as any).clientId || null
     };
     
     // FASE 1: Criar sessão imediatamente se confirmado (idempotente)
@@ -383,6 +383,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
     if (updates.orcamentoId !== undefined) updateData.orcamento_id = updates.orcamentoId;
     if (updates.origem) updateData.origem = updates.origem;
     if (updates.clienteId !== undefined) updateData.cliente_id = updates.clienteId;
+    else if ((updates as any).clientId !== undefined) updateData.cliente_id = (updates as any).clientId;
 
     const { error } = await supabase
       .from('appointments')
