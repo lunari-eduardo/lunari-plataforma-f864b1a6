@@ -305,6 +305,24 @@ export default function AppointmentDetails({
             />
           </div>
         </div>
+
+        {formData.status === 'a confirmar' && appointment.clienteId && valorTotal > 0 && (
+          <div className="pt-2 border-t border-lunar-border/20">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs gap-1.5"
+              onClick={() => setShowChargeModal(true)}
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Cobrar cliente via link
+            </Button>
+            <p className="text-[10px] text-lunar-muted mt-1.5 text-center">
+              Quando o cliente pagar, o agendamento será confirmado automaticamente.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* BLOCO 3: Observações */}
