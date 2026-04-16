@@ -68,8 +68,8 @@ serve(async (req) => {
       throw new Error("Handle InfinitePay não encontrado");
     }
 
-    // NORMALIZE session_id
-    let normalizedSessionId: string | null = null;
+    // NORMALIZE session_id — preserva original se não encontrar match (evita NULL órfão)
+    let normalizedSessionId: string | null = sessionId || null;
     if (sessionId) {
       const { data: byText } = await supabase
         .from("clientes_sessoes")
@@ -89,8 +89,10 @@ serve(async (req) => {
         if (byUuid?.session_id) {
           normalizedSessionId = byUuid.session_id;
         } else {
-          console.warn(`[infinitepay-create-link] Session not found for: ${sessionId}`);
-          normalizedSessionId = null;
+          // Não achou em clientes_sessoes — preserva sessionId original (ex: 'agenda-xxx')
+          // O webhook resolve depois via session_id OR id::text
+          console.warn(`[infinitepay-create-link] Session not found in clientes_sessoes for: ${sessionId}. Preserving original.`);
+          normalizedSessionId = sessionId;
         }
       }
     }
