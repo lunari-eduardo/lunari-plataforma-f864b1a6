@@ -111,6 +111,11 @@ serve(async (req) => {
         if (!clienteIdFinal && sessaoData.cliente_id) {
           clienteIdFinal = sessaoData.cliente_id;
         }
+      } else {
+        // Não achou em clientes_sessoes — preserva sessionId original (ex: 'agenda-xxx')
+        // Evita gravar NULL e perder vínculo no webhook
+        console.warn('[mercadopago-create-link] Session not found in clientes_sessoes, preserving original:', sessionId);
+        textSessionId = sessionId;
       }
     }
 

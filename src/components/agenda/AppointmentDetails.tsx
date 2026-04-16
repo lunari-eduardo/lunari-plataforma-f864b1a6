@@ -20,6 +20,7 @@ import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
+import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
@@ -320,11 +321,55 @@ export default function AppointmentDetails({
               variant="outline"
               size="sm"
               className="w-full h-8 text-xs gap-1.5"
-              onClick={() => {
+              onClick={async () => {
                 if (valorTotal <= 0 && formData.paidAmount <= 0) {
                   toast.info('Selecione um pacote ou informe um valor de entrada para cobrar.');
                   return;
                 }
+
+                // Pré-criar clientes_sessoes (idempotente) para garantir que cobrança/transação tenham vínculo
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user && appointment.sessionId) {
+                    const { data: existing } = await supabase
+                      .from('clientes_sessoes')
+                      .select('id')
+                      .eq('session_id', appointment.sessionId)
+                      .eq('user_id', user.id)
+                      .maybeSingle();
+
+                    if (!existing) {
+                      const { error: insertErr } = await supabase
+                        .from('clientes_sessoes')
+                        .insert({
+                          user_id: user.id,
+                          cliente_id: resolvedClienteId,
+                          session_id: appointment.sessionId,
+                          appointment_id: appointment.id,
+                          data_sessao: formatDateForStorage(formData.date),
+                          hora_sessao: formData.time,
+                          categoria: formData.type || 'sessao',
+                          pacote: selectedPackage?.nome || null,
+                          status: 'agendado',
+                          valor_total: valorTotal || formData.paidAmount || 0,
+                          valor_base_pacote: valorTotal || 0,
+                          valor_pago: 0,
+                          tipo_registro: 'workflow',
+                        });
+
+                      if (insertErr) {
+                        console.error('[AppointmentDetails] Erro ao pré-criar sessão:', insertErr);
+                        toast.error('Erro ao preparar cobrança. Tente novamente.');
+                        return;
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.error('[AppointmentDetails] Erro inesperado pré-criando sessão:', err);
+                  toast.error('Erro ao preparar cobrança.');
+                  return;
+                }
+
                 setShowChargeModal(true);
               }}
             >

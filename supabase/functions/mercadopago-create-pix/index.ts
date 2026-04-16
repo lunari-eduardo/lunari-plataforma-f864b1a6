@@ -106,6 +106,11 @@ serve(async (req) => {
           clienteIdFinal = sessaoData.cliente_id;
           console.log('[mercadopago-create-pix] clienteId resolvido via sessão:', clienteIdFinal);
         }
+      } else {
+        // Não achou em clientes_sessoes — preserva sessionId original (ex: 'agenda-xxx')
+        // Evita gravar NULL e perder vínculo no webhook
+        console.warn('[mercadopago-create-pix] Session not found in clientes_sessoes, preserving original:', sessionId);
+        textSessionId = sessionId;
       }
     }
 
