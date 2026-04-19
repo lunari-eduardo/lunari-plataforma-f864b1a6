@@ -6,7 +6,6 @@ import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
 import { useWorkflowMetricsByYear } from '@/hooks/useWorkflowMetricsByYear';
-import { useRegimeContabil } from '@/hooks/useRegimeContabil';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
