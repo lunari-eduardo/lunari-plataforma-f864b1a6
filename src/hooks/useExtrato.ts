@@ -24,8 +24,11 @@ export function useExtrato() {
     dataFim: fimMes
   });
 
-  // Filtros (estado primeiro, para alimentar a query server-side)
-  const filters = useExtratoFilters([]);
+  // Filtros (estado) — alimenta a query server-side
+  // Passamos [] inicialmente; depois re-criamos abaixo com os dados reais.
+  // Como useExtratoFilters mantém estado interno, podemos chamá-lo uma vez
+  // e usar seus filtros para a query, depois re-aplicar sobre as linhas reais.
+  const filtersState = useExtratoFilters([]);
 
   // ============= BUSCAR DADOS COM FILTROS SERVER-SIDE =============
   const extratoData = useExtratoData({
@@ -34,17 +37,17 @@ export function useExtrato() {
     page: paginaAtual,
     pageSize: PAGE_SIZE,
     regime,
-    tipo: filters.filtros.tipo,
-    origem: filters.filtros.origem,
-    status: filters.filtros.status,
+    tipo: filtersState.filtros.tipo,
+    origem: filtersState.filtros.origem,
+    status: filtersState.filtros.status,
   });
 
-  // Re-aplicar filtros client-side (busca/cliente) sobre as linhas retornadas
-  const filtersWithData = useExtratoFilters(extratoData.linhasExtrato);
+  // Filtros client-side (busca/cliente) sobre linhas paginadas retornadas
+  const filters = useExtratoFilters(extratoData.linhasExtrato);
 
   const calculations = useExtratoCalculationsSupabase(
-    filtersWithData.linhasFiltradas,
-    filtersWithData.filtros,
+    filters.linhasFiltradas,
+    filters.filtros,
     regime
   );
 
