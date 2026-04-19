@@ -26,6 +26,7 @@ export interface CreateTransactionParams {
   item_id: string;
   valor: number;
   data_vencimento: string;
+  data_competencia?: string;
   observacoes?: string;
   isRecorrente?: boolean;
   isValorFixo?: boolean;
@@ -40,6 +41,7 @@ export interface CreateTransactionInput {
   itemId: string;
   valorTotal: number;
   dataPrimeiraOcorrencia: string;
+  dataCompetencia?: string;
   isRecorrente?: boolean;
   isParcelado?: boolean;
   numeroDeParcelas?: number;
@@ -270,6 +272,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
         item_id: (params as CreateTransactionInput).itemId,
         valor: (params as CreateTransactionInput).valorTotal,
         data_vencimento: (params as CreateTransactionInput).dataPrimeiraOcorrencia,
+        data_competencia: (params as CreateTransactionInput).dataCompetencia,
         observacoes: params.observacoes,
         isRecorrente: (params as CreateTransactionInput).isRecorrente,
         isValorFixo: params.isValorFixo,
@@ -283,6 +286,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
         item_id,
         valor,
         data_vencimento,
+        data_competencia,
         observacoes,
         isRecorrente,
         isValorFixo,
@@ -333,9 +337,10 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
         item_id,
         valor,
         data_vencimento,
+        data_competencia: data_competencia || null,
         status: data_vencimento <= new Date().toISOString().split('T')[0] ? 'Faturado' : 'Agendado',
         observacoes: observacoes || null
-      });
+      } as any);
     },
     onSuccess: async (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
