@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, CheckCircle, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Info } from 'lucide-react';
 import { LinhaExtrato, ExtratoPaginacao } from '@/types/extrato';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
