@@ -75,6 +75,9 @@ interface TransacaoComItem {
 }
 
 export function useDashboardFinanceiro() {
+  // Regime contábil global
+  const { regime } = useRegimeContabil();
+  
   // Estados para modal de equipamentos
   const [equipmentModalOpen, setEquipmentModalOpen] = useState(false);
   const [equipmentData, setEquipmentData] = useState<{
