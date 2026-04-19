@@ -144,6 +144,12 @@ export function useExtratoSupabase({
           table: 'fin_transactions',
           filter: `user_id=eq.${userId}`
         }, () => debouncedInvalidate())
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'clientes_sessoes',
+          filter: `user_id=eq.${userId}`
+        }, () => debouncedInvalidate())
         .subscribe();
     };
     

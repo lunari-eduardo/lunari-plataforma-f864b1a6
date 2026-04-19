@@ -98,7 +98,7 @@ export default function ExtratoTab() {
       />
 
       {/* Summary Cards */}
-      <ExtratoSummaryCards resumo={resumo} />
+      <ExtratoSummaryCards resumo={resumo} regime={regime} />
 
       {/* Segmented Control for Views */}
       <div className="flex justify-center">
