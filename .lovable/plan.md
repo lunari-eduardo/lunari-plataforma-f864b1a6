@@ -1,106 +1,113 @@
 
 
-# Refinar UX da "Adição Rápida de Sessão" (Workflow)
+# Plano de correção: Inconsistências do Extrato (cards × demonstrativo)
 
-## Objetivos
-1. **Produtos via dropdown** — substituir input manual por `ProductSearchCombobox` (já existe), com auto-preenchimento de valor unitário a partir da tabela `produtos`. Usuário só edita quantidade.
-2. **Navegação 100% por teclado** — `Tab` ordenado, `Enter` avança/submete, `Esc` fecha, atalhos globais (`Ctrl+S` salvar, `Ctrl+P` adicionar produto, `Ctrl+L` limpar).
-3. **Preenchimento mais rápido** — auto-focar primeiro campo ao abrir, autoselect em todos numéricos (já existe parcialmente), botão "Salvar e Adicionar Outra" para fluxo em lote.
+## Diagnóstico (confirmado via DB para Abril/2026)
 
----
+### Bug 1 — Demonstrativo mostra **R$ 0,00** em todas as despesas ❌
 
-## Mudanças de UX
+**Causa raiz** (`useExtratoCalculationsSupabase.ts` linhas 132–194):
+- A view `extrato_unificado` já retorna `categoria = grupo_principal` (ex: `"Despesa Fixa"`, `"Despesa Variável"`, `"Investimento"`).
+- O código **ignora isso** e cria um mapa `itemToGrupo` mapeando `nome_do_item → grupo` (ex: `"Aluguel" → "Despesa Fixa"`).
+- Depois faz `itemToGrupo.get(l.categoria)` onde `l.categoria` **já é o grupo** ("Despesa Fixa"). O lookup retorna `undefined` → **nenhuma linha entra em nenhum grupo** → Total Despesas = R$ 0,00.
+- Mesmo problema afetaria o nome dos itens: usaria "Despesa Fixa" como nome em vez de "Aluguel".
 
-### A) Produtos: combobox + linha enxuta
+Confirmação via DB: a view retorna corretamente 11 linhas de despesa em abril (R$ 5.255,74 total).
 
-Antes (3 inputs manuais por linha): Nome livre + Qtd + Valor unit.
-Depois (1 combobox + Qtd):
+### Bug 2 — Cards superiores mostram **R$ 23.780** mas demonstrativo mostra **R$ 39.903** ❌
 
-```text
-[ Buscar produto ▾                   ] [ Qtd: 1 ] R$ 150,00 (auto) = R$ 150,00 [×]
-                                                  ^ vlr unitário do cadastro
+**Causa raiz** (`useExtratoCalculationsSupabase.ts` linhas 51–82):
+- Os cards (`resumo`) são calculados a partir de `linhasFiltradas` — que vêm **paginadas** de `useExtratoSupabase` (apenas 100 linhas da página atual).
+- Há 193 movimentações no período: a página 1 cobre só ~50% do total → cards mostram metade.
+- O demonstrativo, corretamente, faz query própria sem paginação → mostra os R$ 39.903 reais.
+- **Resultado:** cards inconsistentes com demonstrativo, tabela e realidade.
+
+Mesma causa explica:
+- "Saídas (pagas) R$ 0,00" + "Futuras R$ 705,06": as despesas pagas de abril (~R$ 4.488) estão em páginas posteriores; a página 1 (mais recente) só contém agendadas de 30/04 e 21/04.
+- "A Receber R$ 0,00" no Caixa.
+
+## Correção em 2 frentes
+
+### Fix 1 — Demonstrativo: usar `categoria` da view diretamente (sem mapa)
+
+`useExtratoCalculationsSupabase.ts` (linhas 132–194):
+- **Remover** a query a `fin_items_master` e o mapa `itemToGrupo`.
+- Agrupar despesas direto por `l.categoria` (que já é o `grupo_principal`).
+- Para nome do item, usar `l.descricao` (que é o `fim.nome` exposto pela view — ex: "Aluguel", "Internet").
+- Receita não operacional: filtrar por `l.categoria === 'Receita Não Operacional'` direto.
+
+```ts
+// Despesas agrupadas direto pela coluna categoria da view
+for (const grupo of GRUPOS_DESPESAS) {
+  const linhasGrupo = saidasFinanceiro.filter(l => l.categoria === grupo);
+  if (linhasGrupo.length === 0) continue;
+  const itensPorNome: Record<string, number> = {};
+  linhasGrupo.forEach(l => {
+    const nome = l.descricao || 'Item desconhecido';
+    itensPorNome[nome] = (itensPorNome[nome] || 0) + Number(l.valor);
+  });
+  // ...
+}
 ```
 
-- Ao selecionar produto → preenche `nome`, `valorUnitario` automaticamente.
-- Quantidade default = 1, focada após selecionar (pronta para digitar).
-- Linha mostra subtotal (qtd × valor) à direita.
-- Se não houver produtos cadastrados, mostrar link discreto "Cadastrar produto em Configurações".
-- **Permite repetir o mesmo produto** em linhas diferentes (caso raro: pacotes diferentes do mesmo item).
+Ganhos: 1 query a menos, código mais simples, agrupamento correto, nomes corretos dos itens.
 
-### B) Navegação por teclado
+### Fix 2 — Cards superiores: query agregada **sem paginação**
 
-| Atalho | Ação |
-|---|---|
-| `Tab` / `Shift+Tab` | Navegação natural respeitando ordem visual |
-| `Enter` em qualquer campo (exceto produtos) | Avança para próximo campo lógico |
-| `Enter` no último campo (Valor Pago) | Submete o formulário |
-| `Ctrl+Enter` | Submete de qualquer campo |
-| `Ctrl+Shift+Enter` | "Salvar e Adicionar Outra" (mantém aberto, limpa, foca cliente) |
-| `Ctrl+P` | Adiciona linha de produto e foca o combobox novo |
-| `Ctrl+L` | Limpar formulário (com confirmação se houver dados) |
-| `Esc` | Fecha o painel (com confirmação se dirty) |
-| `↓` no combobox de produto | Abre dropdown / navega itens |
-| `Enter` no combobox | Seleciona item destacado |
+`useExtratoCalculationsSupabase.ts` — adicionar nova `useQuery` que faz **soma agregada por tipo+status** na view `extrato_unificado` filtrada por período/regime, sem usar `linhasFiltradas`.
 
-**Indicação visual**: mostrar discretamente os atalhos no rodapé do painel (`Ctrl+Enter` para salvar · `Ctrl+P` adicionar produto · `Esc` fechar`), em texto pequeno cinza.
+```ts
+const { data: totaisPeriodo } = useQuery({
+  queryKey: ['extrato-totais-periodo', regime, filtros.dataInicio, filtros.dataFim, filtros.tipo, filtros.origem, filtros.status, filtros.busca],
+  queryFn: async () => {
+    const dataColumn = regime === 'competencia' ? 'data_competencia' : 'data';
+    let q = supabase.from('extrato_unificado')
+      .select('tipo,status,valor')
+      .eq('user_id', user.id)
+      .gte(dataColumn, filtros.dataInicio)
+      .lte(dataColumn, filtros.dataFim);
+    // aplicar mesmos filtros de tipo/origem/status/busca usados na tabela
+    const { data } = await q;
+    // somar por (tipo,status)
+    return agregar(data);
+  }
+});
+```
 
-### C) Auto-focus e fluxo
+Recalcular `resumo` a partir de `totaisPeriodo` (não mais de `linhasFiltradas`). Manter `linhasFiltradas` apenas para a tabela detalhada paginada.
 
-- Ao expandir o painel (`isOpen=true`) → focar `ClientSearchCombobox`.
-- Ao adicionar linha de produto → focar o combobox dela.
-- Após submeter com sucesso (modo padrão) → fechar painel.
-- Após "Salvar e Adicionar Outra" → manter aberto, limpar campos, focar cliente.
+**Importante:** os filtros aplicados (tipo/origem/status/busca) precisam estar na queryKey **e** na query, para os cards refletirem exatamente o que o usuário filtrou — coerente com a tabela.
 
-### D) Microajustes visuais
+### Fix 3 — Garantir que filtros do extrato afetam totais
 
-- Adicionar `tabIndex` explícito onde houver ambiguidade (combos custom).
-- `Label` de cada campo recebe `htmlFor` + `id` no input, para acessibilidade e click-to-focus.
-- Botão "Salvar Sessão" ganha variante secundária ao lado: "Salvar e Adicionar Outra" (`Ctrl+Shift+Enter`).
-- Tooltip nos botões mostrando atalho.
+`useExtratoSupabase` hoje só aplica filtros de período. Filtros de tipo/origem/status/busca são aplicados **client-side** depois. Isso significa que paginação + busca produzem resultados imprecisos. Para os totais agregados serem corretos, vamos:
 
----
-
-## Implementação técnica
-
-### Mudança em `src/components/workflow/QuickSessionAdd.tsx`
-
-1. **Tipo `ManualProduct` enriquecido** — adicionar `produtoId?: string` para rastrear vínculo (mantém `nome` para compatibilidade com payload existente em `useSessionsRealtime.createManualSession`).
-2. **Substituir bloco de produtos** (linhas 449-506) por:
-   - Linha com `<ProductSearchCombobox onSelect={...} />` no lugar do `Input nome`.
-   - Ao selecionar: `handleProductChange(index, { produtoId, nome, valorUnitario: produto.valorVenda })` e foca input de quantidade.
-   - Manter input de quantidade (col-span-2).
-   - Mostrar valor unitário como **texto somente-leitura** (não mais input editável) — vem do cadastro.
-   - Subtotal + botão remover à direita.
-3. **Hook de atalhos globais** — `useEffect` com `keydown` listener no container, registrando `Ctrl+S`, `Ctrl+P`, `Ctrl+L`, `Ctrl+Enter`, `Ctrl+Shift+Enter`, `Esc`. Listener preso a `containerRef` para não vazar para a página.
-4. **Auto-focus**:
-   - `useEffect` em `isOpen` → após 50ms, foca o input do `ClientSearchCombobox` (precisa expor `ref` ou usar `querySelector` no container).
-   - Ao adicionar produto → `setTimeout` foca o último combobox de produto.
-5. **Botão "Salvar e Adicionar Outra"** — nova prop opcional `onSubmit` retorna sucesso; nesse caso chama `handleClear()` mas não `setIsOpen(false)` e re-foca cliente.
-6. **Footer com legenda de atalhos** — `<div class="text-2xs text-muted-foreground">Atalhos: Ctrl+Enter salvar · Ctrl+P produto · Esc fechar</div>`.
-7. **Confirmação ao fechar com dados não salvos** — flag `isDirty` (qualquer campo ≠ default) → ao `Esc`/`Cancelar`, mostrar `confirm()` simples.
-
-### Compatibilidade com backend
-
-- `QuickSessionData.produtosIncluidos` continua sendo `{ nome, quantidade, valorUnitario }[]` — o `produtoId` fica apenas no estado UI; **não há mudança de schema**.
-- `useSessionsRealtime.createManualSession` permanece intacto — já recebe e persiste produtos como `produtos_incluidos` com tipo `'manual'`. (Se quisermos rastrear `produtoId` no futuro, fica como evolução posterior.)
-- Nenhuma migration necessária.
-
----
+- Mover filtros de `tipo`, `origem`, `status` para server-side em `useExtratoSupabase` e na nova query agregada (mesma lógica em ambos).
+- Manter `busca` (texto livre) client-side por simplicidade — quando usuário digitar texto, o card mostrará total agregado do período (sem filtro de busca) com nota "(filtros de texto não afetam o total)" — alternativa simples.
 
 ## Anti-bugs
 
-1. **Combobox dentro de Collapsible**: garantir que o `dropdown-solid` do `ProductSearchCombobox` não seja cortado por `overflow-hidden` do Collapsible — já usa `position: absolute z-50`, validado no padrão usado em outros lugares.
-2. **`Enter` no combobox** não deve submeter o form — o combobox já consome o evento; reforçar com `e.preventDefault()` no handler global se `e.target` estiver dentro de combobox aberto.
-3. **`Ctrl+S` global**: prevenir o "salvar página" do navegador com `e.preventDefault()`.
-4. **Produtos sem cadastro**: se `products.length === 0`, mostrar mensagem inline + botão para abrir Configurações (sem quebrar o fluxo).
-5. **Foco perdido ao adicionar linha**: usar `ref` map por índice de linha para localizar o combobox correto.
+1. **Sem dupla contagem:** novos totais vêm direto da view (única fonte). Cards, tabela e demonstrativo passam a usar a mesma fonte.
+2. **Performance:** query agregada retorna ~3 colunas × N linhas; reduce client-side. Sem JOINs adicionais.
+3. **Filtros server-side:** mover `tipo`/`origem`/`status` para `.eq()` no Supabase em ambas queries (paginada e agregada) para coerência total.
+4. **Realtime preservado:** invalidação atual (`extrato-unificado`) também invalida `extrato-totais-periodo` se prefixo coincidir — usar mesmo prefixo na queryKey.
+5. **Receita Prevista (competência):** continua via query separada `extrato-receita-prevista-sessoes` — sem mudança.
 
----
+## Resultados esperados (Abril/2026, regime Caixa)
+
+| Métrica | Antes | Depois |
+|---|---|---|
+| Entradas (pagas) card | R$ 23.780 ❌ | **R$ 39.903** ✅ |
+| Saídas (pagas) card | R$ 0,00 ❌ | **R$ 4.550,68** ✅ |
+| Demonstrativo Total Despesas | R$ 0,00 ❌ | **R$ 5.255,74** ✅ |
+| Demonstrativo Despesas Fixas | (vazio) ❌ | Aluguel, Internet, Canva… ✅ |
+| Saldo Real | R$ 23.780 ❌ | **R$ 35.352** ✅ |
 
 ## Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/workflow/QuickSessionAdd.tsx` | Substitui input manual de produtos por `ProductSearchCombobox`; adiciona atalhos de teclado, auto-focus, botão "Salvar e Adicionar Outra", footer de atalhos, confirmação ao sair com dirty |
-| `src/components/agenda/ProductSearchCombobox.tsx` | Pequeno ajuste: aceitar `autoFocus` opcional e expor melhor o foco interno (se necessário) |
+| `src/hooks/useExtratoCalculationsSupabase.ts` | (1) Remover mapa `itemToGrupo`, agrupar despesas por `l.categoria` direto; usar `l.descricao` como nome do item. (2) Nova query agregada `extrato-totais-periodo` para alimentar `resumo` independente de paginação. |
+| `src/hooks/useExtratoSupabase.ts` | Aplicar filtros de `tipo`/`origem`/`status` server-side (preparação para totais consistentes). |
+| `src/hooks/useExtrato.ts` | Passar filtros completos para `useExtratoCalculationsSupabase` (não só período). |
 
