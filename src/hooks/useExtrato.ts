@@ -24,20 +24,27 @@ export function useExtrato() {
     dataFim: fimMes
   });
 
+  // Filtros (estado primeiro, para alimentar a query server-side)
+  const filters = useExtratoFilters([]);
+
   // ============= BUSCAR DADOS COM FILTROS SERVER-SIDE =============
   const extratoData = useExtratoData({
     dataInicio: periodoFiltro.dataInicio,
     dataFim: periodoFiltro.dataFim,
     page: paginaAtual,
     pageSize: PAGE_SIZE,
-    regime
+    regime,
+    tipo: filters.filtros.tipo,
+    origem: filters.filtros.origem,
+    status: filters.filtros.status,
   });
 
-  const filters = useExtratoFilters(extratoData.linhasExtrato);
-  
+  // Re-aplicar filtros client-side (busca/cliente) sobre as linhas retornadas
+  const filtersWithData = useExtratoFilters(extratoData.linhasExtrato);
+
   const calculations = useExtratoCalculationsSupabase(
-    filters.linhasFiltradas, 
-    filters.filtros,
+    filtersWithData.linhasFiltradas,
+    filtersWithData.filtros,
     regime
   );
 
