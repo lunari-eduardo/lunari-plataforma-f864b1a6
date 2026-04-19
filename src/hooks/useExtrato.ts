@@ -5,7 +5,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { LinhaExtrato, FiltrosExtrato, ExtratoPaginacao } from '@/types/extrato';
 import { useExtratoData } from '@/hooks/useExtratoData';
-import { useExtratoFilters } from '@/hooks/useExtratoFilters';
+import { useExtratoFiltersState, aplicarFiltrosClientSide } from '@/hooks/useExtratoFilters';
 import { useExtratoCalculationsSupabase } from '@/hooks/useExtratoCalculationsSupabase';
 import { useRegimeContabil } from '@/hooks/useRegimeContabil';
 import { getDefaultPeriod } from '@/utils/extratoUtils';
@@ -24,11 +24,8 @@ export function useExtrato() {
     dataFim: fimMes
   });
 
-  // Filtros (estado) — alimenta a query server-side
-  // Passamos [] inicialmente; depois re-criamos abaixo com os dados reais.
-  // Como useExtratoFilters mantém estado interno, podemos chamá-lo uma vez
-  // e usar seus filtros para a query, depois re-aplicar sobre as linhas reais.
-  const filtersState = useExtratoFilters([]);
+  // Estado dos filtros (único, alimenta query server-side e aplicação client-side)
+  const filtersState = useExtratoFiltersState();
 
   // ============= BUSCAR DADOS COM FILTROS SERVER-SIDE =============
   const extratoData = useExtratoData({
@@ -42,12 +39,19 @@ export function useExtrato() {
     status: filtersState.filtros.status,
   });
 
-  // Filtros client-side (busca/cliente) sobre linhas paginadas retornadas
-  const filters = useExtratoFilters(extratoData.linhasExtrato);
+  // Aplicar filtros client-side restantes (busca/cliente/ordenação) sobre página atual
+  const linhasFiltradas = useMemo(
+    () => aplicarFiltrosClientSide(
+      extratoData.linhasExtrato,
+      filtersState.filtros,
+      filtersState.preferencias
+    ),
+    [extratoData.linhasExtrato, filtersState.filtros, filtersState.preferencias]
+  );
 
   const calculations = useExtratoCalculationsSupabase(
-    filters.linhasFiltradas,
-    filters.filtros,
+    linhasFiltradas,
+    filtersState.filtros,
     regime
   );
 
@@ -83,8 +87,16 @@ export function useExtrato() {
         dataFim: novosFiltros.dataFim ?? prev.dataFim
       }));
     }
-    filters.atualizarFiltros(novosFiltros);
-  }, [filters]);
+    // Reset paginação ao mudar filtros server-side
+    if (
+      novosFiltros.tipo !== undefined ||
+      novosFiltros.origem !== undefined ||
+      novosFiltros.status !== undefined
+    ) {
+      setPaginaAtual(1);
+    }
+    filtersState.atualizarFiltros(novosFiltros);
+  }, [filtersState]);
 
   const limparFiltros = useCallback(() => {
     const { inicioMes, fimMes } = getDefaultPeriod();
@@ -93,8 +105,8 @@ export function useExtrato() {
       dataInicio: inicioMes,
       dataFim: fimMes
     });
-    filters.limparFiltros();
-  }, [filters]);
+    filtersState.limparFiltros();
+  }, [filtersState]);
 
   const abrirOrigem = useCallback((linha: LinhaExtrato) => {
     console.log('📊 Abrir origem:', linha);
@@ -108,10 +120,10 @@ export function useExtrato() {
       },
       resumo: calculations.resumo,
       linhas: calculations.linhasComSaldo,
-      filtrosAplicados: filters.filtros,
+      filtrosAplicados: filtersState.filtros,
       regime
     };
-  }, [periodoFiltro, calculations.resumo, calculations.linhasComSaldo, filters.filtros, regime]);
+  }, [periodoFiltro, calculations.resumo, calculations.linhasComSaldo, filtersState.filtros, regime]);
 
   // Reset para primeira página ao trocar regime
   const handleSetRegime = useCallback((novoRegime: typeof regime) => {
@@ -126,15 +138,15 @@ export function useExtrato() {
     paginacao,
     isLoading: extratoData.isLoading,
     filtros: {
-      ...filters.filtros,
+      ...filtersState.filtros,
       dataInicio: periodoFiltro.dataInicio,
       dataFim: periodoFiltro.dataFim
     },
-    preferencias: filters.preferencias,
+    preferencias: filtersState.preferencias,
     regime,
     setRegime: handleSetRegime,
     atualizarFiltros,
-    atualizarPreferencias: filters.atualizarPreferencias,
+    atualizarPreferencias: filtersState.atualizarPreferencias,
     limparFiltros,
     abrirOrigem,
     prepararDadosExportacao,
