@@ -94,7 +94,9 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
         header img { height: 50px; }
         .company-info h2 { margin: 0 0 5px 0; font-size: 18px; color: #2c3e50; }
         .company-info p { margin: 2px 0; color: #7f8c8d; font-size: 11px; }
+        .regime-badge { display: inline-block; padding: 3px 10px; background: #f0f4f8; border: 1px solid #d0d7de; border-radius: 4px; font-size: 10px; color: #444; font-weight: 600; margin-top: 4px; }
         h1 { text-align: center; font-size: 20px; margin: 20px 0 10px 0; }
+        .subtitle { text-align: center; font-size: 11px; color: #666; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #f8f8f8; font-weight: 600; }
@@ -106,6 +108,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
           <h2>${profile.empresa || profile.nome}</h2>
           ${profile.cpf_cnpj ? `<p>CNPJ/CPF: ${profile.cpf_cnpj}</p>` : ''}
           ${profile.endereco_comercial ? `<p>${profile.endereco_comercial}</p>` : ''}
+          <span class="regime-badge">Regime: ${regimeLabel}</span>
         </div>
         <div class="period-info">
           <strong>Período:</strong> ${formatDateForPDF(period.startDate)} a ${formatDateForPDF(period.endDate)}<br>
