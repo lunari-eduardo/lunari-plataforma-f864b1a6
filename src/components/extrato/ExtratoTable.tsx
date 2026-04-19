@@ -70,7 +70,7 @@ export default function ExtratoTable({
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
-            <ExportDetalhado dados={dadosExportacao} />
+            <ExportDetalhado dados={dadosExportacao} regime={regime} />
           </div>
         </div>
       </CardHeader>
