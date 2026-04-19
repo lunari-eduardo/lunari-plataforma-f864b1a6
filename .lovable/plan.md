@@ -1,104 +1,52 @@
 
 
-# Separação Caixa vs Competência no Financeiro
+# Plano de correção: Remover toggle do Dashboard + Melhorar UX da paginação do Extrato
 
-## Diagnóstico do problema
+## Parte 1 — Remover toggle Caixa/Competência do Dashboard
 
-Hoje **todo o módulo financeiro mistura dois regimes** em um único campo de data:
+### Análise
+O toggle no Dashboard adiciona complexidade sem valor claro. As métricas do Dashboard (Receita, Previsto, A Receber, Despesas, Lucro) já têm semântica natural baseada em workflow + transações pagas/agendadas. Manter o toggle apenas no Extrato (onde a separação faz sentido para análise contábil detalhada).
 
-| Origem | Campo de data atual | Significado real |
-|---|---|---|
-| `clientes_transacoes` (pagamentos sessão) | `data_transacao` | **CAIXA** — quando o dinheiro entrou |
-| `clientes_sessoes` | `data_sessao` | **COMPETÊNCIA** — quando o serviço foi prestado |
-| `fin_transactions` (despesas/receitas avulsas) | `data_vencimento` | Mistura dos dois (vencimento ≠ pagamento) |
+### Mudanças
+1. **`src/components/financas/dashboard/DashboardFilters.tsx`**: remover bloco do toggle (linhas 138-171), remover imports não usados (`useRegimeContabil`, `Tabs`, `Tooltip`, `Info`).
+2. **`src/hooks/useDashboardFinanceiro.ts`**: 
+   - Remover `useRegimeContabil` (linha 9, 79).
+   - Reverter query `dashboard-transactions-period` para usar **sempre** `data_vencimento` (regime caixa), removendo a lógica condicional de `regime === 'competencia'`.
+   - Remover `regime` da queryKey.
+3. **Manter** `data_competencia` na tabela `fin_transactions` e na view (não destrutivo) — continua sendo usado pelo Extrato.
 
-**Sintoma reportado** (confirmado via DB):
-- Pagamentos como o de R$ 250 com `data_transacao = 2026-04-19` mas `data_sessao = 2025-11-21`
-- Card "Entradas (pagas)" do mês mostra R$ 12.428 (caixa do mês)
-- Demonstrativo mostra R$ 39.903 (mistura de caixa + sessões antigas pagas hoje)
-- Inconsistência visual → impossível ler o real desempenho do mês
+## Parte 2 — Esclarecer paginação do Extrato (causa raiz da "inconsistência")
 
-## Estratégia de solução: Toggle global Caixa/Competência
+### Diagnóstico definitivo (confirmado via DB)
+- Usuário tem **350 movimentações** entre 01/03 e 30/04 (157 em março + 138 entre 01-16/abril + 55 entre 17-30/abril).
+- Página de 50 registros ordenada por `data DESC` → página 1 mostra apenas 17/04 a 30/04 (50 mais recentes).
+- **Não é bug de filtro**. É falha de UX: o usuário interpreta a página 1 como "tudo", e a barra de paginação no rodapé passa despercebida.
 
-Adicionar **um seletor único** no topo do Extrato (e Dashboard) que alterna o regime contábil. **Toda** a página reage ao toggle: cards de resumo, demonstrativo, tabela detalhada e exportações.
+### Mudanças de UX para evitar essa confusão
 
-### Definição dos regimes
+1. **`src/components/extrato/ExtratoTable.tsx`** — Tornar a paginação visível e o range de datas explícito:
+   - **Header da seção** deixa de mostrar só `350 registros no total · Visão por Caixa`. Passa a mostrar também o range exibido nesta página: `350 movimentações no período · Página 1 de 7 · exibindo 17/04/2026 a 30/04/2026`.
+   - **Banner sutil** quando há mais de 1 página, no topo da tabela: `Há mais movimentações fora desta página. Use a navegação abaixo para ver registros anteriores.` (apenas na página 1, dispensável após primeira interação via `localStorage`).
+   - **Paginação reforçada** no rodapé: aumentar contraste dos botões "Anterior/Próximo", adicionar atalho "Ir para última página" e indicador visual maior do "Página X de Y".
 
-| Regime | Pagamentos sessão | Despesas/receitas avulsas | Quando usar |
-|---|---|---|---|
-| **Caixa** (padrão) | Filtra por `data_transacao` | Filtra por `data_vencimento` quando `status = 'Pago'` | Fluxo de caixa real, conciliação bancária |
-| **Competência** | Filtra por `data_sessao` (fallback `data_transacao`) | Filtra por `data_vencimento` (independe de status) | Análise de performance do período de prestação do serviço |
+2. **Aumentar `PAGE_SIZE` de 50 para 100** em `src/hooks/useExtrato.ts` — reduz drasticamente a chance de o usuário "não ver" todo o período de 1-2 meses em uma página. 100 linhas ainda é performante (paginação server-side preserva).
 
-## Plano em 5 etapas
+3. **(Opcional, recomendado)** — Adicionar **opção "Mostrar todos"** no rodapé do Extrato. Quando `totalCount ≤ 500`, oferecer botão "Ver todos os 350 registros nesta página" que troca `pageSize` para `totalCount`. Acima disso, manter paginação obrigatória.
 
-### Etapa 1 — View `extrato_unificado` ganha duas datas
+## Anti-bugs
 
-Migration: adicionar coluna `data_competencia` à view (não destrutivo, pois o front continua lendo `data` como caixa).
-
-```sql
--- Pagamentos workflow: data_competencia = data_sessao (com fallback)
-COALESCE(cs.data_sessao, ct.data_transacao) AS data_competencia
--- Estornos: mesma lógica
--- Receitas/despesas avulsas: data_competencia = data_vencimento (já é competência)
-COALESCE(ft.data_competencia, ft.data_vencimento) AS data_competencia
--- Taxas gateway: data_competencia = data_sessao do pagamento de origem
-```
-
-Para `fin_transactions` (despesas/receitas avulsas), adicionar coluna opcional `data_competencia DATE NULL` na tabela. Quando NULL, usar `data_vencimento` como fallback (zero quebra para dados antigos). UI passa a expor o campo no modal de lançamento (opcional, ajuda no futuro).
-
-### Etapa 2 — Hook `useExtratoSupabase` aceita `regime`
-
-Novo parâmetro `regime: 'caixa' | 'competencia'` (default `caixa`).
-
-```ts
-const dataColumn = regime === 'caixa' ? 'data' : 'data_competencia';
-query = query.gte(dataColumn, dataInicio).lte(dataColumn, dataFim);
-query = query.order(dataColumn, { ascending: false });
-```
-
-A view retorna ambas as colunas; mapeamos a "data exibida" baseada no regime para que a tabela detalhada também mostre a data correta.
-
-### Etapa 3 — Hook `useExtratoCalculationsSupabase` (demonstrativo)
-
-Mesma lógica: receber `regime` e trocar a coluna usada nas queries Supabase:
-- `clientes_transacoes`: filtrar por `data_transacao` (caixa) OU JOIN com `clientes_sessoes` filtrando por `data_sessao` (competência).
-- `fin_transactions`: filtrar por `data_vencimento` (caixa exige `status = 'Pago'`, competência ignora status).
-
-Cuidado anti-bug: para taxas de gateway no regime competência, a data de referência também é `data_sessao` (a taxa pertence economicamente à sessão, não ao recebimento).
-
-### Etapa 4 — UI: Toggle global
-
-`ExtratoTab.tsx`: adicionar `<SegmentedControl>` "Caixa | Competência" ao lado dos filtros de período. Persistir escolha em `localStorage` (`extrato_regime_default`).
-
-Cards de resumo, demonstrativo e tabela passam a refletir o regime selecionado. Adicionar **badge sutil** no header da seção (ex.: "Visão por Caixa") + tooltip explicando a diferença.
-
-`DashboardFinanceiro`: aplicar mesmo toggle (mesmo `localStorage` key) para coerência entre telas. Métricas "Receita", "Despesas", "Lucro" passam a respeitar o regime.
-
-### Etapa 5 — Exportação PDF + indicação visual nas linhas
-
-- PDF (`unifiedPdfUtils.ts`) inclui no cabeçalho: "Regime: Caixa" ou "Regime: Competência" + período.
-- Tabela detalhada: quando `data_competencia ≠ data` (caixa), mostrar a data de competência em texto secundário abaixo da data principal: `19/04/2026 · ref. 21/11/2025`. Torna óbvio para o fotógrafo que aquele pagamento se refere a uma sessão antiga.
-
-## Anti-bugs / cuidados
-
-1. **Compatibilidade**: view continua expondo `data` (caixa). Apenas adicionamos `data_competencia`. Nenhum hook existente quebra.
-2. **NULL-safe**: `COALESCE(cs.data_sessao, ct.data_transacao)` garante que pagamentos sem sessão vinculada (vendas avulsas, estornos órfãos) não desaparecem do demonstrativo.
-3. **Sem duplicação**: não criamos novas tabelas/transações — apenas mudamos a coluna usada nos filtros.
-4. **Filtros server-side preservados**: paginação, ordenação e contagem continuam no Supabase.
-5. **Realtime**: invalidação por `queryKey` que inclui `regime` evita cache cruzado entre os modos.
-6. **Teste de regressão**: depois da etapa 1, rodar query comparativa para validar que `SUM(valor)` no regime caixa = soma atual antes da mudança.
+- **Não remover** `data_competencia` da view nem da tabela: o Extrato continua usando.
+- **Não tocar** em `useExtratoCalculationsSupabase` ou `useExtratoSupabase`: regime continua funcional no Extrato.
+- **Compatibilidade**: `useRegimeContabil` permanece (usado pelo Extrato). Apenas o Dashboard deixa de consumir.
+- **localStorage `extrato_regime_default`** continua válido — quem havia escolhido "Competência" no Dashboard verá o Extrato já em Competência (consistente).
 
 ## Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| Migration SQL | Adicionar coluna `data_competencia` em `fin_transactions` (opcional NULL) e recriar view `extrato_unificado` com `data_competencia` |
-| `src/hooks/useExtratoSupabase.ts` | Aceitar `regime`, trocar coluna de filtro/ordem |
-| `src/hooks/useExtratoCalculationsSupabase.ts` | Aceitar `regime`, ajustar queries do demonstrativo |
-| `src/hooks/useExtratoData.ts` + `src/hooks/useExtrato.ts` | Propagar `regime` |
-| `src/components/financas/ExtratoTab.tsx` | Toggle Caixa/Competência + persistência localStorage |
-| `src/components/extrato/ExtratoTable.tsx` | Mostrar data de competência secundária quando diferir |
-| `src/components/financas/DashboardFinanceiro.tsx` + hooks de métricas | Respeitar mesmo toggle |
-| `src/utils/unifiedPdfUtils.ts` | Indicar regime no PDF |
-| `ModalNovoLancamentoRefatorado.tsx` | Campo opcional "Data de competência" em despesas/receitas avulsas |
+| `src/components/financas/dashboard/DashboardFilters.tsx` | Remover toggle Caixa/Competência e imports não usados |
+| `src/hooks/useDashboardFinanceiro.ts` | Remover dependência de `regime`; query volta a filtrar sempre por `data_vencimento` |
+| `src/components/extrato/ExtratoTable.tsx` | Header com range de datas da página atual, banner informativo na página 1 (dispensável), paginação visualmente reforçada |
+| `src/hooks/useExtrato.ts` | `PAGE_SIZE` de 50 → 100 |
+| `src/components/extrato/ExtratoTable.tsx` | (opcional) Botão "Mostrar todos" quando `totalCount ≤ 500` |
 
