@@ -35,12 +35,14 @@ interface MonthlyGroup {
 }
 
 const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
-  const { profile, branding, period, transactions, summary } = data;
+  const { profile, branding, period, transactions, summary, regime = 'caixa' } = data;
+  const regimeLabel = regime === 'competencia' ? 'Competência' : 'Caixa';
 
   console.log('🔍 [HTML Debug] Gerando HTML para PDF:', {
     transactionsTotal: transactions.length,
     profile: profile?.empresa || profile?.nome,
-    period: period
+    period: period,
+    regime
   });
 
   const receitas = transactions.filter(t => {
