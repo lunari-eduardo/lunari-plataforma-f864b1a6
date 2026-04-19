@@ -1,0 +1,1 @@
+ALTER VIEW public.extrato_unificado SET (security_invoker = on);
