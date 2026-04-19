@@ -35,7 +35,6 @@ export function DashboardFilters({
   };
 
   const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>(getTipoPeriodo());
-  const { regime, setRegime } = useRegimeContabil();
 
   const handleTipoPeriodoChange = (value: TipoPeriodo) => {
     setTipoPeriodo(value);
