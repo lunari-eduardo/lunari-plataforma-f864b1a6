@@ -118,6 +118,7 @@ const getExtratoDetalhadoHTML = (data: ExtratoDetalhadoData): string => {
       </header>
 
       <h1>Extrato Financeiro Detalhado</h1>
+      <div class="subtitle">Visão por <strong>${regimeLabel}</strong> — ${regime === 'competencia' ? 'data de prestação do serviço' : 'data efetiva do dinheiro'}</div>
 
       ${monthlyGroups.map(month => `
         <div class="month-section">
