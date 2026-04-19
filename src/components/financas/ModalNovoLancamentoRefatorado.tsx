@@ -38,6 +38,7 @@ export default function ModalNovoLancamentoRefatorado({
     item_id: '',
     valor: '',
     data_vencimento: new Date().toISOString().split('T')[0],
+    data_competencia: '',
     observacoes: '',
     valorFixo: true
   });
@@ -54,6 +55,7 @@ export default function ModalNovoLancamentoRefatorado({
       item_id: '',
       valor: '',
       data_vencimento: new Date().toISOString().split('T')[0],
+      data_competencia: '',
       observacoes: '',
       valorFixo: true
     });
