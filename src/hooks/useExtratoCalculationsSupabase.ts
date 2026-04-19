@@ -2,9 +2,9 @@
  * Hook para cálculos do extrato usando queries Supabase otimizadas
  * Suporta regime contábil (caixa | competencia)
  *
- * IMPORTANTE: O demonstrativo lê da MESMA view `extrato_unificado` que alimenta
- * os cards e a tabela detalhada. Isso garante consistência absoluta entre as
- * três visualizações (sem JOINs órfãos / fallbacks divergentes).
+ * IMPORTANTE: Cards superiores (resumo) usam query AGREGADA do período inteiro
+ * (sem paginação), garantindo consistência com tabela detalhada e demonstrativo.
+ * Demonstrativo lê da MESMA view `extrato_unificado`.
  */
 
 import { useMemo, useCallback } from 'react';
@@ -22,7 +22,6 @@ export function useExtratoCalculationsSupabase(
 ) {
   // ============= RECEITA PREVISTA DE SESSÕES (apenas competência) =============
   // Saldo (valor_total - valor_pago) das sessões de workflow do período.
-  // Não conta o que já foi pago (esse já aparece como entradasPagas via view).
   const { data: receitaPrevistaSessoes = 0 } = useQuery({
     queryKey: ['extrato-receita-prevista-sessoes', regime, filtros.dataInicio, filtros.dataFim],
     queryFn: async () => {
@@ -47,49 +46,104 @@ export function useExtratoCalculationsSupabase(
     staleTime: 30000,
   });
 
-  // ============= CÁLCULO DO RESUMO =============
+  // ============= TOTAIS AGREGADOS DO PERÍODO (independente de paginação) =============
+  // Soma valores por (tipo, status) para todo o período + filtros server-side aplicados.
+  // Esta query alimenta os cards superiores. Não inclui filtro de busca (texto livre).
+  const { data: totaisPeriodo } = useQuery({
+    queryKey: [
+      'extrato-unificado-totais',
+      regime,
+      filtros.dataInicio,
+      filtros.dataFim,
+      filtros.tipo,
+      filtros.origem,
+      filtros.status,
+    ],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const dataColumn = regime === 'competencia' ? 'data_competencia' : 'data';
+
+      let q = supabase
+        .from('extrato_unificado')
+        .select('tipo, status, valor')
+        .eq('user_id', user.id)
+        .gte(dataColumn, filtros.dataInicio)
+        .lte(dataColumn, filtros.dataFim);
+
+      if (filtros.tipo && filtros.tipo !== 'todos') q = q.eq('tipo', filtros.tipo);
+      if (filtros.origem && filtros.origem !== 'todos') q = q.eq('origem', filtros.origem);
+      if (filtros.status && filtros.status !== 'todos') q = q.eq('status', filtros.status);
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const acc = {
+        entradasPagas: 0,
+        entradasFaturadas: 0,
+        entradasAgendadas: 0,
+        saidasPagas: 0,
+        saidasFaturadas: 0,
+        saidasAgendadas: 0,
+        countEntradas: 0,
+      };
+
+      (data || []).forEach((r: any) => {
+        const v = Number(r.valor) || 0;
+        if (r.tipo === 'entrada') {
+          acc.countEntradas++;
+          if (r.status === 'Pago') acc.entradasPagas += v;
+          else if (r.status === 'Faturado') acc.entradasFaturadas += v;
+          else if (r.status === 'Agendado') acc.entradasAgendadas += v;
+        } else if (r.tipo === 'saida') {
+          if (r.status === 'Pago') acc.saidasPagas += v;
+          else if (r.status === 'Faturado') acc.saidasFaturadas += v;
+          else if (r.status === 'Agendado') acc.saidasAgendadas += v;
+        }
+      });
+
+      return acc;
+    },
+    staleTime: 30000,
+  });
+
+  // ============= CÁLCULO DO RESUMO (a partir de totais agregados) =============
   const resumo = useMemo((): ResumoExtrato => {
-    const entradas = linhasFiltradas.filter(l => l.tipo === 'entrada');
-    const saidas = linhasFiltradas.filter(l => l.tipo === 'saida');
+    const t = totaisPeriodo || {
+      entradasPagas: 0, entradasFaturadas: 0, entradasAgendadas: 0,
+      saidasPagas: 0, saidasFaturadas: 0, saidasAgendadas: 0, countEntradas: 0,
+    };
 
-    const entradasPagas = entradas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
-    const entradasFaturadas = entradas.filter(l => l.status === 'Faturado').reduce((sum, l) => sum + l.valor, 0);
-    const entradasAgendadas = entradas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
-
-    const saidasPagas = saidas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
-    const saidasFaturadas = saidas.filter(l => l.status === 'Faturado').reduce((sum, l) => sum + l.valor, 0);
-    const saidasAgendadas = saidas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
-
-    // Receita prevista (saldo de sessões) só conta no regime competência
     const receitaPrevista = regime === 'competencia' ? receitaPrevistaSessoes : 0;
 
-    const totalEntradas = entradasPagas + entradasFaturadas + entradasAgendadas + receitaPrevista;
-    const totalSaidas = saidasPagas + saidasFaturadas + saidasAgendadas;
+    const totalEntradas = t.entradasPagas + t.entradasFaturadas + t.entradasAgendadas + receitaPrevista;
+    const totalSaidas = t.saidasPagas + t.saidasFaturadas + t.saidasAgendadas;
 
-    const saldoEfetivo = entradasPagas - saidasPagas;
-    // Saldo projetado: pagas + agendadas + previsto a receber - despesas (pagas + agendadas + faturadas)
-    const saldoProjetado = entradasPagas + entradasAgendadas + entradasFaturadas + receitaPrevista
-                          - (saidasPagas + saidasAgendadas + saidasFaturadas);
+    const saldoEfetivo = t.entradasPagas - t.saidasPagas;
+    const saldoProjetado = t.entradasPagas + t.entradasAgendadas + t.entradasFaturadas + receitaPrevista
+                          - (t.saidasPagas + t.saidasAgendadas + t.saidasFaturadas);
     const saldoPeriodo = saldoProjetado;
 
-    // A Receber: entradas agendadas + saldo de sessões (no competência)
-    const totalAReceber = entradasAgendadas + receitaPrevista;
-    const totalAgendado = linhasFiltradas.filter(l => l.status === 'Agendado').reduce((sum, l) => sum + l.valor, 0);
-    const totalPago = linhasFiltradas.filter(l => l.status === 'Pago').reduce((sum, l) => sum + l.valor, 0);
+    const totalAReceber = t.entradasAgendadas + receitaPrevista;
+    const totalAgendado = t.entradasAgendadas + t.saidasAgendadas;
+    const totalPago = t.entradasPagas + t.saidasPagas;
 
-    const ticketMedioEntradas = entradas.length > 0 ? (entradasPagas + entradasAgendadas + entradasFaturadas) / entradas.length : 0;
+    const ticketMedioEntradas = t.countEntradas > 0
+      ? (t.entradasPagas + t.entradasAgendadas + t.entradasFaturadas) / t.countEntradas
+      : 0;
     const totalGeral = totalPago + totalAReceber + totalAgendado;
     const percentualPago = totalGeral > 0 ? (totalPago / totalGeral) * 100 : 0;
 
     return {
       totalEntradas,
-      entradasPagas,
-      entradasFaturadas,
-      entradasAgendadas,
+      entradasPagas: t.entradasPagas,
+      entradasFaturadas: t.entradasFaturadas,
+      entradasAgendadas: t.entradasAgendadas,
       totalSaidas,
-      saidasPagas,
-      saidasFaturadas,
-      saidasAgendadas,
+      saidasPagas: t.saidasPagas,
+      saidasFaturadas: t.saidasFaturadas,
+      saidasAgendadas: t.saidasAgendadas,
       saldoPeriodo,
       saldoEfetivo,
       saldoProjetado,
@@ -99,7 +153,7 @@ export function useExtratoCalculationsSupabase(
       ticketMedioEntradas,
       percentualPago
     };
-  }, [linhasFiltradas, regime, receitaPrevistaSessoes]);
+  }, [totaisPeriodo, regime, receitaPrevistaSessoes]);
 
   // ============= LINHAS COM SALDO ACUMULADO =============
   const linhasComSaldo = useMemo(() => {
@@ -108,7 +162,7 @@ export function useExtratoCalculationsSupabase(
 
   // ============= DEMONSTRATIVO LENDO DA VIEW extrato_unificado =============
   const { data: demonstrativoData } = useQuery({
-    queryKey: ['demonstrativo-financeiro-v2', regime, filtros.dataInicio, filtros.dataFim],
+    queryKey: ['demonstrativo-financeiro-v3', regime, filtros.dataInicio, filtros.dataFim],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -116,10 +170,9 @@ export function useExtratoCalculationsSupabase(
       const dataColumn = regime === 'competencia' ? 'data_competencia' : 'data';
 
       // ====== 1. Linhas pagas da view ======
-      // Busca todas as entradas/saídas com status Pago no período (regime correto)
       const { data: linhas, error: errLinhas } = await supabase
         .from('extrato_unificado')
-        .select('tipo, origem, categoria, valor, status')
+        .select('tipo, origem, categoria, descricao, valor, status')
         .eq('user_id', user.id)
         .eq('status', 'Pago')
         .gte(dataColumn, filtros.dataInicio)
@@ -129,23 +182,9 @@ export function useExtratoCalculationsSupabase(
 
       const todasLinhas = linhas || [];
 
-      // ====== 2. Mapear item->grupo via fin_items_master ======
-      const { data: itemsMaster, error: errItems } = await supabase
-        .from('fin_items_master')
-        .select('nome, grupo_principal')
-        .eq('user_id', user.id);
-
-      if (errItems) throw errItems;
-
-      const itemToGrupo = new Map<string, string>();
-      (itemsMaster || []).forEach((it: any) => {
-        itemToGrupo.set(it.nome, it.grupo_principal);
-      });
-
-      // ====== 3. RECEITAS ======
-      // Sessões = origem 'workflow' tipo 'entrada'
-      // Produtos (gallery) = origem 'gallery' tipo 'entrada'
-      // Não operacionais = origem 'financeiro' tipo 'entrada' E grupo='Receita Não Operacional'
+      // ====== 2. RECEITAS ======
+      // categoria na view = grupo_principal (ex: "Receita Não Operacional")
+      // descricao na view = nome do item (ex: "Aluguel")
       const entradas = todasLinhas.filter((l: any) => l.tipo === 'entrada');
 
       const receitaSessoes = entradas
@@ -157,14 +196,11 @@ export function useExtratoCalculationsSupabase(
         .reduce((sum: number, l: any) => sum + Number(l.valor), 0);
 
       const receitaNaoOperacional = entradas
-        .filter((l: any) => {
-          if (l.origem !== 'financeiro') return false;
-          const grupo = itemToGrupo.get(l.categoria || '');
-          return grupo === 'Receita Não Operacional';
-        })
+        .filter((l: any) => l.origem === 'financeiro' && l.categoria === 'Receita Não Operacional')
         .reduce((sum: number, l: any) => sum + Number(l.valor), 0);
 
-      // ====== 4. DESPESAS AGRUPADAS ======
+      // ====== 3. DESPESAS AGRUPADAS ======
+      // Agrupa direto pela coluna `categoria` (que já é o grupo_principal).
       const saidasFinanceiro = todasLinhas.filter(
         (l: any) => l.tipo === 'saida' && l.origem === 'financeiro'
       );
@@ -176,25 +212,23 @@ export function useExtratoCalculationsSupabase(
       }> = [];
 
       for (const grupo of GRUPOS_DESPESAS) {
-        const linhasGrupo = saidasFinanceiro.filter(
-          (l: any) => itemToGrupo.get(l.categoria || '') === grupo
-        );
-
+        const linhasGrupo = saidasFinanceiro.filter((l: any) => l.categoria === grupo);
         if (linhasGrupo.length === 0) continue;
 
         const itensPorNome: Record<string, number> = {};
         linhasGrupo.forEach((l: any) => {
-          const nome = l.categoria || 'Item desconhecido';
+          const nome = l.descricao || 'Item desconhecido';
           itensPorNome[nome] = (itensPorNome[nome] || 0) + Number(l.valor);
         });
 
-        const itens = Object.entries(itensPorNome).map(([nome, valor]) => ({ nome, valor }));
+        const itens = Object.entries(itensPorNome)
+          .map(([nome, valor]) => ({ nome, valor }))
+          .sort((a, b) => b.valor - a.valor);
         const total = itens.reduce((sum, item) => sum + item.valor, 0);
         categorias.push({ grupo, itens, total });
       }
 
-      // ====== 5. TAXAS DE GATEWAY ======
-      // Lê direto de clientes_transacoes (view não expõe taxas)
+      // ====== 4. TAXAS DE GATEWAY ======
       let taxasQuery = supabase
         .from('clientes_transacoes')
         .select(`
@@ -267,22 +301,9 @@ export function useExtratoCalculationsSupabase(
 
   const demonstrativo = useMemo((): DemonstrativoSimplificado => {
     return demonstrativoData || {
-      receitas: {
-        sessoes: 0,
-        produtos: 0,
-        naoOperacionais: 0,
-        totalReceitas: 0
-      },
-      despesas: {
-        categorias: [],
-        totalDespesas: 0
-      },
-      resumoFinal: {
-        receitaTotal: 0,
-        despesaTotal: 0,
-        resultadoLiquido: 0,
-        margemLiquida: 0
-      }
+      receitas: { sessoes: 0, produtos: 0, naoOperacionais: 0, totalReceitas: 0 },
+      despesas: { categorias: [], totalDespesas: 0 },
+      resumoFinal: { receitaTotal: 0, despesaTotal: 0, resultadoLiquido: 0, margemLiquida: 0 }
     };
   }, [demonstrativoData]);
 
