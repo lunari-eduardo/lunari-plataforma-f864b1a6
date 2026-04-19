@@ -6,7 +6,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LinhaExtrato, ExtratoTipo, ExtratoStatus } from '@/types/extrato';
+import { LinhaExtrato, ExtratoTipo, ExtratoStatus, ExtratoOrigem } from '@/types/extrato';
 
 export type RegimeContabil = 'caixa' | 'competencia';
 
@@ -51,6 +51,9 @@ interface UseExtratoSupabaseParams {
   page?: number;
   pageSize?: number;
   regime?: RegimeContabil;
+  tipo?: ExtratoTipo | 'todos';
+  origem?: ExtratoOrigem | 'todos';
+  status?: ExtratoStatus | 'todos';
 }
 
 export function useExtratoSupabase({
@@ -58,7 +61,10 @@ export function useExtratoSupabase({
   dataFim,
   page = 1,
   pageSize = 50,
-  regime = 'caixa'
+  regime = 'caixa',
+  tipo,
+  origem,
+  status
 }: UseExtratoSupabaseParams = {}) {
   const queryClient = useQueryClient();
 
@@ -67,7 +73,7 @@ export function useExtratoSupabase({
 
   // ============= QUERY PAGINADA COM FILTROS SERVER-SIDE =============
   const { data: resultado, isLoading } = useQuery({
-    queryKey: ['extrato-unificado', regime, dataInicio, dataFim, page, pageSize],
+    queryKey: ['extrato-unificado', regime, dataInicio, dataFim, page, pageSize, tipo, origem, status],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -87,6 +93,15 @@ export function useExtratoSupabase({
       }
       if (dataFim) {
         query = query.lte(dataColumn, dataFim);
+      }
+      if (tipo && tipo !== 'todos') {
+        query = query.eq('tipo', tipo);
+      }
+      if (origem && origem !== 'todos') {
+        query = query.eq('origem', origem);
+      }
+      if (status && status !== 'todos') {
+        query = query.eq('status', status);
       }
 
       query = query.range(from, to);
