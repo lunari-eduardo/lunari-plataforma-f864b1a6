@@ -1,93 +1,106 @@
 
 
-# Plano de correção: Inconsistências no Extrato (Competência)
+# Refinar UX da "Adição Rápida de Sessão" (Workflow)
 
-## Diagnóstico (confirmado via DB para Abril/2026)
+## Objetivos
+1. **Produtos via dropdown** — substituir input manual por `ProductSearchCombobox` (já existe), com auto-preenchimento de valor unitário a partir da tabela `produtos`. Usuário só edita quantidade.
+2. **Navegação 100% por teclado** — `Tab` ordenado, `Enter` avança/submete, `Esc` fecha, atalhos globais (`Ctrl+S` salvar, `Ctrl+P` adicionar produto, `Ctrl+L` limpar).
+3. **Preenchimento mais rápido** — auto-focar primeiro campo ao abrir, autoselect em todos numéricos (já existe parcialmente), botão "Salvar e Adicionar Outra" para fluxo em lote.
 
-| Métrica | Workflow | Extrato Caixa | Extrato Competência |
-|---|---|---|---|
-| Recebido | R$ 13.414 | R$ 39.798 | R$ 13.514 (correto) |
-| Demonstrativo "Receita Sessões" | — | R$ 39.798 | **R$ 11.164** ❌ |
-| Previsto / A Receber | R$ 17.584 / R$ 4.170 | — | — / **R$ 0,00** ❌ |
+---
 
-**3 bugs identificados:**
+## Mudanças de UX
 
-### Bug 1 — Demonstrativo (R$ 11.164) ≠ Card "Entradas pagas" (R$ 13.619) no mesmo modo
+### A) Produtos: combobox + linha enxuta
 
-**Causa:** O demonstrativo (`useExtratoCalculationsSupabase`) faz JOIN `clientes_transacoes → clientes_sessoes!fk_transacoes_session_id` e usa `data_sessao` como referência. Pagamentos com `session_id` apontando para registros sem JOIN válido (sessão deletada, FK órfã, ou pagamentos da `cobranca` que materializam linhas no extrato mas não estão no JOIN) **caem fora do demonstrativo**.
+Antes (3 inputs manuais por linha): Nome livre + Qtd + Valor unit.
+Depois (1 combobox + Qtd):
 
-Já o card de resumo soma direto das linhas da view `extrato_unificado` (que usa `COALESCE(cs.data_sessao, ct.data_transacao)`) — captura os órfãos via fallback.
-
-**Fix:** Trocar a query do demonstrativo para **ler a mesma view `extrato_unificado`** (filtrando `tipo='entrada'`, status='Pago', regime selecionado). Garante consistência absoluta com cards e tabela detalhada.
-
-### Bug 2 — "A Receber = R$ 0,00" no Competência (deveria mostrar saldo das sessões do mês)
-
-**Causa:** Hoje `totalAReceber` = soma de linhas com `status='Agendado'` no extrato. Mas:
-- Pagamentos só geram linha quando ocorrem (`clientes_transacoes`)
-- O **saldo restante** de uma sessão (`valor_total - valor_pago`) nunca vira linha
-- Resultado: extrato no regime competência ignora R$ 4.520 a receber de sessões de abril
-
-**Fix:** No regime **competência**, calcular `totalAReceber` somando `(valor_total - COALESCE(valor_pago,0))` de `clientes_sessoes` com `data_sessao` no período + `fin_transactions` tipo entrada não-pagas. No regime caixa, manter lógica atual (entradas agendadas reais).
-
-### Bug 3 — "Saldo Projetado" não inclui receita prevista a receber
-
-**Causa:** `saldoProjetado = totalEntradas - totalSaidas`, onde `totalEntradas` só inclui transações que viraram linha. Despesas agendadas via `fin_transactions` viram linhas (entram em `saidasAgendadas`) — mas saldo a receber de sessões não.
-
-**Fix:** Após corrigir Bug 2, recalcular: `saldoProjetado = entradasPagas + entradasAgendadas + receitaPrevistaSessoes - (saidasPagas + saidasAgendadas)`.
-
-## Plano em 3 etapas
-
-### Etapa 1 — Demonstrativo lê da view `extrato_unificado`
-
-`useExtratoCalculationsSupabase.ts`:
-- Substituir queries diretas em `clientes_transacoes`, `fin_transactions` por **query única na view** `extrato_unificado` filtrada por `user_id`, regime e período.
-- Agrupar resultados por `tipo` (entrada/saida) + `categoria_grupo` (já exposto na view).
-- Receitas: separar por `origem` (workflow=sessões; gallery=produtos; financeiro com grupo `Receita Não Operacional`=avulsas).
-- Despesas: agrupar por `categoria_grupo` (já vem da view).
-- Taxas gateway: continuar lendo `clientes_transacoes` (não estão na view), com mesmo filtro de data por regime.
-
-### Etapa 2 — Card "A Receber" e "Saldo Projetado" inteligentes por regime
-
-`useExtratoCalculationsSupabase.ts` — adicionar query auxiliar:
-
-```ts
-// Apenas no regime COMPETÊNCIA: saldo a receber de sessões do período
-const { data: saldoSessoes } = await supabase
-  .from('clientes_sessoes')
-  .select('valor_total, valor_pago')
-  .gte('data_sessao', dataInicio)
-  .lte('data_sessao', dataFim);
-
-const receitaPrevistaSessoes = regime === 'competencia'
-  ? saldoSessoes.reduce((s, x) => s + (x.valor_total - (x.valor_pago||0)), 0)
-  : 0;
+```text
+[ Buscar produto ▾                   ] [ Qtd: 1 ] R$ 150,00 (auto) = R$ 150,00 [×]
+                                                  ^ vlr unitário do cadastro
 ```
 
-Recalcular:
-- `totalAReceber = entradasAgendadas + receitaPrevistaSessoes`
-- `saldoProjetado = entradasPagas + totalAReceber - (saidasPagas + saidasAgendadas)`
+- Ao selecionar produto → preenche `nome`, `valorUnitario` automaticamente.
+- Quantidade default = 1, focada após selecionar (pronta para digitar).
+- Linha mostra subtotal (qtd × valor) à direita.
+- Se não houver produtos cadastrados, mostrar link discreto "Cadastrar produto em Configurações".
+- **Permite repetir o mesmo produto** em linhas diferentes (caso raro: pacotes diferentes do mesmo item).
 
-No card "A Receber", adicionar legenda contextual:
-- Caixa: "Entradas agendadas"
-- Competência: "Saldo de sessões + agendadas"
+### B) Navegação por teclado
 
-### Etapa 3 — Tooltip explicativo no card Saldo Projetado
+| Atalho | Ação |
+|---|---|
+| `Tab` / `Shift+Tab` | Navegação natural respeitando ordem visual |
+| `Enter` em qualquer campo (exceto produtos) | Avança para próximo campo lógico |
+| `Enter` no último campo (Valor Pago) | Submete o formulário |
+| `Ctrl+Enter` | Submete de qualquer campo |
+| `Ctrl+Shift+Enter` | "Salvar e Adicionar Outra" (mantém aberto, limpa, foca cliente) |
+| `Ctrl+P` | Adiciona linha de produto e foca o combobox novo |
+| `Ctrl+L` | Limpar formulário (com confirmação se houver dados) |
+| `Esc` | Fecha o painel (com confirmação se dirty) |
+| `↓` no combobox de produto | Abre dropdown / navega itens |
+| `Enter` no combobox | Seleciona item destacado |
 
-Atualizar subtítulo do card para refletir a lógica nova: "Pagas + a receber − despesas". Adicionar tooltip pequeno explicando a fórmula.
+**Indicação visual**: mostrar discretamente os atalhos no rodapé do painel (`Ctrl+Enter` para salvar · `Ctrl+P` adicionar produto · `Esc` fechar`), em texto pequeno cinza.
+
+### C) Auto-focus e fluxo
+
+- Ao expandir o painel (`isOpen=true`) → focar `ClientSearchCombobox`.
+- Ao adicionar linha de produto → focar o combobox dela.
+- Após submeter com sucesso (modo padrão) → fechar painel.
+- Após "Salvar e Adicionar Outra" → manter aberto, limpar campos, focar cliente.
+
+### D) Microajustes visuais
+
+- Adicionar `tabIndex` explícito onde houver ambiguidade (combos custom).
+- `Label` de cada campo recebe `htmlFor` + `id` no input, para acessibilidade e click-to-focus.
+- Botão "Salvar Sessão" ganha variante secundária ao lado: "Salvar e Adicionar Outra" (`Ctrl+Shift+Enter`).
+- Tooltip nos botões mostrando atalho.
+
+---
+
+## Implementação técnica
+
+### Mudança em `src/components/workflow/QuickSessionAdd.tsx`
+
+1. **Tipo `ManualProduct` enriquecido** — adicionar `produtoId?: string` para rastrear vínculo (mantém `nome` para compatibilidade com payload existente em `useSessionsRealtime.createManualSession`).
+2. **Substituir bloco de produtos** (linhas 449-506) por:
+   - Linha com `<ProductSearchCombobox onSelect={...} />` no lugar do `Input nome`.
+   - Ao selecionar: `handleProductChange(index, { produtoId, nome, valorUnitario: produto.valorVenda })` e foca input de quantidade.
+   - Manter input de quantidade (col-span-2).
+   - Mostrar valor unitário como **texto somente-leitura** (não mais input editável) — vem do cadastro.
+   - Subtotal + botão remover à direita.
+3. **Hook de atalhos globais** — `useEffect` com `keydown` listener no container, registrando `Ctrl+S`, `Ctrl+P`, `Ctrl+L`, `Ctrl+Enter`, `Ctrl+Shift+Enter`, `Esc`. Listener preso a `containerRef` para não vazar para a página.
+4. **Auto-focus**:
+   - `useEffect` em `isOpen` → após 50ms, foca o input do `ClientSearchCombobox` (precisa expor `ref` ou usar `querySelector` no container).
+   - Ao adicionar produto → `setTimeout` foca o último combobox de produto.
+5. **Botão "Salvar e Adicionar Outra"** — nova prop opcional `onSubmit` retorna sucesso; nesse caso chama `handleClear()` mas não `setIsOpen(false)` e re-foca cliente.
+6. **Footer com legenda de atalhos** — `<div class="text-2xs text-muted-foreground">Atalhos: Ctrl+Enter salvar · Ctrl+P produto · Esc fechar</div>`.
+7. **Confirmação ao fechar com dados não salvos** — flag `isDirty` (qualquer campo ≠ default) → ao `Esc`/`Cancelar`, mostrar `confirm()` simples.
+
+### Compatibilidade com backend
+
+- `QuickSessionData.produtosIncluidos` continua sendo `{ nome, quantidade, valorUnitario }[]` — o `produtoId` fica apenas no estado UI; **não há mudança de schema**.
+- `useSessionsRealtime.createManualSession` permanece intacto — já recebe e persiste produtos como `produtos_incluidos` com tipo `'manual'`. (Se quisermos rastrear `produtoId` no futuro, fica como evolução posterior.)
+- Nenhuma migration necessária.
+
+---
 
 ## Anti-bugs
 
-1. **Sem dupla contagem**: pagamentos já efetivados aparecem como `entradasPagas` (linhas reais). O `receitaPrevistaSessoes` usa `valor_total - valor_pago`, então nunca soma o que já foi pago.
-2. **Regime caixa não muda**: lógica atual preservada — `receitaPrevistaSessoes = 0`.
-3. **Performance**: query auxiliar de saldo é leve (apenas 2 colunas). View `extrato_unificado` substitui 4-5 queries do demonstrativo por 1 só.
-4. **Realtime**: invalidação já cobre `clientes_transacoes` e `fin_transactions`. Adicionar `clientes_sessoes` ao canal para refletir mudanças em valor_total/valor_pago.
-5. **Workflow vs Extrato**: após correção, "Recebido R$ 13.414" no Workflow ≈ "Receita Sessões" no demonstrativo competência. Pequena diferença pode persistir se houver venda avulsa (sem session_id workflow) — esperado.
+1. **Combobox dentro de Collapsible**: garantir que o `dropdown-solid` do `ProductSearchCombobox` não seja cortado por `overflow-hidden` do Collapsible — já usa `position: absolute z-50`, validado no padrão usado em outros lugares.
+2. **`Enter` no combobox** não deve submeter o form — o combobox já consome o evento; reforçar com `e.preventDefault()` no handler global se `e.target` estiver dentro de combobox aberto.
+3. **`Ctrl+S` global**: prevenir o "salvar página" do navegador com `e.preventDefault()`.
+4. **Produtos sem cadastro**: se `products.length === 0`, mostrar mensagem inline + botão para abrir Configurações (sem quebrar o fluxo).
+5. **Foco perdido ao adicionar linha**: usar `ref` map por índice de linha para localizar o combobox correto.
+
+---
 
 ## Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/hooks/useExtratoCalculationsSupabase.ts` | Demonstrativo lê de `extrato_unificado`; calcula `receitaPrevistaSessoes`; recalcula `saldoProjetado` e `totalAReceber` |
-| `src/hooks/useExtratoSupabase.ts` | Adicionar `clientes_sessoes` ao canal realtime |
-| `src/components/extrato/ExtratoSummaryCards.tsx` | Subtítulos contextuais por regime; tooltip no Saldo Projetado |
+| `src/components/workflow/QuickSessionAdd.tsx` | Substitui input manual de produtos por `ProductSearchCombobox`; adiciona atalhos de teclado, auto-focus, botão "Salvar e Adicionar Outra", footer de atalhos, confirmação ao sair com dirty |
+| `src/components/agenda/ProductSearchCombobox.tsx` | Pequeno ajuste: aceitar `autoFocus` opcional e expor melhor o foco interno (se necessário) |
 
