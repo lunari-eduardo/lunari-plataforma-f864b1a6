@@ -10,7 +10,7 @@ import { useExtratoCalculationsSupabase } from '@/hooks/useExtratoCalculationsSu
 import { useRegimeContabil } from '@/hooks/useRegimeContabil';
 import { getDefaultPeriod } from '@/utils/extratoUtils';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
 
 export function useExtrato() {
   const [paginaAtual, setPaginaAtual] = useState(1);
