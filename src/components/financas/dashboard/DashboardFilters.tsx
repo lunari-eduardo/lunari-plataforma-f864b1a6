@@ -139,31 +139,6 @@ export function DashboardFilters({
             </div>
           )}
 
-          {/* Toggle Caixa/Competência */}
-          <div className="ml-auto space-y-1">
-            <div className="flex items-center gap-1">
-              <Label className="text-xs text-muted-foreground">Regime</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="text-xs">
-                      <strong>Caixa:</strong> filtra pela data efetiva do dinheiro entrar/sair.<br />
-                      <strong>Competência:</strong> filtra pela data de prestação do serviço (sessão).
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <Tabs value={regime} onValueChange={(v) => setRegime(v as 'caixa' | 'competencia')}>
-              <TabsList className="h-9">
-                <TabsTrigger value="caixa" className="text-xs px-3">Caixa</TabsTrigger>
-                <TabsTrigger value="competencia" className="text-xs px-3">Competência</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
         </div>
       </Card>
     </section>
