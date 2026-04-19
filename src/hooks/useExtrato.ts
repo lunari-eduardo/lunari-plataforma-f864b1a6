@@ -1,5 +1,5 @@
 /**
- * Hook principal do extrato - 100% SUPABASE COM PAGINAÇÃO
+ * Hook principal do extrato - 100% SUPABASE COM PAGINAÇÃO + REGIME
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -7,15 +7,17 @@ import { LinhaExtrato, FiltrosExtrato, ExtratoPaginacao } from '@/types/extrato'
 import { useExtratoData } from '@/hooks/useExtratoData';
 import { useExtratoFilters } from '@/hooks/useExtratoFilters';
 import { useExtratoCalculationsSupabase } from '@/hooks/useExtratoCalculationsSupabase';
+import { useRegimeContabil } from '@/hooks/useRegimeContabil';
 import { getDefaultPeriod } from '@/utils/extratoUtils';
 
 const PAGE_SIZE = 50;
 
 export function useExtrato() {
-  // ============= ESTADO DE PAGINAÇÃO =============
   const [paginaAtual, setPaginaAtual] = useState(1);
 
-  // ============= ESTADO DE PERÍODO (para filtros server-side) =============
+  // Regime contábil (caixa | competência) — global, sincronizado entre telas
+  const { regime, setRegime } = useRegimeContabil();
+
   const { inicioMes, fimMes } = getDefaultPeriod();
   const [periodoFiltro, setPeriodoFiltro] = useState({
     dataInicio: inicioMes,
@@ -27,19 +29,18 @@ export function useExtrato() {
     dataInicio: periodoFiltro.dataInicio,
     dataFim: periodoFiltro.dataFim,
     page: paginaAtual,
-    pageSize: PAGE_SIZE
+    pageSize: PAGE_SIZE,
+    regime
   });
 
-  // ============= FILTROS SECUNDÁRIOS (CLIENT-SIDE) =============
   const filters = useExtratoFilters(extratoData.linhasExtrato);
   
-  // ============= CÁLCULOS =============
   const calculations = useExtratoCalculationsSupabase(
     filters.linhasFiltradas, 
-    filters.filtros
+    filters.filtros,
+    regime
   );
 
-  // ============= CONTROLE DE PAGINAÇÃO =============
   const paginacao: ExtratoPaginacao & {
     irParaPagina: (p: number) => void;
     proximaPagina: () => void;
@@ -64,22 +65,17 @@ export function useExtrato() {
     }
   }), [paginaAtual, extratoData.totalCount, extratoData.totalPages]);
 
-  // ============= SINCRONIZAR FILTROS DE PERÍODO =============
   const atualizarFiltros = useCallback((novosFiltros: Partial<FiltrosExtrato>) => {
-    // Se mudou período, atualiza estado server-side e reseta página
     if (novosFiltros.dataInicio !== undefined || novosFiltros.dataFim !== undefined) {
-      setPaginaAtual(1); // Reset para primeira página
+      setPaginaAtual(1);
       setPeriodoFiltro(prev => ({
         dataInicio: novosFiltros.dataInicio ?? prev.dataInicio,
         dataFim: novosFiltros.dataFim ?? prev.dataFim
       }));
     }
-    
-    // Atualiza filtros client-side também
     filters.atualizarFiltros(novosFiltros);
   }, [filters]);
 
-  // ============= LIMPAR FILTROS =============
   const limparFiltros = useCallback(() => {
     const { inicioMes, fimMes } = getDefaultPeriod();
     setPaginaAtual(1);
@@ -90,13 +86,10 @@ export function useExtrato() {
     filters.limparFiltros();
   }, [filters]);
 
-  // ============= DRILL-DOWN =============
   const abrirOrigem = useCallback((linha: LinhaExtrato) => {
     console.log('📊 Abrir origem:', linha);
-    // TODO: Implementar modais de detalhes
   }, []);
 
-  // ============= EXPORTAÇÃO =============
   const prepararDadosExportacao = useCallback(() => {
     return {
       periodo: {
@@ -105,29 +98,31 @@ export function useExtrato() {
       },
       resumo: calculations.resumo,
       linhas: calculations.linhasComSaldo,
-      filtrosAplicados: filters.filtros
+      filtrosAplicados: filters.filtros,
+      regime
     };
-  }, [periodoFiltro, calculations.resumo, calculations.linhasComSaldo, filters.filtros]);
+  }, [periodoFiltro, calculations.resumo, calculations.linhasComSaldo, filters.filtros, regime]);
+
+  // Reset para primeira página ao trocar regime
+  const handleSetRegime = useCallback((novoRegime: typeof regime) => {
+    setPaginaAtual(1);
+    setRegime(novoRegime);
+  }, [setRegime]);
 
   return {
-    // Dados principais
     linhas: calculations.linhasComSaldo,
     resumo: calculations.resumo,
     demonstrativo: calculations.demonstrativo,
-    
-    // Paginação
     paginacao,
     isLoading: extratoData.isLoading,
-    
-    // Estados de filtros
     filtros: {
       ...filters.filtros,
       dataInicio: periodoFiltro.dataInicio,
       dataFim: periodoFiltro.dataFim
     },
     preferencias: filters.preferencias,
-    
-    // Funções de controle
+    regime,
+    setRegime: handleSetRegime,
     atualizarFiltros,
     atualizarPreferencias: filters.atualizarPreferencias,
     limparFiltros,
