@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
@@ -36,6 +38,7 @@ export default function ModalNovoLancamentoRefatorado({
     item_id: '',
     valor: '',
     data_vencimento: new Date().toISOString().split('T')[0],
+    data_competencia: '',
     observacoes: '',
     valorFixo: true
   });
@@ -52,6 +55,7 @@ export default function ModalNovoLancamentoRefatorado({
       item_id: '',
       valor: '',
       data_vencimento: new Date().toISOString().split('T')[0],
+      data_competencia: '',
       observacoes: '',
       valorFixo: true
     });
@@ -77,6 +81,7 @@ export default function ModalNovoLancamentoRefatorado({
     const input: CreateTransactionInput = {
       valorTotal: valor,
       dataPrimeiraOcorrencia: formData.data_vencimento,
+      dataCompetencia: formData.data_competencia || undefined,
       itemId: formData.item_id,
       observacoes: formData.observacoes || '',
       isRecorrente: opcoes.despesaRecorrente,
@@ -214,6 +219,35 @@ export default function ModalNovoLancamentoRefatorado({
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Data de Competência (opcional) */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Label htmlFor="data_competencia" className="text-sm">
+                Data de competência <span className="text-muted-foreground font-normal">(opcional)</span>
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      Use quando o lançamento se refere a um período diferente da data de vencimento.
+                      Exemplo: pagar em janeiro um serviço prestado em dezembro.
+                      Se vazio, será usada a data de vencimento.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Input
+              id="data_competencia"
+              type="date"
+              value={formData.data_competencia}
+              onChange={(e) => setFormData({ ...formData, data_competencia: e.target.value })}
+            />
           </div>
 
           {/* Componente Unificado de Opções */}

@@ -14,6 +14,7 @@ export interface FinancialTransactionDB {
   item_id: string;
   valor: number;
   data_vencimento: string;
+  data_competencia?: string | null;
   status: StatusTransacao;
   observacoes?: string;
   parcela_atual?: number;

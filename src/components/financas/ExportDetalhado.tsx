@@ -13,9 +13,10 @@ import { parseDateFromStorage, formatDateForPDF } from '@/utils/dateUtils';
 
 interface ExportDetalhadoProps {
   dados: DadosExportacaoExtrato;
+  regime?: 'caixa' | 'competencia';
 }
 
-export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
+export default function ExportDetalhado({ dados, regime = 'caixa' }: ExportDetalhadoProps) {
   const { getProfileOrDefault } = useUserProfile();
   const { getBrandingOrDefault } = useUserBranding();
   const navigate = useNavigate();
@@ -165,7 +166,8 @@ export default function ExportDetalhado({ dados }: ExportDetalhadoProps) {
           startDate,
           endDate
         },
-        summary: filteredSummary
+        summary: filteredSummary,
+        regime
       };
 
       await generateExtratoDetalhadoPDF(exportData);
