@@ -1343,6 +1343,7 @@ export type Database = {
         Row: {
           created_at: string | null
           credit_card_id: string | null
+          data_competencia: string | null
           data_compra: string | null
           data_vencimento: string
           id: string
@@ -1360,6 +1361,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           credit_card_id?: string | null
+          data_competencia?: string | null
           data_compra?: string | null
           data_vencimento: string
           id?: string
@@ -1377,6 +1379,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           credit_card_id?: string | null
+          data_competencia?: string | null
           data_compra?: string | null
           data_vencimento?: string
           id?: string
@@ -2093,6 +2096,8 @@ export type Database = {
           created_at: string | null
           default_expiration_days: number | null
           default_gallery_permission: string | null
+          default_image_resize: number
+          default_sale_mode: string
           default_watermark: Json | null
           default_welcome_message: string | null
           favicon_url: string | null
@@ -2110,6 +2115,8 @@ export type Database = {
           created_at?: string | null
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
+          default_image_resize?: number
+          default_sale_mode?: string
           default_watermark?: Json | null
           default_welcome_message?: string | null
           favicon_url?: string | null
@@ -2127,6 +2134,8 @@ export type Database = {
           created_at?: string | null
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
+          default_image_resize?: number
+          default_sale_mode?: string
           default_watermark?: Json | null
           default_welcome_message?: string | null
           favicon_url?: string | null
@@ -3710,6 +3719,7 @@ export type Database = {
           cliente: string | null
           created_at: string | null
           data: string | null
+          data_competencia: string | null
           descricao: string | null
           id: string | null
           meio_pagamento: string | null

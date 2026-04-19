@@ -37,6 +37,7 @@ interface ExtratoTableProps {
     paginaAnterior: () => void;
   };
   isLoading?: boolean;
+  regime?: 'caixa' | 'competencia';
 }
 
 export default function ExtratoTable({ 
@@ -44,7 +45,8 @@ export default function ExtratoTable({
   onAbrirOrigem, 
   dadosExportacao,
   paginacao,
-  isLoading
+  isLoading,
+  regime = 'caixa'
 }: ExtratoTableProps) {
   const rangeInicio = paginacao ? ((paginacao.page - 1) * paginacao.pageSize) + 1 : 1;
   const rangeFim = paginacao 
@@ -62,6 +64,9 @@ export default function ExtratoTable({
                 ? `${paginacao.totalCount} registros no total`
                 : `${linhas.length} registros encontrados`
               }
+              <span className="ml-2 text-xs text-muted-foreground">
+                · Visão por {regime === 'competencia' ? 'Competência' : 'Caixa'}
+              </span>
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -101,10 +106,19 @@ export default function ExtratoTable({
                   ) : (
                     linhas.map(linha => {
                       const StatusIcon = STATUS_ICONS[linha.status];
+                      const dataAlt = regime === 'caixa'
+                        ? (linha.dataCompetencia && linha.dataCompetencia !== linha.data ? linha.dataCompetencia : null)
+                        : (linha.dataCaixa && linha.dataCaixa !== linha.data ? linha.dataCaixa : null);
+                      const dataAltLabel = regime === 'caixa' ? 'ref.' : 'pago';
                       return (
                         <TableRow key={linha.id} className="hover:bg-muted/50">
                           <TableCell>
-                            {formatDateForDisplay(linha.data)}
+                            <div>{formatDateForDisplay(linha.data)}</div>
+                            {dataAlt && (
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {dataAltLabel} {formatDateForDisplay(dataAlt)}
+                              </div>
+                            )}
                           </TableCell>
                           
                           <TableCell>

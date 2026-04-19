@@ -11,17 +11,24 @@ interface DemonstrativoSectionProps {
     inicio: string;
     fim: string;
   };
+  regime?: 'caixa' | 'competencia';
 }
 
 export default function DemonstrativoSection({ 
   demonstrativo, 
-  periodo 
+  periodo,
+  regime = 'caixa'
 }: DemonstrativoSectionProps) {
   return (
-    <DemonstrativoSimplificadoComponent 
-      demonstrativo={demonstrativo} 
-      periodo={periodo}
-      transactions={[]} // TODO: [SUPABASE] Passar transações quando necessário
-    />
+    <div className="space-y-2">
+      <div className="text-xs text-muted-foreground text-right">
+        Visão por <strong>{regime === 'competencia' ? 'Competência' : 'Caixa'}</strong>
+      </div>
+      <DemonstrativoSimplificadoComponent 
+        demonstrativo={demonstrativo} 
+        periodo={periodo}
+        transactions={[]}
+      />
+    </div>
   );
 }

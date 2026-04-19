@@ -1,37 +1,37 @@
 /**
  * Hook para carregamento e processamento de dados do extrato
- * MIGRADO PARA 100% SUPABASE COM PAGINAÇÃO
+ * MIGRADO PARA 100% SUPABASE COM PAGINAÇÃO + REGIME (caixa | competência)
  */
 
-import { useExtratoSupabase } from './useExtratoSupabase';
+import { useExtratoSupabase, RegimeContabil } from './useExtratoSupabase';
 
 interface UseExtratoDataParams {
   dataInicio?: string;
   dataFim?: string;
   page?: number;
   pageSize?: number;
+  regime?: RegimeContabil;
 }
 
 export function useExtratoData({
   dataInicio,
   dataFim,
   page,
-  pageSize
+  pageSize,
+  regime
 }: UseExtratoDataParams = {}) {
-  // ============= USAR HOOK SUPABASE COM PAGINAÇÃO =============
   const { 
     linhasExtrato, 
     totalCount, 
     totalPages, 
     isLoading 
-  } = useExtratoSupabase({ dataInicio, dataFim, page, pageSize });
+  } = useExtratoSupabase({ dataInicio, dataFim, page, pageSize, regime });
 
   return {
     linhasExtrato,
     totalCount,
     totalPages,
     isLoading,
-    // Mantém compatibilidade com hooks que usam esses dados
     transacoesFinanceiras: [],
     pagamentosWorkflow: [],
     itensFinanceiros: [],
