@@ -53,17 +53,30 @@ export default function ExtratoTable({
     ? Math.min(paginacao.page * paginacao.pageSize, paginacao.totalCount) 
     : linhas.length;
 
+  // Calcular range de datas da página atual (linhas vêm ordenadas DESC por data)
+  const dataMaisRecente = linhas.length > 0 ? linhas[0].data : null;
+  const dataMaisAntiga = linhas.length > 0 ? linhas[linhas.length - 1].data : null;
+  const temMaisPaginas = paginacao && paginacao.totalPages > 1;
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-lg">Extrato de Movimentações</CardTitle>
             <CardDescription>
               {paginacao 
-                ? `${paginacao.totalCount} registros no total`
+                ? `${paginacao.totalCount} movimentações no período`
                 : `${linhas.length} registros encontrados`
               }
+              {temMaisPaginas && dataMaisAntiga && dataMaisRecente && (
+                <>
+                  <span className="mx-1">·</span>
+                  <span className="font-medium">Página {paginacao!.page} de {paginacao!.totalPages}</span>
+                  <span className="mx-1">·</span>
+                  <span>exibindo {formatDateForDisplay(dataMaisAntiga)} a {formatDateForDisplay(dataMaisRecente)}</span>
+                </>
+              )}
               <span className="ml-2 text-xs text-muted-foreground">
                 · Visão por {regime === 'competencia' ? 'Competência' : 'Caixa'}
               </span>
