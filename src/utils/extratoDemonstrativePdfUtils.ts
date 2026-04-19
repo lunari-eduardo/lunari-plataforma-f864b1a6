@@ -21,6 +21,7 @@ export interface ExtratoDetalhadoData {
     transacoesFaturadas: number;
     transacoesAgendadas: number;
   };
+  regime?: 'caixa' | 'competencia';
 }
 
 interface MonthlyGroup {
