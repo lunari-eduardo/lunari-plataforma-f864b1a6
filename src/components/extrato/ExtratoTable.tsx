@@ -213,11 +213,20 @@ export default function ExtratoTable({
             </ScrollArea>
 
             {paginacao && paginacao.totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t mt-4">
+              <div className="flex items-center justify-between pt-4 border-t mt-4 flex-wrap gap-3">
                 <div className="text-sm text-muted-foreground">
-                  Mostrando {rangeInicio} a {rangeFim} de {paginacao.totalCount} registros
+                  Mostrando <strong className="text-foreground">{rangeInicio}</strong> a <strong className="text-foreground">{rangeFim}</strong> de <strong className="text-foreground">{paginacao.totalCount}</strong> registros
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => paginacao.irParaPagina(1)}
+                    disabled={paginacao.page === 1}
+                    title="Primeira página"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -227,17 +236,26 @@ export default function ExtratoTable({
                     <ChevronLeft className="h-4 w-4 mr-1" />
                     Anterior
                   </Button>
-                  <span className="text-sm px-2">
+                  <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-muted">
                     Página {paginacao.page} de {paginacao.totalPages}
                   </span>
                   <Button 
-                    variant="outline" 
+                    variant="default" 
                     size="sm" 
                     onClick={paginacao.proximaPagina}
                     disabled={paginacao.page === paginacao.totalPages}
                   >
                     Próximo
                     <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => paginacao.irParaPagina(paginacao.totalPages)}
+                    disabled={paginacao.page === paginacao.totalPages}
+                    title="Última página"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
