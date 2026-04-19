@@ -81,6 +81,7 @@ export default function ModalNovoLancamentoRefatorado({
     const input: CreateTransactionInput = {
       valorTotal: valor,
       dataPrimeiraOcorrencia: formData.data_vencimento,
+      dataCompetencia: formData.data_competencia || undefined,
       itemId: formData.item_id,
       observacoes: formData.observacoes || '',
       isRecorrente: opcoes.despesaRecorrente,
