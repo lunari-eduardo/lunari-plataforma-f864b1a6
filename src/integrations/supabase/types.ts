@@ -1343,6 +1343,7 @@ export type Database = {
         Row: {
           created_at: string | null
           credit_card_id: string | null
+          data_competencia: string | null
           data_compra: string | null
           data_vencimento: string
           id: string
@@ -1360,6 +1361,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           credit_card_id?: string | null
+          data_competencia?: string | null
           data_compra?: string | null
           data_vencimento: string
           id?: string
@@ -1377,6 +1379,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           credit_card_id?: string | null
+          data_competencia?: string | null
           data_compra?: string | null
           data_vencimento?: string
           id?: string
@@ -3716,6 +3719,7 @@ export type Database = {
           cliente: string | null
           created_at: string | null
           data: string | null
+          data_competencia: string | null
           descricao: string | null
           id: string | null
           meio_pagamento: string | null
