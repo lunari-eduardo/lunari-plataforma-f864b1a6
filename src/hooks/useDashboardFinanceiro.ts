@@ -6,7 +6,6 @@ import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { useWorkflowMetricsRealtime } from '@/hooks/useWorkflowMetricsRealtime';
 import { useWorkflowMetricsByYear } from '@/hooks/useWorkflowMetricsByYear';
-import { useRegimeContabil } from '@/hooks/useRegimeContabil';
 import { getCurrentDateString, parseDateFromStorage } from '@/utils/dateUtils';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
@@ -75,9 +74,6 @@ interface TransacaoComItem {
 }
 
 export function useDashboardFinanceiro() {
-  // Regime contábil global
-  const { regime } = useRegimeContabil();
-  
   // Estados para modal de equipamentos
   const [equipmentModalOpen, setEquipmentModalOpen] = useState(false);
   const [equipmentData, setEquipmentData] = useState<{
@@ -262,56 +258,42 @@ export function useDashboardFinanceiro() {
 
   // Query dedicada para transações do período selecionado
   const { data: transacoesDoAno = [] } = useQuery({
-    queryKey: ['dashboard-transactions-period', startDate, endDate, regime],
+    queryKey: ['dashboard-transactions-period', startDate, endDate],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       
-      // Buscar todas as transações do range em ambos os campos (vencimento OU competencia)
-      // para evitar perder transações cujas datas divergem
-      const baseSelect = `
-        id,
-        item_id,
-        valor,
-        data_vencimento,
-        data_competencia,
-        status,
-        observacoes,
-        fin_items_master (
-          id,
-          nome,
-          grupo_principal
-        )
-      `;
-
-      let query = supabase
+      const { data, error } = await supabase
         .from('fin_transactions')
-        .select(baseSelect)
-        .eq('user_id', user.id);
-
-      if (regime === 'competencia') {
-        // Usar COALESCE-like logic: filtrar por data_competencia OR (data_competencia IS NULL AND data_vencimento)
-        // Simplificação: usar data_vencimento como fallback - filtrar OR via duas queries unidas
-        query = query.or(
-          `and(data_competencia.gte.${startDate},data_competencia.lte.${endDate}),and(data_competencia.is.null,data_vencimento.gte.${startDate},data_vencimento.lte.${endDate})`
-        );
-      } else {
-        query = query.gte('data_vencimento', startDate).lte('data_vencimento', endDate);
-      }
-
-      const { data, error } = await query.order('data_vencimento', { ascending: true });
+        .select(`
+          id,
+          item_id,
+          valor,
+          data_vencimento,
+          status,
+          observacoes,
+          fin_items_master (
+            id,
+            nome,
+            grupo_principal
+          )
+        `)
+        .eq('user_id', user.id)
+        .gte('data_vencimento', startDate)
+        .lte('data_vencimento', endDate)
+        .order('data_vencimento', { ascending: true });
       
       if (error) {
         console.error('Erro ao buscar transações do período:', error);
         return [];
       }
       
-      // Transformar para formato interno (data efetiva conforme regime)
+      // Transformar para formato interno
       return (data || []).map((t: any) => ({
         id: t.id,
         itemId: t.item_id,
         valor: t.valor,
-        dataVencimento: regime === 'competencia' ? (t.data_competencia || t.data_vencimento) : t.data_vencimento,
+        dataVencimento: t.data_vencimento,
         status: t.status,
         observacoes: t.observacoes,
         item: t.fin_items_master ? {

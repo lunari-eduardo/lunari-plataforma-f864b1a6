@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, CheckCircle, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Info } from 'lucide-react';
 import { LinhaExtrato, ExtratoPaginacao } from '@/types/extrato';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
@@ -53,17 +53,30 @@ export default function ExtratoTable({
     ? Math.min(paginacao.page * paginacao.pageSize, paginacao.totalCount) 
     : linhas.length;
 
+  // Calcular range de datas da página atual (linhas vêm ordenadas DESC por data)
+  const dataMaisRecente = linhas.length > 0 ? linhas[0].data : null;
+  const dataMaisAntiga = linhas.length > 0 ? linhas[linhas.length - 1].data : null;
+  const temMaisPaginas = paginacao && paginacao.totalPages > 1;
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-lg">Extrato de Movimentações</CardTitle>
             <CardDescription>
               {paginacao 
-                ? `${paginacao.totalCount} registros no total`
+                ? `${paginacao.totalCount} movimentações no período`
                 : `${linhas.length} registros encontrados`
               }
+              {temMaisPaginas && dataMaisAntiga && dataMaisRecente && (
+                <>
+                  <span className="mx-1">·</span>
+                  <span className="font-medium">Página {paginacao!.page} de {paginacao!.totalPages}</span>
+                  <span className="mx-1">·</span>
+                  <span>exibindo {formatDateForDisplay(dataMaisAntiga)} a {formatDateForDisplay(dataMaisRecente)}</span>
+                </>
+              )}
               <span className="ml-2 text-xs text-muted-foreground">
                 · Visão por {regime === 'competencia' ? 'Competência' : 'Caixa'}
               </span>
@@ -81,6 +94,15 @@ export default function ExtratoTable({
           </div>
         ) : (
           <>
+            {temMaisPaginas && paginacao!.page === 1 && (
+              <div className="mb-3 flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                <Info className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                <div className="text-foreground">
+                  Existem <strong>{paginacao!.totalCount - linhas.length}</strong> movimentações adicionais fora desta página.
+                  Use os controles de paginação abaixo para navegar pelos demais registros do período.
+                </div>
+              </div>
+            )}
             <ScrollArea className="h-[500px] w-full">
               <Table>
                 <TableHeader>
@@ -191,11 +213,20 @@ export default function ExtratoTable({
             </ScrollArea>
 
             {paginacao && paginacao.totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t mt-4">
+              <div className="flex items-center justify-between pt-4 border-t mt-4 flex-wrap gap-3">
                 <div className="text-sm text-muted-foreground">
-                  Mostrando {rangeInicio} a {rangeFim} de {paginacao.totalCount} registros
+                  Mostrando <strong className="text-foreground">{rangeInicio}</strong> a <strong className="text-foreground">{rangeFim}</strong> de <strong className="text-foreground">{paginacao.totalCount}</strong> registros
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => paginacao.irParaPagina(1)}
+                    disabled={paginacao.page === 1}
+                    title="Primeira página"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -205,17 +236,26 @@ export default function ExtratoTable({
                     <ChevronLeft className="h-4 w-4 mr-1" />
                     Anterior
                   </Button>
-                  <span className="text-sm px-2">
+                  <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-muted">
                     Página {paginacao.page} de {paginacao.totalPages}
                   </span>
                   <Button 
-                    variant="outline" 
+                    variant="default" 
                     size="sm" 
                     onClick={paginacao.proximaPagina}
                     disabled={paginacao.page === paginacao.totalPages}
                   >
                     Próximo
                     <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => paginacao.irParaPagina(paginacao.totalPages)}
+                    disabled={paginacao.page === paginacao.totalPages}
+                    title="Última página"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
