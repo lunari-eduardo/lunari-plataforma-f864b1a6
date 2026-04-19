@@ -2,10 +2,13 @@ export type ExtratoTipo = 'entrada' | 'saida';
 export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao' | 'gallery';
 export type ExtratoStatus = 'Pago' | 'Faturado' | 'Agendado';
 
+// Regime contábil
+export type RegimeContabil = 'caixa' | 'competencia';
+
 // Linha unificada do extrato
 export interface LinhaExtrato {
   id: string;
-  data: string; // Data efetiva (pago) ou vencimento
+  data: string; // Data exibida conforme regime selecionado (caixa ou competência)
   tipo: ExtratoTipo;
   descricao: string;
   origem: ExtratoOrigem;
@@ -24,6 +27,9 @@ export interface LinhaExtrato {
   // IDs de referência para drill-down
   referenciaId: string; // ID da transação ou pagamento original
   referenciaOrigem: ExtratoOrigem;
+  // Datas auxiliares (sempre populadas) para mostrar indicador visual quando diverge
+  dataCaixa?: string;        // data efetiva da transação (regime de caixa)
+  dataCompetencia?: string;  // data econômica/de prestação do serviço
 }
 
 // Resumo do período filtrado
