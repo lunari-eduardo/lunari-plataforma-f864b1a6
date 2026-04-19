@@ -94,6 +94,15 @@ export default function ExtratoTable({
           </div>
         ) : (
           <>
+            {temMaisPaginas && paginacao!.page === 1 && (
+              <div className="mb-3 flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                <Info className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                <div className="text-foreground">
+                  Existem <strong>{paginacao!.totalCount - linhas.length}</strong> movimentações adicionais fora desta página.
+                  Use os controles de paginação abaixo para navegar pelos demais registros do período.
+                </div>
+              </div>
+            )}
             <ScrollArea className="h-[500px] w-full">
               <Table>
                 <TableHeader>
