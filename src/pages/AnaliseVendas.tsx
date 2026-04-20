@@ -89,8 +89,12 @@ export default function AnaliseVendas() {
         {/* BLOCO 3: DIAGNÓSTICO E OPORTUNIDADES                            */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section aria-label="Diagnóstico e oportunidades" className="space-y-4 animate-fade-in">
-          {/* Top Performances e Oportunidades */}
-          <SalesInsightsSection />
+          {/* Top Performances */}
+          <SalesInsightsSection 
+            selectedYear={selectedYear}
+            selectedMonth={selectedMonth}
+            selectedCategory={selectedCategory}
+          />
           
           {/* Leads Perdidos */}
           <LeadLossReasonsChart />
