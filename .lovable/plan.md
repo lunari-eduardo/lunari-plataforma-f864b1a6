@@ -1,113 +1,68 @@
 
 
-# Plano de correção: Inconsistências do Extrato (cards × demonstrativo)
+# Plano: Top Performances reais + remover Oportunidades
 
-## Diagnóstico (confirmado via DB para Abril/2026)
+## Análise da imagem
+- **Amarelo** (Top Performances): valores totalmente mockados (Novembro 2024, Maria Silva, R$ 15.2k, etc.) → calcular do banco real.
+- **Vermelho** (Oportunidades): Orçamentos Pendentes, Sazonalidade, Upsell — também mockados → **remover bloco inteiro**.
 
-### Bug 1 — Demonstrativo mostra **R$ 0,00** em todas as despesas ❌
+## Fontes de dados (todas já existentes)
 
-**Causa raiz** (`useExtratoCalculationsSupabase.ts` linhas 132–194):
-- A view `extrato_unificado` já retorna `categoria = grupo_principal` (ex: `"Despesa Fixa"`, `"Despesa Variável"`, `"Investimento"`).
-- O código **ignora isso** e cria um mapa `itemToGrupo` mapeando `nome_do_item → grupo` (ex: `"Aluguel" → "Despesa Fixa"`).
-- Depois faz `itemToGrupo.get(l.categoria)` onde `l.categoria` **já é o grupo** ("Despesa Fixa"). O lookup retorna `undefined` → **nenhuma linha entra em nenhum grupo** → Total Despesas = R$ 0,00.
-- Mesmo problema afetaria o nome dos itens: usaria "Despesa Fixa" como nome em vez de "Aluguel".
+Tabela `clientes_sessoes` (filtrada por `user_id`, ano selecionado, e `selectedCategory` quando ≠ 'all') já é o repositório das vendas usadas no resto do dashboard. Ela contém: `data_sessao`, `valor_total`, `categoria`, `pacote`, `cliente_id`, `tipo_registro`.
 
-Confirmação via DB: a view retorna corretamente 11 linhas de despesa em abril (R$ 5.255,74 total).
+## Cálculo dos 3 cards reais
 
-### Bug 2 — Cards superiores mostram **R$ 23.780** mas demonstrativo mostra **R$ 39.903** ❌
+### 1. Melhor Mês
+Agrupar `clientes_sessoes` do `selectedYear` (todos os meses) por `to_char(data_sessao, 'YYYY-MM')`, somar `valor_total`. Pegar o mês com maior soma. Calcular variação `+X%` comparado à **média dos demais meses do mesmo ano** (com dados >0).
+- Subtítulo: `"Novembro 2025"` (mês/ano formatado em pt-BR)
+- Valor (badge): `+45%` ou `R$ 12.5k` se for o único mês com dados
 
-**Causa raiz** (`useExtratoCalculationsSupabase.ts` linhas 51–82):
-- Os cards (`resumo`) são calculados a partir de `linhasFiltradas` — que vêm **paginadas** de `useExtratoSupabase` (apenas 100 linhas da página atual).
-- Há 193 movimentações no período: a página 1 cobre só ~50% do total → cards mostram metade.
-- O demonstrativo, corretamente, faz query própria sem paginação → mostra os R$ 39.903 reais.
-- **Resultado:** cards inconsistentes com demonstrativo, tabela e realidade.
+### 2. Melhor Serviço
+Agrupar sessões do período por `categoria` (ou `pacote` quando categoria for vazia), somar `valor_total`. Pegar top 1.
+- Subtítulo: nome da categoria/pacote
+- Valor: total formatado como `R$ X.Xk`
 
-Mesma causa explica:
-- "Saídas (pagas) R$ 0,00" + "Futuras R$ 705,06": as despesas pagas de abril (~R$ 4.488) estão em páginas posteriores; a página 1 (mais recente) só contém agendadas de 30/04 e 21/04.
-- "A Receber R$ 0,00" no Caixa.
+### 3. Cliente Fidelizado
+Agrupar por `cliente_id`, contar sessões (apenas `tipo_registro='workflow'` para excluir vendas avulsas que poluem). JOIN com `clientes` para nome. Pegar top 1.
+- Subtítulo: nome do cliente
+- Valor: `N sessões`
 
-## Correção em 2 frentes
+## Filtros respeitados
+O bloco usa o **mesmo filtro de ano e categoria** já ativo no topo da página (`selectedYear`, `selectedCategory`). `selectedMonth` será **ignorado** para "Melhor Mês" (faz sentido olhar o ano todo); para "Melhor Serviço" e "Cliente Fidelizado", respeita o mês se houver.
 
-### Fix 1 — Demonstrativo: usar `categoria` da view diretamente (sem mapa)
+## Implementação
 
-`useExtratoCalculationsSupabase.ts` (linhas 132–194):
-- **Remover** a query a `fin_items_master` e o mapa `itemToGrupo`.
-- Agrupar despesas direto por `l.categoria` (que já é o `grupo_principal`).
-- Para nome do item, usar `l.descricao` (que é o `fim.nome` exposto pela view — ex: "Aluguel", "Internet").
-- Receita não operacional: filtrar por `l.categoria === 'Receita Não Operacional'` direto.
+### Novo hook: `src/hooks/useSalesTopPerformances.ts`
+- Recebe `selectedYear`, `selectedMonth`, `selectedCategory`.
+- Faz **1 query** a `clientes_sessoes` no período (ano todo ou mês), filtrada por user e categoria, com JOIN a `clientes(nome)`.
+- Em memória: calcula 3 métricas (melhor mês, melhor serviço, cliente top).
+- Retorna objeto `{ melhorMes, melhorServico, clienteFidelizado, isLoading }`.
+- Cada métrica retorna `{ subtitle, value, hasData }` — se `hasData=false`, card mostra "Sem dados no período" sem badge.
 
-```ts
-// Despesas agrupadas direto pela coluna categoria da view
-for (const grupo of GRUPOS_DESPESAS) {
-  const linhasGrupo = saidasFinanceiro.filter(l => l.categoria === grupo);
-  if (linhasGrupo.length === 0) continue;
-  const itensPorNome: Record<string, number> = {};
-  linhasGrupo.forEach(l => {
-    const nome = l.descricao || 'Item desconhecido';
-    itensPorNome[nome] = (itensPorNome[nome] || 0) + Number(l.valor);
-  });
-  // ...
-}
-```
+### Refator `SalesInsightsSection.tsx`
+- Aceitar props `selectedYear`, `selectedMonth`, `selectedCategory`.
+- Chamar `useSalesTopPerformances`.
+- **Remover** completamente o bloco "Oportunidades".
+- Layout passa de `grid-cols-2` para uma única coluna full-width (o bloco fica mais respirável e protagonista).
+- Skeleton de loading nos 3 itens.
+- Empty states individuais para cada métrica.
 
-Ganhos: 1 query a menos, código mais simples, agrupamento correto, nomes corretos dos itens.
-
-### Fix 2 — Cards superiores: query agregada **sem paginação**
-
-`useExtratoCalculationsSupabase.ts` — adicionar nova `useQuery` que faz **soma agregada por tipo+status** na view `extrato_unificado` filtrada por período/regime, sem usar `linhasFiltradas`.
-
-```ts
-const { data: totaisPeriodo } = useQuery({
-  queryKey: ['extrato-totais-periodo', regime, filtros.dataInicio, filtros.dataFim, filtros.tipo, filtros.origem, filtros.status, filtros.busca],
-  queryFn: async () => {
-    const dataColumn = regime === 'competencia' ? 'data_competencia' : 'data';
-    let q = supabase.from('extrato_unificado')
-      .select('tipo,status,valor')
-      .eq('user_id', user.id)
-      .gte(dataColumn, filtros.dataInicio)
-      .lte(dataColumn, filtros.dataFim);
-    // aplicar mesmos filtros de tipo/origem/status/busca usados na tabela
-    const { data } = await q;
-    // somar por (tipo,status)
-    return agregar(data);
-  }
-});
-```
-
-Recalcular `resumo` a partir de `totaisPeriodo` (não mais de `linhasFiltradas`). Manter `linhasFiltradas` apenas para a tabela detalhada paginada.
-
-**Importante:** os filtros aplicados (tipo/origem/status/busca) precisam estar na queryKey **e** na query, para os cards refletirem exatamente o que o usuário filtrou — coerente com a tabela.
-
-### Fix 3 — Garantir que filtros do extrato afetam totais
-
-`useExtratoSupabase` hoje só aplica filtros de período. Filtros de tipo/origem/status/busca são aplicados **client-side** depois. Isso significa que paginação + busca produzem resultados imprecisos. Para os totais agregados serem corretos, vamos:
-
-- Mover filtros de `tipo`, `origem`, `status` para server-side em `useExtratoSupabase` e na nova query agregada (mesma lógica em ambos).
-- Manter `busca` (texto livre) client-side por simplicidade — quando usuário digitar texto, o card mostrará total agregado do período (sem filtro de busca) com nota "(filtros de texto não afetam o total)" — alternativa simples.
+### Update `AnaliseVendas.tsx`
+- Passar `selectedYear`, `selectedMonth`, `selectedCategory` ao `<SalesInsightsSection />`.
 
 ## Anti-bugs
+1. **Filtro user_id**: aplicar `eq('user_id', auth uid)` na query (RLS já exige, mas explícito por clareza).
+2. **Categoria vazia**: tratar `categoria=NULL` como "Outros" no agrupamento de Melhor Serviço.
+3. **Ano sem dados**: todos os 3 cards mostram "Sem dados no período" em vez de quebrar.
+4. **Variação % do Melhor Mês**: se houver apenas 1 mês com dados no ano, mostrar valor absoluto (`R$ X.Xk`) em vez de `+X%` (impossível comparar).
+5. **Cliente Fidelizado sem nome**: fallback para "Cliente sem nome" se JOIN não retornar nome.
+6. **Performance**: query única já filtrada por período, sem N+1; usa `staleTime: 2min` como o resto.
 
-1. **Sem dupla contagem:** novos totais vêm direto da view (única fonte). Cards, tabela e demonstrativo passam a usar a mesma fonte.
-2. **Performance:** query agregada retorna ~3 colunas × N linhas; reduce client-side. Sem JOINs adicionais.
-3. **Filtros server-side:** mover `tipo`/`origem`/`status` para `.eq()` no Supabase em ambas queries (paginada e agregada) para coerência total.
-4. **Realtime preservado:** invalidação atual (`extrato-unificado`) também invalida `extrato-totais-periodo` se prefixo coincidir — usar mesmo prefixo na queryKey.
-5. **Receita Prevista (competência):** continua via query separada `extrato-receita-prevista-sessoes` — sem mudança.
-
-## Resultados esperados (Abril/2026, regime Caixa)
-
-| Métrica | Antes | Depois |
-|---|---|---|
-| Entradas (pagas) card | R$ 23.780 ❌ | **R$ 39.903** ✅ |
-| Saídas (pagas) card | R$ 0,00 ❌ | **R$ 4.550,68** ✅ |
-| Demonstrativo Total Despesas | R$ 0,00 ❌ | **R$ 5.255,74** ✅ |
-| Demonstrativo Despesas Fixas | (vazio) ❌ | Aluguel, Internet, Canva… ✅ |
-| Saldo Real | R$ 23.780 ❌ | **R$ 35.352** ✅ |
-
-## Arquivos modificados
+## Arquivos modificados/criados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/hooks/useExtratoCalculationsSupabase.ts` | (1) Remover mapa `itemToGrupo`, agrupar despesas por `l.categoria` direto; usar `l.descricao` como nome do item. (2) Nova query agregada `extrato-totais-periodo` para alimentar `resumo` independente de paginação. |
-| `src/hooks/useExtratoSupabase.ts` | Aplicar filtros de `tipo`/`origem`/`status` server-side (preparação para totais consistentes). |
-| `src/hooks/useExtrato.ts` | Passar filtros completos para `useExtratoCalculationsSupabase` (não só período). |
+| `src/hooks/useSalesTopPerformances.ts` | **Novo** — calcula as 3 métricas reais |
+| `src/components/analise-vendas/SalesInsightsSection.tsx` | Aceita props de filtro, usa hook, remove bloco "Oportunidades", layout full-width, loading/empty states |
+| `src/pages/AnaliseVendas.tsx` | Passa filtros ao componente |
 
