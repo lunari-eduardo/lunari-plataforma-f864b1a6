@@ -379,7 +379,7 @@ export type Database = {
       }
       categorias: {
         Row: {
-          cor: string
+          cor: string | null
           created_at: string
           id: string
           nome: string
@@ -387,7 +387,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          cor: string
+          cor?: string | null
           created_at?: string
           id?: string
           nome: string
@@ -395,7 +395,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          cor?: string
+          cor?: string | null
           created_at?: string
           id?: string
           nome?: string
