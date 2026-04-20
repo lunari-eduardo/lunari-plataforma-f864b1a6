@@ -19,7 +19,7 @@ interface PricingPreviewProps {
   categorias: Array<{
     id: string;
     nome: string;
-    cor: string;
+    cor?: string | null;
   }>;
 }
 
