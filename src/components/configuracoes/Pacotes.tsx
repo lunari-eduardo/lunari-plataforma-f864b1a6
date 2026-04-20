@@ -116,13 +116,7 @@ export default function Pacotes({
               <SelectItem value="all" className="text-sm">Todas as categorias</SelectItem>
               {categorias.map(categoria => (
                 <SelectItem key={categoria.id} value={categoria.id} className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: categoria.cor }}
-                    />
-                    {categoria.nome}
-                  </div>
+                  {categoria.nome}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -40,15 +40,7 @@ export default function PacoteCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Barra lateral com cor da categoria */}
-      {categoria && (
-        <div 
-          className="absolute left-0 top-0 bottom-0 w-1"
-          style={{ backgroundColor: categoria.cor }}
-        />
-      )}
-      
-      <CardContent className="p-4 pl-5">
+      <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
@@ -59,15 +51,7 @@ export default function PacoteCard({
               </h3>
             </div>
             {categoria && (
-              <Badge 
-                variant="secondary" 
-                className="text-xs px-2 py-0.5"
-                style={{ 
-                  backgroundColor: `${categoria.cor}15`,
-                  color: categoria.cor,
-                  borderColor: `${categoria.cor}30`
-                }}
-              >
+              <Badge variant="outline" className="text-xs px-2 py-0.5">
                 {categoria.nome}
               </Badge>
             )}

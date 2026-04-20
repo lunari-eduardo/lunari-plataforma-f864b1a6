@@ -10,8 +10,6 @@ import { cn } from '@/lib/utils';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import type { Categoria, Pacote } from '@/types/configuration';
 
-const COLOR_PALETTE = ['#7950F2', '#228BE6', '#12B886', '#E64980', '#FD7E14', '#868E96', '#40C057', '#BE4BDB'];
-
 interface CategoriasProps {
   categorias: Categoria[];
   onAdd: (categoria: Omit<Categoria, 'id'>) => void;
@@ -61,16 +59,18 @@ function InlineEditCategoriaRow({ categoria, onUpdate, onDelete, podeRemover, al
     if (validationError) { setError(validationError); return; }
     if (trimmed === categoria.nome) { setIsEditing(false); setError(''); return; }
 
+    // Otimista: fecha imediatamente — UI já reflete via update otimista do contexto
     savingRef.current = true;
-    setIsSaving(true);
+    setIsEditing(false);
+    setError('');
     try {
       await onUpdate(categoria.id, { nome: trimmed });
-      setIsEditing(false);
-      setError('');
     } catch {
+      // Reverte: reabre input com erro
+      setIsEditing(true);
       setError('Erro ao salvar');
+      setTimeout(() => inputRef.current?.focus(), 0);
     } finally {
-      setIsSaving(false);
       savingRef.current = false;
     }
   }, [editNome, categoria, onUpdate, validate]);
@@ -94,11 +94,6 @@ function InlineEditCategoriaRow({ categoria, onUpdate, onDelete, podeRemover, al
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors group">
-      <div
-        className="w-3 h-3 rounded-full shrink-0"
-        style={{ backgroundColor: categoria.cor }}
-      />
-
       <div className="flex-1 min-w-0">
         {isEditing ? (
           <div className="space-y-0.5">
@@ -173,14 +168,13 @@ export default function Categorias({ categorias, onAdd, onUpdate, onDelete, paco
     if (err) { setAddError(err); return; }
     setIsLoading(true);
     try {
-      const cor = COLOR_PALETTE[categorias.length % COLOR_PALETTE.length];
-      onAdd({ nome: novaCategoria.trim(), cor });
+      onAdd({ nome: novaCategoria.trim() } as Omit<Categoria, 'id'>);
       setNovaCategoria('');
       setAddError('');
     } finally {
       setIsLoading(false);
     }
-  }, [novaCategoria, categorias.length, onAdd, validateNew]);
+  }, [novaCategoria, onAdd, validateNew]);
 
   const podeRemover = useCallback((id: string) => !pacotes.some(p => p.categoria_id === id), [pacotes]);
 

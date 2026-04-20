@@ -9,7 +9,7 @@ export interface Categoria {
   id: string;
   user_id?: string; // Para compatibilidade Supabase multi-usuário
   nome: string;
-  cor: string;
+  cor?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -143,11 +143,11 @@ export const CONFIGURATION_STORAGE_KEYS = {
 // ============= DADOS PADRÃO =============
 
 export const DEFAULT_CATEGORIAS: Categoria[] = [
-  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8d", nome: "Gestante", cor: "#FF9500" },
-  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8e", nome: "Newborn", cor: "#34C759" },
-  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8f", nome: "Família", cor: "#5856D6" },
-  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c90", nome: "Casamento", cor: "#FF2D55" },
-  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c91", nome: "Aniversário", cor: "#007AFF" }
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8d", nome: "Gestante" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8e", nome: "Newborn" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c8f", nome: "Família" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c90", nome: "Casamento" },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c91", nome: "Aniversário" }
 ];
 
 export const DEFAULT_PACOTES: Pacote[] = [

@@ -35,13 +35,7 @@ export function CategoriaSelect({
       <SelectContent>
         {categorias.map((categoria) => (
           <SelectItem key={categoria.id} value={categoria.id}>
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: categoria.cor }}
-              />
-              {categoria.nome}
-            </div>
+            {categoria.nome}
           </SelectItem>
         ))}
       </SelectContent>
