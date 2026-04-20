@@ -3,7 +3,7 @@ interface PrecificacaoFotosProps {
   categorias: Array<{
     id: string;
     nome: string;
-    cor: string;
+    cor?: string | null;
   }>;
 }
 
