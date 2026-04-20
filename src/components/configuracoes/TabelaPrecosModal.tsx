@@ -20,10 +20,9 @@ import { formatarMoeda } from '@/utils/currencyUtils';
 interface TabelaPrecosModalProps {
   categoriaId: string;
   categoriaNome: string;
-  categoriaCor: string;
 }
 
-export default function TabelaPrecosModal({ categoriaId, categoriaNome, categoriaCor }: TabelaPrecosModalProps) {
+export default function TabelaPrecosModal({ categoriaId, categoriaNome }: TabelaPrecosModalProps) {
   const [open, setOpen] = useState(false);
   const [tabela, setTabela] = useState<TabelaPrecos | null>(null);
   const [loading, setLoading] = useState(false);
@@ -190,11 +189,7 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome, categori
       
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto scrollbar-elegant">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div 
-              className="w-4 h-4 rounded-full" 
-              style={{ backgroundColor: categoriaCor }}
-            />
+          <DialogTitle>
             Configurar Preços - {categoriaNome}
           </DialogTitle>
           <DialogDescription>

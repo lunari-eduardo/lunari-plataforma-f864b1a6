@@ -19,7 +19,7 @@ interface PricingContainerProps {
   categorias: Array<{
     id: string;
     nome: string;
-    cor: string;
+    cor?: string | null;
   }>;
 }
 
