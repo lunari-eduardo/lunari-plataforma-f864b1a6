@@ -359,11 +359,22 @@ export default function Workflow() {
     'asc',
     localStorage
   );
-  const [situacaoFilter, setSituacaoFilter] = usePersistedState<'todos' | 'pago' | 'parcial' | 'pendente'>(
+  const [situacaoFilter, setSituacaoFilter] = usePersistedState<'todos' | 'pago' | 'pendente'>(
     'lunari_workflow_filter_situacao',
     'todos',
     localStorage
   );
+
+  // Sanear estado persistido legado: 'parcial' -> 'pendente'; sortField 'situacao' -> ''
+  useEffect(() => {
+    if ((situacaoFilter as string) === 'parcial') {
+      setSituacaoFilter('pendente');
+    }
+    if (sortField === 'situacao') {
+      setSortField('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     try {
