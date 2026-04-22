@@ -359,6 +359,11 @@ export default function Workflow() {
     'asc',
     localStorage
   );
+  const [situacaoFilter, setSituacaoFilter] = usePersistedState<'todos' | 'pago' | 'parcial' | 'pendente'>(
+    'lunari_workflow_filter_situacao',
+    'todos',
+    localStorage
+  );
   const [scrollLeft, setScrollLeft] = useState(0);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     try {
