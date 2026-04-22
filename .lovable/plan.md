@@ -1,74 +1,168 @@
 
+# Plano: corrigir filtro de pagamento no Workflow e simplificar a UX
 
-# Plano: Filtro "Situação" funcional (filtro + ordenação)
+## Diagnóstico confirmado
 
-## Diagnóstico
+Hoje o filtro falha por 3 motivos combinados:
 
-### O que existe hoje
-O dropdown **Situação** no Workflow só tem **2 opções de ordenação**: "Pago primeiro" e "Pendente primeiro". Não há **filtro** real — todas as sessões continuam aparecendo, apenas a ordem muda. Como em vários meses todas as sessões já estão "Pagas" (R$ 0,00 pendente), o usuário não vê diferença visual ao trocar entre as opções e percebe como "filtro que não funciona".
+1. **Cálculo de status financeiro está incorreto no frontend**
+   - Em `src/pages/Workflow.tsx`, `getFinancialStatus()` usa `Number(session.valorPacote)`, `Number(session.valorTotalFotoExtra)`, `Number(session.valorTotalProduto)`, `Number(session.valorAdicional)` e `Number(session.desconto)`.
+   - Esses campos em `SessionData` chegam formatados como string (`"R$ 230,00"`), então `Number("R$ 230,00")` vira `NaN`, e o total acaba sendo tratado como `0`.
 
-### Comportamento ideal (e padrão em apps modernos)
-"Situação" deveria ser **filtro** (tipo "Categoria") com opção opcional de ordenação. O usuário quer rapidamente:
-- Ver **só sessões pendentes** ou **só pagas** ou **só parciais**.
-- Eventualmente ordenar por situação.
+2. **Com isso, sessões pagas viram “parciais” ou “pendentes”**
+   - Regra atual:
+     - `pago` só quando `total > 0 && pago >= total`
+     - `parcial` quando `pago > 0`
+     - `pendente` caso contrário
+   - Como o `total` frequentemente vira `0` por erro de parse:
+     - sessões totalmente pagas deixam de cair em `pago`
+     - várias acabam indo para `parcial`
+     - sessões com saldo real em aberto ficam mal classificadas
 
-### Bugs colaterais identificados
-1. **Ordenação parcial confusa**: hoje a classificação interna é `pago=1, parcial=2, pendente=3`. "Pago primeiro" mostra: pagos → parciais → pendentes (OK). "Pendente primeiro" mostra: pendentes → parciais → pagos (OK). Não há bug aqui após releitura.
-2. **Indicador visual ausente**: o botão "Situação" não mostra qual filtro está ativo (ex: "Situação: Pendentes" como faz "Categoria: Família").
+3. **O filtro “parcial” fragmenta desnecessariamente o que o usuário entende como “pendente”**
+   - Pelo seu fluxo, o comportamento ideal é binário:
+     - **Pagas** = saldo pendente `<= 0`
+     - **Pendentes** = qualquer sessão com saldo pendente `> 0`
+   - Ou seja, “parcial” não agrega valor operacional e hoje ainda esconde sessões que deveriam aparecer em “pendentes”.
 
-## Mudanças
+Isso explica exatamente os prints:
+- **Pagas** não encontra sessões que visualmente estão com pendente `R$ 0,00`
+- **Parciais** mostra sessões que não deveriam existir nessa categoria
+- **Pendentes** traz menos itens do que o esperado, porque parte deles foi desviada para “parcial”
 
-### 1. Transformar "Situação" em filtro + ordenação combinados
+---
 
-`WorkflowFilters.tsx`:
-- Adicionar props: `situacaoFilter: 'todos' | 'pago' | 'parcial' | 'pendente'` e `onSituacaoFilterChange`.
-- Reestruturar dropdown "Situação" em 2 grupos:
-  - **Filtrar** (separador "Mostrar"):
-    - Todas (default)
-    - Pagas
-    - Parciais
-    - Pendentes
-  - **Ordenar por situação** (separador "Ordenar"):
-    - Pago primeiro
-    - Pendente primeiro
-- Botão exibe `Situação: Pendentes` quando filtro ativo (visual claro). Cor/destaque ativa quando há filtro **ou** ordenação por situação ativa.
+## Comportamento ideal
 
-### 2. Aplicar o filtro real
+### Regra funcional
+O filtro deve usar a **fonte de verdade do banco**, não strings formatadas da UI:
 
-`Workflow.tsx`:
-- Adicionar state `situacaoFilter` (default `'todos'`).
-- Calcular helper `getFinancialStatus(session)` reutilizando a lógica já existente no `getSortValue` (extrai para função pura para reuso).
-- Adicionar etapa de filtro em `filteredSessions` (ou criar `filteredSessionsBySituacao`):
-  ```ts
-  const filteredBySituacao = situacaoFilter === 'todos'
-    ? filteredSessions
-    : filteredSessions.filter(s => getFinancialStatus(s) === situacaoFilter);
-  ```
-- Sort continua igual sobre o resultado.
-- Passar `situacaoFilter` ao `<WorkflowFilters />` e expor no botão "Limpar".
+- **Pago**: sessão com `status_financeiro = 'pago'` ou `valor_total - valor_pago <= 0`
+- **Pendente**: qualquer outro caso com saldo em aberto (`status_financeiro != 'pago'`)
 
-### 3. Persistência (opcional, segue padrão de outros filtros)
-Não persistir entre páginas/sessions (filtros do mês são voláteis no Workflow atual). Reset ao trocar de mês: **manter estável** (consistente com como `categoryFilter` se comporta hoje).
+### Regra de produto/UX
+O dropdown deve ficar simples:
 
-## Anti-bugs
+- **Todas**
+- **Pagas**
+- **Pendentes**
 
-1. **Função única `getFinancialStatus`**: extrair a regra `pago / parcial / pendente` em um helper compartilhado entre filtro e ordenação para evitar divergência (mesma regra do `getSortValue` linha 580-588).
-2. **Empty state coerente**: se filtro de situação resultar em 0 sessões mostrar mensagem específica ("Nenhuma sessão {pendente/paga/parcial} em {mês}") ao invés do genérico atual.
-3. **"Limpar"**: o botão de limpar já existe mas precisa também resetar `situacaoFilter` para `'todos'`. Atualizar `(sortField || categoryFilter || situacaoFilter !== 'todos')` na condicional.
-4. **Chip ativo no botão**: usar mesma lógica visual do `categoryFilter` (cor primary quando ativo + label dinâmico).
-5. **Compatibilidade com hidratação**: o helper sempre faz `parseFloat` no formato `"R$ X,YZ"` (formato vindo de `useWorkflowRealtime`). Já testado: regex `[^\d,]` + `,→.` produz número correto.
+Remover completamente:
+- **Parciais**
+- **Ordenar: Pago primeiro / Pendente primeiro**
+- toda lógica de `sortField = 'situacao'`
 
-## Resultado esperado
+---
 
-- Botão "Situação" abre dropdown com 4 filtros (Todas/Pagas/Parciais/Pendentes) **e** 2 ordenações.
-- Selecionar "Pendentes" filtra a tabela para mostrar **apenas** sessões com saldo > 0 e nenhum pagamento total.
-- Botão mostra `Situação: Pendentes` em destaque primary.
-- Limpar redefine tudo (situação + categoria + ordem).
+## Correção técnica proposta
 
-## Arquivos modificados
+### 1. Parar de calcular o filtro a partir de `SessionData` formatado
+Em vez de usar `session.valorPacote`, `session.valorPago` etc. em formato `"R$..."`, o filtro deve se basear nos dados crus de `workflowSessions`:
+
+- `valor_total`
+- `valor_pago`
+- `status_financeiro`
+
+A solução mais robusta é:
+
+- criar um helper único em `Workflow.tsx`, algo como:
+  - `getPaymentFilterStatus(sessionRaw: WorkflowSession): 'pago' | 'pendente'`
+- regra:
+  - se `session.status_financeiro === 'pago'` → `pago`
+  - senão → `pendente`
+
+Fallback seguro:
+- se `status_financeiro` vier ausente, usar `Number(session.valor_total) - Number(session.valor_pago)`.
+
+### 2. Filtrar a lista usando os dados brutos, e só depois converter para UI
+Fluxo ideal no `Workflow.tsx`:
+
+1. começa com `workflowSessions` do mês atual
+2. aplica filtro de categoria / busca / pagamento nos dados crus
+3. depois converte o resultado com `convertSessionToData()`
+4. só então renderiza a tabela/cards
+
+Isso elimina divergência entre:
+- o que o filtro decide
+- o que a UI mostra no campo “Pendente”
+
+### 3. Remover “parcial” do tipo e da interface
+Atualizar:
+- `src/components/workflow/WorkflowFilters.tsx`
+- `src/pages/Workflow.tsx`
+
+De:
+- `'todos' | 'pago' | 'parcial' | 'pendente'`
+
+Para:
+- `'todos' | 'pago' | 'pendente'`
+
+### 4. Remover ordenação por situação
+Apagar:
+- seção “Ordenar” do dropdown
+- `onSortChange('situacao', ...)`
+- branch `headerKey === 'situacao'` em `getSortValue()`
+- qualquer destaque visual dependente de `sortField === 'situacao'`
+
+### 5. Sanear estado persistido antigo
+Como o filtro e a ordenação ficam persistidos em `localStorage`, precisa haver normalização ao carregar:
+
+- se `situacaoFilter === 'parcial'`, converter para `'pendente'`
+- se `sortField === 'situacao'`, limpar para `''`
+
+Sem isso, o usuário pode continuar preso em um estado invisível herdado da versão antiga.
+
+---
+
+## Melhoria de usabilidade
+
+### Dropdown simplificado
+Em `WorkflowFilters.tsx`:
+
+- manter botão `Situação`
+- ao abrir, mostrar só:
+  - Todas
+  - Pagas
+  - Pendentes
+
+### Rótulo ativo claro
+Exemplos:
+- `Situação: Pagas`
+- `Situação: Pendentes`
+
+### Empty state coerente
+Em `Workflow.tsx`, ajustar mensagem para a nova semântica:
+- `Nenhuma sessão paga em Abril 2026`
+- `Nenhuma sessão pendente em Abril 2026`
+
+Sem mencionar “parcial”.
+
+### Opcional de UX forte
+Se couber sem poluir:
+- mostrar contagem no menu:
+  - `Pagas (18)`
+  - `Pendentes (24)`
+Isso aumenta confiança no filtro e facilita conferência visual.
+
+---
+
+## Arquivos a alterar
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/workflow/WorkflowFilters.tsx` | Adicionar props de filtro situação; reestruturar dropdown com grupos "Mostrar" e "Ordenar"; label dinâmico no botão; incluir reset no "Limpar" |
-| `src/pages/Workflow.tsx` | Novo state `situacaoFilter`; helper puro `getFinancialStatus`; aplicar filtro antes do sort; passar props ao `WorkflowFilters`; ajustar empty state |
+| `src/pages/Workflow.tsx` | Refatorar filtro para usar `workflowSessions`/`status_financeiro`; remover suporte a `parcial`; remover ordenação por situação; sanear estado persistido antigo; ajustar empty state |
+| `src/components/workflow/WorkflowFilters.tsx` | Simplificar dropdown para `Todas / Pagas / Pendentes`; remover seção de ordenação; remover `parcial` do tipo e labels |
+| `src/types/workflow.ts` | Só se necessário para alinhar tipos auxiliares de filtro; `SessionData` não precisa carregar regra financeira para o filtro se ele passar a usar o dado cru |
 
+---
+
+## Resultado esperado
+
+Depois da correção:
+
+- sessões com **pendente `R$ 0,00`** aparecem corretamente em **Pagas**
+- sessões com **qualquer saldo em aberto** aparecem em **Pendentes**
+- não existe mais categoria confusa de **Parciais**
+- o dropdown fica mais simples e previsível
+- não existe mais ordenação “Pago primeiro / Pendente primeiro”
+- abril/2026 deve bater visualmente com a coluna “Pendente” da própria lista
