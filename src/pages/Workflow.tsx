@@ -1110,7 +1110,7 @@ export default function Workflow() {
                 {searchTerm
                   ? 'Tente ajustar o termo de busca'
                   : situacaoFilter !== 'todos'
-                    ? `Nenhuma sessão ${situacaoFilter === 'pago' ? 'paga' : situacaoFilter === 'parcial' ? 'parcial' : 'pendente'} em ${getMonthName(currentMonth.month)} ${currentMonth.year}`
+                    ? `Nenhuma sessão ${situacaoFilter === 'pago' ? 'paga' : 'pendente'} em ${getMonthName(currentMonth.month)} ${currentMonth.year}`
                     : `Não há sessões para ${getMonthName(currentMonth.month)} ${currentMonth.year}`}
               </div>
             </div>
