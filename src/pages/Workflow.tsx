@@ -1083,7 +1083,11 @@ export default function Workflow() {
             <div className="text-muted-foreground text-center">
               <div className="text-lg font-medium">Nenhuma sessão encontrada</div>
               <div className="text-sm">
-                {searchTerm ? 'Tente ajustar o termo de busca' : `Não há sessões para ${getMonthName(currentMonth.month)} ${currentMonth.year}`}
+                {searchTerm
+                  ? 'Tente ajustar o termo de busca'
+                  : situacaoFilter !== 'todos'
+                    ? `Nenhuma sessão ${situacaoFilter === 'pago' ? 'paga' : situacaoFilter === 'parcial' ? 'parcial' : 'pendente'} em ${getMonthName(currentMonth.month)} ${currentMonth.year}`
+                    : `Não há sessões para ${getMonthName(currentMonth.month)} ${currentMonth.year}`}
               </div>
             </div>
             <div className="flex gap-2">
