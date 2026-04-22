@@ -4,14 +4,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, ArrowUp, ArrowDown, Filter, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type SituacaoFilter = 'todos' | 'pago' | 'parcial' | 'pendente';
+export type SituacaoFilter = 'todos' | 'pago' | 'pendente';
 
 interface WorkflowFiltersProps {
   // Ordenação
@@ -27,12 +25,14 @@ interface WorkflowFiltersProps {
   // Filtro situação financeira
   situacaoFilter: SituacaoFilter;
   onSituacaoFilterChange: (situacao: SituacaoFilter) => void;
+
+  // Contagens opcionais (UX: mostrar quantos itens há em cada bucket)
+  situacaoCounts?: { pago: number; pendente: number; total: number };
 }
 
 const SITUACAO_LABELS: Record<SituacaoFilter, string> = {
   todos: 'Situação',
   pago: 'Pagas',
-  parcial: 'Parciais',
   pendente: 'Pendentes',
 };
 
@@ -45,9 +45,10 @@ export function WorkflowFilters({
   categoryOptions,
   situacaoFilter,
   onSituacaoFilterChange,
+  situacaoCounts,
 }: WorkflowFiltersProps) {
   const isActive = (field: string) => sortField === field;
-  const situacaoActive = situacaoFilter !== 'todos' || isActive('situacao');
+  const situacaoActive = situacaoFilter !== 'todos';
 
   return (
     <div className="flex items-center gap-1 flex-wrap">
@@ -132,7 +133,7 @@ export function WorkflowFilters({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Situação Financeira (Filtro + Ordenação) */}
+      {/* Situação Financeira (apenas filtro: Todas / Pagas / Pendentes) */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -143,7 +144,7 @@ export function WorkflowFilters({
               situacaoActive && "bg-primary/10 text-primary"
             )}
           >
-            {situacaoFilter !== 'todos' ? (
+            {situacaoActive ? (
               <>
                 <Filter className="h-3 w-3" />
                 Situação: {SITUACAO_LABELS[situacaoFilter]}
@@ -155,35 +156,30 @@ export function WorkflowFilters({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[180px]">
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Mostrar
-          </DropdownMenuLabel>
-          {(['todos', 'pago', 'parcial', 'pendente'] as SituacaoFilter[]).map(opt => (
-            <DropdownMenuItem
-              key={opt}
-              onClick={() => onSituacaoFilterChange(opt)}
-              className="flex items-center justify-between"
-            >
-              <span>
-                {opt === 'todos' ? 'Todas' : SITUACAO_LABELS[opt]}
-              </span>
-              {situacaoFilter === opt && <Check className="h-3 w-3 text-primary" />}
-            </DropdownMenuItem>
-          ))}
-
-          <DropdownMenuSeparator />
-
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Ordenar
-          </DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => onSortChange('situacao', 'asc')}>
-            <ArrowUp className="h-3 w-3 mr-2" />
-            Pago primeiro
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onSortChange('situacao', 'desc')}>
-            <ArrowDown className="h-3 w-3 mr-2" />
-            Pendente primeiro
-          </DropdownMenuItem>
+          {(['todos', 'pago', 'pendente'] as SituacaoFilter[]).map(opt => {
+            const label = opt === 'todos' ? 'Todas' : SITUACAO_LABELS[opt];
+            const count =
+              opt === 'todos'
+                ? situacaoCounts?.total
+                : opt === 'pago'
+                  ? situacaoCounts?.pago
+                  : situacaoCounts?.pendente;
+            return (
+              <DropdownMenuItem
+                key={opt}
+                onClick={() => onSituacaoFilterChange(opt)}
+                className="flex items-center justify-between gap-4"
+              >
+                <span>
+                  {label}
+                  {typeof count === 'number' && (
+                    <span className="ml-1 text-muted-foreground">({count})</span>
+                  )}
+                </span>
+                {situacaoFilter === opt && <Check className="h-3 w-3 text-primary" />}
+              </DropdownMenuItem>
+            );
+          })}
         </DropdownMenuContent>
       </DropdownMenu>
 
