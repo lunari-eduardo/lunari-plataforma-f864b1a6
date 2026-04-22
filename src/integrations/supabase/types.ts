@@ -822,6 +822,7 @@ export type Database = {
           dados_extras: Json | null
           data_pagamento: string | null
           descricao: string | null
+          extras_contabilizados: boolean
           galeria_id: string | null
           id: string
           ip_checkout_url: string | null
@@ -857,6 +858,7 @@ export type Database = {
           dados_extras?: Json | null
           data_pagamento?: string | null
           descricao?: string | null
+          extras_contabilizados?: boolean
           galeria_id?: string | null
           id?: string
           ip_checkout_url?: string | null
@@ -892,6 +894,7 @@ export type Database = {
           dados_extras?: Json | null
           data_pagamento?: string | null
           descricao?: string | null
+          extras_contabilizados?: boolean
           galeria_id?: string | null
           id?: string
           ip_checkout_url?: string | null
@@ -1150,6 +1153,81 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      email_delivery_logs: {
+        Row: {
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string
+          error_message: string | null
+          event_type: Database["public"]["Enums"]["email_delivery_event_type"]
+          friendly_message: string | null
+          gallery_id: string | null
+          id: string
+          idempotency_key: string
+          metadata: Json
+          payment_id: string | null
+          resend_message_id: string | null
+          status: Database["public"]["Enums"]["email_delivery_status"]
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cliente_email?: string | null
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: Database["public"]["Enums"]["email_delivery_event_type"]
+          friendly_message?: string | null
+          gallery_id?: string | null
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          payment_id?: string | null
+          resend_message_id?: string | null
+          status: Database["public"]["Enums"]["email_delivery_status"]
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cliente_email?: string | null
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: Database["public"]["Enums"]["email_delivery_event_type"]
+          friendly_message?: string | null
+          gallery_id?: string | null
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          payment_id?: string | null
+          resend_message_id?: string | null
+          status?: Database["public"]["Enums"]["email_delivery_status"]
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_logs_gallery_id_fkey"
+            columns: ["gallery_id"]
+            isOneToOne: false
+            referencedRelation: "galerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_delivery_logs_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       etapas_trabalho: {
         Row: {
@@ -2094,12 +2172,23 @@ export type Database = {
           active_theme_id: string | null
           client_theme: string | null
           created_at: string | null
+          default_allow_comments: boolean | null
+          default_allow_download: boolean | null
+          default_allow_extra_photos: boolean | null
+          default_charge_type: string | null
           default_expiration_days: number | null
           default_gallery_permission: string | null
           default_image_resize: number
+          default_payment_method: string | null
+          default_pricing_model: string | null
           default_sale_mode: string
           default_watermark: Json | null
+          default_watermark_display: string | null
           default_welcome_message: string | null
+          email_on_gallery_reactivated: boolean | null
+          email_on_gallery_sent: boolean
+          email_on_payment_confirmed: boolean
+          email_sending_enabled: boolean
           favicon_url: string | null
           last_session_font: string | null
           studio_logo_url: string | null
@@ -2113,12 +2202,23 @@ export type Database = {
           active_theme_id?: string | null
           client_theme?: string | null
           created_at?: string | null
+          default_allow_comments?: boolean | null
+          default_allow_download?: boolean | null
+          default_allow_extra_photos?: boolean | null
+          default_charge_type?: string | null
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
           default_image_resize?: number
+          default_payment_method?: string | null
+          default_pricing_model?: string | null
           default_sale_mode?: string
           default_watermark?: Json | null
+          default_watermark_display?: string | null
           default_welcome_message?: string | null
+          email_on_gallery_reactivated?: boolean | null
+          email_on_gallery_sent?: boolean
+          email_on_payment_confirmed?: boolean
+          email_sending_enabled?: boolean
           favicon_url?: string | null
           last_session_font?: string | null
           studio_logo_url?: string | null
@@ -2132,12 +2232,23 @@ export type Database = {
           active_theme_id?: string | null
           client_theme?: string | null
           created_at?: string | null
+          default_allow_comments?: boolean | null
+          default_allow_download?: boolean | null
+          default_allow_extra_photos?: boolean | null
+          default_charge_type?: string | null
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
           default_image_resize?: number
+          default_payment_method?: string | null
+          default_pricing_model?: string | null
           default_sale_mode?: string
           default_watermark?: Json | null
+          default_watermark_display?: string | null
           default_welcome_message?: string | null
+          email_on_gallery_reactivated?: boolean | null
+          email_on_gallery_sent?: boolean
+          email_on_payment_confirmed?: boolean
+          email_sending_enabled?: boolean
           favicon_url?: string | null
           last_session_font?: string | null
           studio_logo_url?: string | null
@@ -3831,18 +3942,16 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
-      finalize_gallery_payment:
-        | { Args: { p_cobranca_id: string }; Returns: undefined }
-        | {
-            Args: {
-              p_cobranca_id: string
-              p_manual_method?: string
-              p_manual_obs?: string
-              p_paid_at?: string
-              p_receipt_url?: string
-            }
-            Returns: Json
-          }
+      finalize_gallery_payment: {
+        Args: {
+          p_cobranca_id: string
+          p_manual_method?: string
+          p_manual_obs?: string
+          p_paid_at?: string
+          p_receipt_url?: string
+        }
+        Returns: Json
+      }
       fix_all_valor_pago: { Args: never; Returns: number }
       generate_public_token: { Args: never; Returns: string }
       get_access_state: { Args: never; Returns: Json }
@@ -3884,7 +3993,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
-      prepare_gallery_share: { Args: { p_gallery_id: string }; Returns: Json }
+      prepare_gallery_share: {
+        Args: { p_gallery_id: string; p_mark_as_sent?: boolean }
+        Returns: Json
+      }
       purchase_credits: {
         Args: {
           _amount: number
@@ -3942,6 +4054,11 @@ export type Database = {
       account_status: "active" | "suspended" | "canceled"
       account_type: "gallery_solo" | "starter" | "pro" | "pro_gallery"
       app_role: "admin" | "moderator" | "user"
+      email_delivery_event_type:
+        | "gallery_sent"
+        | "payment_confirmed"
+        | "gallery_reactivated"
+      email_delivery_status: "enviado" | "erro" | "ignorado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4072,6 +4189,12 @@ export const Constants = {
       account_status: ["active", "suspended", "canceled"],
       account_type: ["gallery_solo", "starter", "pro", "pro_gallery"],
       app_role: ["admin", "moderator", "user"],
+      email_delivery_event_type: [
+        "gallery_sent",
+        "payment_confirmed",
+        "gallery_reactivated",
+      ],
+      email_delivery_status: ["enviado", "erro", "ignorado"],
     },
   },
 } as const
