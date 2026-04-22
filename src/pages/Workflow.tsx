@@ -1065,6 +1065,8 @@ export default function Workflow() {
             categoryFilter={categoryFilter}
             onCategoryFilterChange={setCategoryFilter}
             categoryOptions={categoryOptions}
+            situacaoFilter={situacaoFilter}
+            onSituacaoFilterChange={setSituacaoFilter}
           />
           
           <ColumnSettings
