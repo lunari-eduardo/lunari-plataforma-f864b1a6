@@ -637,19 +637,7 @@ export default function Workflow() {
       return calculateRestante(session);
     }
     
-    // Handle financial status (situacao) - custom numeric ordering based on valorPago vs total
-    if (headerKey === 'situacao') {
-      const statusOrder: Record<string, number> = { 'pago': 1, 'parcial': 2, 'pendente': 3 };
-      const total = calculateTotal(session);
-      const pago = parseFloat((session.valorPago || '0').toString().replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      let financialStatus = 'pendente';
-      if (total > 0 && pago >= total) {
-        financialStatus = 'pago';
-      } else if (pago > 0) {
-        financialStatus = 'parcial';
-      }
-      return statusOrder[financialStatus] || 3;
-    }
+    // Ordenação por situação financeira foi removida (UX simplificada para apenas filtro)
     
     // Handle name field
     if (headerKey === 'nome' || field === 'nome') {
