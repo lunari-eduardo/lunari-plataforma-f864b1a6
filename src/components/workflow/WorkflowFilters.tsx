@@ -4,10 +4,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, ArrowUp, ArrowDown, Filter } from 'lucide-react';
+import { ChevronDown, ArrowUp, ArrowDown, Filter, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+export type SituacaoFilter = 'todos' | 'pago' | 'parcial' | 'pendente';
 
 interface WorkflowFiltersProps {
   // Ordenação
@@ -19,7 +23,18 @@ interface WorkflowFiltersProps {
   categoryFilter: string;
   onCategoryFilterChange: (categoria: string) => void;
   categoryOptions: { id: string; nome: string }[];
+
+  // Filtro situação financeira
+  situacaoFilter: SituacaoFilter;
+  onSituacaoFilterChange: (situacao: SituacaoFilter) => void;
 }
+
+const SITUACAO_LABELS: Record<SituacaoFilter, string> = {
+  todos: 'Situação',
+  pago: 'Pagas',
+  parcial: 'Parciais',
+  pendente: 'Pendentes',
+};
 
 export function WorkflowFilters({
   sortField,
@@ -27,9 +42,12 @@ export function WorkflowFilters({
   onSortChange,
   categoryFilter,
   onCategoryFilterChange,
-  categoryOptions
+  categoryOptions,
+  situacaoFilter,
+  onSituacaoFilterChange,
 }: WorkflowFiltersProps) {
   const isActive = (field: string) => sortField === field;
+  const situacaoActive = situacaoFilter !== 'todos' || isActive('situacao');
 
   return (
     <div className="flex items-center gap-1 flex-wrap">
@@ -114,7 +132,7 @@ export function WorkflowFilters({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Situação Financeira */}
+      {/* Situação Financeira (Filtro + Ordenação) */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -122,14 +140,42 @@ export function WorkflowFilters({
             size="sm"
             className={cn(
               "h-8 text-xs gap-1 px-2",
-              isActive('situacao') && "bg-primary/10 text-primary"
+              situacaoActive && "bg-primary/10 text-primary"
             )}
           >
-            Situação
+            {situacaoFilter !== 'todos' ? (
+              <>
+                <Filter className="h-3 w-3" />
+                Situação: {SITUACAO_LABELS[situacaoFilter]}
+              </>
+            ) : (
+              'Situação'
+            )}
             <ChevronDown className="h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[160px]">
+        <DropdownMenuContent align="start" className="min-w-[180px]">
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Mostrar
+          </DropdownMenuLabel>
+          {(['todos', 'pago', 'parcial', 'pendente'] as SituacaoFilter[]).map(opt => (
+            <DropdownMenuItem
+              key={opt}
+              onClick={() => onSituacaoFilterChange(opt)}
+              className="flex items-center justify-between"
+            >
+              <span>
+                {opt === 'todos' ? 'Todas' : SITUACAO_LABELS[opt]}
+              </span>
+              {situacaoFilter === opt && <Check className="h-3 w-3 text-primary" />}
+            </DropdownMenuItem>
+          ))}
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Ordenar
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => onSortChange('situacao', 'asc')}>
             <ArrowUp className="h-3 w-3 mr-2" />
             Pago primeiro
@@ -173,7 +219,7 @@ export function WorkflowFilters({
       </DropdownMenu>
 
       {/* Limpar filtros - só aparece quando há filtro ativo */}
-      {(sortField || categoryFilter) && (
+      {(sortField || categoryFilter || situacaoFilter !== 'todos') && (
         <Button
           variant="ghost"
           size="sm"
@@ -181,6 +227,7 @@ export function WorkflowFilters({
           onClick={() => {
             onSortChange('', 'asc');
             onCategoryFilterChange('');
+            onSituacaoFilterChange('todos');
           }}
         >
           Limpar
