@@ -455,28 +455,51 @@ export default function Workflow() {
     valor: `R$ ${(produto.preco_venda || 0).toFixed(2).replace('.', ',')}`
   }));
 
-  // Filter sessions by category and search term
+  // Helper: Calcula o status financeiro de uma sessão (puro, reutilizado em filtro e ordenação)
+  const getFinancialStatus = useCallback((session: SessionData): 'pago' | 'parcial' | 'pendente' => {
+    const valorPacote = Number(session.valorPacote) || 0;
+    const valorFotoExtra = Number(session.valorTotalFotoExtra) || 0;
+    const valorProduto = Number(session.valorTotalProduto) || 0;
+    const valorAdicional = Number(session.valorAdicional) || 0;
+    const desconto = Number(session.desconto) || 0;
+    const total = valorPacote + valorFotoExtra + valorProduto + valorAdicional - desconto;
+
+    const pago = parseFloat(
+      (session.valorPago || '0').toString().replace(/[^\d,]/g, '').replace(',', '.')
+    ) || 0;
+
+    if (total > 0 && pago >= total) return 'pago';
+    if (pago > 0) return 'parcial';
+    return 'pendente';
+  }, []);
+
+  // Filter sessions by category, situacao and search term
   useEffect(() => {
     let result = sessionDataList;
-    
+
     // 1. Filtro por categoria
     if (categoryFilter) {
       result = result.filter(session => session.categoria === categoryFilter);
     }
-    
-    // 2. Filtro por busca textual
+
+    // 2. Filtro por situação financeira
+    if (situacaoFilter !== 'todos') {
+      result = result.filter(session => getFinancialStatus(session) === situacaoFilter);
+    }
+
+    // 3. Filtro por busca textual
     if (searchTerm.trim()) {
       const searchTermNormalized = removeAccents(searchTerm.toLowerCase());
       result = result.filter(session => {
         const nomeNormalized = removeAccents((session.nome || '').toLowerCase());
         const emailNormalized = removeAccents((session.email || '').toLowerCase());
-        return nomeNormalized.includes(searchTermNormalized) || 
+        return nomeNormalized.includes(searchTermNormalized) ||
                emailNormalized.includes(searchTermNormalized);
       });
     }
-    
+
     setFilteredSessions(result);
-  }, [searchTerm, categoryFilter, sessionDataList]);
+  }, [searchTerm, categoryFilter, situacaoFilter, sessionDataList, getFinancialStatus]);
 
   // FASE 3: Removido filtro duplicado - filteredSessions já está filtrado pelo mês correto
   // O useEffect acima já filtra pelo mês ao buscar do cache
