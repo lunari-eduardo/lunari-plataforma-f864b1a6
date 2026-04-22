@@ -466,23 +466,45 @@ export default function Workflow() {
     valor: `R$ ${(produto.preco_venda || 0).toFixed(2).replace('.', ',')}`
   }));
 
-  // Helper: Calcula o status financeiro de uma sessão (puro, reutilizado em filtro e ordenação)
-  const getFinancialStatus = useCallback((session: SessionData): 'pago' | 'parcial' | 'pendente' => {
-    const valorPacote = Number(session.valorPacote) || 0;
-    const valorFotoExtra = Number(session.valorTotalFotoExtra) || 0;
-    const valorProduto = Number(session.valorTotalProduto) || 0;
-    const valorAdicional = Number(session.valorAdicional) || 0;
-    const desconto = Number(session.desconto) || 0;
-    const total = valorPacote + valorFotoExtra + valorProduto + valorAdicional - desconto;
+  // Mapa para lookup rápido dos dados crus do banco (fonte de verdade do status financeiro)
+  const rawSessionMap = useMemo(() => {
+    const map = new Map<string, WorkflowSession>();
+    for (const s of workflowSessions) map.set(s.id, s);
+    return map;
+  }, [workflowSessions]);
 
-    const pago = parseFloat(
-      (session.valorPago || '0').toString().replace(/[^\d,]/g, '').replace(',', '.')
-    ) || 0;
+  // Helper: status financeiro a partir do dado cru do banco (status_financeiro é GENERATED)
+  // Regra binária: pago (saldo <= 0 ou status_financeiro='pago') vs pendente (qualquer saldo > 0)
+  const getPaymentFilterStatus = useCallback(
+    (raw: WorkflowSession | undefined): 'pago' | 'pendente' => {
+      if (!raw) return 'pendente';
+      if (raw.status_financeiro === 'pago') return 'pago';
+      const total = Number(raw.valor_total) || 0;
+      const pago = Number(raw.valor_pago) || 0;
+      if (total > 0 && pago >= total) return 'pago';
+      return 'pendente';
+    },
+    []
+  );
 
-    if (total > 0 && pago >= total) return 'pago';
-    if (pago > 0) return 'parcial';
-    return 'pendente';
-  }, []);
+  // Contagens por situação (para mostrar no menu) — calculadas após filtros de categoria/busca
+  const situacaoCounts = useMemo(() => {
+    let pago = 0;
+    let pendente = 0;
+    for (const session of sessionDataList) {
+      if (categoryFilter && session.categoria !== categoryFilter) continue;
+      if (searchTerm.trim()) {
+        const q = removeAccents(searchTerm.toLowerCase());
+        const nome = removeAccents((session.nome || '').toLowerCase());
+        const email = removeAccents((session.email || '').toLowerCase());
+        if (!nome.includes(q) && !email.includes(q)) continue;
+      }
+      const status = getPaymentFilterStatus(rawSessionMap.get(session.id));
+      if (status === 'pago') pago++;
+      else pendente++;
+    }
+    return { pago, pendente, total: pago + pendente };
+  }, [sessionDataList, categoryFilter, searchTerm, rawSessionMap, getPaymentFilterStatus]);
 
   // Filter sessions by category, situacao and search term
   useEffect(() => {
@@ -493,9 +515,11 @@ export default function Workflow() {
       result = result.filter(session => session.categoria === categoryFilter);
     }
 
-    // 2. Filtro por situação financeira
+    // 2. Filtro por situação financeira (usando dados crus do banco)
     if (situacaoFilter !== 'todos') {
-      result = result.filter(session => getFinancialStatus(session) === situacaoFilter);
+      result = result.filter(
+        session => getPaymentFilterStatus(rawSessionMap.get(session.id)) === situacaoFilter
+      );
     }
 
     // 3. Filtro por busca textual
@@ -510,7 +534,7 @@ export default function Workflow() {
     }
 
     setFilteredSessions(result);
-  }, [searchTerm, categoryFilter, situacaoFilter, sessionDataList, getFinancialStatus]);
+  }, [searchTerm, categoryFilter, situacaoFilter, sessionDataList, rawSessionMap, getPaymentFilterStatus]);
 
   // FASE 3: Removido filtro duplicado - filteredSessions já está filtrado pelo mês correto
   // O useEffect acima já filtra pelo mês ao buscar do cache
