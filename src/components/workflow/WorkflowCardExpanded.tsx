@@ -2,6 +2,17 @@ import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
@@ -12,7 +23,7 @@ import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
 import { useSessionPayments } from "@/hooks/useSessionPayments";
-import { CreditCard, Plus, Send } from "lucide-react";
+import { CreditCard, Plus, Send, AlertTriangle, Lock } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 
