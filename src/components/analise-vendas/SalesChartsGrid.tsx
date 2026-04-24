@@ -266,18 +266,18 @@ interface ChartCardProps {
 function ChartCard({ icon: Icon, title, hasData, children }: ChartCardProps) {
   return (
     <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
-      <CardContent className="p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon className="h-3.5 w-3.5 text-lunar-textSecondary" />
-          <h3 className="text-xs font-medium text-lunar-text">{title}</h3>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2.5">
+          <Icon className="h-4 w-4 text-lunar-textSecondary" />
+          <h3 className="text-sm font-medium text-lunar-text">{title}</h3>
         </div>
         
         {hasData ? (
           children
         ) : (
           <div className="flex flex-col items-center justify-center h-[200px] lg:h-[225px]">
-            <BarChart3 className="h-6 w-6 text-lunar-textSecondary/40 mb-1" />
-            <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
+            <BarChart3 className="h-7 w-7 text-lunar-textSecondary/40 mb-1.5" />
+            <p className="text-xs text-lunar-textSecondary">Sem dados</p>
           </div>
         )}
       </CardContent>
