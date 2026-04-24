@@ -323,6 +323,123 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_sessoes_desconto_progressivo_20260424: {
+        Row: {
+          appointment_id: string | null
+          backup_at: string | null
+          categoria: string | null
+          cliente_id: string | null
+          created_at: string | null
+          data_sessao: string | null
+          desconto: number | null
+          descricao: string | null
+          detalhes: string | null
+          gal_qtd_extras: number | null
+          gal_total_vendido: number | null
+          gal_valor_foto_extra: number | null
+          galeria_id: string | null
+          hora_sessao: string | null
+          id: string | null
+          observacoes: string | null
+          orcamento_id: string | null
+          pacote: string | null
+          produtos_incluidos: Json | null
+          qtd_fotos_extra: number | null
+          regras_congeladas: Json | null
+          session_id: string | null
+          status: string | null
+          status_financeiro: string | null
+          status_galeria: string | null
+          status_pagamento_fotos_extra: string | null
+          tipo_registro: string | null
+          updated_at: string | null
+          updated_by: string | null
+          user_id: string | null
+          valor_adicional: number | null
+          valor_base_pacote: number | null
+          valor_foto_extra: number | null
+          valor_pago: number | null
+          valor_total: number | null
+          valor_total_foto_extra: number | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          backup_at?: string | null
+          categoria?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          data_sessao?: string | null
+          desconto?: number | null
+          descricao?: string | null
+          detalhes?: string | null
+          gal_qtd_extras?: number | null
+          gal_total_vendido?: number | null
+          gal_valor_foto_extra?: number | null
+          galeria_id?: string | null
+          hora_sessao?: string | null
+          id?: string | null
+          observacoes?: string | null
+          orcamento_id?: string | null
+          pacote?: string | null
+          produtos_incluidos?: Json | null
+          qtd_fotos_extra?: number | null
+          regras_congeladas?: Json | null
+          session_id?: string | null
+          status?: string | null
+          status_financeiro?: string | null
+          status_galeria?: string | null
+          status_pagamento_fotos_extra?: string | null
+          tipo_registro?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string | null
+          valor_adicional?: number | null
+          valor_base_pacote?: number | null
+          valor_foto_extra?: number | null
+          valor_pago?: number | null
+          valor_total?: number | null
+          valor_total_foto_extra?: number | null
+        }
+        Update: {
+          appointment_id?: string | null
+          backup_at?: string | null
+          categoria?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          data_sessao?: string | null
+          desconto?: number | null
+          descricao?: string | null
+          detalhes?: string | null
+          gal_qtd_extras?: number | null
+          gal_total_vendido?: number | null
+          gal_valor_foto_extra?: number | null
+          galeria_id?: string | null
+          hora_sessao?: string | null
+          id?: string | null
+          observacoes?: string | null
+          orcamento_id?: string | null
+          pacote?: string | null
+          produtos_incluidos?: Json | null
+          qtd_fotos_extra?: number | null
+          regras_congeladas?: Json | null
+          session_id?: string | null
+          status?: string | null
+          status_financeiro?: string | null
+          status_galeria?: string | null
+          status_pagamento_fotos_extra?: string | null
+          tipo_registro?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string | null
+          valor_adicional?: number | null
+          valor_base_pacote?: number | null
+          valor_foto_extra?: number | null
+          valor_pago?: number | null
+          valor_total?: number | null
+          valor_total_foto_extra?: number | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           content: string

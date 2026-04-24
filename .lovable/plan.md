@@ -1,168 +1,200 @@
 
-# Plano: corrigir filtro de pagamento no Workflow e simplificar a UX
+# Plano: corrigir desconto progressivo das fotos extras na sessão e blindar contra regressões
 
-## Diagnóstico confirmado
+## Diagnóstico técnico (confirmado no banco)
 
-Hoje o filtro falha por 3 motivos combinados:
+### O caso Louise-Lorena (14/02/2026)
 
-1. **Cálculo de status financeiro está incorreto no frontend**
-   - Em `src/pages/Workflow.tsx`, `getFinancialStatus()` usa `Number(session.valorPacote)`, `Number(session.valorTotalFotoExtra)`, `Number(session.valorTotalProduto)`, `Number(session.valorAdicional)` e `Number(session.desconto)`.
-   - Esses campos em `SessionData` chegam formatados como string (`"R$ 230,00"`), então `Number("R$ 230,00")` vira `NaN`, e o total acaba sendo tratado como `0`.
+| Campo | Galeria (correto) | Sessão (errado) | Esperado |
+|---|---|---|---|
+| Qtd fotos extras | 6 | 6 | 6 |
+| Valor unitário base | 25 | **25** | 23 (faixa 4-7) |
+| **Total fotos extras** | **138** | **150** | **138** |
+| Valor base pacote | — | 130 | 130 |
+| **Valor total sessão** | — | **280** | **268** |
+| Valor pago | — | 268 | 268 |
+| **Pendente falso** | — | **R$ 12** | **R$ 0** |
 
-2. **Com isso, sessões pagas viram “parciais” ou “pendentes”**
-   - Regra atual:
-     - `pago` só quando `total > 0 && pago >= total`
-     - `parcial` quando `pago > 0`
-     - `pendente` caso contrário
-   - Como o `total` frequentemente vira `0` por erro de parse:
-     - sessões totalmente pagas deixam de cair em `pago`
-     - várias acabam indo para `parcial`
-     - sessões com saldo real em aberto ficam mal classificadas
+A galeria salvou corretamente `valor_total_vendido = 138` (6 × R$ 23 com desconto da faixa 4-7 da Tabela Mensal). A sessão recebeu `valor_total_foto_extra = 138` via trigger de sync, **mas foi sobrescrita** para R$ 150.
 
-3. **O filtro “parcial” fragmenta desnecessariamente o que o usuário entende como “pendente”**
-   - Pelo seu fluxo, o comportamento ideal é binário:
-     - **Pagas** = saldo pendente `<= 0`
-     - **Pendentes** = qualquer sessão com saldo pendente `> 0`
-   - Ou seja, “parcial” não agrega valor operacional e hoje ainda esconde sessões que deveriam aparecer em “pendentes”.
+### Causa raiz exata
 
-Isso explica exatamente os prints:
-- **Pagas** não encontra sessões que visualmente estão com pendente `R$ 0,00`
-- **Parciais** mostra sessões que não deveriam existir nessa categoria
-- **Pendentes** traz menos itens do que o esperado, porque parte deles foi desviada para “parcial”
+Existem **dois triggers conflitantes** rodando em sequência na tabela `clientes_sessoes`:
 
----
+**Trigger A** — `recalc_fotos_extras` (BEFORE INSERT/UPDATE):
+```sql
+NEW.valor_total_foto_extra = NEW.qtd_fotos_extra * NEW.valor_foto_extra;
+-- = 6 * 25 = 150  ← sobrepõe o 138 que veio da galeria
+```
 
-## Comportamento ideal
+**Trigger B** — `trigger_recalculate_valor_total` (BEFORE INSERT/UPDATE):
+```sql
+NEW.valor_total = valor_base_pacote + valor_total_foto_extra + ... 
+-- = 130 + 150 = 280  ← deveria ser 268
+```
 
-### Regra funcional
-O filtro deve usar a **fonte de verdade do banco**, não strings formatadas da UI:
+Quando o trigger `sync_gallery_extras_to_session` (na tabela `galerias`) faz:
+```sql
+UPDATE clientes_sessoes 
+SET valor_foto_extra = 25,        -- preço base, sem desconto
+    qtd_fotos_extra = 6,
+    valor_total_foto_extra = 138; -- valor real cobrado COM desconto
+```
 
-- **Pago**: sessão com `status_financeiro = 'pago'` ou `valor_total - valor_pago <= 0`
-- **Pendente**: qualquer outro caso com saldo em aberto (`status_financeiro != 'pago'`)
+…o trigger A intercepta o UPDATE e **descarta o valor de 138** porque recalcula "ingenuamente" `qtd × preço_base`, ignorando que o modelo de precificação progressiva (`global` ou `categoria`) tem um preço unitário **diferente por faixa**.
 
-### Regra de produto/UX
-O dropdown deve ficar simples:
+### Escopo do problema
 
-- **Todas**
-- **Pagas**
-- **Pendentes**
+Query confirmou **20 sessões afetadas** no histórico, totalizando **R$ 382,00 de pendente "fantasma"**. Padrões:
 
-Remover completamente:
-- **Parciais**
-- **Ordenar: Pago primeiro / Pendente primeiro**
-- toda lógica de `sortField = 'situacao'`
+- **Categoria Mensal** (faixas 1-3=R$25, 4-7=R$23, 8+=R$21) — maioria dos casos
+- **Categoria Newborn** com tabela progressiva semelhante
+- **Categoria Páscoa 26**, **Gestantes**, **Smash**
 
----
-
-## Correção técnica proposta
-
-### 1. Parar de calcular o filtro a partir de `SessionData` formatado
-Em vez de usar `session.valorPacote`, `session.valorPago` etc. em formato `"R$..."`, o filtro deve se basear nos dados crus de `workflowSessions`:
-
-- `valor_total`
-- `valor_pago`
-- `status_financeiro`
-
-A solução mais robusta é:
-
-- criar um helper único em `Workflow.tsx`, algo como:
-  - `getPaymentFilterStatus(sessionRaw: WorkflowSession): 'pago' | 'pendente'`
-- regra:
-  - se `session.status_financeiro === 'pago'` → `pago`
-  - senão → `pendente`
-
-Fallback seguro:
-- se `status_financeiro` vier ausente, usar `Number(session.valor_total) - Number(session.valor_pago)`.
-
-### 2. Filtrar a lista usando os dados brutos, e só depois converter para UI
-Fluxo ideal no `Workflow.tsx`:
-
-1. começa com `workflowSessions` do mês atual
-2. aplica filtro de categoria / busca / pagamento nos dados crus
-3. depois converte o resultado com `convertSessionToData()`
-4. só então renderiza a tabela/cards
-
-Isso elimina divergência entre:
-- o que o filtro decide
-- o que a UI mostra no campo “Pendente”
-
-### 3. Remover “parcial” do tipo e da interface
-Atualizar:
-- `src/components/workflow/WorkflowFilters.tsx`
-- `src/pages/Workflow.tsx`
-
-De:
-- `'todos' | 'pago' | 'parcial' | 'pendente'`
-
-Para:
-- `'todos' | 'pago' | 'pendente'`
-
-### 4. Remover ordenação por situação
-Apagar:
-- seção “Ordenar” do dropdown
-- `onSortChange('situacao', ...)`
-- branch `headerKey === 'situacao'` em `getSortValue()`
-- qualquer destaque visual dependente de `sortField === 'situacao'`
-
-### 5. Sanear estado persistido antigo
-Como o filtro e a ordenação ficam persistidos em `localStorage`, precisa haver normalização ao carregar:
-
-- se `situacaoFilter === 'parcial'`, converter para `'pendente'`
-- se `sortField === 'situacao'`, limpar para `''`
-
-Sem isso, o usuário pode continuar preso em um estado invisível herdado da versão antiga.
+Exemplos reais detectados (todos com `pago = total real esperado`, mas sistema mostra pendente):
+- Louise-Lorena 14/02 — 6 extras, pago 268, pendente fantasma R$ 12
+- Lisiane-Otávio 24/03 — 6 extras, pago 268, pendente fantasma R$ 12
+- Paola Pereira 21/02 — 10 extras, pago 340, pendente fantasma R$ 40
+- Priscila Richa 12/04 — 14 extras, pago 1.190, pendente fantasma R$ 56
 
 ---
 
-## Melhoria de usabilidade
+## Proposta de correção
 
-### Dropdown simplificado
-Em `WorkflowFilters.tsx`:
+### Princípio de design
 
-- manter botão `Situação`
-- ao abrir, mostrar só:
-  - Todas
-  - Pagas
-  - Pendentes
+A galeria continua sendo a **fonte da verdade do total cobrado** (`valor_total_vendido`), porque é ela quem aplica o desconto progressivo conforme a tabela congelada. A sessão precisa apenas **respeitar esse total** e **derivar o preço unitário efetivo** (`total ÷ qtd`) para que `qtd × valor_foto_extra = valor_total_foto_extra` continue sendo verdade — assim a UI atual (que mostra "Vlr foto extra" e "Qtd fotos extras") continua coerente sem reescrever componente nenhum.
 
-### Rótulo ativo claro
-Exemplos:
-- `Situação: Pagas`
-- `Situação: Pendentes`
+### Fase 1 — Corrigir o trigger `recalculate_fotos_extras_total` (a causa raiz)
 
-### Empty state coerente
-Em `Workflow.tsx`, ajustar mensagem para a nova semântica:
-- `Nenhuma sessão paga em Abril 2026`
-- `Nenhuma sessão pendente em Abril 2026`
+Mudar a lógica para **não sobrepor** `valor_total_foto_extra` quando ele já vem definido pela sincronização com a galeria. Regra:
 
-Sem mencionar “parcial”.
+```text
+SE a sessão está vinculada a uma galeria (galeria_id IS NOT NULL)
+   E a galeria define valor_total_vendido > 0
+   E o NEW.valor_total_foto_extra recebido bate com o da galeria:
+   
+   → manter o valor recebido (vem do desconto progressivo)
+   → derivar valor_foto_extra = valor_total_foto_extra / qtd_fotos_extra
+   
+SENÃO (sessão avulsa, sem galeria, ou edição manual):
+   → manter comportamento atual: total = qtd × unit
+```
 
-### Opcional de UX forte
-Se couber sem poluir:
-- mostrar contagem no menu:
-  - `Pagas (18)`
-  - `Pendentes (24)`
-Isso aumenta confiança no filtro e facilita conferência visual.
+Isso resolve **todas as 20 sessões** automaticamente quando o trigger de sync rodar de novo, sem depender de backfill.
+
+### Fase 2 — Corrigir o trigger `sync_gallery_extras_to_session`
+
+Em vez de copiar `valor_foto_extra = NEW.valor_foto_extra` (preço base de tabela), passar a copiar o **preço unitário efetivo**:
+
+```sql
+v_unit_efetivo := CASE 
+  WHEN NEW.total_fotos_extras_vendidas > 0 
+  THEN ROUND((NEW.valor_total_vendido / NEW.total_fotos_extras_vendidas)::numeric, 2)
+  ELSE NEW.valor_foto_extra
+END;
+
+UPDATE clientes_sessoes SET
+  valor_foto_extra = v_unit_efetivo,           -- 23 em vez de 25
+  qtd_fotos_extra = NEW.total_fotos_extras_vendidas,
+  valor_total_foto_extra = NEW.valor_total_vendido;
+```
+
+Combinado com a Fase 1, o `recalc_fotos_extras` vai validar: `6 × 23 = 138` ✅ e não sobrepor.
+
+### Fase 3 — Backfill seguro das 20 sessões já corrompidas
+
+Migration única, com `BEGIN/COMMIT` e tabela de backup:
+
+```sql
+-- Backup
+CREATE TABLE backup_sessoes_desconto_progressivo_20260424 AS
+SELECT cs.*, g.valor_total_vendido AS gal_total, g.total_fotos_extras_vendidas AS gal_qtd
+FROM clientes_sessoes cs JOIN galerias g ON g.id = cs.galeria_id
+WHERE g.total_fotos_extras_vendidas > 0 AND g.valor_total_vendido > 0
+  AND ABS(g.valor_total_vendido - (g.total_fotos_extras_vendidas * cs.valor_foto_extra)) > 0.01;
+
+-- Correção: deriva valor_foto_extra do total real da galeria
+UPDATE clientes_sessoes cs
+SET valor_foto_extra = ROUND((g.valor_total_vendido / g.total_fotos_extras_vendidas)::numeric, 2),
+    qtd_fotos_extra = g.total_fotos_extras_vendidas,
+    valor_total_foto_extra = g.valor_total_vendido,
+    updated_at = now()
+FROM galerias g
+WHERE cs.galeria_id = g.id
+  AND g.total_fotos_extras_vendidas > 0
+  AND g.valor_total_vendido > 0
+  AND ABS(g.valor_total_vendido - (g.total_fotos_extras_vendidas * cs.valor_foto_extra)) > 0.01;
+```
+
+O trigger `recalculate_session_valor_total` recalcula `valor_total` automaticamente após o UPDATE → as 20 sessões saem com `valor_total = base + total_extras_real` e `pendente = 0`.
+
+### Fase 4 — Atualizar `regras_congeladas.pacote.valorFotoExtra` da sessão
+
+Para que a UI do modal mostre o **preço unitário efetivo** em "Vlr foto extra" sem ficar piscando entre 25 (regra) e 23 (efetivo), atualizar o JSONB também:
+
+```sql
+regras_congeladas = jsonb_set(
+  regras_congeladas,
+  '{pacote, valorFotoExtraEfetivo}',     -- novo campo, NÃO sobrescreve valorFotoExtra
+  to_jsonb(v_unit_efetivo)
+)
+```
+
+**Não vamos sobrescrever** `valorFotoExtra` original (ela continua sendo o "preço de tabela base") — apenas adicionar `valorFotoExtraEfetivo` com o preço unitário **realmente cobrado** após desconto progressivo. Isso preserva auditoria.
+
+### Fase 5 — UI: badge informativo de "desconto progressivo aplicado"
+
+Em `WorkflowCardExpanded.tsx`, quando `regras_congeladas.pacote.valorFotoExtraEfetivo < regras_congeladas.pacote.valorFotoExtra`:
+
+- Mostrar pequeno tooltip ao lado de "Vlr foto extra": **🏷️ Desconto progressivo: R$ 25 → R$ 23 (faixa 4–7)**
+- Tornar o input não-editável neste caso (já é hoje quando há galeria) e exibir cadeado com tooltip explicativo
+
+Sem novos componentes pesados — apenas um `<TooltipProvider>` em volta do label.
+
+### Fase 6 — Camada de proteção contra regressão
+
+Adicionar **trigger BEFORE UPDATE** em `clientes_sessoes` que **bloqueia** divergências entre sessão e galeria:
+
+```sql
+CREATE OR REPLACE FUNCTION public.protect_session_extras_consistency() ...
+-- Se NEW.galeria_id IS NOT NULL e a galeria tem valor_total_vendido > 0,
+-- valida que NEW.valor_total_foto_extra = galeria.valor_total_vendido
+-- Caso contrário, RAISE WARNING + log no audit_log e força o valor da galeria.
+```
+
+Isso garante que **mesmo edição manual via UI** não consegue introduzir o bug de novo. Combinado com o `AlertDialog` que já existe no `WorkflowCardExpanded`, qualquer tentativa de divergir aciona aviso e auto-correção.
 
 ---
 
-## Arquivos a alterar
+## Arquivos modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/Workflow.tsx` | Refatorar filtro para usar `workflowSessions`/`status_financeiro`; remover suporte a `parcial`; remover ordenação por situação; sanear estado persistido antigo; ajustar empty state |
-| `src/components/workflow/WorkflowFilters.tsx` | Simplificar dropdown para `Todas / Pagas / Pendentes`; remover seção de ordenação; remover `parcial` do tipo e labels |
-| `src/types/workflow.ts` | Só se necessário para alinhar tipos auxiliares de filtro; `SessionData` não precisa carregar regra financeira para o filtro se ele passar a usar o dado cru |
+| `supabase/migrations/[ts]_fix_progressive_discount_extras.sql` | Backup, backfill 20 sessões, correção `recalculate_fotos_extras_total`, correção `sync_gallery_extras_to_session`, novo trigger `protect_session_extras_consistency` |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Tooltip "Desconto progressivo aplicado" no campo "Vlr foto extra" quando `valorFotoExtraEfetivo` existir e for menor que `valorFotoExtra` |
+| `src/utils/sessionCalculations.ts` | (opcional) Helper `getEffectiveExtraPrice(regras)` retornando `valorFotoExtraEfetivo ?? valorFotoExtra` para uso consistente |
 
 ---
 
-## Resultado esperado
+## Resultado esperado após aplicar
 
-Depois da correção:
+- **20 sessões** corrigidas automaticamente, **R$ 382 de pendente fantasma desaparecem**
+- Sessões com desconto progressivo (Mensal, Newborn, Páscoa, Gestantes, Smash) passam a refletir o **valor real cobrado pela galeria**
+- UI mostra `Vlr foto extra: R$ 23` em vez de R$ 25 nessas sessões — com tooltip explicando o desconto
+- **Bug não pode mais ser reintroduzido**: 3 camadas de proteção (trigger de recálculo corrigido, trigger de sync corrigido, trigger de proteção que bloqueia divergência)
+- **Sessões avulsas** (sem galeria) **continuam funcionando como hoje** (`qtd × unit = total`)
+- Backup completo em `backup_sessoes_desconto_progressivo_20260424` permite rollback se necessário
+- **Nenhum dado financeiro real** (`valor_pago`, `cobrancas`, `clientes_transacoes`) é alterado — só corrigimos `valor_total` da sessão para bater com o que a galeria já tinha cobrado corretamente
 
-- sessões com **pendente `R$ 0,00`** aparecem corretamente em **Pagas**
-- sessões com **qualquer saldo em aberto** aparecem em **Pendentes**
-- não existe mais categoria confusa de **Parciais**
-- o dropdown fica mais simples e previsível
-- não existe mais ordenação “Pago primeiro / Pendente primeiro”
-- abril/2026 deve bater visualmente com a coluna “Pendente” da própria lista
+---
+
+## Riscos e mitigações
+
+| Risco | Mitigação |
+|---|---|
+| Sessão avulsa quebrar com a nova lógica do trigger | Fase 1 só altera comportamento quando `galeria_id IS NOT NULL` |
+| Edição manual de qtd/valor em sessão com galeria | Fase 6 detecta e força consistência; Fase 5 sinaliza visualmente que o campo é derivado |
+| Galeria sem `valor_total_vendido` (rascunho) | Fase 1 cai no `ELSE` e mantém comportamento atual `qtd × unit` |
+| Divisão por zero (qtd=0 mas total>0) | Cláusulas `NULLIF` e `WHEN qtd > 0` em todos os cálculos |
+| Backfill afetar sessão errada | Filtro `ABS(...) > 0.01` garante que só toca registros divergentes; backup completo antes |
