@@ -308,6 +308,25 @@ export function WorkflowCardExpanded({
             <div className="flex justify-between items-center gap-2">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 Vlr foto extra:
+                {hasDescontoProgressivo && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center justify-center h-4 px-1 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[9px] font-semibold cursor-help border border-emerald-200 dark:border-emerald-500/30">
+                          %
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        <div className="font-semibold mb-1">Desconto progressivo aplicado</div>
+                        <div>Preço de tabela: R$ {precoBaseTabela.toFixed(2).replace('.', ',')}</div>
+                        <div>Preço cobrado: <strong>R$ {precoEfetivo.toFixed(2).replace('.', ',')}</strong></div>
+                        <div className="mt-1 text-muted-foreground">
+                          Faixa de quantidade aplicada na galeria.
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 {isLinkedToGallery && (
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
