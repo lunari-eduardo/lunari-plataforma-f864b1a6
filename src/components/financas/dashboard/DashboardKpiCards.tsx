@@ -6,7 +6,7 @@ import type { KpiCardsProps } from './types';
 export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
   return (
     <section aria-label="Métricas Financeiras" className="animate-fade-in">
-      <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+      <Card className="glass rounded-2xl shadow-card-subtle">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold">Métricas principais</CardTitle>
         </CardHeader>
