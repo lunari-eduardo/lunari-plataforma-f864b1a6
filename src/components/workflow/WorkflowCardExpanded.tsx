@@ -535,6 +535,40 @@ export function WorkflowCardExpanded({
         onSchedulePayment={schedulePayment}
       />
 
+      {/* Confirmação de edição manual de fotos extras (sobrescreve sync da galeria) */}
+      <AlertDialog open={pendingExtraEdit !== null} onOpenChange={(open) => { if (!open) cancelExtraEdit(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Sobrescrever dado da galeria?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Este campo é normalmente sincronizado automaticamente com a galeria
+                desta sessão. Editar manualmente irá <strong>sobrescrever</strong> o
+                valor recebido do Gallery e pode causar divergência financeira.
+              </span>
+              <span className="block">
+                Novo valor:{" "}
+                <strong className="text-foreground">
+                  {pendingExtraEdit?.field === 'valorFotoExtra'
+                    ? pendingExtraEdit?.nextValue
+                    : `${pendingExtraEdit?.nextValue} foto(s)`}
+                </strong>
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Recomendado: corrija primeiro no Gallery — a sessão será sincronizada automaticamente.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelExtraEdit}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmExtraEdit}>Sobrescrever mesmo assim</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
