@@ -204,6 +204,61 @@ export function WorkflowCardExpanded({
     e.target.select();
   }, []);
 
+  // === Edição de fotos extras (sensível: vinculado à galeria) ===
+  const isLinkedToGallery = Boolean(session.galeriaId);
+
+  // Detecta divergência: usuário editou manualmente um valor que veio da galeria.
+  // Como o trigger sync_gallery_extras_to_session sempre alinha sessão à galeria,
+  // qualquer divergência aqui significa edição manual posterior. Mostramos badge.
+  const hasGalleryDivergenceWarning = isLinkedToGallery && (
+    session.galeriaStatusPagamento === 'pago' || session.galeriaStatusPagamento === 'pendente'
+  );
+
+  const requestExtraEdit = useCallback((field: 'valorFotoExtra' | 'qtdFotosExtra', nextValue: string, previousValue: string) => {
+    if (nextValue === previousValue) return;
+    if (isLinkedToGallery) {
+      setPendingExtraEdit({ field, nextValue, previousValue });
+    } else {
+      onFieldUpdate(session.id, field, nextValue);
+    }
+  }, [isLinkedToGallery, session.id, onFieldUpdate]);
+
+  const handleValorFotoExtraBlur = useCallback(() => {
+    const numValue = parseCurrency(valorFotoExtraValue);
+    const formatted = formatCurrency(numValue);
+    setValorFotoExtraValue(formatted);
+    const previous = formatCurrency(parseCurrency(String(session.valorFotoExtra || '0')));
+    requestExtraEdit('valorFotoExtra', formatted, previous);
+  }, [valorFotoExtraValue, session.valorFotoExtra, requestExtraEdit, parseCurrency, formatCurrency]);
+
+  const handleQtdFotosExtraBlur = useCallback(() => {
+    const sanitized = String(Math.max(0, parseInt(qtdFotosExtraValue, 10) || 0));
+    setQtdFotosExtraValue(sanitized);
+    requestExtraEdit('qtdFotosExtra', sanitized, String(session.qtdFotosExtra || 0));
+  }, [qtdFotosExtraValue, session.qtdFotosExtra, requestExtraEdit]);
+
+  const handleExtraEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  }, []);
+
+  const confirmExtraEdit = useCallback(() => {
+    if (!pendingExtraEdit) return;
+    onFieldUpdate(session.id, pendingExtraEdit.field, pendingExtraEdit.nextValue);
+    setPendingExtraEdit(null);
+  }, [pendingExtraEdit, session.id, onFieldUpdate]);
+
+  const cancelExtraEdit = useCallback(() => {
+    if (pendingExtraEdit?.field === 'valorFotoExtra') {
+      setValorFotoExtraValue(pendingExtraEdit.previousValue);
+    } else if (pendingExtraEdit?.field === 'qtdFotosExtra') {
+      setQtdFotosExtraValue(pendingExtraEdit.previousValue);
+    }
+    setPendingExtraEdit(null);
+  }, [pendingExtraEdit]);
+
   return (
     <div className="bg-gradient-to-br from-transparent via-gray-50/10 to-stone-50/10 dark:from-transparent dark:via-[#1f1f1f]/30 dark:to-[#1a1a1a]/30 px-4 py-5 md:px-6">
       {/* Grid de 3 blocos com divisórias */}
