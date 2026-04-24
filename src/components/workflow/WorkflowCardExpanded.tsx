@@ -330,6 +330,35 @@ export function WorkflowCardExpanded({
           </h4>
           
           <div className="space-y-2.5">
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                Qtd fotos extras:
+                {isLinkedToGallery && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Lock className="h-3 w-3 text-muted-foreground/60" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Sincronizado com a galeria. Editar aqui sobrescreve a quantidade vinda do Gallery.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </span>
+              <Input
+                type="number"
+                min={0}
+                value={qtdFotosExtraValue}
+                onChange={(e) => setQtdFotosExtraValue(e.target.value)}
+                onBlur={handleQtdFotosExtraBlur}
+                onKeyDown={handleExtraEditKeyDown}
+                onFocus={handleValueFocus}
+                placeholder="0"
+                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
+              />
+            </div>
+
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total fotos extras:</span>
               <div className="flex items-center gap-2">
