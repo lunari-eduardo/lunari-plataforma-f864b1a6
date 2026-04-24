@@ -195,6 +195,7 @@ export function WorkflowCardCollapsed({
   }, [session.id, onStatusChange]);
 
   const pendente = calculateRestante();
+  const [reconcileOpen, setReconcileOpen] = useState(false);
   const hasProdutos = session.produtosList && session.produtosList.length > 0;
   const produtosProduzidos = hasProdutos ? session.produtosList.filter(p => p.produzido) : [];
   const todosCompletos = hasProdutos && produtosProduzidos.length === session.produtosList.length;
