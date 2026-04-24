@@ -53,7 +53,7 @@ export function DashboardFilters({
 
   return (
     <section aria-label="Filtros" className="animate-fade-in">
-      <Card className="p-3 rounded-xl border-0 shadow-sm">
+      <Card className="glass p-3 rounded-xl">
         <div className="flex flex-wrap items-end gap-3">
           {/* Ano */}
           <div className="space-y-1">

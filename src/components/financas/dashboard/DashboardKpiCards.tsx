@@ -13,11 +13,11 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Receita */}
-            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="relative rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Receita</span>
-                <div className="p-2 rounded-lg bg-brand-gradient">
-                  <DollarSign className="h-4 w-4 text-white" />
+                <div className="p-2 rounded-lg bg-primary/15">
+                  <DollarSign className="h-4 w-4 text-primary" />
                 </div>
               </div>
               <div className="text-xl font-bold text-lunar-success mt-2">
@@ -31,7 +31,7 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             </div>
 
             {/* Previsto */}
-            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="relative rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Previsto</span>
                 <div className="p-2 rounded-lg bg-brand-gradient">
@@ -44,7 +44,7 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             </div>
 
             {/* A Receber */}
-            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="relative rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">A Receber</span>
                 <div className="p-2 rounded-lg bg-brand-gradient">
@@ -57,7 +57,7 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             </div>
 
             {/* Despesas */}
-            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="relative rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Despesas</span>
                 <div className="p-2 rounded-lg bg-brand-gradient">
@@ -70,7 +70,7 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             </div>
 
             {/* Lucro */}
-            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="relative rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Lucro</span>
                 <div className="p-2 rounded-lg bg-brand-gradient">
@@ -88,7 +88,7 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             </div>
 
             {/* Saldo */}
-            <div className="dashboard-card-inner relative rounded-xl border border-lunar-border/30 bg-card-gradient shadow-card-subtle hover:shadow-card-elevated transition-all duration-300 p-4">
+            <div className="relative rounded-xl border border-white/20 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Saldo</span>
                 <div className="p-2 rounded-lg bg-brand-gradient">
