@@ -294,9 +294,31 @@ export function WorkflowCardExpanded({
               />
             </div>
             
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">Vlr foto extra:</span>
-              <span className="text-sm font-medium text-foreground">{valorFotoExtraUnit}</span>
+            <div className="flex justify-between items-center gap-2">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                Vlr foto extra:
+                {isLinkedToGallery && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Lock className="h-3 w-3 text-muted-foreground/60" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Sincronizado com a galeria. Editar aqui sobrescreve o valor recebido do Gallery.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </span>
+              <Input
+                value={valorFotoExtraValue}
+                onChange={(e) => setValorFotoExtraValue(e.target.value)}
+                onBlur={handleValorFotoExtraBlur}
+                onKeyDown={handleExtraEditKeyDown}
+                onFocus={handleValueFocus}
+                placeholder="R$ 0,00"
+                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
+              />
             </div>
           </div>
         </div>
