@@ -21,6 +21,7 @@ import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
 import { WorkflowDeleteConfirmModal, type DeleteAction } from "./WorkflowDeleteConfirmModal";
+import { ReconcileExtrasModal } from "./ReconcileExtrasModal";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
