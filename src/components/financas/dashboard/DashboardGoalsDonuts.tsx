@@ -11,7 +11,7 @@ export function DashboardGoalsDonuts({ metasData }: GoalsDonutsProps) {
     <section aria-label="Metas" className="animate-fade-in">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Meta de Receita */}
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+        <Card className="glass rounded-2xl shadow-card-subtle">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE RECEITA</CardTitle>
           </CardHeader>
@@ -68,7 +68,7 @@ export function DashboardGoalsDonuts({ metasData }: GoalsDonutsProps) {
         </Card>
 
         {/* Meta de Lucro */}
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+        <Card className="glass rounded-2xl shadow-card-subtle">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">META DE LUCRO</CardTitle>
           </CardHeader>
@@ -125,7 +125,7 @@ export function DashboardGoalsDonuts({ metasData }: GoalsDonutsProps) {
         </Card>
 
         {/* Lucratividade */}
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+        <Card className="glass rounded-2xl shadow-card-subtle">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-sm font-medium uppercase tracking-wide text-foreground">LUCRATIVIDADE</CardTitle>
           </CardHeader>

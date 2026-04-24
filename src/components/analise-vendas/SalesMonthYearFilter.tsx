@@ -34,10 +34,10 @@ export default function SalesMonthYearFilter({
 
   return (
     <div className="sticky top-0 z-50 bg-lunar-bg/95 backdrop-blur-sm border-b border-lunar-border/50">
-      <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto">
+      <div className="px-4 py-3 flex items-center gap-2.5 overflow-x-auto">
         {/* Year */}
         <Select value={selectedYear.toString()} onValueChange={value => onYearChange(parseInt(value))}>
-          <SelectTrigger className="w-[90px] h-7 text-xs">
+          <SelectTrigger className="w-[100px] h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -54,7 +54,7 @@ export default function SalesMonthYearFilter({
           value={selectedMonth === null ? 'all' : selectedMonth.toString()} 
           onValueChange={value => onMonthChange(value === 'all' ? null : parseInt(value))}
         >
-          <SelectTrigger className="w-[100px] h-7 text-xs">
+          <SelectTrigger className="w-[110px] h-8 text-sm">
             <SelectValue placeholder="Mês" />
           </SelectTrigger>
           <SelectContent>
@@ -69,7 +69,7 @@ export default function SalesMonthYearFilter({
 
         {/* Category */}
         <Select value={selectedCategory} onValueChange={onCategoryChange}>
-          <SelectTrigger className="w-[120px] h-7 text-xs">
+          <SelectTrigger className="w-[135px] h-8 text-sm">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
@@ -88,9 +88,9 @@ export default function SalesMonthYearFilter({
             variant="ghost" 
             size="sm" 
             onClick={clearFilters} 
-            className="h-7 w-7 p-0 shrink-0"
+            className="h-8 w-8 p-0 shrink-0"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </Button>
         )}
       </div>

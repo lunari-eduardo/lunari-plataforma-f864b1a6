@@ -10,14 +10,14 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
   // Skeleton loading quando metrics é null
   if (!metrics) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map(i => (
           <div 
             key={i} 
-            className="bg-lunar-surface/80 rounded-xl p-3 border border-lunar-border/30 animate-pulse"
+            className="bg-lunar-surface/80 rounded-xl p-4 border border-lunar-border/30 animate-pulse"
           >
-            <div className="h-3 w-16 bg-lunar-border/30 rounded mb-2" />
-            <div className="h-6 w-24 bg-lunar-border/30 rounded" />
+            <div className="h-3.5 w-20 bg-lunar-border/30 rounded mb-2" />
+            <div className="h-7 w-28 bg-lunar-border/30 rounded" />
           </div>
         ))}
       </div>
@@ -64,27 +64,27 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {metricsCards.map((metric, index) => {
         const Icon = metric.icon;
         return (
           <div 
             key={index} 
             className={cn(
-              "bg-lunar-surface/80 rounded-xl p-3",
+              "bg-lunar-surface/80 rounded-xl p-4",
               "border border-lunar-border/30",
               "transition-all duration-200"
             )}
           >
-            <div className="flex items-center gap-1.5 text-lunar-textSecondary mb-1">
-              <Icon className="h-3 w-3" />
-              <span className="text-2xs font-medium truncate">{metric.title}</span>
+            <div className="flex items-center gap-1.5 text-lunar-textSecondary mb-1.5">
+              <Icon className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium truncate">{metric.title}</span>
             </div>
-            <p className="text-xl font-bold text-lunar-text tracking-tight">
+            <p className="text-2xl font-bold text-lunar-text tracking-tight">
               {metric.value}
             </p>
             {metric.subtitle && (
-              <p className="text-2xs text-lunar-textSecondary mt-1 truncate">
+              <p className="text-xs text-lunar-textSecondary mt-1 truncate">
                 {metric.subtitle}
               </p>
             )}

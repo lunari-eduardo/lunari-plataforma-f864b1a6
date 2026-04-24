@@ -39,7 +39,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
     <>
       {/* Gráfico Principal - Receita vs Lucro */}
       <section aria-label="Gráfico Principal" className="animate-fade-in">
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+        <Card className="glass rounded-2xl shadow-card-subtle">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold">Receita vs Lucro Mensal</CardTitle>
           </CardHeader>
@@ -73,7 +73,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
       <section aria-label="Gráficos Complementares" className="animate-fade-in">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* ROI - Retorno sobre Investimento */}
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+          <Card className="glass rounded-2xl shadow-card-subtle">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold">ROI - Retorno sobre Investimento</CardTitle>
             </CardHeader>
@@ -109,7 +109,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
           </Card>
 
           {/* Composição de Despesas */}
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+          <Card className="glass rounded-2xl shadow-card-subtle">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold">Composição das Despesas</CardTitle>
             </CardHeader>
@@ -146,7 +146,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
 
       {/* Gráfico de Fluxo de Caixa - Linha 2 */}
       <section aria-label="Fluxo de Caixa" className="animate-fade-in">
-        <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300">
+        <Card className="glass rounded-2xl shadow-card-subtle">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold">Fluxo de Caixa Mensal</CardTitle>
           </CardHeader>
