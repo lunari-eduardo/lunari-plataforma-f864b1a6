@@ -56,6 +56,15 @@ export function WorkflowCardExpanded({
   const [descontoValue, setDescontoValue] = useState(session.desconto || '');
   const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || '');
   const [obsValue, setObsValue] = useState(session.observacoes || '');
+  const [valorFotoExtraValue, setValorFotoExtraValue] = useState(session.valorFotoExtra || '');
+  const [qtdFotosExtraValue, setQtdFotosExtraValue] = useState(String(session.qtdFotosExtra || 0));
+
+  // Confirmação para edição de campos vinculados à galeria
+  const [pendingExtraEdit, setPendingExtraEdit] = useState<
+    | { field: 'valorFotoExtra'; nextValue: string; previousValue: string }
+    | { field: 'qtdFotosExtra'; nextValue: string; previousValue: string }
+    | null
+  >(null);
 
   // Hook de pagamentos para os modais
   const {
@@ -72,7 +81,9 @@ export function WorkflowCardExpanded({
     setAdicionalValue(session.valorAdicional || '');
     setObsValue(session.observacoes || '');
     setDescriptionValue(session.descricao || '');
-  }, [session.desconto, session.valorAdicional, session.observacoes, session.descricao]);
+    setValorFotoExtraValue(session.valorFotoExtra || '');
+    setQtdFotosExtraValue(String(session.qtdFotosExtra || 0));
+  }, [session.desconto, session.valorAdicional, session.observacoes, session.descricao, session.valorFotoExtra, session.qtdFotosExtra]);
 
   const formatCurrency = useCallback((value: number) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
