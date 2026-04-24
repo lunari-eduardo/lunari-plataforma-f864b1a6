@@ -1,169 +1,170 @@
 
-# Plano: corrigir desconto progressivo das fotos extras na sessão e blindar contra regressões
+# Plano: recuperar fotos extras + desconto progressivo nas sessões com crédito
 
-## Diagnóstico técnico (confirmado no banco)
+## Diagnóstico (validado no banco)
 
-### O caso Louise-Lorena (14/02/2026)
+Cruzei `clientes_sessoes`, `galerias`, `audit_log` e `clientes_transacoes`. As **14 sessões com crédito** se dividem em **2 grupos bem distintos**:
 
-| Campo | Galeria (correto) | Sessão (errado) | Esperado |
-|---|---|---|---|
-| Qtd fotos extras | 6 | 6 | 6 |
-| Valor unitário base | 25 | **25** | 23 (faixa 4-7) |
-| **Total fotos extras** | **138** | **150** | **138** |
-| Valor base pacote | — | 130 | 130 |
-| **Valor total sessão** | — | **280** | **268** |
-| Valor pago | — | 268 | 268 |
-| **Pendente falso** | — | **R$ 12** | **R$ 0** |
+### 🟢 Grupo A — 10 sessões com recuperação 100% automática (R$ 1.222,00)
 
-A galeria salvou corretamente `valor_total_vendido = 138` (6 × R$ 23 com desconto da faixa 4-7 da Tabela Mensal). A sessão recebeu `valor_total_foto_extra = 138` via trigger de sync, **mas foi sobrescrita** para R$ 150.
+A galeria perdeu os contadores (`total_fotos_extras_vendidas = 0`), mas o `audit_log.metadata` da última `confirm_selection` preserva **exatamente** quantidade, valor unitário (já com desconto progressivo) e total. **A matemática fecha perfeitamente** em todos os 10 casos: `valor_pago - valor_base_pacote - audit_total = R$ 0,00`.
 
-### Causa raiz exata
+| Sessão | Pacote | Qtd extras (audit) | Unit (audit) | Total extras | Crédito atual → após fix |
+|---|---|---|---|---|---|
+| Catiele Vargas 17/04 | Mães 26 10 fotos | 10 | R$ 25 | R$ 250 | R$ 250 → **R$ 0** |
+| Jamile Deliberal 16/04 | Mães/26 5 fotos | 8 | R$ 25 | R$ 200 | R$ 200 → **R$ 0** |
+| Alexia 26/03 | Páscoa 26 | 3 | R$ 25 | R$ 75 | R$ 75 → **R$ 0** |
+| Catiele Vargas 20/03 | Mensal 25 | 5 | **R$ 23** ⚡ | R$ 115 | R$ 115 → **R$ 0** |
+| Thais Freitas 19/03 | Mensal 25 | 13 | **R$ 21** ⚡ | R$ 273 | R$ 273 → **R$ 0** |
+| Daniela Lopes 19/03 | Mensal 25 | 2 | R$ 25 | R$ 50 | R$ 50 → **R$ 0** |
+| Paula Kelling 16/03 | Smash 10f | 2 | R$ 25 | R$ 50 | R$ 50 → **R$ 0** |
+| Louise-Lorena 14/03 | Mensal 25 | 4 | **R$ 23** ⚡ | R$ 92 | R$ 92 → **R$ 0** |
+| Jessica Garcia 14/03 | Gest. Estúdio 20f | 1 | R$ 25 | R$ 25 | R$ 25 → **R$ 0** |
+| Roberta Tomaz 07/03 | Gest. Ext.+Estúd. 40f | 4 | **R$ 23** ⚡ | R$ 92 | R$ 92 → **R$ 0** |
 
-Existem **dois triggers conflitantes** rodando em sequência na tabela `clientes_sessoes`:
+⚡ **= Desconto progressivo recuperado** (Mensal faixa 4-7=R$23, faixa 8+=R$21; Gestantes faixa 4-7=R$23). Esses 4 casos vão mostrar o badge 🏷️ **% Desconto progressivo aplicado** que já implementamos.
 
-**Trigger A** — `recalc_fotos_extras` (BEFORE INSERT/UPDATE):
-```sql
-NEW.valor_total_foto_extra = NEW.qtd_fotos_extra * NEW.valor_foto_extra;
--- = 6 * 25 = 150  ← sobrepõe o 138 que veio da galeria
-```
+### 🟡 Grupo B — 4 sessões que precisam de decisão humana (R$ 685,00)
 
-**Trigger B** — `trigger_recalculate_valor_total` (BEFORE INSERT/UPDATE):
-```sql
-NEW.valor_total = valor_base_pacote + valor_total_foto_extra + ... 
--- = 130 + 150 = 280  ← deveria ser 268
-```
+São casos onde **não dá para inferir automaticamente** o que aconteceu:
 
-Quando o trigger `sync_gallery_extras_to_session` (na tabela `galerias`) faz:
-```sql
-UPDATE clientes_sessoes 
-SET valor_foto_extra = 25,        -- preço base, sem desconto
-    qtd_fotos_extra = 6,
-    valor_total_foto_extra = 138; -- valor real cobrado COM desconto
-```
-
-…o trigger A intercepta o UPDATE e **descarta o valor de 138** porque recalcula "ingenuamente" `qtd × preço_base`, ignorando que o modelo de precificação progressiva (`global` ou `categoria`) tem um preço unitário **diferente por faixa**.
-
-### Escopo do problema
-
-Query confirmou **20 sessões afetadas** no histórico, totalizando **R$ 382,00 de pendente "fantasma"**. Padrões:
-
-- **Categoria Mensal** (faixas 1-3=R$25, 4-7=R$23, 8+=R$21) — maioria dos casos
-- **Categoria Newborn** com tabela progressiva semelhante
-- **Categoria Páscoa 26**, **Gestantes**, **Smash**
-
-Exemplos reais detectados (todos com `pago = total real esperado`, mas sistema mostra pendente):
-- Louise-Lorena 14/02 — 6 extras, pago 268, pendente fantasma R$ 12
-- Lisiane-Otávio 24/03 — 6 extras, pago 268, pendente fantasma R$ 12
-- Paola Pereira 21/02 — 10 extras, pago 340, pendente fantasma R$ 40
-- Priscila Richa 12/04 — 14 extras, pago 1.190, pendente fantasma R$ 56
+| Sessão | Crédito | Por quê precisa decisão |
+|---|---|---|
+| **Gabriela 18/03** (Newborn 10f) | R$ 420 | Audit confirma 10 extras × R$ 21 = R$ 210, mas o cliente pagou R$ 1.120 no total. Sobra R$ 320 — pode ser impressão extra, álbum, próxima sessão, ou erro |
+| **Juliana Dottes 26/04** (Mães 26 5 fotos) | R$ 25 | Sem galeria, sem audit. Pagamento de R$ 255 em 21/04 — pode ser cliente pagou R$ 25 a mais por engano, ou é uma foto extra avulsa |
+| **Thaina Andrade 24/04** (Mensal 25) | R$ 10 | Sem galeria, 2 pagamentos manuais (R$80 + R$60 = R$140). Pode ser troco, gorjeta ou erro de R$ 10 |
+| **Eduarda Goulart 15/01** (Mensal 25) | R$ 25 | Já tem `qtd_fotos_extra=3` (R$75), mas pagou R$25 a mais. Pode ser 4ª foto não cadastrada ou erro |
 
 ---
 
 ## Proposta de correção
 
-### Princípio de design
+### Fase 1 — Backfill automático seguro (Grupo A)
 
-A galeria continua sendo a **fonte da verdade do total cobrado** (`valor_total_vendido`), porque é ela quem aplica o desconto progressivo conforme a tabela congelada. A sessão precisa apenas **respeitar esse total** e **derivar o preço unitário efetivo** (`total ÷ qtd`) para que `qtd × valor_foto_extra = valor_total_foto_extra` continue sendo verdade — assim a UI atual (que mostra "Vlr foto extra" e "Qtd fotos extras") continua coerente sem reescrever componente nenhum.
-
-### Fase 1 — Corrigir o trigger `recalculate_fotos_extras_total` (a causa raiz)
-
-Mudar a lógica para **não sobrepor** `valor_total_foto_extra` quando ele já vem definido pela sincronização com a galeria. Regra:
-
-```text
-SE a sessão está vinculada a uma galeria (galeria_id IS NOT NULL)
-   E a galeria define valor_total_vendido > 0
-   E o NEW.valor_total_foto_extra recebido bate com o da galeria:
-   
-   → manter o valor recebido (vem do desconto progressivo)
-   → derivar valor_foto_extra = valor_total_foto_extra / qtd_fotos_extra
-   
-SENÃO (sessão avulsa, sem galeria, ou edição manual):
-   → manter comportamento atual: total = qtd × unit
-```
-
-Isso resolve **todas as 20 sessões** automaticamente quando o trigger de sync rodar de novo, sem depender de backfill.
-
-### Fase 2 — Corrigir o trigger `sync_gallery_extras_to_session`
-
-Em vez de copiar `valor_foto_extra = NEW.valor_foto_extra` (preço base de tabela), passar a copiar o **preço unitário efetivo**:
-
-```sql
-v_unit_efetivo := CASE 
-  WHEN NEW.total_fotos_extras_vendidas > 0 
-  THEN ROUND((NEW.valor_total_vendido / NEW.total_fotos_extras_vendidas)::numeric, 2)
-  ELSE NEW.valor_foto_extra
-END;
-
-UPDATE clientes_sessoes SET
-  valor_foto_extra = v_unit_efetivo,           -- 23 em vez de 25
-  qtd_fotos_extra = NEW.total_fotos_extras_vendidas,
-  valor_total_foto_extra = NEW.valor_total_vendido;
-```
-
-Combinado com a Fase 1, o `recalc_fotos_extras` vai validar: `6 × 23 = 138` ✅ e não sobrepor.
-
-### Fase 3 — Backfill seguro das 20 sessões já corrompidas
-
-Migration única, com `BEGIN/COMMIT` e tabela de backup:
+Migration única com backup + UPDATE baseado no `audit_log`:
 
 ```sql
 -- Backup
-CREATE TABLE backup_sessoes_desconto_progressivo_20260424 AS
-SELECT cs.*, g.valor_total_vendido AS gal_total, g.total_fotos_extras_vendidas AS gal_qtd
-FROM clientes_sessoes cs JOIN galerias g ON g.id = cs.galeria_id
-WHERE g.total_fotos_extras_vendidas > 0 AND g.valor_total_vendido > 0
-  AND ABS(g.valor_total_vendido - (g.total_fotos_extras_vendidas * cs.valor_foto_extra)) > 0.01;
+CREATE TABLE backup_recovery_extras_audit_20260424 AS
+SELECT cs.*, g.total_fotos_extras_vendidas AS bk_gal_qtd, g.valor_total_vendido AS bk_gal_total
+FROM clientes_sessoes cs LEFT JOIN galerias g ON g.id = cs.galeria_id
+WHERE cs.id IN ('47f1b390-...', '05ccd679-...', ...); -- 10 IDs
 
--- Correção: deriva valor_foto_extra do total real da galeria
-UPDATE clientes_sessoes cs
-SET valor_foto_extra = ROUND((g.valor_total_vendido / g.total_fotos_extras_vendidas)::numeric, 2),
-    qtd_fotos_extra = g.total_fotos_extras_vendidas,
-    valor_total_foto_extra = g.valor_total_vendido,
-    updated_at = now()
-FROM galerias g
-WHERE cs.galeria_id = g.id
-  AND g.total_fotos_extras_vendidas > 0
-  AND g.valor_total_vendido > 0
-  AND ABS(g.valor_total_vendido - (g.total_fotos_extras_vendidas * cs.valor_foto_extra)) > 0.01;
-```
-
-O trigger `recalculate_session_valor_total` recalcula `valor_total` automaticamente após o UPDATE → as 20 sessões saem com `valor_total = base + total_extras_real` e `pendente = 0`.
-
-### Fase 4 — Atualizar `regras_congeladas.pacote.valorFotoExtra` da sessão
-
-Para que a UI do modal mostre o **preço unitário efetivo** em "Vlr foto extra" sem ficar piscando entre 25 (regra) e 23 (efetivo), atualizar o JSONB também:
-
-```sql
-regras_congeladas = jsonb_set(
-  regras_congeladas,
-  '{pacote, valorFotoExtraEfetivo}',     -- novo campo, NÃO sobrescreve valorFotoExtra
-  to_jsonb(v_unit_efetivo)
+-- Recuperação via audit_log (snapshot da última confirm_selection)
+WITH ultima_selecao AS (
+  SELECT DISTINCT ON (gallery_id)
+    gallery_id,
+    (metadata->>'extrasACobrar')::int AS qtd,
+    (metadata->>'valorUnitario')::numeric AS unit_efetivo,
+    (metadata->>'valorTotal')::numeric AS total
+  FROM audit_log
+  WHERE action='confirm_selection' 
+    AND (metadata->>'paymentRequired')::boolean = true
+  ORDER BY gallery_id, created_at DESC
 )
+-- 1. Restaurar contadores na galeria
+UPDATE galerias g SET
+  total_fotos_extras_vendidas = us.qtd,
+  valor_total_vendido = us.total,
+  valor_foto_extra = us.unit_efetivo
+FROM ultima_selecao us
+WHERE g.id = us.gallery_id 
+  AND g.id IN (...10 ids...);
+
+-- 2. O trigger sync_gallery_extras_to_session (já corrigido na migration anterior)
+--    propaga automaticamente para clientes_sessoes com:
+--      - qtd_fotos_extra = us.qtd
+--      - valor_foto_extra = us.unit_efetivo (preço com desconto progressivo)
+--      - valor_total_foto_extra = us.total
+--      - regras_congeladas.pacote.valorFotoExtraEfetivo = us.unit_efetivo
+--    E o trigger trigger_recalculate_valor_total recalcula valor_total
 ```
 
-**Não vamos sobrescrever** `valorFotoExtra` original (ela continua sendo o "preço de tabela base") — apenas adicionar `valorFotoExtraEfetivo` com o preço unitário **realmente cobrado** após desconto progressivo. Isso preserva auditoria.
+**Resultado**: 10 sessões saem com crédito = R$ 0, fotos extras visíveis no UI, badge de desconto progressivo onde aplicável.
 
-### Fase 5 — UI: badge informativo de "desconto progressivo aplicado"
+### Fase 2 — Modal de reconciliação manual (Grupo B)
 
-Em `WorkflowCardExpanded.tsx`, quando `regras_congeladas.pacote.valorFotoExtraEfetivo < regras_congeladas.pacote.valorFotoExtra`:
+Criar componente `ReconcileExtrasModal.tsx` acionado por botão **"Reconciliar crédito"** que aparece **apenas quando `valor_pago > valor_total + 0.01`**, posicionado próximo ao badge "+R$ XX,00" amarelo no card colapsado.
 
-- Mostrar pequeno tooltip ao lado de "Vlr foto extra": **🏷️ Desconto progressivo: R$ 25 → R$ 23 (faixa 4–7)**
-- Tornar o input não-editável neste caso (já é hoje quando há galeria) e exibir cadeado com tooltip explicativo
+**Layout do modal:**
 
-Sem novos componentes pesados — apenas um `<TooltipProvider>` em volta do label.
+```
+┌─────────────────────────────────────────────────┐
+│  Reconciliar crédito de R$ 420,00               │
+│  Gabriela - Otávio E Olívia · 18/03             │
+├─────────────────────────────────────────────────┤
+│  💡 Sugestão automática (do audit_log)          │
+│  Foram cobradas 10 fotos extras a R$ 21,00 cada │
+│  com desconto progressivo (faixa 8+).           │
+│  Total: R$ 210,00                               │
+│  [Aplicar sugestão]                             │
+│                                                 │
+│  ── ou ajustar manualmente ──                   │
+│                                                 │
+│  Quantidade de fotos extras:  [  10  ]          │
+│  Valor unitário efetivo:      [R$ 21,00]        │
+│  Total cobrado em extras:     R$ 210,00         │
+│                                                 │
+│  Sobra: R$ 210,00 — destinar para:              │
+│  ◯ Adicional (produto/serviço extra)            │
+│  ◯ Desconto negativo (acréscimo)                │
+│  ◯ Crédito futuro (mantém como crédito)         │
+│  ◯ Estornar para o cliente                      │
+│                                                 │
+│  [Cancelar]  [Confirmar reconciliação]          │
+└─────────────────────────────────────────────────┘
+```
 
-### Fase 6 — Camada de proteção contra regressão
+**Lógica do modal:**
+- Lê audit_log da galeria (se houver) e oferece como sugestão
+- Para sessões sem galeria, mostra apenas ajuste manual + lista de pagamentos da sessão
+- A confirmação chama RPC `reconcile_session_extras(session_id, qtd, unit, destino_sobra, valor_sobra)` que:
+  1. Atualiza `qtd_fotos_extra`, `valor_foto_extra`, `valor_total_foto_extra`, `regras_congeladas.pacote.valorFotoExtraEfetivo`
+  2. Aplica destino da sobra: `valor_adicional` ou `desconto = -X` ou nada (mantém crédito) ou cria estorno
+  3. Registra evento no `audit_log` com `action='reconcile_credit'` e snapshot completo
 
-Adicionar **trigger BEFORE UPDATE** em `clientes_sessoes` que **bloqueia** divergências entre sessão e galeria:
+### Fase 3 — Camada de proteção contra perda futura
+
+Adicionar trigger `protect_gallery_extras_downgrade` em `galerias`:
 
 ```sql
-CREATE OR REPLACE FUNCTION public.protect_session_extras_consistency() ...
--- Se NEW.galeria_id IS NOT NULL e a galeria tem valor_total_vendido > 0,
--- valida que NEW.valor_total_foto_extra = galeria.valor_total_vendido
--- Caso contrário, RAISE WARNING + log no audit_log e força o valor da galeria.
+CREATE OR REPLACE FUNCTION protect_gallery_extras_downgrade()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  -- Se está reduzindo qtd de extras E existem cobranças pagas vinculadas
+  IF NEW.total_fotos_extras_vendidas < OLD.total_fotos_extras_vendidas THEN
+    IF EXISTS (
+      SELECT 1 FROM cobrancas 
+      WHERE galeria_id = NEW.id 
+        AND status = 'pago'
+        AND tipo_cobranca IN ('fotos_extras', 'extras')
+    ) THEN
+      -- Bloquear E logar
+      INSERT INTO audit_log(action, resource_type, resource_id, metadata)
+      VALUES('blocked_extras_downgrade', 'galeria', NEW.id::text,
+        jsonb_build_object(
+          'old_qtd', OLD.total_fotos_extras_vendidas,
+          'new_qtd', NEW.total_fotos_extras_vendidas,
+          'old_total', OLD.valor_total_vendido,
+          'new_total', NEW.valor_total_vendido));
+      RAISE EXCEPTION 'Não é possível reduzir fotos extras: existem cobranças pagas vinculadas. Use "Reconciliar crédito" no Workflow.';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_protect_gallery_extras_downgrade
+  BEFORE UPDATE OF total_fotos_extras_vendidas, valor_total_vendido ON galerias
+  FOR EACH ROW EXECUTE FUNCTION protect_gallery_extras_downgrade();
 ```
 
-Isso garante que **mesmo edição manual via UI** não consegue introduzir o bug de novo. Combinado com o `AlertDialog` que já existe no `WorkflowCardExpanded`, qualquer tentativa de divergir aciona aviso e auto-correção.
+### Fase 4 — Badge visual "Crédito não conciliado" (anti-confusão)
+
+Em `WorkflowCardCollapsed.tsx`, ao lado do "+R$ XX,00" amarelo já existente, adicionar tooltip:
+
+> ⚠️ **Crédito não conciliado** — O cliente pagou R$ X a mais que o total da sessão. Clique para reconciliar com fotos extras, adicional ou estorno.
+
+Ao clicar no badge, abre o `ReconcileExtrasModal`.
 
 ---
 
@@ -171,21 +172,29 @@ Isso garante que **mesmo edição manual via UI** não consegue introduzir o bug
 
 | Arquivo | Mudança |
 |---|---|
-| `supabase/migrations/[ts]_fix_progressive_discount_extras.sql` | Backup, backfill 20 sessões, correção `recalculate_fotos_extras_total`, correção `sync_gallery_extras_to_session`, novo trigger `protect_session_extras_consistency` |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Tooltip "Desconto progressivo aplicado" no campo "Vlr foto extra" quando `valorFotoExtraEfetivo` existir e for menor que `valorFotoExtra` |
-| `src/utils/sessionCalculations.ts` | (opcional) Helper `getEffectiveExtraPrice(regras)` retornando `valorFotoExtraEfetivo ?? valorFotoExtra` para uso consistente |
+| `supabase/migrations/[ts]_recover_extras_via_audit_log.sql` | Backup + restauração das 10 galerias do Grupo A + trigger `protect_gallery_extras_downgrade` + RPC `reconcile_session_extras` |
+| `src/components/workflow/ReconcileExtrasModal.tsx` *(novo)* | Modal com sugestão do audit_log + ajuste manual + destino da sobra |
+| `src/hooks/useReconcileExtras.ts` *(novo)* | Hook que carrega audit_log da galeria e chama a RPC |
+| `src/components/workflow/WorkflowCardCollapsed.tsx` | Tornar o badge "+R$ XX,00" clicável → abre o modal |
+| `src/components/workflow/WorkflowCardExpanded.tsx` | Botão secundário "Reconciliar crédito" quando há crédito |
 
 ---
 
-## Resultado esperado após aplicar
+## Resultado esperado
 
-- **20 sessões** corrigidas automaticamente, **R$ 382 de pendente fantasma desaparecem**
-- Sessões com desconto progressivo (Mensal, Newborn, Páscoa, Gestantes, Smash) passam a refletir o **valor real cobrado pela galeria**
-- UI mostra `Vlr foto extra: R$ 23` em vez de R$ 25 nessas sessões — com tooltip explicando o desconto
-- **Bug não pode mais ser reintroduzido**: 3 camadas de proteção (trigger de recálculo corrigido, trigger de sync corrigido, trigger de proteção que bloqueia divergência)
-- **Sessões avulsas** (sem galeria) **continuam funcionando como hoje** (`qtd × unit = total`)
-- Backup completo em `backup_sessoes_desconto_progressivo_20260424` permite rollback se necessário
-- **Nenhum dado financeiro real** (`valor_pago`, `cobrancas`, `clientes_transacoes`) é alterado — só corrigimos `valor_total` da sessão para bater com o que a galeria já tinha cobrado corretamente
+**Imediato (após migration):**
+- 10 sessões do Grupo A: crédito vai a **R$ 0**, fotos extras restauradas com desconto progressivo correto
+- 4 casos do Grupo B: continuam com badge amarelo, mas agora **clicável** para reconciliação assistida
+- Total recuperado automaticamente: **R$ 1.222,00** em fotos extras "esquecidas"
+
+**Médio prazo (uso do modal):**
+- Usuário pode reconciliar os 4 casos restantes em < 1 minuto cada
+- Decisão sobre sobras (adicional/desconto/estorno) fica registrada no audit_log
+
+**Longo prazo (proteção):**
+- Não é mais possível reduzir fotos extras na galeria se houver cobrança paga
+- Bug não pode mais "comer" dados financeiros silenciosamente
+- Junto com os triggers anti-divergência da migration anterior, são **4 camadas de proteção**
 
 ---
 
@@ -193,8 +202,8 @@ Isso garante que **mesmo edição manual via UI** não consegue introduzir o bug
 
 | Risco | Mitigação |
 |---|---|
-| Sessão avulsa quebrar com a nova lógica do trigger | Fase 1 só altera comportamento quando `galeria_id IS NOT NULL` |
-| Edição manual de qtd/valor em sessão com galeria | Fase 6 detecta e força consistência; Fase 5 sinaliza visualmente que o campo é derivado |
-| Galeria sem `valor_total_vendido` (rascunho) | Fase 1 cai no `ELSE` e mantém comportamento atual `qtd × unit` |
-| Divisão por zero (qtd=0 mas total>0) | Cláusulas `NULLIF` e `WHEN qtd > 0` em todos os cálculos |
-| Backfill afetar sessão errada | Filtro `ABS(...) > 0.01` garante que só toca registros divergentes; backup completo antes |
+| Audit_log com dados errados | Validamos: 10/10 batem matematicamente (`pago - base - audit_total = 0`) |
+| Galeria recriada / audit_log apagado | Backup completo antes; RPC permite ajuste manual |
+| Cliente clicar "Aplicar sugestão" sem revisar | Modal mostra valores em destaque + botão "Cancelar"; toda mudança vai para audit_log |
+| Sessão sem audit_log (Grupo B) | Modal cai para fluxo 100% manual, com lista dos pagamentos visível |
+| Trigger de proteção bloquear caso legítimo | Mensagem de erro orienta uso do modal de reconciliação |
