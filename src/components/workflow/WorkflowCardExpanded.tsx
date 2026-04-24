@@ -214,6 +214,17 @@ export function WorkflowCardExpanded({
     session.galeriaStatusPagamento === 'pago' || session.galeriaStatusPagamento === 'pendente'
   );
 
+  // === Detecção de desconto progressivo aplicado pela galeria ===
+  // Quando a galeria aplica desconto por faixa (modelo 'global' ou 'categoria'),
+  // o preço unitário efetivo cobrado é menor que o preço base da tabela.
+  const regrasPacote = (session as any)?.regras_congeladas?.pacote
+    ?? (session as any)?.regrasDePrecoFotoExtraCongeladas?.pacote;
+  const precoBaseTabela = Number(regrasPacote?.valorFotoExtra ?? 0);
+  const precoEfetivo = Number(regrasPacote?.valorFotoExtraEfetivo ?? precoBaseTabela);
+  const hasDescontoProgressivo = precoBaseTabela > 0
+    && precoEfetivo > 0
+    && Math.abs(precoBaseTabela - precoEfetivo) > 0.01;
+
   const requestExtraEdit = useCallback((field: 'valorFotoExtra' | 'qtdFotosExtra', nextValue: string, previousValue: string) => {
     if (nextValue === previousValue) return;
     if (isLinkedToGallery) {
