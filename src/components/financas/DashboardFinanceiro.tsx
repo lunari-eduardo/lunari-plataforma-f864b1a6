@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/card';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 import { memo } from 'react';
 import {
@@ -35,16 +34,6 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
   return (
     <div className="min-h-screen">
       <div className="p-6 space-y-6 py-0 my-0">
-        {/* Hero Section */}
-        <section aria-label="Dashboard Header" className="animate-fade-in">
-          <Card className="dashboard-card rounded-2xl border-0 shadow-card-subtle hover:shadow-card-elevated transition-shadow duration-300 overflow-hidden">
-            <div className="relative">
-              {/* decorative accents */}
-              <div className="pointer-events-none absolute inset-0 bg-brand-gradient opacity-[0.12]" />
-            </div>
-          </Card>
-        </section>
-
         {/* Filtros */}
         <DashboardFilters
           anoSelecionado={anoSelecionado}
