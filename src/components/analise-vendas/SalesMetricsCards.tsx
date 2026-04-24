@@ -1,4 +1,4 @@
-import { DollarSign, Camera, TrendingUp } from 'lucide-react';
+import { DollarSign, Camera, TrendingUp, Wallet } from 'lucide-react';
 import { SalesMetrics } from '@/hooks/useSalesAnalytics';
 import { cn } from '@/lib/utils';
 
@@ -10,8 +10,8 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
   // Skeleton loading quando metrics é null
   if (!metrics) {
     return (
-      <div className="grid grid-cols-3 gap-3">
-        {[1, 2, 3].map(i => (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map(i => (
           <div 
             key={i} 
             className="bg-lunar-surface/80 rounded-xl p-3 border border-lunar-border/30 animate-pulse"
@@ -33,26 +33,38 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
     }).format(value);
   };
 
+  const expectedRevenue = (metrics as any).expectedRevenue ?? 0;
+  const pendingRevenue = (metrics as any).pendingRevenue ?? 0;
+
   const metricsCards = [
     {
       title: 'Receita Total',
       value: formatCurrency(metrics.totalRevenue),
-      icon: DollarSign
+      icon: DollarSign,
+      subtitle: undefined as string | undefined,
+    },
+    {
+      title: 'Valor Previsto',
+      value: formatCurrency(expectedRevenue),
+      icon: Wallet,
+      subtitle: pendingRevenue > 0 ? `A receber: ${formatCurrency(pendingRevenue)}` : undefined,
     },
     {
       title: 'Sessões',
       value: metrics.totalSessions.toString(),
-      icon: Camera
+      icon: Camera,
+      subtitle: undefined,
     },
     {
       title: 'Ticket Médio',
       value: formatCurrency(metrics.averageTicket),
-      icon: TrendingUp
+      icon: TrendingUp,
+      subtitle: undefined,
     }
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {metricsCards.map((metric, index) => {
         const Icon = metric.icon;
         return (
@@ -71,6 +83,11 @@ export function SalesMetricsCards({ metrics }: SalesMetricsCardsProps) {
             <p className="text-xl font-bold text-lunar-text tracking-tight">
               {metric.value}
             </p>
+            {metric.subtitle && (
+              <p className="text-2xs text-lunar-textSecondary mt-1 truncate">
+                {metric.subtitle}
+              </p>
+            )}
           </div>
         );
       })}

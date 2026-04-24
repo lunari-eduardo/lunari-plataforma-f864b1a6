@@ -14,6 +14,8 @@ export interface SalesDomainMetrics {
   extraPhotosRevenue?: number;
   additionalRevenue?: number;
   totalDiscount?: number;
+  expectedRevenue?: number;
+  pendingRevenue?: number;
 }
 
 export interface SalesMonthlyData {

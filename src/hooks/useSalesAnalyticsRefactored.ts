@@ -69,6 +69,8 @@ export function useSalesAnalyticsRefactored(
       extraPhotosRevenue: 0,
       additionalRevenue: 0,
       totalDiscount: 0,
+      expectedRevenue: 0,
+      pendingRevenue: 0,
       newClients: 0,
       monthlyGoalProgress: 0
     };
