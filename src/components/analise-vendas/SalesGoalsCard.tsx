@@ -121,24 +121,24 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
   };
 
   return (
-    <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-muted/30 rounded-xl p-5 border border-border/30">
+      <div className="flex items-center justify-between mb-3.5">
         <div className="flex items-center gap-2">
-          <Target className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">Metas</span>
+          <Target className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Metas</span>
         </div>
         <Button 
           variant="ghost" 
           size="sm" 
-          className="h-6 text-2xs px-2"
+          className="h-7 text-xs px-2"
           onClick={() => navigate('/app/financas?tab=metas')}
         >
-          <Settings className="h-3 w-3 mr-1" />
+          <Settings className="h-3.5 w-3.5 mr-1" />
           Configurar
         </Button>
       </div>
       
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {goals.map((goal, index) => {
           const progress = goal.target > 0 ? (goal.current / goal.target) * 100 : 0;
           const progressClamped = Math.min(progress, 100);
@@ -148,18 +148,18 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
           return (
             <div key={index} className="space-y-1">
               <div className="flex items-center gap-3">
-                <span className="text-2xs text-muted-foreground w-16 shrink-0">
+                <span className="text-xs text-muted-foreground w-16 shrink-0">
                   {goal.title}
                 </span>
                 
                 <div className="flex-1 min-w-0">
                   <Progress 
                     value={progressClamped} 
-                    className={cn("h-1.5", statusInfo.bgColor)} 
+                    className={cn("h-2", statusInfo.bgColor)} 
                   />
                 </div>
                 
-                <span className={cn("text-2xs font-medium w-12 text-right", statusInfo.color)}>
+                <span className={cn("text-xs font-medium w-12 text-right", statusInfo.color)}>
                   {progress.toFixed(0)}%
                 </span>
                 
@@ -167,14 +167,14 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
                   {progress > 100 && excedente > 0 ? (
                     <Badge 
                       variant="outline" 
-                      className="text-2xs h-5 px-1.5 text-green-600 border-green-300"
+                      className="text-xs h-5 px-1.5 text-green-600 border-green-300"
                     >
                       +{formatCurrency(excedente)}
                     </Badge>
                   ) : (
                     <Badge 
                       variant="outline" 
-                      className="text-2xs h-5 px-1.5"
+                      className="text-xs h-5 px-1.5"
                       title={goal.origem === 'personalizada' ? 'Meta personalizada' : 'Meta da precificação'}
                     >
                       {goal.origem === 'personalizada' ? '🎯' : '📊'} {goal.daysLeft}d
@@ -186,7 +186,7 @@ export function SalesGoalsCard({ selectedYear, selectedMonth, selectedCategory =
               {/* R$ values row */}
               <div className="flex items-center gap-3">
                 <span className="w-16 shrink-0" />
-                <span className="text-2xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {formatCurrency(goal.current)} / {formatCurrency(goal.target)}
                 </span>
               </div>

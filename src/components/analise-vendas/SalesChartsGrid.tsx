@@ -65,7 +65,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           title="Receita Mensal"
           hasData={hasRevenueData}
         >
-          <ChartContainer config={chartConfig} className="w-full h-[180px] lg:h-[200px]">
+          <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
             <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -77,13 +77,13 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 tickFormatter={(value) => value > 0 ? `${(value / 1000).toFixed(0)}k` : '0'}
                 axisLine={false}
                 tickLine={false}
@@ -103,7 +103,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           title="Sessões por Mês"
           hasData={hasSessionsData}
         >
-          <ChartContainer config={chartConfig} className="w-full h-[180px] lg:h-[200px]">
+          <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
             <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -115,13 +115,13 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
               />
@@ -143,19 +143,19 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           title="Ticket Médio"
           hasData={hasTicketData}
         >
-          <ChartContainer config={chartConfig} className="w-full h-[180px] lg:h-[200px]">
+          <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
             <LineChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 tickFormatter={(value) => value > 0 ? `${(value / 1000).toFixed(1)}k` : '0'}
                 axisLine={false}
                 tickLine={false}
@@ -182,7 +182,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           title="Receita Fotos Extras"
           hasData={hasExtraData}
         >
-          <ChartContainer config={chartConfig} className="w-full h-[180px] lg:h-[200px]">
+          <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
             <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="extraGradient" x1="0" y1="0" x2="0" y2="1">
@@ -194,13 +194,13 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
               <XAxis 
                 dataKey="month" 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))"
-                fontSize={10}
+                fontSize={11}
                 tickFormatter={(value) => value > 0 ? `${(value / 1000).toFixed(0)}k` : '0'}
                 axisLine={false}
                 tickLine={false}
@@ -275,7 +275,7 @@ function ChartCard({ icon: Icon, title, hasData, children }: ChartCardProps) {
         {hasData ? (
           children
         ) : (
-          <div className="flex flex-col items-center justify-center h-[180px] lg:h-[200px]">
+          <div className="flex flex-col items-center justify-center h-[200px] lg:h-[225px]">
             <BarChart3 className="h-6 w-6 text-lunar-textSecondary/40 mb-1" />
             <p className="text-2xs text-lunar-textSecondary">Sem dados</p>
           </div>
