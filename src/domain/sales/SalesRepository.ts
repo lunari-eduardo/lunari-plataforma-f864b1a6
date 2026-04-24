@@ -66,6 +66,10 @@ export class SalesRepositoryImpl implements SalesRepository {
     const additionalRevenue = sessions.reduce((sum, session) => sum + session.additionalValue, 0);
     const totalDiscount = sessions.reduce((sum, session) => sum + session.discount, 0);
     
+    // Expected revenue (valor previsto = total das sessões)
+    const expectedRevenue = sessions.reduce((sum, session) => sum + session.total, 0);
+    const pendingRevenue = Math.max(0, expectedRevenue - totalRevenue);
+    
     // Count unique clients
     const uniqueClients = new Set(
       sessions.map(session => session.clientEmail || session.clientPhone).filter(Boolean)
@@ -104,7 +108,9 @@ export class SalesRepositoryImpl implements SalesRepository {
       averageTicket, 
       extraPhotosRevenue,
       additionalRevenue,
-      totalDiscount
+      totalDiscount,
+      expectedRevenue,
+      pendingRevenue
     });
 
     return {
@@ -116,7 +122,9 @@ export class SalesRepositoryImpl implements SalesRepository {
       conversionRate,
       extraPhotosRevenue,
       additionalRevenue,
-      totalDiscount
+      totalDiscount,
+      expectedRevenue,
+      pendingRevenue
     };
   }
 
