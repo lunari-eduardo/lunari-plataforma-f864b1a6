@@ -14,11 +14,12 @@ import {
   SalesPackageData,
   SalesOriginData,
   SalesMonthlyOriginData,
-  SalesSession
+  SalesSession,
+  SalesComparisonResult
 } from './sales-domain';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
-import { useLeadMetrics } from '@/hooks/useLeadMetrics';
 import { ORIGENS_PADRAO } from '@/utils/defaultOrigens';
+import { computeComparison, ComparativeMonthlyDataPoint } from './comparisonUtils';
 
 export class SalesRepositoryImpl implements SalesRepository {
   constructor(private dataSource: SalesDataSource) {}
@@ -30,18 +31,75 @@ export class SalesRepositoryImpl implements SalesRepository {
   }
 
   async getAnalytics(filters: SalesFilters): Promise<SalesAnalyticsResult> {
-    this.log(`Getting analytics for year: ${filters.year}, month: ${filters.month}, category: ${filters.category}`);
+    this.log(`Getting analytics for year: ${filters.year}, month: ${filters.month}, category: ${filters.category}, comparisonYear: ${filters.comparisonYear ?? 'none'}`);
     
-    const [sessions, availableYears, availableCategories] = await Promise.all([
+    const comparisonEnabled = filters.comparisonYear != null && filters.comparisonYear !== filters.year;
+
+    const [sessions, availableYears, availableCategories, comparisonSessions] = await Promise.all([
       this.dataSource.getSessions(filters),
       this.dataSource.getAvailableYears(),
-      this.dataSource.getAvailableCategories()
+      this.dataSource.getAvailableCategories(),
+      comparisonEnabled
+        ? this.dataSource.getSessions({
+            year: filters.comparisonYear!,
+            month: filters.month,
+            category: filters.category
+          })
+        : Promise.resolve([] as SalesSession[])
     ]);
 
-    this.log(`Loaded ${sessions.length} filtered sessions`);
+    this.log(`Loaded ${sessions.length} filtered sessions${comparisonEnabled ? `, ${comparisonSessions.length} comparison sessions` : ''}`);
+
+    const baseMetrics = await this.calculateMetrics(sessions, filters);
+
+    let comparison: SalesComparisonResult | null = null;
+    if (comparisonEnabled) {
+      const previousMetrics = await this.calculateMetrics(comparisonSessions, {
+        ...filters,
+        year: filters.comparisonYear!
+      });
+      const monthlyCurrent = await this.calculateMonthlyData(sessions, filters.year);
+      const monthlyPrevious = await this.calculateMonthlyData(comparisonSessions, filters.comparisonYear!);
+
+      const monthlyComparative: ComparativeMonthlyDataPoint[] = monthlyCurrent.map((cur, idx) => {
+        const prev = monthlyPrevious[idx];
+        return {
+          month: cur.month,
+          monthIndex: cur.monthIndex,
+          revenueCurrent: cur.revenue,
+          revenuePrevious: prev?.revenue ?? 0,
+          sessionsCurrent: cur.sessions,
+          sessionsPrevious: prev?.sessions ?? 0,
+          averageTicketCurrent: cur.averageTicket,
+          averageTicketPrevious: prev?.averageTicket ?? 0,
+          extraPhotoRevenueCurrent: cur.extraPhotoRevenue,
+          extraPhotoRevenuePrevious: prev?.extraPhotoRevenue ?? 0
+        };
+      });
+
+      comparison = {
+        baseYear: filters.year,
+        comparisonYear: filters.comparisonYear!,
+        previousMetrics,
+        metrics: {
+          totalRevenue: computeComparison(baseMetrics.totalRevenue, previousMetrics.totalRevenue),
+          totalSessions: computeComparison(baseMetrics.totalSessions, previousMetrics.totalSessions),
+          averageTicket: computeComparison(baseMetrics.averageTicket, previousMetrics.averageTicket),
+          extraPhotosRevenue: computeComparison(
+            baseMetrics.extraPhotosRevenue ?? 0,
+            previousMetrics.extraPhotosRevenue ?? 0
+          ),
+          expectedRevenue: computeComparison(
+            baseMetrics.expectedRevenue ?? 0,
+            previousMetrics.expectedRevenue ?? 0
+          )
+        },
+        monthlyData: monthlyComparative
+      };
+    }
 
     const result: SalesAnalyticsResult = {
-      metrics: await this.calculateMetrics(sessions, filters),
+      metrics: baseMetrics,
       monthlyData: await this.calculateMonthlyData(sessions, filters.year),
       categoryData: this.calculateCategoryData(sessions),
       packageData: this.calculatePackageData(sessions),
@@ -49,7 +107,8 @@ export class SalesRepositoryImpl implements SalesRepository {
       monthlyOriginData: await this.calculateMonthlyOriginData(filters.year, filters.category),
       availableYears,
       availableCategories,
-      filteredDataCount: sessions.length
+      filteredDataCount: sessions.length,
+      comparison
     };
 
     this.log('Analytics calculation completed');
