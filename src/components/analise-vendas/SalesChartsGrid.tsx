@@ -30,18 +30,37 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
     }).format(value);
   };
 
+  const comparisonActive = !!comparison;
+  const comparisonYear = comparison?.comparisonYear;
+
+  // Merge monthly data with comparison data when active
+  const mergedMonthly = monthlyData.map((d, idx) => {
+    const prev = comparison?.monthlyData[idx];
+    return {
+      ...d,
+      revenuePrevious: prev?.revenuePrevious ?? 0,
+      sessionsPrevious: prev?.sessionsPrevious ?? 0,
+      averageTicketPrevious: prev?.averageTicketPrevious ?? 0,
+      extraPhotoRevenuePrevious: prev?.extraPhotoRevenuePrevious ?? 0
+    };
+  });
+
   const chartConfig = {
-    revenue: { label: 'Receita', color: 'hsl(var(--chart-primary))' },
-    sessions: { label: 'Sessões', color: 'hsl(var(--chart-secondary))' },
-    averageTicket: { label: 'Ticket Médio', color: 'hsl(var(--chart-tertiary))' },
-    extraPhotoRevenue: { label: 'Fotos Extras', color: 'hsl(var(--chart-quaternary))' }
+    revenue: { label: `Receita ${baseYear}`, color: 'hsl(var(--chart-primary))' },
+    revenuePrevious: { label: `Receita ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' },
+    sessions: { label: `Sessões ${baseYear}`, color: 'hsl(var(--chart-secondary))' },
+    sessionsPrevious: { label: `Sessões ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' },
+    averageTicket: { label: `Ticket ${baseYear}`, color: 'hsl(var(--chart-tertiary))' },
+    averageTicketPrevious: { label: `Ticket ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' },
+    extraPhotoRevenue: { label: `Extras ${baseYear}`, color: 'hsl(var(--chart-quaternary))' },
+    extraPhotoRevenuePrevious: { label: `Extras ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' }
   };
 
   // Check if data has meaningful values
-  const hasRevenueData = monthlyData.some(d => d.revenue > 0);
-  const hasSessionsData = monthlyData.some(d => d.sessions > 0);
-  const hasTicketData = monthlyData.some(d => d.averageTicket > 0);
-  const hasExtraData = monthlyData.some(d => d.extraPhotoRevenue > 0);
+  const hasRevenueData = monthlyData.some(d => d.revenue > 0) || (comparisonActive && mergedMonthly.some(d => d.revenuePrevious > 0));
+  const hasSessionsData = monthlyData.some(d => d.sessions > 0) || (comparisonActive && mergedMonthly.some(d => d.sessionsPrevious > 0));
+  const hasTicketData = monthlyData.some(d => d.averageTicket > 0) || (comparisonActive && mergedMonthly.some(d => d.averageTicketPrevious > 0));
+  const hasExtraData = monthlyData.some(d => d.extraPhotoRevenue > 0) || (comparisonActive && mergedMonthly.some(d => d.extraPhotoRevenuePrevious > 0));
 
   // Transform data for RankedBarList
   const categoryBarData: RankedBarItem[] = categoryData.map(cat => ({
