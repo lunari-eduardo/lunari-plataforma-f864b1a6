@@ -23,7 +23,7 @@ export function useSalesAnalyticsRefactored(
   selectedYear: number,
   selectedMonth: number | null,
   selectedCategory: string,
-  comparisonOptions?: { enabled: boolean; comparisonYear: number | null }
+  comparisonOptions?: { enabled: boolean; comparisonYear: number | null; limitMonth?: number | null }
 ) {
   // Create repository instance
   const repository = useMemo(() => {
@@ -45,8 +45,9 @@ export function useSalesAnalyticsRefactored(
     year: selectedYear,
     month: selectedMonth,
     category: selectedCategory,
-    comparisonYear: comparisonEnabled ? comparisonOptions!.comparisonYear : null
-  }), [selectedYear, selectedMonth, selectedCategory, comparisonEnabled, comparisonOptions?.comparisonYear]);
+    comparisonYear: comparisonEnabled ? comparisonOptions!.comparisonYear : null,
+    comparisonLimitMonth: comparisonEnabled ? (comparisonOptions?.limitMonth ?? null) : null
+  }), [selectedYear, selectedMonth, selectedCategory, comparisonEnabled, comparisonOptions?.comparisonYear, comparisonOptions?.limitMonth]);
 
   // Query sales analytics
   const {

@@ -9,7 +9,7 @@ export function useSalesAnalytics(
   selectedYear: number,
   selectedMonth: number | null,
   selectedCategory: string,
-  comparisonOptions?: { enabled: boolean; comparisonYear: number | null }
+  comparisonOptions?: { enabled: boolean; comparisonYear: number | null; limitMonth?: number | null }
 ) {
   return useSalesAnalyticsRefactored(selectedYear, selectedMonth, selectedCategory, comparisonOptions);
 }
