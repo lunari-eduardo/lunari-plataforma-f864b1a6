@@ -53,17 +53,30 @@ export function buildGalleryNewUrl(params: GalleryRedirectParams): string {
   }
   
   if (params.fotosIncluidas !== undefined && params.fotosIncluidas > 0) {
+    // Nome esperado pelo Gallery (useGestaoParams):
+    searchParams.set('fotos_incluidas_no_pacote', String(params.fotosIncluidas));
+    // Alias legado para compatibilidade temporária:
     searchParams.set('fotos_incluidas', String(params.fotosIncluidas));
   }
-  
+
   if (params.modeloCobranca) {
+    // Nome esperado pelo Gallery:
+    searchParams.set('modelo_de_cobranca', params.modeloCobranca);
+    // Alias legado:
     searchParams.set('modelo_cobranca', params.modeloCobranca);
   }
-  
+
   if (params.precoExtra !== undefined && params.precoExtra > 0) {
-    searchParams.set('preco_extra', String(params.precoExtra));
+    // Sanitiza espelhando sanitizeExtraPrice da Gallery (clamp 0–999.99)
+    const sanitized = Math.min(Math.max(Number(params.precoExtra) || 0, 0), 999.99);
+    if (sanitized > 0) {
+      // Nome esperado pelo Gallery:
+      searchParams.set('preco_da_foto_extra', String(sanitized));
+      // Alias legado:
+      searchParams.set('preco_extra', String(sanitized));
+    }
   }
-  
+
   if (params.tipoAssinatura) {
     searchParams.set('tipo_assinatura', params.tipoAssinatura);
   }

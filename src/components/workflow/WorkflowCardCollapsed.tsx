@@ -210,6 +210,17 @@ export function WorkflowCardCollapsed({
       setGalleryModalOpen(true);
       return;
     }
+
+    // Prioridade do preço da foto extra:
+    // 1) Valor atual editado na sessão (string formatada "R$ 25,00")
+    // 2) Valor congelado original em regras_congeladas
+    // 3) 0
+    const parseValor = (str?: string) =>
+      Number(String(str || '').replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    const valorAtualSessao = parseValor(session.valorFotoExtra);
+    const valorCongelado = Number(session.regras_congeladas?.pacote?.valorFotoExtra) || 0;
+    const precoExtraAtual = valorAtualSessao > 0 ? valorAtualSessao : valorCongelado;
+
     const url = buildGalleryNewUrl({
       sessionId: session.sessionId || session.id,
       sessionUuid: session.id,
@@ -221,7 +232,7 @@ export function WorkflowCardCollapsed({
       pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
       fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
       modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
-      precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,
+      precoExtra: precoExtraAtual,
       tipoAssinatura: accessState.planCode
     });
     window.open(url, '_blank', 'noopener,noreferrer');
