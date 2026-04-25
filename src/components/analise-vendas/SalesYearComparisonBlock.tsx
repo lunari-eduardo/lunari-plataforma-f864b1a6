@@ -8,6 +8,8 @@ interface Props {
   baseYear: number;
 }
 
+const MONTH_ABBR = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -41,9 +43,11 @@ export function SalesYearComparisonBlock({ comparison, baseYear }: Props) {
     },
   ];
 
+  const periodLabel = `Jan – ${MONTH_ABBR[comparison.limitMonth]}`;
+
   return (
     <div className="bg-lunar-surface/80 rounded-xl p-5 border border-lunar-border/30">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-1 flex-wrap">
         <GitCompareArrows className="h-4 w-4 text-lunar-textSecondary" />
         <h2 className="text-sm font-semibold text-lunar-text">
           Comparativo anual
@@ -52,6 +56,9 @@ export function SalesYearComparisonBlock({ comparison, baseYear }: Props) {
           {baseYear} vs {comparison.comparisonYear}
         </span>
       </div>
+      <p className="text-xs text-lunar-textSecondary mb-4">
+        Comparando {periodLabel} {baseYear} vs {periodLabel} {comparison.comparisonYear}
+      </p>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {items.map((item, idx) => (
