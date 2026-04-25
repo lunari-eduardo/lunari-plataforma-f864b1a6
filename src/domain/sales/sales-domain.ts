@@ -69,6 +69,8 @@ export interface SalesFilters {
   year: number;
   month: number | null; // null = all months, 0-11 = specific month
   category: string; // 'all' or specific category
+  /** Optional comparison year (YoY). When set, repository returns comparativeData */
+  comparisonYear?: number | null;
 }
 
 export interface SalesAnalyticsResult {
@@ -81,6 +83,16 @@ export interface SalesAnalyticsResult {
   availableYears: number[];
   availableCategories: string[];
   filteredDataCount: number;
+  /** Populated when filters.comparisonYear is set */
+  comparison?: SalesComparisonResult | null;
+}
+
+export interface SalesComparisonResult {
+  baseYear: number;
+  comparisonYear: number;
+  metrics: import('./comparisonUtils').ComparativeMetrics;
+  monthlyData: import('./comparisonUtils').ComparativeMonthlyDataPoint[];
+  previousMetrics: SalesDomainMetrics;
 }
 
 export interface SalesSession {
