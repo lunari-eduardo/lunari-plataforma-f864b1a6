@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { X, GitCompareArrows } from 'lucide-react';
 
 interface SalesMonthYearFilterProps {
   selectedYear: number;
@@ -11,6 +13,11 @@ interface SalesMonthYearFilterProps {
   onYearChange: (year: number) => void;
   onMonthChange: (month: number | null) => void;
   onCategoryChange: (category: string) => void;
+  // Comparison
+  comparisonEnabled: boolean;
+  comparisonYear: number | null;
+  onComparisonEnabledChange: (enabled: boolean) => void;
+  onComparisonYearChange: (year: number) => void;
 }
 
 const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -23,7 +30,11 @@ export default function SalesMonthYearFilter({
   availableCategories,
   onYearChange,
   onMonthChange,
-  onCategoryChange
+  onCategoryChange,
+  comparisonEnabled,
+  comparisonYear,
+  onComparisonEnabledChange,
+  onComparisonYearChange
 }: SalesMonthYearFilterProps) {
   const clearFilters = () => {
     onMonthChange(null);
@@ -31,6 +42,13 @@ export default function SalesMonthYearFilter({
   };
   
   const hasFilters = selectedMonth !== null || selectedCategory !== 'all';
+
+  // Years available for "compare with" — exclude the selected base year
+  const comparisonYearOptions = availableYears.filter(y => y !== selectedYear);
+  // Fallback: always include selectedYear - 1 if not in list
+  if (!comparisonYearOptions.includes(selectedYear - 1)) {
+    comparisonYearOptions.unshift(selectedYear - 1);
+  }
 
   return (
     <div className="sticky top-0 z-50 bg-lunar-bg/95 backdrop-blur-sm border-b border-lunar-border/50">
@@ -93,7 +111,43 @@ export default function SalesMonthYearFilter({
             <X className="h-4 w-4" />
           </Button>
         )}
+
+        {/* Divider */}
+        <div className="h-6 w-px bg-lunar-border/50 shrink-0 mx-1" />
+
+        {/* Comparison toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          <GitCompareArrows className="h-3.5 w-3.5 text-lunar-textSecondary" />
+          <Label htmlFor="comparison-toggle" className="text-sm text-lunar-textSecondary cursor-pointer whitespace-nowrap">
+            Comparar
+          </Label>
+          <Switch
+            id="comparison-toggle"
+            checked={comparisonEnabled}
+            onCheckedChange={onComparisonEnabledChange}
+          />
+        </div>
+
+        {/* Comparison year */}
+        {comparisonEnabled && (
+          <Select
+            value={(comparisonYear ?? selectedYear - 1).toString()}
+            onValueChange={value => onComparisonYearChange(parseInt(value))}
+          >
+            <SelectTrigger className="w-[110px] h-8 text-sm">
+              <SelectValue placeholder="vs" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from(new Set(comparisonYearOptions)).sort((a, b) => b - a).map(year => (
+                <SelectItem key={year} value={year.toString()}>
+                  vs {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
     </div>
   );
 }
+
