@@ -1,156 +1,88 @@
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Utilities for flexible session deletion with audit trail
+ * @deprecated Use `supabase.rpc('delete_workflow_session_cascade', { p_session_pk, p_action })` directly.
+ * This module is kept only as a compatibility shim and now delegates to the unified RPC.
+ *
+ * The legacy "orphan-then-delete" approach left payments dangling in the database
+ * (session_id = NULL). The new RPC handles transactions, cobrancas, the session
+ * itself, and the linked appointment atomically.
  */
 
 export interface DeletionOptions {
-  paymentAction: 'preserve' | 'refund';
+  paymentAction: 'preserve' | 'refund' | 'remove';
   userId: string;
 }
 
 /**
- * Orphan payments and then delete session
- * Used when preserving payment history
+ * Resolve the session primary key (uuid) from its text session_id.
  */
-export async function orphanPaymentsThenDeleteSession(
-  userId: string,
-  sessionId: string
-) {
-  try {
-    // Step 1: Orphan payments by setting session_id to NULL
-    const { error: updateError, count } = await supabase
-      .from('clientes_transacoes')
-      .update({ 
-        session_id: null, 
-        updated_at: new Date().toISOString(),
-        updated_by: userId 
-      })
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
+async function resolveSessionPk(sessionTextId: string, userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('clientes_sessoes')
+    .select('id')
+    .eq('session_id', sessionTextId)
+    .eq('user_id', userId)
+    .maybeSingle();
 
-    if (updateError) {
-      console.error('❌ Error orphaning payments:', updateError);
-      throw new Error('Falha ao desvincular pagamentos da sessão');
-    }
-
-    console.log(`✅ ${count || 0} payment(s) orphaned for session:`, sessionId);
-
-    // Step 2: Delete the session
-    const { error: sessionError } = await supabase
-      .from('clientes_sessoes')
-      .delete()
-      .eq('session_id', sessionId)
-      .eq('user_id', userId);
-
-    if (sessionError) {
-      console.error('❌ Error deleting session:', sessionError);
-      throw new Error('Falha ao excluir sessão do workflow');
-    }
-
-    console.log('✅ Session deleted, payments preserved as orphans:', sessionId);
-    
-    return {
-      success: true,
-      orphanedPayments: count || 0,
-      sessionId
-    };
-
-  } catch (error) {
-    console.error('❌ Error in orphan+delete operation:', error);
-    throw error;
+  if (error) {
+    console.error('❌ resolveSessionPk error:', error);
+    return null;
   }
+  return data?.id ?? null;
 }
 
 /**
- * Delete session with flexible options for payments
+ * @deprecated Delegates to the unified RPC with action='preserve' semantics
+ * (orphans payments, then deletes the session). New code should call the RPC directly.
  */
-export async function deleteSessionWithOptions(
-  sessionId: string,
-  options: DeletionOptions
-) {
+export async function orphanPaymentsThenDeleteSession(userId: string, sessionTextId: string) {
+  const sessionPk = await resolveSessionPk(sessionTextId, userId);
+  if (!sessionPk) {
+    throw new Error('Sessão não encontrada para exclusão');
+  }
+
+  // 'refund' without paid items behaves like the historic preserve flow but cleans up properly.
+  const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
+    p_session_pk: sessionPk,
+    p_action: 'refund',
+  });
+
+  if (error) throw error;
+  return { success: true, result: data, sessionId: sessionTextId };
+}
+
+/**
+ * @deprecated Delegates to the unified RPC. Maps the legacy options to the new actions.
+ */
+export async function deleteSessionWithOptions(sessionTextId: string, options: DeletionOptions) {
   const { paymentAction, userId } = options;
 
-  try {
-    if (paymentAction === 'refund') {
-      // Buscar pagamentos pagos da sessão para estornar
-      const { data: paidPayments, error: fetchError } = await supabase
-        .from('clientes_transacoes')
-        .select('id, valor, descricao')
-        .eq('session_id', sessionId)
-        .eq('user_id', userId)
-        .eq('tipo', 'pagamento');
-
-      if (fetchError) {
-        console.error('❌ Error fetching payments for refund:', fetchError);
-        throw new Error('Falha ao buscar pagamentos para estorno');
-      }
-
-      // Criar estorno para cada pagamento pago
-      if (paidPayments && paidPayments.length > 0) {
-        const refundRecords = paidPayments.map(p => ({
-          user_id: userId,
-          cliente_id: '', // Will be resolved below
-          session_id: sessionId,
-          tipo: 'estorno',
-          valor: Number(p.valor),
-          data_transacao: new Date().toISOString().split('T')[0],
-          descricao: `Estorno por exclusão de sessão`,
-          updated_by: userId
-        }));
-
-        // Get cliente_id from session
-        const { data: sessaoData } = await supabase
-          .from('clientes_sessoes')
-          .select('cliente_id')
-          .eq('session_id', sessionId)
-          .maybeSingle();
-
-        if (sessaoData?.cliente_id) {
-          refundRecords.forEach(r => r.cliente_id = sessaoData.cliente_id);
-        }
-
-        const { error: refundError } = await supabase
-          .from('clientes_transacoes')
-          .insert(refundRecords);
-
-        if (refundError) {
-          console.error('❌ Error creating refunds:', refundError);
-          throw new Error('Falha ao criar estornos');
-        }
-
-        console.log(`✅ ${paidPayments.length} estorno(s) criado(s) para sessão:`, sessionId);
-      }
-
-      // Orphan payments then delete session
-      return await orphanPaymentsThenDeleteSession(userId, sessionId);
-    } else {
-      // Preserve payments by orphaning them first
-      return await orphanPaymentsThenDeleteSession(userId, sessionId);
-    }
-
-  } catch (error) {
-    console.error('❌ Error in flexible deletion:', error);
-    throw error;
+  const sessionPk = await resolveSessionPk(sessionTextId, userId);
+  if (!sessionPk) {
+    throw new Error('Sessão não encontrada para exclusão');
   }
+
+  const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
+    p_session_pk: sessionPk,
+    p_action: paymentAction,
+  });
+
+  if (error) throw error;
+  return { success: true, result: data, sessionId: sessionTextId };
 }
 
 /**
- * Get orphaned payments (payments without session_id)
+ * Get orphaned payments (payments without session_id) — uses the dedicated view
+ * which is RLS-scoped to the current user via security_invoker.
  */
-export async function getOrphanedPayments(userId: string) {
+export async function getOrphanedPayments(_userId: string) {
   try {
     const { data, error } = await supabase
-      .from('clientes_transacoes')
-      .select(`
-        *,
-        clientes (nome)
-      `)
-      .eq('user_id', userId)
-      .is('session_id', null);
+      .from('vw_transacoes_orfas' as any)
+      .select('*');
 
     if (error) throw error;
-
     return data || [];
   } catch (error) {
     console.error('❌ Error getting orphaned payments:', error);
@@ -159,12 +91,10 @@ export async function getOrphanedPayments(userId: string) {
 }
 
 /**
- * Clean up orphaned payments older than specified days
+ * Clean up orphaned payments older than specified days.
+ * Kept for compatibility — runs a direct DELETE filtered by user.
  */
-export async function cleanupOrphanedPayments(
-  userId: string, 
-  olderThanDays: number = 30
-) {
+export async function cleanupOrphanedPayments(userId: string, olderThanDays: number = 30) {
   try {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
@@ -177,7 +107,6 @@ export async function cleanupOrphanedPayments(
       .lt('created_at', cutoffDate.toISOString());
 
     if (error) throw error;
-
     console.log(`✅ Orphaned payments older than ${olderThanDays} days cleaned up`);
   } catch (error) {
     console.error('❌ Error cleaning up orphaned payments:', error);
