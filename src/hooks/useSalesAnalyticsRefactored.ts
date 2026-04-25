@@ -22,7 +22,8 @@ export type {
 export function useSalesAnalyticsRefactored(
   selectedYear: number,
   selectedMonth: number | null,
-  selectedCategory: string
+  selectedCategory: string,
+  comparisonOptions?: { enabled: boolean; comparisonYear: number | null }
 ) {
   // Create repository instance
   const repository = useMemo(() => {
@@ -37,12 +38,15 @@ export function useSalesAnalyticsRefactored(
     periodType: selectedYear === new Date().getFullYear() ? 'current_year' : 'all_time'
   });
 
+  const comparisonEnabled = !!(comparisonOptions?.enabled && comparisonOptions.comparisonYear && comparisonOptions.comparisonYear !== selectedYear);
+
   // Build filters
   const filters: SalesFilters = useMemo(() => ({
     year: selectedYear,
     month: selectedMonth,
-    category: selectedCategory
-  }), [selectedYear, selectedMonth, selectedCategory]);
+    category: selectedCategory,
+    comparisonYear: comparisonEnabled ? comparisonOptions!.comparisonYear : null
+  }), [selectedYear, selectedMonth, selectedCategory, comparisonEnabled, comparisonOptions?.comparisonYear]);
 
   // Query sales analytics
   const {
@@ -83,19 +87,6 @@ export function useSalesAnalyticsRefactored(
     };
   }, [analyticsResult?.metrics, leadMetrics.taxaConversao]);
 
-  // Log analytics status
-  const filterDescription = selectedMonth !== null 
-    ? `mês ${selectedMonth + 1}/${selectedYear}` 
-    : `ano ${selectedYear}`;
-  
-  if (import.meta.env.VITE_DEBUG_SALES === 'true') {
-    console.log(`🔍 [useSalesAnalyticsRefactored] Análise para ${filterDescription}, categoria: ${selectedCategory}`);
-    
-    if (analyticsResult) {
-      console.log(`💰 [useSalesAnalyticsRefactored] Resultado: R$ ${analyticsResult.metrics.totalRevenue.toLocaleString()}, ${analyticsResult.metrics.totalSessions} sessões`);
-    }
-  }
-
   return {
     // Main metrics (with conversion rate override)
     salesMetrics,
@@ -111,6 +102,9 @@ export function useSalesAnalyticsRefactored(
     availableYears: analyticsResult?.availableYears || [],
     availableCategories: analyticsResult?.availableCategories || [],
     filteredData: [], // Keep for compatibility, but empty for privacy
+    
+    // Comparison data (null when disabled)
+    comparison: analyticsResult?.comparison ?? null,
     
     // Query status
     isLoading,
