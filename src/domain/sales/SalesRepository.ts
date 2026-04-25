@@ -141,9 +141,16 @@ export class SalesRepositoryImpl implements SalesRepository {
       ? await this.calculateMetrics(baseSessionsForMetrics, filters)
       : await this.calculateMetrics(sessions, filters);
 
+    const monthlyDataFull = await this.calculateMonthlyData(sessions, filters.year);
+    const monthlyDataOut = comparison
+      ? (filters.month != null
+          ? monthlyDataFull.filter(m => m.monthIndex === filters.month)
+          : monthlyDataFull.filter(m => m.monthIndex <= comparison!.limitMonth))
+      : monthlyDataFull;
+
     const result: SalesAnalyticsResult = {
       metrics: baseMetrics,
-      monthlyData: await this.calculateMonthlyData(sessions, filters.year),
+      monthlyData: monthlyDataOut,
       categoryData: this.calculateCategoryData(sessions),
       packageData: this.calculatePackageData(sessions),
       originData: this.calculateOriginData(sessions),
