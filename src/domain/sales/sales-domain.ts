@@ -71,6 +71,8 @@ export interface SalesFilters {
   category: string; // 'all' or specific category
   /** Optional comparison year (YoY). When set, repository returns comparativeData */
   comparisonYear?: number | null;
+  /** Optional inclusive month limit (0-11) applied to BOTH base and comparison years for fair YoY comparison */
+  comparisonLimitMonth?: number | null;
 }
 
 export interface SalesAnalyticsResult {
@@ -93,6 +95,8 @@ export interface SalesComparisonResult {
   metrics: import('./comparisonUtils').ComparativeMetrics;
   monthlyData: import('./comparisonUtils').ComparativeMonthlyDataPoint[];
   previousMetrics: SalesDomainMetrics;
+  /** Inclusive month limit (0-11) used for the equivalent-period comparison */
+  limitMonth: number;
 }
 
 export interface SalesSession {
