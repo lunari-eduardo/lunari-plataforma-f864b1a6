@@ -226,11 +226,15 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasExtraData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <AreaChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="extraGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.5" />
                   <stop offset="100%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.1" />
+                </linearGradient>
+                <linearGradient id="extraGradientPrev" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.05" />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
@@ -252,9 +256,22 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => formatCurrency(value)}
               />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Area
+                  type="monotone"
+                  dataKey="extraPhotoRevenuePrevious"
+                  name={`${comparisonYear}`}
+                  stroke="hsl(var(--muted-foreground))"
+                  fill="url(#extraGradientPrev)"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                />
+              )}
               <Area
                 type="monotone"
                 dataKey="extraPhotoRevenue"
+                name={`${baseYear}`}
                 stroke="hsl(var(--chart-quaternary))"
                 fill="url(#extraGradient)"
                 strokeWidth={2}
