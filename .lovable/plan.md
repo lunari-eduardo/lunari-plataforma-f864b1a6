@@ -1,209 +1,128 @@
 
-# Plano: recuperar fotos extras + desconto progressivo nas sessões com crédito
+## Diagnóstico
 
-## Diagnóstico (validado no banco)
+Investiguei o fluxo de criação da galeria a partir do Workflow e encontrei **dois problemas distintos** que se somam para gerar o sintoma:
 
-Cruzei `clientes_sessoes`, `galerias`, `audit_log` e `clientes_transacoes`. As **14 sessões com crédito** se dividem em **2 grupos bem distintos**:
+### Problema A — Gestão envia o valor congelado e com nome de param errado
 
-### 🟢 Grupo A — 10 sessões com recuperação 100% automática (R$ 1.222,00)
+Em `src/components/workflow/WorkflowCardCollapsed.tsx` (linha 224), o handler `handleCreateSelecao` monta a URL de criação da galeria assim:
 
-A galeria perdeu os contadores (`total_fotos_extras_vendidas = 0`), mas o `audit_log.metadata` da última `confirm_selection` preserva **exatamente** quantidade, valor unitário (já com desconto progressivo) e total. **A matemática fecha perfeitamente** em todos os 10 casos: `valor_pago - valor_base_pacote - audit_total = R$ 0,00`.
+```ts
+precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,  // ← lê só o JSON congelado
+fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
+modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
+```
 
-| Sessão | Pacote | Qtd extras (audit) | Unit (audit) | Total extras | Crédito atual → após fix |
-|---|---|---|---|---|---|
-| Catiele Vargas 17/04 | Mães 26 10 fotos | 10 | R$ 25 | R$ 250 | R$ 250 → **R$ 0** |
-| Jamile Deliberal 16/04 | Mães/26 5 fotos | 8 | R$ 25 | R$ 200 | R$ 200 → **R$ 0** |
-| Alexia 26/03 | Páscoa 26 | 3 | R$ 25 | R$ 75 | R$ 75 → **R$ 0** |
-| Catiele Vargas 20/03 | Mensal 25 | 5 | **R$ 23** ⚡ | R$ 115 | R$ 115 → **R$ 0** |
-| Thais Freitas 19/03 | Mensal 25 | 13 | **R$ 21** ⚡ | R$ 273 | R$ 273 → **R$ 0** |
-| Daniela Lopes 19/03 | Mensal 25 | 2 | R$ 25 | R$ 50 | R$ 50 → **R$ 0** |
-| Paula Kelling 16/03 | Smash 10f | 2 | R$ 25 | R$ 50 | R$ 50 → **R$ 0** |
-| Louise-Lorena 14/03 | Mensal 25 | 4 | **R$ 23** ⚡ | R$ 92 | R$ 92 → **R$ 0** |
-| Jessica Garcia 14/03 | Gest. Estúdio 20f | 1 | R$ 25 | R$ 25 | R$ 25 → **R$ 0** |
-| Roberta Tomaz 07/03 | Gest. Ext.+Estúd. 40f | 4 | **R$ 23** ⚡ | R$ 92 | R$ 92 → **R$ 0** |
+E `src/utils/galleryRedirect.ts` traduz para query string usando os nomes:
 
-⚡ **= Desconto progressivo recuperado** (Mensal faixa 4-7=R$23, faixa 8+=R$21; Gestantes faixa 4-7=R$23). Esses 4 casos vão mostrar o badge 🏷️ **% Desconto progressivo aplicado** que já implementamos.
-
-### 🟡 Grupo B — 4 sessões que precisam de decisão humana (R$ 685,00)
-
-São casos onde **não dá para inferir automaticamente** o que aconteceu:
-
-| Sessão | Crédito | Por quê precisa decisão |
+| Gestão envia | Gallery (`useGestaoParams.ts`) espera | Resultado |
 |---|---|---|
-| **Gabriela 18/03** (Newborn 10f) | R$ 420 | Audit confirma 10 extras × R$ 21 = R$ 210, mas o cliente pagou R$ 1.120 no total. Sobra R$ 320 — pode ser impressão extra, álbum, próxima sessão, ou erro |
-| **Juliana Dottes 26/04** (Mães 26 5 fotos) | R$ 25 | Sem galeria, sem audit. Pagamento de R$ 255 em 21/04 — pode ser cliente pagou R$ 25 a mais por engano, ou é uma foto extra avulsa |
-| **Thaina Andrade 24/04** (Mensal 25) | R$ 10 | Sem galeria, 2 pagamentos manuais (R$80 + R$60 = R$140). Pode ser troco, gorjeta ou erro de R$ 10 |
-| **Eduarda Goulart 15/01** (Mensal 25) | R$ 25 | Já tem `qtd_fotos_extra=3` (R$75), mas pagou R$25 a mais. Pode ser 4ª foto não cadastrada ou erro |
+| `preco_extra` | `preco_da_foto_extra` | **Ignorado** |
+| `fotos_incluidas` | `fotos_incluidas_no_pacote` | **Ignorado** |
+| `modelo_cobranca` | `modelo_de_cobranca` | **Ignorado** |
+| (não enviamos) | `modelo_de_preco` | n/a |
+| `tipo_assinatura`, `pacote_nome`, `pacote_categoria`, `cliente_*`, `session_id` | iguais | OK |
+
+Como o Gallery não recebe `preco_da_foto_extra` válido, ele cai no fallback que lê a sessão pelo `session_id` e copia `clientes_sessoes.regras_congeladas.pacote.valorFotoExtra` — que é o **valor original congelado de R$ 250,05**, mesmo o usuário tendo editado o campo "Vlr foto extra" para R$ 25,00.
+
+Confirmado no banco para a sessão da Andreza (`workflow-1776882726236-…`):
+
+- `clientes_sessoes.valor_foto_extra = 25` ✅ (editado pelo usuário)
+- `clientes_sessoes.regras_congeladas.pacote.valorFotoExtra = 250.05` ❌ (congelado)
+- `galerias.valor_foto_extra = 250.05` ❌ (criada com o valor errado)
+
+### Problema B — Edição do workflow não atualiza o JSON congelado
+
+Quando o usuário edita "Vlr foto extra" no card do workflow, `useWorkflowRealtime.ts` grava em `clientes_sessoes.valor_foto_extra` mas **não** atualiza `regras_congeladas.pacote.valorFotoExtra`. Isso faz com que:
+
+1. A Gallery (que prioriza o JSONB em vários caminhos) continue vendo o valor antigo.
+2. Outras telas/relatórios que consultam o JSON também divergem.
+3. 9 das 10 sessões "Mães 26 5 fotos" estão hoje em estado divergente (25 no campo, 250.05 no JSON).
+
+O próprio time da Gallery já mapeou isso no plano interno deles (`.lovable/plan.md`) e aponta o JSONB como fonte de verdade na precificação progressiva.
 
 ---
 
-## Proposta de correção
+## Plano de correção
 
-### Fase 1 — Backfill automático seguro (Grupo A)
+A correção precisa atuar em 3 frentes complementares: enviar o dado certo, manter o JSON congelado sincronizado, e corrigir os dados existentes.
 
-Migration única com backup + UPDATE baseado no `audit_log`:
+### 1) Gestão — enviar o valor atual e com os nomes corretos (front)
 
-```sql
--- Backup
-CREATE TABLE backup_recovery_extras_audit_20260424 AS
-SELECT cs.*, g.total_fotos_extras_vendidas AS bk_gal_qtd, g.valor_total_vendido AS bk_gal_total
-FROM clientes_sessoes cs LEFT JOIN galerias g ON g.id = cs.galeria_id
-WHERE cs.id IN ('47f1b390-...', '05ccd679-...', ...); -- 10 IDs
+**`src/utils/galleryRedirect.ts`**
+- Renomear (ou adicionar como aliases) os query params para bater com o contrato do Gallery:
+  - `preco_extra` → `preco_da_foto_extra`
+  - `fotos_incluidas` → `fotos_incluidas_no_pacote`
+  - `modelo_cobranca` → `modelo_de_cobranca`
+- Por compatibilidade temporária e segurança, **enviar ambos** os nomes (antigo + novo) por 1–2 ciclos. O Gallery passa a consumir só o novo, e em seguida removemos os antigos.
+- Adicionar suporte a `modelo_de_preco` (`fixed`/`packages`) opcional, para alinhar com o contrato do Gallery (não obrigatório para fechar o bug, mas evita outro fallback).
+- Sanitizar `precoExtra` (clamp 0–999,99) antes de serializar, espelhando o `sanitizeExtraPrice` da Gallery.
 
--- Recuperação via audit_log (snapshot da última confirm_selection)
-WITH ultima_selecao AS (
-  SELECT DISTINCT ON (gallery_id)
-    gallery_id,
-    (metadata->>'extrasACobrar')::int AS qtd,
-    (metadata->>'valorUnitario')::numeric AS unit_efetivo,
-    (metadata->>'valorTotal')::numeric AS total
-  FROM audit_log
-  WHERE action='confirm_selection' 
-    AND (metadata->>'paymentRequired')::boolean = true
-  ORDER BY gallery_id, created_at DESC
-)
--- 1. Restaurar contadores na galeria
-UPDATE galerias g SET
-  total_fotos_extras_vendidas = us.qtd,
-  valor_total_vendido = us.total,
-  valor_foto_extra = us.unit_efetivo
-FROM ultima_selecao us
-WHERE g.id = us.gallery_id 
-  AND g.id IN (...10 ids...);
+**`src/components/workflow/WorkflowCardCollapsed.tsx` — `handleCreateSelecao`**
+- Trocar a fonte de verdade do `precoExtra`:
+  ```ts
+  // Prioridade: valor atual editado na sessão > valor congelado > 0
+  const precoExtraAtual =
+    Number(session.valor_foto_extra) ||
+    Number(session.regras_congeladas?.pacote?.valorFotoExtra) ||
+    0;
+  ```
+  Para isso, expor `valor_foto_extra` (numérico cru) no `SessionData` (`src/types/workflow.ts`) e no `convertSessionToData` de `src/hooks/useWorkflowPackageData.ts` — hoje só temos a versão formatada `valorFotoExtra: string`. Adicionar campo `valorFotoExtraNumber: number` (ou similar) sem quebrar consumidores.
+- Idem para `fotosIncluidas`: já usa `regras_congeladas` (campo estável); manter como está.
+- `modeloCobranca`: manter `regras_congeladas?.precificacaoFotoExtra?.modelo` (correto), só ajustar o nome da chave na URL.
 
--- 2. O trigger sync_gallery_extras_to_session (já corrigido na migration anterior)
---    propaga automaticamente para clientes_sessoes com:
---      - qtd_fotos_extra = us.qtd
---      - valor_foto_extra = us.unit_efetivo (preço com desconto progressivo)
---      - valor_total_foto_extra = us.total
---      - regras_congeladas.pacote.valorFotoExtraEfetivo = us.unit_efetivo
---    E o trigger trigger_recalculate_valor_total recalcula valor_total
-```
+### 2) Gestão — manter `regras_congeladas.pacote.valorFotoExtra` sincronizado quando o usuário edita
 
-**Resultado**: 10 sessões saem com crédito = R$ 0, fotos extras visíveis no UI, badge de desconto progressivo onde aplicável.
+**Banco (preferencial — uma única fonte de garantia, idempotente):**
+Criar um trigger `BEFORE UPDATE` em `clientes_sessoes` que, sempre que `valor_foto_extra` mudar, faça `jsonb_set(regras_congeladas, '{pacote,valorFotoExtra}', to_jsonb(NEW.valor_foto_extra))` (com clamp 0–999,99 e proteção contra recursão via `pg_trigger_depth()`). Isso resolve **todas** as edições futuras independentemente do front-end (workflow, agenda, edição inline, importações).
 
-### Fase 2 — Modal de reconciliação manual (Grupo B)
+**Front (defesa em profundidade — opcional, mas recomendado):**
+Em `src/hooks/useWorkflowRealtime.ts`, no caminho do `case 'valorFotoExtra'` (linhas ~461–482), além de `sanitizedUpdates.valor_foto_extra = …`, calcular um `regras_congeladas` patcheado e mandar junto no UPDATE. Garante consistência mesmo se o trigger for desativado.
 
-Criar componente `ReconcileExtrasModal.tsx` acionado por botão **"Reconciliar crédito"** que aparece **apenas quando `valor_pago > valor_total + 0.01`**, posicionado próximo ao badge "+R$ XX,00" amarelo no card colapsado.
+### 3) Backfill dos dados já corrompidos
 
-**Layout do modal:**
+Migration única que, para cada sessão onde `valor_foto_extra` divergir de `regras_congeladas.pacote.valorFotoExtra`, sincroniza o JSONB para o valor do campo (que é o que o usuário editou e considera correto). Tratamento dos casos:
 
-```
-┌─────────────────────────────────────────────────┐
-│  Reconciliar crédito de R$ 420,00               │
-│  Gabriela - Otávio E Olívia · 18/03             │
-├─────────────────────────────────────────────────┤
-│  💡 Sugestão automática (do audit_log)          │
-│  Foram cobradas 10 fotos extras a R$ 21,00 cada │
-│  com desconto progressivo (faixa 8+).           │
-│  Total: R$ 210,00                               │
-│  [Aplicar sugestão]                             │
-│                                                 │
-│  ── ou ajustar manualmente ──                   │
-│                                                 │
-│  Quantidade de fotos extras:  [  10  ]          │
-│  Valor unitário efetivo:      [R$ 21,00]        │
-│  Total cobrado em extras:     R$ 210,00         │
-│                                                 │
-│  Sobra: R$ 210,00 — destinar para:              │
-│  ◯ Adicional (produto/serviço extra)            │
-│  ◯ Desconto negativo (acréscimo)                │
-│  ◯ Crédito futuro (mantém como crédito)         │
-│  ◯ Estornar para o cliente                      │
-│                                                 │
-│  [Cancelar]  [Confirmar reconciliação]          │
-└─────────────────────────────────────────────────┘
-```
+- **Caso normal** (campo > 0 e diferente do JSON): JSON ← campo.
+- **Caso "campo = 0 e JSON > 0"**: NÃO sobrescrever — significa que o usuário ainda não editou; manter o congelado.
+- **Caso "Huimi Loreto"** (`valorFotoExtra = 2550`, valor em centavos não normalizado, citado no plano da Gallery): clampar com `LEAST(GREATEST(v, 0), 999.99)`.
 
-**Lógica do modal:**
-- Lê audit_log da galeria (se houver) e oferece como sugestão
-- Para sessões sem galeria, mostra apenas ajuste manual + lista de pagamentos da sessão
-- A confirmação chama RPC `reconcile_session_extras(session_id, qtd, unit, destino_sobra, valor_sobra)` que:
-  1. Atualiza `qtd_fotos_extra`, `valor_foto_extra`, `valor_total_foto_extra`, `regras_congeladas.pacote.valorFotoExtraEfetivo`
-  2. Aplica destino da sobra: `valor_adicional` ou `desconto = -X` ou nada (mantém crédito) ou cria estorno
-  3. Registra evento no `audit_log` com `action='reconcile_credit'` e snapshot completo
+Cobertura imediata: as 9 sessões "Mães 26 5 fotos" identificadas no diagnóstico passam de 250,05 para 25,00 no JSON.
 
-### Fase 3 — Camada de proteção contra perda futura
+**Importante:** **não** atualizar `cobrancas` históricas (preço cobrado é imutável). E **não** alterar `galerias` já criadas com valor errado — para essas, o usuário deve usar o "Editar" da Gallery para ajustar (ver seção 4).
 
-Adicionar trigger `protect_gallery_extras_downgrade` em `galerias`:
+### 4) Galerias já criadas com R$ 250,05 (correção pontual)
 
-```sql
-CREATE OR REPLACE FUNCTION protect_gallery_extras_downgrade()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN
-  -- Se está reduzindo qtd de extras E existem cobranças pagas vinculadas
-  IF NEW.total_fotos_extras_vendidas < OLD.total_fotos_extras_vendidas THEN
-    IF EXISTS (
-      SELECT 1 FROM cobrancas 
-      WHERE galeria_id = NEW.id 
-        AND status = 'pago'
-        AND tipo_cobranca IN ('fotos_extras', 'extras')
-    ) THEN
-      -- Bloquear E logar
-      INSERT INTO audit_log(action, resource_type, resource_id, metadata)
-      VALUES('blocked_extras_downgrade', 'galeria', NEW.id::text,
-        jsonb_build_object(
-          'old_qtd', OLD.total_fotos_extras_vendidas,
-          'new_qtd', NEW.total_fotos_extras_vendidas,
-          'old_total', OLD.valor_total_vendido,
-          'new_total', NEW.valor_total_vendido));
-      RAISE EXCEPTION 'Não é possível reduzir fotos extras: existem cobranças pagas vinculadas. Use "Reconciliar crédito" no Workflow.';
-    END IF;
-  END IF;
-  RETURN NEW;
-END $$;
+Para a galeria da Andreza (e outras 4 do Dia das Mães já criadas com 250,05), oferecer duas opções ao usuário:
 
-CREATE TRIGGER trg_protect_gallery_extras_downgrade
-  BEFORE UPDATE OF total_fotos_extras_vendidas, valor_total_vendido ON galerias
-  FOR EACH ROW EXECUTE FUNCTION protect_gallery_extras_downgrade();
-```
+- (a) Atualizar manualmente via tela de "Editar" da Gallery (campo `valor_foto_extra`).
+- (b) Script de correção pontual no backfill: para galerias **sem cobranças geradas ainda** (sem `cobrancas.galeria_id`), atualizar `galerias.valor_foto_extra` e `galerias.regras_congeladas.pacote.valorFotoExtra` para o valor atual da sessão. Cobranças já emitidas permanecem intocadas.
 
-### Fase 4 — Badge visual "Crédito não conciliado" (anti-confusão)
+Recomendo (b) com filtro de "sem cobrança", pois é seguro e elimina a fricção manual.
 
-Em `WorkflowCardCollapsed.tsx`, ao lado do "+R$ XX,00" amarelo já existente, adicionar tooltip:
+### 5) Revisão sugerida no projeto Lunari Gallery
 
-> ⚠️ **Crédito não conciliado** — O cliente pagou R$ X a mais que o total da sessão. Clique para reconciliar com fotos extras, adicional ou estorno.
+(Não vou alterar o Gallery por aqui, mas vale comunicar — a equipe deles já tem um plano paralelo e o que falta é uma única peça nova:)
 
-Ao clicar no badge, abre o `ReconcileExtrasModal`.
+**Aceitar `preco_da_foto_extra` da query como override do JSONB na criação assistida**, mesmo quando o `session_id` resolve uma sessão com `regras_congeladas`. Hoje, mesmo que mandássemos com o nome certo, há caminhos onde o JSON da sessão prevalece. Sugestão: na hidratação inicial da galeria a partir de `session_id`, se `preco_da_foto_extra` veio da query e for válido (e divergir do JSONB), usar o da query e logar um warning para telemetria de divergência.
+
+Adicionalmente, o trigger `sync_gallery_extras_to_session` deveria também propagar para o JSONB nos dois lados (sessão e galeria), conforme já está descrito no `.lovable/plan.md` interno deles.
 
 ---
 
-## Arquivos modificados
+## Resumo dos arquivos que serão alterados (Gestão)
 
-| Arquivo | Mudança |
-|---|---|
-| `supabase/migrations/[ts]_recover_extras_via_audit_log.sql` | Backup + restauração das 10 galerias do Grupo A + trigger `protect_gallery_extras_downgrade` + RPC `reconcile_session_extras` |
-| `src/components/workflow/ReconcileExtrasModal.tsx` *(novo)* | Modal com sugestão do audit_log + ajuste manual + destino da sobra |
-| `src/hooks/useReconcileExtras.ts` *(novo)* | Hook que carrega audit_log da galeria e chama a RPC |
-| `src/components/workflow/WorkflowCardCollapsed.tsx` | Tornar o badge "+R$ XX,00" clicável → abre o modal |
-| `src/components/workflow/WorkflowCardExpanded.tsx` | Botão secundário "Reconciliar crédito" quando há crédito |
-
----
+- `src/utils/galleryRedirect.ts` — corrigir nomes de query params, adicionar sanitização e `modelo_de_preco`.
+- `src/components/workflow/WorkflowCardCollapsed.tsx` — usar valor atual da sessão (com fallback para o congelado) no `handleCreateSelecao`.
+- `src/types/workflow.ts` — adicionar `valorFotoExtraNumber: number` no `SessionData`.
+- `src/hooks/useWorkflowPackageData.ts` — popular `valorFotoExtraNumber` a partir de `session.valor_foto_extra`.
+- `src/hooks/useWorkflowRealtime.ts` — (defesa em profundidade) patchear o JSONB ao salvar `valor_foto_extra`.
+- **Migration nova**: trigger `BEFORE UPDATE` em `clientes_sessoes` mantendo `regras_congeladas.pacote.valorFotoExtra` sincronizado, + backfill one-shot das sessões já divergentes, + correção pontual de galerias sem cobrança.
 
 ## Resultado esperado
 
-**Imediato (após migration):**
-- 10 sessões do Grupo A: crédito vai a **R$ 0**, fotos extras restauradas com desconto progressivo correto
-- 4 casos do Grupo B: continuam com badge amarelo, mas agora **clicável** para reconciliação assistida
-- Total recuperado automaticamente: **R$ 1.222,00** em fotos extras "esquecidas"
+- Editar "Vlr foto extra" no workflow passa a refletir corretamente em qualquer nova galeria criada (assistida ou não).
+- O JSON congelado deixa de divergir do campo simples — bug de raiz resolvido.
+- Galerias futuras criadas para a Andreza e qualquer outro pacote com valor extra editado virão com o valor certo desde o primeiro clique.
+- Galerias já existentes com valor errado e **sem cobrança** são corrigidas no backfill; as com cobrança permanecem auditáveis e podem ser ajustadas manualmente.
 
-**Médio prazo (uso do modal):**
-- Usuário pode reconciliar os 4 casos restantes em < 1 minuto cada
-- Decisão sobre sobras (adicional/desconto/estorno) fica registrada no audit_log
-
-**Longo prazo (proteção):**
-- Não é mais possível reduzir fotos extras na galeria se houver cobrança paga
-- Bug não pode mais "comer" dados financeiros silenciosamente
-- Junto com os triggers anti-divergência da migration anterior, são **4 camadas de proteção**
-
----
-
-## Riscos e mitigações
-
-| Risco | Mitigação |
-|---|---|
-| Audit_log com dados errados | Validamos: 10/10 batem matematicamente (`pago - base - audit_total = 0`) |
-| Galeria recriada / audit_log apagado | Backup completo antes; RPC permite ajuste manual |
-| Cliente clicar "Aplicar sugestão" sem revisar | Modal mostra valores em destaque + botão "Cancelar"; toda mudança vai para audit_log |
-| Sessão sem audit_log (Grupo B) | Modal cai para fluxo 100% manual, com lista dos pagamentos visível |
-| Trigger de proteção bloquear caso legítimo | Mensagem de erro orienta uso do modal de reconciliação |
