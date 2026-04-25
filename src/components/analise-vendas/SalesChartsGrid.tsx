@@ -88,7 +88,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasRevenueData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <BarChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.9" />
@@ -114,7 +114,11 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => formatCurrency(value)}
               />
-              <Bar dataKey="revenue" fill="url(#revenueGradient)" radius={[4, 4, 0, 0]} />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Bar dataKey="revenuePrevious" name={`${comparisonYear}`} fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
+              )}
+              <Bar dataKey="revenue" name={`${baseYear}`} fill="url(#revenueGradient)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </ChartCard>
@@ -126,7 +130,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasSessionsData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <BarChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-secondary))" stopOpacity="0.9" />
@@ -151,7 +155,11 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => `${value} sessões`}
               />
-              <Bar dataKey="sessions" fill="url(#sessionsGradient)" radius={[4, 4, 0, 0]} />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Bar dataKey="sessionsPrevious" name={`${comparisonYear}`} fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
+              )}
+              <Bar dataKey="sessions" name={`${baseYear}`} fill="url(#sessionsGradient)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </ChartCard>
@@ -166,7 +174,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasTicketData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <LineChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <LineChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
               <XAxis 
                 dataKey="month" 
@@ -186,9 +194,22 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => formatCurrency(value)}
               />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Line
+                  type="monotone"
+                  dataKey="averageTicketPrevious"
+                  name={`${comparisonYear}`}
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={false}
+                />
+              )}
               <Line
                 type="monotone"
                 dataKey="averageTicket"
+                name={`${baseYear}`}
                 stroke="hsl(var(--chart-tertiary))"
                 strokeWidth={2}
                 dot={{ fill: 'hsl(var(--chart-tertiary))', strokeWidth: 0, r: 3 }}
