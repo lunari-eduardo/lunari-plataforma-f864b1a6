@@ -780,26 +780,40 @@ export default function Workflow() {
       }
 
       // Mensagens contextualizadas por ação
+      let title: string;
       let description: string;
+      let durationMs = 5000;
+
       if (deleteAction === 'preserve') {
+        title = 'Sessão arquivada';
         description = 'Sessão movida para o histórico do cliente.';
       } else if (deleteAction === 'refund') {
-        const partes: string[] = [];
-        if (result.estornos_criados) partes.push(`${result.estornos_criados} estorno(s) criado(s)`);
-        if (result.deleted_appointment) partes.push('agendamento removido');
-        description = partes.length ? partes.join(' • ') : 'Sessão excluída.';
+        title = 'Sessão excluída com estorno';
+        const partes: string[] = ['Sessão e agendamento removidos'];
+        if (result.estornos_criados) partes.push(`${result.estornos_criados} estorno(s) registrado(s)`);
+        description = partes.join(' • ') + '.';
       } else {
-        const partes: string[] = [];
-        if (result.deleted_transactions) partes.push(`${result.deleted_transactions} pagamento(s) excluído(s)`);
-        if (result.deleted_cobrancas) partes.push(`${result.deleted_cobrancas} cobrança(s) removida(s)`);
-        if (result.unlinked_cobrancas) partes.push(`${result.unlinked_cobrancas} cobrança(s) preservada(s) por conter pagamento confirmado`);
-        if (result.deleted_appointment) partes.push('agendamento removido');
-        description = partes.length ? partes.join(' • ') : 'Sessão excluída permanentemente.';
+        title = 'Sessão excluída';
+        const pagamentos = result.deleted_transactions ?? 0;
+        const cobrancasPreservadas = result.unlinked_cobrancas ?? 0;
+        const agendamentoRemovido = !!result.deleted_appointment;
+
+        const acoes: string[] = ['Sessão'];
+        if (pagamentos > 0) acoes.push(`${pagamentos} pagamento(s)`);
+        if (agendamentoRemovido) acoes.push('agendamento');
+
+        description = `${acoes.join(', ').replace(/, ([^,]*)$/, ' e $1')} excluídos permanentemente.`;
+
+        if (cobrancasPreservadas > 0) {
+          description += ` ${cobrancasPreservadas} pagamento(s) recebido(s) via gateway (Asaas/Mercado Pago/InfinitePay) foram mantidos no extrato fiscal para auditoria contábil.`;
+          durationMs = 8000;
+        }
       }
 
       toast({
-        title: 'Sessão excluída',
+        title,
         description,
+        duration: durationMs,
       });
 
       // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
