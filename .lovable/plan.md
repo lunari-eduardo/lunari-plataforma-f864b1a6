@@ -1,128 +1,118 @@
+# 🩺 Diagnóstico — Por que a exclusão pelo Workflow não removeu pagamentos nem agendamento
 
-## Diagnóstico
+Após investigar o fluxo completo (UI → handler → DB) e consultar o estado atual do banco, identifiquei **três falhas distintas** que se somam:
 
-Investiguei o fluxo de criação da galeria a partir do Workflow e encontrei **dois problemas distintos** que se somam para gerar o sintoma:
-
-### Problema A — Gestão envia o valor congelado e com nome de param errado
-
-Em `src/components/workflow/WorkflowCardCollapsed.tsx` (linha 224), o handler `handleCreateSelecao` monta a URL de criação da galeria assim:
-
+### 1. A opção "Excluir tudo permanentemente" não exclui pagamentos
+Em `src/pages/Workflow.tsx` (linhas 800-820), o branch `else` (`action === 'remove'`) faz **exatamente o mesmo** que o `'preserve'`:
 ```ts
-precoExtra: session.regras_congeladas?.pacote?.valorFotoExtra,  // ← lê só o JSON congelado
-fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
-modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
+// remove: hard delete — decouple transactions first
+await supabase.from('clientes_transacoes')
+  .update({ session_id: null })   // ❌ apenas DESVINCULA
+  .eq('session_id', sessaoData.session_id);
+await supabase.from('clientes_sessoes').delete().eq('id', sessionId);
 ```
+Some-se a isso a FK `clientes_transacoes.session_id → clientes_sessoes(session_id) ON DELETE SET NULL`: mesmo se a sessão fosse deletada sem o `update` prévio, as transações sobreviveriam como órfãs. **Resultado:** o pagamento de R$ 112,00 do Eduardo Valmor (visível no extrato como `session_id = NULL`) é exatamente esse cenário.
 
-E `src/utils/galleryRedirect.ts` traduz para query string usando os nomes:
+### 2. A exclusão pelo Workflow ignora o `appointment` da Agenda
+A função `handleDeleteSession` só toca em `clientes_sessoes` e `clientes_transacoes`. **Nunca apaga `appointments`**. Confirmei no banco: o appointment `1c1bb97f-…` (Eduardo Valmor, 18/06 15:00) ainda existe vinculado à sessão `68f97f40-…` — exatamente o card azul que aparece na sua imagem da Agenda.
 
-| Gestão envia | Gallery (`useGestaoParams.ts`) espera | Resultado |
-|---|---|---|
-| `preco_extra` | `preco_da_foto_extra` | **Ignorado** |
-| `fotos_incluidas` | `fotos_incluidas_no_pacote` | **Ignorado** |
-| `modelo_cobranca` | `modelo_de_cobranca` | **Ignorado** |
-| (não enviamos) | `modelo_de_preco` | n/a |
-| `tipo_assinatura`, `pacote_nome`, `pacote_categoria`, `cliente_*`, `session_id` | iguais | OK |
+### 3. Existem dois fluxos paralelos (e divergentes) de exclusão
+- **Agenda** usa a RPC atômica `delete_appointment_cascade` (que apaga transações + sessão + appointment de forma transacional) — está correta.
+- **Workflow** usa código manual em `Workflow.tsx` (errado) e ainda existe o hook morto `useWorkflowRealtime.deleteSession → deleteSessionWithOptions` (que só conhece `preserve|refund`, nem suporta `remove`). Há também o `FlexibleDeleteModal` (2 opções) e o `WorkflowDeleteConfirmModal` (3 opções) coexistindo.
 
-Como o Gallery não recebe `preco_da_foto_extra` válido, ele cai no fallback que lê a sessão pelo `session_id` e copia `clientes_sessoes.regras_congeladas.pacote.valorFotoExtra` — que é o **valor original congelado de R$ 250,05**, mesmo o usuário tendo editado o campo "Vlr foto extra" para R$ 25,00.
-
-Confirmado no banco para a sessão da Andreza (`workflow-1776882726236-…`):
-
-- `clientes_sessoes.valor_foto_extra = 25` ✅ (editado pelo usuário)
-- `clientes_sessoes.regras_congeladas.pacote.valorFotoExtra = 250.05` ❌ (congelado)
-- `galerias.valor_foto_extra = 250.05` ❌ (criada com o valor errado)
-
-### Problema B — Edição do workflow não atualiza o JSON congelado
-
-Quando o usuário edita "Vlr foto extra" no card do workflow, `useWorkflowRealtime.ts` grava em `clientes_sessoes.valor_foto_extra` mas **não** atualiza `regras_congeladas.pacote.valorFotoExtra`. Isso faz com que:
-
-1. A Gallery (que prioriza o JSONB em vários caminhos) continue vendo o valor antigo.
-2. Outras telas/relatórios que consultam o JSON também divergem.
-3. 9 das 10 sessões "Mães 26 5 fotos" estão hoje em estado divergente (25 no campo, 250.05 no JSON).
-
-O próprio time da Gallery já mapeou isso no plano interno deles (`.lovable/plan.md`) e aponta o JSONB como fonte de verdade na precificação progressiva.
+### Estado atual do banco (impacto)
+- 50 transações órfãs (`session_id IS NULL`) somando R$ 3.097 só do user de testes — algumas marcadas com sufixo `[orphan]` em descrições antigas.
+- Appointment + sessão do Eduardo Valmor (15:00) ainda intactos.
+- Cobranças do Eduardo (Asaas/InfinitePay) também já estão com `session_id = NULL` — perda de rastreabilidade.
 
 ---
 
-## Plano de correção
+# 🎯 Plano de correção
 
-A correção precisa atuar em 3 frentes complementares: enviar o dado certo, manter o JSON congelado sincronizado, e corrigir os dados existentes.
-
-### 1) Gestão — enviar o valor atual e com os nomes corretos (front)
-
-**`src/utils/galleryRedirect.ts`**
-- Renomear (ou adicionar como aliases) os query params para bater com o contrato do Gallery:
-  - `preco_extra` → `preco_da_foto_extra`
-  - `fotos_incluidas` → `fotos_incluidas_no_pacote`
-  - `modelo_cobranca` → `modelo_de_cobranca`
-- Por compatibilidade temporária e segurança, **enviar ambos** os nomes (antigo + novo) por 1–2 ciclos. O Gallery passa a consumir só o novo, e em seguida removemos os antigos.
-- Adicionar suporte a `modelo_de_preco` (`fixed`/`packages`) opcional, para alinhar com o contrato do Gallery (não obrigatório para fechar o bug, mas evita outro fallback).
-- Sanitizar `precoExtra` (clamp 0–999,99) antes de serializar, espelhando o `sanitizeExtraPrice` da Gallery.
-
-**`src/components/workflow/WorkflowCardCollapsed.tsx` — `handleCreateSelecao`**
-- Trocar a fonte de verdade do `precoExtra`:
-  ```ts
-  // Prioridade: valor atual editado na sessão > valor congelado > 0
-  const precoExtraAtual =
-    Number(session.valor_foto_extra) ||
-    Number(session.regras_congeladas?.pacote?.valorFotoExtra) ||
-    0;
-  ```
-  Para isso, expor `valor_foto_extra` (numérico cru) no `SessionData` (`src/types/workflow.ts`) e no `convertSessionToData` de `src/hooks/useWorkflowPackageData.ts` — hoje só temos a versão formatada `valorFotoExtra: string`. Adicionar campo `valorFotoExtraNumber: number` (ou similar) sem quebrar consumidores.
-- Idem para `fotosIncluidas`: já usa `regras_congeladas` (campo estável); manter como está.
-- `modeloCobranca`: manter `regras_congeladas?.precificacaoFotoExtra?.modelo` (correto), só ajustar o nome da chave na URL.
-
-### 2) Gestão — manter `regras_congeladas.pacote.valorFotoExtra` sincronizado quando o usuário edita
-
-**Banco (preferencial — uma única fonte de garantia, idempotente):**
-Criar um trigger `BEFORE UPDATE` em `clientes_sessoes` que, sempre que `valor_foto_extra` mudar, faça `jsonb_set(regras_congeladas, '{pacote,valorFotoExtra}', to_jsonb(NEW.valor_foto_extra))` (com clamp 0–999,99 e proteção contra recursão via `pg_trigger_depth()`). Isso resolve **todas** as edições futuras independentemente do front-end (workflow, agenda, edição inline, importações).
-
-**Front (defesa em profundidade — opcional, mas recomendado):**
-Em `src/hooks/useWorkflowRealtime.ts`, no caminho do `case 'valorFotoExtra'` (linhas ~461–482), além de `sanitizedUpdates.valor_foto_extra = …`, calcular um `regras_congeladas` patcheado e mandar junto no UPDATE. Garante consistência mesmo se o trigger for desativado.
-
-### 3) Backfill dos dados já corrompidos
-
-Migration única que, para cada sessão onde `valor_foto_extra` divergir de `regras_congeladas.pacote.valorFotoExtra`, sincroniza o JSONB para o valor do campo (que é o que o usuário editou e considera correto). Tratamento dos casos:
-
-- **Caso normal** (campo > 0 e diferente do JSON): JSON ← campo.
-- **Caso "campo = 0 e JSON > 0"**: NÃO sobrescrever — significa que o usuário ainda não editou; manter o congelado.
-- **Caso "Huimi Loreto"** (`valorFotoExtra = 2550`, valor em centavos não normalizado, citado no plano da Gallery): clampar com `LEAST(GREATEST(v, 0), 999.99)`.
-
-Cobertura imediata: as 9 sessões "Mães 26 5 fotos" identificadas no diagnóstico passam de 250,05 para 25,00 no JSON.
-
-**Importante:** **não** atualizar `cobrancas` históricas (preço cobrado é imutável). E **não** alterar `galerias` já criadas com valor errado — para essas, o usuário deve usar o "Editar" da Gallery para ajustar (ver seção 4).
-
-### 4) Galerias já criadas com R$ 250,05 (correção pontual)
-
-Para a galeria da Andreza (e outras 4 do Dia das Mães já criadas com 250,05), oferecer duas opções ao usuário:
-
-- (a) Atualizar manualmente via tela de "Editar" da Gallery (campo `valor_foto_extra`).
-- (b) Script de correção pontual no backfill: para galerias **sem cobranças geradas ainda** (sem `cobrancas.galeria_id`), atualizar `galerias.valor_foto_extra` e `galerias.regras_congeladas.pacote.valorFotoExtra` para o valor atual da sessão. Cobranças já emitidas permanecem intocadas.
-
-Recomendo (b) com filtro de "sem cobrança", pois é seguro e elimina a fricção manual.
-
-### 5) Revisão sugerida no projeto Lunari Gallery
-
-(Não vou alterar o Gallery por aqui, mas vale comunicar — a equipe deles já tem um plano paralelo e o que falta é uma única peça nova:)
-
-**Aceitar `preco_da_foto_extra` da query como override do JSONB na criação assistida**, mesmo quando o `session_id` resolve uma sessão com `regras_congeladas`. Hoje, mesmo que mandássemos com o nome certo, há caminhos onde o JSON da sessão prevalece. Sugestão: na hidratação inicial da galeria a partir de `session_id`, se `preco_da_foto_extra` veio da query e for válido (e divergir do JSONB), usar o da query e logar um warning para telemetria de divergência.
-
-Adicionalmente, o trigger `sync_gallery_extras_to_session` deveria também propagar para o JSONB nos dois lados (sessão e galeria), conforme já está descrito no `.lovable/plan.md` interno deles.
+## Princípios
+1. **Uma única fonte da verdade**: criar RPC `delete_workflow_session_cascade` espelhando o padrão da Agenda.
+2. **Atomicidade**: tudo (transações, cobranças desvinculadas, sessão, appointment) numa transação SQL.
+3. **Sem perda silenciosa**: cobranças com pagamentos já confirmados (`status='pago'` com gateway externo) **não são apagadas** — apenas perdem o vínculo, e a sessão recebe registro em `audit_log`.
+4. **Compatibilidade Gallery**: galerias vinculadas obedecem à FK `ON DELETE SET NULL` que já existe — não removemos galerias, apenas desvinculamos.
 
 ---
 
-## Resumo dos arquivos que serão alterados (Gestão)
+## FASE 1 — Backend: RPC atômica unificada
+**Arquivo:** nova migration SQL.
 
-- `src/utils/galleryRedirect.ts` — corrigir nomes de query params, adicionar sanitização e `modelo_de_preco`.
-- `src/components/workflow/WorkflowCardCollapsed.tsx` — usar valor atual da sessão (com fallback para o congelado) no `handleCreateSelecao`.
-- `src/types/workflow.ts` — adicionar `valorFotoExtraNumber: number` no `SessionData`.
-- `src/hooks/useWorkflowPackageData.ts` — popular `valorFotoExtraNumber` a partir de `session.valor_foto_extra`.
-- `src/hooks/useWorkflowRealtime.ts` — (defesa em profundidade) patchear o JSONB ao salvar `valor_foto_extra`.
-- **Migration nova**: trigger `BEFORE UPDATE` em `clientes_sessoes` mantendo `regras_congeladas.pacote.valorFotoExtra` sincronizado, + backfill one-shot das sessões já divergentes, + correção pontual de galerias sem cobrança.
+Criar `public.delete_workflow_session_cascade(p_session_pk uuid, p_action text)` com `SECURITY DEFINER` e `auth.uid()`:
 
-## Resultado esperado
+| Ação | Comportamento |
+|---|---|
+| `preserve` | `UPDATE clientes_sessoes SET status='historico'` (soft delete, mantém tudo) |
+| `refund` | INSERT estornos espelhando pagamentos `tipo='pagamento'` → DELETE da sessão (FK desvincula transações automaticamente) → DELETE do appointment vinculado |
+| `remove` | DELETE de `clientes_transacoes WHERE session_id=...` → DELETE de `clientes_sessoes` → DELETE de `appointments WHERE id = appointment_id` da sessão. Cobranças do gateway: se houver pagamento confirmado externo, **não apagar** a `cobranca` (apenas zerar `session_id`); senão, apagar. |
 
-- Editar "Vlr foto extra" no workflow passa a refletir corretamente em qualquer nova galeria criada (assistida ou não).
-- O JSON congelado deixa de divergir do campo simples — bug de raiz resolvido.
-- Galerias futuras criadas para a Andreza e qualquer outro pacote com valor extra editado virão com o valor certo desde o primeiro clique.
-- Galerias já existentes com valor errado e **sem cobrança** são corrigidas no backfill; as com cobrança permanecem auditáveis e podem ser ajustadas manualmente.
+Retorno: `jsonb` com contadores (`deleted_transactions`, `deleted_cobrancas`, `deleted_appointment`, `deleted_session`) para feedback ao usuário e logs.
 
+Validações dentro da função:
+- `auth.uid()` precisa bater com `user_id` da sessão (defesa em profundidade além das RLS).
+- `RAISE EXCEPTION` se sessão não existe (evita o "sucesso silencioso" que aconteceu agora).
+
+## FASE 2 — Frontend: unificar fluxo do Workflow
+**Arquivos a editar:**
+
+### `src/pages/Workflow.tsx`
+Substituir a `handleDeleteSession` (linhas 743-829) por chamada única à RPC:
+```ts
+const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
+  p_session_pk: sessionId,
+  p_action: deleteAction
+});
+if (error) throw error;
+// usar data.deleted_* para mensagem de sucesso ("3 pagamentos removidos, 1 agendamento removido")
+```
+Remover toda a lógica manual de `update session_id=null` e `delete`.
+
+### `src/hooks/useWorkflowRealtime.ts`
+- Atualizar `deleteSession(id, action: 'preserve'|'refund'|'remove')` para também usar a RPC.
+- Manter assinatura compatível para chamadas existentes.
+
+### `src/utils/sessionDeletionUtils.ts`
+- Marcar `orphanPaymentsThenDeleteSession` e `deleteSessionWithOptions` como **deprecated** (manter export por 1 release para evitar quebra) e fazer eles chamarem a RPC internamente.
+
+### `src/components/workflow/FlexibleDeleteModal.tsx`
+- **Remover** (modal antigo de 2 opções, não está mais em uso pelo card colapsado — vou validar usos antes de apagar para evitar quebras).
+
+## FASE 3 — Sincronização Workflow ↔ Agenda
+- Após a RPC retornar com `deleted_appointment > 0`, disparar `window.dispatchEvent(new CustomEvent('agenda:refresh'))` para que a `AgendaContext` re-buscar (já existe esse padrão para outros eventos). Garante que o card azul desapareça imediatamente da Agenda sem F5.
+
+## FASE 4 — Backfill seguro do estado órfão atual
+Migration adicional (idempotente) com 3 passos, **não destrutivos**:
+
+1. **Marcar** todas as transações órfãs `session_id IS NULL` com sufixo `[orphan-pre-fix]` na descrição (caso ainda não tenha) — para auditoria.
+2. **Não excluir automaticamente** transações órfãs (algumas podem ser legítimas — pagamentos avulsos, integrações antigas). Em vez disso, criar uma **view** `vw_transacoes_orfas` para que o usuário decida no extrato (futura UI: botão "Excluir órfã").
+3. **Caso específico do Eduardo Valmor (sessão `68f97f40`)**: como o usuário confirmou que tentou excluir hoje sem sucesso, executar via migration um cleanup pontual usando a nova RPC para essa sessão exata (`p_action='remove'`). Isso resolve a inconsistência visível agora sem mexer em dados de outros usuários.
+
+## FASE 5 — Telemetria & defesa
+- Adicionar `console.log('🗑️ [WORKFLOW-DELETE]', { sessionId, action, result })` antes/depois da RPC.
+- Toast de erro **explícito** quando `data.deleted_session === 0` (hoje o `.delete()` não retorna erro mesmo quando RLS bloqueia 0 linhas — esse é provavelmente o motivo da exclusão de hoje ter "passado" sem efeito).
+
+## FASE 6 — QA manual sugerido
+1. Criar sessão de teste com pagamento → excluir com "Estornar e excluir" → conferir estorno no extrato + sumiço da Agenda.
+2. Criar sessão de teste com pagamento → excluir com "Excluir tudo permanentemente" → conferir sumiço total no extrato + Agenda.
+3. Criar sessão sem pagamento → excluir → conferir sumiço.
+4. Sessão com galeria + cobrança Asaas paga → excluir "permanentemente" → conferir que cobrança permanece (com `session_id=NULL`) mas sessão e appointment somem.
+
+---
+
+# 🔍 Sobre o projeto Gallery
+**Não há ação necessária no projeto Gallery** para este bug. A FK `clientes_sessoes.galeria_id → galerias(id) ON DELETE SET NULL` já protege a galeria de ser apagada acidentalmente. A nova RPC respeita esse padrão.
+
+**Sugestão futura (não no escopo desta correção):** quando uma sessão é excluída em "remove" e havia galeria vinculada, registrar em `audit_log` para que o painel de Galleries no Gallery exiba aviso "Sessão de origem foi excluída" — mas isso é UX, não integridade.
+
+---
+
+# ✅ Resultado esperado após a implementação
+- "Excluir tudo permanentemente" passa a **realmente apagar** transações, sessão e appointment numa transação atômica.
+- Agenda atualiza em tempo real (sem F5).
+- Pagamentos pré-existentes do gateway (Asaas/MP/InfinitePay) com confirmação externa são preservados como cobrança histórica (sem vínculo) — protege contabilidade.
+- Backlog de 50 órfãs antigas fica visível em uma view para limpeza manual posterior, sem risco de exclusão automática indevida.
+- Sessão `68f97f40` do Eduardo Valmor é limpa imediatamente via migration pontual.
+
+Posso prosseguir com a implementação?
