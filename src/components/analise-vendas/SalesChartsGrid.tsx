@@ -1,12 +1,13 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { TrendingUp, Calendar, Camera, DollarSign, Package, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
 import { OriginChartsSection } from './OriginChartsSection';
 import { OriginHighlightCard } from './OriginHighlightCard';
 import { RankedBarList, RankedBarItem } from './RankedBarList';
 import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
+import { SalesComparisonResult } from '@/domain/sales/sales-domain';
 
 interface SalesChartsGridProps {
   monthlyData: MonthlyData[];
@@ -15,9 +16,11 @@ interface SalesChartsGridProps {
   originData: OriginData[];
   monthlyOriginData: MonthlyOriginData[];
   selectedCategory: string;
+  comparison?: SalesComparisonResult | null;
+  baseYear: number;
 }
 
-export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, monthlyOriginData, selectedCategory }: SalesChartsGridProps) {
+export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, monthlyOriginData, selectedCategory, comparison, baseYear }: SalesChartsGridProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency', 
