@@ -741,89 +741,77 @@ export default function Workflow() {
   }, []);
 
   const handleDeleteSession = useCallback(async (sessionId: string, sessionTitle: string, paymentCount: number, action?: string) => {
-    const deleteAction = action || 'remove';
-    
+    const deleteAction = (action || 'remove') as 'preserve' | 'refund' | 'remove';
+
+    console.log('🗑️ [WORKFLOW-DELETE] start', { sessionId, deleteAction });
+
     try {
-      if (deleteAction === 'preserve') {
-        // Soft delete: mark as hidden/historico
-        const { error: updateError } = await supabase
-          .from('clientes_sessoes')
-          .update({ status: 'historico' })
-          .eq('id', sessionId);
-        if (updateError) throw updateError;
-      } else if (deleteAction === 'refund') {
-        // Get session_id (text) for transaction lookup
-        const { data: sessaoData } = await supabase
-          .from('clientes_sessoes')
-          .select('session_id')
-          .eq('id', sessionId)
-          .single();
-        const sessionTextId = sessaoData?.session_id;
+      // Chamada única à RPC atômica que cuida de transações, cobranças, sessão e appointment
+      const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
+        p_session_pk: sessionId,
+        p_action: deleteAction,
+      });
 
-        if (sessionTextId) {
-          // Create refund transactions
-          const { data: transacoes } = await supabase
-            .from('clientes_transacoes')
-            .select('*')
-            .eq('session_id', sessionTextId)
-            .eq('tipo', 'receita');
-          
-          if (transacoes && transacoes.length > 0) {
-            const estornos = transacoes.map(t => ({
-              cliente_id: t.cliente_id,
-              user_id: t.user_id,
-              session_id: t.session_id,
-              valor: t.valor,
-              tipo: 'estorno' as const,
-              data_transacao: new Date().toISOString().split('T')[0],
-              descricao: `Estorno: ${t.descricao || 'Pagamento'}`,
-            }));
-            
-            const { error: estornoError } = await supabase
-              .from('clientes_transacoes')
-              .insert(estornos);
-            if (estornoError) throw estornoError;
-          }
-
-          // Decouple transactions before delete (defensive)
-          await supabase
-            .from('clientes_transacoes')
-            .update({ session_id: null })
-            .eq('session_id', sessionTextId);
-        }
-        
-        const { error: deleteError } = await supabase
-          .from('clientes_sessoes')
-          .delete()
-          .eq('id', sessionId);
-        if (deleteError) throw deleteError;
-      } else {
-        // remove: hard delete — decouple transactions first
-        const { data: sessaoData } = await supabase
-          .from('clientes_sessoes')
-          .select('session_id')
-          .eq('id', sessionId)
-          .single();
-        
-        if (sessaoData?.session_id) {
-          await supabase
-            .from('clientes_transacoes')
-            .update({ session_id: null })
-            .eq('session_id', sessaoData.session_id);
-        }
-
-        const { error: deleteError } = await supabase
-          .from('clientes_sessoes')
-          .delete()
-          .eq('id', sessionId);
-        if (deleteError) throw deleteError;
+      if (error) {
+        console.error('❌ [WORKFLOW-DELETE] rpc error', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('Error deleting session:', error);
+
+      const result = (data ?? {}) as {
+        deleted_transactions?: number;
+        deleted_cobrancas?: number;
+        unlinked_cobrancas?: number;
+        deleted_session?: number;
+        deleted_appointment?: number;
+        estornos_criados?: number;
+        soft_deleted?: boolean;
+      };
+
+      console.log('✅ [WORKFLOW-DELETE] rpc result', result);
+
+      // Defesa contra "sucesso silencioso": se nenhuma sessão foi tocada, alertar
+      if (deleteAction !== 'preserve' && (result.deleted_session ?? 0) === 0) {
+        toast({
+          title: 'Nada foi excluído',
+          description: 'A sessão pode já ter sido removida ou você não tem permissão.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Mensagens contextualizadas por ação
+      let description: string;
+      if (deleteAction === 'preserve') {
+        description = 'Sessão movida para o histórico do cliente.';
+      } else if (deleteAction === 'refund') {
+        const partes: string[] = [];
+        if (result.estornos_criados) partes.push(`${result.estornos_criados} estorno(s) criado(s)`);
+        if (result.deleted_appointment) partes.push('agendamento removido');
+        description = partes.length ? partes.join(' • ') : 'Sessão excluída.';
+      } else {
+        const partes: string[] = [];
+        if (result.deleted_transactions) partes.push(`${result.deleted_transactions} pagamento(s) excluído(s)`);
+        if (result.deleted_cobrancas) partes.push(`${result.deleted_cobrancas} cobrança(s) removida(s)`);
+        if (result.unlinked_cobrancas) partes.push(`${result.unlinked_cobrancas} cobrança(s) preservada(s) por conter pagamento confirmado`);
+        if (result.deleted_appointment) partes.push('agendamento removido');
+        description = partes.length ? partes.join(' • ') : 'Sessão excluída permanentemente.';
+      }
+
       toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir a sessão.",
-        variant: "destructive",
+        title: 'Sessão excluída',
+        description,
+      });
+
+      // Notificar Agenda para refresh imediato (o appointment foi removido)
+      if (result.deleted_appointment) {
+        window.dispatchEvent(new CustomEvent('agenda:refresh'));
+      }
+    } catch (error: any) {
+      console.error('❌ [WORKFLOW-DELETE] failed', error);
+      toast({
+        title: 'Erro ao excluir',
+        description: error?.message || 'Não foi possível excluir a sessão.',
+        variant: 'destructive',
       });
     }
   }, []);
