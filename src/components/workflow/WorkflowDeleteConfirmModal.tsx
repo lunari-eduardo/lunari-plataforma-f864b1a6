@@ -134,6 +134,11 @@ export function WorkflowDeleteConfirmModal({
                           <p className="text-xs text-lunar-textSecondary">
                             Remove sessão do workflow e todos os pagamentos relacionados permanentemente
                           </p>
+                          {action === 'remove' && (
+                            <p className="text-[11px] text-lunar-textSecondary/80 italic mt-2 leading-snug">
+                              ℹ️ Pagamentos já recebidos via gateway (Asaas, Mercado Pago, InfinitePay) serão mantidos no extrato fiscal para auditoria contábil, mesmo nesta opção.
+                            </p>
+                          )}
                         </div>
                       </Label>
                     </div>
