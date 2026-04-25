@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesGoalsCard } from '@/components/analise-vendas/SalesGoalsCard';
 import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilter';
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { SalesInsightsSection } from '@/components/analise-vendas/SalesInsightsSection';
+import { SalesYearComparisonBlock } from '@/components/analise-vendas/SalesYearComparisonBlock';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalyticsWrapper';
 
 export default function AnaliseVendas() {
@@ -27,6 +28,17 @@ export default function AnaliseVendas() {
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
+  // Comparison state
+  const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  const [comparisonYear, setComparisonYear] = useState<number | null>(null);
+
+  // Auto-suggest previous year when toggling comparison or changing base year
+  const effectiveComparisonYear = useMemo(() => {
+    if (!comparisonEnabled) return null;
+    if (comparisonYear && comparisonYear !== selectedYear) return comparisonYear;
+    return selectedYear - 1;
+  }, [comparisonEnabled, comparisonYear, selectedYear]);
+
   const {
     salesMetrics,
     monthlyData,
@@ -35,8 +47,12 @@ export default function AnaliseVendas() {
     originData,
     monthlyOriginData,
     availableYears,
-    availableCategories
-  } = useSalesAnalytics(selectedYear, selectedMonth, selectedCategory);
+    availableCategories,
+    comparison
+  } = useSalesAnalytics(selectedYear, selectedMonth, selectedCategory, {
+    enabled: comparisonEnabled,
+    comparisonYear: effectiveComparisonYear
+  });
 
   return (
     <div className="min-h-screen">
@@ -49,7 +65,16 @@ export default function AnaliseVendas() {
         availableCategories={availableCategories} 
         onYearChange={setSelectedYear} 
         onMonthChange={setSelectedMonth} 
-        onCategoryChange={setSelectedCategory} 
+        onCategoryChange={setSelectedCategory}
+        comparisonEnabled={comparisonEnabled}
+        comparisonYear={effectiveComparisonYear}
+        onComparisonEnabledChange={(enabled) => {
+          setComparisonEnabled(enabled);
+          if (enabled && !comparisonYear) {
+            setComparisonYear(selectedYear - 1);
+          }
+        }}
+        onComparisonYearChange={setComparisonYear}
       />
 
       {/* Main Content - 3 Blocos Visuais */}
@@ -59,8 +84,11 @@ export default function AnaliseVendas() {
         {/* BLOCO 1: VISÃO EXECUTIVA                                        */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section aria-label="Visão executiva" className="space-y-4 animate-fade-in">
-          {/* KPIs Compactos */}
-          <SalesMetricsCards metrics={salesMetrics} />
+          {/* KPIs Compactos com comparação */}
+          <SalesMetricsCards 
+            metrics={salesMetrics} 
+            comparison={comparison ? { metrics: comparison.metrics, comparisonYear: comparison.comparisonYear } : null}
+          />
           
           {/* Metas Horizontais Compactas */}
           <SalesGoalsCard 
@@ -81,8 +109,15 @@ export default function AnaliseVendas() {
             packageDistributionData={packageDistributionData} 
             originData={originData} 
             monthlyOriginData={monthlyOriginData} 
-            selectedCategory={selectedCategory} 
+            selectedCategory={selectedCategory}
+            comparison={comparison}
+            baseYear={selectedYear}
           />
+
+          {/* Bloco de comparação anual detalhado */}
+          {comparison && (
+            <SalesYearComparisonBlock comparison={comparison} baseYear={selectedYear} />
+          )}
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}

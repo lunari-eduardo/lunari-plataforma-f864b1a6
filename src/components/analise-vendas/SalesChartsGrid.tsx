@@ -1,12 +1,13 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { TrendingUp, Calendar, Camera, DollarSign, Package, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import { MonthlyData, CategoryData, PackageDistributionData, OriginData } from '@/hooks/useSalesAnalytics';
 import { OriginChartsSection } from './OriginChartsSection';
 import { OriginHighlightCard } from './OriginHighlightCard';
 import { RankedBarList, RankedBarItem } from './RankedBarList';
 import { MonthlyOriginData } from '@/services/RevenueAnalyticsService';
+import { SalesComparisonResult } from '@/domain/sales/sales-domain';
 
 interface SalesChartsGridProps {
   monthlyData: MonthlyData[];
@@ -15,9 +16,11 @@ interface SalesChartsGridProps {
   originData: OriginData[];
   monthlyOriginData: MonthlyOriginData[];
   selectedCategory: string;
+  comparison?: SalesComparisonResult | null;
+  baseYear: number;
 }
 
-export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, monthlyOriginData, selectedCategory }: SalesChartsGridProps) {
+export function SalesChartsGrid({ monthlyData, categoryData, packageDistributionData, originData, monthlyOriginData, selectedCategory, comparison, baseYear }: SalesChartsGridProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency', 
@@ -27,18 +30,37 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
     }).format(value);
   };
 
+  const comparisonActive = !!comparison;
+  const comparisonYear = comparison?.comparisonYear;
+
+  // Merge monthly data with comparison data when active
+  const mergedMonthly = monthlyData.map((d, idx) => {
+    const prev = comparison?.monthlyData[idx];
+    return {
+      ...d,
+      revenuePrevious: prev?.revenuePrevious ?? 0,
+      sessionsPrevious: prev?.sessionsPrevious ?? 0,
+      averageTicketPrevious: prev?.averageTicketPrevious ?? 0,
+      extraPhotoRevenuePrevious: prev?.extraPhotoRevenuePrevious ?? 0
+    };
+  });
+
   const chartConfig = {
-    revenue: { label: 'Receita', color: 'hsl(var(--chart-primary))' },
-    sessions: { label: 'Sessões', color: 'hsl(var(--chart-secondary))' },
-    averageTicket: { label: 'Ticket Médio', color: 'hsl(var(--chart-tertiary))' },
-    extraPhotoRevenue: { label: 'Fotos Extras', color: 'hsl(var(--chart-quaternary))' }
+    revenue: { label: `Receita ${baseYear}`, color: 'hsl(var(--chart-primary))' },
+    revenuePrevious: { label: `Receita ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' },
+    sessions: { label: `Sessões ${baseYear}`, color: 'hsl(var(--chart-secondary))' },
+    sessionsPrevious: { label: `Sessões ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' },
+    averageTicket: { label: `Ticket ${baseYear}`, color: 'hsl(var(--chart-tertiary))' },
+    averageTicketPrevious: { label: `Ticket ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' },
+    extraPhotoRevenue: { label: `Extras ${baseYear}`, color: 'hsl(var(--chart-quaternary))' },
+    extraPhotoRevenuePrevious: { label: `Extras ${comparisonYear ?? ''}`, color: 'hsl(var(--muted-foreground))' }
   };
 
   // Check if data has meaningful values
-  const hasRevenueData = monthlyData.some(d => d.revenue > 0);
-  const hasSessionsData = monthlyData.some(d => d.sessions > 0);
-  const hasTicketData = monthlyData.some(d => d.averageTicket > 0);
-  const hasExtraData = monthlyData.some(d => d.extraPhotoRevenue > 0);
+  const hasRevenueData = monthlyData.some(d => d.revenue > 0) || (comparisonActive && mergedMonthly.some(d => d.revenuePrevious > 0));
+  const hasSessionsData = monthlyData.some(d => d.sessions > 0) || (comparisonActive && mergedMonthly.some(d => d.sessionsPrevious > 0));
+  const hasTicketData = monthlyData.some(d => d.averageTicket > 0) || (comparisonActive && mergedMonthly.some(d => d.averageTicketPrevious > 0));
+  const hasExtraData = monthlyData.some(d => d.extraPhotoRevenue > 0) || (comparisonActive && mergedMonthly.some(d => d.extraPhotoRevenuePrevious > 0));
 
   // Transform data for RankedBarList
   const categoryBarData: RankedBarItem[] = categoryData.map(cat => ({
@@ -66,7 +88,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasRevenueData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <BarChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.9" />
@@ -92,7 +114,11 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => formatCurrency(value)}
               />
-              <Bar dataKey="revenue" fill="url(#revenueGradient)" radius={[4, 4, 0, 0]} />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Bar dataKey="revenuePrevious" name={`${comparisonYear}`} fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
+              )}
+              <Bar dataKey="revenue" name={`${baseYear}`} fill="url(#revenueGradient)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </ChartCard>
@@ -104,7 +130,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasSessionsData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <BarChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="sessionsGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-secondary))" stopOpacity="0.9" />
@@ -129,7 +155,11 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => `${value} sessões`}
               />
-              <Bar dataKey="sessions" fill="url(#sessionsGradient)" radius={[4, 4, 0, 0]} />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Bar dataKey="sessionsPrevious" name={`${comparisonYear}`} fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
+              )}
+              <Bar dataKey="sessions" name={`${baseYear}`} fill="url(#sessionsGradient)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </ChartCard>
@@ -144,7 +174,7 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasTicketData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <LineChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <LineChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
               <XAxis 
                 dataKey="month" 
@@ -164,9 +194,22 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => formatCurrency(value)}
               />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Line
+                  type="monotone"
+                  dataKey="averageTicketPrevious"
+                  name={`${comparisonYear}`}
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={false}
+                />
+              )}
               <Line
                 type="monotone"
                 dataKey="averageTicket"
+                name={`${baseYear}`}
                 stroke="hsl(var(--chart-tertiary))"
                 strokeWidth={2}
                 dot={{ fill: 'hsl(var(--chart-tertiary))', strokeWidth: 0, r: 3 }}
@@ -183,11 +226,15 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
           hasData={hasExtraData}
         >
           <ChartContainer config={chartConfig} className="w-full h-[200px] lg:h-[225px]">
-            <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <AreaChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="extraGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.5" />
                   <stop offset="100%" stopColor="hsl(var(--chart-quaternary))" stopOpacity="0.1" />
+                </linearGradient>
+                <linearGradient id="extraGradientPrev" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="hsl(var(--muted-foreground))" stopOpacity="0.05" />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
@@ -209,9 +256,22 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 content={<ChartTooltipContent hideIndicator />}
                 formatter={(value: any) => formatCurrency(value)}
               />
+              {comparisonActive && <Legend wrapperStyle={{ fontSize: 11 }} iconSize={10} />}
+              {comparisonActive && (
+                <Area
+                  type="monotone"
+                  dataKey="extraPhotoRevenuePrevious"
+                  name={`${comparisonYear}`}
+                  stroke="hsl(var(--muted-foreground))"
+                  fill="url(#extraGradientPrev)"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                />
+              )}
               <Area
                 type="monotone"
                 dataKey="extraPhotoRevenue"
+                name={`${baseYear}`}
                 stroke="hsl(var(--chart-quaternary))"
                 fill="url(#extraGradient)"
                 strokeWidth={2}

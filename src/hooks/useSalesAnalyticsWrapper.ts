@@ -8,8 +8,8 @@ import { useSalesAnalyticsRefactored } from '@/hooks/useSalesAnalyticsRefactored
 export function useSalesAnalytics(
   selectedYear: number,
   selectedMonth: number | null,
-  selectedCategory: string
+  selectedCategory: string,
+  comparisonOptions?: { enabled: boolean; comparisonYear: number | null }
 ) {
-  // Always use refactored version with Supabase data source
-  return useSalesAnalyticsRefactored(selectedYear, selectedMonth, selectedCategory);
+  return useSalesAnalyticsRefactored(selectedYear, selectedMonth, selectedCategory, comparisonOptions);
 }
