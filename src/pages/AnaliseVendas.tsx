@@ -31,6 +31,8 @@ export default function AnaliseVendas() {
   // Comparison state
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
   const [comparisonYear, setComparisonYear] = useState<number | null>(null);
+  // null = automatic (current month or last month with data)
+  const [comparisonLimitMonth, setComparisonLimitMonth] = useState<number | null>(null);
 
   // Auto-suggest previous year when toggling comparison or changing base year
   const effectiveComparisonYear = useMemo(() => {
@@ -51,8 +53,21 @@ export default function AnaliseVendas() {
     comparison
   } = useSalesAnalytics(selectedYear, selectedMonth, selectedCategory, {
     enabled: comparisonEnabled,
-    comparisonYear: effectiveComparisonYear
+    comparisonYear: effectiveComparisonYear,
+    limitMonth: comparisonLimitMonth
   });
+
+  // Effective limit month (resolved by repository, falls back to current month for current year, or 11)
+  const effectiveLimitMonth = useMemo(() => {
+    if (comparison) return comparison.limitMonth;
+    if (selectedYear === currentYear) return new Date().getMonth();
+    return 11;
+  }, [comparison, selectedYear, currentYear]);
+
+  // Reset manual limit when toggling comparison off so "Auto" reappears next time
+  useEffect(() => {
+    if (!comparisonEnabled) setComparisonLimitMonth(null);
+  }, [comparisonEnabled]);
 
   return (
     <div className="min-h-screen">
@@ -75,6 +90,9 @@ export default function AnaliseVendas() {
           }
         }}
         onComparisonYearChange={setComparisonYear}
+        comparisonLimitMonth={comparisonLimitMonth}
+        effectiveLimitMonth={effectiveLimitMonth}
+        onComparisonLimitMonthChange={setComparisonLimitMonth}
       />
 
       {/* Main Content - 3 Blocos Visuais */}
