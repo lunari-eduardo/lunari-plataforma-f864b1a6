@@ -781,39 +781,49 @@ export const useWorkflowRealtime = () => {
     }
   }, [sessions]);
 
-  // Delete session with flexible options
-  const deleteSession = useCallback(async (id: string, paymentAction: 'preserve' | 'refund' = 'preserve') => {
+  // Delete session with flexible options — agora usa a RPC atômica unificada
+  const deleteSession = useCallback(async (id: string, paymentAction: 'preserve' | 'refund' | 'remove' = 'preserve') => {
     try {
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      if (!authSession?.user) throw new Error('User not authenticated');
-      const user = { user: authSession.user };
-
-      // Find session data for session_id
+      // Find session data for optimistic UI update
       const session = sessions.find(s => s.id === id);
       if (!session) throw new Error('Session not found');
 
-      // Use flexible deletion utility
-      const { deleteSessionWithOptions } = await import('@/utils/sessionDeletionUtils');
-      
-      await deleteSessionWithOptions(session.session_id, {
-        paymentAction,
-        userId: user.user.id
+      const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
+        p_session_pk: id,
+        p_action: paymentAction,
       });
 
-      setSessions(prev => prev.filter(session => session.id !== id));
-      
-      toast({
-        title: "Sessão excluída",
-        description: paymentAction === 'refund' ? 
-          "Sessão excluída e pagamentos estornados com sucesso." :
-          "Sessão excluída. Pagamentos mantidos para auditoria.",
-      });
+      if (error) throw error;
+
+      const result = (data ?? {}) as {
+        deleted_session?: number;
+        deleted_appointment?: number;
+        deleted_transactions?: number;
+        estornos_criados?: number;
+        soft_deleted?: boolean;
+      };
+
+      // Atualizar cache local somente quando a sessão saiu de fato
+      if (paymentAction === 'preserve' || (result.deleted_session ?? 0) > 0) {
+        setSessions(prev => prev.filter(s => s.id !== id));
+      }
+
+      // O appointment vinculado é removido automaticamente da Agenda via subscription realtime de `appointments`.
+
+      const description =
+        paymentAction === 'refund'
+          ? `Sessão excluída e ${result.estornos_criados ?? 0} estorno(s) criado(s).`
+          : paymentAction === 'remove'
+          ? `Sessão e ${result.deleted_transactions ?? 0} pagamento(s) excluídos permanentemente.`
+          : 'Sessão movida para o histórico do cliente.';
+
+      toast({ title: 'Sessão excluída', description });
     } catch (err) {
       console.error('Error deleting session:', err);
       toast({
-        title: "Erro ao excluir sessão",
+        title: 'Erro ao excluir sessão',
         description: err instanceof Error ? err.message : 'Failed to delete session',
-        variant: "destructive",
+        variant: 'destructive',
       });
       throw err;
     }
