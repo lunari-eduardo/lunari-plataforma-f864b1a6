@@ -50,16 +50,53 @@ export class SalesRepositoryImpl implements SalesRepository {
 
     this.log(`Loaded ${sessions.length} filtered sessions${comparisonEnabled ? `, ${comparisonSessions.length} comparison sessions` : ''}`);
 
-    const baseMetrics = await this.calculateMetrics(sessions, filters);
-
     let comparison: SalesComparisonResult | null = null;
+    let baseSessionsForMetrics = sessions;
+
     if (comparisonEnabled) {
-      const previousMetrics = await this.calculateMetrics(comparisonSessions, {
+      // Resolve equivalent-period limit month
+      const currentDate = new Date();
+      const isCurrentYear = filters.year === currentDate.getFullYear();
+      // Last month with data in the base year (0-11). -1 if no data
+      const lastMonthWithData = sessions.reduce<number>(
+        (max, s) => (s.year === filters.year && s.month > max ? s.month : max),
+        -1
+      );
+      const autoLimit = isCurrentYear
+        ? Math.min(currentDate.getMonth(), lastMonthWithData >= 0 ? lastMonthWithData : currentDate.getMonth())
+        : (lastMonthWithData >= 0 ? lastMonthWithData : 11);
+
+      const limitMonth = filters.comparisonLimitMonth != null
+        ? Math.max(0, Math.min(11, filters.comparisonLimitMonth))
+        : autoLimit;
+
+      // When a specific month is selected, filter exactly that month; otherwise apply the limit
+      const applyLimit = (list: SalesSession[]) =>
+        filters.month != null
+          ? list.filter(s => s.month === filters.month)
+          : list.filter(s => s.month <= limitMonth);
+
+      const baseLimited = applyLimit(sessions);
+      const prevLimited = applyLimit(comparisonSessions);
+
+      // Use limited base sessions for metrics so KPIs match the comparison period
+      baseSessionsForMetrics = baseLimited;
+
+      const baseMetricsLimited = await this.calculateMetrics(baseLimited, filters);
+      const previousMetrics = await this.calculateMetrics(prevLimited, {
         ...filters,
         year: filters.comparisonYear!
       });
-      const monthlyCurrent = await this.calculateMonthlyData(sessions, filters.year);
-      const monthlyPrevious = await this.calculateMonthlyData(comparisonSessions, filters.comparisonYear!);
+      const monthlyCurrentFull = await this.calculateMonthlyData(sessions, filters.year);
+      const monthlyPreviousFull = await this.calculateMonthlyData(comparisonSessions, filters.comparisonYear!);
+
+      // Truncate monthly series to limit (or single month) for comparative view
+      const monthlyCurrent = filters.month != null
+        ? monthlyCurrentFull.filter(m => m.monthIndex === filters.month)
+        : monthlyCurrentFull.filter(m => m.monthIndex <= limitMonth);
+      const monthlyPrevious = filters.month != null
+        ? monthlyPreviousFull.filter(m => m.monthIndex === filters.month)
+        : monthlyPreviousFull.filter(m => m.monthIndex <= limitMonth);
 
       const monthlyComparative: ComparativeMonthlyDataPoint[] = monthlyCurrent.map((cur, idx) => {
         const prev = monthlyPrevious[idx];
@@ -81,16 +118,17 @@ export class SalesRepositoryImpl implements SalesRepository {
         baseYear: filters.year,
         comparisonYear: filters.comparisonYear!,
         previousMetrics,
+        limitMonth: filters.month != null ? filters.month : limitMonth,
         metrics: {
-          totalRevenue: computeComparison(baseMetrics.totalRevenue, previousMetrics.totalRevenue),
-          totalSessions: computeComparison(baseMetrics.totalSessions, previousMetrics.totalSessions),
-          averageTicket: computeComparison(baseMetrics.averageTicket, previousMetrics.averageTicket),
+          totalRevenue: computeComparison(baseMetricsLimited.totalRevenue, previousMetrics.totalRevenue),
+          totalSessions: computeComparison(baseMetricsLimited.totalSessions, previousMetrics.totalSessions),
+          averageTicket: computeComparison(baseMetricsLimited.averageTicket, previousMetrics.averageTicket),
           extraPhotosRevenue: computeComparison(
-            baseMetrics.extraPhotosRevenue ?? 0,
+            baseMetricsLimited.extraPhotosRevenue ?? 0,
             previousMetrics.extraPhotosRevenue ?? 0
           ),
           expectedRevenue: computeComparison(
-            baseMetrics.expectedRevenue ?? 0,
+            baseMetricsLimited.expectedRevenue ?? 0,
             previousMetrics.expectedRevenue ?? 0
           )
         },
@@ -98,9 +136,21 @@ export class SalesRepositoryImpl implements SalesRepository {
       };
     }
 
+    // KPI metrics: when comparison is active, reflect only the equivalent period
+    const baseMetrics = comparisonEnabled
+      ? await this.calculateMetrics(baseSessionsForMetrics, filters)
+      : await this.calculateMetrics(sessions, filters);
+
+    const monthlyDataFull = await this.calculateMonthlyData(sessions, filters.year);
+    const monthlyDataOut = comparison
+      ? (filters.month != null
+          ? monthlyDataFull.filter(m => m.monthIndex === filters.month)
+          : monthlyDataFull.filter(m => m.monthIndex <= comparison!.limitMonth))
+      : monthlyDataFull;
+
     const result: SalesAnalyticsResult = {
       metrics: baseMetrics,
-      monthlyData: await this.calculateMonthlyData(sessions, filters.year),
+      monthlyData: monthlyDataOut,
       categoryData: this.calculateCategoryData(sessions),
       packageData: this.calculatePackageData(sessions),
       originData: this.calculateOriginData(sessions),

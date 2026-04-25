@@ -18,6 +18,10 @@ interface SalesMonthYearFilterProps {
   comparisonYear: number | null;
   onComparisonEnabledChange: (enabled: boolean) => void;
   onComparisonYearChange: (year: number) => void;
+  // Equivalent-period limit (0-11). null = auto
+  comparisonLimitMonth: number | null;
+  effectiveLimitMonth: number;
+  onComparisonLimitMonthChange: (month: number | null) => void;
 }
 
 const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -34,7 +38,10 @@ export default function SalesMonthYearFilter({
   comparisonEnabled,
   comparisonYear,
   onComparisonEnabledChange,
-  onComparisonYearChange
+  onComparisonYearChange,
+  comparisonLimitMonth,
+  effectiveLimitMonth,
+  onComparisonLimitMonthChange
 }: SalesMonthYearFilterProps) {
   const clearFilters = () => {
     onMonthChange(null);
@@ -145,6 +152,35 @@ export default function SalesMonthYearFilter({
               ))}
             </SelectContent>
           </Select>
+        )}
+
+        {/* Comparison limit month - only when comparing whole year (no specific month) */}
+        {comparisonEnabled && selectedMonth === null && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Label className="text-xs text-lunar-textSecondary whitespace-nowrap">
+              até:
+            </Label>
+            <Select
+              value={comparisonLimitMonth === null ? 'auto' : comparisonLimitMonth.toString()}
+              onValueChange={value =>
+                onComparisonLimitMonthChange(value === 'auto' ? null : parseInt(value))
+              }
+            >
+              <SelectTrigger className="w-[120px] h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">
+                  Auto ({months[effectiveLimitMonth]})
+                </SelectItem>
+                {months.map((month, index) => (
+                  <SelectItem key={index} value={index.toString()}>
+                    {month}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
     </div>
