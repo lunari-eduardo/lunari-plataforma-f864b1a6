@@ -808,10 +808,7 @@ export const useWorkflowRealtime = () => {
         setSessions(prev => prev.filter(s => s.id !== id));
       }
 
-      // Notificar a Agenda quando o appointment vinculado também foi removido
-      if (result.deleted_appointment) {
-        window.dispatchEvent(new CustomEvent('agenda:refresh'));
-      }
+      // O appointment vinculado é removido automaticamente da Agenda via subscription realtime de `appointments`.
 
       const description =
         paymentAction === 'refund'
