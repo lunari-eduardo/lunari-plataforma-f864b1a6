@@ -802,10 +802,7 @@ export default function Workflow() {
         description,
       });
 
-      // Notificar Agenda para refresh imediato (o appointment foi removido)
-      if (result.deleted_appointment) {
-        window.dispatchEvent(new CustomEvent('agenda:refresh'));
-      }
+      // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
     } catch (error: any) {
       console.error('❌ [WORKFLOW-DELETE] failed', error);
       toast({
