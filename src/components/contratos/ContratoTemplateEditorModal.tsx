@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,33 +8,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { ContratoRichEditor } from './ContratoRichEditor';
 import { VARIAVEIS_DISPONIVEIS } from '@/utils/contratoVariables';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 import type { ContratoTemplate } from '@/types/contrato';
+import type { ContratoSeedTemplate } from '@/utils/contratoSeedTemplates';
 
 interface ContratoTemplateEditorModalProps {
   open: boolean;
   onClose: () => void;
   template?: ContratoTemplate | null;
+  /** Pré-preenchimento opcional vindo de um modelo pronto (seed) */
+  seedDraft?: ContratoSeedTemplate | null;
   onSave: (data: { nome: string; descricao?: string; categoria?: string; conteudo: string; is_padrao?: boolean }) => Promise<void>;
 }
 
-export function ContratoTemplateEditorModal({ open, onClose, template, onSave }: ContratoTemplateEditorModalProps) {
-  const [nome, setNome] = useState(template?.nome || '');
-  const [descricao, setDescricao] = useState(template?.descricao || '');
-  const [categoria, setCategoria] = useState(template?.categoria || 'geral');
-  const [conteudo, setConteudo] = useState(template?.conteudo || '');
-  const [isPadrao, setIsPadrao] = useState(template?.is_padrao || false);
+export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft, onSave }: ContratoTemplateEditorModalProps) {
+  const [nome, setNome] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [categoria, setCategoria] = useState('geral');
+  const [conteudo, setConteudo] = useState('');
+  const [isPadrao, setIsPadrao] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showLegacy, setShowLegacy] = useState(false);
 
-  // Reset state when template changes / modal reopens
-  const [lastId, setLastId] = useState(template?.id);
-  if (template?.id !== lastId) {
-    setLastId(template?.id);
-    setNome(template?.nome || '');
-    setDescricao(template?.descricao || '');
-    setCategoria(template?.categoria || 'geral');
-    setConteudo(template?.conteudo || '');
-    setIsPadrao(template?.is_padrao || false);
-  }
+  // Sincroniza estado quando o modal abre ou troca de origem (template existente vs seed vs novo)
+  useEffect(() => {
+    if (!open) return;
+    if (template) {
+      setNome(template.nome);
+      setDescricao(template.descricao || '');
+      setCategoria(template.categoria || 'geral');
+      setConteudo(template.conteudo);
+      setIsPadrao(template.is_padrao || false);
+    } else if (seedDraft) {
+      setNome(seedDraft.nome);
+      setDescricao(seedDraft.descricao);
+      setCategoria(seedDraft.categoria);
+      setConteudo(seedDraft.conteudo);
+      setIsPadrao(false);
+    } else {
+      setNome('');
+      setDescricao('');
+      setCategoria('geral');
+      setConteudo('');
+      setIsPadrao(false);
+    }
+  }, [open, template?.id, seedDraft?.slug]);
 
   const handleSave = async () => {
     if (!nome.trim() || !conteudo.trim()) return;
@@ -51,17 +70,35 @@ export function ContratoTemplateEditorModal({ open, onClose, template, onSave }:
     setConteudo((prev) => `${prev}<p>{{${key}}}</p>`);
   };
 
+  const padraoVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.grupo === 'padrao');
+  const manualVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.grupo === 'manual' || v.grupo === 'contrato');
+  const legacyVars = VARIAVEIS_DISPONIVEIS.filter((v) => ['cliente', 'sessao', 'fotografo'].includes(v.grupo));
+
+  const renderVarButton = (v: typeof VARIAVEIS_DISPONIVEIS[number]) => (
+    <button
+      key={v.key}
+      type="button"
+      onClick={() => insertVariableAtCursor(v.key)}
+      className="w-full text-left text-[11px] px-2 py-1.5 rounded hover:bg-muted transition-colors"
+    >
+      <div className="font-mono text-primary">{`{{${v.key}}}`}</div>
+      <div className="text-muted-foreground">{v.label}</div>
+    </button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>{template ? 'Editar modelo de contrato' : 'Novo modelo de contrato'}</DialogTitle>
+          <DialogTitle>
+            {template ? 'Editar modelo de contrato' : seedDraft ? `Revisar: ${seedDraft.nome}` : 'Novo modelo de contrato'}
+          </DialogTitle>
           <DialogDescription>
-            Use variáveis como <code>{`{{cliente_nome}}`}</code> que serão substituídas automaticamente ao gerar o contrato.
+            Use variáveis como <code>{`{{nome_cliente}}`}</code> que serão substituídas automaticamente ao gerar o contrato.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-4 flex-1 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-4 flex-1 overflow-hidden">
           <div className="space-y-3 overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -88,28 +125,29 @@ export function ContratoTemplateEditorModal({ open, onClose, template, onSave }:
           </div>
 
           <div className="border-l border-border pl-4 hidden md:block">
-            <h4 className="text-sm font-semibold mb-2">Variáveis disponíveis</h4>
-            <p className="text-[11px] text-muted-foreground mb-3">Clique para adicionar ao final do conteúdo.</p>
+            <h4 className="text-sm font-semibold mb-1">Variáveis</h4>
+            <p className="text-[11px] text-muted-foreground mb-3">Clique para adicionar ao final.</p>
             <ScrollArea className="h-[440px] pr-2">
               <div className="space-y-3">
-                {(['cliente', 'sessao', 'fotografo', 'contrato'] as const).map((grupo) => (
-                  <div key={grupo}>
-                    <div className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">{grupo}</div>
-                    <div className="space-y-1">
-                      {VARIAVEIS_DISPONIVEIS.filter((v) => v.grupo === grupo).map((v) => (
-                        <button
-                          key={v.key}
-                          type="button"
-                          onClick={() => insertVariableAtCursor(v.key)}
-                          className="w-full text-left text-[11px] px-2 py-1.5 rounded hover:bg-muted transition-colors"
-                        >
-                          <div className="font-mono text-primary">{`{{${v.key}}}`}</div>
-                          <div className="text-muted-foreground">{v.label}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                <div>
+                  <div className="text-[10px] font-semibold uppercase text-primary mb-1">Padrão recomendado</div>
+                  <div className="space-y-1">{padraoVars.map(renderVarButton)}</div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Manuais & data</div>
+                  <div className="space-y-1">{manualVars.map(renderVarButton)}</div>
+                </div>
+
+                <Collapsible open={showLegacy} onOpenChange={setShowLegacy}>
+                  <CollapsibleTrigger className="flex items-center gap-1 text-[10px] font-semibold uppercase text-muted-foreground hover:text-foreground transition-colors w-full">
+                    <ChevronDown className={`h-3 w-3 transition-transform ${showLegacy ? '' : '-rotate-90'}`} />
+                    Variáveis legadas
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-1 space-y-1">
+                    {legacyVars.map(renderVarButton)}
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </ScrollArea>
           </div>

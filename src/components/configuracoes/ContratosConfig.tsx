@@ -2,45 +2,37 @@ import { useState } from 'react';
 import { useContratoTemplates } from '@/hooks/useContratoTemplates';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Star, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, FileText, Sparkles } from 'lucide-react';
 import { ContratoTemplateEditorModal } from '@/components/contratos/ContratoTemplateEditorModal';
 import { Badge } from '@/components/ui/badge';
 import type { ContratoTemplate } from '@/types/contrato';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-
-const SEED_CONTENT = `<h2>Contrato de Prestação de Serviços Fotográficos</h2>
-<p>Por meio deste instrumento particular, de um lado <strong>{{fotografo_nome}}</strong> ("CONTRATADO"), e de outro <strong>{{cliente_nome}}</strong> ("CONTRATANTE"), telefone {{cliente_telefone}}, têm entre si, justo e contratado o seguinte:</p>
-<h3>1. Do objeto</h3>
-<p>O CONTRATADO se compromete a realizar serviços fotográficos referentes à categoria <strong>{{sessao_categoria}}</strong> ({{sessao_pacote}}), no dia <strong>{{sessao_data}}</strong> às <strong>{{sessao_hora}}</strong>.</p>
-<h3>2. Do valor</h3>
-<p>O valor total dos serviços é de <strong>{{sessao_valor_total}}</strong>, conforme condições acordadas previamente entre as partes.</p>
-<h3>3. Da entrega</h3>
-<p>O material será entregue por meio de galeria digital, conforme prazos estabelecidos no pacote contratado.</p>
-<h3>4. Disposições finais</h3>
-<p>As partes elegem o foro de {{cidade_atual}} para dirimir quaisquer dúvidas oriundas deste contrato.</p>
-<p style="margin-top:48px;">{{cidade_atual}}, {{data_atual}}.</p>
-<p style="margin-top:48px;">______________________________<br/>{{fotografo_nome}}</p>
-<p style="margin-top:32px;">______________________________<br/>{{cliente_nome}}</p>`;
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { CONTRATO_SEED_TEMPLATES, type ContratoSeedTemplate } from '@/utils/contratoSeedTemplates';
 
 export default function ContratosConfig() {
   const { templates, isLoading, create, update, remove } = useContratoTemplates();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ContratoTemplate | null>(null);
+  const [draftSeed, setDraftSeed] = useState<ContratoSeedTemplate | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<ContratoTemplate | null>(null);
 
   const handleNew = () => {
     setEditing(null);
+    setDraftSeed(null);
     setEditorOpen(true);
   };
 
-  const handleSeed = async () => {
-    await create({
-      nome: 'Contrato padrão de prestação de serviços',
-      descricao: 'Modelo genérico inicial — ajuste à sua realidade.',
-      categoria: 'geral',
-      conteudo: SEED_CONTENT,
-      is_padrao: true,
-    });
+  const handleUseSeed = (seed: ContratoSeedTemplate) => {
+    setEditing(null);
+    setDraftSeed(seed);
+    setEditorOpen(true);
   };
 
   const handleSave = async (data: any) => {
@@ -49,33 +41,88 @@ export default function ContratosConfig() {
     } else {
       await create(data);
     }
+    setDraftSeed(null);
+  };
+
+  const handleEditorClose = () => {
+    setEditorOpen(false);
+    setDraftSeed(null);
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-lg font-semibold">Modelos de contrato</h3>
           <p className="text-sm text-muted-foreground">Crie modelos reutilizáveis com variáveis dinâmicas.</p>
         </div>
-        <Button onClick={handleNew} size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Novo modelo
-        </Button>
+        {templates.length > 0 && (
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Sparkles className="h-4 w-4 mr-1" />
+                  Modelo pronto
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Adicionar modelo profissional</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {CONTRATO_SEED_TEMPLATES.map((seed) => (
+                  <DropdownMenuItem key={seed.slug} onClick={() => handleUseSeed(seed)} className="cursor-pointer">
+                    <span className="mr-2 text-base">{seed.emoji}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{seed.nome.replace('Contrato — ', '')}</span>
+                      <span className="text-[10px] text-muted-foreground line-clamp-1">{seed.descricao}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={handleNew} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Novo modelo
+            </Button>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground py-8 text-center">Carregando...</div>
       ) : templates.length === 0 ? (
-        <Card className="p-8 text-center border-dashed">
-          <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-          <h4 className="font-medium mb-1">Nenhum modelo ainda</h4>
-          <p className="text-sm text-muted-foreground mb-4">
-            Comece com um modelo genérico que você pode editar a qualquer momento.
-          </p>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" onClick={handleSeed}>Usar modelo padrão</Button>
-            <Button onClick={handleNew}>Criar do zero</Button>
+        <Card className="p-6 border-dashed">
+          <div className="text-center mb-5">
+            <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+            <h4 className="font-medium mb-1">Comece com um modelo pronto</h4>
+            <p className="text-sm text-muted-foreground">
+              Modelos profissionais já formatados — clique em um para revisar e salvar.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {CONTRATO_SEED_TEMPLATES.map((seed) => (
+              <button
+                key={seed.slug}
+                type="button"
+                onClick={() => handleUseSeed(seed)}
+                className="text-left p-4 rounded-lg border border-border bg-card hover:border-primary hover:bg-accent/40 transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl shrink-0 group-hover:scale-110 transition-transform">{seed.emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <h5 className="font-medium text-sm mb-1">{seed.nome.replace('Contrato — ', '')}</h5>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2">{seed.descricao}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5 pt-4 border-t flex justify-center">
+            <Button variant="ghost" onClick={handleNew} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Ou criar do zero
+            </Button>
           </div>
         </Card>
       ) : (
@@ -83,7 +130,7 @@ export default function ContratosConfig() {
           {templates.map((t) => (
             <Card key={t.id} className="p-4 flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h4 className="font-medium truncate">{t.nome}</h4>
                   {t.is_padrao && (
                     <Badge variant="secondary" className="gap-1">
@@ -98,7 +145,7 @@ export default function ContratosConfig() {
                 {t.descricao && <p className="text-xs text-muted-foreground line-clamp-1">{t.descricao}</p>}
               </div>
               <div className="flex items-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => { setEditing(t); setEditorOpen(true); }}>
+                <Button size="sm" variant="ghost" onClick={() => { setEditing(t); setDraftSeed(null); setEditorOpen(true); }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(t)}>
@@ -112,8 +159,9 @@ export default function ContratosConfig() {
 
       <ContratoTemplateEditorModal
         open={editorOpen}
-        onClose={() => setEditorOpen(false)}
+        onClose={handleEditorClose}
         template={editing}
+        seedDraft={draftSeed}
         onSave={handleSave}
       />
 
