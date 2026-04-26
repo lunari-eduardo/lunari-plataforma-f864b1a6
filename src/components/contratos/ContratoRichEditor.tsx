@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { forwardRef, useRef, useEffect, useCallback, useImperativeHandle } from 'react';
 import DOMPurify from 'dompurify';
 import { Toggle } from '@/components/ui/toggle';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,12 @@ interface ContratoRichEditorProps {
   editable?: boolean;
   minHeight?: string;
   className?: string;
+}
+
+export interface ContratoRichEditorHandle {
+  /** Insere `{{key}}` na posição atual do cursor (ou no final se não houver seleção válida). */
+  insertVariableAtCursor: (key: string) => void;
+  focus: () => void;
 }
 
 const ALLOWED_TAGS = [
@@ -42,16 +48,21 @@ function sanitize(html: string): string {
  * Estável, sem dependências externas frágeis. Renderiza HTML diretamente
  * e mantém o cursor durante a digitação.
  */
-export function ContratoRichEditor({
-  value,
-  onChange,
-  placeholder = 'Comece a redigir seu contrato...',
-  editable = true,
-  minHeight = '320px',
-  className,
-}: ContratoRichEditorProps) {
+export const ContratoRichEditor = forwardRef<ContratoRichEditorHandle, ContratoRichEditorProps>(function ContratoRichEditor(
+  {
+    value,
+    onChange,
+    placeholder = 'Comece a redigir seu contrato...',
+    editable = true,
+    minHeight = '320px',
+    className,
+  },
+  ref
+) {
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmittedRef = useRef<string>('');
+  // Última seleção válida dentro do editor — usada para restaurar o caret quando o foco vai para botões externos.
+  const lastRangeRef = useRef<Range | null>(null);
 
   // Carrega/atualiza o conteúdo externamente apenas quando muda de fato
   // (evita destruir o cursor do usuário enquanto digita).
@@ -59,8 +70,6 @@ export function ContratoRichEditor({
     const el = editorRef.current;
     if (!el) return;
     const incoming = sanitize(value || '');
-    // Se o último HTML emitido pelo próprio editor é igual ao incoming,
-    // não precisa redefinir innerHTML (evita reset de cursor).
     if (incoming === lastEmittedRef.current) return;
     if (el.innerHTML !== incoming) {
       el.innerHTML = incoming;
@@ -76,6 +85,30 @@ export function ContratoRichEditor({
     onChange(sanitized);
   }, [onChange]);
 
+  // Salva a Range corrente (se estiver dentro do editor) para restaurar depois.
+  const saveSelection = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (el.contains(range.commonAncestorContainer)) {
+      lastRangeRef.current = range.cloneRange();
+    }
+  }, []);
+
+  // Move o caret para o final do editor (fallback quando não há seleção válida).
+  const moveCaretToEnd = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, []);
+
   const exec = useCallback((command: string, arg?: string) => {
     if (!editable) return;
     editorRef.current?.focus();
@@ -86,7 +119,6 @@ export function ContratoRichEditor({
   const formatBlock = useCallback((tag: string) => {
     if (!editable) return;
     editorRef.current?.focus();
-    // execCommand espera o tag entre <> em alguns navegadores
     document.execCommand('formatBlock', false, `<${tag}>`);
     emitChange();
   }, [editable, emitChange]);
@@ -103,13 +135,41 @@ export function ContratoRichEditor({
   }, [exec]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    // Cola como texto plano para evitar HTML quebrado de fontes externas
     if (!editable) return;
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
     document.execCommand('insertText', false, text);
     emitChange();
   }, [editable, emitChange]);
+
+  // Expõe API imperativa para inserir variável na posição do cursor.
+  useImperativeHandle(ref, () => ({
+    focus: () => editorRef.current?.focus(),
+    insertVariableAtCursor: (key: string) => {
+      const el = editorRef.current;
+      if (!el || !editable) return;
+
+      el.focus();
+
+      const sel = window.getSelection();
+      const hasRangeInsideEditor =
+        sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer);
+
+      if (!hasRangeInsideEditor) {
+        // Tenta restaurar a última Range conhecida; senão, vai para o final.
+        if (lastRangeRef.current && el.contains(lastRangeRef.current.commonAncestorContainer)) {
+          sel?.removeAllRanges();
+          sel?.addRange(lastRangeRef.current);
+        } else {
+          moveCaretToEnd();
+        }
+      }
+
+      // Usa execCommand para preservar histórico de undo/redo nativo.
+      document.execCommand('insertText', false, `{{${key}}}`);
+      emitChange();
+    },
+  }), [editable, emitChange, moveCaretToEnd]);
 
   return (
     <div className={cn('border border-border rounded-lg overflow-hidden bg-background flex flex-col', className)}>
@@ -172,14 +232,15 @@ export function ContratoRichEditor({
         contentEditable={editable}
         suppressContentEditableWarning
         onInput={emitChange}
-        onBlur={emitChange}
+        onBlur={() => { saveSelection(); emitChange(); }}
+        onKeyUp={saveSelection}
+        onMouseUp={saveSelection}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         data-placeholder={placeholder}
         spellCheck
         className={cn(
           'contrato-editor px-4 py-3 outline-none overflow-y-auto bg-background text-foreground text-sm leading-relaxed',
-          // Tipografia para que o usuário enxergue os modelos
           '[&_h1]:text-xl [&_h1]:font-semibold [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-foreground',
           '[&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-foreground',
           '[&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-foreground',
@@ -197,9 +258,9 @@ export function ContratoRichEditor({
       />
     </div>
   );
-}
+});
 
 /** Helper mantido para compatibilidade da API anterior. */
 export function insertVariableIntoEditor(_editor: any, _variable: string) {
-  // No-op: agora a inserção de variáveis é feita pelo modal que controla `value`.
+  // No-op: agora a inserção de variáveis é feita via ref no ContratoRichEditor.
 }
