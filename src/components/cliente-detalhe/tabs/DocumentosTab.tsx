@@ -1,5 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
 import { ClienteFormulariosList } from '@/components/formularios/ClienteFormulariosList';
 import { ClienteContratosList } from '@/components/contratos/ClienteContratosList';
@@ -11,40 +11,42 @@ interface DocumentosTabProps {
 
 export function DocumentosTab({ cliente }: DocumentosTabProps) {
   return (
-    <div className="space-y-4">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Formulários / Briefings */}
-      <Card>
-        <CardContent className="pt-6">
-          <ClienteFormulariosList
-            clienteId={cliente.id}
-            clienteNome={cliente.nome}
-            clienteTelefone={cliente.telefone || cliente.whatsapp || undefined}
-          />
-        </CardContent>
-      </Card>
+      <section>
+        <ClienteFormulariosList
+          clienteId={cliente.id}
+          clienteNome={cliente.nome}
+          clienteTelefone={cliente.telefone || cliente.whatsapp || undefined}
+        />
+      </section>
+
+      <Separator />
 
       {/* Contratos */}
-      <Card>
-        <CardContent className="pt-6">
-          <ClienteContratosList clienteId={cliente.id} clienteNome={cliente.nome} />
-        </CardContent>
-      </Card>
+      <section>
+        <ClienteContratosList clienteId={cliente.id} clienteNome={cliente.nome} />
+      </section>
 
-      {/* Documentos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
+      <Separator />
+
+      {/* Documentos do Cliente */}
+      <section className="space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" />
             Documentos do Cliente
-          </CardTitle>
-          <CardDescription>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Gerencie todos os documentos relacionados a este cliente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FileUploadZone clienteId={cliente?.id} description="Documento do cliente" showExisting={true} />
-        </CardContent>
-      </Card>
+          </p>
+        </div>
+        <FileUploadZone
+          clienteId={cliente?.id}
+          description="Documento do cliente"
+          showExisting={true}
+        />
+      </section>
     </div>
   );
 }
