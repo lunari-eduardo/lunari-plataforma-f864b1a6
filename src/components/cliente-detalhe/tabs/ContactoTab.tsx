@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,8 +11,7 @@ import { PhoneInputSmart } from '../shared/PhoneInputSmart';
 import { OrigemVisualSelect } from '../shared/OrigemVisualSelect';
 import { FamilyMiniCard } from '../shared/FamilyMiniCard';
 import { ClienteCompleto } from '@/types/cliente-supabase';
-import { useState, useEffect, useRef } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 
 interface ContactoTabProps {
   cliente: ClienteCompleto;
