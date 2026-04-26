@@ -172,7 +172,7 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
 
           <div className="border-l border-border pl-4 hidden md:block">
             <h4 className="text-sm font-semibold mb-1">Variáveis</h4>
-            <p className="text-[11px] text-muted-foreground mb-3">Clique para adicionar ao final.</p>
+            <p className="text-[11px] text-muted-foreground mb-3">Clique para inserir na posição do cursor.</p>
             <ScrollArea className="h-[440px] pr-2">
               <div className="space-y-3">
                 <div>
