@@ -67,6 +67,8 @@ export function useFormularios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-cliente'] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-session'] });
       toast({ title: 'Formulário criado com sucesso!' });
     },
     onError: (error) => {
@@ -113,6 +115,8 @@ export function useFormularios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-cliente'] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-session'] });
       toast({ title: 'Formulário atualizado!' });
     },
     onError: (error) => {
@@ -147,6 +151,8 @@ export function useFormularios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-cliente'] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-session'] });
       toast({ title: 'Formulário publicado e pronto para envio!' });
     },
     onError: (error) => {
@@ -174,6 +180,8 @@ export function useFormularios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-cliente'] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-session'] });
       toast({ title: 'Formulário excluído' });
     },
     onError: (error) => {
