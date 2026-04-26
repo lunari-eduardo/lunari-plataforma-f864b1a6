@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, Box, Workflow, Shapes, DollarSign, ClipboardList } from 'lucide-react';
+import { Package, Box, Workflow, Shapes, DollarSign, ClipboardList, FileSignature } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
@@ -13,6 +13,7 @@ import Produtos from '@/components/configuracoes/Produtos';
 import FluxoTrabalho from '@/components/configuracoes/FluxoTrabalho';
 import PrecificacaoFotos from '@/components/configuracoes/PrecificacaoFotos';
 import FormulariosConfig from '@/components/configuracoes/FormulariosConfig';
+import ContratosConfig from '@/components/configuracoes/ContratosConfig';
 
 export default function Configuracoes() {
   const configuration = useRealtimeConfiguration();
@@ -67,6 +68,10 @@ export default function Configuracoes() {
                   <ClipboardList className="h-4 w-4" />
                   <span className="hidden sm:inline">Formulários</span>
                 </TabsTrigger>
+                <TabsTrigger value="contratos" className="flex items-center gap-2">
+                  <FileSignature className="h-4 w-4" />
+                  <span className="hidden sm:inline">Contratos</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="categorias">
@@ -113,6 +118,10 @@ export default function Configuracoes() {
               
               <TabsContent value="formularios">
                 <FormulariosConfig />
+              </TabsContent>
+              
+              <TabsContent value="contratos">
+                <ContratosConfig />
               </TabsContent>
             </Tabs>
           </CardContent>
