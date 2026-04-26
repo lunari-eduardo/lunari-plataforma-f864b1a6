@@ -2,7 +2,7 @@
  * Modelos de contrato profissionais prontos para uso.
  * Cobrem os principais segmentos da fotografia: casamento, ensaio, newborn e evento.
  *
- * Usam o padrão novo de variáveis:
+ * Padrão de variáveis:
  *  {{nome_cliente}}, {{cpf_cliente}}, {{nome_fotografo}}, {{data_sessao}},
  *  {{horario_sessao}}, {{tipo_ensaio}}, {{valor_total}}, {{forma_pagamento}}, {{prazo_entrega}}
  */
@@ -44,11 +44,7 @@ const CASAMENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Ca
 <p>O contratado não se responsabiliza por interferências externas, atrasos ou condições que prejudiquem a execução do serviço.</p>
 
 <h3>9. Disposições gerais</h3>
-<p>Este contrato entra em vigor na data de sua assinatura.</p>
-
-<p style="margin-top:48px;">{{cidade_atual}}, {{data_atual}}.</p>
-<p style="margin-top:48px;">______________________________<br/>{{nome_fotografo}}</p>
-<p style="margin-top:32px;">______________________________<br/>{{nome_cliente}}</p>`;
+<p>Este contrato entra em vigor na data de sua assinatura.</p>`;
 
 const ENSAIO = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensaio</h2>
 
@@ -57,7 +53,7 @@ const ENSAIO = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensai
 <strong>Contratado:</strong> {{nome_fotografo}}</p>
 
 <h3>2. Objeto</h3>
-<p>Realização de ensaio fotográfico do tipo <strong>{{tipo_ensaio}}</strong>, na data <strong>{{data_sessao}}</strong>, com início às <strong>{{horario_sessao}}</strong>.</p>
+<p>Realização de ensaio fotográfico do tipo <strong>{{tipo_ensaio}}</strong>, na data <strong>{{data_sessao}}</strong>.</p>
 
 <h3>3. Serviço</h3>
 <p>O ensaio inclui captação, seleção e tratamento das imagens conforme pacote contratado.</p>
@@ -75,14 +71,10 @@ const ENSAIO = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensai
 <p>Atrasos do cliente podem reduzir o tempo de ensaio.</p>
 
 <h3>8. Direito de imagem</h3>
-<p>Autorização para uso em portfólio, salvo restrição formal por escrito.</p>
+<p>Autorização para uso em portfólio, salvo restrição formal.</p>
 
 <h3>9. Condições gerais</h3>
-<p>O cliente declara estar ciente das condições do serviço.</p>
-
-<p style="margin-top:48px;">{{cidade_atual}}, {{data_atual}}.</p>
-<p style="margin-top:48px;">______________________________<br/>{{nome_fotografo}}</p>
-<p style="margin-top:32px;">______________________________<br/>{{nome_cliente}}</p>`;
+<p>O cliente declara estar ciente das condições do serviço.</p>`;
 
 const NEWBORN = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensaio Newborn</h2>
 
@@ -91,13 +83,13 @@ const NEWBORN = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensa
 <strong>Contratado:</strong> {{nome_fotografo}}</p>
 
 <h3>2. Objeto</h3>
-<p>Realização de ensaio fotográfico newborn na data <strong>{{data_sessao}}</strong>, com início às <strong>{{horario_sessao}}</strong>.</p>
+<p>Realização de ensaio fotográfico newborn na data <strong>{{data_sessao}}</strong>.</p>
 
 <h3>3. Segurança</h3>
 <p>O ensaio será realizado respeitando limites e segurança do bebê. O fotógrafo poderá interromper poses que considere inseguras.</p>
 
 <h3>4. Condições do bebê</h3>
-<p>O ensaio depende do estado do bebê (sono, alimentação, bem-estar). O tempo total pode variar.</p>
+<p>O ensaio depende do estado do bebê (sono, alimentação, bem-estar).</p>
 
 <h3>5. Prazo de entrega</h3>
 <p>Entrega em até <strong>{{prazo_entrega}}</strong> dias.</p>
@@ -106,17 +98,13 @@ const NEWBORN = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensa
 <p>Total de <strong>{{valor_total}}</strong> via <strong>{{forma_pagamento}}</strong>.</p>
 
 <h3>7. Reagendamento</h3>
-<p>Pode ocorrer em caso de intercorrências com o bebê, sem custo adicional.</p>
+<p>Pode ocorrer em caso de intercorrências com o bebê.</p>
 
 <h3>8. Direito de imagem</h3>
-<p>Uso autorizado para portfólio profissional, salvo restrição formal por escrito.</p>
+<p>Uso autorizado para portfólio.</p>
 
 <h3>9. Disposições</h3>
-<p>O cliente declara ciência das particularidades do ensaio newborn.</p>
-
-<p style="margin-top:48px;">{{cidade_atual}}, {{data_atual}}.</p>
-<p style="margin-top:48px;">______________________________<br/>{{nome_fotografo}}</p>
-<p style="margin-top:32px;">______________________________<br/>{{nome_cliente}}</p>`;
+<p>O cliente declara ciência das particularidades do ensaio newborn.</p>`;
 
 const EVENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Evento</h2>
 
@@ -125,7 +113,7 @@ const EVENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Event
 <strong>Contratado:</strong> {{nome_fotografo}}</p>
 
 <h3>2. Objeto</h3>
-<p>Cobertura fotográfica do evento na data <strong>{{data_sessao}}</strong>, com início às <strong>{{horario_sessao}}</strong>.</p>
+<p>Cobertura fotográfica do evento na data <strong>{{data_sessao}}</strong>.</p>
 
 <h3>3. Serviço</h3>
 <p>Registro fotográfico do evento conforme duração e pacote contratado.</p>
@@ -137,20 +125,16 @@ const EVENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Event
 <p><strong>{{valor_total}}</strong> via <strong>{{forma_pagamento}}</strong>.</p>
 
 <h3>6. Condições de execução</h3>
-<p>O contratante deve garantir acesso ao local, iluminação mínima e condições adequadas para o trabalho fotográfico.</p>
+<p>O contratante deve garantir acesso, iluminação mínima e condições adequadas.</p>
 
 <h3>7. Limitações</h3>
-<p>O fotógrafo não se responsabiliza por momentos não registrados devido a fatores externos (atrasos, falta de luz, restrições de acesso, etc).</p>
+<p>O fotógrafo não se responsabiliza por momentos não registrados devido a fatores externos.</p>
 
 <h3>8. Direito de imagem</h3>
-<p>Uso permitido para divulgação profissional, salvo restrição formal por escrito.</p>
+<p>Uso permitido para divulgação.</p>
 
 <h3>9. Disposições gerais</h3>
-<p>Contrato válido após assinatura por ambas as partes.</p>
-
-<p style="margin-top:48px;">{{cidade_atual}}, {{data_atual}}.</p>
-<p style="margin-top:48px;">______________________________<br/>{{nome_fotografo}}</p>
-<p style="margin-top:32px;">______________________________<br/>{{nome_cliente}}</p>`;
+<p>Contrato válido após assinatura.</p>`;
 
 export const CONTRATO_SEED_TEMPLATES: ContratoSeedTemplate[] = [
   {

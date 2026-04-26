@@ -9,7 +9,7 @@ import { ContratoRichEditor } from './ContratoRichEditor';
 import { VARIAVEIS_DISPONIVEIS } from '@/utils/contratoVariables';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { ContratoTemplate } from '@/types/contrato';
 import type { ContratoSeedTemplate } from '@/utils/contratoSeedTemplates';
 
@@ -31,14 +31,21 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
   const [saving, setSaving] = useState(false);
   const [showLegacy, setShowLegacy] = useState(false);
 
-  // Sincroniza estado quando o modal abre ou troca de origem (template existente vs seed vs novo)
+  // Origem do conteúdo — usada como key para forçar remount limpo do editor
+  const editorKey = template
+    ? `template-${template.id}`
+    : seedDraft
+      ? `seed-${seedDraft.slug}`
+      : 'new';
+
+  // Sincroniza estado quando o modal abre ou troca de origem
   useEffect(() => {
     if (!open) return;
     if (template) {
       setNome(template.nome);
       setDescricao(template.descricao || '');
       setCategoria(template.categoria || 'geral');
-      setConteudo(template.conteudo);
+      setConteudo(template.conteudo || '');
       setIsPadrao(template.is_padrao || false);
     } else if (seedDraft) {
       setNome(seedDraft.nome);
@@ -66,8 +73,12 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
     }
   };
 
-  const insertVariableAtCursor = (key: string) => {
-    setConteudo((prev) => `${prev}<p>{{${key}}}</p>`);
+  /** Insere a variável apendando ao conteúdo atual. */
+  const insertVariable = (key: string) => {
+    setConteudo((prev) => {
+      const trimmed = (prev || '').trimEnd();
+      return `${trimmed}<p>{{${key}}}</p>`;
+    });
   };
 
   const padraoVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.grupo === 'padrao');
@@ -78,13 +89,18 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
     <button
       key={v.key}
       type="button"
-      onClick={() => insertVariableAtCursor(v.key)}
+      onClick={() => insertVariable(v.key)}
       className="w-full text-left text-[11px] px-2 py-1.5 rounded hover:bg-muted transition-colors"
     >
       <div className="font-mono text-primary">{`{{${v.key}}}`}</div>
       <div className="text-muted-foreground">{v.label}</div>
     </button>
   );
+
+  // Indicador de conteúdo carregado
+  const conteudoLimpo = (conteudo || '').replace(/<[^>]+>/g, '').trim();
+  const conteudoCharCount = conteudoLimpo.length;
+  const temConteudo = conteudoCharCount > 0;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -115,8 +131,30 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
               <Textarea id="descricao" value={descricao || ''} onChange={(e) => setDescricao(e.target.value)} rows={2} />
             </div>
             <div>
-              <Label>Conteúdo do contrato</Label>
-              <ContratoRichEditor value={conteudo} onChange={setConteudo} minHeight="380px" />
+              <div className="flex items-center justify-between mb-1">
+                <Label>Conteúdo do contrato</Label>
+                <span
+                  className={`flex items-center gap-1 text-[11px] ${temConteudo ? 'text-emerald-600' : 'text-amber-600'}`}
+                >
+                  {temConteudo ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3" />
+                      Conteúdo carregado · {conteudoCharCount} caracteres
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-3 w-3" />
+                      Sem conteúdo
+                    </>
+                  )}
+                </span>
+              </div>
+              <ContratoRichEditor
+                key={editorKey}
+                value={conteudo}
+                onChange={setConteudo}
+                minHeight="380px"
+              />
             </div>
             <div className="flex items-center gap-2">
               <Switch id="padrao" checked={isPadrao} onCheckedChange={setIsPadrao} />
@@ -155,7 +193,7 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || !nome.trim() || !conteudo.trim()}>
+          <Button onClick={handleSave} disabled={saving || !nome.trim() || !temConteudo}>
             {saving ? 'Salvando...' : 'Salvar modelo'}
           </Button>
         </DialogFooter>

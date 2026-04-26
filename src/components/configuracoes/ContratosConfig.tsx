@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useContratoTemplates } from '@/hooks/useContratoTemplates';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Star, FileText, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, FileText, Sparkles, PackagePlus } from 'lucide-react';
 import { ContratoTemplateEditorModal } from '@/components/contratos/ContratoTemplateEditorModal';
 import { Badge } from '@/components/ui/badge';
 import type { ContratoTemplate } from '@/types/contrato';
@@ -15,6 +15,10 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { CONTRATO_SEED_TEMPLATES, type ContratoSeedTemplate } from '@/utils/contratoSeedTemplates';
+import { toast } from '@/hooks/use-toast';
+
+const normalize = (s?: string | null) =>
+  (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
 
 export default function ContratosConfig() {
   const { templates, isLoading, create, update, remove } = useContratoTemplates();
@@ -22,6 +26,22 @@ export default function ContratosConfig() {
   const [editing, setEditing] = useState<ContratoTemplate | null>(null);
   const [draftSeed, setDraftSeed] = useState<ContratoSeedTemplate | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<ContratoTemplate | null>(null);
+  const [bulkAdding, setBulkAdding] = useState(false);
+
+  // Identifica seeds ainda não criados pelo usuário (compara nome ou categoria)
+  const existingKeys = useMemo(() => {
+    const set = new Set<string>();
+    templates.forEach((t) => {
+      set.add(normalize(t.nome));
+      if (t.categoria) set.add(`cat:${normalize(t.categoria)}`);
+    });
+    return set;
+  }, [templates]);
+
+  const isSeedAlreadyCreated = (seed: ContratoSeedTemplate) =>
+    existingKeys.has(normalize(seed.nome)) || existingKeys.has(`cat:${normalize(seed.categoria)}`);
+
+  const seedsFaltando = CONTRATO_SEED_TEMPLATES.filter((s) => !isSeedAlreadyCreated(s));
 
   const handleNew = () => {
     setEditing(null);
@@ -49,6 +69,32 @@ export default function ContratosConfig() {
     setDraftSeed(null);
   };
 
+  const handleAddAllSeeds = async () => {
+    const lista = seedsFaltando;
+    if (lista.length === 0) {
+      toast({ title: 'Tudo certo', description: 'Todos os modelos profissionais já estão na sua lista.' });
+      return;
+    }
+    setBulkAdding(true);
+    try {
+      let criados = 0;
+      for (const seed of lista) {
+        // eslint-disable-next-line no-await-in-loop
+        await create({
+          nome: seed.nome,
+          descricao: seed.descricao,
+          categoria: seed.categoria,
+          conteudo: seed.conteudo,
+          is_padrao: false,
+        });
+        criados += 1;
+      }
+      toast({ title: `${criados} modelo${criados > 1 ? 's' : ''} adicionado${criados > 1 ? 's' : ''}` });
+    } finally {
+      setBulkAdding(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -57,7 +103,19 @@ export default function ContratosConfig() {
           <p className="text-sm text-muted-foreground">Crie modelos reutilizáveis com variáveis dinâmicas.</p>
         </div>
         {templates.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {seedsFaltando.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddAllSeeds}
+                disabled={bulkAdding}
+                title="Adiciona todos os modelos profissionais que ainda não estão na sua lista"
+              >
+                <PackagePlus className="h-4 w-4 mr-1" />
+                {bulkAdding ? 'Adicionando...' : `Adicionar ${seedsFaltando.length} modelo${seedsFaltando.length > 1 ? 's' : ''} profissional${seedsFaltando.length > 1 ? 'is' : ''}`}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -93,10 +151,17 @@ export default function ContratosConfig() {
         <Card className="p-6 border-dashed">
           <div className="text-center mb-5">
             <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-            <h4 className="font-medium mb-1">Comece com um modelo pronto</h4>
+            <h4 className="font-medium mb-1">Comece com modelos prontos</h4>
             <p className="text-sm text-muted-foreground">
-              Modelos profissionais já formatados — clique em um para revisar e salvar.
+              Modelos profissionais já formatados — adicione todos de uma vez ou escolha um para revisar.
             </p>
+          </div>
+
+          <div className="flex justify-center mb-4">
+            <Button onClick={handleAddAllSeeds} disabled={bulkAdding}>
+              <PackagePlus className="h-4 w-4 mr-1" />
+              {bulkAdding ? 'Adicionando...' : `Adicionar os ${CONTRATO_SEED_TEMPLATES.length} modelos profissionais`}
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
