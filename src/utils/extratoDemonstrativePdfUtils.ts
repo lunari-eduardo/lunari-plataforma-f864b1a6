@@ -152,5 +152,5 @@ export async function generateExtratoDetalhadoPDF(data: ExtratoDetalhadoData): P
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  await html2pdf().from(htmlContent).set(opt).save();
+  await html2pdf().from(htmlContent).set(opt as any).save();
 }

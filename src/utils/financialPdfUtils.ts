@@ -551,7 +551,7 @@ export const generateFinancialPDF = async (data: FinancialExportData, options: E
   };
 
   try {
-    await html2pdf().set(pdfOptions).from(html).save();
+    await html2pdf().set(pdfOptions as any).from(html).save();
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
     throw new Error('Falha na geração do PDF. Tente novamente.');
@@ -987,7 +987,7 @@ export async function generateDemonstrativePDF(data: DemonstrativeExportData): P
   };
 
   try {
-    await html2pdf().set(opt).from(html).save();
+    await html2pdf().set(opt as any).from(html).save();
   } catch (error) {
     console.error('Erro ao gerar PDF do demonstrativo:', error);
     throw error;
