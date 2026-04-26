@@ -43,7 +43,6 @@ export function OrigemVisualSelect({
     setIsSaving(true);
     try {
       await onSave(origemId);
-      toast.success('Salvo', { duration: 1500 });
       setIsEditing(false);
     } catch (error) {
       toast.error('Erro ao salvar');

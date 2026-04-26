@@ -1,129 +1,114 @@
-## Diagnóstico mais profundo
+## Diagnóstico
 
-O conteúdo dos modelos prontos existe no código, mas há dois pontos diferentes no fluxo:
+Encontrei três causas principais no fluxo de edição do cliente no CRM:
 
-1. **Modelos prontos ainda não foram persistidos no banco**
-   - A tabela `contrato_templates` tem hoje apenas 1 registro: `Contrato padrão de prestação de serviços`.
-   - Esse registro tem conteúdo no banco (`conteudo_len = 1131`), então o banco não está totalmente vazio.
-   - Os 4 modelos profissionais (`Casamento`, `Ensaio`, `Newborn`, `Evento`) existem apenas como seeds em `src/utils/contratoSeedTemplates.ts` até o usuário clicar, revisar e salvar.
+1. **Auto-save indevido durante digitação**
+   - `InlineEditField`, `PhoneInputSmart` e `FamilyMiniCard` salvam automaticamente com debounce de 800ms enquanto o usuário digita.
+   - Isso conflita com a UI, que mostra botão de check como ação explícita de salvar.
+   - Resultado: cada pausa na digitação dispara update no Supabase e notificações.
 
-2. **O editor continua sendo o ponto frágil**
-   - O modal recebe `template.conteudo` ou `seedDraft.conteudo` corretamente no estado.
-   - O conteúdo não aparece porque o `ContratoRichEditor` ainda depende do Tiptap para renderizar HTML dentro de um modal com montagem/desmontagem condicional.
-   - O `setContent` agora está com assinatura v3 correta, mas o problema persiste na camada de renderização/sincronização do Tiptap, não na existência do texto.
-   - Como o usuário precisa de confiabilidade para contratos, o editor de contrato não deve ficar dependente desse comportamento instável.
+2. **Notificações duplicadas em camadas diferentes**
+   - O campo mostra `toast.success('Salvo')`.
+   - O hook `useClientesRealtime.ts` também mostra `toast.success('Cliente atualizado com sucesso')` dentro de `atualizarCliente`.
+   - `atualizarClienteCompleto` chama `atualizarCliente` e depois mostra outro `toast.success('Cliente atualizado com sucesso')`.
+   - Ao selecionar origem ou salvar família, isso pode acumular 2 a 3 toasts ao mesmo tempo.
+
+3. **Perda de dados ao salvar campos isolados**
+   - `ContactoTab` chama `onUpdate(cliente.id, { telefone: valor })`, `{ email: valor }`, `{ endereco: valor }`, etc.
+   - Mas `atualizarClienteCompleto` monta um objeto de update com todos os campos, preenchendo campos ausentes como `null`.
+   - Exemplo: ao salvar telefone, `email`, `endereco`, `observacoes`, `origem` podem ir como `null`. Depois, ao editar email, o telefone pode ser sobrescrito/apagado.
 
 ## Plano de correção
 
-### 1. Substituir o editor de contrato por um editor HTML estável baseado em `contentEditable`
-Trocar internamente o `ContratoRichEditor` para deixar de usar Tiptap e usar o mesmo padrão já estável do projeto nos editores de blog/tarefas:
+### 1. Remover auto-save de campos editáveis
 
-- `div contentEditable` controlado por `ref`.
-- Sincronização direta via `innerHTML` quando `value` muda.
-- Sanitização com `DOMPurify` preservando tags necessárias para contrato: `h1`, `h2`, `h3`, `p`, `br`, `strong`, `em`, `u`, `ul`, `ol`, `li`, `blockquote`, `span`, `div`.
-- Preservar `style` somente para casos necessários como espaçamento de assinatura (`margin-top`).
-- Manter a mesma API atual do componente:
-  - `value`
-  - `onChange`
-  - `editable`
-  - `minHeight`
-  - `placeholder`
-  - `className`
+Ajustar os componentes de edição inline para só salvar quando o usuário clicar no check ou pressionar Enter:
 
-Resultado: `ContratoTemplateEditorModal`, `NovoContratoModal` e `ContratoViewerModal` continuam usando o mesmo componente, mas sem o bug de renderização do Tiptap.
+- `src/components/cliente-detalhe/shared/InlineEditField.tsx`
+- `src/components/cliente-detalhe/shared/PhoneInputSmart.tsx`
+- `src/components/cliente-detalhe/shared/FamilyMiniCard.tsx`
 
-### 2. Manter a toolbar de edição rica
-Recriar as ações atuais sem alterar a experiência:
+Mudanças:
+- Remover timers/debounce que chamam `onSave` dentro de `onChange`.
+- `onChange` passará apenas a atualizar estado local.
+- `Escape` continuará cancelando.
+- `Enter` continuará salvando.
+- O check será a confirmação principal.
 
-- Negrito
-- Itálico
-- Sublinhado
-- Título 1
-- Título 2
-- Lista com marcadores
-- Lista numerada
-- Citação
-- Desfazer/refazer se viável via `document.execCommand('undo'/'redo')`
+### 2. Centralizar política de notificações
 
-Também aplicar classes de visualização adequadas:
+Seguir a memória do projeto: **sem toast de sucesso para CRUD comum**.
 
-- Texto sempre visível em `text-foreground`.
-- Headings com `text-foreground`.
-- Parágrafos com boa leitura.
-- `minHeight` real no container editável.
-- Placeholder visual quando vazio.
+Mudanças:
+- Remover success toasts redundantes em:
+  - `InlineEditField`
+  - `PhoneInputSmart`
+  - `FamilyMiniCard`
+  - `OrigemVisualSelect`
+  - `ContactoTab` observações
+  - `useClientesRealtime.ts` para update comum de cliente/família
+- Manter apenas `toast.error(...)` quando houver falha real.
+- Para sucesso, usar feedback visual discreto no próprio campo: o input fecha, o valor aparece atualizado, e o ícone/check pode retornar ao estado normal.
 
-### 3. Corrigir o modal para forçar remount correto por origem de conteúdo
-No `ContratoTemplateEditorModal`, adicionar uma `key` no editor baseada na origem:
+Exceções que podem continuar com sucesso se fizer sentido fora desse fluxo:
+- Migração de clientes.
+- Ações destrutivas/raras se já existirem em outras telas, mas não no perfil do cliente durante edição normal.
 
-- `template-${template.id}` ao editar modelo salvo.
-- `seed-${seedDraft.slug}` ao abrir modelo pronto.
-- `new` ao criar do zero.
+### 3. Corrigir update parcial para não apagar dados
 
-Isso elimina qualquer reaproveitamento indevido do editor entre um modelo vazio e outro com conteúdo.
+Refatorar `atualizarClienteCompleto` em `src/hooks/useClientesRealtime.ts` para montar o payload apenas com campos realmente enviados.
 
-### 4. Adicionar uma prévia simples de segurança abaixo/ao lado do editor
-Adicionar um pequeno indicador no modal:
+Exemplo de lógica esperada:
 
-- Se houver conteúdo: mostrar contagem aproximada de caracteres e “Conteúdo carregado”.
-- Se estiver vazio: mostrar aviso “Este modelo ainda não possui conteúdo”.
+```ts
+const updateData: Partial<ClienteSupabase> = {};
 
-Isso ajuda a diferenciar:
+if ('nome' in dadosBasicos) updateData.nome = dadosBasicos.nome;
+if ('email' in dadosBasicos) updateData.email = dadosBasicos.email || null;
+if ('telefone' in dadosBasicos) updateData.telefone = dadosBasicos.telefone || null;
+if ('endereco' in dadosBasicos) updateData.endereco = dadosBasicos.endereco || null;
+if ('observacoes' in dadosBasicos) updateData.observacoes = dadosBasicos.observacoes || null;
+if ('origem' in dadosBasicos) updateData.origem = dadosBasicos.origem || null;
+if ('dataNascimento' in dadosBasicos) updateData.data_nascimento = dadosBasicos.dataNascimento || null;
+```
 
-- Conteúdo realmente vazio no banco.
-- Conteúdo carregado, mas problema visual no editor.
+Assim, salvar `telefone` não mexe em `email`, `endereco`, `origem` ou qualquer outro campo.
 
-### 5. Persistir automaticamente os 4 modelos profissionais se o usuário ainda não os tiver
-Ajustar `ContratosConfig` para oferecer uma ação clara, e/ou no estado vazio permitir salvar todos:
+### 4. Evitar updates vazios e chamadas duplicadas
 
-- “Adicionar modelos profissionais” cria `Casamento`, `Ensaio`, `Newborn` e `Evento` com o conteúdo completo que você enviou.
-- Evitar duplicados comparando `categoria`/`nome` antes de criar.
-- Manter opção de editar e salvar qualquer modelo depois.
+Ainda em `useClientesRealtime.ts`:
+- Só chamar `atualizarCliente(id, updateData)` se `updateData` tiver pelo menos uma chave.
+- Se o update for apenas de família, não disparar update vazio na tabela `clientes`.
+- Garantir que família continue sincronizando somente quando `conjuge` ou `filhos` forem enviados.
 
-Importante: não vou apagar o modelo genérico existente sem confirmação. Posso apenas deixar os modelos profissionais disponíveis e editáveis.
+### 5. Ajustar observações para o mesmo padrão
 
-### 6. Ajustar os templates para ficarem exatamente no conteúdo enviado
-Remover acréscimos que não estavam no texto original, como linhas de cidade/data/assinatura adicionadas automaticamente ao final dos seeds.
+Hoje observações salva automaticamente após 800ms e ainda mostra `Salvo`.
 
-Os modelos ficarão com:
+Ajuste proposto:
+- Trocar observações para edição explícita também, com botões de salvar/cancelar, ou reutilizar `InlineEditField` com `type="textarea"`.
+- Isso deixa todo o perfil consistente: digitar não salva; check salva.
 
-- Título exatamente como enviado.
-- Cláusulas 1 a 9 exatamente como enviadas.
-- Variáveis no padrão solicitado:
-  - `{{nome_cliente}}`
-  - `{{cpf_cliente}}`
-  - `{{nome_fotografo}}`
-  - `{{data_sessao}}`
-  - `{{horario_sessao}}`
-  - `{{tipo_ensaio}}`
-  - `{{valor_total}}`
-  - `{{forma_pagamento}}`
-  - `{{prazo_entrega}}`
+### 6. Ajustar origem para não gerar múltiplos toasts
 
-### 7. Validar o fluxo completo após implementar
-Validar os cenários:
+Em `OrigemVisualSelect`:
+- Selecionar uma origem salva uma vez.
+- Remover toast local `Salvo`.
+- Manter erro apenas se falhar.
+- Fechar o seletor após sucesso.
 
-1. Abrir o modelo salvo “Contrato padrão” para editar: conteúdo aparece no editor.
-2. Abrir “Modelo pronto → Casamento”: conteúdo aparece imediatamente.
-3. Salvar modelo pronto e reabrir: conteúdo continua aparecendo.
-4. Criar contrato a partir de um modelo: conteúdo final é gerado e salvo independente do modelo.
-5. Botão de salvar fica desabilitado apenas quando o conteúdo realmente estiver vazio.
+### 7. Revisão de estado local após Realtime
 
-## Arquivos a alterar
+Após remover auto-save e corrigir update parcial:
+- Confirmar que os campos em edição não são resetados enquanto o usuário digita.
+- Manter a regra atual de sincronização externa apenas quando não estiver editando.
+- Isso evita que um update recebido via Realtime apague o valor em digitação.
 
-- `src/components/contratos/ContratoRichEditor.tsx`
-  - Remover dependência prática de Tiptap neste componente e implementar editor `contentEditable` estável.
+## Resultado esperado
 
-- `src/components/contratos/ContratoTemplateEditorModal.tsx`
-  - Forçar remount do editor por `key`.
-  - Adicionar indicador de conteúdo carregado/vazio.
-
-- `src/components/configuracoes/ContratosConfig.tsx`
-  - Melhorar ação para adicionar modelos prontos e, se necessário, adicionar todos de uma vez sem duplicar.
-
-- `src/utils/contratoSeedTemplates.ts`
-  - Ajustar conteúdo para ficar exatamente igual ao enviado, sem acréscimos de assinatura/cidade/data.
-
-## Observação técnica
-
-A correção anterior tentou estabilizar o Tiptap v3, mas como o problema continuou, a abordagem mais segura é remover Tiptap do fluxo de contratos. Contratos precisam de previsibilidade: se existe HTML no estado ou no banco, ele deve aparecer no modal sem depender de ciclo interno de editor externo.
+- Digitar endereço, telefone, email, nome ou família não dispara toast nem salva automaticamente.
+- O usuário salva apenas ao clicar no check ou pressionar Enter.
+- Selecionar origem não empilha notificações.
+- Salvar um campo não apaga outro campo.
+- Erros continuam aparecendo quando houver falha real.
+- A experiência fica mais limpa, previsível e consistente com o padrão do projeto.
