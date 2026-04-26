@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { ContratoRichEditor } from './ContratoRichEditor';
+import { ContratoRichEditor, type ContratoRichEditorHandle } from './ContratoRichEditor';
 import { VARIAVEIS_DISPONIVEIS } from '@/utils/contratoVariables';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -30,6 +30,7 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
   const [isPadrao, setIsPadrao] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLegacy, setShowLegacy] = useState(false);
+  const editorRef = useRef<ContratoRichEditorHandle>(null);
 
   // Origem do conteúdo — usada como key para forçar remount limpo do editor
   const editorKey = template
@@ -73,8 +74,12 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
     }
   };
 
-  /** Insere a variável apendando ao conteúdo atual. */
+  /** Insere a variável na posição atual do cursor (fallback: append ao final). */
   const insertVariable = (key: string) => {
+    if (editorRef.current?.insertVariableAtCursor) {
+      editorRef.current.insertVariableAtCursor(key);
+      return;
+    }
     setConteudo((prev) => {
       const trimmed = (prev || '').trimEnd();
       return `${trimmed}<p>{{${key}}}</p>`;
@@ -89,6 +94,8 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
     <button
       key={v.key}
       type="button"
+      // Evita roubar o foco do editor ANTES do clique — preserva a seleção/caret.
+      onMouseDown={(e) => e.preventDefault()}
       onClick={() => insertVariable(v.key)}
       className="w-full text-left text-[11px] px-2 py-1.5 rounded hover:bg-muted transition-colors"
     >
@@ -150,6 +157,7 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
                 </span>
               </div>
               <ContratoRichEditor
+                ref={editorRef}
                 key={editorKey}
                 value={conteudo}
                 onChange={setConteudo}
