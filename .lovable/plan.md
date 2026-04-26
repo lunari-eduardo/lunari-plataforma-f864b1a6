@@ -1,101 +1,59 @@
-## 🎯 Objetivo
+## 🎯 Problema
 
-Reduzir poluição visual no card colapsado do Workflow removendo o ícone de Contrato (pouco utilizado no acesso rápido) e movê-lo para o card **expandido**, com **identificação textual clara** (ícone + label + status), tornando o controle mais explícito e acessível quando o usuário realmente precisa.
+No `ContratoTemplateEditorModal`, a função `insertVariable` apenas concatena `<p>{{key}}</p>` ao final do `conteudo` (string HTML). Por isso, mesmo com o cursor no meio do texto, a variável sempre vai parar no rodapé do documento.
 
----
-
-## 📍 Situação Atual
-
-### `WorkflowCardCollapsed.tsx` (linhas 478–494)
-A "Zona 11" agrupa **dois ícones soltos** no canto direito:
-- `<SessaoContratoIcon />` — ícone `FileSignature` 7x7 com bolinha de status
-- Botão de excluir (`Trash2`)
-
-Problemas:
-- Ícone de contrato fica quase invisível (sem label) no meio das colunas
-- Compete por espaço com o botão de excluir e demais ações
-- Usuário não identifica facilmente que é "Contrato"
-- É uma ação pouco frequente que ocupa espaço nobre
-
-### `WorkflowCardExpanded.tsx` (Bloco 3 — Ações de Pagamento, linhas 431–473)
-Já existe uma coluna vertical bem definida com:
-- Cobrar
-- Agendar pagamento manual
-- (divisor)
-- Pagamentos
-
-É o lugar natural para receber o botão de Contrato.
-
----
-
-## 🛠️ Mudanças Propostas
-
-### 1. `src/components/workflow/WorkflowCardCollapsed.tsx`
-- **Remover** o `<SessaoContratoIcon />` da Zona 11 (linhas 480–486)
-- **Remover** o import `SessaoContratoIcon` (linha 25)
-- A Zona 11 passa a conter **apenas** o botão de excluir, ficando mais limpa
-- Manter a estrutura `flex items-center justify-center` (a div continua válida com 1 filho)
-
-### 2. `src/components/workflow/WorkflowCardExpanded.tsx`
-
-**a)** Importar o componente:
-```tsx
-import { SessaoContratoIcon } from "@/components/contratos/SessaoContratoIcon";
+```ts
+// src/components/contratos/ContratoTemplateEditorModal.tsx (atual)
+const insertVariable = (key: string) => {
+  setConteudo((prev) => `${prev.trimEnd()}<p>{{${key}}}</p>`);
+};
 ```
 
-**b)** Adicionar uma nova seção dentro do **Bloco 3 — Ações de Pagamento** (após o botão "Pagamentos", linha 471), separada por divisor:
+Além disso, o `ContratoRichEditor` já expõe um `editorRef` (contentEditable nativo), mas o helper `insertVariableIntoEditor` é um no-op.
 
-```tsx
-{/* Divisor */}
-<div className="w-full border-t border-border/20 my-1" />
+## ✅ Solução
 
-{/* Contrato — ação documental, separada das ações de pagamento */}
-{session.clienteId && (
-  <SessaoContratoButton
-    sessionId={session.sessionId || session.id}
-    clienteId={session.clienteId}
-    clienteNome={session.nome}
-  />
-)}
-```
+Permitir que a variável seja inserida **exatamente na posição do cursor (caret)** dentro do editor, mantendo o append ao final apenas como fallback (quando o editor nunca recebeu foco).
 
-> O botão fica **dentro do mesmo bloco vertical** das ações, mantendo a coluna alinhada à direita (área "AÇÕES DE PAGAMENTO" da imagem). Apesar do título do bloco ser "Ações de Pagamento", podemos renomeá-lo para **"Ações"** para englobar contrato + pagamentos sem confusão semântica.
+### Mudanças
 
-**c)** Renomear o título do bloco (linha 433) de `Ações de Pagamento` → `Ações`.
+**1. `src/components/contratos/ContratoRichEditor.tsx`**
+- Expor uma API imperativa via `forwardRef` + `useImperativeHandle` com o método:
+  - `insertVariableAtCursor(key: string)` — insere o texto `{{key}}` na seleção atual.
+- Lógica:
+  - `editorRef.current.focus()`
+  - Recuperar `window.getSelection()`. Se a seleção não estiver dentro do editor (ou inexistente), mover o caret para o final do editor antes de inserir (fallback seguro).
+  - Usar `document.execCommand('insertText', false, '{{key}}')` — preserva o histórico de undo/redo nativo e funciona bem em todos os navegadores baseados em Chromium/WebKit/Firefox.
+  - Disparar `emitChange()` para sincronizar o estado externo.
+- Guardar internamente a última `Range` válida em `onBlur` (lastRangeRef) — assim, ao clicar num botão de variável (que rouba o foco), conseguimos restaurar o caret correto antes de inserir.
 
-### 3. Novo componente `src/components/contratos/SessaoContratoButton.tsx`
+**2. `src/components/contratos/ContratoTemplateEditorModal.tsx`**
+- Criar um `editorRef = useRef<ContratoRichEditorHandle>(null)` e passar ao `<ContratoRichEditor ref={editorRef} ... />`.
+- Refatorar `insertVariable`:
+  ```ts
+  const insertVariable = (key: string) => {
+    if (editorRef.current?.insertVariableAtCursor) {
+      editorRef.current.insertVariableAtCursor(key);
+      return;
+    }
+    // Fallback: append ao final
+    setConteudo(prev => `${(prev || '').trimEnd()}<p>{{${key}}}</p>`);
+  };
+  ```
+- Botões de variável (`renderVarButton`) precisam usar `onMouseDown={e => e.preventDefault()}` para **não roubar o foco** do editor antes do clique — assim a seleção é preservada e o `insertText` cai exatamente onde o cursor estava.
+- Atualizar o texto auxiliar de "Clique para adicionar ao final." para algo como "Clique para inserir na posição do cursor."
 
-Cria uma variante **com label** do `SessaoContratoIcon` (que continuará existindo para outros usos eventuais), com a mesma lógica interna (Popover de listagem, modal de novo contrato, modal viewer), mas renderizada como um **botão largo** semelhante a "Cobrar"/"Pagamentos":
+**3. UX adicional**
+- Sem mudanças visuais. Comportamento agora respeita o caret e mantém compatibilidade com o fallback (caso o usuário nunca tenha focado o editor, ainda funciona).
 
-- Largura total (`w-full`) para alinhar com os outros botões da coluna
-- Ícone `FileSignature` + texto **"Contrato"** ou **"Contratos (N)"** quando houver
-- Badge de status à direita (cor da bolinha já existente em `dotColor`) quando houver contrato no status mais avançado
-- Variante `outline` para diferenciar de "Cobrar"/"Agendar" (ações primárias)
-- Reaproveita 100% da lógica atual: `useContratos`, `STATUS_PRIORITY`, `Popover` com lista, `NovoContratoModal`, `ContratoViewerModal`
+## 📋 Arquivos afetados
 
-Estrutura visual aproximada:
-```
-┌─────────────────────────────┐
-│ 📄  Contrato         ● Enviado│   ← sem contratos: "Contrato"
-└─────────────────────────────┘   ← com contratos: "Contratos (2)" + badge
-```
+- `src/components/contratos/ContratoRichEditor.tsx` — converter para `forwardRef`, expor `insertVariableAtCursor`, rastrear última Range válida.
+- `src/components/contratos/ContratoTemplateEditorModal.tsx` — usar ref para inserir e ajustar `onMouseDown` dos botões + texto da legenda.
 
-### 4. Verificar outros usos de `SessaoContratoIcon`
-Rodar busca para confirmar que o componente original não está sendo usado em outro lugar além do card colapsado. Se não estiver, ele pode permanecer no projeto (não-disruptivo) ou ser removido — preferência por **manter** para não quebrar imports indiretos.
+## 🧪 Cenários cobertos
 
----
-
-## ✅ Resultado Esperado
-
-- **Card colapsado**: mais limpo, sem ícone órfão de contrato. Apenas Galerias + Excluir na zona final
-- **Card expandido**: contrato passa a ser uma ação clara, identificável e bem posicionada junto às demais ações da sessão
-- **UX**: usuário acessa contrato de forma intencional (ao expandir o card), sem perder funcionalidade
-- **Identificação**: label "Contrato" + status visual eliminam ambiguidade do ícone solto
-
----
-
-## 📁 Arquivos Afetados
-
-- `src/components/workflow/WorkflowCardCollapsed.tsx` — remover ícone e import
-- `src/components/workflow/WorkflowCardExpanded.tsx` — adicionar botão no Bloco 3, renomear título
-- `src/components/contratos/SessaoContratoButton.tsx` — **novo** componente (variante com label)
+1. Cursor posicionado no meio de um parágrafo → variável aparece no ponto exato.
+2. Texto selecionado → seleção é substituída pela variável (comportamento natural do `insertText`).
+3. Editor nunca focado / sem seleção → cai no fallback e adiciona ao final.
+4. Undo/redo do navegador continuam funcionando (uso de `execCommand`).
