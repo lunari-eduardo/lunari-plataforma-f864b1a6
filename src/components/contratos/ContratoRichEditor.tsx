@@ -33,6 +33,9 @@ export function ContratoRichEditor({
     ],
     content: value || '',
     editable,
+    // Tiptap v3: required for React strict mode + ensures content prop is honored on remount
+    immediatelyRender: false,
+    shouldRerenderOnTransaction: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -47,13 +50,20 @@ export function ContratoRichEditor({
     },
   });
 
-  // Sincroniza valor externo quando muda (ex.: troca de template)
+  // Sincroniza valor externo quando muda (ex.: troca de template / pré-preenchimento de seed)
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '', { emitUpdate: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+    if (!editor || editor.isDestroyed) return;
+    const current = editor.getHTML();
+    const incoming = value || '';
+    // Tiptap retorna "<p></p>" quando vazio — normalizamos para comparação
+    const normalizedCurrent = current === '<p></p>' ? '' : current;
+    if (incoming === normalizedCurrent) return;
+    // Tiptap v3: setContent(content, options?) — emitUpdate dentro de options
+    editor.commands.setContent(incoming, {
+      emitUpdate: false,
+      parseOptions: { preserveWhitespace: 'full' },
+    });
+  }, [value, editor]);
 
   useEffect(() => {
     if (editor) editor.setEditable(editable);
