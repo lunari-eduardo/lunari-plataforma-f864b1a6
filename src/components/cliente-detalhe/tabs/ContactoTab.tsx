@@ -394,21 +394,14 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
             </div>
           </AccordionTrigger>
           <AccordionContent className="pb-4">
-            <Textarea
-              value={localObservacoes}
-              onChange={(e) => handleObservacoesChange(e.target.value)}
+            <InlineEditField
+              value={cliente.observacoes || ''}
+              onSave={handleSaveObservacoes}
+              type="textarea"
               placeholder="Anotações importantes sobre o cliente, preferências, histórico..."
-              rows={4}
-              className="resize-none"
+              icon={<MessageSquare className="h-4 w-4" />}
+              emptyText="Nenhuma observação"
             />
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-muted-foreground">
-                {localObservacoes.length}/500 caracteres
-              </p>
-              {isSavingObs && (
-                <p className="text-xs text-primary animate-pulse">Salvando...</p>
-              )}
-            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
