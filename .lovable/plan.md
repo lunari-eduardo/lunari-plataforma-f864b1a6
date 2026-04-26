@@ -1,151 +1,101 @@
+## 🎯 Objetivo
 
-# 📋 Refatoração — CRM › Cliente › Aba Documentos
-
-Transformar os blocos de **Briefings** e **Contratos** em **listas compactas tipo linha** (uma por item), com ações inline e menu **⋮** padronizado, eliminando o excesso de altura, espaço vazio e ações distantes do conteúdo.
-
----
-
-## 🎯 Diagnóstico atual
-
-**`DocumentosTab.tsx`** envolve cada lista em um `<Card>` com `pt-6` → gera muito padding vertical. Dentro:
-
-- **`ClienteFormulariosList.tsx`**: cada item é um bloco `border rounded-lg p-3 space-y-2` com 2 linhas + botão de ação largura total → cards altos demais.
-- **`ClienteContratosList.tsx`**: itens são `<Card>` clicáveis sem ação visível, sem badge de status alinhada à direita e **sem possibilidade de excluir pela lista** (só pelo modal).
-- Sem menu **⋮** em nenhum dos dois.
-- Briefings respondidos não podem ser excluídos pela UI (só via banco). O FK já tem `ON DELETE CASCADE` → confirmado seguro excluir e arrastar respostas junto.
+Reduzir poluição visual no card colapsado do Workflow removendo o ícone de Contrato (pouco utilizado no acesso rápido) e movê-lo para o card **expandido**, com **identificação textual clara** (ícone + label + status), tornando o controle mais explícito e acessível quando o usuário realmente precisa.
 
 ---
 
-## 🧱 Estrutura final de cada linha (padrão único)
+## 📍 Situação Atual
 
+### `WorkflowCardCollapsed.tsx` (linhas 478–494)
+A "Zona 11" agrupa **dois ícones soltos** no canto direito:
+- `<SessaoContratoIcon />` — ícone `FileSignature` 7x7 com bolinha de status
+- Botão de excluir (`Trash2`)
+
+Problemas:
+- Ícone de contrato fica quase invisível (sem label) no meio das colunas
+- Compete por espaço com o botão de excluir e demais ações
+- Usuário não identifica facilmente que é "Contrato"
+- É uma ação pouco frequente que ocupa espaço nobre
+
+### `WorkflowCardExpanded.tsx` (Bloco 3 — Ações de Pagamento, linhas 431–473)
+Já existe uma coluna vertical bem definida com:
+- Cobrar
+- Agendar pagamento manual
+- (divisor)
+- Pagamentos
+
+É o lugar natural para receber o botão de Contrato.
+
+---
+
+## 🛠️ Mudanças Propostas
+
+### 1. `src/components/workflow/WorkflowCardCollapsed.tsx`
+- **Remover** o `<SessaoContratoIcon />` da Zona 11 (linhas 480–486)
+- **Remover** o import `SessaoContratoIcon` (linha 25)
+- A Zona 11 passa a conter **apenas** o botão de excluir, ficando mais limpa
+- Manter a estrutura `flex items-center justify-center` (a div continua válida com 1 filho)
+
+### 2. `src/components/workflow/WorkflowCardExpanded.tsx`
+
+**a)** Importar o componente:
+```tsx
+import { SessaoContratoIcon } from "@/components/contratos/SessaoContratoIcon";
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ [icon] Nome do item            │ [Ação principal] │ [Status badge] │  ⋮      │
-│        meta secundária (data)  │                  │                │         │
-└──────────────────────────────────────────────────────────────────────────────┘
-```
 
-- **Altura alvo:** ~52px (vs ~96px atuais).
-- **Hover:** `bg-accent/40`, sem elevar shadow.
-- **Clique na linha (fora dos botões):** abre ação principal (ver respostas / abrir contrato).
-
----
-
-## 1. Novo componente compartilhado
-
-**Criar `src/components/cliente-detalhe/shared/CompactItemRow.tsx`**
-
-Linha reutilizável padronizada para briefings, contratos e (futuramente) outros documentos:
+**b)** Adicionar uma nova seção dentro do **Bloco 3 — Ações de Pagamento** (após o botão "Pagamentos", linha 471), separada por divisor:
 
 ```tsx
-interface CompactItemRowProps {
-  icon?: ReactNode;
-  title: string;
-  meta?: string;            // ex: "Enviado em 07/04/2026"
-  status?: ReactNode;       // badge JSX
-  primaryAction?: { label: string; icon: ReactNode; onClick: () => void };
-  menuItems: Array<{
-    label: string;
-    icon: ReactNode;
-    onClick: () => void;
-    variant?: 'default' | 'destructive';
-    separatorBefore?: boolean;
-  }>;
-  onRowClick?: () => void;
-}
+{/* Divisor */}
+<div className="w-full border-t border-border/20 my-1" />
+
+{/* Contrato — ação documental, separada das ações de pagamento */}
+{session.clienteId && (
+  <SessaoContratoButton
+    sessionId={session.sessionId || session.id}
+    clienteId={session.clienteId}
+    clienteNome={session.nome}
+  />
+)}
 ```
 
-- Menu **⋮** via `DropdownMenu` (shadcn).
-- `primaryAction` aparece como botão `ghost` discreto à direita do meta, antes da badge.
-- Mobile (<sm): primaryAction colapsa para dentro do menu ⋮.
+> O botão fica **dentro do mesmo bloco vertical** das ações, mantendo a coluna alinhada à direita (área "AÇÕES DE PAGAMENTO" da imagem). Apesar do título do bloco ser "Ações de Pagamento", podemos renomeá-lo para **"Ações"** para englobar contrato + pagamentos sem confusão semântica.
 
----
+**c)** Renomear o título do bloco (linha 433) de `Ações de Pagamento` → `Ações`.
 
-## 2. `ClienteFormulariosList.tsx` — refatoração
+### 3. Novo componente `src/components/contratos/SessaoContratoButton.tsx`
 
-Trocar o bloco atual pelo `CompactItemRow`:
+Cria uma variante **com label** do `SessaoContratoIcon` (que continuará existindo para outros usos eventuais), com a mesma lógica interna (Popover de listagem, modal de novo contrato, modal viewer), mas renderizada como um **botão largo** semelhante a "Cobrar"/"Pagamentos":
 
-| Estado | Ação principal | Itens do menu ⋮ |
-|---|---|---|
-| `respondido` | **Ver respostas** (Eye) | Ver respostas · Copiar link · **Excluir** (vermelho, com confirmação) |
-| `enviado` | **Copiar link** (Copy) | Copiar link · Reenviar via WhatsApp · **Excluir** |
-| `expirado` / `nao_enviado` | **Copiar link** (se houver token) | Copiar link · **Excluir** |
+- Largura total (`w-full`) para alinhar com os outros botões da coluna
+- Ícone `FileSignature` + texto **"Contrato"** ou **"Contratos (N)"** quando houver
+- Badge de status à direita (cor da bolinha já existente em `dotColor`) quando houver contrato no status mais avançado
+- Variante `outline` para diferenciar de "Cobrar"/"Agendar" (ações primárias)
+- Reaproveita 100% da lógica atual: `useContratos`, `STATUS_PRIORITY`, `Popover` com lista, `NovoContratoModal`, `ContratoViewerModal`
 
-**Exclusão:**
-- Importar `deleteFormulario` de `useFormularios()`.
-- Se `status_envio === 'respondido'` → `AlertDialog`:  
-  *"Esta ação excluirá também todas as respostas enviadas pelo cliente. Deseja continuar?"*
-- Caso contrário → exclusão direta sem confirmação (consistente com a política de toasts mínimos; exibir só `toast.error` em caso de falha).
-
-Header da seção continua: `📄 Formulários / Briefings` + botão `+ Enviar briefing`.
-
----
-
-## 3. `ClienteContratosList.tsx` — refatoração
-
-Mesma `CompactItemRow`. Header mantém ícone, título, contagem e botão `+ Novo contrato`.
-
-| Status | Ação principal | Itens do menu ⋮ |
-|---|---|---|
-| `rascunho` | **Abrir** | Abrir · Baixar PDF · Marcar como enviado · **Excluir** |
-| `enviado` | **Abrir** | Abrir · Baixar PDF · Marcar como assinado · **Excluir** |
-| `assinado` | **Abrir** | Abrir · Baixar PDF · Baixar PDF assinado (se houver) · **Excluir** |
-
-**Mudanças funcionais:**
-- Status badge passa a ficar à direita (alinhado com formulários).
-- **Excluir direto da lista** via `remove(contrato.id)` do hook `useContratos`, com `AlertDialog` de confirmação simples ("Excluir contrato? Esta ação não pode ser desfeita.").
-- "Baixar PDF" reutiliza `downloadContratoPdf` (mesma lógica do modal) — extrair para handler compartilhado dentro da lista.
-- "Marcar como enviado/assinado" chama `setStatus({ id, status })`.
-
----
-
-## 4. `DocumentosTab.tsx` — container
-
-Substituir os 3 `<Card>` largos por:
-
-```tsx
-<div className="space-y-6 max-w-4xl">
-  <section> {/* Briefings */} </section>
-  <Separator />
-  <section> {/* Contratos */} </section>
-  <Separator />
-  <section> {/* Upload de documentos */} </section>
-</div>
+Estrutura visual aproximada:
+```
+┌─────────────────────────────┐
+│ 📄  Contrato         ● Enviado│   ← sem contratos: "Contrato"
+└─────────────────────────────┘   ← com contratos: "Contratos (2)" + badge
 ```
 
-- **Reduzir largura:** `max-w-4xl` (vs full-width atual) → respeita padrão Notion/Stripe.
-- Remover wrappers `<Card>` redundantes; cada seção usa apenas título + lista, sem chrome extra.
-- Manter `FileUploadZone` na seção "Documentos do Cliente" (sem alteração funcional, apenas remover `<Card>` ao redor).
+### 4. Verificar outros usos de `SessaoContratoIcon`
+Rodar busca para confirmar que o componente original não está sendo usado em outro lugar além do card colapsado. Se não estiver, ele pode permanecer no projeto (não-disruptivo) ou ser removido — preferência por **manter** para não quebrar imports indiretos.
 
 ---
 
-## 5. Padronização de notificações
+## ✅ Resultado Esperado
 
-Seguindo a regra de memória (`politica-notificacao-sucesso-minimalista`):
-
-- ❌ Sem toast de sucesso para: copiar link, abrir, marcar como enviado/assinado, excluir.
-- ✅ Manter `toast.error` apenas em falhas reais.
-- Exceção: **copiar link** mantém um toast curto ("Link copiado!") por ser uma ação cega (sem feedback visual no DOM) — já existe e é útil.
-
----
-
-## 6. Arquivos afetados
-
-| Arquivo | Ação |
-|---|---|
-| `src/components/cliente-detalhe/shared/CompactItemRow.tsx` | **Criar** |
-| `src/components/cliente-detalhe/tabs/DocumentosTab.tsx` | Refatorar layout (sem Cards, max-w-4xl, separators) |
-| `src/components/formularios/ClienteFormulariosList.tsx` | Migrar para `CompactItemRow` + adicionar exclusão com confirmação condicional |
-| `src/components/contratos/ClienteContratosList.tsx` | Migrar para `CompactItemRow` + ações inline (baixar PDF, marcar enviado, excluir) |
-
-Sem mudanças de banco. Sem mudanças em hooks (todos os métodos necessários — `deleteFormulario`, `remove`, `setStatus`, `downloadContratoPdf` — já existem).
+- **Card colapsado**: mais limpo, sem ícone órfão de contrato. Apenas Galerias + Excluir na zona final
+- **Card expandido**: contrato passa a ser uma ação clara, identificável e bem posicionada junto às demais ações da sessão
+- **UX**: usuário acessa contrato de forma intencional (ao expandir o card), sem perder funcionalidade
+- **Identificação**: label "Contrato" + status visual eliminam ambiguidade do ícone solto
 
 ---
 
-## ✅ Resultado esperado
+## 📁 Arquivos Afetados
 
-- Densidade ~2x maior (4-5 itens visíveis sem scroll vs 2 atuais).
-- Ações no mesmo eixo visual do item — zero deslocamento ocular.
-- Exclusão possível em qualquer estado, com proteção apenas onde há perda de dados (respostas).
-- Visual consistente entre briefings e contratos.
-- Largura controlada (`max-w-4xl`) → leitura mais confortável em telas largas.
+- `src/components/workflow/WorkflowCardCollapsed.tsx` — remover ícone e import
+- `src/components/workflow/WorkflowCardExpanded.tsx` — adicionar botão no Bloco 3, renomear título
+- `src/components/contratos/SessaoContratoButton.tsx` — **novo** componente (variante com label)
