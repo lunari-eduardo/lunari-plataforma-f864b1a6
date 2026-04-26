@@ -20,27 +20,18 @@ const formatPhone = (value: string): string => {
   if (digits.length <= 2) return `(${digits}`;
   if (digits.length <= 6) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
   if (digits.length <= 10) {
-    // Fixo: (XX) XXXX-XXXX
     return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
   }
-  // Celular: (XX) XXXXX-XXXX
   return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7,11)}`;
 };
 
-// Remove formatação para armazenar
 const unformatPhone = (value: string): string => {
   return value.replace(/\D/g, '');
 };
 
-// Verifica se é celular (9º dígito = 9)
 const isCelular = (digits: string): boolean => {
   if (digits.length < 3) return false;
   return digits.charAt(2) === '9';
-};
-
-// Extrai DDD
-const getDDD = (digits: string): string => {
-  return digits.slice(0, 2);
 };
 
 export function PhoneInputSmart({
@@ -53,20 +44,18 @@ export function PhoneInputSmart({
   const [localValue, setLocalValue] = useState(formatPhone(value));
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const digits = unformatPhone(value);
   const hasPhone = digits.length >= 10;
   const celular = isCelular(digits);
 
-  // Sync localValue quando value muda externamente
+  // Sync localValue quando value muda externamente (apenas fora de edição)
   useEffect(() => {
     if (!isEditing) {
       setLocalValue(formatPhone(value));
     }
   }, [value, isEditing]);
 
-  // Focus input quando entra em modo edição
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -74,10 +63,6 @@ export function PhoneInputSmart({
   }, [isEditing]);
 
   const handleSave = async () => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
     const cleanValue = unformatPhone(localValue);
     if (cleanValue === unformatPhone(value)) {
       setIsEditing(false);
@@ -87,7 +72,6 @@ export function PhoneInputSmart({
     setIsSaving(true);
     try {
       await onSave(cleanValue);
-      toast.success('Salvo', { duration: 1500 });
       setIsEditing(false);
     } catch (error) {
       toast.error('Erro ao salvar');
@@ -97,36 +81,14 @@ export function PhoneInputSmart({
   };
 
   const handleCancel = () => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
     setLocalValue(formatPhone(value));
     setIsEditing(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Apenas atualiza estado local — sem auto-save
     const formatted = formatPhone(e.target.value);
     setLocalValue(formatted);
-    
-    // Auto-save com debounce de 800ms
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    
-    const cleanValue = unformatPhone(formatted);
-    debounceRef.current = setTimeout(async () => {
-      if (cleanValue !== unformatPhone(value) && cleanValue.length >= 10) {
-        setIsSaving(true);
-        try {
-          await onSave(cleanValue);
-          toast.success('Salvo', { duration: 1500 });
-        } catch (error) {
-          toast.error('Erro ao salvar');
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    }, 800);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -135,6 +97,7 @@ export function PhoneInputSmart({
       handleSave();
     }
     if (e.key === 'Escape') {
+      e.preventDefault();
       handleCancel();
     }
   };
@@ -182,7 +145,6 @@ export function PhoneInputSmart({
           <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
         
-        {/* Botões de ação rápida */}
         {hasPhone && (
           <div className="flex gap-2 pl-6">
             <Button

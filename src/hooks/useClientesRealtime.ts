@@ -179,14 +179,18 @@ export function useClientesRealtime() {
 
   const atualizarCliente = useCallback(async (id: string, dados: Partial<ClienteSupabase>) => {
     try {
+      // Não disparar update sem nada para mudar
+      if (!dados || Object.keys(dados).length === 0) {
+        return;
+      }
+
       const { error } = await supabase
         .from('clientes')
         .update(dados)
         .eq('id', id);
 
       if (error) throw error;
-      
-      toast.success('Cliente atualizado com sucesso');
+      // Sem toast de sucesso aqui — feedback visual é do componente que chamou
     } catch (error) {
       console.error('❌ Error updating client:', error);
       toast.error('Erro ao atualizar cliente');
@@ -230,8 +234,7 @@ export function useClientesRealtime() {
         .single();
 
       if (error) throw error;
-      
-      toast.success('Membro da família adicionado');
+      // Sem toast — feedback visual no card de família
       return data;
     } catch (error) {
       console.error('❌ Error adding family member:', error);
@@ -265,8 +268,7 @@ export function useClientesRealtime() {
         .eq('id', id);
 
       if (error) throw error;
-      
-      toast.success('Membro da família removido');
+      // Sem toast — UI já remove o card visualmente
     } catch (error) {
       console.error('❌ Error removing family member:', error);
       toast.error('Erro ao remover membro da família');
@@ -411,20 +413,23 @@ export function useClientesRealtime() {
       // Separar dados do cliente dos dados da família
       const { conjuge, filhos, ...dadosBasicos } = dadosCliente;
 
-      // 1. Atualizar dados básicos do cliente
-      const updateData: Partial<ClienteSupabase> = {
-        nome: dadosBasicos.nome,
-        email: dadosBasicos.email || null,
-        telefone: dadosBasicos.telefone || null,
-        endereco: dadosBasicos.endereco || null,
-        observacoes: dadosBasicos.observacoes || null,
-        origem: dadosBasicos.origem || null,
-        data_nascimento: dadosBasicos.dataNascimento || null
-      };
+      // 1. Montar update PARCIAL apenas com campos realmente enviados
+      // Isso evita sobrescrever campos não tocados (ex.: salvar telefone não apaga email)
+      const updateData: Partial<ClienteSupabase> = {};
+      if ('nome' in dadosBasicos) updateData.nome = dadosBasicos.nome;
+      if ('email' in dadosBasicos) updateData.email = dadosBasicos.email || null;
+      if ('telefone' in dadosBasicos) updateData.telefone = dadosBasicos.telefone || null;
+      if ('endereco' in dadosBasicos) updateData.endereco = dadosBasicos.endereco || null;
+      if ('observacoes' in dadosBasicos) updateData.observacoes = dadosBasicos.observacoes || null;
+      if ('origem' in dadosBasicos) updateData.origem = dadosBasicos.origem || null;
+      if ('dataNascimento' in dadosBasicos) updateData.data_nascimento = dadosBasicos.dataNascimento || null;
 
-      await atualizarCliente(id, updateData);
+      // Só chama update se houver algo a alterar
+      if (Object.keys(updateData).length > 0) {
+        await atualizarCliente(id, updateData);
+      }
 
-      // 2. Sincronizar dados da família
+      // 2. Sincronizar dados da família apenas quando enviados
       if (conjuge !== undefined || filhos !== undefined) {
         await syncFamiliaData(
           id,
@@ -433,7 +438,7 @@ export function useClientesRealtime() {
         );
       }
 
-      toast.success('Cliente atualizado com sucesso');
+      // Sem toast de sucesso — feedback visual já é o fechamento dos inputs inline
     } catch (error) {
       console.error('❌ Erro ao atualizar cliente completo:', error);
       toast.error('Erro ao atualizar cliente');

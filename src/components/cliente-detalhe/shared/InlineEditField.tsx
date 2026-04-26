@@ -33,9 +33,8 @@ export function InlineEditField({
   const [localValue, setLocalValue] = useState(value);
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync localValue quando value muda externamente
+  // Sync localValue quando value muda externamente (apenas fora de edição)
   useEffect(() => {
     if (!isEditing) {
       setLocalValue(value);
@@ -50,10 +49,6 @@ export function InlineEditField({
   }, [isEditing]);
 
   const handleSave = async () => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
     if (localValue === value) {
       setIsEditing(false);
       return;
@@ -62,8 +57,8 @@ export function InlineEditField({
     setIsSaving(true);
     try {
       await onSave(localValue);
-      toast.success('Salvo', { duration: 1500 });
       setIsEditing(false);
+      // Sem toast de sucesso — feedback visual já é o fechamento do input
     } catch (error) {
       toast.error('Erro ao salvar');
     } finally {
@@ -72,34 +67,13 @@ export function InlineEditField({
   };
 
   const handleCancel = () => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
     setLocalValue(value);
     setIsEditing(false);
   };
 
   const handleChange = (newValue: string) => {
+    // Apenas atualiza estado local — sem auto-save
     setLocalValue(newValue);
-    
-    // Auto-save com debounce de 800ms
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    
-    debounceRef.current = setTimeout(async () => {
-      if (newValue !== value) {
-        setIsSaving(true);
-        try {
-          await onSave(newValue);
-          toast.success('Salvo', { duration: 1500 });
-        } catch (error) {
-          toast.error('Erro ao salvar');
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    }, 800);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -108,6 +82,7 @@ export function InlineEditField({
       handleSave();
     }
     if (e.key === 'Escape') {
+      e.preventDefault();
       handleCancel();
     }
   };

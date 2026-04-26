@@ -29,7 +29,6 @@ const formatAge = (birthDate: string) => {
   }
   
   if (age < 1) {
-    // Calcular meses para bebês
     let months = (today.getFullYear() - birth.getFullYear()) * 12 + (today.getMonth() - birth.getMonth());
     if (today.getDate() < birth.getDate()) months--;
     if (months <= 0) return 'Recém-nascido';
@@ -55,7 +54,6 @@ export function FamilyMiniCard({
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const Icon = tipo === 'conjuge' ? Heart : Baby;
   const bgColor = tipo === 'conjuge' 
@@ -77,7 +75,6 @@ export function FamilyMiniCard({
   }, [editingField]);
 
   const handleSaveNome = async () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (localNome === nome) {
       setEditingField(null);
       return;
@@ -86,7 +83,6 @@ export function FamilyMiniCard({
     setIsSaving(true);
     try {
       await onSaveNome(localNome);
-      toast.success('Salvo', { duration: 1500 });
       setEditingField(null);
     } catch (error) {
       toast.error('Erro ao salvar');
@@ -96,7 +92,6 @@ export function FamilyMiniCard({
   };
 
   const handleSaveData = async () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (localData === dataNascimento) {
       setEditingField(null);
       return;
@@ -105,7 +100,6 @@ export function FamilyMiniCard({
     setIsSaving(true);
     try {
       await onSaveData(localData);
-      toast.success('Salvo', { duration: 1500 });
       setEditingField(null);
     } catch (error) {
       toast.error('Erro ao salvar');
@@ -119,47 +113,19 @@ export function FamilyMiniCard({
     setIsRemoving(true);
     try {
       await onRemove();
-      toast.success('Removido', { duration: 1500 });
     } catch (error) {
       toast.error('Erro ao remover');
       setIsRemoving(false);
     }
   };
 
+  // Apenas atualiza estado local — sem auto-save
   const handleNomeChange = (value: string) => {
     setLocalNome(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (value !== nome) {
-        setIsSaving(true);
-        try {
-          await onSaveNome(value);
-          toast.success('Salvo', { duration: 1500 });
-        } catch (error) {
-          toast.error('Erro ao salvar');
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    }, 800);
   };
 
   const handleDataChange = (value: string) => {
     setLocalData(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (value !== dataNascimento) {
-        setIsSaving(true);
-        try {
-          await onSaveData(value);
-          toast.success('Salvo', { duration: 1500 });
-        } catch (error) {
-          toast.error('Erro ao salvar');
-        } finally {
-          setIsSaving(false);
-        }
-      }
-    }, 800);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, saveHandler: () => void) => {
@@ -168,6 +134,7 @@ export function FamilyMiniCard({
       saveHandler();
     }
     if (e.key === 'Escape') {
+      e.preventDefault();
       setLocalNome(nome);
       setLocalData(dataNascimento);
       setEditingField(null);
@@ -267,7 +234,6 @@ export function FamilyMiniCard({
         )}
       </div>
 
-      {/* Botão remover (apenas para filhos) */}
       {onRemove && tipo === 'filho' && (
         <Button
           variant="ghost"

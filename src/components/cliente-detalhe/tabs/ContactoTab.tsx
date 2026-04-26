@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,8 +11,7 @@ import { PhoneInputSmart } from '../shared/PhoneInputSmart';
 import { OrigemVisualSelect } from '../shared/OrigemVisualSelect';
 import { FamilyMiniCard } from '../shared/FamilyMiniCard';
 import { ClienteCompleto } from '@/types/cliente-supabase';
-import { useState, useEffect, useRef } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 
 interface ContactoTabProps {
   cliente: ClienteCompleto;
@@ -58,10 +56,6 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
     dataNascimento: conjugeData?.data_nascimento || ''
   });
 
-  const [localObservacoes, setLocalObservacoes] = useState(cliente.observacoes || '');
-  const [isSavingObs, setIsSavingObs] = useState(false);
-  const obsDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
   // Sync quando cliente muda
   useEffect(() => {
     const conjugeDataNew = cliente.familia?.find(f => f.tipo === 'conjuge');
@@ -77,8 +71,6 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
       nome: f.nome || '',
       dataNascimento: f.data_nascimento || ''
     })));
-
-    setLocalObservacoes(cliente.observacoes || '');
   }, [cliente]);
 
   // Handler genérico para salvar um campo do cliente
@@ -145,23 +137,9 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
     saveFamilia(localConjuge, newFilhos);
   };
 
-  // Handler para observações com debounce
-  const handleObservacoesChange = (value: string) => {
-    setLocalObservacoes(value);
-    
-    if (obsDebounceRef.current) {
-      clearTimeout(obsDebounceRef.current);
-    }
-    
-    obsDebounceRef.current = setTimeout(async () => {
-      setIsSavingObs(true);
-      try {
-        onUpdate(cliente.id, { observacoes: value });
-        toast.success('Salvo', { duration: 1500 });
-      } finally {
-        setIsSavingObs(false);
-      }
-    }, 800);
+  // Observações: salva via InlineEditField (textarea), com botão check explícito
+  const handleSaveObservacoes = async (value: string) => {
+    onUpdate(cliente.id, { observacoes: value });
   };
 
   // Contadores para os headers
@@ -416,21 +394,14 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
             </div>
           </AccordionTrigger>
           <AccordionContent className="pb-4">
-            <Textarea
-              value={localObservacoes}
-              onChange={(e) => handleObservacoesChange(e.target.value)}
+            <InlineEditField
+              value={cliente.observacoes || ''}
+              onSave={handleSaveObservacoes}
+              type="textarea"
               placeholder="Anotações importantes sobre o cliente, preferências, histórico..."
-              rows={4}
-              className="resize-none"
+              icon={<MessageSquare className="h-4 w-4" />}
+              emptyText="Nenhuma observação"
             />
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-xs text-muted-foreground">
-                {localObservacoes.length}/500 caracteres
-              </p>
-              {isSavingObs && (
-                <p className="text-xs text-primary animate-pulse">Salvando...</p>
-              )}
-            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
