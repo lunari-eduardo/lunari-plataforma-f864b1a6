@@ -179,14 +179,18 @@ export function useClientesRealtime() {
 
   const atualizarCliente = useCallback(async (id: string, dados: Partial<ClienteSupabase>) => {
     try {
+      // Não disparar update sem nada para mudar
+      if (!dados || Object.keys(dados).length === 0) {
+        return;
+      }
+
       const { error } = await supabase
         .from('clientes')
         .update(dados)
         .eq('id', id);
 
       if (error) throw error;
-      
-      toast.success('Cliente atualizado com sucesso');
+      // Sem toast de sucesso aqui — feedback visual é do componente que chamou
     } catch (error) {
       console.error('❌ Error updating client:', error);
       toast.error('Erro ao atualizar cliente');
