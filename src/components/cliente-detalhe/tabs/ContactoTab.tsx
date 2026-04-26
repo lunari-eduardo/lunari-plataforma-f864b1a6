@@ -137,23 +137,9 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
     saveFamilia(localConjuge, newFilhos);
   };
 
-  // Handler para observações com debounce
-  const handleObservacoesChange = (value: string) => {
-    setLocalObservacoes(value);
-    
-    if (obsDebounceRef.current) {
-      clearTimeout(obsDebounceRef.current);
-    }
-    
-    obsDebounceRef.current = setTimeout(async () => {
-      setIsSavingObs(true);
-      try {
-        onUpdate(cliente.id, { observacoes: value });
-        toast.success('Salvo', { duration: 1500 });
-      } finally {
-        setIsSavingObs(false);
-      }
-    }, 800);
+  // Observações: salva via InlineEditField (textarea), com botão check explícito
+  const handleSaveObservacoes = async (value: string) => {
+    onUpdate(cliente.id, { observacoes: value });
   };
 
   // Contadores para os headers
