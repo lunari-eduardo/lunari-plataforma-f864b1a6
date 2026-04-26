@@ -26,6 +26,7 @@ import { useSessionPayments } from "@/hooks/useSessionPayments";
 import { CreditCard, Plus, Send, AlertTriangle, Lock } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
+import { SessaoContratoButton } from "@/components/contratos/SessaoContratoButton";
 
 interface WorkflowCardExpandedProps {
   session: SessionData;
@@ -428,13 +429,13 @@ export function WorkflowCardExpanded({
           </div>
         </div>
 
-        {/* BLOCO 3 - Ações de Pagamento */}
+        {/* BLOCO 3 - Ações */}
         <div className="space-y-3 flex flex-col items-center justify-center py-4">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Ações de Pagamento
+            Ações
           </h4>
           
-          <div className="flex flex-col items-center gap-2 w-full max-w-[200px]">
+          <div className="flex flex-col items-center gap-2 w-full max-w-[220px]">
             {/* Cobrar */}
             <Button
               variant="outline"
@@ -469,6 +470,15 @@ export function WorkflowCardExpanded({
               <CreditCard className="h-4 w-4" />
               Pagamentos
             </Button>
+
+            {/* Contrato — ação documental, separada das ações de pagamento */}
+            {session.clienteId && (
+              <SessaoContratoButton
+                sessionId={session.sessionId || session.id}
+                clienteId={session.clienteId}
+                clienteNome={session.nome}
+              />
+            )}
           </div>
         </div>
       </div>
