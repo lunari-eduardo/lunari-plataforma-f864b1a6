@@ -22,6 +22,7 @@ import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
 import { WorkflowDeleteConfirmModal, type DeleteAction } from "./WorkflowDeleteConfirmModal";
 import { ReconcileExtrasModal } from "./ReconcileExtrasModal";
+import { SessaoContratoIcon } from "@/components/contratos/SessaoContratoIcon";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
@@ -474,8 +475,15 @@ export function WorkflowCardCollapsed({
           <GalleryButtons />
         </div>
 
-        {/* Zona 11: Delete */}
-        <div className="flex items-center justify-center pt-1" onClick={(e) => e.stopPropagation()}>
+        {/* Zona 11: Contrato + Delete */}
+        <div className="flex items-center justify-center gap-0.5 pt-1" onClick={(e) => e.stopPropagation()}>
+          {session.clienteId && (
+            <SessaoContratoIcon
+              sessionId={session.sessionId || session.id}
+              clienteId={session.clienteId}
+              clienteNome={session.nome}
+            />
+          )}
           <button
             onClick={() => setDeleteModalOpen(true)}
             className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-destructive/10 transition-all"

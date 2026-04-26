@@ -1,8 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Upload } from "lucide-react";
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
 import { ClienteFormulariosList } from '@/components/formularios/ClienteFormulariosList';
+import { ClienteContratosList } from '@/components/contratos/ClienteContratosList';
 import { ClienteCompleto } from '@/types/cliente-supabase';
 
 interface DocumentosTabProps {
@@ -20,6 +20,13 @@ export function DocumentosTab({ cliente }: DocumentosTabProps) {
             clienteNome={cliente.nome}
             clienteTelefone={cliente.telefone || cliente.whatsapp || undefined}
           />
+        </CardContent>
+      </Card>
+
+      {/* Contratos */}
+      <Card>
+        <CardContent className="pt-6">
+          <ClienteContratosList clienteId={cliente.id} clienteNome={cliente.nome} />
         </CardContent>
       </Card>
 

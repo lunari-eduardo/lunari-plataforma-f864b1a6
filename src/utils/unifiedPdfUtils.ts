@@ -577,5 +577,5 @@ export async function generateUnifiedExtratoFDF(data: UnifiedExtratoData): Promi
     }
   };
 
-  await html2pdf().set(opt).from(htmlContent).save();
+  await html2pdf().set(opt as any).from(htmlContent).save();
 }
