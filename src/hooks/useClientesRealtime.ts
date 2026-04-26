@@ -234,8 +234,7 @@ export function useClientesRealtime() {
         .single();
 
       if (error) throw error;
-      
-      toast.success('Membro da família adicionado');
+      // Sem toast — feedback visual no card de família
       return data;
     } catch (error) {
       console.error('❌ Error adding family member:', error);
