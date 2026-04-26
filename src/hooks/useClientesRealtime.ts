@@ -268,8 +268,7 @@ export function useClientesRealtime() {
         .eq('id', id);
 
       if (error) throw error;
-      
-      toast.success('Membro da família removido');
+      // Sem toast — UI já remove o card visualmente
     } catch (error) {
       console.error('❌ Error removing family member:', error);
       toast.error('Erro ao remover membro da família');
