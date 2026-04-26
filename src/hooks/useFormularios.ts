@@ -67,6 +67,8 @@ export function useFormularios() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-cliente'] });
+      queryClient.invalidateQueries({ queryKey: ['formularios-session'] });
       toast({ title: 'Formulário criado com sucesso!' });
     },
     onError: (error) => {
