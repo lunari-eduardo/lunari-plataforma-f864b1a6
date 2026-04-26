@@ -56,10 +56,6 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
     dataNascimento: conjugeData?.data_nascimento || ''
   });
 
-  const [localObservacoes, setLocalObservacoes] = useState(cliente.observacoes || '');
-  const [isSavingObs, setIsSavingObs] = useState(false);
-  const obsDebounceRef = useRef<NodeJS.Timeout | null>(null);
-
   // Sync quando cliente muda
   useEffect(() => {
     const conjugeDataNew = cliente.familia?.find(f => f.tipo === 'conjuge');
@@ -75,8 +71,6 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
       nome: f.nome || '',
       dataNascimento: f.data_nascimento || ''
     })));
-
-    setLocalObservacoes(cliente.observacoes || '');
   }, [cliente]);
 
   // Handler genérico para salvar um campo do cliente
