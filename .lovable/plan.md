@@ -1,59 +1,61 @@
-## 🎯 Problema
+# Atualizar modelos de contrato profissionais
 
-No `ContratoTemplateEditorModal`, a função `insertVariable` apenas concatena `<p>{{key}}</p>` ao final do `conteudo` (string HTML). Por isso, mesmo com o cursor no meio do texto, a variável sempre vai parar no rodapé do documento.
+Vamos substituir os modelos seed atuais (4 modelos curtos) pelos **5 modelos profissionais completos** que você passou e expandir o sistema de variáveis para suportar todas as novas chaves usadas neles.
 
-```ts
-// src/components/contratos/ContratoTemplateEditorModal.tsx (atual)
-const insertVariable = (key: string) => {
-  setConteudo((prev) => `${prev.trimEnd()}<p>{{${key}}}</p>`);
-};
+## O que você terá ao final
+
+5 modelos prontos disponíveis em **Configurações → Contratos → "Modelo pronto"**:
+
+1. **Ensaio Fotográfico** (Estúdio e Externas) — geral
+2. **Ensaio Gestante** — com cláusulas de saúde, figurino e nascimento prematuro
+3. **Casamento** — cobertura completa com sinal, multa e alimentação da equipe
+4. **Newborn** — cláusulas vitais de segurança e higiene do bebê
+5. **Eventos Gerais** (festas, corporativos, aniversários)
+
+Todos com qualificação completa das partes (CPF/CNPJ, RG, cidade, estado, e-mail), foro, direitos autorais e cláusulas específicas de cada nicho.
+
+## Novas variáveis suportadas
+
+O sistema atual tem ~9 variáveis principais. Vamos adicionar **~25 novas** para cobrir todos os modelos:
+
+**Cliente expandido:** `documento_cliente`, `cidade_cliente`, `estado_cliente`, `email_cliente`, `rg_cliente`, `nome_bebe`
+
+**Fotógrafo expandido:** `documento_fotografo`, `cidade_fotografo`, `email_fotografo`
+
+**Sessão/Evento:** `data_evento`, `local_evento`, `local_ensaio`, `horario_inicio`, `horario_termino`, `duracao_sessao`, `duracao_maxima`
+
+**Comerciais (manuais):** `valor_sinal`, `valor_hora_extra`, `valor_foto_extra`, `taxa_deslocamento`, `valor_taxa_dano`, `descricao_forma_pagamento`, `quantidade_fotos`, `prazo_selecao`, `prazo_entrega_final`, `dias_aviso_previo`, `dias_multa_cancelamento`, `porcentagem_multa`, `fornecimento_figurino`
+
+**Auto-preenchimento sempre que possível:**
+- Dados do cliente vêm do CRM (nome, email, cidade, estado, CPF, endereço)
+- Dados do fotógrafo vêm do perfil (nome, email, cidade)
+- Dados de sessão vêm do workflow (data, hora, categoria, valor)
+
+Variáveis sem valor disponível ficam destacadas em **amarelo `[nome_variavel]`** no PDF gerado, sinalizando ao fotógrafo o que precisa ajustar antes de enviar.
+
+## Compatibilidade
+
+- **Modelos antigos do usuário continuam funcionando** — todas as variáveis legado (`cliente_nome`, `sessao_data`, etc.) seguem suportadas em paralelo
+- **Banco de dados não muda** — apenas o conteúdo dos seeds
+- **Botão "Adicionar N modelos profissionais"** detecta automaticamente quais dos 5 ainda faltam na lista do usuário (via comparação de nome/categoria), permitindo adicionar só os novos sem duplicar
+
+## Arquivos modificados
+
+```text
+src/utils/contratoSeedTemplates.ts     ← reescrito com 5 modelos completos em HTML
+src/utils/contratoVariables.ts         ← adiciona ~25 variáveis novas + auto-fill
+src/components/contratos/NovoContratoModal.tsx  ← carrega cidade/estado/CPF do cliente
+                                                  e cidade do fotógrafo nas variáveis
 ```
 
-Além disso, o `ContratoRichEditor` já expõe um `editorRef` (contentEditable nativo), mas o helper `insertVariableIntoEditor` é um no-op.
+## Detalhes técnicos
 
-## ✅ Solução
+- Conteúdo dos modelos em HTML semântico (`<h2>`, `<h3>`, `<p>`, `<strong>`) compatível com o `ContratoRichEditor` e o gerador de PDF (`contratoPdf.ts`)
+- `buildVariableMap` recebe novos campos opcionais do cliente (`cidade`, `estado`, `cpf`, `rg`) e do fotógrafo (`cidade`, `documento`) — leitura via `supabase.from('clientes').select('...')` e `useUserProfile`
+- Variáveis puramente comerciais (sinal, multa, hora extra, etc.) ficam no grupo `manual` — são preservadas como `[placeholder]` se não preenchidas, para o fotógrafo editar inline antes de salvar o contrato
+- Categorias dos seeds: `ensaio`, `gestante`, `casamento`, `newborn`, `evento` (a detecção de duplicatas usa essas categorias normalizadas)
 
-Permitir que a variável seja inserida **exatamente na posição do cursor (caret)** dentro do editor, mantendo o append ao final apenas como fallback (quando o editor nunca recebeu foco).
+## O que NÃO vamos fazer
 
-### Mudanças
-
-**1. `src/components/contratos/ContratoRichEditor.tsx`**
-- Expor uma API imperativa via `forwardRef` + `useImperativeHandle` com o método:
-  - `insertVariableAtCursor(key: string)` — insere o texto `{{key}}` na seleção atual.
-- Lógica:
-  - `editorRef.current.focus()`
-  - Recuperar `window.getSelection()`. Se a seleção não estiver dentro do editor (ou inexistente), mover o caret para o final do editor antes de inserir (fallback seguro).
-  - Usar `document.execCommand('insertText', false, '{{key}}')` — preserva o histórico de undo/redo nativo e funciona bem em todos os navegadores baseados em Chromium/WebKit/Firefox.
-  - Disparar `emitChange()` para sincronizar o estado externo.
-- Guardar internamente a última `Range` válida em `onBlur` (lastRangeRef) — assim, ao clicar num botão de variável (que rouba o foco), conseguimos restaurar o caret correto antes de inserir.
-
-**2. `src/components/contratos/ContratoTemplateEditorModal.tsx`**
-- Criar um `editorRef = useRef<ContratoRichEditorHandle>(null)` e passar ao `<ContratoRichEditor ref={editorRef} ... />`.
-- Refatorar `insertVariable`:
-  ```ts
-  const insertVariable = (key: string) => {
-    if (editorRef.current?.insertVariableAtCursor) {
-      editorRef.current.insertVariableAtCursor(key);
-      return;
-    }
-    // Fallback: append ao final
-    setConteudo(prev => `${(prev || '').trimEnd()}<p>{{${key}}}</p>`);
-  };
-  ```
-- Botões de variável (`renderVarButton`) precisam usar `onMouseDown={e => e.preventDefault()}` para **não roubar o foco** do editor antes do clique — assim a seleção é preservada e o `insertText` cai exatamente onde o cursor estava.
-- Atualizar o texto auxiliar de "Clique para adicionar ao final." para algo como "Clique para inserir na posição do cursor."
-
-**3. UX adicional**
-- Sem mudanças visuais. Comportamento agora respeita o caret e mantém compatibilidade com o fallback (caso o usuário nunca tenha focado o editor, ainda funciona).
-
-## 📋 Arquivos afetados
-
-- `src/components/contratos/ContratoRichEditor.tsx` — converter para `forwardRef`, expor `insertVariableAtCursor`, rastrear última Range válida.
-- `src/components/contratos/ContratoTemplateEditorModal.tsx` — usar ref para inserir e ajustar `onMouseDown` dos botões + texto da legenda.
-
-## 🧪 Cenários cobertos
-
-1. Cursor posicionado no meio de um parágrafo → variável aparece no ponto exato.
-2. Texto selecionado → seleção é substituída pela variável (comportamento natural do `insertText`).
-3. Editor nunca focado / sem seleção → cai no fallback e adiciona ao final.
-4. Undo/redo do navegador continuam funcionando (uso de `execCommand`).
+- Não vamos criar uma UI nova para preencher manualmente cada variável comercial antes de gerar — o fluxo continua sendo: gerar contrato → editar inline no rich editor → salvar. Isso mantém a simplicidade do fluxo atual.
+- Não vamos remover os modelos já criados pelos usuários no banco (apenas atualizamos o que aparece na lista de "modelos prontos disponíveis para adicionar").
