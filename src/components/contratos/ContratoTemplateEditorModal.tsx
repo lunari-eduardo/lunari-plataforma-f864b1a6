@@ -86,23 +86,31 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
     });
   };
 
-  const padraoVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.grupo === 'padrao');
-  const manualVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.grupo === 'manual' || v.grupo === 'contrato');
-  const legacyVars = VARIAVEIS_DISPONIVEIS.filter((v) => ['cliente', 'sessao', 'fotografo'].includes(v.grupo));
+  const autoVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.tipo === 'auto');
+  const editavelVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.tipo === 'editavel');
+  const legacyVars = VARIAVEIS_DISPONIVEIS.filter((v) => v.tipo === 'legacy');
 
-  const renderVarButton = (v: typeof VARIAVEIS_DISPONIVEIS[number]) => (
-    <button
-      key={v.key}
-      type="button"
-      // Evita roubar o foco do editor ANTES do clique — preserva a seleção/caret.
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => insertVariable(v.key)}
-      className="w-full text-left text-[11px] px-2 py-1.5 rounded hover:bg-muted transition-colors"
-    >
-      <div className="font-mono text-primary">{`{{${v.key}}}`}</div>
-      <div className="text-muted-foreground">{v.label}</div>
-    </button>
-  );
+  const renderVarButton = (v: typeof VARIAVEIS_DISPONIVEIS[number]) => {
+    const isAuto = v.tipo === 'auto';
+    const chipClass = isAuto
+      ? 'bg-primary/10 text-primary'
+      : v.tipo === 'editavel'
+        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+        : 'bg-muted text-muted-foreground';
+    return (
+      <button
+        key={v.key}
+        type="button"
+        // Evita roubar o foco do editor ANTES do clique — preserva a seleção/caret.
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => insertVariable(v.key)}
+        className="w-full text-left text-[11px] px-2 py-1.5 rounded hover:bg-muted transition-colors"
+      >
+        <div className={`font-mono inline-block px-1.5 py-0.5 rounded ${chipClass}`}>{`{{${v.key}}}`}</div>
+        <div className="text-muted-foreground mt-0.5">{v.label}</div>
+      </button>
+    );
+  };
 
   // Indicador de conteúdo carregado
   const conteudoLimpo = (conteudo || '').replace(/<[^>]+>/g, '').trim();
