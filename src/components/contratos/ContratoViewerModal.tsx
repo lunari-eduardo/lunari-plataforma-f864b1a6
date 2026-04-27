@@ -42,13 +42,22 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   };
 
   const handleDownloadPdf = async () => {
-    await downloadContratoPdf({
-      titulo,
-      conteudoHtml: conteudo,
-      fotografoNome: profile?.nome || undefined,
-      fotografoEmail: profile?.email || undefined,
-      filename: `${titulo}.pdf`,
-    });
+    try {
+      await downloadContratoPdf({
+        titulo,
+        conteudoHtml: conteudo,
+        fotografoNome: profile?.nome || undefined,
+        fotografoEmail: profile?.email || undefined,
+        filename: `${titulo}.pdf`,
+      });
+    } catch (err: any) {
+      console.error('[Contrato PDF] Falha ao baixar:', err);
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: err?.message || 'Tente novamente em alguns instantes.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
