@@ -43,7 +43,15 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   };
 
   const handleDownloadPdf = async () => {
+    if (downloadingPdf) return;
+    setDownloadingPdf(true);
     try {
+      console.info('[Contrato PDF] Download iniciado (Workflow/Modal)', {
+        contratoId: contrato.id,
+        titulo,
+        tamanhoConteudo: (conteudo || '').length,
+        editado: conteudo !== contrato.conteudo,
+      });
       await downloadContratoPdf({
         titulo,
         conteudoHtml: conteudo,
@@ -58,6 +66,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
         description: err?.message || 'Tente novamente em alguns instantes.',
         variant: 'destructive',
       });
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
