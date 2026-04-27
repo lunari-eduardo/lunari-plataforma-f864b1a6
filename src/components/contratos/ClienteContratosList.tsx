@@ -43,6 +43,11 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
 
   const handleDownloadPdf = async (c: Contrato) => {
     try {
+      console.info('[Contrato PDF] Download iniciado (CRM)', {
+        contratoId: c.id,
+        titulo: c.titulo,
+        tamanhoConteudo: (c.conteudo || '').length,
+      });
       await downloadContratoPdf({
         titulo: c.titulo,
         conteudoHtml: c.conteudo,
