@@ -158,9 +158,9 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             Excluir
           </Button>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleDownloadPdf}>
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf}>
               <Download className="h-4 w-4 mr-1" />
-              Baixar PDF
+              {downloadingPdf ? 'Gerando...' : 'Baixar PDF'}
             </Button>
             {contrato.status === 'rascunho' && (
               <Button variant="outline" onClick={() => handleStatusChange('enviado')}>
