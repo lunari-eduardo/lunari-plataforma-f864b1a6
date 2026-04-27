@@ -1,17 +1,25 @@
 /**
  * Geração de PDF para contratos via html2pdf.js
  *
- * Estratégia revisada após PDFs em branco no Workflow e CRM:
+ * Estratégia (após PDFs em branco no Workflow e CRM):
  *
- * 1. NUNCA usar opacity/visibility/display:none no container — html2canvas pode
- *    capturar exatamente isso e devolver um canvas em branco.
- * 2. Container fica fora da viewport (top: -10000px) mas com tudo VISÍVEL
- *    (sem opacity), preservando a captura.
- * 3. CSS 100% inline com cores hex literais — nada depende do tema do app.
- * 4. Normalização robusta do HTML do editor (regex tolerante a múltiplos atributos).
- * 5. Escala adaptativa para evitar limite de canvas em contratos longos.
- * 6. Validação do Blob: se vier menor que ~3KB (PDF vazio típico), lança erro
- *    em vez de baixar arquivo inutilizável.
+ * O modo de captura via DOM real (com `transform: translateY(-200vh)` e
+ * `ignoreElements` apontando para o próprio container) estava produzindo PDFs
+ * em branco. Foi substituído pela mesma estratégia que JÁ FUNCIONA nos outros
+ * PDFs do projeto (`unifiedPdfUtils`, `newDemonstrativePdfUtils`,
+ * `financialPdfUtils`):
+ *
+ *     await html2pdf().set(opt).from(htmlString).save()
+ *
+ * Diferenças importantes:
+ *  1. Passamos um HTML <string> completo (com <html><head><body>) para o
+ *     html2pdf, deixando ele criar o iframe de renderização internamente.
+ *     Sem container manual, sem `transform`, sem `ignoreElements`, sem
+ *     opacity:0/visibility:hidden — eliminando a causa raiz do "PDF branco".
+ *  2. CSS 100% inline com cores hex literais (nunca CSS variables do app).
+ *  3. Normalização robusta do HTML do editor preservando todo o texto.
+ *  4. Diagnóstico completo no console quando habilitado em
+ *     `localStorage.setItem('debugContratoPdf','1')` ou em ambiente preview.
  */
 
 interface GenerateContratoPdfOptions {
@@ -22,238 +30,327 @@ interface GenerateContratoPdfOptions {
   filename?: string;
 }
 
-/**
- * Remove as classes do editor de contratos (`contrato-var-auto` e
- * `contrato-campo-editavel`) preservando o texto. Tolerante a:
- *   - aspas simples ou duplas
- *   - múltiplas classes no mesmo span
- *   - outros atributos antes/depois (data-campo, style, etc.)
- */
+/* ------------------------------------------------------------------ */
+/* Diagnóstico                                                         */
+/* ------------------------------------------------------------------ */
+
+function isDebugEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.localStorage?.getItem('debugContratoPdf') === '1') return true;
+  } catch { /* noop */ }
+  // Preview/dev hostnames: ajuda a debugar em ambientes não produtivos
+  const host = window.location?.hostname || '';
+  return /localhost|127\.0\.0\.1|lovable\.app|preview/.test(host);
+}
+
+function diag(...args: unknown[]) {
+  if (isDebugEnabled()) {
+    // eslint-disable-next-line no-console
+    console.log('[ContratoPDF]', ...args);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Normalização de conteúdo                                            */
+/* ------------------------------------------------------------------ */
+
+/** Remove classes/atributos do editor mantendo todo o texto. */
 function neutralizarEstilosEditor(html: string): string {
   if (!html) return '';
 
-  // Remove a classe inteira mantendo o atributo `class=""` apenas se sobrar algo.
-  // Funciona para:  class="contrato-var-auto"  |  class="x contrato-var-auto y"
-  const stripClass = (input: string, className: string) => {
-    return input.replace(
-      /class\s*=\s*(["'])([^"']*)\1/gi,
-      (full, quote, classes) => {
-        const cleaned = classes
-          .split(/\s+/)
-          .filter((c: string) => c !== className)
-          .join(' ')
-          .trim();
-        return cleaned ? `class=${quote}${cleaned}${quote}` : '';
-      }
-    );
-  };
+  const stripClass = (input: string, className: string) =>
+    input.replace(/class\s*=\s*(["'])([^"']*)\1/gi, (_full, quote, classes) => {
+      const cleaned = String(classes)
+        .split(/\s+/)
+        .filter((c: string) => c !== className)
+        .join(' ')
+        .trim();
+      return cleaned ? `class=${quote}${cleaned}${quote}` : '';
+    });
 
   let out = html;
   out = stripClass(out, 'contrato-var-auto');
   out = stripClass(out, 'contrato-campo-editavel');
-  // Limpa atributos data-campo (não fazem falta no PDF)
   out = out.replace(/\s*data-campo\s*=\s*(["'])[^"']*\1/gi, '');
-  // Remove eventuais spans vazios que sobraram
+  // Remove handlers inline por segurança
+  out = out.replace(/\s*on[a-z]+\s*=\s*(["'])[^"']*\1/gi, '');
+  // Remove style colors brancas/transparentes que poderiam esconder texto
+  out = out.replace(/color\s*:\s*(white|#fff(?:fff)?|transparent)\s*;?/gi, '');
   out = out.replace(/<span\s*>\s*<\/span>/gi, '');
   return out;
 }
 
-/**
- * Extrai apenas texto puro do HTML para checagem de "está vazio?".
- */
+/** Texto puro para checagens. */
 function htmlToPlainText(html: string): string {
-  return (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim();
+  return (html || '')
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .trim();
 }
 
-/**
- * Estima escala a usar com base no tamanho do conteúdo.
- * Contratos muito longos podem estourar o limite de canvas do browser
- * (~16.384px de altura no Chrome) e gerar PDF em branco.
- */
-function getSafeScale(plainTextLength: number): number {
-  if (plainTextLength > 12000) return 1;     // muito longo → escala mínima
-  if (plainTextLength > 6000) return 1.5;    // longo → escala média
-  return 2;                                   // padrão de boa qualidade
+/** Garante HTML estruturado (envolve texto puro em <p>). */
+function ensureStructuredHtml(html: string): string {
+  const trimmed = (html || '').trim();
+  if (!trimmed) return '';
+  // Já tem alguma tag estrutural?
+  if (/<\s*(p|div|h[1-6]|ul|ol|li|blockquote|section|article|table)\b/i.test(trimmed)) {
+    return trimmed;
+  }
+  // Texto puro → quebra por linhas em parágrafos.
+  return trimmed
+    .split(/\n{2,}|\r\n{2,}/)
+    .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
+    .join('');
 }
 
-const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
-  const { titulo, conteudoHtml, fotografoNome, fotografoEmail } = opts;
+/* ------------------------------------------------------------------ */
+/* Documento HTML do PDF                                               */
+/* ------------------------------------------------------------------ */
+
+function escapeHtml(s: string): string {
+  return (s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildHtmlDocument(opts: GenerateContratoPdfOptions): string {
+  const { titulo, fotografoNome, fotografoEmail } = opts;
   const dataGeracao = new Date().toLocaleDateString('pt-BR');
-  const conteudoLimpo = neutralizarEstilosEditor(conteudoHtml || '');
+  const conteudoLimpo = neutralizarEstilosEditor(ensureStructuredHtml(opts.conteudoHtml || ''));
 
-  // CSS inline — todas as cores em hex/rgb literais, nada de CSS variables.
-  return `
-    <style>
-      .pdf-root, .pdf-root * { box-sizing: border-box; }
-      .pdf-root {
-        font-family: Helvetica, Arial, sans-serif;
-        color: #111827;
-        background: #ffffff;
-        padding: 32px 40px;
-        width: 794px;
-        font-size: 13px;
-        line-height: 1.7;
-      }
-      .pdf-root h1 { font-size: 22px; font-weight: 700; margin: 4px 0 0 0; color: #111827; }
-      .pdf-root h2 { font-size: 17px; font-weight: 700; margin: 18px 0 8px 0; color: #111827; }
-      .pdf-root h3 { font-size: 14px; font-weight: 700; margin: 14px 0 6px 0; color: #111827; }
-      .pdf-root h4, .pdf-root h5, .pdf-root h6 { font-size: 13px; font-weight: 700; margin: 12px 0 4px 0; color: #111827; }
-      .pdf-root p  { margin: 8px 0; color: #1f2937; text-align: justify; }
-      .pdf-root span { color: inherit; }
-      .pdf-root strong, .pdf-root b { font-weight: 700; color: #111827; }
-      .pdf-root em, .pdf-root i { font-style: italic; }
-      .pdf-root u { text-decoration: underline; }
-      .pdf-root ul { list-style: disc; padding-left: 24px; margin: 8px 0; }
-      .pdf-root ol { list-style: decimal; padding-left: 24px; margin: 8px 0; }
-      .pdf-root li { margin: 4px 0; color: #1f2937; }
-      .pdf-root blockquote {
-        border-left: 3px solid #d1d5db;
-        padding-left: 12px;
-        margin: 12px 0;
-        font-style: italic;
-        color: #4b5563;
-      }
-      .pdf-root br { line-height: inherit; }
-      .pdf-header {
-        border-bottom: 2px solid #111827;
-        padding-bottom: 14px;
-        margin-bottom: 22px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-      }
-      .pdf-eyebrow {
-        font-size: 10px;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      .pdf-meta {
-        text-align: right;
-        font-size: 11px;
-        color: #6b7280;
-        line-height: 1.5;
-      }
-      .pdf-meta-strong { font-weight: 600; color: #111827; }
-      .pdf-footer {
-        margin-top: 48px;
-        padding-top: 12px;
-        border-top: 1px solid #e5e7eb;
-        font-size: 10px;
-        color: #9ca3af;
-        text-align: center;
-      }
-      /* Garante que blocos não fiquem cortados desnecessariamente entre páginas */
-      .pdf-root h1, .pdf-root h2, .pdf-root h3 { page-break-after: avoid; }
-      .pdf-root li, .pdf-root p { page-break-inside: avoid; }
-    </style>
-    <div class="pdf-root">
-      <header class="pdf-header">
-        <div>
-          <div class="pdf-eyebrow">Contrato</div>
-          <h1>${titulo || 'Contrato'}</h1>
-        </div>
-        <div class="pdf-meta">
-          ${fotografoNome ? `<div class="pdf-meta-strong">${fotografoNome}</div>` : ''}
-          ${fotografoEmail ? `<div>${fotografoEmail}</div>` : ''}
-          <div>Emitido em ${dataGeracao}</div>
-        </div>
-      </header>
-      <main>${conteudoLimpo || '<p><em>Contrato sem conteúdo.</em></p>'}</main>
-      <footer class="pdf-footer">Gerado por Lunari · ${dataGeracao}</footer>
+  // Documento COMPLETO (html/head/body) — html2pdf renderiza dentro de um
+  // iframe próprio quando recebemos string. Cores em hex literal.
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(titulo || 'Contrato')}</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #111827;
+    font-family: Helvetica, Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body {
+    padding: 28px 36px 32px 36px;
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin: 4px 0 0 0; color: #111827; }
+  h2 { font-size: 16px; font-weight: 700; margin: 18px 0 8px 0; color: #111827; }
+  h3 { font-size: 13.5px; font-weight: 700; margin: 14px 0 6px 0; color: #111827; }
+  h4, h5, h6 { font-size: 12.5px; font-weight: 700; margin: 12px 0 4px 0; color: #111827; }
+  p { margin: 8px 0; color: #1f2937; text-align: justify; }
+  span, b, strong, em, i, u, li { color: inherit; }
+  strong, b { font-weight: 700; color: #111827; }
+  em, i { font-style: italic; }
+  u { text-decoration: underline; }
+  ul { list-style: disc; padding-left: 22px; margin: 8px 0; }
+  ol { list-style: decimal; padding-left: 22px; margin: 8px 0; }
+  li { margin: 4px 0; color: #1f2937; }
+  blockquote {
+    border-left: 3px solid #d1d5db;
+    padding-left: 12px;
+    margin: 12px 0;
+    font-style: italic;
+    color: #4b5563;
+  }
+  a { color: #1d4ed8; text-decoration: underline; }
+
+  .pdf-header {
+    border-bottom: 2px solid #111827;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+    width: 100%;
+    display: table;
+  }
+  .pdf-header-left, .pdf-header-right { display: table-cell; vertical-align: bottom; }
+  .pdf-header-right { text-align: right; font-size: 11px; color: #6b7280; line-height: 1.5; }
+  .pdf-eyebrow {
+    font-size: 10px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .pdf-meta-strong { font-weight: 600; color: #111827; }
+
+  .pdf-content { margin-top: 4px; }
+
+  .pdf-footer {
+    margin-top: 36px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 10px;
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  /* Não cortar headings e listas no meio */
+  h1, h2, h3 { page-break-after: avoid; }
+  ul, ol, blockquote { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+  <div class="pdf-header">
+    <div class="pdf-header-left">
+      <div class="pdf-eyebrow">Contrato</div>
+      <h1>${escapeHtml(titulo || 'Contrato')}</h1>
     </div>
-  `;
-};
+    <div class="pdf-header-right">
+      ${fotografoNome ? `<div class="pdf-meta-strong">${escapeHtml(fotografoNome)}</div>` : ''}
+      ${fotografoEmail ? `<div>${escapeHtml(fotografoEmail)}</div>` : ''}
+      <div>Emitido em ${dataGeracao}</div>
+    </div>
+  </div>
 
-/** Aguarda fontes web carregarem (evita PDF em branco por fonte ausente). */
+  <div class="pdf-content">
+    ${conteudoLimpo || '<p><em>Contrato sem conteúdo.</em></p>'}
+  </div>
+
+  <div class="pdf-footer">Gerado por Lunari · ${dataGeracao}</div>
+</body>
+</html>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Geração                                                             */
+/* ------------------------------------------------------------------ */
+
+function getSafeScale(plainTextLength: number): number {
+  if (plainTextLength > 12000) return 1;
+  if (plainTextLength > 6000) return 1.5;
+  return 2;
+}
+
 async function waitForFonts(): Promise<void> {
   if (typeof document === 'undefined') return;
   const anyDoc = document as any;
   if (anyDoc.fonts?.ready) {
-    try {
-      await anyDoc.fonts.ready;
-    } catch {
-      /* noop */
-    }
+    try { await anyDoc.fonts.ready; } catch { /* noop */ }
   }
 }
 
-/** Aguarda o próximo paint do browser. */
-function nextPaint(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
+function buildPdfOptions(filename: string, plainTextLength: number) {
+  const scale = getSafeScale(plainTextLength);
+  return {
+    margin: [10, 10, 12, 10] as [number, number, number, number],
+    filename,
+    image: { type: 'jpeg' as const, quality: 0.98 },
+    html2canvas: {
+      scale,
+      useCORS: true,
+      letterRendering: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      // 794px ≈ A4 a 96dpi
+      windowWidth: 794,
+    },
+    jsPDF: {
+      unit: 'mm' as const,
+      format: 'a4' as const,
+      orientation: 'portrait' as const,
+      compress: true,
+    },
+    pagebreak: { mode: ['css', 'legacy'] as string[] },
+  };
 }
 
 export async function generateContratoPdf(opts: GenerateContratoPdfOptions): Promise<Blob> {
-  // Validação prévia: conteúdo está realmente vazio?
-  const plain = htmlToPlainText(opts.conteudoHtml);
+  const plain = htmlToPlainText(opts.conteudoHtml || '');
+
+  // Diagnóstico de entrada
+  diag('Entrada', {
+    titulo: opts.titulo,
+    tamanhoHtml: (opts.conteudoHtml || '').length,
+    tamanhoTextoPuro: plain.length,
+    fotografoNome: opts.fotografoNome,
+    placeholdersRestantes: (opts.conteudoHtml || '').match(/\{\{[^}]+\}\}/g) || [],
+    amostraHtml: (opts.conteudoHtml || '').slice(0, 240),
+  });
+
   if (!plain) {
     throw new Error('O contrato está vazio. Adicione conteúdo antes de gerar o PDF.');
   }
 
   const html2pdf = (await import('html2pdf.js')).default;
 
-  // Container REAL no DOM — visível para o motor de captura, mas posicionado
-  // FORA da viewport. SEM opacity/visibility/display:none (que zeram a captura).
+  await waitForFonts();
+
+  const filename = opts.filename || `${opts.titulo || 'contrato'}.pdf`;
+  const html = buildHtmlDocument(opts);
+  diag('HTML final', { tamanho: html.length, amostra: html.slice(0, 400) });
+
+  // 1) Geração principal — HTML string → html2pdf (mesma abordagem dos
+  //    PDFs financeiros que funcionam).
+  try {
+    const pdfOpt = buildPdfOptions(filename, plain.length);
+    const blob: Blob = await html2pdf()
+      .set(pdfOpt as any)
+      .from(html)
+      .outputPdf('blob');
+
+    diag('Blob gerado (string)', { size: blob?.size });
+    if (blob && blob.size >= 2000) return blob;
+    diag('Blob suspeito de vazio — tentando fallback DOM real');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[ContratoPDF] Falha na geração via string, tentando fallback DOM real:', err);
+  }
+
+  // 2) Fallback — montar container REAL no DOM, sem transform, sem
+  //    ignoreElements. Apenas posicionado no topo com pointer-events:none.
   const container = document.createElement('div');
-  container.innerHTML = buildHtmlDocument(opts);
-  container.setAttribute('data-pdf-render', 'true');
-  // Estilo aplicado de forma que NÃO esconde o conteúdo do html2canvas:
+  container.innerHTML = html;
   container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
   container.style.width = '794px';
   container.style.maxWidth = '794px';
-  container.style.minHeight = '100px';
   container.style.background = '#ffffff';
   container.style.color = '#111827';
-  container.style.zIndex = '2147483647';   // por cima de tudo (mas fora da viewport)
-  container.style.transform = 'translateY(-200vh)'; // joga para fora da tela visível
+  container.style.zIndex = '-1';        // atrás de tudo, mas presente
   container.style.pointerEvents = 'none';
-  container.style.contain = 'layout paint'; // isolamento visual
-
+  container.style.opacity = '1';        // NUNCA 0 — html2canvas captura literalmente
   document.body.appendChild(container);
 
-  // Aguarda fontes carregarem e o navegador realizar layout/paint
-  await waitForFonts();
-  await nextPaint();
-  // Pequeno delay extra para imagens/fontes em conexões lentas
-  await new Promise((r) => setTimeout(r, 80));
+  // espera layout
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-  // Escala adaptativa para evitar limite de canvas em contratos longos
-  const scale = getSafeScale(plain.length);
+  diag('Fallback DOM dimensões', {
+    scrollWidth: container.scrollWidth,
+    scrollHeight: container.scrollHeight,
+    clientWidth: container.clientWidth,
+    clientHeight: container.clientHeight,
+  });
 
   try {
+    const pdfOpt = buildPdfOptions(filename, plain.length);
     const blob: Blob = await html2pdf()
-      .set({
-        margin: [12, 12, 14, 12] as [number, number, number, number],
-        filename: opts.filename || `${opts.titulo}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: {
-          scale,
-          useCORS: true,
-          letterRendering: true,
-          backgroundColor: '#ffffff',
-          windowWidth: 794,
-          logging: false,
-          // Ignora o próprio wrapper invisível durante o clone
-          ignoreElements: (el: Element) =>
-            el !== container && (el as HTMLElement).getAttribute?.('data-pdf-render') === 'true',
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['css', 'legacy'] },
-      } as any)
+      .set(pdfOpt as any)
       .from(container)
       .outputPdf('blob');
 
-    // Validação: PDF "vazio" geralmente tem ~1.5–2.5 KB (só fontes embutidas).
-    if (!blob || blob.size < 3000) {
+    diag('Blob gerado (DOM)', { size: blob?.size });
+    if (!blob || blob.size < 2000) {
       throw new Error('Falha ao gerar o PDF: arquivo gerado parece vazio.');
     }
     return blob;
   } finally {
-    document.body.removeChild(container);
+    if (container.parentNode) container.parentNode.removeChild(container);
   }
 }
 
@@ -262,9 +359,39 @@ export async function downloadContratoPdf(opts: GenerateContratoPdfOptions): Pro
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = opts.filename || `${opts.titulo}.pdf`;
+  a.download = opts.filename || `${opts.titulo || 'contrato'}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Teste mínimo isolado: gera um PDF "Hello World" para diagnosticar se o
+ * problema é do conteúdo do contrato ou do motor de geração.
+ * Acessível via console: `await window.__testContratoPdf?.()`.
+ */
+export async function __testMinimalPdf(): Promise<Blob> {
+  const html2pdf = (await import('html2pdf.js')).default;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body style="margin:40px;font-family:Arial,sans-serif;color:#111;background:#fff">
+<h1 style="color:#111">Teste de PDF</h1>
+<p style="color:#111">Se você consegue ler esta linha no PDF, o motor está funcionando.</p>
+</body></html>`;
+  const blob: Blob = await html2pdf()
+    .set({
+      margin: 10,
+      filename: 'teste.pdf',
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+    } as any)
+    .from(html)
+    .outputPdf('blob');
+  // eslint-disable-next-line no-console
+  console.log('[ContratoPDF][TesteMinimo] Blob size:', blob?.size);
+  return blob;
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).__testContratoPdf = __testMinimalPdf;
 }
