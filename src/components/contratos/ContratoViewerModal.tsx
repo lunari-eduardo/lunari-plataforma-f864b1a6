@@ -25,6 +25,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const [conteudo, setConteudo] = useState(contrato.conteudo);
   const [titulo, setTitulo] = useState(contrato.titulo);
   const [saving, setSaving] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
