@@ -97,7 +97,14 @@ export function NovoContratoModal({ open, onClose, clienteId, clienteNome, sessi
               valor_total: sessaoSel.valor_total,
             }
           : null,
-        fotografo: { nome: profile?.nome || user?.email, email: profile?.email || user?.email },
+        fotografo: {
+          nome: (profile as any)?.nome || (profile as any)?.empresa || user?.email,
+          email: (profile as any)?.email || user?.email,
+          cidade: (profile as any)?.cidade_nome
+            ? `${(profile as any).cidade_nome}${(profile as any).cidade_uf ? ` - ${(profile as any).cidade_uf}` : ''}`
+            : (profile as any)?.cidade || '',
+          documento: (profile as any)?.cpf_cnpj || '',
+        },
       }),
     [cliente, sessaoSel, profile, user]
   );
