@@ -48,11 +48,18 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
         titulo: c.titulo,
         tamanhoConteudo: (c.conteudo || '').length,
       });
+      const snap = (c.variaveis_snapshot || {}) as Record<string, any>;
       await downloadContratoPdf({
         titulo: c.titulo,
         conteudoHtml: c.conteudo,
-        fotografoNome: profile?.nome || undefined,
-        fotografoEmail: profile?.email || undefined,
+        fotografoNome: profile?.nome || snap.nome_fotografo || undefined,
+        fotografoEmail: profile?.email || snap.email_fotografo || undefined,
+        fotografoDocumento: (profile as any)?.cpf_cnpj || snap.documento_fotografo || undefined,
+        clienteNome: c.cliente?.nome || clienteNome || snap.nome_cliente || undefined,
+        clienteEmail: c.cliente?.email || snap.email_cliente || undefined,
+        clienteDocumento: snap.documento_cliente || snap.cpf_cliente || undefined,
+        cidadeLocal: snap.cidade_atual || snap.cidade_fotografo || snap.cidade_cliente || undefined,
+        variaveisSnapshot: snap,
         filename: `${c.titulo}.pdf`,
       });
     } catch (err: any) {
