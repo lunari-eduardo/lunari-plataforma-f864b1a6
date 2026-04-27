@@ -25,6 +25,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const [conteudo, setConteudo] = useState(contrato.conteudo);
   const [titulo, setTitulo] = useState(contrato.titulo);
   const [saving, setSaving] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +43,15 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   };
 
   const handleDownloadPdf = async () => {
+    if (downloadingPdf) return;
+    setDownloadingPdf(true);
     try {
+      console.info('[Contrato PDF] Download iniciado (Workflow/Modal)', {
+        contratoId: contrato.id,
+        titulo,
+        tamanhoConteudo: (conteudo || '').length,
+        editado: conteudo !== contrato.conteudo,
+      });
       await downloadContratoPdf({
         titulo,
         conteudoHtml: conteudo,
@@ -57,6 +66,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
         description: err?.message || 'Tente novamente em alguns instantes.',
         variant: 'destructive',
       });
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -147,9 +158,9 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             Excluir
           </Button>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleDownloadPdf}>
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf}>
               <Download className="h-4 w-4 mr-1" />
-              Baixar PDF
+              {downloadingPdf ? 'Gerando...' : 'Baixar PDF'}
             </Button>
             {contrato.status === 'rascunho' && (
               <Button variant="outline" onClick={() => handleStatusChange('enviado')}>
