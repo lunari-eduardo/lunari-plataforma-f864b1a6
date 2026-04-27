@@ -33,13 +33,13 @@ const ALLOWED_TAGS = [
   'a',
 ];
 
-const ALLOWED_ATTR = ['href', 'target', 'rel', 'style'];
+const ALLOWED_ATTR = ['href', 'target', 'rel', 'style', 'class', 'data-campo'];
 
 function sanitize(html: string): string {
   return DOMPurify.sanitize(html || '', {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
-    ADD_ATTR: ['style'],
+    ADD_ATTR: ['style', 'class', 'data-campo'],
   });
 }
 

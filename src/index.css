@@ -704,3 +704,55 @@
     animation: none !important;
   }
 }
+
+/* ============================================================
+   Contratos — variáveis automáticas e campos editáveis
+   ============================================================ */
+
+/* Variável automática preenchida pelo sistema (somente leitura visual) */
+.contrato-var-auto {
+  background: hsl(var(--primary) / 0.10);
+  color: hsl(var(--primary));
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* Campo editável manual — destaque suave + cursor de texto */
+.contrato-campo-editavel {
+  background: hsl(45 100% 92%);
+  border-bottom: 1px dashed hsl(35 90% 50%);
+  color: hsl(25 50% 25%);
+  padding: 0 3px;
+  border-radius: 2px 2px 0 0;
+  cursor: text;
+  transition: background 120ms ease;
+}
+.contrato-campo-editavel:hover,
+.contrato-campo-editavel:focus {
+  background: hsl(45 100% 85%);
+  outline: none;
+}
+
+/* Tema escuro */
+.dark .contrato-campo-editavel {
+  background: hsl(45 60% 22%);
+  color: hsl(45 90% 88%);
+  border-bottom-color: hsl(35 80% 55%);
+}
+.dark .contrato-campo-editavel:hover,
+.dark .contrato-campo-editavel:focus {
+  background: hsl(45 60% 30%);
+}
+
+/* No PDF/visualização final, neutralizar destaques visuais
+   para o documento ficar limpo (sem cores) */
+@media print {
+  .contrato-var-auto,
+  .contrato-campo-editavel {
+    background: transparent !important;
+    border: none !important;
+    color: inherit !important;
+    padding: 0 !important;
+  }
+}
