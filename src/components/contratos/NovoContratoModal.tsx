@@ -194,19 +194,22 @@ export function NovoContratoModal({ open, onClose, clienteId, clienteNome, sessi
                   </div>
                 )}
 
-                <div className="bg-muted/40 border border-border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+                <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
                     <Sparkles className="h-4 w-4 text-primary" />
                     Variáveis que serão preenchidas
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    {VARIAVEIS_DISPONIVEIS.slice(0, 10).map((v) => (
+                    {VARIAVEIS_DISPONIVEIS.filter((v) => v.tipo === 'auto').slice(0, 10).map((v) => (
                       <div key={v.key} className="flex justify-between gap-2">
                         <span className="text-muted-foreground truncate">{v.label}:</span>
                         <span className="font-mono truncate text-right">{variaveis[v.key] || <em className="text-amber-600">vazio</em>}</span>
                       </div>
                     ))}
                   </div>
+                  <p className="text-[11px] text-muted-foreground border-t border-border pt-2">
+                    Variáveis sem dado no sistema (ex.: duração, valor do sinal) virarão <span className="px-1 bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 rounded">campos editáveis</span> destacados em amarelo no contrato — basta clicar e ajustar.
+                  </p>
                 </div>
               </>
             )}
