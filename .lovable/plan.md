@@ -1,169 +1,87 @@
 
 ## 🎯 Objetivo
-
-Eliminar a confusão dos placeholders amarelos `[duracao_sessao]` que aparecem no contrato gerado quando não há campo correspondente no sistema. Em vez de mostrar variáveis "quebradas", transformá-las em **campos editáveis destacados** (preenchimento sugerido + visual clicável) e manter as **variáveis automáticas** apenas para dados que realmente vivem no banco.
-
----
-
-## 📊 Diagnóstico atual
-
-Hoje (em `src/utils/contratoVariables.ts` e `applyVariables`):
-- Toda variável `{{xxx}}` que não tem dado é renderizada como `<span>[xxx]</span>` em amarelo
-- Variáveis manuais (ex.: `duracao_sessao`, `valor_sinal`, `quantidade_fotos`, `fornecimento_figurino`) **nunca** têm dado — pois não existe UI para preencher
-- Resultado: contrato gerado vem cheio de `[duracao_sessao]` em amarelo, parecendo "erro"
-
-A análise do usuário está correta:
-- ❌ Manter como variável → confunde, parece bug
-- ❌ Hardcode no template → perde flexibilidade
-- ✅ **Campos editáveis destacados com sugestão padrão** → mostra valor sugerido, fica claro que é manual e edita-se direto no editor
+Corrigir o download do PDF de contratos, que atualmente sai totalmente em branco. O PDF deve renderizar **cabeçalho, parágrafos formatados, listas, espaçamento, dados do fotógrafo e variáveis** corretamente.
 
 ---
 
-## 🏗️ Arquitetura proposta
+## 🔍 Causas identificadas (investigação completa)
 
-### 1. Reclassificar variáveis em **dois tipos**
-
-**Tipo A — Variáveis automáticas (sistema)**
-Têm origem garantida no banco. Renderizadas em **azul** (chip discreto) e substituídas no momento de gerar o contrato. Lista:
-- `nome_cliente`, `email_cliente`, `cpf_cliente`, `documento_cliente`
-- `nome_fotografo`, `documento_fotografo`, `cidade_fotografo`, `email_fotografo`
-- `data_sessao` / `data_evento`, `horario_inicio` / `horario_sessao`
-- `tipo_ensaio` / `tipo_evento` (categoria), `valor_total`
-- `data_atual`, `cidade_atual`
-
-**Tipo B — Campos editáveis (manuais)**
-Não existem no sistema. Em vez de virarem `[xxx]` em amarelo, são substituídos por um **valor sugerido padrão** envolto num span destacado:
-
-```html
-<span class="contrato-campo-editavel" data-campo="duracao_sessao">2 horas</span>
-```
-
-Lista do Tipo B (com sugestão padrão):
-| Variável | Sugestão padrão |
-|---|---|
-| `duracao_sessao` | `2 horas` |
-| `duracao_maxima` | `4 horas` |
-| `quantidade_fotos` | `20 fotos tratadas` |
-| `valor_sinal` | `R$ 0,00` |
-| `valor_hora_extra` | `R$ 0,00` |
-| `valor_foto_extra` | `R$ 0,00` |
-| `taxa_deslocamento` | `R$ 0,00` |
-| `valor_taxa_dano` | `R$ 0,00` |
-| `forma_pagamento` | `PIX / Cartão / Transferência` |
-| `descricao_forma_pagamento` | `30% de sinal + saldo até 5 dias antes do evento` |
-| `prazo_entrega` | `30 dias úteis` |
-| `prazo_entrega_final` | `45 dias úteis` |
-| `prazo_selecao` | `15 dias úteis` |
-| `dias_aviso_previo` | `7` |
-| `dias_multa_cancelamento` | `30` |
-| `porcentagem_multa` | `50` |
-| `fornecimento_figurino` | `não está incluso` |
-| `fornecimento_figurino` | `não está incluso` |
-| `local_ensaio` / `local_evento` | `a definir` |
-| `horario_termino` | `a definir` |
-| `tipo_ensaio` (quando sem categoria) | `a definir` |
-| `cidade_cliente` / `estado_cliente` | `a definir` / `--` |
-| `rg_cliente` | `a informar` |
-| `nome_bebe` | `a informar` |
-
-### 2. Visual diferenciado no editor (CSS)
-
-Adicionar classes globais (em `src/index.css` ou estilos do editor):
-
-```css
-/* Variável automática resolvida (apenas leitura visual) */
-.contrato-var-auto {
-  background: hsl(var(--primary) / 0.08);
-  color: hsl(var(--primary));
-  padding: 0 4px;
-  border-radius: 3px;
-  font-weight: 500;
-}
-
-/* Campo editável manual — destaque suave + cursor de edição */
-.contrato-campo-editavel {
-  background: hsl(45 100% 95%);        /* amarelo clarinho */
-  border-bottom: 1px dashed hsl(35 90% 55%);
-  padding: 0 3px;
-  border-radius: 2px;
-  cursor: text;
-  transition: background 120ms;
-}
-.contrato-campo-editavel:hover,
-.contrato-campo-editavel:focus {
-  background: hsl(45 100% 88%);
-  outline: none;
-}
-```
-
-Os campos editáveis **continuam editáveis** porque o editor é `contentEditable` — o usuário clica e digita por cima normalmente. O `data-campo` permanece como metadado opcional (não atrapalha).
-
-### 3. Atualização da lógica `applyVariables`
-
-Em `src/utils/contratoVariables.ts`:
-- Receber um segundo argumento `defaults: Record<string, string>` com os valores sugeridos do Tipo B
-- Para cada `{{xxx}}` encontrado:
-  - Se há valor real (Tipo A com dado) → `<span class="contrato-var-auto">valor</span>`
-  - Se está em `defaults` (Tipo B) → `<span class="contrato-campo-editavel">sugestão</span>`
-  - Se não existe em nenhum mapa → manter `{{xxx}}` (variável legada/desconhecida) — não polui mais com `[xxx]` amarelo
-
-Exportar `CAMPOS_EDITAVEIS_DEFAULTS` com a tabela acima.
-
-### 4. UI do painel lateral de variáveis (`ContratoTemplateEditorModal`)
-
-Reorganizar em 2 seções claras com ícones:
-
-```
-🔵 Automáticas (preenchidas pelo sistema)
-   nome_cliente, email_cliente, valor_total, …
-
-🟡 Campos editáveis (você ajusta no contrato)
-   duracao_sessao, valor_sinal, quantidade_fotos, …
-
-▾ Legadas
-```
-
-Cada botão mostra um chip colorido (azul/amarelo) para reforçar a diferença. O texto de ajuda do topo passa a:
-> *Variáveis azuis são preenchidas automaticamente. Variáveis amarelas viram campos editáveis com valor sugerido — clique no contrato para ajustar.*
-
-### 5. Ao gerar o contrato (`NovoContratoModal`)
-
-Passa `CAMPOS_EDITAVEIS_DEFAULTS` para o `applyVariables`, gerando um conteúdo onde:
-- Dados reais do cliente/sessão já estão preenchidos (azul)
-- Lacunas viram texto sugerido editável (amarelo suave)
-- Usuário só revisa/ajusta o que realmente precisa
-
-O painel de "Variáveis que serão preenchidas" passa a mostrar apenas as **automáticas** (não polui com manuais).
+| # | Causa | Impacto |
+|---|---|---|
+| 1 | Container posicionado em `position: fixed; left: -9999px` | html2canvas não consegue capturar elementos fora do viewport — gera canvas em branco |
+| 2 | Container sem `width` explícita | html2canvas calcula 0px de largura |
+| 3 | Cadeia `html2pdf().set().from().outputPdf()` instável | A chain correta é `.from().set().toPdf().output('blob')` ou await na cadeia completa |
+| 4 | `pagebreak: 'avoid-all'` | Tenta evitar quebras em TUDO e pode empurrar conteúdo para fora |
+| 5 | Spans `.contrato-var-auto` / `.contrato-campo-editavel` usam **CSS variables Tailwind** (`hsl(var(--primary))`) | html2canvas não resolve CSS variables em todos os contextos → texto pode sair invisível |
+| 6 | `margin` horizontal zero + padding interno do container | Layout pode estourar e cortar conteúdo |
+| 7 | Container injetado fora da árvore visível pode não herdar fontes web carregadas | Texto vazio se a fonte ainda não carregou |
 
 ---
 
-## 📁 Arquivos afetados
+## 🛠️ Correções propostas
 
-| Arquivo | Mudança |
-|---|---|
-| `src/utils/contratoVariables.ts` | Adicionar `CAMPOS_EDITAVEIS_DEFAULTS`; reescrever `applyVariables` para gerar 2 estilos de span; reclassificar `grupo` das variáveis para `'auto' \| 'editavel' \| 'legacy'` |
-| `src/utils/contratoSeedTemplates.ts` | Sem mudança de conteúdo — os templates já usam as variáveis certas |
-| `src/components/contratos/ContratoTemplateEditorModal.tsx` | Reorganizar painel lateral em "Automáticas" / "Campos editáveis" / "Legadas" com chips coloridos; atualizar texto de ajuda |
-| `src/components/contratos/NovoContratoModal.tsx` | Passar defaults ao `applyVariables`; ajustar preview lateral para mostrar só auto |
-| `src/components/contratos/ContratoRichEditor.tsx` | Permitir as classes `contrato-var-auto` e `contrato-campo-editavel` no DOMPurify (já permite `class` via `ALLOWED_ATTR`, só validar) |
-| `src/index.css` (ou similar global) | Adicionar estilos `.contrato-var-auto` e `.contrato-campo-editavel` |
-| `src/components/contratos/ContratoViewerModal.tsx` | Garantir que os estilos também apareçam quando o contrato é visualizado/impresso (ou neutralizar campos editáveis no PDF final) |
+### 1. Reescrever `src/utils/contratoPdf.ts`
+
+**Mudanças no container:**
+- Trocar `position: fixed; left: -9999px` por **container visível porém oculto**: `position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -1;`
+- Adicionar **`width: 794px`** explícita (largura A4 a 96dpi).
+- Adicionar `background: #ffffff` explícito (evita transparência).
+- Adicionar `color: #111827` explícito como base.
+
+**Mudanças no HTML:**
+- Substituir todos os estilos que dependem de CSS variables por **cores hex literais** dentro do `buildHtmlDocument`.
+- **Inlinear** estilos para `.contrato-var-auto` e `.contrato-campo-editavel` no próprio HTML do PDF (estilos `<style>` dentro do container) — usando cores fixas, sem depender do CSS global do app.
+- Adicionar reset básico (`* { box-sizing: border-box; }`).
+
+**Mudanças na chain do html2pdf:**
+- Trocar para o padrão estável:
+  ```ts
+  const worker = html2pdf().from(container).set(opts);
+  await worker.toContainer().toCanvas().toPdf();
+  const blob = worker.output('blob');
+  ```
+  Ou mais simples e confiável:
+  ```ts
+  const blob = await html2pdf().set(opts).from(container).outputPdf('blob');
+  ```
+  garantindo `await` correto.
+- Trocar `pagebreak: 'avoid-all'` por `pagebreak: { mode: ['css', 'legacy'] }` (mais permissivo, deixa o conteúdo fluir entre páginas).
+- Ajustar `margin` para `[15, 15, 15, 15]` (mm) — margens iguais nos 4 lados.
+- Adicionar `html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 }` para forçar fundo branco e largura.
+
+**Garantia de fontes carregadas:**
+- Antes de gerar, aguardar `document.fonts.ready` (se disponível) para evitar PDF sem texto por falta de fonte.
+
+### 2. Garantir compatibilidade do conteúdo do contrato no PDF
+
+- Antes de injetar `conteudoHtml` no container, **substituir as classes** `contrato-var-auto` e `contrato-campo-editavel` pelos estilos inline equivalentes (cores hex), para que funcionem mesmo sem o CSS global.
+  - Exemplo: regex simples que troca `class="contrato-var-auto"` por `style="color:#0f172a;font-weight:500"` (ou similar, já neutralizado para o PDF).
+  - Manter o conteúdo dos spans intacto.
+
+### 3. Validação visual
+
+Após implementar, fazer um teste manual:
+1. Abrir um contrato existente.
+2. Clicar em "Baixar PDF".
+3. Verificar:
+   - ✅ Cabeçalho com título e dados do fotógrafo aparece.
+   - ✅ Parágrafos com espaçamento correto.
+   - ✅ Listas (`ul`, `ol`) formatadas.
+   - ✅ Negrito / itálico preservados.
+   - ✅ Variáveis preenchidas (sem fundo colorido — texto neutro).
+   - ✅ Rodapé com data de emissão.
+   - ✅ Quebra de página funciona em contratos longos.
 
 ---
 
-## ✅ Resultado esperado
+## 📁 Arquivos que serão alterados
 
-- Contrato gerado **não tem mais `[xxx]` em amarelo** — só dados reais (azul) ou sugestões editáveis (amarelo suave com sublinhado tracejado)
-- Usuário entende imediatamente: *"azul = automático, amarelo = eu edito"*
-- Edição inline já funciona porque é `contentEditable`
-- Templates seed continuam usando `{{variavel}}` — a diferença é apenas na geração do contrato
-- Compatibilidade total com modelos antigos (variáveis legadas continuam funcionando)
+- `src/utils/contratoPdf.ts` — reescrita completa da função de geração.
+
+(Não há mudanças em outros arquivos — o conteúdo HTML do contrato em si já está correto; o problema é exclusivo do pipeline de conversão.)
 
 ---
 
-## ❓ Pontos de decisão para confirmar
+## ⚠️ Alternativa, caso o html2pdf.js continue instável
 
-1. **Defaults sugeridos** — a lista da tabela acima está adequada? Quer ajustar algum valor padrão (ex.: `quantidade_fotos = 30 fotos` em vez de `20`)?
-2. **Variáveis automáticas sem dado** (ex.: gerar contrato sem sessão vinculada → `valor_total` vazio) — devem virar campo editável amarelo (`a definir`) ou permanecer azul vazio? Recomendação: virar editável amarelo para nunca haver lacuna invisível.
-3. **No PDF/visualização final** — os campos editáveis amarelos devem aparecer estilizados (mostrando que foi um campo manual) ou **neutros** (sem cor)? Recomendação: neutros no PDF, destacados apenas no editor.
-
+Se mesmo após as correções acima o html2pdf.js apresentar comportamento errático (já é uma lib não mantida), o plano de contingência é migrar para **`jsPDF` + `html` plugin nativo** (`jspdf` já vem como dependência transitiva do html2pdf.js). Mas começamos pela correção mínima para não trocar de stack desnecessariamente.
