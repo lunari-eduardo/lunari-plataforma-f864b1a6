@@ -1,32 +1,38 @@
 /**
- * Geração de PDF para contratos via html2pdf.js
+ * Geração de PDF para contratos.
  *
- * Estratégia (após PDFs em branco no Workflow e CRM):
+ * Estratégia definitiva (após sucessivos casos de PDF em branco ou com texto
+ * invisível em modo dark):
  *
- * O modo de captura via DOM real (com `transform: translateY(-200vh)` e
- * `ignoreElements` apontando para o próprio container) estava produzindo PDFs
- * em branco. Foi substituído pela mesma estratégia que JÁ FUNCIONA nos outros
- * PDFs do projeto (`unifiedPdfUtils`, `newDemonstrativePdfUtils`,
- * `financialPdfUtils`):
- *
- *     await html2pdf().set(opt).from(htmlString).save()
- *
- * Diferenças importantes:
- *  1. Passamos um HTML <string> completo (com <html><head><body>) para o
- *     html2pdf, deixando ele criar o iframe de renderização internamente.
- *     Sem container manual, sem `transform`, sem `ignoreElements`, sem
- *     opacity:0/visibility:hidden — eliminando a causa raiz do "PDF branco".
- *  2. CSS 100% inline com cores hex literais (nunca CSS variables do app).
- *  3. Normalização robusta do HTML do editor preservando todo o texto.
- *  4. Diagnóstico completo no console quando habilitado em
- *     `localStorage.setItem('debugContratoPdf','1')` ou em ambiente preview.
+ *  1. Motor principal: `jsPDF.html()` com autoPaging, renderizando um container
+ *     DOM real (visível, sem opacity/transform), construído com CSS próprio
+ *     de impressão — totalmente isolado do tema do app.
+ *  2. Fallback: `html2pdf().from(htmlString)` caso o motor principal falhe.
+ *  3. Normalização agressiva: remove TODO atributo `style`, `class`,
+ *     `data-*`, `contenteditable`, handlers `on*` do HTML do editor —
+ *     mantendo apenas tags estruturais e texto. Isso elimina o vazamento
+ *     de cores claras/tema dark herdadas do editor.
+ *  4. Layout contratual completo: cabeçalho, partes, corpo, local/data,
+ *     linhas de assinatura, rodapé. Fundo branco, texto preto.
+ *  5. Diagnóstico no console habilitado em preview/dev ou via
+ *     `localStorage.setItem('debugContratoPdf','1')`.
  */
 
-interface GenerateContratoPdfOptions {
+import jsPDF from 'jspdf';
+
+export interface GenerateContratoPdfOptions {
   titulo: string;
   conteudoHtml: string;
+  /* Metadados opcionais — quanto mais, melhor */
   fotografoNome?: string;
   fotografoEmail?: string;
+  fotografoDocumento?: string;
+  clienteNome?: string;
+  clienteEmail?: string;
+  clienteDocumento?: string;
+  cidadeLocal?: string;
+  /** Snapshot com variáveis usadas na geração do contrato. */
+  variaveisSnapshot?: Record<string, unknown> | null;
   filename?: string;
 }
 
@@ -39,7 +45,6 @@ function isDebugEnabled(): boolean {
   try {
     if (window.localStorage?.getItem('debugContratoPdf') === '1') return true;
   } catch { /* noop */ }
-  // Preview/dev hostnames: ajuda a debugar em ambientes não produtivos
   const host = window.location?.hostname || '';
   return /localhost|127\.0\.0\.1|lovable\.app|preview/.test(host);
 }
@@ -51,37 +56,64 @@ function diag(...args: unknown[]) {
   }
 }
 
+function warn(...args: unknown[]) {
+  // eslint-disable-next-line no-console
+  console.warn('[ContratoPDF]', ...args);
+}
+
 /* ------------------------------------------------------------------ */
 /* Normalização de conteúdo                                            */
 /* ------------------------------------------------------------------ */
 
-/** Remove classes/atributos do editor mantendo todo o texto. */
-function neutralizarEstilosEditor(html: string): string {
+const ALLOWED_TAGS = new Set([
+  'p', 'br', 'div', 'span',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'strong', 'b', 'em', 'i', 'u',
+  'ul', 'ol', 'li',
+  'blockquote',
+]);
+
+/**
+ * Remove TUDO que pode vazar estilos do app (style, class, data-*, on*,
+ * contenteditable, spellcheck, etc.) — deixando apenas tags estruturais
+ * e o texto. Também descarta tags não permitidas, preservando seu texto.
+ */
+function sanitizeContratoHtml(html: string): string {
   if (!html) return '';
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    // Fallback por regex no SSR
+    return html
+      .replace(/\s(style|class|data-[\w-]+|on[a-z]+|contenteditable|spellcheck)\s*=\s*(["'])[^"']*\2/gi, '')
+      .replace(/<(?!\/?(?:p|br|div|span|h[1-6]|strong|b|em|i|u|ul|ol|li|blockquote)\b)[^>]*>/gi, '');
+  }
 
-  const stripClass = (input: string, className: string) =>
-    input.replace(/class\s*=\s*(["'])([^"']*)\1/gi, (_full, quote, classes) => {
-      const cleaned = String(classes)
-        .split(/\s+/)
-        .filter((c: string) => c !== className)
-        .join(' ')
-        .trim();
-      return cleaned ? `class=${quote}${cleaned}${quote}` : '';
-    });
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
 
-  let out = html;
-  out = stripClass(out, 'contrato-var-auto');
-  out = stripClass(out, 'contrato-campo-editavel');
-  out = out.replace(/\s*data-campo\s*=\s*(["'])[^"']*\1/gi, '');
-  // Remove handlers inline por segurança
-  out = out.replace(/\s*on[a-z]+\s*=\s*(["'])[^"']*\1/gi, '');
-  // Remove style colors brancas/transparentes que poderiam esconder texto
-  out = out.replace(/color\s*:\s*(white|#fff(?:fff)?|transparent)\s*;?/gi, '');
-  out = out.replace(/<span\s*>\s*<\/span>/gi, '');
-  return out;
+  const walk = (node: Element) => {
+    // Remove atributos em TODOS os elementos
+    [...node.attributes].forEach((attr) => node.removeAttribute(attr.name));
+
+    // Substitui tags desconhecidas por <span> preservando filhos
+    const tag = node.tagName.toLowerCase();
+    if (!ALLOWED_TAGS.has(tag)) {
+      const replacement = document.createElement('span');
+      while (node.firstChild) replacement.appendChild(node.firstChild);
+      node.parentNode?.replaceChild(replacement, node);
+      walkChildren(replacement);
+      return;
+    }
+    walkChildren(node);
+  };
+
+  const walkChildren = (el: Element) => {
+    [...el.children].forEach(walk);
+  };
+
+  walkChildren(wrapper);
+  return wrapper.innerHTML;
 }
 
-/** Texto puro para checagens. */
 function htmlToPlainText(html: string): string {
   return (html || '')
     .replace(/<\s*br\s*\/?>/gi, '\n')
@@ -94,24 +126,15 @@ function htmlToPlainText(html: string): string {
     .trim();
 }
 
-/** Garante HTML estruturado (envolve texto puro em <p>). */
 function ensureStructuredHtml(html: string): string {
   const trimmed = (html || '').trim();
   if (!trimmed) return '';
-  // Já tem alguma tag estrutural?
-  if (/<\s*(p|div|h[1-6]|ul|ol|li|blockquote|section|article|table)\b/i.test(trimmed)) {
-    return trimmed;
-  }
-  // Texto puro → quebra por linhas em parágrafos.
+  if (/<\s*(p|div|h[1-6]|ul|ol|li|blockquote)\b/i.test(trimmed)) return trimmed;
   return trimmed
-    .split(/\n{2,}|\r\n{2,}/)
+    .split(/\n{2,}/)
     .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
     .join('');
 }
-
-/* ------------------------------------------------------------------ */
-/* Documento HTML do PDF                                               */
-/* ------------------------------------------------------------------ */
 
 function escapeHtml(s: string): string {
   return (s || '')
@@ -121,142 +144,380 @@ function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function buildHtmlDocument(opts: GenerateContratoPdfOptions): string {
-  const { titulo, fotografoNome, fotografoEmail } = opts;
-  const dataGeracao = new Date().toLocaleDateString('pt-BR');
-  const conteudoLimpo = neutralizarEstilosEditor(ensureStructuredHtml(opts.conteudoHtml || ''));
+/* ------------------------------------------------------------------ */
+/* Layout do PDF                                                       */
+/* ------------------------------------------------------------------ */
 
-  // Documento COMPLETO (html/head/body) — html2pdf renderiza dentro de um
-  // iframe próprio quando recebemos string. Cores em hex literal.
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8" />
-<title>${escapeHtml(titulo || 'Contrato')}</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #ffffff;
-    color: #111827;
-    font-family: Helvetica, Arial, sans-serif;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+/** CSS 100% isolado do tema do app. Cores literais apenas. */
+const PRINT_CSS = `
+  /* RESET agressivo dentro do container, isolado do tema do app */
+  .lunari-pdf, .lunari-pdf * {
+    box-sizing: border-box !important;
+    background: transparent !important;
+    color: #000000 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    text-shadow: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    border-color: #cccccc !important;
   }
-  body {
-    padding: 28px 36px 32px 36px;
+  .lunari-pdf {
+    background: #ffffff !important;
+    width: 794px;
+    padding: 56px 56px 56px 56px;
+    color: #000000;
     font-size: 12.5px;
-    line-height: 1.65;
+    line-height: 1.6;
   }
-  h1 { font-size: 22px; font-weight: 700; margin: 4px 0 0 0; color: #111827; }
-  h2 { font-size: 16px; font-weight: 700; margin: 18px 0 8px 0; color: #111827; }
-  h3 { font-size: 13.5px; font-weight: 700; margin: 14px 0 6px 0; color: #111827; }
-  h4, h5, h6 { font-size: 12.5px; font-weight: 700; margin: 12px 0 4px 0; color: #111827; }
-  p { margin: 8px 0; color: #1f2937; text-align: justify; }
-  span, b, strong, em, i, u, li { color: inherit; }
-  strong, b { font-weight: 700; color: #111827; }
-  em, i { font-style: italic; }
-  u { text-decoration: underline; }
-  ul { list-style: disc; padding-left: 22px; margin: 8px 0; }
-  ol { list-style: decimal; padding-left: 22px; margin: 8px 0; }
-  li { margin: 4px 0; color: #1f2937; }
-  blockquote {
-    border-left: 3px solid #d1d5db;
+  .lunari-pdf h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; }
+  .lunari-pdf h2 { font-size: 15px; font-weight: 700; margin: 16px 0 8px 0; }
+  .lunari-pdf h3 { font-size: 13px; font-weight: 700; margin: 14px 0 6px 0; }
+  .lunari-pdf h4, .lunari-pdf h5, .lunari-pdf h6 {
+    font-size: 12.5px; font-weight: 700; margin: 12px 0 4px 0;
+  }
+  .lunari-pdf p { margin: 8px 0; text-align: justify; }
+  .lunari-pdf strong, .lunari-pdf b { font-weight: 700; }
+  .lunari-pdf em, .lunari-pdf i { font-style: italic; }
+  .lunari-pdf u { text-decoration: underline; }
+  .lunari-pdf ul { list-style: disc; padding-left: 22px; margin: 8px 0; }
+  .lunari-pdf ol { list-style: decimal; padding-left: 22px; margin: 8px 0; }
+  .lunari-pdf li { margin: 4px 0; }
+  .lunari-pdf blockquote {
+    border-left: 3px solid #cccccc;
     padding-left: 12px;
     margin: 12px 0;
     font-style: italic;
-    color: #4b5563;
   }
-  a { color: #1d4ed8; text-decoration: underline; }
 
-  .pdf-header {
-    border-bottom: 2px solid #111827;
+  /* Cabeçalho */
+  .lunari-pdf .pdf-header {
+    border-bottom: 2px solid #000000;
     padding-bottom: 12px;
     margin-bottom: 18px;
-    width: 100%;
-    display: table;
   }
-  .pdf-header-left, .pdf-header-right { display: table-cell; vertical-align: bottom; }
-  .pdf-header-right { text-align: right; font-size: 11px; color: #6b7280; line-height: 1.5; }
-  .pdf-eyebrow {
+  .lunari-pdf .pdf-eyebrow {
     font-size: 10px;
-    color: #6b7280;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
   }
-  .pdf-meta-strong { font-weight: 600; color: #111827; }
+  .lunari-pdf .pdf-title { font-size: 20px; font-weight: 700; margin: 0; }
+  .lunari-pdf .pdf-header-meta {
+    margin-top: 10px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .lunari-pdf .pdf-header-meta span + span::before {
+    content: ' · ';
+  }
 
-  .pdf-content { margin-top: 4px; }
+  /* Partes (cards) */
+  .lunari-pdf .pdf-partes {
+    display: flex;
+    gap: 14px;
+    margin: 14px 0 22px 0;
+  }
+  .lunari-pdf .pdf-parte {
+    flex: 1;
+    border: 1px solid #cccccc;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+  .lunari-pdf .pdf-parte-label {
+    font-size: 9.5px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .lunari-pdf .pdf-parte-nome { font-weight: 700; font-size: 12px; }
 
-  .pdf-footer {
-    margin-top: 36px;
+  /* Corpo */
+  .lunari-pdf .pdf-body { margin-top: 4px; }
+
+  /* Fechamento e assinaturas */
+  .lunari-pdf .pdf-fechamento {
+    margin-top: 28px;
+    font-size: 11.5px;
+  }
+  .lunari-pdf .pdf-assinaturas {
+    margin-top: 46px;
+    display: flex;
+    gap: 32px;
+    page-break-inside: avoid;
+  }
+  .lunari-pdf .pdf-assinatura { flex: 1; text-align: center; font-size: 11px; }
+  .lunari-pdf .pdf-assinatura-linha {
+    border-top: 1px solid #000000;
+    margin-bottom: 6px;
+    height: 1px;
+  }
+  .lunari-pdf .pdf-assinatura-nome { font-weight: 700; }
+  .lunari-pdf .pdf-assinatura-papel {
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Rodapé */
+  .lunari-pdf .pdf-footer {
+    margin-top: 30px;
     padding-top: 10px;
-    border-top: 1px solid #e5e7eb;
-    font-size: 10px;
-    color: #9ca3af;
+    border-top: 1px solid #dddddd;
+    font-size: 9.5px;
     text-align: center;
   }
 
-  /* Não cortar headings e listas no meio */
-  h1, h2, h3 { page-break-after: avoid; }
-  ul, ol, blockquote { page-break-inside: avoid; }
-</style>
-</head>
-<body>
-  <div class="pdf-header">
-    <div class="pdf-header-left">
+  /* Paginação: só evitar cortar títulos e assinatura */
+  .lunari-pdf h1, .lunari-pdf h2, .lunari-pdf h3 { page-break-after: avoid; }
+  .lunari-pdf .pdf-assinaturas { page-break-inside: avoid; }
+`;
+
+function readVar(snapshot: Record<string, unknown> | null | undefined, key: string): string {
+  if (!snapshot) return '';
+  const v = (snapshot as any)[key];
+  return typeof v === 'string' ? v.trim() : '';
+}
+
+function buildMetaHeader(opts: GenerateContratoPdfOptions): string {
+  const clienteNome = opts.clienteNome || readVar(opts.variaveisSnapshot, 'nome_cliente');
+  const fotografoNome = opts.fotografoNome || readVar(opts.variaveisSnapshot, 'nome_fotografo');
+  const dataGeracao = new Date().toLocaleDateString('pt-BR');
+
+  const parts: string[] = [];
+  if (clienteNome) parts.push(`<span><strong>Cliente:</strong> ${escapeHtml(clienteNome)}</span>`);
+  if (fotografoNome) parts.push(`<span><strong>Fotógrafo:</strong> ${escapeHtml(fotografoNome)}</span>`);
+  parts.push(`<span><strong>Emissão:</strong> ${dataGeracao}</span>`);
+
+  return `<div class="pdf-header-meta">${parts.join('')}</div>`;
+}
+
+function buildPartesBlock(opts: GenerateContratoPdfOptions): string {
+  const clienteNome =
+    opts.clienteNome || readVar(opts.variaveisSnapshot, 'nome_cliente') || '—';
+  const clienteEmail =
+    opts.clienteEmail || readVar(opts.variaveisSnapshot, 'email_cliente');
+  const clienteDoc =
+    opts.clienteDocumento ||
+    readVar(opts.variaveisSnapshot, 'documento_cliente') ||
+    readVar(opts.variaveisSnapshot, 'cpf_cliente');
+
+  const fotografoNome =
+    opts.fotografoNome || readVar(opts.variaveisSnapshot, 'nome_fotografo') || '—';
+  const fotografoEmail =
+    opts.fotografoEmail || readVar(opts.variaveisSnapshot, 'email_fotografo');
+  const fotografoDoc =
+    opts.fotografoDocumento ||
+    readVar(opts.variaveisSnapshot, 'documento_fotografo');
+
+  const partes = [
+    {
+      label: 'CONTRATANTE',
+      nome: clienteNome,
+      email: clienteEmail,
+      doc: clienteDoc,
+    },
+    {
+      label: 'CONTRATADA(O)',
+      nome: fotografoNome,
+      email: fotografoEmail,
+      doc: fotografoDoc,
+    },
+  ];
+
+  const cards = partes
+    .map(
+      (p) => `
+    <div class="pdf-parte">
+      <div class="pdf-parte-label">${p.label}</div>
+      <div class="pdf-parte-nome">${escapeHtml(p.nome)}</div>
+      ${p.doc ? `<div>Documento: ${escapeHtml(p.doc)}</div>` : ''}
+      ${p.email ? `<div>${escapeHtml(p.email)}</div>` : ''}
+    </div>`
+    )
+    .join('');
+
+  return `<div class="pdf-partes">${cards}</div>`;
+}
+
+function buildFechamentoBlock(opts: GenerateContratoPdfOptions): string {
+  const cidade =
+    opts.cidadeLocal ||
+    readVar(opts.variaveisSnapshot, 'cidade_atual') ||
+    readVar(opts.variaveisSnapshot, 'cidade_fotografo') ||
+    readVar(opts.variaveisSnapshot, 'cidade_cliente') ||
+    '__________________';
+  const dataHoje = new Date().toLocaleDateString('pt-BR');
+  return `<div class="pdf-fechamento">${escapeHtml(cidade)}, ${dataHoje}.</div>`;
+}
+
+function buildAssinaturasBlock(opts: GenerateContratoPdfOptions): string {
+  const clienteNome =
+    opts.clienteNome || readVar(opts.variaveisSnapshot, 'nome_cliente') || '';
+  const fotografoNome =
+    opts.fotografoNome || readVar(opts.variaveisSnapshot, 'nome_fotografo') || '';
+  return `
+    <div class="pdf-assinaturas">
+      <div class="pdf-assinatura">
+        <div class="pdf-assinatura-linha"></div>
+        <div class="pdf-assinatura-nome">${escapeHtml(clienteNome || '\u00A0')}</div>
+        <div class="pdf-assinatura-papel">Contratante</div>
+      </div>
+      <div class="pdf-assinatura">
+        <div class="pdf-assinatura-linha"></div>
+        <div class="pdf-assinatura-nome">${escapeHtml(fotografoNome || '\u00A0')}</div>
+        <div class="pdf-assinatura-papel">Contratada(o)</div>
+      </div>
+    </div>`;
+}
+
+function buildInnerHtml(opts: GenerateContratoPdfOptions, sanitizedBody: string): string {
+  const titulo = escapeHtml(opts.titulo || 'Contrato');
+  const dataGeracao = new Date().toLocaleDateString('pt-BR');
+  return `
+    <div class="pdf-header">
       <div class="pdf-eyebrow">Contrato</div>
-      <h1>${escapeHtml(titulo || 'Contrato')}</h1>
+      <h1 class="pdf-title">${titulo}</h1>
+      ${buildMetaHeader(opts)}
     </div>
-    <div class="pdf-header-right">
-      ${fotografoNome ? `<div class="pdf-meta-strong">${escapeHtml(fotografoNome)}</div>` : ''}
-      ${fotografoEmail ? `<div>${escapeHtml(fotografoEmail)}</div>` : ''}
-      <div>Emitido em ${dataGeracao}</div>
-    </div>
-  </div>
-
-  <div class="pdf-content">
-    ${conteudoLimpo || '<p><em>Contrato sem conteúdo.</em></p>'}
-  </div>
-
-  <div class="pdf-footer">Gerado por Lunari · ${dataGeracao}</div>
-</body>
-</html>`;
+    ${buildPartesBlock(opts)}
+    <div class="pdf-body">${sanitizedBody || '<p><em>Contrato sem conteúdo.</em></p>'}</div>
+    ${buildFechamentoBlock(opts)}
+    ${buildAssinaturasBlock(opts)}
+    <div class="pdf-footer">Gerado por Lunari · ${dataGeracao}</div>
+  `;
 }
 
 /* ------------------------------------------------------------------ */
-/* Geração                                                             */
+/* Container DOM real (visível off-screen, sem opacity/transform)      */
 /* ------------------------------------------------------------------ */
 
-function getSafeScale(plainTextLength: number): number {
-  if (plainTextLength > 12000) return 1;
-  if (plainTextLength > 6000) return 1.5;
-  return 2;
+function createRenderContainer(innerHtml: string): { root: HTMLDivElement; styleEl: HTMLStyleElement } {
+  // Style injetado no <head> para ter prioridade máxima, só durante a geração.
+  const styleEl = document.createElement('style');
+  styleEl.setAttribute('data-lunari-pdf', 'true');
+  styleEl.textContent = PRINT_CSS;
+  document.head.appendChild(styleEl);
+
+  const root = document.createElement('div');
+  root.className = 'lunari-pdf';
+  root.setAttribute('data-lunari-pdf', 'true');
+  root.innerHTML = innerHtml;
+
+  // Posiciona fora da área visível MAS renderizando normalmente.
+  // Sem opacity:0, sem visibility:hidden, sem transform, sem display:none.
+  root.style.position = 'fixed';
+  root.style.left = '-10000px';
+  root.style.top = '0';
+  root.style.width = '794px';
+  root.style.pointerEvents = 'none';
+  root.style.zIndex = '0';
+  document.body.appendChild(root);
+
+  return { root, styleEl };
 }
 
-async function waitForFonts(): Promise<void> {
+function destroyRenderContainer(root: HTMLDivElement, styleEl: HTMLStyleElement) {
+  root.parentNode?.removeChild(root);
+  styleEl.parentNode?.removeChild(styleEl);
+}
+
+async function waitForLayout(): Promise<void> {
   if (typeof document === 'undefined') return;
   const anyDoc = document as any;
   if (anyDoc.fonts?.ready) {
     try { await anyDoc.fonts.ready; } catch { /* noop */ }
   }
+  await new Promise<void>((r) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => r()))
+  );
 }
 
-function buildPdfOptions(filename: string, plainTextLength: number) {
-  const scale = getSafeScale(plainTextLength);
-  return {
-    margin: [10, 10, 12, 10] as [number, number, number, number],
+/* ------------------------------------------------------------------ */
+/* Motor primário: jsPDF.html() com autoPaging                          */
+/* ------------------------------------------------------------------ */
+
+async function generateViaJsPDF(opts: GenerateContratoPdfOptions, innerHtml: string): Promise<Blob> {
+  const { root, styleEl } = createRenderContainer(innerHtml);
+  try {
+    await waitForLayout();
+
+    const rect = root.getBoundingClientRect();
+    const firstP = root.querySelector('.pdf-body p, .pdf-body h2, .pdf-body h3');
+    const computedColor = firstP ? getComputedStyle(firstP).color : '';
+    diag('Container', {
+      width: rect.width,
+      height: rect.height,
+      scrollHeight: root.scrollHeight,
+      scrollWidth: root.scrollWidth,
+      firstBodyColor: computedColor,
+    });
+
+    if (rect.width < 100 || rect.height < 100) {
+      throw new Error('Container inválido (dimensões < 100px)');
+    }
+
+    const doc = new jsPDF({
+      unit: 'px',
+      format: 'a4',
+      orientation: 'portrait',
+      hotfixes: ['px_scaling'],
+      compress: true,
+    });
+
+    // Largura interna do A4 em px no sistema do jsPDF (~595.28 pt ≈ 794 px a 96dpi)
+    // Usamos width do próprio container (794) como referência e deixamos o
+    // jsPDF escalar para A4 via hotfix 'px_scaling'.
+    await doc.html(root, {
+      autoPaging: 'text',
+      width: 794,
+      windowWidth: 794,
+      margin: [24, 24, 28, 24],
+      html2canvas: {
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        scale: 2,
+        letterRendering: true,
+        logging: false,
+      },
+    });
+
+    const blob = doc.output('blob');
+    diag('Blob jsPDF', { size: blob.size });
+    if (!blob || blob.size < 2000) {
+      throw new Error('jsPDF gerou blob suspeito de vazio');
+    }
+    return blob;
+  } finally {
+    destroyRenderContainer(root, styleEl);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Fallback: html2pdf via string (sem DOM real)                         */
+/* ------------------------------------------------------------------ */
+
+async function generateViaHtml2Pdf(opts: GenerateContratoPdfOptions, innerHtml: string): Promise<Blob> {
+  const html2pdf = (await import('html2pdf.js')).default;
+  const filename = opts.filename || `${opts.titulo || 'contrato'}.pdf`;
+
+  const fullHtml = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escapeHtml(
+    opts.titulo || 'Contrato'
+  )}</title><style>${PRINT_CSS}</style></head><body style="margin:0;background:#ffffff;">
+  <div class="lunari-pdf">${innerHtml}</div>
+  </body></html>`;
+
+  const opt = {
+    margin: [8, 8, 10, 8] as [number, number, number, number],
     filename,
     image: { type: 'jpeg' as const, quality: 0.98 },
     html2canvas: {
-      scale,
+      scale: 2,
       useCORS: true,
       letterRendering: true,
       backgroundColor: '#ffffff',
       logging: false,
-      // 794px ≈ A4 a 96dpi
       windowWidth: 794,
     },
     jsPDF: {
@@ -267,91 +528,52 @@ function buildPdfOptions(filename: string, plainTextLength: number) {
     },
     pagebreak: { mode: ['css', 'legacy'] as string[] },
   };
+
+  const blob: Blob = await html2pdf().set(opt as any).from(fullHtml).outputPdf('blob');
+  diag('Blob html2pdf fallback', { size: blob?.size });
+  if (!blob || blob.size < 2000) {
+    throw new Error('html2pdf fallback também falhou (blob pequeno)');
+  }
+  return blob;
 }
 
-export async function generateContratoPdf(opts: GenerateContratoPdfOptions): Promise<Blob> {
-  const plain = htmlToPlainText(opts.conteudoHtml || '');
+/* ------------------------------------------------------------------ */
+/* API pública                                                         */
+/* ------------------------------------------------------------------ */
 
-  // Diagnóstico de entrada
+export async function generateContratoPdf(opts: GenerateContratoPdfOptions): Promise<Blob> {
+  const rawHtml = opts.conteudoHtml || '';
+  const plain = htmlToPlainText(rawHtml);
+
   diag('Entrada', {
     titulo: opts.titulo,
-    tamanhoHtml: (opts.conteudoHtml || '').length,
+    tamanhoHtml: rawHtml.length,
     tamanhoTextoPuro: plain.length,
-    fotografoNome: opts.fotografoNome,
-    placeholdersRestantes: (opts.conteudoHtml || '').match(/\{\{[^}]+\}\}/g) || [],
-    amostraHtml: (opts.conteudoHtml || '').slice(0, 240),
+    placeholdersRestantes: (rawHtml.match(/\{\{[^}]+\}\}/g) || []),
+    cliente: opts.clienteNome,
+    fotografo: opts.fotografoNome,
+    temSnapshot: !!opts.variaveisSnapshot,
   });
 
   if (!plain) {
     throw new Error('O contrato está vazio. Adicione conteúdo antes de gerar o PDF.');
   }
 
-  const html2pdf = (await import('html2pdf.js')).default;
+  const structured = ensureStructuredHtml(rawHtml);
+  const sanitized = sanitizeContratoHtml(structured);
+  diag('HTML sanitizado', { tamanho: sanitized.length, amostra: sanitized.slice(0, 240) });
 
-  await waitForFonts();
+  const innerHtml = buildInnerHtml(opts, sanitized);
 
-  const filename = opts.filename || `${opts.titulo || 'contrato'}.pdf`;
-  const html = buildHtmlDocument(opts);
-  diag('HTML final', { tamanho: html.length, amostra: html.slice(0, 400) });
-
-  // 1) Geração principal — HTML string → html2pdf (mesma abordagem dos
-  //    PDFs financeiros que funcionam).
+  // 1) Motor principal: jsPDF.html com DOM real.
   try {
-    const pdfOpt = buildPdfOptions(filename, plain.length);
-    const blob: Blob = await html2pdf()
-      .set(pdfOpt as any)
-      .from(html)
-      .outputPdf('blob');
-
-    diag('Blob gerado (string)', { size: blob?.size });
-    if (blob && blob.size >= 2000) return blob;
-    diag('Blob suspeito de vazio — tentando fallback DOM real');
+    return await generateViaJsPDF(opts, innerHtml);
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[ContratoPDF] Falha na geração via string, tentando fallback DOM real:', err);
+    warn('Motor principal (jsPDF.html) falhou, tentando fallback html2pdf:', err);
   }
 
-  // 2) Fallback — montar container REAL no DOM, sem transform, sem
-  //    ignoreElements. Apenas posicionado no topo com pointer-events:none.
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  container.style.position = 'fixed';
-  container.style.top = '0';
-  container.style.left = '0';
-  container.style.width = '794px';
-  container.style.maxWidth = '794px';
-  container.style.background = '#ffffff';
-  container.style.color = '#111827';
-  container.style.zIndex = '-1';        // atrás de tudo, mas presente
-  container.style.pointerEvents = 'none';
-  container.style.opacity = '1';        // NUNCA 0 — html2canvas captura literalmente
-  document.body.appendChild(container);
-
-  // espera layout
-  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-
-  diag('Fallback DOM dimensões', {
-    scrollWidth: container.scrollWidth,
-    scrollHeight: container.scrollHeight,
-    clientWidth: container.clientWidth,
-    clientHeight: container.clientHeight,
-  });
-
-  try {
-    const pdfOpt = buildPdfOptions(filename, plain.length);
-    const blob: Blob = await html2pdf()
-      .set(pdfOpt as any)
-      .from(container)
-      .outputPdf('blob');
-
-    diag('Blob gerado (DOM)', { size: blob?.size });
-    if (!blob || blob.size < 2000) {
-      throw new Error('Falha ao gerar o PDF: arquivo gerado parece vazio.');
-    }
-    return blob;
-  } finally {
-    if (container.parentNode) container.parentNode.removeChild(container);
-  }
+  // 2) Fallback: html2pdf via string.
+  return await generateViaHtml2Pdf(opts, innerHtml);
 }
 
 export async function downloadContratoPdf(opts: GenerateContratoPdfOptions): Promise<void> {
@@ -363,35 +585,41 @@ export async function downloadContratoPdf(opts: GenerateContratoPdfOptions): Pro
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-/**
- * Teste mínimo isolado: gera um PDF "Hello World" para diagnosticar se o
- * problema é do conteúdo do contrato ou do motor de geração.
- * Acessível via console: `await window.__testContratoPdf?.()`.
- */
+/* ------------------------------------------------------------------ */
+/* Testes expostos no window para diagnóstico manual                   */
+/* ------------------------------------------------------------------ */
+
 export async function __testMinimalPdf(): Promise<Blob> {
-  const html2pdf = (await import('html2pdf.js')).default;
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-<body style="margin:40px;font-family:Arial,sans-serif;color:#111;background:#fff">
-<h1 style="color:#111">Teste de PDF</h1>
-<p style="color:#111">Se você consegue ler esta linha no PDF, o motor está funcionando.</p>
-</body></html>`;
-  const blob: Blob = await html2pdf()
-    .set({
-      margin: 10,
-      filename: 'teste.pdf',
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
-    } as any)
-    .from(html)
-    .outputPdf('blob');
-  // eslint-disable-next-line no-console
-  console.log('[ContratoPDF][TesteMinimo] Blob size:', blob?.size);
-  return blob;
+  return generateContratoPdf({
+    titulo: 'Teste de PDF',
+    conteudoHtml: '<h2>Teste</h2><p>Se você lê esta linha no PDF, o motor está funcionando.</p>',
+    clienteNome: 'Cliente Teste',
+    fotografoNome: 'Fotógrafo Teste',
+  });
+}
+
+export async function __testLayoutPdf(): Promise<Blob> {
+  return generateContratoPdf({
+    titulo: 'Contrato de Teste de Layout',
+    conteudoHtml: `
+      <h2>1. Teste</h2>
+      <p>Primeiro parágrafo de teste. <strong>Negrito</strong>, <em>itálico</em>, <u>sublinhado</u>.</p>
+      <h3>1.1 Subseção</h3>
+      <ul><li>Item A</li><li>Item B</li><li>Item C</li></ul>
+      <p>Parágrafo longo para validar justificação e quebras automáticas. ${'Teste '.repeat(80)}</p>
+    `,
+    clienteNome: 'Cliente Exemplo',
+    clienteEmail: 'cliente@exemplo.com',
+    fotografoNome: 'Fotógrafo Exemplo',
+    fotografoEmail: 'foto@exemplo.com',
+    cidadeLocal: 'Cachoeira do Sul - RS',
+  });
 }
 
 if (typeof window !== 'undefined') {
   (window as any).__testContratoPdf = __testMinimalPdf;
+  (window as any).__testContratoPdfLayout = __testLayoutPdf;
 }

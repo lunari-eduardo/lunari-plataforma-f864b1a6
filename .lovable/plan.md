@@ -1,150 +1,192 @@
-## Diagnóstico encontrado
+## Diagnóstico confirmado
 
-O problema não parece estar no cadastro/salvamento principal do contrato, porque:
+Pelas imagens anexadas, o PDF não está mais totalmente vazio: o conteúdo existe, mas está quase invisível. Isso muda a causa raiz principal:
 
-- `NovoContratoModal` gera `conteudoFinal` com `applyVariables(...)` e salva `conteudo` na tabela `contratos`.
-- `useContratos` busca `conteudo` diretamente da tabela `contratos`.
-- `ContratoViewerModal` reabre o contrato usando `contrato.conteudo`.
-- O CRM (`ClienteContratosList`) baixa usando `c.conteudo` diretamente.
+1. O problema atual é principalmente contraste/CSS: o texto está sendo renderizado com cor muito clara, provavelmente herdada de estilos do editor/tema ou de estilos inline preservados.
+2. A estratégia atual ainda depende de `html2pdf/html2canvas`, que rasteriza o HTML como imagem e é sensível a tema dark, estilos herdados, `line-height`, canvas grande e paginação.
+3. O layout atual do PDF ainda está frágil: não tem estrutura contratual completa com capa/cabeçalho forte, dados das partes em blocos, rodapé/assinaturas e paginação previsível.
+4. A validação por tamanho do Blob não detecta o erro visual, porque um PDF com texto quase branco pode ter tamanho normal.
+5. O contrato salvo contém spans e possivelmente estilos vindos do editor (`style`, `class`, `data-campo`), e a limpeza atual remove apenas algumas cores específicas, não neutraliza todo CSS herdado/inline.
 
-O ponto mais frágil está no gerador `src/utils/contratoPdf.ts`.
+## Correção definitiva proposta
 
-Causas prováveis identificadas no código atual:
+### 1. Parar de usar o layout da tela para o PDF
 
-1. O `ignoreElements` pode estar ignorando o próprio container clonado pelo `html2canvas`
-   - O container recebe `data-pdf-render="true"`.
-   - No clone interno do `html2canvas`, `el !== container` tende a ser verdadeiro porque o elemento é clonado.
-   - Resultado possível: o elemento raiz do PDF é ignorado, gerando captura em branco.
+Refatorar `src/utils/contratoPdf.ts` para gerar um documento de impressão totalmente isolado:
 
-2. O container está fora da área útil via `transform: translateY(-200vh)`
-   - Mesmo visível, elementos transformados para fora podem ser rasterizados fora do canvas capturado.
-   - Isso pode gerar PDF branco mesmo com HTML presente.
+- HTML próprio para PDF, sem classes Tailwind, sem variáveis CSS do app e sem dependência do tema dark/light.
+- Fundo branco absoluto.
+- Texto preto absoluto (`#000000`) em todos os elementos do contrato.
+- Fonte segura: Arial, Helvetica, sans-serif.
+- Largura A4 e margens internas padronizadas.
+- CSS de impressão com reset agressivo dentro do container do PDF.
 
-3. O fluxo atual usa `outputPdf('blob')` em vez de `.save()`
-   - Outros PDFs do projeto usam `html2pdf().from(htmlString).save()` e funcionam em formato mais simples.
-   - O contrato ficou com uma estratégia mais complexa e mais suscetível a bug.
+### 2. Trocar o motor principal para `jsPDF.html()` com DOM real isolado
 
-4. A validação por tamanho do Blob não garante conteúdo visível
-   - Um PDF pode ter cabeçalho/estrutura e passar de 3KB, mas ainda estar visualmente em branco.
+Substituir o fluxo principal atual de `html2pdf().from(htmlString).outputPdf('blob')` por renderização direta com `jsPDF.html()`:
 
-## Plano de correção
+- Criar um container DOM real, visível para renderização, fora da tela sem `opacity: 0`, sem `visibility:hidden`, sem `display:none` e sem `transform`.
+- Definir largura fixa em pixels compatível com A4.
+- Forçar dimensões e estilos antes de renderizar.
+- Aguardar fontes/layout com `document.fonts.ready` e dois `requestAnimationFrame`.
+- Gerar Blob via `doc.output('blob')`.
 
-### 1. Adicionar checkup completo antes da geração
+O `html2pdf` ficará apenas como fallback temporário se o ambiente não suportar a renderização principal.
 
-Em `src/utils/contratoPdf.ts`, criar uma etapa de diagnóstico antes de converter:
+### 3. Neutralizar completamente estilos problemáticos do editor
 
-- Logar `titulo`.
-- Logar `conteudoHtml` recebido.
-- Logar texto puro extraído.
-- Logar placeholders restantes `{{...}}`.
-- Logar HTML final montado para PDF.
-- Logar dimensões reais do container quando usado.
-- Logar `scrollWidth`, `scrollHeight`, `clientWidth`, `clientHeight`, `getBoundingClientRect()` e quantidade de caracteres.
+Reescrever a normalização do conteúdo para:
 
-Para evitar vazar contratos no console em produção, os logs completos ficarão ativos em ambiente de desenvolvimento/preview e também quando `localStorage.setItem('debugContratoPdf', '1')` estiver habilitado. Em caso de erro, o resumo técnico será logado sempre.
+- Sanitizar HTML com lista de tags permitidas.
+- Remover todos os atributos `style` do conteúdo do contrato, não apenas cores brancas.
+- Remover classes do editor e quaisquer classes herdadas.
+- Remover atributos `data-*`, handlers `on*`, `contenteditable`, `spellcheck` etc.
+- Preservar texto, parágrafos, títulos, listas, negrito, itálico, sublinhado e quebras.
+- Converter texto puro em parágrafos válidos.
+- Transformar `div` soltos em blocos seguros quando necessário.
+- Detectar placeholders `{{...}}` restantes e logar no diagnóstico.
 
-### 2. Corrigir a geração removendo as duas causas mais prováveis de branco
+Isso elimina a causa mais provável do contraste quase branco: estilos inline/classes herdadas escapando para o PDF.
 
-Refatorar `generateContratoPdf` para:
+### 4. Criar layout contratual completo
 
-- Remover `data-pdf-render` do container capturado.
-- Remover completamente `ignoreElements`.
-- Não usar `transform`, `opacity`, `visibility:hidden` ou `display:none` no elemento de captura.
-- Preferir passar um HTML string completo para `html2pdf().from(html).save()/outputPdf(...)`, seguindo o padrão dos outros PDFs do projeto.
-- Se for necessário usar DOM real, posicionar o container de forma neutra, com `position: fixed; left: 0; top: 0; width: 794px`, sem transform, mantendo `pointer-events: none` e limpando logo após.
+O PDF será montado com esta estrutura fixa:
 
-### 3. Criar fallback real: PDF mínimo e motor alternativo
+```text
+[Topo do documento]
+CONTRATO
+Título do contrato
+Cliente | Fotógrafo | Data de emissão
 
-Adicionar dois testes internos no gerador:
+[Duas caixas de identificação]
+Contratante: nome/e-mail/documento quando disponível
+Contratada(o): nome/e-mail/documento quando disponível
 
-- Teste mínimo com HTML fixo: `Teste de PDF`.
-- Se o contrato falhar mas o teste mínimo funcionar, o erro está no HTML/conteúdo.
-- Se o teste mínimo falhar, o erro está no motor `html2pdf/html2canvas/jsPDF` ou no ambiente.
+[Corpo]
+Conteúdo do contrato com headings, parágrafos, listas e espaçamento corretos
 
-Implementar fallback de exportação:
+[Fechamento]
+Local e data
 
-1. Tentar geração normal com `html2pdf` usando HTML string completo.
-2. Se falhar ou se as dimensões ficarem zeradas, tentar geração por DOM real sem transform.
-3. Se ainda falhar, gerar erro claro para o usuário e console com diagnóstico.
+[Assinaturas]
+______________________________
+Nome do cliente
+CONTRATANTE
 
-### 4. Normalizar HTML do contrato antes do PDF
+______________________________
+Nome do fotógrafo
+CONTRATADA(O)
 
-Ajustar a preparação do conteúdo para garantir HTML válido:
+[Rodapé]
+Gerado por Lunari + data
+```
 
-- Se vier texto puro sem tags, envolver em `<p>...</p>` preservando quebras de linha.
-- Preservar tags válidas: `p`, `br`, `div`, `span`, `h1-h6`, `strong`, `b`, `em`, `i`, `u`, `ul`, `ol`, `li`, `blockquote`, `a`.
-- Remover classes do editor (`contrato-var-auto`, `contrato-campo-editavel`) sem remover texto.
-- Remover atributos problemáticos/event handlers.
-- Forçar `color: #111827`, `background: #ffffff`, `font-family: Arial, Helvetica, sans-serif`.
-- Garantir `white-space`/quebras compatíveis para parágrafos.
+### 5. Enriquecer os dados passados ao gerador
 
-### 5. Ajustar layout profissional do PDF
+Atualizar chamadas no Workflow/modal e CRM para enviar metadados quando disponíveis:
 
-Manter e reforçar:
+- nome do cliente (`contrato.cliente?.nome` ou prop/lista);
+- e-mail do cliente;
+- nome/e-mail do fotógrafo;
+- data de emissão;
+- local/data do contrato via `variaveis_snapshot` quando existir (`cidade_atual`, `cidade_fotografo`, `data_atual`).
 
-- A4 retrato.
-- Margens consistentes.
-- Cabeçalho com título do contrato, fotógrafo/e-mail e data de emissão.
-- Conteúdo com parágrafos justificados, espaçamento e headings legíveis.
-- Listas com recuo.
-- Rodapé discreto.
+Se algum dado estiver ausente, o PDF usará placeholders profissionais como linhas em branco, sem quebrar layout.
 
-Também remover regras que possam causar branco ou quebra excessiva:
+### 6. Corrigir paginação e corte no final
 
-- Evitar `page-break-inside: avoid` em todos os `<p>`, pois contratos longos podem criar comportamento ruim de paginação.
-- Usar quebras apenas em títulos/listas quando necessário.
+Adicionar regras específicas para evitar cortes:
 
-### 6. Corrigir fluxo Workflow e CRM
+- `page-break-inside: avoid` apenas em blocos pequenos e assinatura, não em todos os parágrafos longos.
+- Títulos com `page-break-after: avoid`.
+- Área de assinatura com `page-break-inside: avoid` e espaço antes.
+- Margens inferiores suficientes.
+- Remover `height` fixa do canvas/PDF e deixar o render calcular altura.
+- Controlar `autoPaging` no `jsPDF.html()` para quebrar texto automaticamente.
 
-Em `ContratoViewerModal`:
+### 7. Diagnóstico definitivo no console
 
-- Antes de baixar, se houver edição não salva, usar o estado atual do editor (`conteudo`) e logar isso.
-- Adicionar indicador `Gerando PDF...` para evitar duplo clique.
-- Em caso de erro, mostrar toast destrutivo com mensagem clara.
+Manter e ampliar logs de debug (`localStorage.setItem('debugContratoPdf','1')`):
 
-Em `ClienteContratosList`:
+- conteúdo recebido;
+- texto puro extraído;
+- placeholders restantes;
+- HTML sanitizado;
+- HTML final do PDF;
+- dimensões do container (`scrollWidth`, `scrollHeight`, `clientWidth`, `clientHeight`, `getBoundingClientRect()`);
+- cor computada real dos primeiros parágrafos antes de gerar;
+- tamanho final do Blob.
 
-- Baixar sempre com `c.conteudo` do contrato listado.
-- Logar ID/título/tamanho do conteúdo antes de chamar o gerador.
-- Manter tratamento de erro.
+Adicionar uma validação visual programática mínima antes de gerar:
 
-### 7. Validação pós-correção
+- se `getComputedStyle(container).color` ou dos parágrafos não for preto/escuro, abortar e corrigir forçando estilos inline no container.
+- se dimensões forem zero, abortar com erro claro.
 
-Depois da implementação:
+### 8. Testes internos de geração
 
-- Rodar build/typecheck para garantir que não quebrou TypeScript.
-- Fazer teste de geração com conteúdo fixo simples.
-- Fazer teste com HTML real de contrato contendo:
-  - `<h2>`/`<h3>`
-  - `<p>`
-  - `<br>`
-  - `<ul><li>`
-  - spans de variáveis automáticas/editáveis
-  - placeholders restantes
-- Confirmar nos logs:
-  - conteúdo recebido não vazio
-  - HTML final não vazio
-  - dimensões do container maiores que zero
-  - PDF gerado com tamanho plausível
+Adicionar funções de teste em modo debug no `window`:
+
+- `window.__testContratoPdf()` gera PDF mínimo “Teste PDF”.
+- `window.__testContratoPdfLayout()` gera contrato de exemplo com título, parágrafos, lista e assinaturas.
+- `window.__debugContratoPdfHtml()` retorna/mostra o HTML final sanitizado para inspeção.
+
+### 9. Ajustes nos fluxos Workflow e CRM
+
+Em `ContratoViewerModal.tsx`:
+
+- Usar o conteúdo atual do editor, inclusive edição não salva.
+- Bloquear duplo clique com estado `Gerando...`.
+- Enviar metadados do cliente e snapshot para o PDF.
+- Exibir erro claro caso o PDF não consiga ser gerado.
+
+Em `ClienteContratosList.tsx`:
+
+- Adicionar estado por contrato para impedir múltiplos downloads simultâneos.
+- Enviar nome/e-mail do cliente do contrato listado.
+- Manter logs de diagnóstico.
+
+### 10. Remover ruído de toast de sucesso onde não for necessário
+
+Manter apenas toasts de erro para geração de PDF, respeitando a preferência do projeto de evitar notificações de sucesso em ações CRUD/rotineiras.
 
 ## Arquivos a alterar
 
 - `src/utils/contratoPdf.ts`
-  - Refatoração principal, diagnóstico, HTML normalization, correção de container e fallback.
+  - Refatoração principal do motor, normalização, layout A4, assinatura, diagnóstico e fallback.
 
 - `src/components/contratos/ContratoViewerModal.tsx`
-  - Estado de geração, logs do fluxo modal, prevenção de duplo clique e erro claro.
+  - Passar metadados completos e manter estado de geração.
 
 - `src/components/contratos/ClienteContratosList.tsx`
-  - Logs do fluxo CRM/lista e prevenção de erro silencioso.
+  - Passar metadados completos e adicionar trava de download por contrato.
+
+- `src/types/contrato.ts`
+  - Expandir tipagem opcional do `cliente` se necessário para incluir e-mail/documentos já retornados pelo hook.
+
+- `src/hooks/useContratos.ts`
+  - Ajustar `select` para trazer dados úteis do cliente caso falte algum campo permitido.
+
+## Validação após implementar
+
+1. Rodar build/typecheck.
+2. Gerar teste mínimo.
+3. Gerar teste de layout completo.
+4. Gerar contrato real com o conteúdo do modelo de gestante mostrado nas imagens.
+5. Confirmar no console:
+   - conteúdo recebido não está vazio;
+   - HTML final possui texto;
+   - container tem largura/altura reais;
+   - cor computada do texto é preta/escura;
+   - Blob final tem tamanho plausível.
+6. Confirmar visualmente no preview que o PDF tem:
+   - texto preto legível;
+   - fundo branco;
+   - cabeçalho estruturado;
+   - margens A4;
+   - parágrafos e títulos espaçados;
+   - assinatura e rodapé;
+   - sem corte no final.
 
 ## Resultado esperado
 
-O PDF deixará de sair em branco e passará a ser gerado com:
-
-- conteúdo completo do contrato;
-- parágrafos e espaçamento corretos;
-- cabeçalhos legíveis;
-- dados preenchidos;
-- cores forçadas para texto preto em fundo branco;
-- diagnóstico claro no console caso algo volte a falhar.
+O PDF de contratos deixará de depender do tema visual do sistema e será renderizado como documento profissional de impressão, com contraste correto, estrutura contratual completa, quebra de página previsível, cabeçalho, rodapé e assinaturas.

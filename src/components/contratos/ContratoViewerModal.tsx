@@ -52,11 +52,18 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
         tamanhoConteudo: (conteudo || '').length,
         editado: conteudo !== contrato.conteudo,
       });
+      const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
       await downloadContratoPdf({
         titulo,
         conteudoHtml: conteudo,
-        fotografoNome: profile?.nome || undefined,
-        fotografoEmail: profile?.email || undefined,
+        fotografoNome: profile?.nome || snap.nome_fotografo || undefined,
+        fotografoEmail: profile?.email || snap.email_fotografo || undefined,
+        fotografoDocumento: (profile as any)?.cpf_cnpj || snap.documento_fotografo || undefined,
+        clienteNome: contrato.cliente?.nome || snap.nome_cliente || undefined,
+        clienteEmail: contrato.cliente?.email || snap.email_cliente || undefined,
+        clienteDocumento: snap.documento_cliente || snap.cpf_cliente || undefined,
+        cidadeLocal: snap.cidade_atual || snap.cidade_fotografo || snap.cidade_cliente || undefined,
+        variaveisSnapshot: snap,
         filename: `${titulo}.pdf`,
       });
     } catch (err: any) {
