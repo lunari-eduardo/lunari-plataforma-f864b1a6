@@ -1,14 +1,17 @@
 /**
  * Geração de PDF para contratos via html2pdf.js
  *
- * IMPORTANTE: o html2canvas (engine interna do html2pdf.js) tem várias armadilhas:
- *  1. Não captura corretamente elementos com `position: fixed; left: -9999px`
- *     → usamos `position: absolute; opacity: 0` mas dentro do viewport.
- *  2. Não resolve CSS variables (`hsl(var(--primary))`) em todos os contextos
- *     → todo CSS é inline com cores hex literais.
- *  3. Precisa de `width` explícita no elemento raiz, senão calcula 0px.
- *  4. Pode renderizar PDF em branco se as fontes ainda estiverem carregando
- *     → aguardamos `document.fonts.ready` antes.
+ * Estratégia revisada após PDFs em branco no Workflow e CRM:
+ *
+ * 1. NUNCA usar opacity/visibility/display:none no container — html2canvas pode
+ *    capturar exatamente isso e devolver um canvas em branco.
+ * 2. Container fica fora da viewport (top: -10000px) mas com tudo VISÍVEL
+ *    (sem opacity), preservando a captura.
+ * 3. CSS 100% inline com cores hex literais — nada depende do tema do app.
+ * 4. Normalização robusta do HTML do editor (regex tolerante a múltiplos atributos).
+ * 5. Escala adaptativa para evitar limite de canvas em contratos longos.
+ * 6. Validação do Blob: se vier menor que ~3KB (PDF vazio típico), lança erro
+ *    em vez de baixar arquivo inutilizável.
  */
 
 interface GenerateContratoPdfOptions {
@@ -20,20 +23,57 @@ interface GenerateContratoPdfOptions {
 }
 
 /**
- * Neutraliza as classes do editor (`contrato-var-auto`, `contrato-campo-editavel`)
- * substituindo-as por estilos inline neutros. No PDF final o documento fica limpo,
- * sem fundos coloridos que possam destoar de um contrato profissional.
+ * Remove as classes do editor de contratos (`contrato-var-auto` e
+ * `contrato-campo-editavel`) preservando o texto. Tolerante a:
+ *   - aspas simples ou duplas
+ *   - múltiplas classes no mesmo span
+ *   - outros atributos antes/depois (data-campo, style, etc.)
  */
 function neutralizarEstilosEditor(html: string): string {
   if (!html) return '';
-  // Remove apenas as classes do contrato (mantendo outras se houver)
-  return html
-    // Variáveis automáticas: texto normal, mantém peso
-    .replace(/class="contrato-var-auto"/g, 'style="font-weight:500"')
-    .replace(/class='contrato-var-auto'/g, "style='font-weight:500'")
-    // Campos editáveis: texto normal, sem destaque
-    .replace(/class="contrato-campo-editavel"/g, 'style=""')
-    .replace(/class='contrato-campo-editavel'/g, "style=''");
+
+  // Remove a classe inteira mantendo o atributo `class=""` apenas se sobrar algo.
+  // Funciona para:  class="contrato-var-auto"  |  class="x contrato-var-auto y"
+  const stripClass = (input: string, className: string) => {
+    return input.replace(
+      /class\s*=\s*(["'])([^"']*)\1/gi,
+      (full, quote, classes) => {
+        const cleaned = classes
+          .split(/\s+/)
+          .filter((c: string) => c !== className)
+          .join(' ')
+          .trim();
+        return cleaned ? `class=${quote}${cleaned}${quote}` : '';
+      }
+    );
+  };
+
+  let out = html;
+  out = stripClass(out, 'contrato-var-auto');
+  out = stripClass(out, 'contrato-campo-editavel');
+  // Limpa atributos data-campo (não fazem falta no PDF)
+  out = out.replace(/\s*data-campo\s*=\s*(["'])[^"']*\1/gi, '');
+  // Remove eventuais spans vazios que sobraram
+  out = out.replace(/<span\s*>\s*<\/span>/gi, '');
+  return out;
+}
+
+/**
+ * Extrai apenas texto puro do HTML para checagem de "está vazio?".
+ */
+function htmlToPlainText(html: string): string {
+  return (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim();
+}
+
+/**
+ * Estima escala a usar com base no tamanho do conteúdo.
+ * Contratos muito longos podem estourar o limite de canvas do browser
+ * (~16.384px de altura no Chrome) e gerar PDF em branco.
+ */
+function getSafeScale(plainTextLength: number): number {
+  if (plainTextLength > 12000) return 1;     // muito longo → escala mínima
+  if (plainTextLength > 6000) return 1.5;    // longo → escala média
+  return 2;                                   // padrão de boa qualidade
 }
 
 const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
@@ -41,8 +81,7 @@ const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
   const dataGeracao = new Date().toLocaleDateString('pt-BR');
   const conteudoLimpo = neutralizarEstilosEditor(conteudoHtml || '');
 
-  // Estilos inline para evitar dependência do CSS global do app.
-  // Todas as cores em hex/rgb literais — html2canvas não resolve CSS vars.
+  // CSS inline — todas as cores em hex/rgb literais, nada de CSS variables.
   return `
     <style>
       .pdf-root, .pdf-root * { box-sizing: border-box; }
@@ -58,7 +97,9 @@ const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
       .pdf-root h1 { font-size: 22px; font-weight: 700; margin: 4px 0 0 0; color: #111827; }
       .pdf-root h2 { font-size: 17px; font-weight: 700; margin: 18px 0 8px 0; color: #111827; }
       .pdf-root h3 { font-size: 14px; font-weight: 700; margin: 14px 0 6px 0; color: #111827; }
+      .pdf-root h4, .pdf-root h5, .pdf-root h6 { font-size: 13px; font-weight: 700; margin: 12px 0 4px 0; color: #111827; }
       .pdf-root p  { margin: 8px 0; color: #1f2937; text-align: justify; }
+      .pdf-root span { color: inherit; }
       .pdf-root strong, .pdf-root b { font-weight: 700; color: #111827; }
       .pdf-root em, .pdf-root i { font-style: italic; }
       .pdf-root u { text-decoration: underline; }
@@ -72,6 +113,7 @@ const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
         font-style: italic;
         color: #4b5563;
       }
+      .pdf-root br { line-height: inherit; }
       .pdf-header {
         border-bottom: 2px solid #111827;
         padding-bottom: 14px;
@@ -101,12 +143,15 @@ const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
         color: #9ca3af;
         text-align: center;
       }
+      /* Garante que blocos não fiquem cortados desnecessariamente entre páginas */
+      .pdf-root h1, .pdf-root h2, .pdf-root h3 { page-break-after: avoid; }
+      .pdf-root li, .pdf-root p { page-break-inside: avoid; }
     </style>
     <div class="pdf-root">
       <header class="pdf-header">
         <div>
           <div class="pdf-eyebrow">Contrato</div>
-          <h1>${titulo}</h1>
+          <h1>${titulo || 'Contrato'}</h1>
         </div>
         <div class="pdf-meta">
           ${fotografoNome ? `<div class="pdf-meta-strong">${fotografoNome}</div>` : ''}
@@ -114,7 +159,7 @@ const buildHtmlDocument = (opts: GenerateContratoPdfOptions): string => {
           <div>Emitido em ${dataGeracao}</div>
         </div>
       </header>
-      <main>${conteudoLimpo}</main>
+      <main>${conteudoLimpo || '<p><em>Contrato sem conteúdo.</em></p>'}</main>
       <footer class="pdf-footer">Gerado por Lunari · ${dataGeracao}</footer>
     </div>
   `;
@@ -133,51 +178,79 @@ async function waitForFonts(): Promise<void> {
   }
 }
 
+/** Aguarda o próximo paint do browser. */
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
 export async function generateContratoPdf(opts: GenerateContratoPdfOptions): Promise<Blob> {
+  // Validação prévia: conteúdo está realmente vazio?
+  const plain = htmlToPlainText(opts.conteudoHtml);
+  if (!plain) {
+    throw new Error('O contrato está vazio. Adicione conteúdo antes de gerar o PDF.');
+  }
+
   const html2pdf = (await import('html2pdf.js')).default;
 
-  // Container visível porém invisível ao usuário, mas dentro do viewport
-  // (html2canvas precisa de elemento renderizado em coordenadas reais).
+  // Container REAL no DOM — visível para o motor de captura, mas posicionado
+  // FORA da viewport. SEM opacity/visibility/display:none (que zeram a captura).
   const container = document.createElement('div');
   container.innerHTML = buildHtmlDocument(opts);
-  container.style.position = 'absolute';
+  container.setAttribute('data-pdf-render', 'true');
+  // Estilo aplicado de forma que NÃO esconde o conteúdo do html2canvas:
+  container.style.position = 'fixed';
   container.style.top = '0';
   container.style.left = '0';
   container.style.width = '794px';
+  container.style.maxWidth = '794px';
+  container.style.minHeight = '100px';
   container.style.background = '#ffffff';
-  container.style.opacity = '0';
+  container.style.color = '#111827';
+  container.style.zIndex = '2147483647';   // por cima de tudo (mas fora da viewport)
+  container.style.transform = 'translateY(-200vh)'; // joga para fora da tela visível
   container.style.pointerEvents = 'none';
-  container.style.zIndex = '-1';
+  container.style.contain = 'layout paint'; // isolamento visual
+
   document.body.appendChild(container);
 
-  // Aguarda fontes carregarem antes de capturar (evita texto invisível)
+  // Aguarda fontes carregarem e o navegador realizar layout/paint
   await waitForFonts();
-  // Pequeno tick para garantir layout calculado pelo browser
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await nextPaint();
+  // Pequeno delay extra para imagens/fontes em conexões lentas
+  await new Promise((r) => setTimeout(r, 80));
+
+  // Escala adaptativa para evitar limite de canvas em contratos longos
+  const scale = getSafeScale(plain.length);
 
   try {
     const blob: Blob = await html2pdf()
-      .from(container)
       .set({
         margin: [12, 12, 14, 12] as [number, number, number, number],
         filename: opts.filename || `${opts.titulo}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: {
-          scale: 2,
+          scale,
           useCORS: true,
           letterRendering: true,
           backgroundColor: '#ffffff',
           windowWidth: 794,
-          // 'logging: false' evita ruído no console
           logging: false,
+          // Ignora o próprio wrapper invisível durante o clone
+          ignoreElements: (el: Element) =>
+            el !== container && (el as HTMLElement).getAttribute?.('data-pdf-render') === 'true',
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        // 'css' + 'legacy' deixa o conteúdo fluir naturalmente entre páginas.
-        // Evita 'avoid-all' que pode esconder blocos grandes.
         pagebreak: { mode: ['css', 'legacy'] },
       } as any)
+      .from(container)
       .outputPdf('blob');
 
+    // Validação: PDF "vazio" geralmente tem ~1.5–2.5 KB (só fontes embutidas).
+    if (!blob || blob.size < 3000) {
+      throw new Error('Falha ao gerar o PDF: arquivo gerado parece vazio.');
+    }
     return blob;
   } finally {
     document.body.removeChild(container);
@@ -193,6 +266,5 @@ export async function downloadContratoPdf(opts: GenerateContratoPdfOptions): Pro
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  // Pequeno delay antes de revogar — garante o download iniciar em todos os navegadores
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

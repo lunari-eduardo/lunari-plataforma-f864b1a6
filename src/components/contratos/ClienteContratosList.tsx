@@ -42,13 +42,23 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
   const [confirmDelete, setConfirmDelete] = useState<Contrato | null>(null);
 
   const handleDownloadPdf = async (c: Contrato) => {
-    await downloadContratoPdf({
-      titulo: c.titulo,
-      conteudoHtml: c.conteudo,
-      fotografoNome: profile?.nome || undefined,
-      fotografoEmail: profile?.email || undefined,
-      filename: `${c.titulo}.pdf`,
-    });
+    try {
+      await downloadContratoPdf({
+        titulo: c.titulo,
+        conteudoHtml: c.conteudo,
+        fotografoNome: profile?.nome || undefined,
+        fotografoEmail: profile?.email || undefined,
+        filename: `${c.titulo}.pdf`,
+      });
+    } catch (err: any) {
+      console.error('[Contrato PDF] Falha ao baixar:', err);
+      const { toast } = await import('@/hooks/use-toast');
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: err?.message || 'Tente novamente em alguns instantes.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleMarcarEnviado = async (c: Contrato) => {
