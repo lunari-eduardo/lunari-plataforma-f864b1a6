@@ -180,17 +180,26 @@ export function ContratoTemplateEditorModal({ open, onClose, template, seedDraft
 
           <div className="border-l border-border pl-4 hidden md:block">
             <h4 className="text-sm font-semibold mb-1">Variáveis</h4>
-            <p className="text-[11px] text-muted-foreground mb-3">Clique para inserir na posição do cursor.</p>
+            <p className="text-[11px] text-muted-foreground mb-3 leading-snug">
+              <span className="inline-block w-2 h-2 rounded-sm bg-primary/40 align-middle mr-1" /> Azul: preenchido pelo sistema.<br/>
+              <span className="inline-block w-2 h-2 rounded-sm bg-amber-300 align-middle mr-1" /> Amarelo: campo editável (você ajusta).
+            </p>
             <ScrollArea className="h-[440px] pr-2">
               <div className="space-y-3">
                 <div>
-                  <div className="text-[10px] font-semibold uppercase text-primary mb-1">Padrão recomendado</div>
-                  <div className="space-y-1">{padraoVars.map(renderVarButton)}</div>
+                  <div className="text-[10px] font-semibold uppercase text-primary mb-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-sm bg-primary/60" />
+                    Automáticas (sistema)
+                  </div>
+                  <div className="space-y-1">{autoVars.map(renderVarButton)}</div>
                 </div>
 
                 <div>
-                  <div className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Manuais & data</div>
-                  <div className="space-y-1">{manualVars.map(renderVarButton)}</div>
+                  <div className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1">
+                    <span className="inline-block w-2 h-2 rounded-sm bg-amber-400" />
+                    Campos editáveis
+                  </div>
+                  <div className="space-y-1">{editavelVars.map(renderVarButton)}</div>
                 </div>
 
                 <Collapsible open={showLegacy} onOpenChange={setShowLegacy}>
