@@ -1,87 +1,84 @@
+Plano para corrigir definitivamente o PDF em branco dos contratos
 
-## 🎯 Objetivo
-Corrigir o download do PDF de contratos, que atualmente sai totalmente em branco. O PDF deve renderizar **cabeçalho, parágrafos formatados, listas, espaçamento, dados do fotógrafo e variáveis** corretamente.
+Diagnóstico confirmado
 
----
+- O PDF anexado realmente está vazio: ele tem apenas 1 página A4 branca e praticamente nenhum conteúdo desenhado.
+- A correção anterior atacou causas comuns do `html2canvas`, mas deixou passar um ponto crítico: o container temporário está com `opacity: 0`.
+- Como `html2pdf.js` renderiza o DOM via `html2canvas`, `opacity: 0` pode ser respeitado na captura. Resultado: ele captura exatamente uma página branca.
+- Também há outro risco importante: contratos longos renderizados como um único canvas podem bater no limite máximo de canvas do navegador e sair completamente brancos. Esse problema é documentado pelo próprio `html2pdf.js`.
 
-## 🔍 Causas identificadas (investigação completa)
+O que será alterado
 
-| # | Causa | Impacto |
-|---|---|---|
-| 1 | Container posicionado em `position: fixed; left: -9999px` | html2canvas não consegue capturar elementos fora do viewport — gera canvas em branco |
-| 2 | Container sem `width` explícita | html2canvas calcula 0px de largura |
-| 3 | Cadeia `html2pdf().set().from().outputPdf()` instável | A chain correta é `.from().set().toPdf().output('blob')` ou await na cadeia completa |
-| 4 | `pagebreak: 'avoid-all'` | Tenta evitar quebras em TUDO e pode empurrar conteúdo para fora |
-| 5 | Spans `.contrato-var-auto` / `.contrato-campo-editavel` usam **CSS variables Tailwind** (`hsl(var(--primary))`) | html2canvas não resolve CSS variables em todos os contextos → texto pode sair invisível |
-| 6 | `margin` horizontal zero + padding interno do container | Layout pode estourar e cortar conteúdo |
-| 7 | Container injetado fora da árvore visível pode não herdar fontes web carregadas | Texto vazio se a fonte ainda não carregou |
+1. Corrigir a causa direta do PDF branco
+- Em `src/utils/contratoPdf.ts`, remover o uso de `opacity: 0` no elemento usado para captura.
+- Substituir por uma técnica segura:
+  - container renderizado normalmente, com texto visível para o motor de captura;
+  - fora da área visível do usuário, mas sem `opacity: 0`, sem `display: none` e sem `visibility: hidden`;
+  - largura explícita de A4;
+  - fundo branco explícito;
+  - isolamento visual para não interferir no app.
 
----
+2. Trocar o fluxo de geração para uma versão mais robusta
+- Usar HTML completo como fonte de geração (`from(htmlString)`) ou um container clonado sem transparência, evitando capturar o próprio wrapper invisível.
+- Manter CSS totalmente independente do tema do app, com cores fixas e tipografia segura.
+- Configurar `html2canvas` com:
+  - `backgroundColor: '#ffffff'`
+  - `windowWidth` coerente com o A4 em pixels
+  - `scale` controlado para reduzir risco de limite de canvas
+  - logging opcional apenas em ambiente de desenvolvimento
 
-## 🛠️ Correções propostas
+3. Reduzir risco de canvas gigante em contratos longos
+- Diminuir o `scale` de 2 para um valor seguro quando o conteúdo for grande.
+- Adicionar proteção por altura estimada: se o conteúdo for longo, usar uma escala menor para evitar PDF branco por limite de canvas.
+- Evitar configurações de pagebreak que empurrem blocos inteiros para fora da página.
 
-### 1. Reescrever `src/utils/contratoPdf.ts`
+4. Normalizar HTML do contrato antes do PDF
+- Melhorar `neutralizarEstilosEditor` para lidar com spans que tenham múltiplos atributos, por exemplo:
+  - `<span class="contrato-var-auto" data-campo="...">`
+  - `<span data-campo="..." class="contrato-campo-editavel">`
+- Remover classes visuais do editor, mas preservar o texto digitado pelo usuário.
+- Garantir que tags usadas pelo editor (`p`, `br`, `h2`, `h3`, `ul`, `ol`, `li`, `strong`, `em`, `span`) tenham estilo definido no PDF.
 
-**Mudanças no container:**
-- Trocar `position: fixed; left: -9999px` por **container visível porém oculto**: `position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -1;`
-- Adicionar **`width: 794px`** explícita (largura A4 a 96dpi).
-- Adicionar `background: #ffffff` explícito (evita transparência).
-- Adicionar `color: #111827` explícito como base.
+5. Melhorar o layout final do contrato
+- Cabeçalho com título do contrato, fotógrafo/e-mail e data de emissão.
+- Corpo com parágrafos justificados, espaçamento consistente e títulos bem definidos.
+- Margens A4 profissionais.
+- Rodapé discreto.
+- Quebra de página mais previsível para contratos longos.
 
-**Mudanças no HTML:**
-- Substituir todos os estilos que dependem de CSS variables por **cores hex literais** dentro do `buildHtmlDocument`.
-- **Inlinear** estilos para `.contrato-var-auto` e `.contrato-campo-editavel` no próprio HTML do PDF (estilos `<style>` dentro do container) — usando cores fixas, sem depender do CSS global do app.
-- Adicionar reset básico (`* { box-sizing: border-box; }`).
+6. Corrigir comportamento nos dois pontos de entrada
+- Manter um único utilitário `downloadContratoPdf` usado por:
+  - modal do contrato aberto pelo Workflow;
+  - lista/modal de contratos no CRM.
+- Como ambos usam o mesmo utilitário, a correção será centralizada e vale para os dois fluxos.
 
-**Mudanças na chain do html2pdf:**
-- Trocar para o padrão estável:
-  ```ts
-  const worker = html2pdf().from(container).set(opts);
-  await worker.toContainer().toCanvas().toPdf();
-  const blob = worker.output('blob');
-  ```
-  Ou mais simples e confiável:
-  ```ts
-  const blob = await html2pdf().set(opts).from(container).outputPdf('blob');
-  ```
-  garantindo `await` correto.
-- Trocar `pagebreak: 'avoid-all'` por `pagebreak: { mode: ['css', 'legacy'] }` (mais permissivo, deixa o conteúdo fluir entre páginas).
-- Ajustar `margin` para `[15, 15, 15, 15]` (mm) — margens iguais nos 4 lados.
-- Adicionar `html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 }` para forçar fundo branco e largura.
+7. Adicionar validações e fallback de erro
+- Antes de gerar, validar se `conteudoHtml` não está vazio depois de remover tags.
+- Se a geração produzir um Blob suspeito/muito pequeno, exibir erro claro em vez de baixar PDF branco.
+- Adicionar tratamento visual de erro no botão de baixar PDF para o usuário saber que a geração falhou.
 
-**Garantia de fontes carregadas:**
-- Antes de gerar, aguardar `document.fonts.ready` (se disponível) para evitar PDF sem texto por falta de fonte.
+Arquivos previstos
 
-### 2. Garantir compatibilidade do conteúdo do contrato no PDF
+- `src/utils/contratoPdf.ts`
+  - refatorar a estratégia de renderização;
+  - remover `opacity: 0`;
+  - adicionar normalização robusta de HTML;
+  - adicionar proteção contra canvas gigante;
+  - adicionar validação de Blob.
 
-- Antes de injetar `conteudoHtml` no container, **substituir as classes** `contrato-var-auto` e `contrato-campo-editavel` pelos estilos inline equivalentes (cores hex), para que funcionem mesmo sem o CSS global.
-  - Exemplo: regex simples que troca `class="contrato-var-auto"` por `style="color:#0f172a;font-weight:500"` (ou similar, já neutralizado para o PDF).
-  - Manter o conteúdo dos spans intacto.
+- `src/components/contratos/ContratoViewerModal.tsx`
+  - envolver download em `try/catch` e mostrar toast de erro.
 
-### 3. Validação visual
+- `src/components/contratos/ClienteContratosList.tsx`
+  - envolver download em `try/catch` e mostrar toast de erro no fluxo do CRM.
 
-Após implementar, fazer um teste manual:
-1. Abrir um contrato existente.
-2. Clicar em "Baixar PDF".
-3. Verificar:
-   - ✅ Cabeçalho com título e dados do fotógrafo aparece.
-   - ✅ Parágrafos com espaçamento correto.
-   - ✅ Listas (`ul`, `ol`) formatadas.
-   - ✅ Negrito / itálico preservados.
-   - ✅ Variáveis preenchidas (sem fundo colorido — texto neutro).
-   - ✅ Rodapé com data de emissão.
-   - ✅ Quebra de página funciona em contratos longos.
+Resultado esperado
 
----
-
-## 📁 Arquivos que serão alterados
-
-- `src/utils/contratoPdf.ts` — reescrita completa da função de geração.
-
-(Não há mudanças em outros arquivos — o conteúdo HTML do contrato em si já está correto; o problema é exclusivo do pipeline de conversão.)
-
----
-
-## ⚠️ Alternativa, caso o html2pdf.js continue instável
-
-Se mesmo após as correções acima o html2pdf.js apresentar comportamento errático (já é uma lib não mantida), o plano de contingência é migrar para **`jsPDF` + `html` plugin nativo** (`jspdf` já vem como dependência transitiva do html2pdf.js). Mas começamos pela correção mínima para não trocar de stack desnecessariamente.
+- O PDF deixará de sair branco.
+- Contratos gerados pelo Workflow e pelo CRM sairão com:
+  - cabeçalho;
+  - título;
+  - dados preenchidos;
+  - parágrafos e espaçamento corretos;
+  - campos editáveis convertidos em texto limpo;
+  - quebras de página naturais para contratos longos.
