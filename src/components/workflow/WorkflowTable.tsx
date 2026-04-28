@@ -23,7 +23,7 @@ import { useNumberInput } from '@/hooks/useNumberInput';
 import { formatToDayMonth, formatDateForDisplay } from "@/utils/dateUtils";
 import { calcularTotalFotosExtras, obterConfiguracaoPrecificacao, obterTabelaGlobal, obterTabelaCategoria, calcularValorPorFoto, formatarMoeda, calcularComRegrasProprias, migrarRegrasParaItemAntigo } from '@/utils/precificacaoUtils';
 import { RegrasCongeladasIndicator } from './RegrasCongeladasIndicator';
-import { AutoPhotoCalculator } from './AutoPhotoCalculator';
+
 import { DataFreezingStatus } from './DataFreezingStatus';
 import type { SessionData } from '@/types/workflow';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
