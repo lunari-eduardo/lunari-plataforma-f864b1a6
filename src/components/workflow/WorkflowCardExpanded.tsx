@@ -205,19 +205,21 @@ export function WorkflowCardExpanded({
     e.target.select();
   }, []);
 
-  // === Edição de fotos extras (sensível: vinculado à galeria) ===
+  // === Edição de fotos extras (sensível somente quando galeria tem vendas reais) ===
   const isLinkedToGallery = Boolean(session.galeriaId);
+  // Galeria com vendas consolidadas → travar (cadeado + modal de confirmação).
+  // Galeria vinculada mas sem vendas → edição livre (caso "vendi fotos por fora").
+  const galeriaHasSales =
+    isLinkedToGallery && (
+      session.galeriaStatusPagamento === 'pago' ||
+      Number((session as any).galerias?.valor_total_vendido ?? 0) > 0
+    );
 
-  // Detecta divergência: usuário editou manualmente um valor que veio da galeria.
-  // Como o trigger sync_gallery_extras_to_session sempre alinha sessão à galeria,
-  // qualquer divergência aqui significa edição manual posterior. Mostramos badge.
-  const hasGalleryDivergenceWarning = isLinkedToGallery && (
+  const hasGalleryDivergenceWarning = galeriaHasSales && (
     session.galeriaStatusPagamento === 'pago' || session.galeriaStatusPagamento === 'pendente'
   );
 
   // === Detecção de desconto progressivo aplicado pela galeria ===
-  // Quando a galeria aplica desconto por faixa (modelo 'global' ou 'categoria'),
-  // o preço unitário efetivo cobrado é menor que o preço base da tabela.
   const regrasPacote = (session as any)?.regras_congeladas?.pacote
     ?? (session as any)?.regrasDePrecoFotoExtraCongeladas?.pacote;
   const precoBaseTabela = Number(regrasPacote?.valorFotoExtra ?? 0);
@@ -228,12 +230,12 @@ export function WorkflowCardExpanded({
 
   const requestExtraEdit = useCallback((field: 'valorFotoExtra' | 'qtdFotosExtra', nextValue: string, previousValue: string) => {
     if (nextValue === previousValue) return;
-    if (isLinkedToGallery) {
+    if (galeriaHasSales) {
       setPendingExtraEdit({ field, nextValue, previousValue });
     } else {
       onFieldUpdate(session.id, field, nextValue);
     }
-  }, [isLinkedToGallery, session.id, onFieldUpdate]);
+  }, [galeriaHasSales, session.id, onFieldUpdate]);
 
   const handleValorFotoExtraBlur = useCallback(() => {
     const numValue = parseCurrency(valorFotoExtraValue);
