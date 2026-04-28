@@ -1,192 +1,86 @@
-## Diagnóstico confirmado
+## Problema identificado
 
-Pelas imagens anexadas, o PDF não está mais totalmente vazio: o conteúdo existe, mas está quase invisível. Isso muda a causa raiz principal:
+Ao editar **Qtd fotos extras** ou **Vlr foto extra** no card expandido do Workflow, o campo **Total fotos extras** permanece R$ 0,00 até um refresh manual. Consequentemente, o `Total` da sessão também não reflete as fotos vendidas por fora.
 
-1. O problema atual é principalmente contraste/CSS: o texto está sendo renderizado com cor muito clara, provavelmente herdada de estilos do editor/tema ou de estilos inline preservados.
-2. A estratégia atual ainda depende de `html2pdf/html2canvas`, que rasteriza o HTML como imagem e é sensível a tema dark, estilos herdados, `line-height`, canvas grande e paginação.
-3. O layout atual do PDF ainda está frágil: não tem estrutura contratual completa com capa/cabeçalho forte, dados das partes em blocos, rodapé/assinaturas e paginação previsível.
-4. A validação por tamanho do Blob não detecta o erro visual, porque um PDF com texto quase branco pode ter tamanho normal.
-5. O contrato salvo contém spans e possivelmente estilos vindos do editor (`style`, `class`, `data-campo`), e a limpeza atual remove apenas algumas cores específicas, não neutraliza todo CSS herdado/inline.
+### Causa raiz (investigação completa)
 
-## Correção definitiva proposta
+1. **Banco de dados já calcula corretamente**. A trigger `recalc_fotos_extras` em `clientes_sessoes` faz `valor_total_foto_extra := qtd_fotos_extra × valor_foto_extra`, e `trigger_recalculate_valor_total` recompõe o `valor_total`. Testado e consistente.
 
-### 1. Parar de usar o layout da tela para o PDF
+2. **Frontend NÃO reflete o recálculo imediatamente**. No fluxo atual:
+   - `WorkflowCardExpanded` chama `onFieldUpdate(sessionId, 'qtdFotosExtra' | 'valorFotoExtra', ...)` direto (linhas 234/261).
+   - `Workflow.tsx > handleFieldUpdate` (linha 237–287) aplica um **optimistic merge** no cache apenas com o campo editado (`qtd_fotos_extra` OU `valor_foto_extra`), **sem recalcular localmente `valor_total_foto_extra` nem `valor_total`**.
+   - O valor correto só chega de volta via realtime do Supabase (após o trigger). Se a subscription atrasar ou não reemitir o registro completo, a UI segue mostrando R$ 0,00.
 
-Refatorar `src/utils/contratoPdf.ts` para gerar um documento de impressão totalmente isolado:
+3. **Lógica de recálculo existente está órfã**. `WorkflowTable.handleEditFinish` (linhas 587–623) até recalcula `valorTotalFotoExtra` manualmente após edição, mas essa função **só é disparada pelo layout tabular antigo**, não pelo card expandido (o layout principal hoje).
 
-- HTML próprio para PDF, sem classes Tailwind, sem variáveis CSS do app e sem dependência do tema dark/light.
-- Fundo branco absoluto.
-- Texto preto absoluto (`#000000`) em todos os elementos do contrato.
-- Fonte segura: Arial, Helvetica, sans-serif.
-- Largura A4 e margens internas padronizadas.
-- CSS de impressão com reset agressivo dentro do container do PDF.
+4. **`AutoPhotoCalculator` é importado mas nunca renderizado** em `WorkflowTable.tsx` (linha 26 importa, JSX nunca instancia) — portanto não atua.
 
-### 2. Trocar o motor principal para `jsPDF.html()` com DOM real isolado
+5. Não há bloqueio da trigger `z_protect_session_extras_consistency` no caso da imagem (galeria sem vendas registradas). O problema é puramente de reatividade de UI.
 
-Substituir o fluxo principal atual de `html2pdf().from(htmlString).outputPdf('blob')` por renderização direta com `jsPDF.html()`:
+### Resultado visível
+Cliente com `valor_foto_extra=R$ 25,00`, `qtd=3`, galeria vazia → BD grava `valor_total_foto_extra=75,00`, mas a UI segue exibindo `R$ 0,00` até recarregar.
 
-- Criar um container DOM real, visível para renderização, fora da tela sem `opacity: 0`, sem `visibility:hidden`, sem `display:none` e sem `transform`.
-- Definir largura fixa em pixels compatível com A4.
-- Forçar dimensões e estilos antes de renderizar.
-- Aguardar fontes/layout com `document.fonts.ready` e dois `requestAnimationFrame`.
-- Gerar Blob via `doc.output('blob')`.
+---
 
-O `html2pdf` ficará apenas como fallback temporário se o ambiente não suportar a renderização principal.
+## Objetivo da correção
 
-### 3. Neutralizar completamente estilos problemáticos do editor
+1. Ao alterar **Qtd fotos extras** ou **Vlr foto extra** no card, o total deve recalcular **instantaneamente** (optimistic), e o `Total` da sessão deve ajustar no mesmo frame.
+2. Permitir registro manual de fotos extras vendidas por fora da galeria, com cálculo automático e confiável (já é permitido hoje, mas a UI não reflete).
+3. Respeitar regras congeladas e desconto progressivo quando existirem; senão aplicar `qtd × valor_unitário`.
+4. Preservar o contrato atual com Galeria: se a galeria tem vendas registradas (`v_gal_total > 0` e `qtd sessão = qtd galeria`), a trigger do BD continua mandando — a UI apenas espelha.
 
-Reescrever a normalização do conteúdo para:
+---
 
-- Sanitizar HTML com lista de tags permitidas.
-- Remover todos os atributos `style` do conteúdo do contrato, não apenas cores brancas.
-- Remover classes do editor e quaisquer classes herdadas.
-- Remover atributos `data-*`, handlers `on*`, `contenteditable`, `spellcheck` etc.
-- Preservar texto, parágrafos, títulos, listas, negrito, itálico, sublinhado e quebras.
-- Converter texto puro em parágrafos válidos.
-- Transformar `div` soltos em blocos seguros quando necessário.
-- Detectar placeholders `{{...}}` restantes e logar no diagnóstico.
+## Plano de implementação
 
-Isso elimina a causa mais provável do contraste quase branco: estilos inline/classes herdadas escapando para o PDF.
+### 1. Recálculo otimista centralizado em `Workflow.tsx > handleFieldUpdate`
 
-### 4. Criar layout contratual completo
+Quando `field` for `qtdFotosExtra` ou `valorFotoExtra`:
 
-O PDF será montado com esta estrutura fixa:
+- Calcular `novoTotalFotoExtra` localmente usando `PricingFreezingService.calcularValorFotoExtraComRegrasCongeladas` se `regras_congeladas.pacote` existir; caso contrário `qtd × valor_foto_extra`.
+- Se a sessão tiver `galeria_id` e a galeria tiver vendas consolidadas iguais à qtd → não sobrescrever (respeitar BD).
+- Adicionar ao `cacheSafeUpdates`:
+  - `valor_total_foto_extra` recalculado,
+  - `valor_foto_extra` efetivo (quando houver desconto progressivo),
+  - `valor_total` recomposto via fórmula idêntica ao trigger: `max(0, valor_base_pacote + valor_total_foto_extra + produtos_manuais + valor_adicional − desconto)`.
+- Só então chamar `mergeUpdate(...)` e `updateSessionRealtime(sessionId, validUpdates)`.
 
-```text
-[Topo do documento]
-CONTRATO
-Título do contrato
-Cliente | Fotógrafo | Data de emissão
+Isso elimina a dependência do realtime para que a UI fique correta e mantém o BD como fonte da verdade (realtime continua conciliando depois).
 
-[Duas caixas de identificação]
-Contratante: nome/e-mail/documento quando disponível
-Contratada(o): nome/e-mail/documento quando disponível
+### 2. Limpeza do código órfão
 
-[Corpo]
-Conteúdo do contrato com headings, parágrafos, listas e espaçamento corretos
+- Remover a duplicação `handleEditFinish` (linhas 586–622 de `WorkflowTable.tsx`) e import não usado `AutoPhotoCalculator` (linha 26). A lógica passa a viver em um único lugar (`handleFieldUpdate`).
 
-[Fechamento]
-Local e data
+### 3. Ajuste do `WorkflowCardExpanded`
 
-[Assinaturas]
-______________________________
-Nome do cliente
-CONTRATANTE
+- Sem mudança de comportamento do usuário.
+- Pequena melhoria UX: habilitar edição do campo **Qtd fotos extras** mesmo em sessões vinculadas a galeria (já permite via `pendingExtraEdit`), e deixar explícito no tooltip que "editar sobrescreve a quantidade vinda do Gallery e recalcula o total automaticamente".
+- Garantir `min=0` e normalização para inteiro (já existe).
 
-______________________________
-Nome do fotógrafo
-CONTRATADA(O)
+### 4. Helper reutilizável
 
-[Rodapé]
-Gerado por Lunari + data
+Criar `src/utils/fotosExtrasCalculator.ts` com uma função pura:
+```ts
+recalcFotosExtras({ qtd, valorFotoExtra, regrasCongeladas, galeriaInfo }) 
+  => { valorUnitarioEfetivo, valorTotalFotoExtra, respeitarBanco }
 ```
+Usada tanto por `handleFieldUpdate` (Workflow) quanto por `calculateTotal` (WorkflowTable) para garantir paridade de cálculo entre otimista e exibição.
 
-### 5. Enriquecer os dados passados ao gerador
+### 5. Teste manual (checklist)
 
-Atualizar chamadas no Workflow/modal e CRM para enviar metadados quando disponíveis:
+- Sessão sem galeria, sem regras congeladas: alterar qtd de 0→3 com valor=25 → total deve ir para R$ 75,00 imediatamente; Total da sessão sobe R$ 75,00.
+- Alterar valor unitário 25→30 → total vai para R$ 90,00 sem piscar.
+- Sessão com regras congeladas (desconto progressivo): qtd que aciona faixa menor aplica preço efetivo correto.
+- Sessão com galeria que tem vendas (qtd bate): edição bloqueada pela trigger (UI respeita BD e mostra valores da galeria).
+- Sessão com galeria sem vendas ainda: edição manual funciona (caso da imagem).
 
-- nome do cliente (`contrato.cliente?.nome` ou prop/lista);
-- e-mail do cliente;
-- nome/e-mail do fotógrafo;
-- data de emissão;
-- local/data do contrato via `variaveis_snapshot` quando existir (`cidade_atual`, `cidade_fotografo`, `data_atual`).
-
-Se algum dado estiver ausente, o PDF usará placeholders profissionais como linhas em branco, sem quebrar layout.
-
-### 6. Corrigir paginação e corte no final
-
-Adicionar regras específicas para evitar cortes:
-
-- `page-break-inside: avoid` apenas em blocos pequenos e assinatura, não em todos os parágrafos longos.
-- Títulos com `page-break-after: avoid`.
-- Área de assinatura com `page-break-inside: avoid` e espaço antes.
-- Margens inferiores suficientes.
-- Remover `height` fixa do canvas/PDF e deixar o render calcular altura.
-- Controlar `autoPaging` no `jsPDF.html()` para quebrar texto automaticamente.
-
-### 7. Diagnóstico definitivo no console
-
-Manter e ampliar logs de debug (`localStorage.setItem('debugContratoPdf','1')`):
-
-- conteúdo recebido;
-- texto puro extraído;
-- placeholders restantes;
-- HTML sanitizado;
-- HTML final do PDF;
-- dimensões do container (`scrollWidth`, `scrollHeight`, `clientWidth`, `clientHeight`, `getBoundingClientRect()`);
-- cor computada real dos primeiros parágrafos antes de gerar;
-- tamanho final do Blob.
-
-Adicionar uma validação visual programática mínima antes de gerar:
-
-- se `getComputedStyle(container).color` ou dos parágrafos não for preto/escuro, abortar e corrigir forçando estilos inline no container.
-- se dimensões forem zero, abortar com erro claro.
-
-### 8. Testes internos de geração
-
-Adicionar funções de teste em modo debug no `window`:
-
-- `window.__testContratoPdf()` gera PDF mínimo “Teste PDF”.
-- `window.__testContratoPdfLayout()` gera contrato de exemplo com título, parágrafos, lista e assinaturas.
-- `window.__debugContratoPdfHtml()` retorna/mostra o HTML final sanitizado para inspeção.
-
-### 9. Ajustes nos fluxos Workflow e CRM
-
-Em `ContratoViewerModal.tsx`:
-
-- Usar o conteúdo atual do editor, inclusive edição não salva.
-- Bloquear duplo clique com estado `Gerando...`.
-- Enviar metadados do cliente e snapshot para o PDF.
-- Exibir erro claro caso o PDF não consiga ser gerado.
-
-Em `ClienteContratosList.tsx`:
-
-- Adicionar estado por contrato para impedir múltiplos downloads simultâneos.
-- Enviar nome/e-mail do cliente do contrato listado.
-- Manter logs de diagnóstico.
-
-### 10. Remover ruído de toast de sucesso onde não for necessário
-
-Manter apenas toasts de erro para geração de PDF, respeitando a preferência do projeto de evitar notificações de sucesso em ações CRUD/rotineiras.
+---
 
 ## Arquivos a alterar
 
-- `src/utils/contratoPdf.ts`
-  - Refatoração principal do motor, normalização, layout A4, assinatura, diagnóstico e fallback.
+- `src/pages/Workflow.tsx` — incrementar `handleFieldUpdate` com recálculo otimista.
+- `src/utils/fotosExtrasCalculator.ts` — novo helper puro.
+- `src/components/workflow/WorkflowTable.tsx` — remover código órfão (handleEditFinish antigo de fotos extras, import não usado) e usar o helper.
+- `src/components/workflow/WorkflowCardExpanded.tsx` — tooltip mais claro; nenhuma mudança estrutural.
 
-- `src/components/contratos/ContratoViewerModal.tsx`
-  - Passar metadados completos e manter estado de geração.
-
-- `src/components/contratos/ClienteContratosList.tsx`
-  - Passar metadados completos e adicionar trava de download por contrato.
-
-- `src/types/contrato.ts`
-  - Expandir tipagem opcional do `cliente` se necessário para incluir e-mail/documentos já retornados pelo hook.
-
-- `src/hooks/useContratos.ts`
-  - Ajustar `select` para trazer dados úteis do cliente caso falte algum campo permitido.
-
-## Validação após implementar
-
-1. Rodar build/typecheck.
-2. Gerar teste mínimo.
-3. Gerar teste de layout completo.
-4. Gerar contrato real com o conteúdo do modelo de gestante mostrado nas imagens.
-5. Confirmar no console:
-   - conteúdo recebido não está vazio;
-   - HTML final possui texto;
-   - container tem largura/altura reais;
-   - cor computada do texto é preta/escura;
-   - Blob final tem tamanho plausível.
-6. Confirmar visualmente no preview que o PDF tem:
-   - texto preto legível;
-   - fundo branco;
-   - cabeçalho estruturado;
-   - margens A4;
-   - parágrafos e títulos espaçados;
-   - assinatura e rodapé;
-   - sem corte no final.
-
-## Resultado esperado
-
-O PDF de contratos deixará de depender do tema visual do sistema e será renderizado como documento profissional de impressão, com contraste correto, estrutura contratual completa, quebra de página previsível, cabeçalho, rodapé e assinaturas.
+Sem migrações de banco — as triggers existentes já fazem o trabalho correto.
