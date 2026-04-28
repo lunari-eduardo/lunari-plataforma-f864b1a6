@@ -654,11 +654,105 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   }, [sessionId]);
 
   // Estornar pagamento pago (cria registro de estorno, mantém original)
-  const refundPayment = useCallback(async (paymentId: string, motivo?: string) => {
+  // options.autoRefund: se true e origem for asaas/mercadopago, chama API do gateway
+  const refundPayment = useCallback(async (
+    paymentId: string,
+    options?: { motivo?: string; autoRefund?: boolean }
+  ) => {
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return false;
 
-    const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivo);
+    const motivo = options?.motivo;
+    const autoRefund = options?.autoRefund === true;
+
+    // Se auto refund solicitado, tentar API do gateway antes de gravar registro interno
+    if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+
+        if (payment.origem === 'asaas') {
+          // paymentId pode ser "asaas-parcela-{parcelaId}" ou "asaas-{cobrancaId}"
+          let cobrancaId: string | undefined;
+          let parcelaId: string | undefined;
+
+          if (paymentId.startsWith('asaas-parcela-')) {
+            parcelaId = paymentId.replace('asaas-parcela-', '');
+            // Buscar cobranca_id da parcela
+            const { data: parcela } = await supabase
+              .from('cobranca_parcelas')
+              .select('cobranca_id')
+              .eq('id', parcelaId)
+              .maybeSingle();
+            cobrancaId = parcela?.cobranca_id;
+          } else if (paymentId.startsWith('asaas-')) {
+            cobrancaId = paymentId.replace('asaas-', '');
+          }
+
+          if (!cobrancaId) {
+            const { toast } = await import('sonner');
+            toast.error('Não foi possível identificar a cobrança Asaas para estornar');
+            return false;
+          }
+
+          const { data, error } = await supabase.functions.invoke('gestao-asaas-refund', {
+            body: { cobrancaId, parcelaId, valor: payment.valor, motivo }
+          });
+
+          if (error || !data?.success) {
+            const { toast } = await import('sonner');
+            const errMsg = (data as any)?.error || error?.message || 'Erro ao estornar no Asaas';
+            toast.error(`Estorno no Asaas falhou: ${errMsg}`);
+            return false;
+          }
+        } else if (payment.origem === 'mercadopago') {
+          // paymentId no formato "mp-{id}" — pode ser mp_payment_id ou cobranca.id
+          const suffix = paymentId.replace(/^mp-/, '');
+          // Tentar como cobranca.id primeiro (UUID)
+          const isUUID = /^[0-9a-f-]{36}$/i.test(suffix);
+          let cobrancaId: string | undefined;
+          if (isUUID) {
+            cobrancaId = suffix;
+          } else {
+            // É mp_payment_id; buscar cobrança correspondente
+            const { data: cob } = await supabase
+              .from('cobrancas')
+              .select('id')
+              .eq('mp_payment_id', suffix)
+              .maybeSingle();
+            cobrancaId = cob?.id;
+          }
+
+          if (!cobrancaId) {
+            const { toast } = await import('sonner');
+            toast.error('Não foi possível identificar a cobrança Mercado Pago para estornar');
+            return false;
+          }
+
+          const { data, error } = await supabase.functions.invoke('gestao-mercadopago-refund', {
+            body: { cobrancaId, valor: payment.valor, motivo }
+          });
+
+          if (error || !data?.success) {
+            const { toast } = await import('sonner');
+            const errMsg = (data as any)?.error || error?.message || 'Erro ao estornar no Mercado Pago';
+            toast.error(`Estorno no Mercado Pago falhou: ${errMsg}`);
+            return false;
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao chamar gateway refund:', err);
+        const { toast } = await import('sonner');
+        toast.error('Erro inesperado ao estornar no gateway');
+        return false;
+      }
+    }
+
+    // Sempre gravar registro interno (fonte de verdade financeira)
+    const motivoFinal = autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')
+      ? `${motivo || ''}${motivo ? ' ' : ''}[Estornado no gateway]`.trim()
+      : motivo;
+
+    const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivoFinal);
     if (success) {
       // Adicionar estorno à lista local
       const estorno: SessionPaymentExtended = {
@@ -669,7 +763,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         statusPagamento: 'estornado',
         origem: 'supabase',
         editavel: false,
-        observacoes: `Estorno${motivo ? `: ${motivo}` : ''}`
+        observacoes: `Estorno${motivoFinal ? `: ${motivoFinal}` : ''}`
       };
       setPayments(prev => [...prev, estorno]);
     }

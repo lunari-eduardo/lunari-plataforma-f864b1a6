@@ -14,6 +14,7 @@ import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalE
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RefundDialog } from '@/components/payments/RefundDialog';
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
@@ -506,54 +507,16 @@ export function SessionPaymentsManager({
       )}
 
       {/* Refund Confirmation Dialog */}
-      <AlertDialog open={!!paymentToRefund} onOpenChange={(open) => {
-        if (!open) {
-          setPaymentToRefund(null);
-          setRefundMotivo('');
-        }
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-orange-600" />
-              Estornar pagamento?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  Será registrado um estorno de <strong>{paymentToRefund ? formatCurrency(paymentToRefund.valor) : ''}</strong>.
-                  O pagamento original será mantido para auditoria.
-                </p>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Motivo (opcional)</label>
-                  <input
-                    type="text"
-                    value={refundMotivo}
-                    onChange={(e) => setRefundMotivo(e.target.value)}
-                    placeholder="Ex: Cliente desistiu, erro de cobrança..."
-                    className="w-full mt-1 px-3 py-2 border rounded-md text-sm bg-background"
-                  />
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-orange-600 text-white hover:bg-orange-700"
-              onClick={() => {
-                if (paymentToRefund) {
-                  refundPayment(paymentToRefund.id, refundMotivo || undefined);
-                  setPaymentToRefund(null);
-                  setRefundMotivo('');
-                }
-              }}
-            >
-              Confirmar Estorno
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <RefundDialog
+        payment={paymentToRefund}
+        onClose={() => { setPaymentToRefund(null); setRefundMotivo(''); }}
+        onConfirm={async (motivo, autoRefund) => {
+          if (paymentToRefund) {
+            const ok = await refundPayment(paymentToRefund.id, { motivo: motivo || undefined, autoRefund });
+            if (ok) { setPaymentToRefund(null); setRefundMotivo(''); }
+          }
+        }}
+      />
 
       {/* Charge Modal - Passar sessionId TEXTO para garantir vínculo correto */}
       <ChargeModal

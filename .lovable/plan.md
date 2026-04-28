@@ -1,101 +1,168 @@
-## Diagnóstico (causa-raiz confirmada no banco)
+# Plano: Estorno inteligente por gateway
 
-Sessão da imagem (`f3ce12c6-... Rita – Amália`, galeria vinculada `e245375a-...`):
+## Objetivo
 
-```
-clientes_sessoes:
-  qtd_fotos_extra        = 3
-  valor_foto_extra       = 0      ← ZERADO no banco
-  valor_total_foto_extra = 0      ← consequência
-  valor_base_pacote      = 350
-  valor_total            = 350
+Diferenciar o comportamento do botão **Estornar pagamento** conforme o gateway de origem, mantendo sempre o estorno interno (movimentação negativa) como fonte de verdade financeira e adicionando, quando o gateway suportar, a opção de disparar o estorno real na conta do fotógrafo.
 
-galerias (vinculada):
-  total_fotos_extras_vendidas = 0
-  valor_total_vendido         = 0
-  valor_foto_extra            = 25
-  regras_congeladas.pacote.valorFotoExtra = 25
-```
-
-A sessão é vinculada a uma galeria, mas a galeria **não tem vendas consolidadas** (`total_vendido=0`). Rastreando as triggers em `clientes_sessoes`:
-
-1. **`recalculate_fotos_extras_total` (`recalc_fotos_extras`)** — como `v_gal_total=0`, cai no ramo padrão `valor_total_foto_extra = qtd × valor_foto_extra`. Mas `NEW.valor_foto_extra=0` (vem assim do registro), então total=0.
-2. **`sync_gallery_extras_to_session`** (na tabela `galerias`) não ajuda: só executa quando a galeria muda; como a galeria nunca teve venda, `valor_foto_extra` da sessão nunca foi populado a partir dela.
-3. **`z_protect_session_extras_consistency`** não interfere (só age quando `v_gal_total>0`).
-4. **`sync_session_extra_price_to_frozen`** só patcha o JSON quando `valor_foto_extra` do NEW muda, e clampa 0 quando o frozen já tem valor (`IF v_clamped=0 AND v_current_frozen>0 RETURN NEW`) — não repõe.
-
-Resultado: a sessão ficou com `valor_foto_extra=0` no banco, mesmo com `regras_congeladas.pacote.valorFotoExtra=25`. O hook UI `recalcFotosExtras` multiplica `qtd × 0 = 0`. Por isso "Total fotos extras" fica R$ 0,00 e o pendente não sobe.
-
-Antes (histórico do usuário) funcionava porque: ou (a) a trigger `sync_gallery_extras_to_session` escrevia `valor_foto_extra` na sessão no momento do vínculo mesmo sem vendas (usando `v_unit_base`), ou (b) o frontend tinha fallback para `regras_congeladas.pacote.valorFotoExtra`. Hoje nenhum dos dois acontece para este caso (galeria vinculada sem vendas).
-
-**Secundário:** existem dois inputs de "quantidade fotos extras" no card — na linha do cabeçalho (topo) **e** dentro do bloco "Adicionais" (Qtd fotos extras). Isso é redundante e confuso.
+Regra imutável preservada:
+- Pagamento original **nunca é excluído**.
+- Estorno é sempre um **novo registro** (`tipo='estorno'`) em `clientes_transacoes`.
+- Estornos parciais/totais atualizam o status apenas via soma (lógica já existente).
 
 ---
 
-## Plano de correção
+## 1. Detecção do gateway do pagamento
 
-### 1. Migração de banco — trigger `recalculate_fotos_extras_total`
+No `SessionPaymentsManager`, ao clicar em estornar, classificar o pagamento em dois grupos usando `payment.origem`:
 
-Alterar a função para, no ramo padrão (galeria sem vendas OU sem galeria), aplicar fallback quando `valor_foto_extra` do registro vier `0/NULL`:
+- **Grupo Manual** (`manual`, `supabase`, `infinitepay`, `pix_manual`): estorno só interno. InfinitePay não possui API de refund em uso e PIX manual é transferência direta — ambos exigem ação fora do sistema.
+- **Grupo Automatizável** (`asaas`, `mercadopago`): oferecer opção de estorno automático via API do gateway.
 
-```
-fallback_preco := COALESCE(
-  NULLIF(NEW.valor_foto_extra, 0),
-  (NEW.regras_congeladas->'pacote'->>'valorFotoExtraEfetivo')::numeric,
-  (NEW.regras_congeladas->'pacote'->>'valorFotoExtra')::numeric,
-  0
-)
-NEW.valor_foto_extra       := fallback_preco
-NEW.valor_total_foto_extra := COALESCE(NEW.qtd_fotos_extra,0) * fallback_preco
-```
+Para pagamentos do grupo automatizável precisamos também do **ID do pagamento no gateway**, que já existe:
+- Asaas: `cobranca_parcelas.asaas_payment_id` (parcelas) ou `cobrancas` com `provedor='asaas'`
+- Mercado Pago: `cobrancas.mp_payment_id`
 
-Isto também corrige retroativamente qualquer sessão com `valor_foto_extra=0` que tenha `regras_congeladas.pacote.valorFotoExtra` definido: basta um `UPDATE clientes_sessoes SET updated_at=now()` após o deploy para reexecutar a trigger (incluído na migração).
-
-Manter `z_protect_session_extras_consistency` intacta (ela só atua quando galeria tem vendas — mantém integridade do contrato Gallery).
-
-### 2. Frontend — `src/utils/fotosExtrasCalculator.ts`
-
-Espelhar o mesmo fallback na função pura `recalcFotosExtras`, para que a UI otimista acerte mesmo antes do round-trip:
-
-- Se `valorFotoExtra` informado == 0 e existir `regrasCongeladas.pacote.valorFotoExtraEfetivo || regrasCongeladas.pacote.valorFotoExtra > 0`, usar esse valor como unitário efetivo.
-- Ajustar o caso "galeria com vendas consolidadas" para usar `respeitarBanco` apenas quando `qtd` bate com `totalFotosExtrasVendidas` E há `valor_total_vendido>0` (já está). Sem mudança aqui.
-
-### 3. Frontend — `Workflow.tsx > updateSession` (optimistic)
-
-No bloco de recálculo otimista (linhas 281–333), passar `currentAny.regras_congeladas` para o helper (já passa). Garantir que o `valorUnit` considerado para recálculo caia no fallback do helper quando `valor_foto_extra=0` — isso já ocorrerá automaticamente com a mudança (2).
-
-Adicionar também: quando o usuário edita apenas `qtdFotosExtra` e a sessão tem `valor_foto_extra=0` mas `regras_congeladas.pacote.valorFotoExtra>0`, gravar explicitamente o `valor_foto_extra` efetivo no `validUpdates` (enviado ao Supabase), para que o banco também fique consistente.
-
-### 4. Frontend — `WorkflowCardExpanded.tsx` — UX dos dois inputs
-
-Remover o input "Qtd fotos extras" duplicado. A fonte de verdade deve ser **um único input**. Baseado na captura e no layout atual:
-
-- Manter o input de "Qtd fotos extras" dentro do **bloco 2 (Adicionais)** — é onde o usuário edita junto com "Total fotos extras" e "Adicional", contexto financeiro coerente.
-- Remover o input duplicado que aparece no header do card (coluna FOTOS EXTRAS da linha compacta).
-- O header compacto (colapsado) continua exibindo a qtd como **texto somente-leitura** — clicar para expandir o card para editar.
-
-Verificar se esse input superior vem do próprio `WorkflowCardExpanded` ou do componente-pai (linha de cards). Remover apenas a versão redundante, preservando a exibição read-only na linha colapsada.
-
-### 5. Tooltip e feedback visual
-
-- Manter ícone de cadeado `Lock` apenas quando a galeria tem vendas consolidadas (`galeriaStatusPagamento === 'pago'` OU existe `valor_total_vendido>0`). Quando a galeria está vinculada mas sem vendas (caso da Rita), não exibir cadeado — a edição é livre e não requer confirmação modal.
-- Atualizar `requestExtraEdit`: só abrir `AlertDialog` de confirmação quando há vendas reais na galeria (não apenas `galeriaId`).
-
-### 6. Verificação
-
-- SQL: após migração + `UPDATE ... SET updated_at=now() WHERE galeria_id IS NOT NULL AND valor_foto_extra=0 AND (regras_congeladas->'pacote'->>'valorFotoExtra')::numeric > 0`, conferir que sessões afetadas ficam com `valor_foto_extra` e `valor_total_foto_extra` corretos.
-- UI: editar qtd de 0→3 com galeria vinculada sem vendas → Total fotos extras deve ir a R$ 75,00 instantaneamente, Pendente sobe R$ 75,00.
-- UI: sessão com galeria paga (vendas consolidadas) → campos travados, cadeado visível, editar mostra modal de confirmação.
-- UI: sessão avulsa sem galeria → edição livre, recálculo imediato (regressão do fluxo anterior que já funcionava).
+A função `refundPayment` receberá um objeto completo do pagamento (não só id/valor) para poder resolver esses identificadores.
 
 ---
 
-## Arquivos alterados
+## 2. UX do modal de estorno (AlertDialog existente)
 
-- `supabase/migrations/<timestamp>_fix_fotos_extras_fallback.sql` — nova migração: atualiza `recalculate_fotos_extras_total` + `UPDATE` de re-execução nas sessões afetadas.
-- `src/utils/fotosExtrasCalculator.ts` — fallback para preço congelado quando unitário = 0.
-- `src/pages/Workflow.tsx` — enviar `valor_foto_extra` efetivo ao persistir quando a sessão estava com 0.
-- `src/components/workflow/WorkflowCardExpanded.tsx` — remover input duplicado; cadeado e confirmação condicionados a vendas reais na galeria.
-- (se o input duplicado vier do componente-pai da linha compacta) o pai correspondente (`WorkflowCardHeader` ou equivalente) — remover edição inline ali, manter exibição.
+Substituir o conteúdo atual do `AlertDialog` por duas variantes visuais baseadas no grupo:
 
-Sem alterações em outros edge-functions ou no projeto Gallery. Integridade do contrato Gallery (quando há vendas) preservada.
+### 2a. InfinitePay / PIX manual (manual)
+
+```
+[ícone aviso laranja]  Estornar pagamento
+
+O estorno deste pagamento deve ser realizado manualmente
+fora do sistema (no app/painel do seu gateway ou transferência
+PIX reversa).
+
+Esta ação registra o estorno apenas como controle financeiro
+interno — o dinheiro não será devolvido automaticamente ao cliente.
+
+Valor: R$ XX,XX
+[input] Motivo (opcional)
+
+[Cancelar]  [Registrar estorno interno]
+```
+
+### 2b. Asaas / Mercado Pago (automatizável)
+
+```
+[ícone refresh]  Estornar pagamento
+
+Este pagamento foi processado via Asaas (ou Mercado Pago).
+Você pode realizar o estorno diretamente na sua conta de
+pagamento — o valor será devolvido ao cliente.
+
+Valor: R$ XX,XX
+[input] Motivo (opcional)
+
+[checkbox] ☑ Realizar estorno automaticamente no gateway
+           (marcado por padrão)
+
+Se desmarcar, apenas o controle interno será registrado;
+o estorno real deverá ser feito manualmente no painel do gateway.
+
+[Cancelar]  [Confirmar estorno]
+```
+
+Estado interno: `autoRefund: boolean` (default `true` para automatizáveis, `false` para manuais).
+
+---
+
+## 3. Edge Functions novas
+
+Criar duas funções isoladas, cada uma resolvendo credencial multi-tenant via `usuarios_integracoes` (padrão já adotado em `gestao-asaas-create-payment`):
+
+### `gestao-asaas-refund`
+- Input: `{ cobrancaId, parcelaId?, valor?, motivo? }`
+- Resolve `access_token` Asaas do usuário logado.
+- Lê `asaas_payment_id` da parcela (ou cobrança) correspondente.
+- Chama `POST https://api.asaas.com/v3/payments/{id}/refund` com body `{ value, description }` (Asaas suporta parcial).
+- Retorna `{ success, refundId, status }` ou erro com mensagem do Asaas.
+
+### `gestao-mercadopago-refund`
+- Input: `{ cobrancaId, valor?, motivo? }`
+- Resolve token MP do usuário (tabela `usuarios_integracoes`, provedor `mercadopago`).
+- Chama `POST https://api.mercadopago.com/v1/payments/{mp_payment_id}/refunds` com body `{ amount }` (omitido = total).
+- Retorna `{ success, refundId, status }`.
+
+Ambas com JWT obrigatório (não são compartilhadas com Gallery).
+
+---
+
+## 4. Fluxo no frontend (`refundPayment`)
+
+Refatorar `refundPayment` no `useSessionPayments.ts`:
+
+```
+refundPayment(payment, { motivo, autoRefund }):
+  if (autoRefund && grupoAutomatizavel) {
+    resp = invoke edge function (asaas ou mp)
+    if (!resp.success) {
+      toast.error(resp.error)
+      return false    // NÃO registra estorno interno
+    }
+    motivoFinal = motivo + ' [Estornado no gateway]'
+  } else {
+    motivoFinal = motivo
+  }
+  PaymentSupabaseService.refundPayment(...)  // registro interno sempre
+```
+
+Regras:
+- Falha no gateway **aborta** o estorno (não cria registro interno) — evita descasamento.
+- Sucesso no gateway **sempre** cria o registro interno com tag `[Estornado no gateway]` para auditoria.
+- Sem auto refund: comportamento atual (apenas interno).
+
+---
+
+## 5. Atualização de status de cobrança (opcional mas recomendado)
+
+Quando o estorno automático for executado com sucesso:
+- Atualizar `cobrancas.status` para `cancelado` (total) ou manter `pago` com flag em `dados_extras.refunded_at` (parcial).
+- Para Asaas: webhook `PAYMENT_REFUNDED` já existe no projeto? Verificar no `asaas-webhook` — se sim, a atualização virá automática e evita race. Se não, atualizar no retorno da edge function.
+- Para MP: webhook `payment.updated` com status `refunded` → adicionar handler em `mercadopago-webhook` (já mapeia `refunded: 'cancelado'`, mas não cria estorno interno — manter assim para evitar duplicação com o registro já criado pelo frontend).
+
+---
+
+## 6. Arquivos a alterar
+
+**Frontend**
+- `src/components/payments/SessionPaymentsManager.tsx` — reescrever AlertDialog com duas variantes, adicionar checkbox `autoRefund`, passar `payment` completo para `refundPayment`.
+- `src/hooks/useSessionPayments.ts` — assinatura nova `refundPayment(paymentId, { motivo, autoRefund })`, lógica condicional de invocação da edge function.
+- `src/services/PaymentSupabaseService.ts` — aceitar `motivo` já formatado (sem mudança estrutural).
+
+**Backend**
+- `supabase/functions/gestao-asaas-refund/index.ts` (novo)
+- `supabase/functions/gestao-mercadopago-refund/index.ts` (novo)
+- `supabase/config.toml` — registrar as duas funções com `verify_jwt = true`.
+
+**Opcional (hardening)**
+- `supabase/functions/asaas-webhook/index.ts` — garantir handler para `PAYMENT_REFUNDED` que atualize a cobrança (sem duplicar estorno interno).
+
+---
+
+## 7. Casos de borda tratados
+
+| Cenário | Comportamento |
+|---|---|
+| Pagamento manual / PIX manual | Modal mostra aviso, grava só estorno interno |
+| Pagamento InfinitePay | Mesmo do manual (sem API de refund integrada) |
+| Asaas com parcelas, usuário estorna 1 parcela | Envia `asaas_payment_id` da parcela ao endpoint; Asaas faz refund parcial |
+| Gateway retorna erro (saldo insuficiente, pagamento já estornado, etc.) | Toast com erro do gateway, nada é gravado |
+| Checkbox desmarcado em Asaas/MP | Só registro interno; label adiciona `(estorno manual no gateway)` |
+| Estorno parcial (futuro) | Fora do escopo agora; valor = valor total do pagamento selecionado |
+
+---
+
+## Resumo de entregáveis
+
+1. Modal com dois modos e checkbox `Realizar estorno automaticamente`
+2. Duas edge functions de refund (Asaas, MP) com resolução multi-tenant
+3. Hook `refundPayment` condicional: gateway → interno, só interno se desmarcado, abort em erro
+4. Registro interno mantido como fonte única de verdade financeira
+5. Textos e UX exatamente conforme especificado pelo usuário
