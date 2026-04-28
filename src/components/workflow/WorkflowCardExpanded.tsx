@@ -330,7 +330,7 @@ export function WorkflowCardExpanded({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {isLinkedToGallery && (
+                {galeriaHasSales && (
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -366,7 +366,7 @@ export function WorkflowCardExpanded({
             <div className="flex justify-between items-center gap-2">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 Qtd fotos extras:
-                {isLinkedToGallery && (
+                {galeriaHasSales && (
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
                       <TooltipTrigger asChild>
