@@ -278,6 +278,60 @@ export default function Workflow() {
         }
       }
       
+      // RECÁLCULO OTIMISTA: fotos extras + valor_total
+      // Espelha as triggers recalc_fotos_extras e recalculate_session_valor_total
+      // para que a UI reflita instantaneamente (sem depender de round-trip realtime).
+      const touchedFotoExtra =
+        'qtd_fotos_extra' in cacheSafeUpdates ||
+        'valor_foto_extra' in cacheSafeUpdates;
+      const touchedTotalAffectingField =
+        touchedFotoExtra ||
+        'valor_adicional' in cacheSafeUpdates ||
+        'desconto' in cacheSafeUpdates ||
+        'produtos_incluidos' in cacheSafeUpdates;
+
+      if (touchedTotalAffectingField) {
+        const currentAny = currentSession as any;
+        const qtd = (cacheSafeUpdates as any).qtd_fotos_extra ?? Number(currentAny.qtd_fotos_extra) ?? 0;
+        const valorUnit = (cacheSafeUpdates as any).valor_foto_extra ?? Number(currentAny.valor_foto_extra) ?? 0;
+
+        if (touchedFotoExtra) {
+          const result = recalcFotosExtras({
+            qtd,
+            valorFotoExtra: valorUnit,
+            regrasCongeladas: currentAny.regras_congeladas,
+            galeriaInfo: {
+              galeriaId: currentAny.galeria_id,
+              valorTotalVendido: currentAny.galerias?.valor_total_vendido,
+              totalFotosExtrasVendidas: currentAny.galerias?.total_fotos_extras_vendidas,
+            },
+          });
+
+          if (!result.respeitarBanco) {
+            (cacheSafeUpdates as any).valor_total_foto_extra = result.valorTotalFotoExtra;
+            // Refletir o valor unitário efetivo (útil quando há desconto progressivo).
+            if (Math.abs(result.valorUnitarioEfetivo - valorUnit) > 0.001) {
+              (cacheSafeUpdates as any).valor_foto_extra = result.valorUnitarioEfetivo;
+            }
+          }
+        }
+
+        // Recompor valor_total (igual ao trigger).
+        const novoValorTotal = recalcSessionValorTotal({
+          valorBasePacote:
+            (cacheSafeUpdates as any).valor_base_pacote ?? Number(currentAny.valor_base_pacote) ?? 0,
+          valorTotalFotoExtra:
+            (cacheSafeUpdates as any).valor_total_foto_extra ?? Number(currentAny.valor_total_foto_extra) ?? 0,
+          produtosIncluidos:
+            (cacheSafeUpdates as any).produtos_incluidos ?? currentAny.produtos_incluidos ?? [],
+          valorAdicional:
+            (cacheSafeUpdates as any).valor_adicional ?? Number(currentAny.valor_adicional) ?? 0,
+          desconto:
+            (cacheSafeUpdates as any).desconto ?? Number(currentAny.desconto) ?? 0,
+        });
+        (cacheSafeUpdates as any).valor_total = novoValorTotal;
+      }
+      
       // 1. Optimistic update no cache com dados normalizados (apenas se houver algo E não precisar recongelar)
       // FASE 2: Para campos que precisam recongelamento, deixar o realtime fazer o update completo
       if (Object.keys(cacheSafeUpdates).length > 0 && !needsRefreeze) {
