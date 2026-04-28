@@ -428,15 +428,13 @@ export function WorkflowCardCollapsed({
           </Select>
         </div>
 
-        {/* Zona 7: Fotos Extras */}
-        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+        {/* Zona 7: Fotos Extras (somente leitura — edição no card expandido) */}
+        <div className="flex flex-col gap-0.5">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Fotos extras</span>
           <div className="flex justify-center">
-            <ExtraPhotoQtyInput
-              sessionId={session.id}
-              initialValue={session.qtdFotosExtra || 0}
-              onUpdate={onFieldUpdate}
-            />
+            <span className="text-sm font-medium text-foreground tabular-nums">
+              {session.qtdFotosExtra || 0}
+            </span>
           </div>
         </div>
 

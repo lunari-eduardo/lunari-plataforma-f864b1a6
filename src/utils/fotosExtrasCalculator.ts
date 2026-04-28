@@ -57,39 +57,50 @@ export function recalcFotosExtras(input: RecalcFotosExtrasInput): RecalcFotosExt
     };
   }
 
-  // 2. Quantidade zero → total zero.
+  // 2. Fallback de preço: se unitário informado = 0, tentar regras congeladas.
+  // Isto espelha o fallback aplicado na trigger recalculate_fotos_extras_total.
+  const pacoteCong = input.regrasCongeladas?.pacote;
+  const precoCongEfet = Number(pacoteCong?.valorFotoExtraEfetivo) || 0;
+  const precoCongBase = Number(pacoteCong?.valorFotoExtra) || 0;
+  const valorUnitResolvido =
+    valorInformado > 0
+      ? valorInformado
+      : precoCongEfet > 0
+        ? precoCongEfet
+        : precoCongBase;
+
+  // 3. Quantidade zero → total zero (mas já resolvemos o unitário para UI).
   if (qtd === 0) {
     return {
-      valorUnitarioEfetivo: valorInformado,
+      valorUnitarioEfetivo: valorUnitResolvido,
       valorTotalFotoExtra: 0,
       respeitarBanco: false,
     };
   }
 
-  // 3. Regras congeladas (desconto progressivo) → usar serviço existente.
-  if (input.regrasCongeladas?.pacote) {
+  // 4. Regras congeladas com desconto progressivo → usar serviço (faixas por qtd).
+  if (pacoteCong) {
     try {
       const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
         qtd,
         input.regrasCongeladas,
       );
-      const valorUnit = Number(resultado.valorUnitario) || valorInformado;
+      const valorUnit = Number(resultado.valorUnitario) || valorUnitResolvido;
       const total = Number(resultado.valorTotal) || qtd * valorUnit;
       return {
         valorUnitarioEfetivo: valorUnit,
-        valorTotalFotoExtra: total,
+        valorTotalFotoExtra: Number(total.toFixed(2)),
         respeitarBanco: false,
       };
     } catch (e) {
-      // fall through para cálculo simples
       console.warn('[recalcFotosExtras] Falha regras congeladas, usando qtd × valor:', e);
     }
   }
 
-  // 4. Cálculo padrão: qtd × valor unitário.
+  // 5. Cálculo padrão: qtd × valor unitário resolvido.
   return {
-    valorUnitarioEfetivo: valorInformado,
-    valorTotalFotoExtra: Number((qtd * valorInformado).toFixed(2)),
+    valorUnitarioEfetivo: valorUnitResolvido,
+    valorTotalFotoExtra: Number((qtd * valorUnitResolvido).toFixed(2)),
     respeitarBanco: false,
   };
 }
