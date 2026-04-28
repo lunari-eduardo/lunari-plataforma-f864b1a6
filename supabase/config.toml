@@ -98,3 +98,9 @@ verify_jwt = false
 
 [functions.r2-media-upload]
 verify_jwt = false
+
+[functions.gestao-asaas-refund]
+verify_jwt = false
+
+[functions.gestao-mercadopago-refund]
+verify_jwt = false
