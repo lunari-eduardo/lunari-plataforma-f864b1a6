@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
