@@ -371,7 +371,7 @@ export function WorkflowCardExpanded({
                         <Lock className="h-3 w-3 text-muted-foreground/60" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs text-xs">
-                        Sincronizado com a galeria. Editar aqui sobrescreve a quantidade vinda do Gallery.
+                        Sincronizado com a galeria. Editar aqui sobrescreve a quantidade vinda do Gallery e recalcula o total automaticamente (útil para fotos vendidas por fora).
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
