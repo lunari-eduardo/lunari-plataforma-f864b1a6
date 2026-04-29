@@ -1,168 +1,153 @@
-# Plano: Estorno inteligente por gateway
+## Diagnóstico
 
-## Objetivo
+Confirmei todos os pontos levantados em `src/utils/contratoPdf.ts`. A combinação atual `jsPDF.html() + unit:'px' + hotfix px_scaling + html2canvas scale:2 + container off-screen` é instável e gera os PDFs em branco / com texto fantasma. O fallback (`html2pdf`) já roda em `mm`, mas só é acionado quando o motor principal lança exceção — e o `jsPDF.html()` frequentemente "tem sucesso" produzindo um PDF vazio (não passa pelo catch).
 
-Diferenciar o comportamento do botão **Estornar pagamento** conforme o gateway de origem, mantendo sempre o estorno interno (movimentação negativa) como fonte de verdade financeira e adicionando, quando o gateway suportar, a opção de disparar o estorno real na conta do fotógrafo.
+Concordo com o plano de inverter a estratégia: **`html2pdf` como motor principal**, jsPDF apenas como fallback opcional.
 
-Regra imutável preservada:
-- Pagamento original **nunca é excluído**.
-- Estorno é sempre um **novo registro** (`tipo='estorno'`) em `clientes_transacoes`.
-- Estornos parciais/totais atualizam o status apenas via soma (lógica já existente).
+### Outros problemas que encontrei na auditoria
 
----
+1. **Validação de blob fraca** (linha 488): `blob.size < 2000` deixa passar PDFs em branco que pesam 2-10 KB (header A4 + página vazia já chega a esse tamanho). Vou trocar por validação real (contar páginas / verificar texto extraível via análise do tamanho relativo).
+2. **`scale: 2` no html2pdf** (linha 516): o usuário sugeriu 1.5 e está correto — scale 2 com `unit:mm` força um upscale grande que esmaece bordas finas e torna o texto cinza claro em algumas impressoras/visualizadores.
+3. **Reset CSS global `.lunari-pdf *`** força `background: transparent !important` em TUDO inclusive `<strong>`, `<table>`, etc — junto com `color: #000 !important` nos chips `<span class="contrato-var-auto">` (variáveis automáticas) os destruidores visuais ficam ok, mas o `border-color: #cccccc !important` aplicado a todo elemento interno gera linhas cinza fantasmas em parágrafos. Vou restringir o reset.
+4. **Container em `left:-10000px`** (linha 411): em alguns navegadores (Safari/iOS) o html2canvas captura como tela vazia. Trocar para `left:0; top:0; opacity:0; pointer-events:none` posicionado atrás (`z-index:-1`) com `position:fixed` funciona melhor sem causar flash visual.
+5. **Sem `pagebreak.before/avoid` configurado nos blocos chave** — assinaturas podem partir entre páginas mesmo com `page-break-inside:avoid` no CSS, porque html2pdf precisa do `mode:['css','legacy','avoid-all']` explícito.
+6. **Variáveis ainda não substituídas no PDF**: o `conteudoHtml` recebido já vem com os spans `<span class="contrato-var-auto">…</span>` e `<span class="contrato-campo-editavel">…</span>` do editor. O `sanitizeContratoHtml` remove os atributos (ok) mas mantém o texto — então o conteúdo final está correto. Sem mudança aqui, só registrando que está validado.
+7. **Fonte Arial pode falhar em ambientes Linux headless** — adicionar fallback de fonte na string `font-family` (já tem Helvetica, mas falta `sans-serif` final por algum motivo está ok). OK.
 
-## 1. Detecção do gateway do pagamento
+## Plano de correção
 
-No `SessionPaymentsManager`, ao clicar em estornar, classificar o pagamento em dois grupos usando `payment.origem`:
+### Alteração 1 — Inverter ordem dos motores em `generateContratoPdf`
 
-- **Grupo Manual** (`manual`, `supabase`, `infinitepay`, `pix_manual`): estorno só interno. InfinitePay não possui API de refund em uso e PIX manual é transferência direta — ambos exigem ação fora do sistema.
-- **Grupo Automatizável** (`asaas`, `mercadopago`): oferecer opção de estorno automático via API do gateway.
+`src/utils/contratoPdf.ts` linhas 568-577:
 
-Para pagamentos do grupo automatizável precisamos também do **ID do pagamento no gateway**, que já existe:
-- Asaas: `cobranca_parcelas.asaas_payment_id` (parcelas) ou `cobrancas` com `provedor='asaas'`
-- Mercado Pago: `cobrancas.mp_payment_id`
-
-A função `refundPayment` receberá um objeto completo do pagamento (não só id/valor) para poder resolver esses identificadores.
-
----
-
-## 2. UX do modal de estorno (AlertDialog existente)
-
-Substituir o conteúdo atual do `AlertDialog` por duas variantes visuais baseadas no grupo:
-
-### 2a. InfinitePay / PIX manual (manual)
-
-```
-[ícone aviso laranja]  Estornar pagamento
-
-O estorno deste pagamento deve ser realizado manualmente
-fora do sistema (no app/painel do seu gateway ou transferência
-PIX reversa).
-
-Esta ação registra o estorno apenas como controle financeiro
-interno — o dinheiro não será devolvido automaticamente ao cliente.
-
-Valor: R$ XX,XX
-[input] Motivo (opcional)
-
-[Cancelar]  [Registrar estorno interno]
+```ts
+// 1) Motor principal AGORA: html2pdf (mais estável com unit:mm)
+try {
+  return await generateViaHtml2Pdf(opts, innerHtml);
+} catch (err) {
+  warn('Motor principal (html2pdf) falhou, tentando fallback jsPDF.html:', err);
+}
+// 2) Fallback: jsPDF.html
+return await generateViaJsPDF(opts, innerHtml);
 ```
 
-### 2b. Asaas / Mercado Pago (automatizável)
+### Alteração 2 — Reescrever `generateViaHtml2Pdf` com configuração estável
 
-```
-[ícone refresh]  Estornar pagamento
+Mudanças:
+- `scale: 1.5` (era 2)
+- Margens em mm coerentes com A4: `[15, 15, 15, 15]`
+- Adicionar `pagebreak: { mode: ['css', 'legacy', 'avoid-all'] }`
+- Render em DOM real (não string) → permite que o CSS e fontes do navegador atuem antes da captura. Vai compartilhar o mesmo `createRenderContainer` que já existe.
+- Validar blob com threshold mais sensato e via verificação do conteúdo do PDF (header `%PDF` + tamanho > 8 KB para 1 página de texto real).
 
-Este pagamento foi processado via Asaas (ou Mercado Pago).
-Você pode realizar o estorno diretamente na sua conta de
-pagamento — o valor será devolvido ao cliente.
+### Alteração 3 — Refazer container de render (`createRenderContainer`)
 
-Valor: R$ XX,XX
-[input] Motivo (opcional)
-
-[checkbox] ☑ Realizar estorno automaticamente no gateway
-           (marcado por padrão)
-
-Se desmarcar, apenas o controle interno será registrado;
-o estorno real deverá ser feito manualmente no painel do gateway.
-
-[Cancelar]  [Confirmar estorno]
+Trocar:
+```ts
+root.style.position = 'fixed';
+root.style.left = '-10000px';
+root.style.top = '0';
+root.style.width = '794px';
 ```
 
-Estado interno: `autoRefund: boolean` (default `true` para automatizáveis, `false` para manuais).
-
----
-
-## 3. Edge Functions novas
-
-Criar duas funções isoladas, cada uma resolvendo credencial multi-tenant via `usuarios_integracoes` (padrão já adotado em `gestao-asaas-create-payment`):
-
-### `gestao-asaas-refund`
-- Input: `{ cobrancaId, parcelaId?, valor?, motivo? }`
-- Resolve `access_token` Asaas do usuário logado.
-- Lê `asaas_payment_id` da parcela (ou cobrança) correspondente.
-- Chama `POST https://api.asaas.com/v3/payments/{id}/refund` com body `{ value, description }` (Asaas suporta parcial).
-- Retorna `{ success, refundId, status }` ou erro com mensagem do Asaas.
-
-### `gestao-mercadopago-refund`
-- Input: `{ cobrancaId, valor?, motivo? }`
-- Resolve token MP do usuário (tabela `usuarios_integracoes`, provedor `mercadopago`).
-- Chama `POST https://api.mercadopago.com/v1/payments/{mp_payment_id}/refunds` com body `{ amount }` (omitido = total).
-- Retorna `{ success, refundId, status }`.
-
-Ambas com JWT obrigatório (não são compartilhadas com Gallery).
-
----
-
-## 4. Fluxo no frontend (`refundPayment`)
-
-Refatorar `refundPayment` no `useSessionPayments.ts`:
-
-```
-refundPayment(payment, { motivo, autoRefund }):
-  if (autoRefund && grupoAutomatizavel) {
-    resp = invoke edge function (asaas ou mp)
-    if (!resp.success) {
-      toast.error(resp.error)
-      return false    // NÃO registra estorno interno
-    }
-    motivoFinal = motivo + ' [Estornado no gateway]'
-  } else {
-    motivoFinal = motivo
-  }
-  PaymentSupabaseService.refundPayment(...)  // registro interno sempre
+Por:
+```ts
+root.style.position = 'fixed';
+root.style.left = '0';
+root.style.top = '0';
+root.style.width = '794px';
+root.style.opacity = '0';
+root.style.pointerEvents = 'none';
+root.style.zIndex = '-1';
 ```
 
-Regras:
-- Falha no gateway **aborta** o estorno (não cria registro interno) — evita descasamento.
-- Sucesso no gateway **sempre** cria o registro interno com tag `[Estornado no gateway]` para auditoria.
-- Sem auto refund: comportamento atual (apenas interno).
+Mantém o nó dentro do viewport (html2canvas captura corretamente), invisível ao usuário.
 
----
+### Alteração 4 — Suavizar reset CSS
 
-## 5. Atualização de status de cobrança (opcional mas recomendado)
+No `PRINT_CSS` (linhas 152-275), substituir o bloco global por reset escopado mais cirúrgico:
 
-Quando o estorno automático for executado com sucesso:
-- Atualizar `cobrancas.status` para `cancelado` (total) ou manter `pago` com flag em `dados_extras.refunded_at` (parcial).
-- Para Asaas: webhook `PAYMENT_REFUNDED` já existe no projeto? Verificar no `asaas-webhook` — se sim, a atualização virá automática e evita race. Se não, atualizar no retorno da edge function.
-- Para MP: webhook `payment.updated` com status `refunded` → adicionar handler em `mercadopago-webhook` (já mapeia `refunded: 'cancelado'`, mas não cria estorno interno — manter assim para evitar duplicação com o registro já criado pelo frontend).
+```css
+/* Reset apenas no container raiz (não nos descendentes) */
+.lunari-pdf {
+  background: #ffffff;
+  color: #000000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.6;
+  width: 794px;
+  padding: 56px;
+  box-sizing: border-box;
+}
+/* Reset cirúrgico: garante texto preto, mas NÃO força background nem border global */
+.lunari-pdf * {
+  box-sizing: border-box;
+  color: #000000;
+  text-shadow: none;
+  filter: none;
+}
+.lunari-pdf span,
+.lunari-pdf p,
+.lunari-pdf div,
+.lunari-pdf li,
+.lunari-pdf h1,
+.lunari-pdf h2,
+.lunari-pdf h3 {
+  background: transparent;
+  border: none;
+}
+/* Restaura bordas onde realmente queremos */
+.lunari-pdf .pdf-parte { border: 1px solid #cccccc; }
+.lunari-pdf .pdf-header { border-bottom: 2px solid #000; }
+.lunari-pdf .pdf-assinatura-linha { border-top: 1px solid #000; }
+.lunari-pdf .pdf-footer { border-top: 1px solid #ddd; }
+.lunari-pdf blockquote { border-left: 3px solid #ccc; }
+```
 
----
+### Alteração 5 — Validação de blob real
 
-## 6. Arquivos a alterar
+Substituir `blob.size < 2000` por uma checagem mais confiável:
 
-**Frontend**
-- `src/components/payments/SessionPaymentsManager.tsx` — reescrever AlertDialog com duas variantes, adicionar checkbox `autoRefund`, passar `payment` completo para `refundPayment`.
-- `src/hooks/useSessionPayments.ts` — assinatura nova `refundPayment(paymentId, { motivo, autoRefund })`, lógica condicional de invocação da edge function.
-- `src/services/PaymentSupabaseService.ts` — aceitar `motivo` já formatado (sem mudança estrutural).
+```ts
+async function isLikelyValidPdf(blob: Blob): Promise<boolean> {
+  if (!blob || blob.size < 1500) return false;
+  const head = await blob.slice(0, 5).text();
+  if (!head.startsWith('%PDF-')) return false;
+  // Heurística: PDF com texto real raramente tem < 6 KB para 1+ página
+  return blob.size >= 4000;
+}
+```
 
-**Backend**
-- `supabase/functions/gestao-asaas-refund/index.ts` (novo)
-- `supabase/functions/gestao-mercadopago-refund/index.ts` (novo)
-- `supabase/config.toml` — registrar as duas funções com `verify_jwt = true`.
+E usar nas duas funções de geração — se reprovar, lança erro e cai no próximo motor.
 
-**Opcional (hardening)**
-- `supabase/functions/asaas-webhook/index.ts` — garantir handler para `PAYMENT_REFUNDED` que atualize a cobrança (sem duplicar estorno interno).
+### Alteração 6 — Atualizar `generateViaJsPDF` (fallback)
 
----
+Quando vira fallback, mantém o código atual mas com:
+- `unit: 'mm'` (não `px`)
+- remover `hotfixes: ['px_scaling']`
+- remover `width: 794` / `windowWidth: 794` da chamada `doc.html()`
+- `scale: 1.5`
 
-## 7. Casos de borda tratados
+### Alteração 7 — Nada a mexer na UI
 
-| Cenário | Comportamento |
-|---|---|
-| Pagamento manual / PIX manual | Modal mostra aviso, grava só estorno interno |
-| Pagamento InfinitePay | Mesmo do manual (sem API de refund integrada) |
-| Asaas com parcelas, usuário estorna 1 parcela | Envia `asaas_payment_id` da parcela ao endpoint; Asaas faz refund parcial |
-| Gateway retorna erro (saldo insuficiente, pagamento já estornado, etc.) | Toast com erro do gateway, nada é gravado |
-| Checkbox desmarcado em Asaas/MP | Só registro interno; label adiciona `(estorno manual no gateway)` |
-| Estorno parcial (futuro) | Fora do escopo agora; valor = valor total do pagamento selecionado |
+Os botões "Baixar PDF" em `ContratoViewerModal.tsx` e nos cards do Workflow já chamam `downloadContratoPdf` — funciona transparentemente.
 
----
+## Validação obrigatória após implementação
 
-## Resumo de entregáveis
+1. Console do navegador: rodar `__testContratoPdfLayout()` → baixa PDF de teste e abrir.
+2. Abrir um contrato real do cliente (ex.: o gerado para "Eduardo Valmor") e baixar PDF.
+3. Verificar:
+   - Texto preto nítido (não fantasma/cinza claro)
+   - Cabeçalho com nome do cliente/fotógrafo
+   - Cards de partes com bordas visíveis
+   - Linhas de assinatura aparecendo
+   - Paginação não corta título no meio
+   - Variáveis substituídas (sem `{{xxx}}` no PDF)
 
-1. Modal com dois modos e checkbox `Realizar estorno automaticamente`
-2. Duas edge functions de refund (Asaas, MP) com resolução multi-tenant
-3. Hook `refundPayment` condicional: gateway → interno, só interno se desmarcado, abort em erro
-4. Registro interno mantido como fonte única de verdade financeira
-5. Textos e UX exatamente conforme especificado pelo usuário
+## Arquivos a alterar
+
+- `src/utils/contratoPdf.ts` — todas as 6 alterações listadas. Nenhum outro arquivo é afetado.
+
+## Fora de escopo
+
+- O HTML "minimalista" sugerido pelo usuário foi usado como inspiração (mm, scale 1.5, container visível com opacity), mas vamos preservar o layout completo atual (cabeçalho, partes, fechamento, assinaturas, rodapé) que está mais profissional. Se quiser layout simplificado depois, é uma segunda iteração.
