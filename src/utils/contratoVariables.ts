@@ -248,8 +248,10 @@ export function buildVariableMap(input: BuildVariablesInput): Record<string, str
     duracao_maxima: manuais?.duracao_maxima || '',
     tipo_ensaio: categoria,
     tipo_evento: categoria,
-    local_ensaio: manuais?.local_ensaio || cliente?.endereco || '',
-    local_evento: manuais?.local_evento || cliente?.endereco || '',
+    // IMPORTANTE: NUNCA usar cliente.endereco como fallback do local —
+    // o endereço residencial do cliente não é o local da sessão/evento.
+    local_ensaio: manuais?.local_ensaio || '',
+    local_evento: manuais?.local_evento || '',
 
     valor_total: valorTotal,
     valor_sinal: manuais?.valor_sinal || '',
