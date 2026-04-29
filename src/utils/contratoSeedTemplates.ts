@@ -31,12 +31,11 @@ const ENSAIO = `<h2>Contrato de Prestação de Serviços Fotográficos</h2>
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_cliente}}, residente/sediado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto, data e local</h3>
+<h3>2. Do objeto e da data</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços fotográficos referentes a um Ensaio <strong>{{tipo_ensaio}}</strong>.</p>
 <p><strong>Data da Sessão:</strong> {{data_sessao}}<br/>
 <strong>Horário de Início:</strong> {{horario_inicio}} (a tolerância de atraso é de 15 minutos; o tempo de atraso será descontado da duração total do ensaio).<br/>
-<strong>Duração do Ensaio:</strong> {{duracao_sessao}} horas.<br/>
-<strong>Local do Ensaio:</strong> {{local_ensaio}}</p>
+<strong>Duração do Ensaio:</strong> {{duracao_sessao}} horas.</p>
 
 <h3>3. Das locações e deslocamento (estúdio e externas)</h3>
 <p><strong>Ensaios externos/terceiros:</strong> caso o local escolhido exija pagamento de taxas de locação ou autorizações prévias, os custos e trâmites são de inteira responsabilidade da(o) CONTRATANTE. Taxas de deslocamento fora do perímetro urbano da cidade sede da(o) CONTRATADA(O) serão cobradas no valor de <strong>{{taxa_deslocamento}}</strong>.</p>
