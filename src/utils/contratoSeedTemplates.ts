@@ -143,9 +143,8 @@ const NEWBORN = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensa
 <p><strong>CONTRATANTE (Pais/Responsáveis):</strong> {{nome_cliente}}, inscrito(a) no CPF sob o nº {{cpf_cliente}}, residente e domiciliado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O) (Estúdio/Fotógrafo):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços fotográficos referentes ao ensaio da categoria <strong>Newborn</strong> (recém-nascido) do bebê <strong>{{nome_bebe}}</strong>, a ser realizado na data de <strong>{{data_sessao}}</strong>.</p>
-<p><strong>Local do Ensaio:</strong> {{local_ensaio}}</p>
 
 <h3>3. Da dinâmica e duração do ensaio</h3>
 <p>O ensaio Newborn respeita única e exclusivamente o tempo, o conforto e os reflexos do bebê (ciclos de sono, amamentação e necessidades fisiológicas).</p>
