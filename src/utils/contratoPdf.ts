@@ -424,14 +424,15 @@ function createRenderContainer(innerHtml: string): { root: HTMLDivElement; style
   root.setAttribute('data-lunari-pdf', 'true');
   root.innerHTML = innerHtml;
 
-  // Posiciona fora da área visível MAS renderizando normalmente.
-  // Sem opacity:0, sem visibility:hidden, sem transform, sem display:none.
+  // Render dentro do viewport (html2canvas captura corretamente em todos navegadores).
+  // Invisível ao usuário via opacity:0 — sem transform, sem display:none, sem off-screen.
   root.style.position = 'fixed';
-  root.style.left = '-10000px';
+  root.style.left = '0';
   root.style.top = '0';
   root.style.width = '794px';
+  root.style.opacity = '0';
   root.style.pointerEvents = 'none';
-  root.style.zIndex = '0';
+  root.style.zIndex = '-1';
   document.body.appendChild(root);
 
   return { root, styleEl };
