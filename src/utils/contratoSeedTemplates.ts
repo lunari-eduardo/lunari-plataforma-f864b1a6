@@ -31,12 +31,11 @@ const ENSAIO = `<h2>Contrato de Prestação de Serviços Fotográficos</h2>
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_cliente}}, residente/sediado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto, data e local</h3>
+<h3>2. Do objeto e da data</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços fotográficos referentes a um Ensaio <strong>{{tipo_ensaio}}</strong>.</p>
 <p><strong>Data da Sessão:</strong> {{data_sessao}}<br/>
 <strong>Horário de Início:</strong> {{horario_inicio}} (a tolerância de atraso é de 15 minutos; o tempo de atraso será descontado da duração total do ensaio).<br/>
-<strong>Duração do Ensaio:</strong> {{duracao_sessao}} horas.<br/>
-<strong>Local do Ensaio:</strong> {{local_ensaio}}</p>
+<strong>Duração do Ensaio:</strong> {{duracao_sessao}} horas.</p>
 
 <h3>3. Das locações e deslocamento (estúdio e externas)</h3>
 <p><strong>Ensaios externos/terceiros:</strong> caso o local escolhido exija pagamento de taxas de locação ou autorizações prévias, os custos e trâmites são de inteira responsabilidade da(o) CONTRATANTE. Taxas de deslocamento fora do perímetro urbano da cidade sede da(o) CONTRATADA(O) serão cobradas no valor de <strong>{{taxa_deslocamento}}</strong>.</p>
@@ -67,9 +66,8 @@ const GESTANTE = `<h2>Contrato de Prestação de Serviços Fotográficos – Ens
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF sob o nº {{cpf_cliente}}, residente e domiciliado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços fotográficos referentes ao ensaio de <strong>GESTANTE</strong>, a ser realizado na data de <strong>{{data_sessao}}</strong>, com duração aproximada de <strong>{{duracao_sessao}}</strong> horas.</p>
-<p><strong>Local do Ensaio:</strong> {{local_ensaio}}</p>
 
 <h3>3. Do figurino, maquiagem e preparação</h3>
 <p><strong>Figurino:</strong> a locação ou disponibilização de roupas e vestidos {{fornecimento_figurino}}.</p>
@@ -105,10 +103,9 @@ const CASAMENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Ca
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF sob o nº {{cpf_cliente}} e RG nº {{rg_cliente}}, residente e domiciliado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto e da data</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços de cobertura fotográfica do evento de <strong>CASAMENTO</strong>, a ser realizado na data de <strong>{{data_evento}}</strong>.</p>
-<p><strong>Local do Evento:</strong> {{local_evento}}<br/>
-<strong>Horário de Início:</strong> {{horario_inicio}}<br/>
+<p><strong>Horário de Início:</strong> {{horario_inicio}}<br/>
 <strong>Horário de Término (cobertura máxima):</strong> {{horario_termino}}</p>
 
 <h3>3. Dos serviços inclusos e entregáveis</h3>
@@ -146,9 +143,8 @@ const NEWBORN = `<h2>Contrato de Prestação de Serviços Fotográficos – Ensa
 <p><strong>CONTRATANTE (Pais/Responsáveis):</strong> {{nome_cliente}}, inscrito(a) no CPF sob o nº {{cpf_cliente}}, residente e domiciliado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O) (Estúdio/Fotógrafo):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços fotográficos referentes ao ensaio da categoria <strong>Newborn</strong> (recém-nascido) do bebê <strong>{{nome_bebe}}</strong>, a ser realizado na data de <strong>{{data_sessao}}</strong>.</p>
-<p><strong>Local do Ensaio:</strong> {{local_ensaio}}</p>
 
 <h3>3. Da dinâmica e duração do ensaio</h3>
 <p>O ensaio Newborn respeita única e exclusivamente o tempo, o conforto e os reflexos do bebê (ciclos de sono, amamentação e necessidades fisiológicas).</p>
@@ -183,10 +179,9 @@ const EVENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Event
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_cliente}}, residente/sediado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto e da data</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços de cobertura fotográfica do evento do tipo <strong>{{tipo_evento}}</strong>, a ser realizado na data de <strong>{{data_evento}}</strong>.</p>
-<p><strong>Local do Evento:</strong> {{local_evento}}<br/>
-<strong>Horário de Início:</strong> {{horario_inicio}}<br/>
+<p><strong>Horário de Início:</strong> {{horario_inicio}}<br/>
 <strong>Horário de Término:</strong> {{horario_termino}}</p>
 
 <h3>3. Dos serviços inclusos e entregáveis</h3>
@@ -261,3 +256,52 @@ export const CONTRATO_SEED_TEMPLATES: ContratoSeedTemplate[] = [
     conteudo: EVENTO,
   },
 ];
+
+/**
+ * Saneia o conteúdo de um modelo de contrato corrigindo problemas conhecidos
+ * dos modelos padrão antigos:
+ *  1. Remove a linha "Local do Ensaio: {{local_ensaio}}" (puxava endereço do cliente).
+ *  2. Remove a linha "Local do Evento: {{local_evento}}".
+ *  3. Renomeia títulos "Do objeto e local" / "Do objeto, data e local".
+ *  4. Remove duplicações de unidade ao lado de variáveis numéricas
+ *     (ex.: "{{duracao_sessao}} horas horas" → "{{duracao_sessao}} horas").
+ *
+ * Conservador: só toca em padrões muito específicos para não destruir o texto
+ * personalizado do usuário.
+ */
+export function sanitizeContratoTemplateConteudo(html: string): string {
+  if (!html) return html;
+  let out = html;
+
+  // 1) Linha "Local do Ensaio/Evento: {{local_xxx}}" — em <p> isolado ou após <br/>
+  out = out.replace(
+    /<p>\s*<strong>\s*Local do (?:Ensaio|Evento)\s*:?\s*<\/strong>\s*\{\{\s*local_(?:ensaio|evento)\s*\}\}\s*<\/p>/gi,
+    ''
+  );
+  out = out.replace(
+    /<br\s*\/?>\s*<strong>\s*Local do (?:Ensaio|Evento)\s*:?\s*<\/strong>\s*\{\{\s*local_(?:ensaio|evento)\s*\}\}/gi,
+    ''
+  );
+  out = out.replace(
+    /<strong>\s*Local do (?:Ensaio|Evento)\s*:?\s*<\/strong>\s*\{\{\s*local_(?:ensaio|evento)\s*\}\}\s*<br\s*\/?>/gi,
+    ''
+  );
+
+  // 2) Renomear títulos
+  out = out.replace(/Do objeto,\s*data\s*e\s*local/gi, 'Do objeto e da data');
+  out = out.replace(/Do objeto\s*e\s*local/gi, 'Do objeto');
+
+  // 3) Remover duplicações de unidade depois de variáveis numéricas
+  const dedupePatterns: Array<[RegExp, string]> = [
+    // "{{duracao_xxx}} horas horas" → "{{duracao_xxx}} horas"
+    [/(\{\{\s*duracao_\w+\s*\}\}[^<]{0,40}?\bhoras?)\s+horas?\b/gi, '$1'],
+    [/(\{\{\s*quantidade_fotos\s*\}\}[^<]{0,40}?\bfotos?(?:\s+tratadas?)?)\s+fotos?\b/gi, '$1'],
+    [/(\{\{\s*prazo_\w+\s*\}\}[^<]{0,40}?\bdias?(?:\s+úteis?)?)\s+dias?\b/gi, '$1'],
+    [/(\{\{\s*porcentagem_\w+\s*\}\})%\s*%/g, '$1%'],
+  ];
+  for (const [re, replacement] of dedupePatterns) {
+    out = out.replace(re, replacement);
+  }
+
+  return out;
+}

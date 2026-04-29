@@ -1,153 +1,114 @@
-## Diagnóstico
+Do I know what the issue is? Sim.
 
-Confirmei todos os pontos levantados em `src/utils/contratoPdf.ts`. A combinação atual `jsPDF.html() + unit:'px' + hotfix px_scaling + html2canvas scale:2 + container off-screen` é instável e gera os PDFs em branco / com texto fantasma. O fallback (`html2pdf`) já roda em `mm`, mas só é acionado quando o motor principal lança exceção — e o `jsPDF.html()` frequentemente "tem sucesso" produzindo um PDF vazio (não passa pelo catch).
+O problema dos contratos não foi corrigido antes porque a etapa sobre variáveis/modelos ficou como plano e não houve implementação dela; a aprovação posterior executou apenas o plano do PDF. Na prática, os arquivos de variáveis e modelos ainda estão com os mesmos pontos que você marcou nas imagens.
 
-Concordo com o plano de inverter a estratégia: **`html2pdf` como motor principal**, jsPDF apenas como fallback opcional.
+O problema do PDF também está identificado: a função de contrato foi alterada, mas continua renderizando um DOM oculto com `opacity: 0` e `z-index: -1`. Como html2canvas captura o estado visual real do elemento, isso pode gerar uma imagem transparente/branca. O PDF financeiro funciona porque usa outro padrão: monta um HTML completo/string e entrega direto para `html2pdf`, sem depender de um nó invisível no DOM.
 
-### Outros problemas que encontrei na auditoria
+Plano de correção obrigatória
 
-1. **Validação de blob fraca** (linha 488): `blob.size < 2000` deixa passar PDFs em branco que pesam 2-10 KB (header A4 + página vazia já chega a esse tamanho). Vou trocar por validação real (contar páginas / verificar texto extraível via análise do tamanho relativo).
-2. **`scale: 2` no html2pdf** (linha 516): o usuário sugeriu 1.5 e está correto — scale 2 com `unit:mm` força um upscale grande que esmaece bordas finas e torna o texto cinza claro em algumas impressoras/visualizadores.
-3. **Reset CSS global `.lunari-pdf *`** força `background: transparent !important` em TUDO inclusive `<strong>`, `<table>`, etc — junto com `color: #000 !important` nos chips `<span class="contrato-var-auto">` (variáveis automáticas) os destruidores visuais ficam ok, mas o `border-color: #cccccc !important` aplicado a todo elemento interno gera linhas cinza fantasmas em parágrafos. Vou restringir o reset.
-4. **Container em `left:-10000px`** (linha 411): em alguns navegadores (Safari/iOS) o html2canvas captura como tela vazia. Trocar para `left:0; top:0; opacity:0; pointer-events:none` posicionado atrás (`z-index:-1`) com `position:fixed` funciona melhor sem causar flash visual.
-5. **Sem `pagebreak.before/avoid` configurado nos blocos chave** — assinaturas podem partir entre páginas mesmo com `page-break-inside:avoid` no CSS, porque html2pdf precisa do `mode:['css','legacy','avoid-all']` explícito.
-6. **Variáveis ainda não substituídas no PDF**: o `conteudoHtml` recebido já vem com os spans `<span class="contrato-var-auto">…</span>` e `<span class="contrato-campo-editavel">…</span>` do editor. O `sanitizeContratoHtml` remove os atributos (ok) mas mantém o texto — então o conteúdo final está correto. Sem mudança aqui, só registrando que está validado.
-7. **Fonte Arial pode falhar em ambientes Linux headless** — adicionar fallback de fonte na string `font-family` (já tem Helvetica, mas falta `sans-serif` final por algum motivo está ok). OK.
+1. Corrigir a origem das variáveis de contrato
+- Em `src/utils/contratoVariables.ts`:
+  - Remover definitivamente o fallback de `local_ensaio` e `local_evento` para `cliente.endereco`.
+  - Manter compatibilidade técnica com contratos antigos, mas essas variáveis não vão mais puxar endereço do cliente.
+  - Ajustar defaults editáveis para valores sem unidade:
+    - `duracao_sessao`: `2`, não `2 horas`
+    - `duracao_maxima`: `4`, não `4 horas`
+    - `quantidade_fotos`: `20`, não `20 fotos tratadas`
+    - `prazo_entrega`, `prazo_entrega_final`, `prazo_selecao`: números puros, não `30 dias úteis`
+  - Criar uma normalização por tipo de variável para impedir duplicação mesmo se algum valor antigo/manual vier com unidade. Exemplo:
+    - `2 horas` vira `2` antes de entrar em `{{duracao_sessao}} horas`
+    - `20 fotos tratadas` vira `20` antes de entrar em `{{quantidade_fotos}} fotografias tratadas`
+    - `30 dias úteis` vira `30` antes de entrar em `{{prazo_entrega}} dias úteis`
 
-## Plano de correção
+2. Remover “Local do Ensaio/Evento” dos modelos padrão
+- Em `src/utils/contratoSeedTemplates.ts`, revisar os 5 modelos padrão:
+  - Ensaio Fotográfico
+  - Ensaio Gestante
+  - Casamento
+  - Newborn
+  - Eventos
+- Remover as linhas/cláusulas com:
+  - `Local do Ensaio: {{local_ensaio}}`
+  - `Local do Evento: {{local_evento}}`
+- Ajustar títulos de cláusulas para não prometer local quando o modelo não define local. Exemplo: “Do objeto, data e local” vira “Do objeto e data”.
+- Revisar cada trecho onde a variável recebe unidade no texto para garantir que não haverá frases como:
+  - `2 horas horas`
+  - `20 fotos tratadas fotos tratadas`
+  - `30 dias úteis dias úteis`
+- Corrigir também inconsistências textuais encontradas durante a revisão, especialmente cláusulas de sinal/reserva em casamento e newborn para explicitar `{{valor_sinal}}` quando aplicável.
 
-### Alteração 1 — Inverter ordem dos motores em `generateContratoPdf`
+3. Garantir que modelos já existentes do usuário também sejam corrigidos
+Apenas alterar os seeds não corrige automaticamente modelos já salvos no banco. Por isso a correção precisa cobrir os dois cenários:
+- Novos modelos criados a partir dos padrões: virão corrigidos.
+- Modelos padrão já salvos no Supabase: serão normalizados ao carregar/usar, removendo as linhas de local e evitando unidades duplicadas.
 
-`src/utils/contratoPdf.ts` linhas 568-577:
+Implementação prevista:
+- Criar uma função utilitária de saneamento de conteúdo de template, aplicada quando os templates são carregados e antes de gerar um contrato.
+- Essa função será conservadora: corrige apenas padrões conhecidos dos modelos do sistema, sem destruir textos personalizados do usuário.
+- Contratos já assinados/permanentes não serão apagados nem reescritos automaticamente; a correção mira modelos e novos rascunhos gerados.
 
-```ts
-// 1) Motor principal AGORA: html2pdf (mais estável com unit:mm)
-try {
-  return await generateViaHtml2Pdf(opts, innerHtml);
-} catch (err) {
-  warn('Motor principal (html2pdf) falhou, tentando fallback jsPDF.html:', err);
-}
-// 2) Fallback: jsPDF.html
-return await generateViaJsPDF(opts, innerHtml);
-```
+4. Refatorar completamente o PDF de contrato usando o padrão que funciona no financeiro
+- Em `src/utils/contratoPdf.ts`, remover a arquitetura atual baseada em:
+  - criar container no DOM
+  - `opacity: 0`
+  - `z-index: -1`
+  - `windowWidth: 794`
+  - `jsPDF.html()` como fallback visual
+- Substituir por uma arquitetura similar ao financeiro:
+  - montar um HTML completo e isolado: `<!doctype html><html><head><style>...</style></head><body>...</body></html>`
+  - passar esse HTML string diretamente para `html2pdf().set(options).from(html).outputPdf('blob')`
+  - usar CSS inline/escopado com fundo branco e texto preto
+  - não depender do tema dark do editor
+  - não renderizar elemento oculto no viewport
+- Usar opções de PDF simples e estáveis:
+  - `jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait', compress: true }`
+  - `html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', letterRendering: true, logging: false }`
+  - sem `width`, sem `windowWidth`, sem `px_scaling`
 
-### Alteração 2 — Reescrever `generateViaHtml2Pdf` com configuração estável
+5. Criar fallback real que nunca gere PDF branco
+- O fallback não será mais `jsPDF.html()`, porque ele também depende de html2canvas.
+- Se o `html2pdf` falhar, gerar um PDF simplificado via jsPDF puro:
+  - extrair texto limpo do contrato
+  - quebrar linhas com `splitTextToSize`
+  - desenhar título, metadados, corpo e assinaturas página por página
+- Esse fallback perde parte da formatação rica, mas garante o mais importante: nunca entregar PDF branco para o usuário.
 
-Mudanças:
-- `scale: 1.5` (era 2)
-- Margens em mm coerentes com A4: `[15, 15, 15, 15]`
-- Adicionar `pagebreak: { mode: ['css', 'legacy', 'avoid-all'] }`
-- Render em DOM real (não string) → permite que o CSS e fontes do navegador atuem antes da captura. Vai compartilhar o mesmo `createRenderContainer` que já existe.
-- Validar blob com threshold mais sensato e via verificação do conteúdo do PDF (header `%PDF` + tamanho > 8 KB para 1 página de texto real).
+6. Melhorar testes e diagnóstico
+- Manter e revisar:
+  - `window.__testContratoPdf()`
+  - `window.__testContratoPdfLayout()`
+- Adicionar logs úteis somente em preview/dev:
+  - tamanho do HTML final
+  - tamanho do texto puro
+  - motor usado: `html2pdf-string` ou `jspdf-text-fallback`
+  - tamanho final do blob
+- Critério de aceite técnico:
+  - teste mínimo baixa PDF com texto visível
+  - teste de layout baixa PDF com títulos, parágrafos, lista e assinaturas
+  - contrato real com seus modelos não mostra local do cliente como local do ensaio/evento
+  - não aparecem duplicações de unidade nos trechos de duração, fotos e prazos
 
-### Alteração 3 — Refazer container de render (`createRenderContainer`)
+7. Limpar notificações indevidas encontradas no fluxo
+- Os hooks de contratos/modelos ainda exibem toasts de sucesso em CRUD, contrariando a memória do projeto: “No success toasts for CRUD actions”.
+- Vou remover os toasts de sucesso nesses hooks e manter apenas erros, sem alterar a lógica principal.
 
-Trocar:
-```ts
-root.style.position = 'fixed';
-root.style.left = '-10000px';
-root.style.top = '0';
-root.style.width = '794px';
-```
+Arquivos a alterar
+- `src/utils/contratoVariables.ts`
+- `src/utils/contratoSeedTemplates.ts`
+- `src/utils/contratoPdf.ts`
+- `src/hooks/useContratoTemplates.ts`
+- `src/components/contratos/NovoContratoModal.tsx`
+- Possivelmente `src/components/contratos/ContratoTemplateEditorModal.tsx` para esconder/remover as variáveis de local da lista de inserção.
 
-Por:
-```ts
-root.style.position = 'fixed';
-root.style.left = '0';
-root.style.top = '0';
-root.style.width = '794px';
-root.style.opacity = '0';
-root.style.pointerEvents = 'none';
-root.style.zIndex = '-1';
-```
+Critério de aceite final
+- “Local do Ensaio/Evento” não aparece mais nos modelos padrão do sistema.
+- Nenhuma variável de local puxa endereço do cliente.
+- Duração, quantidade de fotos e prazos não duplicam unidades.
+- Todos os modelos padrão são revisados.
+- PDF de contrato deixa de usar renderização oculta e passa a usar HTML string como o financeiro.
+- Se o motor visual falhar, um PDF textual válido é gerado em fallback em vez de PDF branco.
 
-Mantém o nó dentro do viewport (html2canvas captura corretamente), invisível ao usuário.
-
-### Alteração 4 — Suavizar reset CSS
-
-No `PRINT_CSS` (linhas 152-275), substituir o bloco global por reset escopado mais cirúrgico:
-
-```css
-/* Reset apenas no container raiz (não nos descendentes) */
-.lunari-pdf {
-  background: #ffffff;
-  color: #000000;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 12.5px;
-  line-height: 1.6;
-  width: 794px;
-  padding: 56px;
-  box-sizing: border-box;
-}
-/* Reset cirúrgico: garante texto preto, mas NÃO força background nem border global */
-.lunari-pdf * {
-  box-sizing: border-box;
-  color: #000000;
-  text-shadow: none;
-  filter: none;
-}
-.lunari-pdf span,
-.lunari-pdf p,
-.lunari-pdf div,
-.lunari-pdf li,
-.lunari-pdf h1,
-.lunari-pdf h2,
-.lunari-pdf h3 {
-  background: transparent;
-  border: none;
-}
-/* Restaura bordas onde realmente queremos */
-.lunari-pdf .pdf-parte { border: 1px solid #cccccc; }
-.lunari-pdf .pdf-header { border-bottom: 2px solid #000; }
-.lunari-pdf .pdf-assinatura-linha { border-top: 1px solid #000; }
-.lunari-pdf .pdf-footer { border-top: 1px solid #ddd; }
-.lunari-pdf blockquote { border-left: 3px solid #ccc; }
-```
-
-### Alteração 5 — Validação de blob real
-
-Substituir `blob.size < 2000` por uma checagem mais confiável:
-
-```ts
-async function isLikelyValidPdf(blob: Blob): Promise<boolean> {
-  if (!blob || blob.size < 1500) return false;
-  const head = await blob.slice(0, 5).text();
-  if (!head.startsWith('%PDF-')) return false;
-  // Heurística: PDF com texto real raramente tem < 6 KB para 1+ página
-  return blob.size >= 4000;
-}
-```
-
-E usar nas duas funções de geração — se reprovar, lança erro e cai no próximo motor.
-
-### Alteração 6 — Atualizar `generateViaJsPDF` (fallback)
-
-Quando vira fallback, mantém o código atual mas com:
-- `unit: 'mm'` (não `px`)
-- remover `hotfixes: ['px_scaling']`
-- remover `width: 794` / `windowWidth: 794` da chamada `doc.html()`
-- `scale: 1.5`
-
-### Alteração 7 — Nada a mexer na UI
-
-Os botões "Baixar PDF" em `ContratoViewerModal.tsx` e nos cards do Workflow já chamam `downloadContratoPdf` — funciona transparentemente.
-
-## Validação obrigatória após implementação
-
-1. Console do navegador: rodar `__testContratoPdfLayout()` → baixa PDF de teste e abrir.
-2. Abrir um contrato real do cliente (ex.: o gerado para "Eduardo Valmor") e baixar PDF.
-3. Verificar:
-   - Texto preto nítido (não fantasma/cinza claro)
-   - Cabeçalho com nome do cliente/fotógrafo
-   - Cards de partes com bordas visíveis
-   - Linhas de assinatura aparecendo
-   - Paginação não corta título no meio
-   - Variáveis substituídas (sem `{{xxx}}` no PDF)
-
-## Arquivos a alterar
-
-- `src/utils/contratoPdf.ts` — todas as 6 alterações listadas. Nenhum outro arquivo é afetado.
-
-## Fora de escopo
-
-- O HTML "minimalista" sugerido pelo usuário foi usado como inspiração (mm, scale 1.5, container visível com opacity), mas vamos preservar o layout completo atual (cabeçalho, partes, fechamento, assinaturas, rodapé) que está mais profissional. Se quiser layout simplificado depois, é uma segunda iteração.
+<lov-actions>
+<lov-open-history>View History</lov-open-history>
+<lov-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</lov-link>
+</lov-actions>

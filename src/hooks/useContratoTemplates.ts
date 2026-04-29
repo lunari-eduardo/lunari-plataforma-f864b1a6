@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import type { ContratoTemplate, ContratoTemplateCreateInput } from '@/types/contrato';
+import { sanitizeContratoTemplateConteudo } from '@/utils/contratoSeedTemplates';
 
 const QK = 'contrato_templates';
 
@@ -19,7 +20,13 @@ export function useContratoTemplates() {
         .order('is_padrao', { ascending: false })
         .order('updated_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as ContratoTemplate[];
+      // Normaliza modelos antigos (remove cláusula de "Local" que puxava endereço,
+      // remove duplicações de unidade) sem persistir — protege contratos já
+      // gerados e evita escritas em massa.
+      return (data || []).map((t: any) => ({
+        ...t,
+        conteudo: sanitizeContratoTemplateConteudo(t.conteudo || ''),
+      })) as ContratoTemplate[];
     },
     enabled: !!user,
   });
@@ -44,7 +51,6 @@ export function useContratoTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Modelo criado' });
     },
     onError: (e: any) => toast({ title: 'Erro ao criar modelo', description: e.message, variant: 'destructive' }),
   });
@@ -62,7 +68,6 @@ export function useContratoTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Modelo atualizado' });
     },
     onError: (e: any) => toast({ title: 'Erro ao atualizar', description: e.message, variant: 'destructive' }),
   });
@@ -74,7 +79,6 @@ export function useContratoTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Modelo removido' });
     },
     onError: (e: any) => toast({ title: 'Erro ao remover', description: e.message, variant: 'destructive' }),
   });

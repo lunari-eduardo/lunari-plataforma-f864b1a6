@@ -58,10 +58,10 @@ export const VARIAVEIS_DISPONIVEIS: ContratoVariavelDef[] = [
   { key: 'nome_bebe', label: 'Nome do bebê (newborn)', tipo: 'editavel', grupo: 'manual' },
 
   { key: 'horario_termino', label: 'Horário de término', tipo: 'editavel', grupo: 'manual' },
-  { key: 'duracao_sessao', label: 'Duração da sessão', tipo: 'editavel', grupo: 'manual' },
-  { key: 'duracao_maxima', label: 'Duração máxima', tipo: 'editavel', grupo: 'manual' },
-  { key: 'local_ensaio', label: 'Local do ensaio', tipo: 'editavel', grupo: 'manual' },
-  { key: 'local_evento', label: 'Local do evento', tipo: 'editavel', grupo: 'manual' },
+  { key: 'duracao_sessao', label: 'Duração da sessão (número)', tipo: 'editavel', grupo: 'manual' },
+  { key: 'duracao_maxima', label: 'Duração máxima (número)', tipo: 'editavel', grupo: 'manual' },
+  // local_ensaio e local_evento foram movidos para 'legacy' para não puxarem
+  // o endereço do cliente nem aparecerem como variáveis recomendadas.
 
   { key: 'valor_sinal', label: 'Valor do sinal/arras', tipo: 'editavel', grupo: 'manual' },
   { key: 'valor_hora_extra', label: 'Valor da hora extra', tipo: 'editavel', grupo: 'manual' },
@@ -93,6 +93,8 @@ export const VARIAVEIS_DISPONIVEIS: ContratoVariavelDef[] = [
   { key: 'fotografo_nome', label: 'Nome do fotógrafo (legado)', tipo: 'legacy', grupo: 'fotografo' },
   { key: 'fotografo_email', label: 'E-mail do fotógrafo (legado)', tipo: 'legacy', grupo: 'fotografo' },
   { key: 'cidade_atual', label: 'Cidade atual', tipo: 'legacy', grupo: 'manual' },
+  { key: 'local_ensaio', label: 'Local do ensaio (legado)', tipo: 'legacy', grupo: 'manual' },
+  { key: 'local_evento', label: 'Local do evento (legado)', tipo: 'legacy', grupo: 'manual' },
 ];
 
 /**
@@ -106,8 +108,9 @@ export const CAMPOS_EDITAVEIS_DEFAULTS: Record<string, string> = {
   nome_bebe: 'a informar',
 
   horario_termino: 'a definir',
-  duracao_sessao: '2 horas',
-  duracao_maxima: '4 horas',
+  // Valores numéricos sem unidade — a unidade já está escrita ao lado da variável no template.
+  duracao_sessao: '2',
+  duracao_maxima: '4',
   local_ensaio: 'a definir',
   local_evento: 'a definir',
 
@@ -118,15 +121,42 @@ export const CAMPOS_EDITAVEIS_DEFAULTS: Record<string, string> = {
   valor_taxa_dano: 'R$ 0,00',
   forma_pagamento: 'PIX / Cartão / Transferência',
   descricao_forma_pagamento: '30% de sinal + saldo até 5 dias antes do evento',
-  quantidade_fotos: '20 fotos tratadas',
-  prazo_entrega: '30 dias úteis',
-  prazo_entrega_final: '45 dias úteis',
-  prazo_selecao: '15 dias úteis',
+  quantidade_fotos: '20',
+  prazo_entrega: '30',
+  prazo_entrega_final: '45',
+  prazo_selecao: '15',
   dias_aviso_previo: '7',
   dias_multa_cancelamento: '30',
   porcentagem_multa: '50',
   fornecimento_figurino: 'não está incluso',
 };
+
+/**
+ * Variáveis que sempre representam um VALOR NUMÉRICO acompanhado de unidade
+ * escrita ao lado no template (ex.: "{{duracao_sessao}} horas").
+ *
+ * Se um valor antigo vier com a unidade embutida (ex.: "2 horas"), normalizamos
+ * para apenas o número, evitando duplicações como "2 horas horas".
+ */
+const NUMERIC_VARS_WITH_INLINE_UNIT: Record<string, RegExp> = {
+  duracao_sessao: /\s*(horas?|h)\s*$/i,
+  duracao_maxima: /\s*(horas?|h)\s*$/i,
+  quantidade_fotos: /\s*(fotos?\s+tratadas?|fotos?|imagens?)\s*$/i,
+  prazo_entrega: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  prazo_entrega_final: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  prazo_selecao: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  dias_aviso_previo: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  dias_multa_cancelamento: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  porcentagem_multa: /\s*%\s*$/,
+};
+
+function normalizeVarValue(key: string, raw: string): string {
+  const value = (raw || '').trim();
+  if (!value) return value;
+  const stripper = NUMERIC_VARS_WITH_INLINE_UNIT[key];
+  if (!stripper) return value;
+  return value.replace(stripper, '').trim();
+}
 
 const formatBRL = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -220,8 +250,10 @@ export function buildVariableMap(input: BuildVariablesInput): Record<string, str
     duracao_maxima: manuais?.duracao_maxima || '',
     tipo_ensaio: categoria,
     tipo_evento: categoria,
-    local_ensaio: manuais?.local_ensaio || cliente?.endereco || '',
-    local_evento: manuais?.local_evento || cliente?.endereco || '',
+    // IMPORTANTE: NUNCA usar cliente.endereco como fallback do local —
+    // o endereço residencial do cliente não é o local da sessão/evento.
+    local_ensaio: manuais?.local_ensaio || '',
+    local_evento: manuais?.local_evento || '',
 
     valor_total: valorTotal,
     valor_sinal: manuais?.valor_sinal || '',
@@ -280,12 +312,14 @@ export function applyVariables(
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   return html.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
-    const value = variables[key];
-    if (value && value.trim() !== '') {
+    const rawValue = variables[key];
+    if (rawValue && rawValue.trim() !== '') {
+      const value = normalizeVarValue(key, rawValue);
       return `<span class="contrato-var-auto" data-campo="${key}">${escape(value)}</span>`;
     }
     if (key in defaults) {
-      return `<span class="contrato-campo-editavel" data-campo="${key}">${escape(defaults[key])}</span>`;
+      const value = normalizeVarValue(key, defaults[key]);
+      return `<span class="contrato-campo-editavel" data-campo="${key}">${escape(value)}</span>`;
     }
     // Variável desconhecida → preserva o token original (não destaca como erro)
     return match;
