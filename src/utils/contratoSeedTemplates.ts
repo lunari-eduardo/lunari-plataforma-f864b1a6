@@ -66,9 +66,8 @@ const GESTANTE = `<h2>Contrato de Prestação de Serviços Fotográficos – Ens
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF sob o nº {{cpf_cliente}}, residente e domiciliado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços fotográficos referentes ao ensaio de <strong>GESTANTE</strong>, a ser realizado na data de <strong>{{data_sessao}}</strong>, com duração aproximada de <strong>{{duracao_sessao}}</strong> horas.</p>
-<p><strong>Local do Ensaio:</strong> {{local_ensaio}}</p>
 
 <h3>3. Do figurino, maquiagem e preparação</h3>
 <p><strong>Figurino:</strong> a locação ou disponibilização de roupas e vestidos {{fornecimento_figurino}}.</p>
