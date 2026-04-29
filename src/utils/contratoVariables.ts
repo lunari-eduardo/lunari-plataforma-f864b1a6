@@ -58,10 +58,10 @@ export const VARIAVEIS_DISPONIVEIS: ContratoVariavelDef[] = [
   { key: 'nome_bebe', label: 'Nome do bebê (newborn)', tipo: 'editavel', grupo: 'manual' },
 
   { key: 'horario_termino', label: 'Horário de término', tipo: 'editavel', grupo: 'manual' },
-  { key: 'duracao_sessao', label: 'Duração da sessão', tipo: 'editavel', grupo: 'manual' },
-  { key: 'duracao_maxima', label: 'Duração máxima', tipo: 'editavel', grupo: 'manual' },
-  { key: 'local_ensaio', label: 'Local do ensaio', tipo: 'editavel', grupo: 'manual' },
-  { key: 'local_evento', label: 'Local do evento', tipo: 'editavel', grupo: 'manual' },
+  { key: 'duracao_sessao', label: 'Duração da sessão (número)', tipo: 'editavel', grupo: 'manual' },
+  { key: 'duracao_maxima', label: 'Duração máxima (número)', tipo: 'editavel', grupo: 'manual' },
+  // local_ensaio e local_evento foram movidos para 'legacy' para não puxarem
+  // o endereço do cliente nem aparecerem como variáveis recomendadas.
 
   { key: 'valor_sinal', label: 'Valor do sinal/arras', tipo: 'editavel', grupo: 'manual' },
   { key: 'valor_hora_extra', label: 'Valor da hora extra', tipo: 'editavel', grupo: 'manual' },
