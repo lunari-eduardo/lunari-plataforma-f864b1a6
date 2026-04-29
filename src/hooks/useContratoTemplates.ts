@@ -51,7 +51,6 @@ export function useContratoTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Modelo criado' });
     },
     onError: (e: any) => toast({ title: 'Erro ao criar modelo', description: e.message, variant: 'destructive' }),
   });
@@ -69,7 +68,6 @@ export function useContratoTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Modelo atualizado' });
     },
     onError: (e: any) => toast({ title: 'Erro ao atualizar', description: e.message, variant: 'destructive' }),
   });
@@ -81,7 +79,6 @@ export function useContratoTemplates() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Modelo removido' });
     },
     onError: (e: any) => toast({ title: 'Erro ao remover', description: e.message, variant: 'destructive' }),
   });
