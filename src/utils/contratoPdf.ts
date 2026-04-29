@@ -148,26 +148,45 @@ function escapeHtml(s: string): string {
 /* Layout do PDF                                                       */
 /* ------------------------------------------------------------------ */
 
-/** CSS 100% isolado do tema do app. Cores literais apenas. */
+/** CSS isolado do tema do app — reset cirúrgico (não global agressivo). */
 const PRINT_CSS = `
-  /* RESET agressivo dentro do container, isolado do tema do app */
-  .lunari-pdf, .lunari-pdf * {
-    box-sizing: border-box !important;
-    background: transparent !important;
-    color: #000000 !important;
-    font-family: Arial, Helvetica, sans-serif !important;
-    text-shadow: none !important;
-    filter: none !important;
-    opacity: 1 !important;
-    border-color: #cccccc !important;
-  }
+  /* Container raiz: define base visual */
   .lunari-pdf {
-    background: #ffffff !important;
-    width: 794px;
-    padding: 56px 56px 56px 56px;
+    background: #ffffff;
     color: #000000;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 12.5px;
     line-height: 1.6;
+    width: 794px;
+    padding: 56px;
+    box-sizing: border-box;
+  }
+  /* Reset cirúrgico nos descendentes — sem !important global, sem border-color forçado */
+  .lunari-pdf * {
+    box-sizing: border-box;
+    color: #000000;
+    text-shadow: none;
+    filter: none;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  /* Garante fundo transparente e sem borda em elementos textuais (evita herança do editor) */
+  .lunari-pdf p,
+  .lunari-pdf span,
+  .lunari-pdf div,
+  .lunari-pdf li,
+  .lunari-pdf strong,
+  .lunari-pdf em,
+  .lunari-pdf u,
+  .lunari-pdf b,
+  .lunari-pdf i,
+  .lunari-pdf h1,
+  .lunari-pdf h2,
+  .lunari-pdf h3,
+  .lunari-pdf h4,
+  .lunari-pdf h5,
+  .lunari-pdf h6 {
+    background: transparent;
+    border: none;
   }
   .lunari-pdf h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px 0; }
   .lunari-pdf h2 { font-size: 15px; font-weight: 700; margin: 16px 0 8px 0; }
