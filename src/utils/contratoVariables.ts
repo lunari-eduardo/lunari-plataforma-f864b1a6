@@ -93,6 +93,8 @@ export const VARIAVEIS_DISPONIVEIS: ContratoVariavelDef[] = [
   { key: 'fotografo_nome', label: 'Nome do fotógrafo (legado)', tipo: 'legacy', grupo: 'fotografo' },
   { key: 'fotografo_email', label: 'E-mail do fotógrafo (legado)', tipo: 'legacy', grupo: 'fotografo' },
   { key: 'cidade_atual', label: 'Cidade atual', tipo: 'legacy', grupo: 'manual' },
+  { key: 'local_ensaio', label: 'Local do ensaio (legado)', tipo: 'legacy', grupo: 'manual' },
+  { key: 'local_evento', label: 'Local do evento (legado)', tipo: 'legacy', grupo: 'manual' },
 ];
 
 /**
