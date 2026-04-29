@@ -106,8 +106,9 @@ export const CAMPOS_EDITAVEIS_DEFAULTS: Record<string, string> = {
   nome_bebe: 'a informar',
 
   horario_termino: 'a definir',
-  duracao_sessao: '2 horas',
-  duracao_maxima: '4 horas',
+  // Valores numéricos sem unidade — a unidade já está escrita ao lado da variável no template.
+  duracao_sessao: '2',
+  duracao_maxima: '4',
   local_ensaio: 'a definir',
   local_evento: 'a definir',
 
@@ -118,15 +119,42 @@ export const CAMPOS_EDITAVEIS_DEFAULTS: Record<string, string> = {
   valor_taxa_dano: 'R$ 0,00',
   forma_pagamento: 'PIX / Cartão / Transferência',
   descricao_forma_pagamento: '30% de sinal + saldo até 5 dias antes do evento',
-  quantidade_fotos: '20 fotos tratadas',
-  prazo_entrega: '30 dias úteis',
-  prazo_entrega_final: '45 dias úteis',
-  prazo_selecao: '15 dias úteis',
+  quantidade_fotos: '20',
+  prazo_entrega: '30',
+  prazo_entrega_final: '45',
+  prazo_selecao: '15',
   dias_aviso_previo: '7',
   dias_multa_cancelamento: '30',
   porcentagem_multa: '50',
   fornecimento_figurino: 'não está incluso',
 };
+
+/**
+ * Variáveis que sempre representam um VALOR NUMÉRICO acompanhado de unidade
+ * escrita ao lado no template (ex.: "{{duracao_sessao}} horas").
+ *
+ * Se um valor antigo vier com a unidade embutida (ex.: "2 horas"), normalizamos
+ * para apenas o número, evitando duplicações como "2 horas horas".
+ */
+const NUMERIC_VARS_WITH_INLINE_UNIT: Record<string, RegExp> = {
+  duracao_sessao: /\s*(horas?|h)\s*$/i,
+  duracao_maxima: /\s*(horas?|h)\s*$/i,
+  quantidade_fotos: /\s*(fotos?\s+tratadas?|fotos?|imagens?)\s*$/i,
+  prazo_entrega: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  prazo_entrega_final: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  prazo_selecao: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  dias_aviso_previo: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  dias_multa_cancelamento: /\s*(dias?\s+úteis?|dias?)\s*$/i,
+  porcentagem_multa: /\s*%\s*$/,
+};
+
+function normalizeVarValue(key: string, raw: string): string {
+  const value = (raw || '').trim();
+  if (!value) return value;
+  const stripper = NUMERIC_VARS_WITH_INLINE_UNIT[key];
+  if (!stripper) return value;
+  return value.replace(stripper, '').trim();
+}
 
 const formatBRL = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
