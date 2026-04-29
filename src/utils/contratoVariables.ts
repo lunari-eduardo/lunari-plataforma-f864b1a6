@@ -310,12 +310,14 @@ export function applyVariables(
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   return html.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
-    const value = variables[key];
-    if (value && value.trim() !== '') {
+    const rawValue = variables[key];
+    if (rawValue && rawValue.trim() !== '') {
+      const value = normalizeVarValue(key, rawValue);
       return `<span class="contrato-var-auto" data-campo="${key}">${escape(value)}</span>`;
     }
     if (key in defaults) {
-      return `<span class="contrato-campo-editavel" data-campo="${key}">${escape(defaults[key])}</span>`;
+      const value = normalizeVarValue(key, defaults[key]);
+      return `<span class="contrato-campo-editavel" data-campo="${key}">${escape(value)}</span>`;
     }
     // Variável desconhecida → preserva o token original (não destaca como erro)
     return match;
