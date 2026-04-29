@@ -179,10 +179,9 @@ const EVENTO = `<h2>Contrato de Prestação de Serviços Fotográficos – Event
 <p><strong>CONTRATANTE:</strong> {{nome_cliente}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_cliente}}, residente/sediado(a) na cidade de {{cidade_cliente}}, {{estado_cliente}}, com e-mail: {{email_cliente}}.</p>
 <p><strong>CONTRATADA(O):</strong> {{nome_fotografo}}, inscrito(a) no CPF/CNPJ sob o nº {{documento_fotografo}}, sediado(a) na cidade de {{cidade_fotografo}}, com e-mail: {{email_fotografo}}.</p>
 
-<h3>2. Do objeto e local</h3>
+<h3>2. Do objeto e da data</h3>
 <p>O presente instrumento tem como objeto a prestação de serviços de cobertura fotográfica do evento do tipo <strong>{{tipo_evento}}</strong>, a ser realizado na data de <strong>{{data_evento}}</strong>.</p>
-<p><strong>Local do Evento:</strong> {{local_evento}}<br/>
-<strong>Horário de Início:</strong> {{horario_inicio}}<br/>
+<p><strong>Horário de Início:</strong> {{horario_inicio}}<br/>
 <strong>Horário de Término:</strong> {{horario_termino}}</p>
 
 <h3>3. Dos serviços inclusos e entregáveis</h3>
