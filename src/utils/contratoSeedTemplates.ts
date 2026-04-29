@@ -256,3 +256,52 @@ export const CONTRATO_SEED_TEMPLATES: ContratoSeedTemplate[] = [
     conteudo: EVENTO,
   },
 ];
+
+/**
+ * Saneia o conteúdo de um modelo de contrato corrigindo problemas conhecidos
+ * dos modelos padrão antigos:
+ *  1. Remove a linha "Local do Ensaio: {{local_ensaio}}" (puxava endereço do cliente).
+ *  2. Remove a linha "Local do Evento: {{local_evento}}".
+ *  3. Renomeia títulos "Do objeto e local" / "Do objeto, data e local".
+ *  4. Remove duplicações de unidade ao lado de variáveis numéricas
+ *     (ex.: "{{duracao_sessao}} horas horas" → "{{duracao_sessao}} horas").
+ *
+ * Conservador: só toca em padrões muito específicos para não destruir o texto
+ * personalizado do usuário.
+ */
+export function sanitizeContratoTemplateConteudo(html: string): string {
+  if (!html) return html;
+  let out = html;
+
+  // 1) Linha "Local do Ensaio/Evento: {{local_xxx}}" — em <p> isolado ou após <br/>
+  out = out.replace(
+    /<p>\s*<strong>\s*Local do (?:Ensaio|Evento)\s*:?\s*<\/strong>\s*\{\{\s*local_(?:ensaio|evento)\s*\}\}\s*<\/p>/gi,
+    ''
+  );
+  out = out.replace(
+    /<br\s*\/?>\s*<strong>\s*Local do (?:Ensaio|Evento)\s*:?\s*<\/strong>\s*\{\{\s*local_(?:ensaio|evento)\s*\}\}/gi,
+    ''
+  );
+  out = out.replace(
+    /<strong>\s*Local do (?:Ensaio|Evento)\s*:?\s*<\/strong>\s*\{\{\s*local_(?:ensaio|evento)\s*\}\}\s*<br\s*\/?>/gi,
+    ''
+  );
+
+  // 2) Renomear títulos
+  out = out.replace(/Do objeto,\s*data\s*e\s*local/gi, 'Do objeto e da data');
+  out = out.replace(/Do objeto\s*e\s*local/gi, 'Do objeto');
+
+  // 3) Remover duplicações de unidade depois de variáveis numéricas
+  const dedupePatterns: Array<[RegExp, string]> = [
+    // "{{duracao_xxx}} horas horas" → "{{duracao_xxx}} horas"
+    [/(\{\{\s*duracao_\w+\s*\}\}[^<]{0,40}?\bhoras?)\s+horas?\b/gi, '$1'],
+    [/(\{\{\s*quantidade_fotos\s*\}\}[^<]{0,40}?\bfotos?(?:\s+tratadas?)?)\s+fotos?\b/gi, '$1'],
+    [/(\{\{\s*prazo_\w+\s*\}\}[^<]{0,40}?\bdias?(?:\s+úteis?)?)\s+dias?\b/gi, '$1'],
+    [/(\{\{\s*porcentagem_\w+\s*\}\})%\s*%/g, '$1%'],
+  ];
+  for (const [re, replacement] of dedupePatterns) {
+    out = out.replace(re, replacement);
+  }
+
+  return out;
+}
