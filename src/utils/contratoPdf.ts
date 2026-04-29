@@ -455,7 +455,82 @@ async function waitForLayout(): Promise<void> {
 }
 
 /* ------------------------------------------------------------------ */
-/* Motor primário: jsPDF.html() com autoPaging                          */
+/* Validação de PDF gerado                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Valida se o blob retornado é realmente um PDF com conteúdo:
+ *  - Começa com %PDF- (assinatura de arquivo)
+ *  - Tem tamanho mínimo razoável (PDFs em branco ficam ~1-3 KB; com 1+ pág
+ *    de texto real costumam passar de 4-8 KB)
+ */
+async function isLikelyValidPdf(blob: Blob): Promise<boolean> {
+  if (!blob || blob.size < 1500) return false;
+  try {
+    const head = await blob.slice(0, 5).text();
+    if (!head.startsWith('%PDF-')) return false;
+  } catch {
+    return false;
+  }
+  return blob.size >= 4000;
+}
+
+/* ------------------------------------------------------------------ */
+/* Motor PRINCIPAL: html2pdf via DOM real (unit:mm, scale 1.5)         */
+/* ------------------------------------------------------------------ */
+
+async function generateViaHtml2Pdf(opts: GenerateContratoPdfOptions, innerHtml: string): Promise<Blob> {
+  const html2pdf = (await import('html2pdf.js')).default;
+  const { root, styleEl } = createRenderContainer(innerHtml);
+  try {
+    await waitForLayout();
+
+    const rect = root.getBoundingClientRect();
+    diag('html2pdf container', {
+      width: rect.width,
+      height: rect.height,
+      scrollHeight: root.scrollHeight,
+    });
+
+    if (rect.width < 100 || rect.height < 100) {
+      throw new Error('Container inválido (dimensões < 100px)');
+    }
+
+    const opt = {
+      margin: [15, 15, 15, 15] as [number, number, number, number], // mm
+      filename: opts.filename || `${opts.titulo || 'contrato'}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: {
+        scale: 1.5,
+        useCORS: true,
+        letterRendering: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 794,
+      },
+      jsPDF: {
+        unit: 'mm' as const,
+        format: 'a4' as const,
+        orientation: 'portrait' as const,
+        compress: true,
+      },
+      pagebreak: { mode: ['css', 'legacy', 'avoid-all'] as string[] },
+    };
+
+    const blob: Blob = await html2pdf().set(opt as any).from(root).outputPdf('blob');
+    diag('Blob html2pdf', { size: blob?.size });
+
+    if (!(await isLikelyValidPdf(blob))) {
+      throw new Error(`html2pdf gerou PDF inválido ou vazio (size=${blob?.size || 0})`);
+    }
+    return blob;
+  } finally {
+    destroyRenderContainer(root, styleEl);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Fallback: jsPDF.html() com unit:mm                                   */
 /* ------------------------------------------------------------------ */
 
 async function generateViaJsPDF(opts: GenerateContratoPdfOptions, innerHtml: string): Promise<Blob> {
@@ -466,11 +541,10 @@ async function generateViaJsPDF(opts: GenerateContratoPdfOptions, innerHtml: str
     const rect = root.getBoundingClientRect();
     const firstP = root.querySelector('.pdf-body p, .pdf-body h2, .pdf-body h3');
     const computedColor = firstP ? getComputedStyle(firstP).color : '';
-    diag('Container', {
+    diag('jsPDF container', {
       width: rect.width,
       height: rect.height,
       scrollHeight: root.scrollHeight,
-      scrollWidth: root.scrollWidth,
       firstBodyColor: computedColor,
     });
 
@@ -479,25 +553,19 @@ async function generateViaJsPDF(opts: GenerateContratoPdfOptions, innerHtml: str
     }
 
     const doc = new jsPDF({
-      unit: 'px',
+      unit: 'mm',
       format: 'a4',
       orientation: 'portrait',
-      hotfixes: ['px_scaling'],
       compress: true,
     });
 
-    // Largura interna do A4 em px no sistema do jsPDF (~595.28 pt ≈ 794 px a 96dpi)
-    // Usamos width do próprio container (794) como referência e deixamos o
-    // jsPDF escalar para A4 via hotfix 'px_scaling'.
     await doc.html(root, {
       autoPaging: 'text',
-      width: 794,
-      windowWidth: 794,
-      margin: [24, 24, 28, 24],
+      margin: [15, 15, 15, 15], // mm
       html2canvas: {
         backgroundColor: '#ffffff',
         useCORS: true,
-        scale: 2,
+        scale: 1.5,
         letterRendering: true,
         logging: false,
       },
@@ -505,56 +573,14 @@ async function generateViaJsPDF(opts: GenerateContratoPdfOptions, innerHtml: str
 
     const blob = doc.output('blob');
     diag('Blob jsPDF', { size: blob.size });
-    if (!blob || blob.size < 2000) {
-      throw new Error('jsPDF gerou blob suspeito de vazio');
+
+    if (!(await isLikelyValidPdf(blob))) {
+      throw new Error(`jsPDF gerou PDF inválido ou vazio (size=${blob?.size || 0})`);
     }
     return blob;
   } finally {
     destroyRenderContainer(root, styleEl);
   }
-}
-
-/* ------------------------------------------------------------------ */
-/* Fallback: html2pdf via string (sem DOM real)                         */
-/* ------------------------------------------------------------------ */
-
-async function generateViaHtml2Pdf(opts: GenerateContratoPdfOptions, innerHtml: string): Promise<Blob> {
-  const html2pdf = (await import('html2pdf.js')).default;
-  const filename = opts.filename || `${opts.titulo || 'contrato'}.pdf`;
-
-  const fullHtml = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${escapeHtml(
-    opts.titulo || 'Contrato'
-  )}</title><style>${PRINT_CSS}</style></head><body style="margin:0;background:#ffffff;">
-  <div class="lunari-pdf">${innerHtml}</div>
-  </body></html>`;
-
-  const opt = {
-    margin: [8, 8, 10, 8] as [number, number, number, number],
-    filename,
-    image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      letterRendering: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: 794,
-    },
-    jsPDF: {
-      unit: 'mm' as const,
-      format: 'a4' as const,
-      orientation: 'portrait' as const,
-      compress: true,
-    },
-    pagebreak: { mode: ['css', 'legacy'] as string[] },
-  };
-
-  const blob: Blob = await html2pdf().set(opt as any).from(fullHtml).outputPdf('blob');
-  diag('Blob html2pdf fallback', { size: blob?.size });
-  if (!blob || blob.size < 2000) {
-    throw new Error('html2pdf fallback também falhou (blob pequeno)');
-  }
-  return blob;
 }
 
 /* ------------------------------------------------------------------ */
@@ -585,16 +611,17 @@ export async function generateContratoPdf(opts: GenerateContratoPdfOptions): Pro
 
   const innerHtml = buildInnerHtml(opts, sanitized);
 
-  // 1) Motor principal: jsPDF.html com DOM real.
+  // 1) Motor PRINCIPAL: html2pdf (mais estável com unit:mm + DOM real).
   try {
-    return await generateViaJsPDF(opts, innerHtml);
+    return await generateViaHtml2Pdf(opts, innerHtml);
   } catch (err) {
-    warn('Motor principal (jsPDF.html) falhou, tentando fallback html2pdf:', err);
+    warn('Motor principal (html2pdf) falhou, tentando fallback jsPDF.html:', err);
   }
 
-  // 2) Fallback: html2pdf via string.
-  return await generateViaHtml2Pdf(opts, innerHtml);
+  // 2) Fallback: jsPDF.html().
+  return await generateViaJsPDF(opts, innerHtml);
 }
+
 
 export async function downloadContratoPdf(opts: GenerateContratoPdfOptions): Promise<void> {
   const blob = await generateContratoPdf(opts);
