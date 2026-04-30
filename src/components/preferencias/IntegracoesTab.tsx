@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plug, CreditCard, Calendar, Crown } from 'lucide-react';
+import { Plug, CreditCard, Calendar, Crown, FileSignature } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PaymentSettings } from '@/components/integracoes/PaymentSettings';
 import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
+import { AutentiqueCard } from '@/components/integracoes/AutentiqueCard';
 import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { toast } from 'sonner';
@@ -53,13 +54,17 @@ export function IntegracoesTab() {
 
       {/* Tabs */}
       <Tabs defaultValue="pagamentos" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-xl">
           <TabsTrigger value="pagamentos" className="gap-2">
             <CreditCard className="h-4 w-4" />
-            Pagamentos
+            <span className="hidden sm:inline">Pagamentos</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value="calendar" 
+          <TabsTrigger value="assinatura" className="gap-2">
+            <FileSignature className="h-4 w-4" />
+            <span className="hidden sm:inline">Assinatura</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="calendar"
             className="gap-2"
             onClick={(e) => {
               if (!hasPro) {
@@ -76,13 +81,19 @@ export function IntegracoesTab() {
             disabled={!hasPro}
           >
             <Calendar className="h-4 w-4" />
-            Google Calendar
+            <span className="hidden sm:inline">Calendar</span>
             {!hasPro && <Crown className="h-3.5 w-3.5 text-primary" />}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pagamentos" className="mt-6">
           <PaymentSettings />
+        </TabsContent>
+
+        <TabsContent value="assinatura" className="mt-6">
+          <div className="max-w-xl">
+            <AutentiqueCard />
+          </div>
         </TabsContent>
 
         <TabsContent value="calendar" className="mt-6">
