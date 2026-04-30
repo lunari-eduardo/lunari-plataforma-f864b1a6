@@ -36,7 +36,6 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     setSaving(true);
     try {
       await update({ id: contrato.id, titulo, conteudo });
-      toast({ title: 'Alterações salvas' });
     } finally {
       setSaving(false);
     }
