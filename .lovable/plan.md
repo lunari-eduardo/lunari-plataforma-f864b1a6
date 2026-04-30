@@ -1,34 +1,60 @@
 ## Objetivo
 
-Ordenar as sessões do Workflow por **data + horário** (ao invés de só data), espelhando a ordem visual da Agenda. Sessões do mesmo dia passam a aparecer na ordem cronológica do horário agendado (08:00 antes de 14:00 etc.), exatamente como na tela de Agenda — Dia.
+Quatro ajustes pontuais: limpar UI do Workflow, padronizar a cor da aba do PWA (cinza médio neutro) e travar o título da aba sempre como "Lunari Studio".
 
-## Mudanças
+---
 
-### 1. `src/pages/Workflow.tsx` — Ordenação padrão (sem sortField)
+## 1. Workflow — Remover bloco "Adicionar Sessão Rápida"
 
-No `useMemo` de `sortedSessions` (linhas ~733–742), o branch padrão hoje compara só `parseDateFromStorage(a.data)`. Vou compor a chave de ordenação com `data + hora`:
+**Arquivo:** `src/pages/Workflow.tsx`
 
-- Para cada sessão, montar um timestamp combinado: timestamp da data + minutos de `session.hora` (formato `HH:mm`).
-- Sessões sem `hora` recebem fallback `00:00` para irem ao topo do dia (mesmo comportamento da Agenda quando não há horário).
-- Mantém ordem **decrescente por dia** (mais recentes primeiro), mas **crescente por horário dentro do mesmo dia** (08:00 → 18:00), igual à Agenda.
+- Remover o import do `QuickSessionAdd` (linha 4).
+- Remover o JSX `<QuickSessionAdd ... />` (linha 1122).
+- Remover o callback `handleQuickSessionAdd` (linhas ~906–941) e qualquer dependência exclusiva dele que fique órfã (`createManualSession` se não for usada em outro lugar — verificar antes de remover do destructuring).
+- Manter o componente `src/components/workflow/QuickSessionAdd.tsx` no projeto (não excluir agora, evitamos quebrar imports residuais e podemos reusar futuramente).
 
-### 2. `src/pages/Workflow.tsx` — Ordenação manual por coluna "Data"
+## 2. Workflow — Remover seletor de colunas
 
-No `getSortValue` (linhas ~702–706), quando `headerKey === 'date'`, somar os minutos de `session.hora` ao timestamp da data. Assim, ao clicar em "Data ↑/↓" no header, o desempate dentro do mesmo dia continua sendo o horário (asc preserva 08:00 antes de 14:00; desc inverte).
+**Arquivo:** `src/pages/Workflow.tsx`
 
-### 3. Helper de parsing
+- Remover o import do `ColumnSettings` (linha 5).
+- Remover o JSX `<ColumnSettings ... />` (linhas 1154–1160).
+- Manter o estado `visibleColumns` (a tabela ainda lê dele para decidir o que exibir) com o default já existente — apenas o controle visual é removido.
 
-Criar um pequeno utilitário inline (ou em `src/utils/dateUtils.ts`) `parseHoraToMinutes(hora: string): number` que aceita `"HH:mm"` ou `"HH:mm:ss"` e retorna minutos desde meia-noite, com fallback `0` para valores inválidos/vazios.
+## 3. PWA — Cor da aba neutra (cinza médio)
 
-## Critérios de aceite
+Trocar o `theme_color` lilás (`#9b87f5`) por um cinza médio neutro que funcione bem em light e dark. Escolha: **`#6B7280`** (Tailwind `gray-500`) — equilibrado, sem viés quente/frio.
 
-- No Workflow, abrindo o mês, sessões do mesmo dia aparecem na ordem 08:00 → 18:00 (igual ao print da Agenda enviado).
-- Dias diferentes continuam ordenados do mais recente para o mais antigo por padrão.
-- Clicar em "Data" no header ordena por data + hora (asc/desc) sem quebrar.
-- Sessões sem horário definido aparecem no topo do dia respectivo.
-- Não há mudança em filtros, integração com Galeria, cache, ou realtime.
+**Arquivos:**
+- `index.html` (linha 26): `<meta name="theme-color" content="#6B7280" />`
+- `vite.config.ts` (linha 25): `theme_color: '#6B7280'` no manifest do `VitePWA`.
 
-## Fora de escopo
+Observação: o `apple-mobile-web-app-status-bar-style` continua `black-translucent` (já neutro). O usuário precisará reinstalar o PWA para ver a mudança no app instalado (manifest é cacheado no install).
 
-- Não altera ordenação de outros sortFields (nome, status, categoria, valores).
-- Não toca em `WorkflowCacheManager` nem em queries do Supabase (a ordenação fina por hora é feita no cliente, onde a `hora` já está disponível).
+## 4. Título da aba sempre "Lunari Studio"
+
+**Arquivos a alterar:**
+
+- `index.html` linha 15: `<title>Lunari Studio</title>`
+- `index.html` linha 30: `apple-mobile-web-app-title` → `"Lunari Studio"`
+- `index.html` linhas 57–58 (og:title / twitter:title): manter descrição rica para SEO/compartilhamento (não afeta aba) — **não alterar**, pois servem para previews sociais, não para a tab.
+- `vite.config.ts`: `name: 'Lunari Studio'`, `short_name: 'Lunari Studio'`.
+
+**Remover sobrescritas dinâmicas de `document.title`:**
+- `src/components/seo/SEOHead.tsx` (linhas 25 e 84): remover as atribuições a `document.title` (manter o resto do componente para meta description/OG, que continuam úteis para SEO mas não mexem na aba).
+- `src/pages/Tarefas.tsx` (linha 73): remover o `useEffect` que seta `document.title = 'Tarefas | Lunari'`.
+- `src/pages/AnaliseVendas.tsx` (linha 15): remover a atribuição a `document.title`.
+- `src/pages/Index.tsx` (linha 20): remover a atribuição a `document.title`.
+- `src/pages/FeedTest.tsx` (linha 34): remover a atribuição (rota de teste, mas mantém consistência).
+
+Resultado: o `<title>` do `index.html` permanece intocado durante a navegação SPA, garantindo "Lunari Studio" sempre.
+
+---
+
+## Resumo dos arquivos editados
+
+- `index.html` — title, theme-color, apple title
+- `vite.config.ts` — manifest name/short_name/theme_color
+- `src/pages/Workflow.tsx` — remove QuickSessionAdd e ColumnSettings
+- `src/components/seo/SEOHead.tsx` — remove document.title
+- `src/pages/Tarefas.tsx`, `src/pages/AnaliseVendas.tsx`, `src/pages/Index.tsx`, `src/pages/FeedTest.tsx` — remove document.title
