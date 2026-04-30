@@ -137,6 +137,43 @@ export function useContratos(opts: UseContratosOpts = {}) {
     return data?.signedUrl || null;
   };
 
+  /**
+   * Envia o contrato para assinatura via Autentique.
+   * Recebe o PDF já gerado no client (Blob) e converte para base64.
+   */
+  const enviarParaAssinaturaMutation = useMutation({
+    mutationFn: async ({
+      contratoId,
+      pdfBlob,
+      includeFotografo,
+    }: {
+      contratoId: string;
+      pdfBlob: Blob;
+      includeFotografo?: boolean;
+    }) => {
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      const { data, error } = await supabase.functions.invoke('autentique-send-contrato', {
+        body: {
+          contrato_id: contratoId,
+          pdf_base64: pdfBase64,
+          include_fotografo: !!includeFotografo,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data as { success: true; document_id: string; signers: any[] };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [QK] });
+    },
+    onError: (e: any) =>
+      toast({
+        title: 'Não foi possível enviar para assinatura',
+        description: e?.message || 'Tente novamente em alguns instantes.',
+        variant: 'destructive',
+      }),
+  });
+
   return {
     contratos,
     isLoading,
@@ -145,6 +182,22 @@ export function useContratos(opts: UseContratosOpts = {}) {
     setStatus: setStatusMutation.mutateAsync,
     remove: deleteMutation.mutateAsync,
     uploadAssinado: uploadAssinadoMutation.mutateAsync,
+    enviarParaAssinatura: enviarParaAssinaturaMutation.mutateAsync,
+    isEnviandoParaAssinatura: enviarParaAssinaturaMutation.isPending,
     getSignedUrl,
   };
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const result = reader.result as string;
+      // result vem como "data:application/pdf;base64,XXXX" — devolvemos só o XXXX
+      const idx = result.indexOf(',');
+      resolve(idx >= 0 ? result.slice(idx + 1) : result);
+    };
+    reader.readAsDataURL(blob);
+  });
 }
