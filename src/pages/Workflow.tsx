@@ -11,7 +11,7 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
-import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
+
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
 import { parseDateFromStorage, parseHoraToMinutes } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
