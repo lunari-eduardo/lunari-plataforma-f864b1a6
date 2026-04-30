@@ -200,8 +200,6 @@ export default function Workflow() {
     return workflowSessions.map(session => convertSessionToData(session));
   }, [workflowSessions, convertSessionToData]);
   
-  // Use sessions hook for manual session creation
-  const { createManualSession } = useSessionsRealtime();
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
   
   // Funções de edição (integradas com Context) - FASE 1, 2 e 4
