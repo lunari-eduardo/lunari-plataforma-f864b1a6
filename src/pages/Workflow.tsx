@@ -15,7 +15,7 @@ import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
-import { parseDateFromStorage } from "@/utils/dateUtils";
+import { parseDateFromStorage, parseHoraToMinutes } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { usePersistedState } from '@/hooks/usePersistedState';
