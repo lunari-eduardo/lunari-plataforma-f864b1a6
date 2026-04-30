@@ -107,6 +107,61 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     await setStatus({ id: contrato.id, status });
   };
 
+  const handleEnviarParaAssinatura = async () => {
+    if (!contrato.cliente?.email) {
+      toast({
+        title: 'Cliente sem e-mail',
+        description: 'Adicione um e-mail ao cliente antes de enviar para assinatura.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!conteudo || conteudo.trim().length < 10) {
+      toast({
+        title: 'Contrato vazio',
+        description: 'Adicione conteúdo antes de enviar para assinatura.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      // 1) Salva alterações pendentes
+      if (conteudo !== contrato.conteudo || titulo !== contrato.titulo) {
+        await update({ id: contrato.id, titulo, conteudo });
+      }
+
+      // 2) Gera o PDF localmente
+      const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
+      const blob = await generateContratoPdf({
+        titulo,
+        conteudoHtml: conteudo,
+        fotografoNome: profile?.nome || snap.nome_fotografo || undefined,
+        fotografoEmail: profile?.email || snap.email_fotografo || undefined,
+        fotografoDocumento: (profile as any)?.cpf_cnpj || snap.documento_fotografo || undefined,
+        clienteNome: contrato.cliente?.nome || snap.nome_cliente || undefined,
+        clienteEmail: contrato.cliente?.email || snap.email_cliente || undefined,
+        clienteDocumento: snap.documento_cliente || snap.cpf_cliente || undefined,
+        cidadeLocal: snap.cidade_atual || snap.cidade_fotografo || snap.cidade_cliente || undefined,
+        variaveisSnapshot: snap,
+      });
+
+      // 3) Envia para edge function
+      await enviarParaAssinatura({
+        contratoId: contrato.id,
+        pdfBlob: blob,
+        includeFotografo: false,
+      });
+
+      toast({
+        title: 'Contrato enviado',
+        description: `Enviado para ${contrato.cliente?.email} via Autentique.`,
+      });
+    } catch (err: any) {
+      console.error('[Autentique] Falha no envio:', err);
+      // Toast de erro já tratado no hook
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
@@ -136,6 +191,39 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
           )}
 
           <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={isEditable} minHeight="400px" />
+
+          {jaEnviadoNaAutentique && (
+            <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm space-y-2">
+              <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300 font-medium">
+                <FileSignature className="h-4 w-4" />
+                Enviado via Autentique
+              </div>
+              <div className="text-xs text-blue-900/80 dark:text-blue-300/80">
+                ID: <code className="font-mono">{contrato.signature_external_id}</code>
+              </div>
+              {Array.isArray(contrato.signers) && contrato.signers.length > 0 && (
+                <div className="space-y-1">
+                  {contrato.signers.map((s: any, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <span className="text-blue-900 dark:text-blue-200">
+                        {s.nome || s.email}
+                      </span>
+                      {s.link && (
+                        <a
+                          href={s.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-700 dark:text-blue-300 hover:underline"
+                        >
+                          Link de assinatura <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
             <div>
@@ -182,7 +270,17 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
               <Download className="h-4 w-4 mr-1" />
               {downloadingPdf ? 'Gerando...' : 'Baixar PDF'}
             </Button>
-            {contrato.status === 'rascunho' && (
+            {podeEnviarParaAssinatura && (
+              <Button onClick={handleEnviarParaAssinatura} disabled={isEnviandoParaAssinatura}>
+                {isEnviandoParaAssinatura ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <FileSignature className="h-4 w-4 mr-1" />
+                )}
+                {isEnviandoParaAssinatura ? 'Enviando...' : 'Enviar para assinatura'}
+              </Button>
+            )}
+            {contrato.status === 'rascunho' && !autentiqueConectado && (
               <Button variant="outline" onClick={() => handleStatusChange('enviado')}>
                 <Send className="h-4 w-4 mr-1" />
                 Marcar como enviado
