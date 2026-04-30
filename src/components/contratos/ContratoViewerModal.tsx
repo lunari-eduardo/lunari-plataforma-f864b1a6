@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { ContratoRichEditor } from './ContratoRichEditor';
 import { ContratoStatusBadge } from './ContratoStatusBadge';
 import { useContratos } from '@/hooks/useContratos';
+import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { downloadContratoPdf } from '@/utils/contratoPdf';
-import { Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip } from 'lucide-react';
+import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
+import { Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip, FileSignature, ExternalLink, Loader2 } from 'lucide-react';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,16 @@ interface ContratoViewerModalProps {
 
 export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerModalProps) {
   const { profile } = useUserProfile();
-  const { update, setStatus, remove, uploadAssinado, getSignedUrl } = useContratos({ clienteId: contrato.cliente_id });
+  const {
+    update,
+    setStatus,
+    remove,
+    uploadAssinado,
+    getSignedUrl,
+    enviarParaAssinatura,
+    isEnviandoParaAssinatura,
+  } = useContratos({ clienteId: contrato.cliente_id });
+  const { status: autentiqueStatus } = useAutentiqueIntegration();
   const [conteudo, setConteudo] = useState(contrato.conteudo);
   const [titulo, setTitulo] = useState(contrato.titulo);
   const [saving, setSaving] = useState(false);
@@ -30,7 +40,11 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isAssinado = contrato.status === 'assinado';
-  const isEditable = !isAssinado;
+  const isEditable = !isAssinado && contrato.status !== 'enviado';
+  const autentiqueConectado = !!autentiqueStatus?.connected;
+  const jaEnviadoNaAutentique = !!contrato.signature_external_id;
+  const podeEnviarParaAssinatura =
+    contrato.status === 'rascunho' && autentiqueConectado && !jaEnviadoNaAutentique;
 
   const handleSave = async () => {
     setSaving(true);
