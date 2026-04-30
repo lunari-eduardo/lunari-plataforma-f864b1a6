@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     let fotografoNome: string | undefined;
     if (includeFotografoAsSigner) {
       const { data: prof } = await admin
-        .from("user_profiles")
+        .from("profiles")
         .select("nome, email")
         .eq("user_id", userId)
         .maybeSingle();
