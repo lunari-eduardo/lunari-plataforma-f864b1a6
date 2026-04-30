@@ -70,7 +70,7 @@ export default function Tarefas() {
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
 
-  useEffect(() => { document.title = 'Tarefas | Lunari'; }, []);
+  
 
   const [view, setView] = useState<'kanban' | 'list'>(() => localStorage.getItem('lunari_tasks_view') as any || 'kanban');
   const [filters, setFilters] = useState<TaskFilters>({ search: '', status: 'all', priority: 'all', assignee: 'all', dateRange: 'all' });
