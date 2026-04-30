@@ -16,8 +16,6 @@ import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 export default function Index() {
   // SEO basics
   useEffect(() => {
-    const title = "Dashboard de Negócios | Início";
-    document.title = title;
     const desc = "Dashboard: receita do mês vs metas, categoria mais rentável, novos clientes e próximos agendamentos.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {

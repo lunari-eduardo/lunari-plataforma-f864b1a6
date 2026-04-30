@@ -19,10 +19,10 @@ export default defineConfig(({ mode }) => ({
       injectRegister: 'auto',
       includeAssets: ['favicon.ico', 'lovable-uploads/caa859cc-c72e-4964-b21b-1cad68a4a9a5.png'],
       manifest: {
-        name: 'Lunari 2.0 - Gestão para Fotógrafos',
-        short_name: 'Lunari',
+        name: 'Lunari Studio',
+        short_name: 'Lunari Studio',
         description: 'Sistema de gestão completo para fotógrafos e estúdios fotográficos',
-        theme_color: '#9b87f5',
+        theme_color: '#6B7280',
         background_color: '#0A0A0A',
         display: 'standalone',
         orientation: 'portrait',

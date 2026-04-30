@@ -31,7 +31,6 @@ export default function FeedTest() {
   const [igUsername, setIgUsername] = useState<string>('');
   const [isLoadingIg, setIsLoadingIg] = useState(false);
   useEffect(() => {
-    document.title = 'Feed Test – Instagram-like feed 4:5';
     const desc = 'Página Feed Test com upload, recorte 4:5, compressão JPG, drag-and-drop e persistência em LocalStorage.';
     let meta = document.querySelector("meta[name='description']");
     if (!meta) {
