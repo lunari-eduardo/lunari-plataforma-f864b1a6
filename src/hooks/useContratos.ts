@@ -55,7 +55,6 @@ export function useContratos(opts: UseContratosOpts = {}) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Contrato criado' });
     },
     onError: (e: any) => toast({ title: 'Erro ao criar contrato', description: e.message, variant: 'destructive' }),
   });
@@ -81,7 +80,6 @@ export function useContratos(opts: UseContratosOpts = {}) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Status atualizado' });
     },
     onError: (e: any) => toast({ title: 'Erro', description: e.message, variant: 'destructive' }),
   });
@@ -93,7 +91,6 @@ export function useContratos(opts: UseContratosOpts = {}) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Contrato removido' });
     },
     onError: (e: any) => toast({ title: 'Erro ao remover', description: e.message, variant: 'destructive' }),
   });
@@ -128,7 +125,6 @@ export function useContratos(opts: UseContratosOpts = {}) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK] });
-      toast({ title: 'Contrato assinado anexado' });
     },
     onError: (e: any) => toast({ title: 'Erro no upload', description: e.message, variant: 'destructive' }),
   });
