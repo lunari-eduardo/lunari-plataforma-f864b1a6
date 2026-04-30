@@ -351,3 +351,16 @@ export function formatDateTimeForDisplay(timestamp: string): string {
     return '';
   }
 }
+
+/**
+ * Converte uma string de horário "HH:mm" ou "HH:mm:ss" em minutos desde meia-noite.
+ * Retorna 0 para entrada vazia ou inválida (faz a sessão ir ao topo do dia).
+ */
+export function parseHoraToMinutes(hora?: string | null): number {
+  if (!hora || typeof hora !== 'string') return 0;
+  const match = hora.trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return 0;
+  const h = Math.min(23, Math.max(0, parseInt(match[1], 10) || 0));
+  const m = Math.min(59, Math.max(0, parseInt(match[2], 10) || 0));
+  return h * 60 + m;
+}

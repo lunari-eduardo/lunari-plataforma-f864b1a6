@@ -15,7 +15,7 @@ import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
-import { parseDateFromStorage } from "@/utils/dateUtils";
+import { parseDateFromStorage, parseHoraToMinutes } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
 import { usePricingMigration } from '@/hooks/usePricingMigration';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -699,10 +699,11 @@ export default function Workflow() {
       return removeAccents((session.nome || '').toLowerCase());
     }
     
-    // Handle dates - convert to timestamp
+    // Handle dates - convert to timestamp + minutos do horário (para empatar mesma data pela hora)
     if (headerKey === 'date' || field === 'data') {
       const dateObj = parseDateFromStorage(session.data);
-      return dateObj ? dateObj.getTime() : 0;
+      const baseTs = dateObj ? dateObj.getTime() : 0;
+      return baseTs + parseHoraToMinutes(session.hora) * 60_000;
     }
     
     // Handle currency fields - convert to number
@@ -732,12 +733,15 @@ export default function Workflow() {
   // Sort sessions
   const sortedSessions = useMemo(() => {
     if (!sortField) {
-      // Ordenação padrão: mais recentes primeiro
+      // Ordenação padrão: dias mais recentes primeiro; dentro do mesmo dia, ordem cronológica do horário (igual à Agenda)
       return [...filteredSessions].sort((a, b) => {
         const dateA = parseDateFromStorage(a.data);
         const dateB = parseDateFromStorage(b.data);
-        if (!dateA || !dateB) return 0;
-        return dateB.getTime() - dateA.getTime();
+        const tsA = dateA ? dateA.getTime() : 0;
+        const tsB = dateB ? dateB.getTime() : 0;
+        if (tsA !== tsB) return tsB - tsA; // dia desc
+        // Mesmo dia: hora asc (08:00 antes de 14:00)
+        return parseHoraToMinutes(a.hora) - parseHoraToMinutes(b.hora);
       });
     }
 
