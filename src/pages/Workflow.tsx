@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
-import { QuickSessionAdd } from "@/components/workflow/QuickSessionAdd";
-import { ColumnSettings } from "@/components/workflow/ColumnSettings";
 import { WorkflowFilters } from "@/components/workflow/WorkflowFilters";
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Search, PanelRightOpen } from "lucide-react";
 import { WorkflowTasksPanel } from "@/components/workflow/WorkflowTasksPanel";
@@ -13,7 +11,7 @@ import { useOrcamentoData } from "@/hooks/useOrcamentoData";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
-import { useSessionsRealtime } from "@/hooks/useSessionsRealtime";
+
 import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
 import { parseDateFromStorage, parseHoraToMinutes } from "@/utils/dateUtils";
 import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
@@ -202,8 +200,6 @@ export default function Workflow() {
     return workflowSessions.map(session => convertSessionToData(session));
   }, [workflowSessions, convertSessionToData]);
   
-  // Use sessions hook for manual session creation
-  const { createManualSession } = useSessionsRealtime();
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
   
   // Funções de edição (integradas com Context) - FASE 1, 2 e 4
@@ -903,43 +899,6 @@ export default function Workflow() {
     });
   }, []);
 
-  // Handle quick session add with optimistic update
-  const handleQuickSessionAdd = useCallback(async (data: any) => {
-    try {
-      const newSession = await createManualSession(data);
-      
-      // Optimistic update: buscar sessão completa e fazer merge direto no cache
-      if (newSession?.id) {
-        console.log('🆕 [Workflow] Quick add success, fetching full session for cache...');
-        const { data: fullSession, error } = await supabase
-          .from('clientes_sessoes')
-          .select('*, clientes(nome, email, telefone, whatsapp)')
-          .eq('id', newSession.id)
-          .single();
-        
-        if (fullSession && !error) {
-          console.log('✅ [Workflow] Merging new session into cache:', fullSession.id);
-          mergeUpdate(fullSession as WorkflowSession);
-          
-          // Sessão agora é sempre criada no mês atual (não precisa navegar)
-          console.log(`✅ [Workflow] Sessão criada no mês atual: ${currentMonth.month}/${currentMonth.year}`);
-        }
-      }
-      
-      toast({
-        title: "Sessão criada",
-        description: "A sessão foi adicionada com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao criar sessão rápida:', error);
-      toast({
-        title: "Erro ao criar sessão",
-        description: "Não foi possível criar a sessão. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  }, [createManualSession, mergeUpdate, currentMonth]);
-
   // FASE 4: Recongelar todas as sessões manualmente
   const recongelarTodasSessoes = useCallback(async () => {
     try {
@@ -1117,12 +1076,7 @@ export default function Workflow() {
 
       {/* Workflow Table */}
       <div className="rounded-lg bg-white/30 backdrop-blur-xl dark:bg-white/[0.04] border border-white/50 dark:border-white/10">
-        {/* Quick Add Session - Always visible */}
-        <div className="p-4 border-b border-white/40 dark:border-white/10">
-          <QuickSessionAdd onSubmit={handleQuickSessionAdd} currentMonth={currentMonth} />
-        </div>
-
-        {/* Busca e Configuração de Colunas */}
+        {/* Busca */}
         <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
           <div className="relative flex-1 max-w-sm min-w-[200px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -1151,13 +1105,6 @@ export default function Workflow() {
             situacaoCounts={situacaoCounts}
           />
           
-          <ColumnSettings
-            visibleColumns={visibleColumns}
-            onColumnVisibilityChange={(columns) => {
-              setVisibleColumns(columns);
-              window.localStorage.setItem('workflow_visible_columns', JSON.stringify(columns));
-            }}
-          />
         </div>
 
         {sortedSessions.length === 0 ? (

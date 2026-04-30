@@ -11,8 +11,6 @@ import { useSalesAnalytics } from '@/hooks/useSalesAnalyticsWrapper';
 export default function AnaliseVendas() {
   // SEO basics
   useEffect(() => {
-    const title = "Análise de Vendas | Dashboard de Performance";
-    document.title = title;
     const desc = "Análise completa de vendas: receita mensal, sessões realizadas, ticket médio, conversão, distribuição por categoria e origem dos leads.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {

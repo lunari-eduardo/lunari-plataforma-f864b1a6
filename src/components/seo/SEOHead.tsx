@@ -21,9 +21,6 @@ export function SEOHead({
   ogType = 'article',
 }: SEOHeadProps) {
   useEffect(() => {
-    // Title
-    document.title = title;
-
     // Meta tags helper
     const setMeta = (name: string, content: string, isProperty = false) => {
       const attr = isProperty ? 'property' : 'name';
@@ -78,11 +75,6 @@ export function SEOHead({
       setMeta('og:url', canonical, true);
     }
 
-    // Cleanup on unmount
-    return () => {
-      // Reset to default title
-      document.title = 'Lunari';
-    };
   }, [title, description, canonical, noindex, ogImage, ogType]);
 
   return null;
