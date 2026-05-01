@@ -44,10 +44,15 @@ export function SessaoContratoButton({
   className,
 }: SessaoContratoButtonProps) {
   const { contratos } = useContratos({ sessionId });
+  const { profile } = useUserProfile();
+  const { user } = useAuth();
   const [novoOpen, setNovoOpen] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [popOpen, setPopOpen] = useState(false);
 
+  const algumPendenteParaMim = contratos.some((c) =>
+    !!getFotografoPendente(c, { profileEmail: profile?.email, userEmail: user?.email })
+  );
   const statusPrincipal: ContratoStatus | null =
     contratos.length > 0
       ? contratos.reduce<ContratoStatus>(
