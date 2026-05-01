@@ -465,6 +465,24 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
               )}
             </div>
           </div>
+
+          {!isEditable && (
+            <Collapsible open={conteudoOpen} onOpenChange={setConteudoOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors group">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Conteúdo do contrato
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="hidden sm:inline">{conteudoOpen ? 'Ocultar' : 'Visualizar'}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${conteudoOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={false} minHeight="400px" />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
 
         <DialogFooter className="flex flex-wrap gap-2 sm:justify-between">
