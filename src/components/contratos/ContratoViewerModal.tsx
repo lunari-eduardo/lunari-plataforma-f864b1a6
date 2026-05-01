@@ -6,6 +6,7 @@ import { ContratoStatusBadge } from './ContratoStatusBadge';
 import { useContratos } from '@/hooks/useContratos';
 import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
