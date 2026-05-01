@@ -468,12 +468,25 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             Excluir
           </Button>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              title={
+                contrato.arquivo_assinado_path
+                  ? 'Baixar PDF com assinaturas eletrônicas'
+                  : jaEnviadoNaAutentique
+                  ? 'O PDF assinado fica disponível após todas as partes assinarem'
+                  : 'Baixar versão atual do contrato (sem assinaturas)'
+              }
+            >
               <Download className="h-4 w-4 mr-1" />
               {downloadingPdf
                 ? 'Gerando...'
                 : contrato.arquivo_assinado_path
                 ? 'Baixar PDF assinado'
+                : jaEnviadoNaAutentique
+                ? 'Baixar rascunho'
                 : 'Baixar PDF'}
             </Button>
             {podeEnviarParaAssinatura && (
