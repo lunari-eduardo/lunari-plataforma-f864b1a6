@@ -69,7 +69,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const podeSincronizar = jaEnviadoNaAutentique && contrato.status !== 'cancelado';
   const podeCancelar = jaEnviadoNaAutentique && !isAssinado && contrato.status !== 'cancelado';
 
-  const fotografoEmail = (profile?.email || '').toLowerCase();
+  const fotografoEmail = ((profile?.email || user?.email || '') as string).trim().toLowerCase();
   const signers = (contrato.signers as any[]) || [];
 
   const handleSave = async () => {
