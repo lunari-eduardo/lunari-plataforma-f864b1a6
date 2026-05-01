@@ -50,6 +50,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     isSyncingAutentique,
     cancelAutentique,
     isCancelingAutentique,
+    notifySigner,
+    isNotifyingSigner,
   } = useContratos({ clienteId: contrato.cliente_id });
   const { status: autentiqueStatus } = useAutentiqueIntegration();
   const [conteudo, setConteudo] = useState(contrato.conteudo);
@@ -70,7 +72,28 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const podeCancelar = jaEnviadoNaAutentique && !isAssinado && contrato.status !== 'cancelado';
 
   const fotografoEmail = ((profile?.email || user?.email || '') as string).trim().toLowerCase();
+  const clienteEmailNorm = (contrato.cliente?.email || '').trim().toLowerCase();
   const signers = (contrato.signers as any[]) || [];
+
+  // Match robusto: profile.email → user.email → "outro signer que não é o cliente"
+  const isFotografoSigner = (s: any) => {
+    const e = (s?.email || '').trim().toLowerCase();
+    if (!e) return false;
+    if (fotografoEmail && e === fotografoEmail) return true;
+    // Fallback: se não tenho profile.email mas o e-mail do signer não é o do cliente,
+    // assume que é o fotógrafo (modelo de 2 partes).
+    if (!fotografoEmail && clienteEmailNorm && e !== clienteEmailNorm) return true;
+    return false;
+  };
+
+  const fotografoSigner = signers.find(isFotografoSigner);
+  const fotografoPendente =
+    fotografoSigner && fotografoSigner.status !== 'assinado' && fotografoSigner.status !== 'recusado' && fotografoSigner.link
+      ? fotografoSigner
+      : null;
+
+  const assinadosCount = signers.filter((s: any) => s.status === 'assinado').length;
+  const totalSigners = signers.length;
 
   const handleSave = async () => {
     setSaving(true);
