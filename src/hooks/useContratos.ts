@@ -239,6 +239,34 @@ export function useContratos(opts: UseContratosOpts = {}) {
       toast({ title: 'Erro ao reenviar', description: e?.message, variant: 'destructive' }),
   });
 
+  /**
+   * Envia e-mail próprio (Resend) com o link de assinatura.
+   * Usado para notificar o fotógrafo, já que a Autentique não envia
+   * e-mail para o dono da conta API.
+   */
+  const notifySignerMutation = useMutation({
+    mutationFn: async ({
+      contratoId,
+      signerEmail,
+      link,
+      tipo = 'envio',
+    }: {
+      contratoId: string;
+      signerEmail: string;
+      link: string;
+      tipo?: 'envio' | 'lembrete';
+    }) => {
+      const { data, error } = await supabase.functions.invoke('autentique-notify-signer', {
+        body: { contrato_id: contratoId, signer_email: signerEmail, link, tipo },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data;
+    },
+    onError: (e: any) =>
+      toast({ title: 'Não foi possível enviar o e-mail', description: e?.message, variant: 'destructive' }),
+  });
+
   return {
     contratos,
     isLoading,
@@ -255,6 +283,8 @@ export function useContratos(opts: UseContratosOpts = {}) {
     isCancelingAutentique: cancelAutentiqueMutation.isPending,
     resendSigner: resendSignerMutation.mutateAsync,
     isResendingSigner: resendSignerMutation.isPending,
+    notifySigner: notifySignerMutation.mutateAsync,
+    isNotifyingSigner: notifySignerMutation.isPending,
     getSignedUrl,
   };
 }

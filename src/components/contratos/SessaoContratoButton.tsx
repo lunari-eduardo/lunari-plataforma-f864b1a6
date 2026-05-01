@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useContratos } from '@/hooks/useContratos';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
+import { getFotografoPendente } from '@/utils/contratoSigners';
 import { Button } from '@/components/ui/button';
 import { FileSignature } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -41,10 +44,15 @@ export function SessaoContratoButton({
   className,
 }: SessaoContratoButtonProps) {
   const { contratos } = useContratos({ sessionId });
+  const { profile } = useUserProfile();
+  const { user } = useAuth();
   const [novoOpen, setNovoOpen] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [popOpen, setPopOpen] = useState(false);
 
+  const algumPendenteParaMim = contratos.some((c) =>
+    !!getFotografoPendente(c, { profileEmail: profile?.email, userEmail: user?.email })
+  );
   const statusPrincipal: ContratoStatus | null =
     contratos.length > 0
       ? contratos.reduce<ContratoStatus>(
@@ -76,7 +84,7 @@ export function SessaoContratoButton({
       <Popover open={popOpen} onOpenChange={setPopOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant="outline"
+            variant={algumPendenteParaMim ? 'default' : 'outline'}
             size="sm"
             onClick={handleClick}
             className={cn('gap-2 w-full justify-between', className)}
@@ -84,20 +92,29 @@ export function SessaoContratoButton({
           >
             <span className="flex items-center gap-2">
               <FileSignature className="h-3.5 w-3.5" />
-              {label}
+              {algumPendenteParaMim ? 'Assinar contrato' : label}
             </span>
-            {statusPrincipal && (
+            {algumPendenteParaMim ? (
               <span className="flex items-center gap-1.5">
-                <span
-                  className={cn(
-                    'h-2 w-2 rounded-full',
-                    dotColor[statusPrincipal]
-                  )}
-                />
-                <span className="text-[10px] text-muted-foreground">
-                  {CONTRATO_STATUS_LABELS[statusPrincipal]}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                 </span>
               </span>
+            ) : (
+              statusPrincipal && (
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'h-2 w-2 rounded-full',
+                      dotColor[statusPrincipal]
+                    )}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {CONTRATO_STATUS_LABELS[statusPrincipal]}
+                  </span>
+                </span>
+              )
             )}
           </Button>
         </PopoverTrigger>
@@ -110,24 +127,46 @@ export function SessaoContratoButton({
             Contratos da sessão
           </div>
           <div className="space-y-1 max-h-60 overflow-y-auto">
-            {contratos.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setViewing(c);
-                  setPopOpen(false);
-                }}
-                className="w-full text-left px-2 py-1.5 rounded hover:bg-muted transition-colors"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium truncate">
-                    {c.titulo}
-                  </span>
-                  <ContratoStatusBadge status={c.status} showIcon={false} />
+            {contratos.map((c) => {
+              const pend = getFotografoPendente(c, {
+                profileEmail: profile?.email,
+                userEmail: user?.email,
+              });
+              return (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewing(c);
+                      setPopOpen(false);
+                    }}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium truncate">{c.titulo}</span>
+                      <ContratoStatusBadge status={c.status} showIcon={false} />
+                    </div>
+                  </button>
+                  {pend && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(pend.link!, '_blank', 'noopener,noreferrer');
+                      }}
+                    >
+                      <FileSignature className="h-3 w-3 mr-1" />
+                      Assinar
+                    </Button>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
           <Button
             size="sm"

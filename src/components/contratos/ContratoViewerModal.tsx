@@ -8,6 +8,7 @@ import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
+import { getFotografoPendente } from '@/utils/contratoSigners';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
   FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy,
@@ -50,6 +51,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     isSyncingAutentique,
     cancelAutentique,
     isCancelingAutentique,
+    notifySigner,
+    isNotifyingSigner,
   } = useContratos({ clienteId: contrato.cliente_id });
   const { status: autentiqueStatus } = useAutentiqueIntegration();
   const [conteudo, setConteudo] = useState(contrato.conteudo);
@@ -70,7 +73,28 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const podeCancelar = jaEnviadoNaAutentique && !isAssinado && contrato.status !== 'cancelado';
 
   const fotografoEmail = ((profile?.email || user?.email || '') as string).trim().toLowerCase();
+  const clienteEmailNorm = (contrato.cliente?.email || '').trim().toLowerCase();
   const signers = (contrato.signers as any[]) || [];
+
+  // Match robusto: profile.email → user.email → "outro signer que não é o cliente"
+  const isFotografoSigner = (s: any) => {
+    const e = (s?.email || '').trim().toLowerCase();
+    if (!e) return false;
+    if (fotografoEmail && e === fotografoEmail) return true;
+    // Fallback: se não tenho profile.email mas o e-mail do signer não é o do cliente,
+    // assume que é o fotógrafo (modelo de 2 partes).
+    if (!fotografoEmail && clienteEmailNorm && e !== clienteEmailNorm) return true;
+    return false;
+  };
+
+  const fotografoSigner = signers.find(isFotografoSigner);
+  const fotografoPendente = getFotografoPendente(contrato, {
+    profileEmail: profile?.email,
+    userEmail: user?.email,
+  });
+
+  const assinadosCount = signers.filter((s: any) => s.status === 'assinado').length;
+  const totalSigners = signers.length;
 
   const handleSave = async () => {
     setSaving(true);
@@ -212,13 +236,18 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     }
   };
 
-  const isFotografoSigner = (s: any) => {
-    const e = (s?.email || '').trim().toLowerCase();
-    return !!e && !!fotografoEmail && e === fotografoEmail;
+  const handleNotifyMe = async () => {
+    if (!fotografoPendente?.email || !fotografoPendente?.link) return;
+    try {
+      await notifySigner({
+        contratoId: contrato.id,
+        signerEmail: fotografoPendente.email,
+        link: fotografoPendente.link,
+        tipo: 'envio',
+      });
+      toast({ title: 'E-mail enviado', description: `Verifique a caixa de entrada de ${fotografoPendente.email}.` });
+    } catch {/* tratado no hook */}
   };
-  const fotografoPendente = signers.find(
-    (s: any) => isFotografoSigner(s) && s.status !== 'assinado' && s.status !== 'recusado' && s.link
-  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -236,6 +265,13 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                 />
                 <ContratoStatusBadge status={contrato.status} />
               </DialogTitle>
+              {jaEnviadoNaAutentique && totalSigners > 0 && (
+                <div className="text-xs text-muted-foreground mt-1 ml-7">
+                  {assinadosCount === totalSigners
+                    ? 'Todas as assinaturas concluídas'
+                    : `Aguardando ${totalSigners - assinadosCount} de ${totalSigners} assinatura${totalSigners - assinadosCount > 1 ? 's' : ''}`}
+                </div>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -292,7 +328,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                     <FileSignature className="h-4 w-4 shrink-0" />
                     <span><strong>Sua assinatura está pendente.</strong> Abra o link e assine na Autentique.</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       size="sm"
                       onClick={() => window.open(fotografoPendente.link, '_blank', 'noopener,noreferrer')}
@@ -303,6 +339,20 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                     <Button size="sm" variant="outline" onClick={() => handleCopyLink(fotografoPendente.link)}>
                       <Copy className="h-3.5 w-3.5 mr-1" />
                       Copiar link
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleNotifyMe}
+                      disabled={isNotifyingSigner}
+                      title="Receber o link por e-mail"
+                    >
+                      {isNotifyingSigner ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Receber por e-mail
                     </Button>
                   </div>
                 </div>
@@ -419,12 +469,25 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             Excluir
           </Button>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              title={
+                contrato.arquivo_assinado_path
+                  ? 'Baixar PDF com assinaturas eletrônicas'
+                  : jaEnviadoNaAutentique
+                  ? 'O PDF assinado fica disponível após todas as partes assinarem'
+                  : 'Baixar versão atual do contrato (sem assinaturas)'
+              }
+            >
               <Download className="h-4 w-4 mr-1" />
               {downloadingPdf
                 ? 'Gerando...'
                 : contrato.arquivo_assinado_path
                 ? 'Baixar PDF assinado'
+                : jaEnviadoNaAutentique
+                ? 'Baixar rascunho'
                 : 'Baixar PDF'}
             </Button>
             {podeEnviarParaAssinatura && (

@@ -175,6 +175,39 @@ Deno.serve(async (req) => {
       .eq("id", contrato.id);
     if (upErr) throw upErr;
 
+    // 7) Notifica o fotógrafo por e-mail (Autentique não envia para o dono da conta).
+    // Fire-and-forget: não bloqueia a resposta nem falha o envio se o e-mail quebrar.
+    if (includeFotografoAsSigner && fotografoEmail) {
+      const fotoSigner = signersOut.find(
+        (s: any) => (s.email || "").toLowerCase() === fotografoEmail!.toLowerCase()
+      );
+      if (fotoSigner?.link) {
+        const notifyPromise = fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/autentique-notify-signer`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: authHeader,
+            },
+            body: JSON.stringify({
+              contrato_id: contrato.id,
+              signer_email: fotografoEmail,
+              link: fotoSigner.link,
+              tipo: "envio",
+            }),
+          }
+        ).catch((err) =>
+          console.error("[autentique-send-contrato] notify-signer failed", err)
+        );
+        // @ts-ignore - EdgeRuntime exists in Deno Deploy
+        if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+          // @ts-ignore
+          EdgeRuntime.waitUntil(notifyPromise);
+        }
+      }
+    }
+
     return jres({
       success: true,
       document_id: doc.id,
