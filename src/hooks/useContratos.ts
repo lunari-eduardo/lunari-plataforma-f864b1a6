@@ -191,6 +191,54 @@ export function useContratos(opts: UseContratosOpts = {}) {
       }),
   });
 
+  /**
+   * Atualiza o status do contrato consultando a Autentique sob demanda.
+   */
+  const syncAutentiqueMutation = useMutation({
+    mutationFn: async (contratoId: string) => {
+      const { data, error } = await supabase.functions.invoke('autentique-sync-contrato', {
+        body: { contrato_id: contratoId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data as { success: true; status: string; signers: any[]; pdf_downloaded: boolean };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: (e: any) =>
+      toast({
+        title: 'Não foi possível atualizar',
+        description: e?.message,
+        variant: 'destructive',
+      }),
+  });
+
+  const cancelAutentiqueMutation = useMutation({
+    mutationFn: async (contratoId: string) => {
+      const { data, error } = await supabase.functions.invoke('autentique-cancel-contrato', {
+        body: { contrato_id: contratoId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: (e: any) =>
+      toast({ title: 'Erro ao cancelar', description: e?.message, variant: 'destructive' }),
+  });
+
+  const resendSignerMutation = useMutation({
+    mutationFn: async ({ contratoId, publicId }: { contratoId: string; publicId: string }) => {
+      const { data, error } = await supabase.functions.invoke('autentique-resend-signer', {
+        body: { contrato_id: contratoId, public_id: publicId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data;
+    },
+    onError: (e: any) =>
+      toast({ title: 'Erro ao reenviar', description: e?.message, variant: 'destructive' }),
+  });
+
   return {
     contratos,
     isLoading,
@@ -201,6 +249,12 @@ export function useContratos(opts: UseContratosOpts = {}) {
     uploadAssinado: uploadAssinadoMutation.mutateAsync,
     enviarParaAssinatura: enviarParaAssinaturaMutation.mutateAsync,
     isEnviandoParaAssinatura: enviarParaAssinaturaMutation.isPending,
+    syncAutentique: syncAutentiqueMutation.mutateAsync,
+    isSyncingAutentique: syncAutentiqueMutation.isPending,
+    cancelAutentique: cancelAutentiqueMutation.mutateAsync,
+    isCancelingAutentique: cancelAutentiqueMutation.isPending,
+    resendSigner: resendSignerMutation.mutateAsync,
+    isResendingSigner: resendSignerMutation.isPending,
     getSignedUrl,
   };
 }
