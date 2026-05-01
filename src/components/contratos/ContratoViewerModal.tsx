@@ -11,8 +11,9 @@ import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
 import { getFotografoPendente } from '@/utils/contratoSigners';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
-  FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy,
+  FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy, ChevronDown,
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -65,6 +66,8 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
 
   const isAssinado = contrato.status === 'assinado';
   const isEditable = !isAssinado && contrato.status !== 'enviado';
+  const [conteudoOpen, setConteudoOpen] = useState(isEditable);
+
   const autentiqueConectado = !!autentiqueStatus?.connected;
   const jaEnviadoNaAutentique = !!contrato.signature_external_id;
   const podeEnviarParaAssinatura =
@@ -284,8 +287,9 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             </div>
           )}
 
-          <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={isEditable} minHeight="400px" />
-
+          {isEditable && (
+            <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={isEditable} minHeight="400px" />
+          )}
           {jaEnviadoNaAutentique && (
             <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -461,6 +465,24 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
               )}
             </div>
           </div>
+
+          {!isEditable && (
+            <Collapsible open={conteudoOpen} onOpenChange={setConteudoOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors group">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Conteúdo do contrato
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="hidden sm:inline">{conteudoOpen ? 'Ocultar' : 'Visualizar'}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${conteudoOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3">
+                <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={false} minHeight="400px" />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
 
         <DialogFooter className="flex flex-wrap gap-2 sm:justify-between">
