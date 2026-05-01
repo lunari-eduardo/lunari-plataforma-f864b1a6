@@ -287,8 +287,9 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
             </div>
           )}
 
-          <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={isEditable} minHeight="400px" />
-
+          {isEditable && (
+            <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={isEditable} minHeight="400px" />
+          )}
           {jaEnviadoNaAutentique && (
             <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
