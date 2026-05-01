@@ -396,24 +396,14 @@ function generateViaJsPdfText(opts: GenerateContratoPdfOptions, plainBody: strin
     y += 2;
   }
 
-  // Assinaturas
-  ensureSpace(40);
-  y += 18;
-  const halfWidth = (contentWidth - 16) / 2;
-  doc.line(marginX, y, marginX + halfWidth, y);
-  doc.line(marginX + halfWidth + 16, y, marginX + contentWidth, y);
-  y += 4;
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-  doc.text(clienteNome, marginX + halfWidth / 2, y, { align: 'center' });
-  doc.text(fotografoNome, marginX + halfWidth + 16 + halfWidth / 2, y, { align: 'center' });
-  y += 4;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-  doc.text('CONTRATANTE', marginX + halfWidth / 2, y, { align: 'center' });
-  doc.text('CONTRATADA(O)', marginX + halfWidth + 16 + halfWidth / 2, y, { align: 'center' });
-
   // Rodapé
   doc.setFontSize(8);
-  doc.text(`Documento gerado por Lunari · ${new Date().toLocaleDateString('pt-BR')}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+  doc.text(
+    `Documento gerado por Lunari · ${new Date().toLocaleDateString('pt-BR')} · Assinaturas eletrônicas no manifesto digital.`,
+    pageWidth / 2,
+    pageHeight - 8,
+    { align: 'center' }
+  );
 
   return doc.output('blob');
 }
