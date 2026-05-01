@@ -33,6 +33,22 @@ export function useContratos(opts: UseContratosOpts = {}) {
     enabled: !!user,
   });
 
+  // Realtime: ouve mudanças em contratos do usuário (atualizado por webhook/sync)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`contratos-rt-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'contratos', filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: [QK] })
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, qc]);
+
   const createMutation = useMutation({
     mutationFn: async (input: ContratoCreateInput) => {
       if (!user) throw new Error('Usuário não autenticado');
