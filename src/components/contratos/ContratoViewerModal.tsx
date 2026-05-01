@@ -201,12 +201,22 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     } catch {/* tratado no hook */}
   };
 
-  const handleResend = async (publicId: string) => {
+  const handleCopyLink = async (link: string) => {
     try {
-      await resendSigner({ contratoId: contrato.id, publicId });
-      toast({ title: 'E-mail reenviado' });
-    } catch {/* tratado no hook */}
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'Link copiado' });
+    } catch {
+      toast({ title: 'Não foi possível copiar', variant: 'destructive' });
+    }
   };
+
+  const isFotografoSigner = (s: any) => {
+    const e = (s?.email || '').trim().toLowerCase();
+    return !!e && !!fotografoEmail && e === fotografoEmail;
+  };
+  const fotografoPendente = signers.find(
+    (s: any) => isFotografoSigner(s) && s.status !== 'assinado' && s.status !== 'recusado' && s.link
+  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
