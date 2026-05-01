@@ -8,6 +8,7 @@ import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
+import { getFotografoPendente } from '@/utils/contratoSigners';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
   FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy,
