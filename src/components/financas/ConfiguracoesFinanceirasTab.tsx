@@ -45,13 +45,13 @@ export default function ConfiguracoesFinanceirasTab({
   // Enhanced confirm dialog for item deletion
   const handleRemoverItemWithConfirmation = useCallback(async (id: string, nome: string) => {
     const confirmed = await confirm({
-      title: "Remover Item Financeiro",
-      description: `Tem certeza que deseja remover "${nome}"? Esta ação também removerá todas as transações relacionadas.`,
-      confirmText: "Remover",
+      title: "Excluir item financeiro",
+      description: `"${nome}" será removido definitivamente. Todos os lançamentos vinculados a este item também serão apagados. Esta ação não pode ser desfeita.`,
+      confirmText: "Excluir definitivamente",
       cancelText: "Cancelar",
       variant: "destructive"
     });
-    
+
     if (confirmed) {
       await itemsManagement.handleRemoverItem(id);
     }
