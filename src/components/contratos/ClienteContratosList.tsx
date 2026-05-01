@@ -139,7 +139,7 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
                 onClick: () => setViewing(c),
               },
               {
-                label: 'Baixar PDF',
+                label: c.arquivo_assinado_path ? 'Baixar PDF assinado' : 'Baixar PDF',
                 icon: <Download className="h-3.5 w-3.5" />,
                 onClick: () => handleDownloadPdf(c),
               },
