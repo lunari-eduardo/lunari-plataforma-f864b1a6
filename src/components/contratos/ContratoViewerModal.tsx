@@ -11,8 +11,9 @@ import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
 import { getFotografoPendente } from '@/utils/contratoSigners';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
-  FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy,
+  FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy, ChevronDown,
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
