@@ -103,6 +103,38 @@ export function AutentiqueCard() {
                 <Trash2 className="mr-1 h-4 w-4" /> Desconectar
               </Button>
             </div>
+
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <Webhook className="h-3.5 w-3.5 text-primary" />
+                Webhook (atualização automática de status)
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cole esta URL no painel da Autentique em <strong>Organização → Webhooks</strong>{' '}
+                para que o status do contrato e o PDF assinado sejam recebidos automaticamente.
+              </p>
+              <div className="flex gap-2">
+                <Input value={WEBHOOK_URL} readOnly className="text-xs font-mono h-8" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(WEBHOOK_URL);
+                    toast({ title: 'URL copiada' });
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <a
+                href="https://painel.autentique.com.br/organizacao/webhooks"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Abrir painel de webhooks <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
