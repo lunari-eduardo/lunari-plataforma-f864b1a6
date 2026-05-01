@@ -7,18 +7,32 @@ import { useContratos } from '@/hooks/useContratos';
 import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
-import { Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip, FileSignature, ExternalLink, Loader2 } from 'lucide-react';
+import {
+  Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
+  FileSignature, ExternalLink, Loader2, RefreshCw, MailPlus, XCircle, Eye, Clock, Ban,
+} from 'lucide-react';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ContratoViewerModalProps {
   open: boolean;
   onClose: () => void;
   contrato: Contrato;
 }
+
+const SIGNER_STATUS_META: Record<string, { label: string; icon: any; classes: string }> = {
+  assinado: { label: 'Assinado', icon: CheckCircle2, classes: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' },
+  visualizado: { label: 'Visualizado', icon: Eye, classes: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30' },
+  recusado: { label: 'Recusado', icon: XCircle, classes: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30' },
+  pendente: { label: 'Aguardando', icon: Clock, classes: 'bg-muted text-muted-foreground border-border' },
+};
 
 export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerModalProps) {
   const { profile } = useUserProfile();
@@ -30,6 +44,12 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     getSignedUrl,
     enviarParaAssinatura,
     isEnviandoParaAssinatura,
+    syncAutentique,
+    isSyncingAutentique,
+    cancelAutentique,
+    isCancelingAutentique,
+    resendSigner,
+    isResendingSigner,
   } = useContratos({ clienteId: contrato.cliente_id });
   const { status: autentiqueStatus } = useAutentiqueIntegration();
   const [conteudo, setConteudo] = useState(contrato.conteudo);
@@ -37,6 +57,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const [saving, setSaving] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isAssinado = contrato.status === 'assinado';
@@ -45,6 +66,11 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const jaEnviadoNaAutentique = !!contrato.signature_external_id;
   const podeEnviarParaAssinatura =
     contrato.status === 'rascunho' && autentiqueConectado && !jaEnviadoNaAutentique;
+  const podeSincronizar = jaEnviadoNaAutentique && contrato.status !== 'cancelado';
+  const podeCancelar = jaEnviadoNaAutentique && !isAssinado && contrato.status !== 'cancelado';
+
+  const fotografoEmail = (profile?.email || '').toLowerCase();
+  const signers = (contrato.signers as any[]) || [];
 
   const handleSave = async () => {
     setSaving(true);
@@ -59,12 +85,6 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     if (downloadingPdf) return;
     setDownloadingPdf(true);
     try {
-      console.info('[Contrato PDF] Download iniciado (Workflow/Modal)', {
-        contratoId: contrato.id,
-        titulo,
-        tamanhoConteudo: (conteudo || '').length,
-        editado: conteudo !== contrato.conteudo,
-      });
       const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
       await downloadContratoPdf({
         titulo,
@@ -80,10 +100,9 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
         filename: `${titulo}.pdf`,
       });
     } catch (err: any) {
-      console.error('[Contrato PDF] Falha ao baixar:', err);
       toast({
         title: 'Erro ao gerar PDF',
-        description: err?.message || 'Tente novamente em alguns instantes.',
+        description: err?.message || 'Tente novamente.',
         variant: 'destructive',
       });
     } finally {
@@ -111,26 +130,19 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     if (!contrato.cliente?.email) {
       toast({
         title: 'Cliente sem e-mail',
-        description: 'Adicione um e-mail ao cliente antes de enviar para assinatura.',
+        description: 'Adicione um e-mail ao cliente antes de enviar.',
         variant: 'destructive',
       });
       return;
     }
     if (!conteudo || conteudo.trim().length < 10) {
-      toast({
-        title: 'Contrato vazio',
-        description: 'Adicione conteúdo antes de enviar para assinatura.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Contrato vazio', variant: 'destructive' });
       return;
     }
     try {
-      // 1) Salva alterações pendentes
       if (conteudo !== contrato.conteudo || titulo !== contrato.titulo) {
         await update({ id: contrato.id, titulo, conteudo });
       }
-
-      // 2) Gera o PDF localmente
       const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
       const blob = await generateContratoPdf({
         titulo,
@@ -144,22 +156,44 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
         cidadeLocal: snap.cidade_atual || snap.cidade_fotografo || snap.cidade_cliente || undefined,
         variaveisSnapshot: snap,
       });
-
-      // 3) Envia para edge function
       await enviarParaAssinatura({
         contratoId: contrato.id,
         pdfBlob: blob,
-        includeFotografo: false,
+        includeFotografo: true,
       });
-
       toast({
         title: 'Contrato enviado',
-        description: `Enviado para ${contrato.cliente?.email} via Autentique.`,
+        description: `Você e ${contrato.cliente?.email} receberão o link por e-mail.`,
       });
     } catch (err: any) {
       console.error('[Autentique] Falha no envio:', err);
-      // Toast de erro já tratado no hook
     }
+  };
+
+  const handleSync = async () => {
+    try {
+      const r = await syncAutentique(contrato.id);
+      if (r?.status === 'assinado') {
+        toast({
+          title: 'Contrato assinado!',
+          description: r.pdf_downloaded ? 'PDF assinado foi salvo.' : 'Status atualizado.',
+        });
+      }
+    } catch {/* tratado no hook */}
+  };
+
+  const handleCancelAutentique = async () => {
+    try {
+      await cancelAutentique(contrato.id);
+      setConfirmCancel(false);
+    } catch {/* tratado no hook */}
+  };
+
+  const handleResend = async (publicId: string) => {
+    try {
+      await resendSigner({ contratoId: contrato.id, publicId });
+      toast({ title: 'E-mail reenviado' });
+    } catch {/* tratado no hook */}
   };
 
   return (
@@ -193,33 +227,108 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
           <ContratoRichEditor value={conteudo} onChange={setConteudo} editable={isEditable} minHeight="400px" />
 
           {jaEnviadoNaAutentique && (
-            <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm space-y-2">
-              <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300 font-medium">
-                <FileSignature className="h-4 w-4" />
-                Enviado via Autentique
+            <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-3 text-sm space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300 font-medium">
+                  <FileSignature className="h-4 w-4" />
+                  Enviado via Autentique
+                </div>
+                <div className="flex gap-2">
+                  {podeSincronizar && (
+                    <Button size="sm" variant="outline" onClick={handleSync} disabled={isSyncingAutentique}>
+                      {isSyncingAutentique ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Atualizar status
+                    </Button>
+                  )}
+                  {podeCancelar && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setConfirmCancel(true)}
+                      disabled={isCancelingAutentique}
+                    >
+                      <Ban className="h-3.5 w-3.5 mr-1" />
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="text-xs text-blue-900/80 dark:text-blue-300/80">
+              <div className="text-xs text-blue-900/70 dark:text-blue-300/70">
                 ID: <code className="font-mono">{contrato.signature_external_id}</code>
               </div>
-              {Array.isArray(contrato.signers) && contrato.signers.length > 0 && (
-                <div className="space-y-1">
-                  {contrato.signers.map((s: any, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <span className="text-blue-900 dark:text-blue-200">
-                        {s.nome || s.email}
-                      </span>
-                      {s.link && (
-                        <a
-                          href={s.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-700 dark:text-blue-300 hover:underline"
-                        >
-                          Link de assinatura <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
+
+              {signers.length > 0 && (
+                <div className="space-y-2">
+                  {signers.map((s: any, i: number) => {
+                    const meta = SIGNER_STATUS_META[s.status] || SIGNER_STATUS_META.pendente;
+                    const Icon = meta.icon;
+                    const isFotografo =
+                      fotografoEmail && s.email && s.email.toLowerCase() === fotografoEmail;
+                    const podeAssinar = isFotografo && s.status !== 'assinado' && s.status !== 'recusado' && s.link;
+                    const podeReenviar = !isFotografo && (s.status === 'pendente' || s.status === 'visualizado') && s.public_id;
+                    return (
+                      <div
+                        key={s.public_id || i}
+                        className="flex items-center justify-between gap-2 rounded-md border border-blue-200/60 dark:border-blue-900/50 bg-background/40 px-2.5 py-1.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 text-sm font-medium truncate">
+                            <span className="truncate">{s.nome || s.email}</span>
+                            {isFotografo && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1">você</Badge>
+                            )}
+                          </div>
+                          {s.nome && s.email && (
+                            <div className="text-xs text-muted-foreground truncate">{s.email}</div>
+                          )}
+                          {s.timestamp && (
+                            <div className="text-[10px] text-muted-foreground">
+                              {new Date(s.timestamp).toLocaleString('pt-BR')}
+                            </div>
+                          )}
+                        </div>
+                        <Badge variant="outline" className={`text-[11px] gap-1 ${meta.classes}`}>
+                          <Icon className="h-3 w-3" />
+                          {meta.label}
+                        </Badge>
+                        {podeAssinar && (
+                          <Button
+                            size="sm"
+                            onClick={() => window.open(s.link, '_blank', 'noopener,noreferrer')}
+                          >
+                            <FileSignature className="h-3.5 w-3.5 mr-1" />
+                            Assinar
+                          </Button>
+                        )}
+                        {!podeAssinar && s.link && s.status !== 'assinado' && (
+                          <a
+                            href={s.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-300 hover:underline"
+                          >
+                            Link <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                        {podeReenviar && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleResend(s.public_id)}
+                            disabled={isResendingSigner}
+                            title="Reenviar e-mail"
+                          >
+                            <MailPlus className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -311,6 +420,24 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                 }}
               >
                 Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
+              <AlertDialogDescription>
+                O documento será removido da Autentique e os links de assinatura ficarão inválidos.
+                O conteúdo do contrato permanece no Lunari.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleCancelAutentique} disabled={isCancelingAutentique}>
+                {isCancelingAutentique ? 'Cancelando...' : 'Cancelar assinatura'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
