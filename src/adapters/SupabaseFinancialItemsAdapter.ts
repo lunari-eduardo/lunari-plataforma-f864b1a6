@@ -43,44 +43,59 @@ const DEFAULT_FINANCIAL_ITEMS: Array<{ nome: string; grupo_principal: GrupoPrinc
 ];
 
 export class SupabaseFinancialItemsAdapter {
-  
+  // Cache de Promise por usuário para evitar race conditions:
+  // múltiplas chamadas paralelas a getAllItems aguardam a mesma inicialização.
+  private static initPromises = new Map<string, Promise<void>>();
+
   /**
-   * Inicializar itens padrão para um novo usuário
+   * Inicializar itens padrão para um novo usuário (idempotente, race-safe)
    */
   static async initializeDefaultItems(userId: string): Promise<void> {
-    try {
-      // Verificar se usuário já tem itens
-      const { data: existing } = await supabase
-        .from('fin_items_master')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-      
-      if (existing && existing.length > 0) {
-        console.log('Usuário já possui itens financeiros');
-        return;
+    const cached = this.initPromises.get(userId);
+    if (cached) return cached;
+
+    const promise = (async () => {
+      try {
+        // Verificação rápida — evita INSERT desnecessário quando usuário já tem itens
+        const { data: existing } = await supabase
+          .from('fin_items_master')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
+
+        if (existing && existing.length > 0) return;
+
+        const itemsToInsert = DEFAULT_FINANCIAL_ITEMS.map(item => ({
+          user_id: userId,
+          nome: item.nome,
+          grupo_principal: item.grupo_principal,
+          ativo: true,
+          is_default: true
+        }));
+
+        // O índice único (user_id, lower(nome), grupo_principal) garante idempotência
+        // mesmo se duas chamadas paralelas escaparem do cache acima.
+        const { error } = await supabase
+          .from('fin_items_master')
+          .upsert(itemsToInsert, {
+            onConflict: 'user_id,nome,grupo_principal',
+            ignoreDuplicates: true
+          });
+
+        // Erros de unique violation (23505) são esperados em race e devem ser silenciados
+        if (error && (error as any).code !== '23505') throw error;
+
+        console.log(`✅ Itens financeiros padrão garantidos para ${userId}`);
+      } catch (error) {
+        // Ao falhar, remove cache para permitir nova tentativa em chamada futura
+        this.initPromises.delete(userId);
+        console.error('Erro ao inicializar itens padrão:', error);
+        throw error;
       }
-      
-      // Inserir itens padrão
-      const itemsToInsert = DEFAULT_FINANCIAL_ITEMS.map(item => ({
-        user_id: userId,
-        nome: item.nome,
-        grupo_principal: item.grupo_principal,
-        ativo: true,
-        is_default: true
-      }));
-      
-      const { error } = await supabase
-        .from('fin_items_master')
-        .insert(itemsToInsert);
-      
-      if (error) throw error;
-      
-      console.log(`✅ ${itemsToInsert.length} itens financeiros padrão criados`);
-    } catch (error) {
-      console.error('Erro ao inicializar itens padrão:', error);
-      throw error;
-    }
+    })();
+
+    this.initPromises.set(userId, promise);
+    return promise;
   }
   
   /**
@@ -195,18 +210,38 @@ export class SupabaseFinancialItemsAdapter {
   }
   
   /**
-   * Desativar item financeiro (soft delete)
+   * Excluir definitivamente o item financeiro.
+   * As FKs em fin_transactions / fin_recurring_blueprints são ON DELETE CASCADE,
+   * portanto a UI deve confirmar com o usuário antes de chamar este método.
    */
   static async deleteItem(id: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('fin_items_master')
-        .update({ ativo: false })
+        .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
     } catch (error) {
       console.error('Erro ao remover item financeiro:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Apenas oculta o item (mantém histórico). Útil quando o usuário quer
+   * preservar transações antigas mas não ver mais o item na lista.
+   */
+  static async archiveItem(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('fin_items_master')
+        .update({ ativo: false })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao arquivar item financeiro:', error);
       throw error;
     }
   }
