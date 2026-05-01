@@ -267,20 +267,7 @@ function buildPdfRoot(opts: GenerateContratoPdfOptions): HTMLElement {
 
     <div class="contrato-pdf-fechamento">${escapeHtml(cidade)}, ${escapeHtml(dataGeracao)}.</div>
 
-    <table class="contrato-pdf-assinaturas"><tbody><tr>
-      <td class="contrato-pdf-assinatura">
-        <div class="linha"></div>
-        <div class="nome">${escapeHtml(clienteNome)}</div>
-        <div class="papel">Contratante</div>
-      </td>
-      <td class="contrato-pdf-assinatura">
-        <div class="linha"></div>
-        <div class="nome">${escapeHtml(fotografoNome)}</div>
-        <div class="papel">Contratada(o)</div>
-      </td>
-    </tr></tbody></table>
-
-    <div class="contrato-pdf-footer">Documento gerado por Lunari · ${escapeHtml(dataGeracao)}</div>
+    <div class="contrato-pdf-footer">Documento gerado por Lunari · ${escapeHtml(dataGeracao)} · As assinaturas eletrônicas constam no manifesto da plataforma de assinatura digital.</div>
   `);
 
   return root;
