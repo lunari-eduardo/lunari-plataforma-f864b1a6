@@ -46,14 +46,21 @@ export function getFotografoSigner(
 }
 
 export function getFotografoPendente(
-  contrato: Pick<Contrato, 'signers' | 'cliente'>,
+  contrato: Pick<Contrato, 'signers' | 'cliente' | 'signature_external_id'>,
   options: { profileEmail?: string | null; userEmail?: string | null }
 ): SignerLite | null {
   const s = getFotografoSigner(contrato, options);
   if (!s) return null;
   if (s.status === 'assinado' || s.status === 'recusado') return null;
-  if (!s.link) return null;
-  return s;
+  // Se a Autentique não devolveu short_link para o fotógrafo (comportamento da
+  // plataforma quando o signer é o dono da conta API), usa a URL pública do
+  // documento — o fotógrafo loga e assina pelo painel.
+  const fallbackLink = contrato.signature_external_id
+    ? `https://app.autentique.com.br/documentos/visualizar/${contrato.signature_external_id}`
+    : null;
+  const link = s.link || fallbackLink;
+  if (!link) return null;
+  return { ...s, link };
 }
 
 export function countAssinaturas(contrato: Pick<Contrato, 'signers'>): { assinados: number; total: number } {
