@@ -6,10 +6,11 @@ import { ContratoStatusBadge } from './ContratoStatusBadge';
 import { useContratos } from '@/hooks/useContratos';
 import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
-  FileSignature, ExternalLink, Loader2, RefreshCw, MailPlus, XCircle, Eye, Clock, Ban,
+  FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy,
 } from 'lucide-react';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,6 +37,7 @@ const SIGNER_STATUS_META: Record<string, { label: string; icon: any; classes: st
 
 export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerModalProps) {
   const { profile } = useUserProfile();
+  const { user } = useAuth();
   const {
     update,
     setStatus,
@@ -48,8 +50,6 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     isSyncingAutentique,
     cancelAutentique,
     isCancelingAutentique,
-    resendSigner,
-    isResendingSigner,
   } = useContratos({ clienteId: contrato.cliente_id });
   const { status: autentiqueStatus } = useAutentiqueIntegration();
   const [conteudo, setConteudo] = useState(contrato.conteudo);
@@ -69,7 +69,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   const podeSincronizar = jaEnviadoNaAutentique && contrato.status !== 'cancelado';
   const podeCancelar = jaEnviadoNaAutentique && !isAssinado && contrato.status !== 'cancelado';
 
-  const fotografoEmail = (profile?.email || '').toLowerCase();
+  const fotografoEmail = ((profile?.email || user?.email || '') as string).trim().toLowerCase();
   const signers = (contrato.signers as any[]) || [];
 
   const handleSave = async () => {
@@ -203,12 +203,22 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     } catch {/* tratado no hook */}
   };
 
-  const handleResend = async (publicId: string) => {
+  const handleCopyLink = async (link: string) => {
     try {
-      await resendSigner({ contratoId: contrato.id, publicId });
-      toast({ title: 'E-mail reenviado' });
-    } catch {/* tratado no hook */}
+      await navigator.clipboard.writeText(link);
+      toast({ title: 'Link copiado' });
+    } catch {
+      toast({ title: 'Não foi possível copiar', variant: 'destructive' });
+    }
   };
+
+  const isFotografoSigner = (s: any) => {
+    const e = (s?.email || '').trim().toLowerCase();
+    return !!e && !!fotografoEmail && e === fotografoEmail;
+  };
+  const fotografoPendente = signers.find(
+    (s: any) => isFotografoSigner(s) && s.status !== 'assinado' && s.status !== 'recusado' && s.link
+  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -276,15 +286,35 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                 ID: <code className="font-mono">{contrato.signature_external_id}</code>
               </div>
 
+              {fotografoPendente && (
+                <div className="rounded-md border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 p-3 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm text-amber-900 dark:text-amber-200">
+                    <FileSignature className="h-4 w-4 shrink-0" />
+                    <span><strong>Sua assinatura está pendente.</strong> Abra o link e assine na Autentique.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => window.open(fotografoPendente.link, '_blank', 'noopener,noreferrer')}
+                    >
+                      <FileSignature className="h-3.5 w-3.5 mr-1" />
+                      Assinar agora
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleCopyLink(fotografoPendente.link)}>
+                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      Copiar link
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {signers.length > 0 && (
                 <div className="space-y-2">
                   {signers.map((s: any, i: number) => {
                     const meta = SIGNER_STATUS_META[s.status] || SIGNER_STATUS_META.pendente;
                     const Icon = meta.icon;
-                    const isFotografo =
-                      fotografoEmail && s.email && s.email.toLowerCase() === fotografoEmail;
-                    const podeAssinar = isFotografo && s.status !== 'assinado' && s.status !== 'recusado' && s.link;
-                    const podeReenviar = !isFotografo && (s.status === 'pendente' || s.status === 'visualizado') && s.public_id;
+                    const isFotografo = isFotografoSigner(s);
+                    const podeAbrirLink = !!s.link && s.status !== 'assinado' && s.status !== 'recusado';
                     return (
                       <div
                         key={s.public_id || i}
@@ -310,35 +340,35 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                           <Icon className="h-3 w-3" />
                           {meta.label}
                         </Badge>
-                        {podeAssinar && (
-                          <Button
-                            size="sm"
-                            onClick={() => window.open(s.link, '_blank', 'noopener,noreferrer')}
-                          >
-                            <FileSignature className="h-3.5 w-3.5 mr-1" />
-                            Assinar
-                          </Button>
-                        )}
-                        {!podeAssinar && s.link && s.status !== 'assinado' && (
-                          <a
-                            href={s.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-300 hover:underline"
-                          >
-                            Link <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                        {podeReenviar && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleResend(s.public_id)}
-                            disabled={isResendingSigner}
-                            title="Reenviar e-mail"
-                          >
-                            <MailPlus className="h-3.5 w-3.5" />
-                          </Button>
+                        {podeAbrirLink && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant={isFotografo ? 'default' : 'outline'}
+                              onClick={() => window.open(s.link, '_blank', 'noopener,noreferrer')}
+                              title={isFotografo ? 'Assinar agora' : 'Abrir link de assinatura'}
+                            >
+                              {isFotografo ? (
+                                <>
+                                  <FileSignature className="h-3.5 w-3.5 mr-1" />
+                                  Assinar
+                                </>
+                              ) : (
+                                <>
+                                  <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                                  Abrir link
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCopyLink(s.link)}
+                              title="Copiar link"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     );

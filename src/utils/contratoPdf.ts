@@ -189,11 +189,6 @@ const PDF_SCOPED_CSS = `
 .contrato-pdf-body li { margin: 4px 0; }
 .contrato-pdf-body blockquote { border-left: 3px solid #000 !important; padding-left: 12px; margin: 12px 0; font-style: italic; }
 .contrato-pdf-fechamento { margin-top: 28px; font-size: 11.5px; }
-.contrato-pdf-assinaturas { width: 100%; border-collapse: separate; border-spacing: 32px 0; margin-top: 60px; page-break-inside: avoid; }
-.contrato-pdf-assinatura { width: 50%; vertical-align: top; text-align: center; font-size: 11px; }
-.contrato-pdf-assinatura .linha { border-top: 1px solid #000 !important; height: 1px; margin-bottom: 6px; }
-.contrato-pdf-assinatura .nome { font-weight: 700; font-size: 11.5px; }
-.contrato-pdf-assinatura .papel { font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 2px; }
 .contrato-pdf-footer { margin-top: 28px; padding-top: 8px; border-top: 1px solid #000 !important; text-align: center; font-size: 9.5px; }
 `;
 
@@ -272,20 +267,7 @@ function buildPdfRoot(opts: GenerateContratoPdfOptions): HTMLElement {
 
     <div class="contrato-pdf-fechamento">${escapeHtml(cidade)}, ${escapeHtml(dataGeracao)}.</div>
 
-    <table class="contrato-pdf-assinaturas"><tbody><tr>
-      <td class="contrato-pdf-assinatura">
-        <div class="linha"></div>
-        <div class="nome">${escapeHtml(clienteNome)}</div>
-        <div class="papel">Contratante</div>
-      </td>
-      <td class="contrato-pdf-assinatura">
-        <div class="linha"></div>
-        <div class="nome">${escapeHtml(fotografoNome)}</div>
-        <div class="papel">Contratada(o)</div>
-      </td>
-    </tr></tbody></table>
-
-    <div class="contrato-pdf-footer">Documento gerado por Lunari · ${escapeHtml(dataGeracao)}</div>
+    <div class="contrato-pdf-footer">Documento gerado por Lunari · ${escapeHtml(dataGeracao)} · As assinaturas eletrônicas constam no manifesto da plataforma de assinatura digital.</div>
   `);
 
   return root;
@@ -414,24 +396,14 @@ function generateViaJsPdfText(opts: GenerateContratoPdfOptions, plainBody: strin
     y += 2;
   }
 
-  // Assinaturas
-  ensureSpace(40);
-  y += 18;
-  const halfWidth = (contentWidth - 16) / 2;
-  doc.line(marginX, y, marginX + halfWidth, y);
-  doc.line(marginX + halfWidth + 16, y, marginX + contentWidth, y);
-  y += 4;
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-  doc.text(clienteNome, marginX + halfWidth / 2, y, { align: 'center' });
-  doc.text(fotografoNome, marginX + halfWidth + 16 + halfWidth / 2, y, { align: 'center' });
-  y += 4;
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-  doc.text('CONTRATANTE', marginX + halfWidth / 2, y, { align: 'center' });
-  doc.text('CONTRATADA(O)', marginX + halfWidth + 16 + halfWidth / 2, y, { align: 'center' });
-
   // Rodapé
   doc.setFontSize(8);
-  doc.text(`Documento gerado por Lunari · ${new Date().toLocaleDateString('pt-BR')}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+  doc.text(
+    `Documento gerado por Lunari · ${new Date().toLocaleDateString('pt-BR')} · Assinaturas eletrônicas no manifesto digital.`,
+    pageWidth / 2,
+    pageHeight - 8,
+    { align: 'center' }
+  );
 
   return doc.output('blob');
 }
