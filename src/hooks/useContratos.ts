@@ -283,6 +283,8 @@ export function useContratos(opts: UseContratosOpts = {}) {
     isCancelingAutentique: cancelAutentiqueMutation.isPending,
     resendSigner: resendSignerMutation.mutateAsync,
     isResendingSigner: resendSignerMutation.isPending,
+    notifySigner: notifySignerMutation.mutateAsync,
+    isNotifyingSigner: notifySignerMutation.isPending,
     getSignedUrl,
   };
 }
