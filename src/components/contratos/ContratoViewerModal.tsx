@@ -66,6 +66,10 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
 
   const isAssinado = contrato.status === 'assinado';
   const isEditable = !isAssinado && contrato.status !== 'enviado';
+  const [conteudoOpen, setConteudoOpen] = useState(isEditable);
+
+  const isAssinado = contrato.status === 'assinado';
+  const isEditable = !isAssinado && contrato.status !== 'enviado';
   const autentiqueConectado = !!autentiqueStatus?.connected;
   const jaEnviadoNaAutentique = !!contrato.signature_external_id;
   const podeEnviarParaAssinatura =
