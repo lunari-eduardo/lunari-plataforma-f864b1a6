@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     // Pega contratos ativos (enviados na Autentique e ainda não finalizados)
     const { data: contratos, error: cErr } = await admin
       .from("contratos")
-      .select("id, user_id, titulo, signature_external_id, status")
+      .select("id, user_id, titulo, signature_external_id, status, observacoes, enviado_em")
       .not("signature_external_id", "is", null)
       .in("status", ["enviado", "rascunho"])
       .order("updated_at", { ascending: true })
