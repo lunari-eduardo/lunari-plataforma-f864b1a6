@@ -51,6 +51,9 @@ verify_jwt = false
 [functions.autentique-webhook]
 verify_jwt = false
 
+[functions.autentique-cron-sync]
+verify_jwt = false
+
 [functions.google-calendar-connect]
 verify_jwt = false
 

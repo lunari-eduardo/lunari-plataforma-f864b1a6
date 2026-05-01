@@ -85,6 +85,20 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     if (downloadingPdf) return;
     setDownloadingPdf(true);
     try {
+      // Se já existe PDF assinado, baixa ele direto
+      if (contrato.arquivo_assinado_path) {
+        const url = await getSignedUrl(contrato.arquivo_assinado_path);
+        if (url) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = contrato.arquivo_assinado_nome || `${titulo}-assinado.pdf`;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+      }
       const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
       await downloadContratoPdf({
         titulo,
@@ -377,7 +391,11 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={handleDownloadPdf} disabled={downloadingPdf}>
               <Download className="h-4 w-4 mr-1" />
-              {downloadingPdf ? 'Gerando...' : 'Baixar PDF'}
+              {downloadingPdf
+                ? 'Gerando...'
+                : contrato.arquivo_assinado_path
+                ? 'Baixar PDF assinado'
+                : 'Baixar PDF'}
             </Button>
             {podeEnviarParaAssinatura && (
               <Button onClick={handleEnviarParaAssinatura} disabled={isEnviandoParaAssinatura}>
