@@ -37,6 +37,7 @@ const SIGNER_STATUS_META: Record<string, { label: string; icon: any; classes: st
 
 export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerModalProps) {
   const { profile } = useUserProfile();
+  const { user } = useAuth();
   const {
     update,
     setStatus,
