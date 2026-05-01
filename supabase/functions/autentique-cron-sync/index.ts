@@ -87,7 +87,7 @@ async function syncOne({
 }: {
   admin: any;
   apiKey: string;
-  contrato: { id: string; user_id: string; titulo: string; signature_external_id: string; status: string };
+  contrato: { id: string; user_id: string; titulo: string; signature_external_id: string; status: string; observacoes?: string | null; enviado_em?: string | null };
 }) {
   const query = `
     query GetDocument($id: UUID!) {
@@ -170,6 +170,10 @@ async function syncOne({
         console.error("[autentique-cron-sync] download pdf falhou", e);
       }
     }
+  } else {
+    // Lembrete: se há ALGUM signatário assinado e ALGUM pendente há > 1h,
+    // notificamos os pendentes (limita a 1 lembrete por dia por contrato).
+    await maybeSendReminder({ admin, contrato, signers: signersOut });
   }
 
   const { error: upErr } = await admin
@@ -182,6 +186,80 @@ async function syncOne({
   }
 
   return { changed: true };
+}
+
+async function maybeSendReminder({
+  admin,
+  contrato,
+  signers,
+}: {
+  admin: any;
+  contrato: { id: string; observacoes?: string | null; enviado_em?: string | null };
+  signers: any[];
+}) {
+  const algumAssinou = signers.some((s) => s.status === "assinado");
+  if (!algumAssinou) return; // só lembra depois que a primeira parte assinou
+
+  const pendentes = signers.filter((s) => s.status !== "assinado" && s.status !== "recusado" && s.link);
+  if (pendentes.length === 0) return;
+
+  // Rate limit: 1 lembrete a cada 24h
+  const meta = parseMeta(contrato.observacoes);
+  const lastReminder = meta.last_reminder_at ? new Date(meta.last_reminder_at).getTime() : 0;
+  const now = Date.now();
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  if (now - lastReminder < ONE_DAY) return;
+
+  // E só dispara se passou > 1h desde o envio
+  const enviadoEm = contrato.enviado_em ? new Date(contrato.enviado_em).getTime() : now;
+  const ONE_HOUR = 60 * 60 * 1000;
+  if (now - enviadoEm < ONE_HOUR) return;
+
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableKey) return;
+
+  // Envia direto pelo gateway (sem JWT, pois é background job)
+  for (const s of pendentes) {
+    try {
+      await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${lovableKey}`,
+        },
+        body: JSON.stringify({
+          from: "Lunari <onboarding@resend.dev>",
+          to: [s.email],
+          subject: `Lembrete: assinatura pendente`,
+          html: `<p>Olá ${s.nome || ""},</p>
+            <p>Você ainda não assinou o contrato. As outras partes já assinaram e estão aguardando.</p>
+            <p><a href="${s.link}" style="display:inline-block;background:#111827;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;">Assinar agora</a></p>
+            <p style="font-size:12px;color:#6b7280;">Se o botão não funcionar, copie este link: <br>${s.link}</p>`,
+        }),
+      });
+    } catch (e) {
+      console.error("[cron-sync] reminder failed for", s.email, e);
+    }
+  }
+
+  // Marca lembrete enviado
+  meta.last_reminder_at = new Date().toISOString();
+  meta.reminder_count = (meta.reminder_count || 0) + 1;
+  await admin
+    .from("contratos")
+    .update({ observacoes: writeMeta(contrato.observacoes, meta) })
+    .eq("id", contrato.id);
+}
+
+function parseMeta(obs?: string | null): Record<string, any> {
+  if (!obs) return {};
+  const m = obs.match(/__META__:(\{.*?\})__\/META__/s);
+  if (!m) return {};
+  try { return JSON.parse(m[1]); } catch { return {}; }
+}
+function writeMeta(obs: string | null | undefined, meta: Record<string, any>): string {
+  const cleaned = (obs || "").replace(/__META__:\{.*?\}__\/META__/s, "").trim();
+  return `${cleaned}\n__META__:${JSON.stringify(meta)}__/META__`.trim();
 }
 
 function jres(body: unknown, status = 200) {
