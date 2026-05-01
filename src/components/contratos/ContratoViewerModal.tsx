@@ -48,8 +48,6 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     isSyncingAutentique,
     cancelAutentique,
     isCancelingAutentique,
-    resendSigner,
-    isResendingSigner,
   } = useContratos({ clienteId: contrato.cliente_id });
   const { status: autentiqueStatus } = useAutentiqueIntegration();
   const [conteudo, setConteudo] = useState(contrato.conteudo);
