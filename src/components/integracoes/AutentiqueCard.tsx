@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { FileSignature, ExternalLink, CheckCircle2, AlertCircle, Loader2, Plug, Trash2 } from 'lucide-react';
+import { FileSignature, ExternalLink, CheckCircle2, AlertCircle, Loader2, Plug, Trash2, Copy, Webhook } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAutentiqueIntegration } from '@/hooks/useAutentiqueIntegration';
 import { toast } from '@/hooks/use-toast';
+
+const WEBHOOK_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.functions.supabase.co/autentique-webhook`;
 
 export function AutentiqueCard() {
   const { status, isLoading, connect, isConnecting, disconnect, isDisconnecting, test, isTesting, refetch } =
