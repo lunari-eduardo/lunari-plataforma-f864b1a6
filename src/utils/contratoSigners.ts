@@ -56,7 +56,7 @@ export function getFotografoPendente(
   // plataforma quando o signer é o dono da conta API), usa a URL pública do
   // documento — o fotógrafo loga e assina pelo painel.
   const fallbackLink = contrato.signature_external_id
-    ? `https://app.autentique.com.br/documentos/visualizar/${contrato.signature_external_id}`
+    ? `https://app.autentique.com.br/documentos/${contrato.signature_external_id}`
     : null;
   const link = s.link || fallbackLink;
   if (!link) return null;
