@@ -1,124 +1,64 @@
-## Contexto
 
-A Etapa 2 enviou o contrato com sucesso para a Autentique (ID `73f97ce0…` confirma). O cliente assinou no e-mail dele, mas o Lunari ainda não sabe — falta o caminho de **retorno** (status + PDF assinado) e a **ação de assinatura do fotógrafo**.
+# Plano: assinatura digital sem fricção + PDF limpo
 
-Vamos resolver em 4 frentes complementares: sync manual (botão), webhook automático, download do PDF assinado, e UI para o fotógrafo assinar.
+## Problemas identificados
 
----
+1. **Fotógrafo sem botão "Assinar" claro.** Hoje o botão só aparece quando o e-mail do `profile` bate exatamente com o e-mail do signatário no Autentique. Se houver divergência (case, espaço, e-mail diferente do cadastrado), o fotógrafo só vê o ícone de "reenviar" — que é o botão errado.
+2. **Reenvio por e-mail falhando** ("Edge Function returned a non-2xx status code"). A mutation `resendSignatures` da Autentique exige plano pago em algumas contas e o fluxo é confuso — o usuário não quer esperar e-mail chegar, ele quer **abrir o link e assinar agora**.
+3. **Fluxo trava após cliente assinar.** Cliente assina → status fica "Aguardando" para o fotógrafo → fotógrafo não tem como assinar pela UI → contrato nunca conclui. O cron de 5 min só ajuda *depois* que ambos assinarem.
+4. **PDF tem linhas para assinatura manual** (`_______ CONTRATANTE / CONTRATADA(O)`), redundantes num fluxo 100% digital. A própria Autentique adiciona página de manifesto com as assinaturas eletrônicas no final.
 
-## Etapa 3.1 — Sync manual de status (resolve seu caso AGORA)
+## Solução proposta
 
-Cria botão "Atualizar status" no modal do contrato que consulta a Autentique sob demanda. É a forma mais rápida de você ver "Assinado" hoje, sem depender de webhook configurado.
+### 1. UI — substituir "reenviar e-mail" por "abrir link de assinatura"
 
-**Edge function `autentique-sync-contrato`:**
-- Recebe `{ contrato_id }`.
-- Busca `signature_external_id` no contrato (com checagem de `user_id`).
-- Resolve API Key da `usuarios_integracoes`.
-- Query GraphQL Autentique:
-  ```
-  query { document(id: $id) {
-    id name signed_count refusable
-    signatures { public_id email name signed { created_at }
-                 rejected { created_at } viewed { created_at }
-                 link { short_link } action { name } }
-    files { signed original }
-  }}
-  ```
-- Atualiza `contratos.signers` com status individual (`assinado` / `visualizado` / `recusado` / `pendente` + timestamps).
-- Se TODOS os signatários assinaram → status `assinado`, `assinado_em = max(signed.created_at)`, e dispara o passo de download do PDF (Etapa 3.2).
-- Se algum recusou → status `cancelado`.
-- Se algum visualizou (mas nenhum assinou ainda) → mantém `enviado` (status não muda, mas a info aparece na UI).
+No `ContratoViewerModal.tsx`, no bloco de signatários (linhas ~279-347):
 
-**UI (`ContratoViewerModal.tsx`):**
-- Adicionar botão "Atualizar status" (ícone `RefreshCw`) ao lado do bloco "Enviado via Autentique", visível quando `signature_external_id` existe e status ≠ `assinado`/`cancelado`.
-- Cada signatário no bloco passa a mostrar badge: Pendente / Visualizado / Assinado / Recusado, com timestamp.
+- **Remover** o botão de reenviar e-mail (`MailPlus`) e a mutation `resendSigner` da UI (manter no hook por enquanto, sem exposição).
+- **Para qualquer signatário pendente/visualizado que tenha `s.link`**, mostrar botão primário **"Abrir link de assinatura"** (`ExternalLink`) que abre `s.link` em nova aba.
+  - Se for o fotógrafo (match por e-mail), o rótulo vira **"Assinar agora"** com ícone `FileSignature` e estilo destacado.
+  - Se for o cliente, rótulo **"Abrir link"** — útil pra reenviar manualmente por WhatsApp ou copiar a URL.
+- **Adicionar botão secundário "Copiar link"** (ícone `Copy`) em cada signatário pendente, copia `s.link` pro clipboard com toast de erro só se falhar.
+- **Tornar o match do fotógrafo mais tolerante**: comparar e-mails normalizados (`trim().toLowerCase()`) e, se o `profile.email` não bater, usar fallback comparando com `claims.email` enviado pelo `auth.user`.
 
----
+### 2. Banner de ação rápida quando o fotógrafo precisa assinar
 
-## Etapa 3.2 — Download automático do PDF assinado
+Acima da lista de signatários, quando `jaEnviadoNaAutentique && !isAssinado` e existir um signatário-fotógrafo pendente, mostrar uma faixa destacada:
 
-Quando todos assinarem (via sync ou webhook), baixar o PDF final da Autentique e gravar no Storage.
+```
+┌──────────────────────────────────────────────────────┐
+│ ✍  Sua assinatura está pendente                       │
+│   [Assinar agora →]   [Copiar link]                   │
+└──────────────────────────────────────────────────────┘
+```
 
-**Lógica reutilizável (helper na própria function `autentique-sync-contrato`, e chamada também pelo webhook):**
-1. Pega `files.signed` (URL temporária da Autentique).
-2. `fetch` da URL → `arrayBuffer`.
-3. Upload para bucket `contratos-assinados` em `${user_id}/${contrato_id}/autentique-${doc_id}.pdf` (admin client, `upsert: true`).
-4. Atualiza no contrato:
-   - `arquivo_assinado_path`
-   - `arquivo_assinado_nome` = `${titulo}-assinado.pdf`
-   - `arquivo_assinado_tamanho`
-   - `status = 'assinado'`, `assinado_em`
+Isso resolve o "fluxo travado": fotógrafo abre o contrato, vê o CTA, clica e assina na Autentique. Ao voltar, clica em **"Atualizar status"** (botão já existente) ou aguarda o cron de 5 min — o PDF assinado é baixado automaticamente.
 
-**Storage:** o bucket `contratos-assinados` já existe (Etapa 2 / upload manual). Apenas confirmar via SQL — se a policy atual só permite ao próprio user inserir, o admin client (service role) ignora RLS e funciona normalmente.
+### 3. PDF — remover bloco de assinaturas manuais
 
----
+Em `src/utils/contratoPdf.ts`:
 
-## Etapa 3.3 — Cancelar / reenviar (ações secundárias)
+- **Versão HTML (html2pdf)**: remover o `<table class="contrato-pdf-assinaturas">` (linhas ~275-286) e o CSS associado (linhas ~192-196). Manter apenas o `contrato-pdf-fechamento` (cidade + data) e o footer.
+- **Versão jsPDF (fallback)**: remover o bloco de assinaturas (linhas ~417-430) — as duas linhas horizontais e os labels CONTRATANTE/CONTRATADA(O).
+- **Adicionar nota discreta no rodapé**: "As assinaturas eletrônicas constam no manifesto anexado pela plataforma de assinatura digital." (só quando o contrato for enviado pra assinatura — opcionalmente sempre, já que o PDF não-assinado também é só rascunho).
 
-Pequenos extras para fechar o ciclo:
+### 4. Limpeza menor
 
-**Edge function `autentique-cancel-contrato`:**
-- Mutation GraphQL: `deleteDocument(id: $id)`.
-- Atualiza contrato para `status = 'cancelado'`, limpa `signature_external_id`/`signers` (mantém em `observacoes` o ID antigo p/ histórico).
-
-**Edge function `autentique-resend-signer`:**
-- Recebe `{ contrato_id, public_id }`.
-- Mutation `resendSignatures(public_ids: [$public_id])`.
-- Sem mudanças no DB.
-
-**UI:** botões "Reenviar e-mail" por signatário pendente, e "Cancelar assinatura" no rodapé do bloco azul (com `AlertDialog` de confirmação).
-
----
-
-## Etapa 4 — Webhook automático (tempo real)
-
-Para deixar tudo automático sem o usuário clicar em "Atualizar".
-
-**Edge function pública `autentique-webhook`** (`verify_jwt = false` em `config.toml`):
-- Recebe POST da Autentique com `{ event, document: { id, ... }, signature: { ... } }`.
-- Eventos relevantes da Autentique: `signature.accepted`, `signature.rejected`, `signature.viewed`, `document.finished`.
-- Busca contrato por `signature_external_id = document.id` (sem filtrar por user — é webhook).
-- Reaproveita o mesmo helper da Etapa 3.1 (faz uma query completa do documento e reescreve `signers` + status), garantindo idempotência.
-- Em `document.finished` → executa também o download do PDF (Etapa 3.2).
-- Resposta 200 sempre que o evento for processado (ou 200 mesmo em "ignorado", para não estourar reentregas).
-
-**Configuração na Autentique:**
-- A Autentique configura webhook por organização no painel deles. Vou registrar a URL pública no painel da integração da nossa UI ("Configurações > Integrações > Assinatura"), com botão **"Copiar URL do webhook"** apontando para `https://tlnjspsywycbudhewsfv.functions.supabase.co/autentique-webhook`.
-- Adiciono instrução no card mostrando: "Cole esta URL em Autentique > Organização > Webhooks" + link.
-
-**Realtime no front:** o `useContratos` já usa React Query — basta o webhook atualizar a row para o usuário ver assim que voltar à tela (a UI hoje não escuta realtime, então adiciono uma `supabase.channel('contratos-changes')` com invalidate da query no modal aberto).
-
----
-
-## Etapa 5 — Assinatura do fotógrafo
-
-Hoje o envio é só com o cliente como signatário (`include_fotografo: false`). Você quer poder assinar também.
-
-**Decisão de UX (recomendado):** incluir o fotógrafo como signatário **desde o envio**, mas com `action: SIGN` e ordem livre. Assim:
-- A Autentique já manda e-mail para você junto com o cliente.
-- No bloco "Enviado via Autentique", aparece **seu próprio link de assinatura** com botão **"Assinar agora"** que abre `link.short_link` em nova aba.
-- Funciona antes ou depois do cliente assinar (Autentique permite ordem livre por padrão).
-
-**Mudanças:**
-- Em `ContratoViewerModal.handleEnviarParaAssinatura`, passar `includeFotografo: true` por padrão (com checkbox opcional "Apenas o cliente assina" para casos raros — escondido em "opções avançadas").
-- Após o envio, identificar o signatário do fotógrafo comparando `email` com o do `profile`, e renderizar botão destacado **"Assinar como fotógrafo"** ao lado dele.
-- Pré-requisito: garantir que o `profiles.email` do user logado existe — se não houver, fallback para `auth.user.email` no momento do envio.
-
----
-
-## Ordem de execução proposta
-
-1. **Etapa 3.1 + 3.2** (sync manual + download automático) — resolve seu problema do contrato já assinado da Lise hoje, com 1 clique.
-2. **Etapa 5** (fotógrafo como signatário) — resolve a parte de UI que falta.
-3. **Etapa 3.3** (cancelar/reenviar) — polimento.
-4. **Etapa 4** (webhook) — automação total, configurada por último porque depende de você colar a URL no painel da Autentique.
+- Remover `resendSigner` / `isResendingSigner` da desestruturação no modal (continua exportado pelo hook caso precise no futuro).
+- Não removo a edge function `autentique-resend-signer` (mantém por compatibilidade, mas deixa de ser chamada).
 
 ## Arquivos afetados
 
-- **Novos:** `supabase/functions/autentique-sync-contrato/index.ts`, `autentique-cancel-contrato/index.ts`, `autentique-resend-signer/index.ts`, `autentique-webhook/index.ts`.
-- **Editados:** `src/hooks/useContratos.ts` (mutations sync/cancel/resend), `src/components/contratos/ContratoViewerModal.tsx` (botões + badges + assinar como fotógrafo + realtime), `src/components/integracoes/AutentiqueCard.tsx` (URL do webhook), `supabase/config.toml` (registrar `autentique-webhook` com `verify_jwt = false`).
-- **Sem migration de DB** — todas as colunas necessárias (`signers`, `arquivo_assinado_*`, `signature_external_id`, `assinado_em`) já existem.
+- `src/components/contratos/ContratoViewerModal.tsx` — novo CTA, banner do fotógrafo, copiar link, match tolerante.
+- `src/utils/contratoPdf.ts` — remover bloco de assinaturas em ambas versões (HTML e jsPDF).
 
-## Confirmação antes de começar
+## Fora do escopo
 
-Posso seguir com a **ordem proposta acima**, começando por 3.1+3.2+5 num único bloco (resolve seu caso e a UI do fotógrafo), depois 3.3 e 4? Ou prefere que eu deixe a Etapa 5 (fotógrafo signatário) como **opt-in por checkbox** em vez de padrão?
+- Não mexo em edge functions (envio, sync, cron continuam como estão).
+- Não mexo no schema do banco.
+- Não removo o cron — ele continua sendo a rede de segurança que baixa o PDF assinado.
+
+## Resultado esperado
+
+- Cliente assina pelo e-mail → fotógrafo abre o modal do contrato no Lunari → vê banner "Sua assinatura está pendente" → clica **Assinar agora** → assina no Autentique → volta e clica **Atualizar status** (ou aguarda 5 min) → PDF assinado disponível pra download, status "Assinado".
+- PDF gerado sem linhas de assinatura manual — visual mais limpo e coerente com o fluxo digital.
