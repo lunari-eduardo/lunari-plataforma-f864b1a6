@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useContratos } from '@/hooks/useContratos';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
+import { getFotografoPendente } from '@/utils/contratoSigners';
 import { Button } from '@/components/ui/button';
 import { FileSignature } from 'lucide-react';
 import { cn } from '@/lib/utils';
