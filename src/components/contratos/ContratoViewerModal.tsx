@@ -264,6 +264,13 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                 />
                 <ContratoStatusBadge status={contrato.status} />
               </DialogTitle>
+              {jaEnviadoNaAutentique && totalSigners > 0 && (
+                <div className="text-xs text-muted-foreground mt-1 ml-7">
+                  {assinadosCount === totalSigners
+                    ? 'Todas as assinaturas concluídas'
+                    : `Aguardando ${totalSigners - assinadosCount} de ${totalSigners} assinatura${totalSigners - assinadosCount > 1 ? 's' : ''}`}
+                </div>
+              )}
             </div>
           </div>
         </DialogHeader>
