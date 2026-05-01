@@ -9,7 +9,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { downloadContratoPdf, generateContratoPdf } from '@/utils/contratoPdf';
 import {
   Download, Send, CheckCircle2, Upload, FileText, Save, Trash2, Paperclip,
-  FileSignature, ExternalLink, Loader2, RefreshCw, MailPlus, XCircle, Eye, Clock, Ban,
+  FileSignature, ExternalLink, Loader2, RefreshCw, XCircle, Eye, Clock, Ban, Copy,
 } from 'lucide-react';
 import type { Contrato } from '@/types/contrato';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
