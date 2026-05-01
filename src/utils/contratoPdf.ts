@@ -189,11 +189,6 @@ const PDF_SCOPED_CSS = `
 .contrato-pdf-body li { margin: 4px 0; }
 .contrato-pdf-body blockquote { border-left: 3px solid #000 !important; padding-left: 12px; margin: 12px 0; font-style: italic; }
 .contrato-pdf-fechamento { margin-top: 28px; font-size: 11.5px; }
-.contrato-pdf-assinaturas { width: 100%; border-collapse: separate; border-spacing: 32px 0; margin-top: 60px; page-break-inside: avoid; }
-.contrato-pdf-assinatura { width: 50%; vertical-align: top; text-align: center; font-size: 11px; }
-.contrato-pdf-assinatura .linha { border-top: 1px solid #000 !important; height: 1px; margin-bottom: 6px; }
-.contrato-pdf-assinatura .nome { font-weight: 700; font-size: 11.5px; }
-.contrato-pdf-assinatura .papel { font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; margin-top: 2px; }
 .contrato-pdf-footer { margin-top: 28px; padding-top: 8px; border-top: 1px solid #000 !important; text-align: center; font-size: 9.5px; }
 `;
 
