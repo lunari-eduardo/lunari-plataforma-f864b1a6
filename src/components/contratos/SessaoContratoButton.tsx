@@ -127,24 +127,46 @@ export function SessaoContratoButton({
             Contratos da sessão
           </div>
           <div className="space-y-1 max-h-60 overflow-y-auto">
-            {contratos.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setViewing(c);
-                  setPopOpen(false);
-                }}
-                className="w-full text-left px-2 py-1.5 rounded hover:bg-muted transition-colors"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium truncate">
-                    {c.titulo}
-                  </span>
-                  <ContratoStatusBadge status={c.status} showIcon={false} />
+            {contratos.map((c) => {
+              const pend = getFotografoPendente(c, {
+                profileEmail: profile?.email,
+                userEmail: user?.email,
+              });
+              return (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewing(c);
+                      setPopOpen(false);
+                    }}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium truncate">{c.titulo}</span>
+                      <ContratoStatusBadge status={c.status} showIcon={false} />
+                    </div>
+                  </button>
+                  {pend && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(pend.link!, '_blank', 'noopener,noreferrer');
+                      }}
+                    >
+                      <FileSignature className="h-3 w-3 mr-1" />
+                      Assinar
+                    </Button>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
           <Button
             size="sm"
