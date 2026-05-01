@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +32,22 @@ export function useContratos(opts: UseContratosOpts = {}) {
     },
     enabled: !!user,
   });
+
+  // Realtime: ouve mudanças em contratos do usuário (atualizado por webhook/sync)
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`contratos-rt-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'contratos', filter: `user_id=eq.${user.id}` },
+        () => qc.invalidateQueries({ queryKey: [QK] })
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, qc]);
 
   const createMutation = useMutation({
     mutationFn: async (input: ContratoCreateInput) => {
@@ -174,6 +191,54 @@ export function useContratos(opts: UseContratosOpts = {}) {
       }),
   });
 
+  /**
+   * Atualiza o status do contrato consultando a Autentique sob demanda.
+   */
+  const syncAutentiqueMutation = useMutation({
+    mutationFn: async (contratoId: string) => {
+      const { data, error } = await supabase.functions.invoke('autentique-sync-contrato', {
+        body: { contrato_id: contratoId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data as { success: true; status: string; signers: any[]; pdf_downloaded: boolean };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: (e: any) =>
+      toast({
+        title: 'Não foi possível atualizar',
+        description: e?.message,
+        variant: 'destructive',
+      }),
+  });
+
+  const cancelAutentiqueMutation = useMutation({
+    mutationFn: async (contratoId: string) => {
+      const { data, error } = await supabase.functions.invoke('autentique-cancel-contrato', {
+        body: { contrato_id: contratoId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [QK] }),
+    onError: (e: any) =>
+      toast({ title: 'Erro ao cancelar', description: e?.message, variant: 'destructive' }),
+  });
+
+  const resendSignerMutation = useMutation({
+    mutationFn: async ({ contratoId, publicId }: { contratoId: string; publicId: string }) => {
+      const { data, error } = await supabase.functions.invoke('autentique-resend-signer', {
+        body: { contrato_id: contratoId, public_id: publicId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error.message);
+      return data;
+    },
+    onError: (e: any) =>
+      toast({ title: 'Erro ao reenviar', description: e?.message, variant: 'destructive' }),
+  });
+
   return {
     contratos,
     isLoading,
@@ -184,6 +249,12 @@ export function useContratos(opts: UseContratosOpts = {}) {
     uploadAssinado: uploadAssinadoMutation.mutateAsync,
     enviarParaAssinatura: enviarParaAssinaturaMutation.mutateAsync,
     isEnviandoParaAssinatura: enviarParaAssinaturaMutation.isPending,
+    syncAutentique: syncAutentiqueMutation.mutateAsync,
+    isSyncingAutentique: syncAutentiqueMutation.isPending,
+    cancelAutentique: cancelAutentiqueMutation.mutateAsync,
+    isCancelingAutentique: cancelAutentiqueMutation.isPending,
+    resendSigner: resendSignerMutation.mutateAsync,
+    isResendingSigner: resendSignerMutation.isPending,
     getSignedUrl,
   };
 }
