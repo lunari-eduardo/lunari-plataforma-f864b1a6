@@ -135,6 +135,11 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
               c.session_id ? ' · vinculado a sessão' : ''
             }`;
 
+            const fotografoPendente = getFotografoPendente(c, {
+              profileEmail: profile?.email,
+              userEmail: user?.email,
+            });
+
             const menuItems = [
               {
                 label: 'Abrir',
@@ -169,6 +174,18 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
               },
             ];
 
+            const primaryAction = fotografoPendente
+              ? {
+                  label: 'Assinar',
+                  icon: <FileSignature className="h-3.5 w-3.5" />,
+                  onClick: () => window.open(fotografoPendente.link!, '_blank', 'noopener,noreferrer'),
+                }
+              : {
+                  label: 'Abrir',
+                  icon: <Eye className="h-3.5 w-3.5" />,
+                  onClick: () => setViewing(c),
+                };
+
             return (
               <CompactItemRow
                 key={c.id}
@@ -176,11 +193,7 @@ export function ClienteContratosList({ clienteId, clienteNome }: ClienteContrato
                 title={c.titulo}
                 meta={meta}
                 status={<ContratoStatusBadge status={c.status} />}
-                primaryAction={{
-                  label: 'Abrir',
-                  icon: <Eye className="h-3.5 w-3.5" />,
-                  onClick: () => setViewing(c),
-                }}
+                primaryAction={primaryAction}
                 menuItems={menuItems}
                 onRowClick={() => setViewing(c)}
               />
