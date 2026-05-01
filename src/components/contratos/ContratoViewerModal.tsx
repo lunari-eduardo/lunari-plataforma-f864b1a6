@@ -327,7 +327,7 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                     <FileSignature className="h-4 w-4 shrink-0" />
                     <span><strong>Sua assinatura está pendente.</strong> Abra o link e assine na Autentique.</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       size="sm"
                       onClick={() => window.open(fotografoPendente.link, '_blank', 'noopener,noreferrer')}
@@ -338,6 +338,20 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
                     <Button size="sm" variant="outline" onClick={() => handleCopyLink(fotografoPendente.link)}>
                       <Copy className="h-3.5 w-3.5 mr-1" />
                       Copiar link
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleNotifyMe}
+                      disabled={isNotifyingSigner}
+                      title="Receber o link por e-mail"
+                    >
+                      {isNotifyingSigner ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Receber por e-mail
                     </Button>
                   </div>
                 </div>
