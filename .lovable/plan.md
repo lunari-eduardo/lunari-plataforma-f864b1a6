@@ -1,84 +1,150 @@
-## Objetivo
+# Centro de Notificações — Plano de Implementação
 
-Duas melhorias no modal de contratos enviados:
+## Estado atual
 
-1. **Colapsar o conteúdo do contrato** quando já enviado, priorizando status e ações.
-2. **Corrigir URL de fallback do fotógrafo** que está retornando 404.
+O sino no Header (`src/components/layout/Header.tsx`, linha 52) usa `useState(2)` hardcoded e não abre nada ao clicar. Decorativo. O sistema já tem várias fontes de eventos espalhadas (lembretes de produção, tarefas, cobranças, contratos, leads, formulários, galerias, aniversários) mas sem um ponto único de acesso.
 
----
+## Visão geral da solução
 
-## 1. Card colapsável para o conteúdo (`ContratoViewerModal.tsx`)
+Transformar o sino num **Popover lateral** (estilo Notion/Linear) com:
 
-Quando o contrato **não está em rascunho** (`!isEditable`), o texto longo do contrato vira referência. Hoje ele empurra o bloco da Autentique e os botões de ação para baixo da dobra.
+- Lista agregada e ordenada por prioridade/recência
+- Agrupamento por categoria (com tabs: "Tudo", "Pendências", "Financeiro", "Clientes")
+- Badge com contagem de **não lidas**
+- Ações rápidas inline (marcar lida, dispensar, "ir para...")
+- Atualização em tempo real via canais Supabase já existentes
+- Persistência leve do estado lido/dispensado (sem nova tabela na v1 — usa `localStorage` por usuário; v2 opcional migra para tabela)
 
-### Mudanças
+## Fontes de notificação (mapeadas no banco/hooks atuais)
 
-- Importar `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` de `@/components/ui/collapsible` e `ChevronDown` de `lucide-react`.
-- Estado: `const [conteudoOpen, setConteudoOpen] = useState(isEditable)` — aberto em rascunho, fechado em enviado/assinado/cancelado.
-- Em rascunho: comportamento atual (editor sempre visível e editável).
-- Em enviado/assinado/cancelado: envolver o `ContratoRichEditor` em um `Collapsible`:
-  - Trigger: card com `flex items-center justify-between w-full p-3 rounded-lg border hover:bg-muted/40`, ícone `FileText`, label **"Conteúdo do contrato"**, hint à direita "Clique para visualizar" e chevron animado (`rotate-180` quando aberto).
-  - Content: `ContratoRichEditor` read-only com `minHeight: 400px`.
+Categoria **Pendências (Produção/Tarefas)**
 
-### Reordenação no modo enviado
+- Produtos não produzidos → reaproveita `useProductionReminders` (já existe)
+- Tarefas com `due_date <= hoje` e `status != done` → query em `tasks`
+- Tarefas atrasadas (vencidas há >1 dia) → mesma query, prioridade alta
 
-Nova ordem dentro do scroll do modal (de cima para baixo):
+Categoria **Financeiro**
 
-1. Banner verde "Contrato assinado" (se aplicável).
-2. **Bloco "Enviado via Autentique"** (sobe para o topo) com:
-   - Sub-status "Aguardando X de Y assinaturas".
-   - Banner âmbar "Sua assinatura está pendente" + botões `Assinar agora` / `Copiar link` / `Receber por e-mail`.
-   - Lista de signers.
-3. Grid Status + PDF assinado anexado.
-4. **Card colapsado "Conteúdo do contrato"** ao final.
+- Contas faturadas e **vencidas** (`fin_transactions` onde `status='faturado'` AND `data_vencimento < hoje`)
+- Contas vencendo em ≤3 dias
+- Pagamentos confirmados via cobrança hoje (`cobrancas` com `status='pago'` e `created_at` recente, ou via `clientes_transacoes`)
+- Cobranças enviadas e ainda não pagas há >7 dias
 
-Footer continua sticky com `Excluir`, `Baixar rascunho`/`Baixar PDF assinado`, `Salvar`.
+Categoria **Clientes / Comercial**
 
----
+- Aniversários hoje/amanhã → reaproveita `useBirthdayAlert`
+- Leads novos sem follow-up há >2 dias (`leads` por `status` + `created_at`)
+- Respostas de formulário recebidas (`formulario_respostas` recentes)
 
-## 2. Corrigir link de fallback do fotógrafo (404)
+Categoria **Documentos**
 
-### Problema
+- Contratos assinados (`contratos.status='assinado'` recente)
+- Contratos enviados há >3 dias sem assinatura
 
-Em `src/utils/contratoSigners.ts`, quando a Autentique não devolve `short_link` para o fotógrafo (dono da conta API), gerávamos:
+Categoria **Agenda**
 
+- Agendamentos confirmados nas últimas 24h
+
+## Arquitetura técnica
+
+### Novos arquivos
+
+- `src/types/notifications.ts` — tipos `Notification`, `NotificationCategory`, `NotificationPriority`
+- `src/hooks/useNotifications.ts` — hook agregador central que combina todas as fontes, aplica estado lido/dispensado e expõe `notifications`, `unreadCount`, `markAsRead`, `markAllAsRead`, `dismiss`
+- `src/hooks/notifications/useFinancialNotifications.ts`
+- `src/hooks/notifications/useTaskNotifications.ts`
+- `src/hooks/notifications/useContractNotifications.ts`
+- `src/hooks/notifications/useClientNotifications.ts` (aniversários + leads + formulários)
+- `src/hooks/notifications/useAgendaNotifications.ts`
+- `src/services/NotificationStateService.ts` — persistência localStorage com chave por user_id (`notif_state_${userId}`) guardando `{ readIds: string[], dismissedIds: string[], lastSeenAt }`
+- `src/components/notifications/NotificationBell.tsx` — sino + Popover
+- `src/components/notifications/NotificationList.tsx` — lista agrupada com tabs
+- `src/components/notifications/NotificationItem.tsx` — item individual com ícone por categoria, título, descrição, timestamp relativo, ações
+- `src/components/notifications/NotificationEmptyState.tsx`
+
+### Modificações
+
+- `src/components/layout/Header.tsx` — substituir o Button do sino por `<NotificationBell />`
+
+### Identidade estável dos itens
+
+Cada notificação tem ID determinístico baseado em fonte+entidade:
+
+- `task-overdue-${taskId}`
+- `fin-overdue-${transactionId}`
+- `cobranca-paid-${cobrancaId}`
+- `birthday-${clienteId}-${YYYYMMDD}`
+- `contract-signed-${contratoId}`
+
+Isso garante que "marcar como lida" persiste mesmo após refetch.
+
+### Realtime
+
+Reusar `useSupabaseRealtime` nas tabelas-chave (`tasks`, `fin_transactions`, `cobrancas`, `contratos`, `formulario_respostas`, `appointments`) já suportadas pelo `RealtimeSubscriptionManager`. As notificações se atualizam automaticamente.
+
+### Performance
+
+- Hook agregador com `useMemo` para combinar/ordenar
+- Queries com filtros restritivos (últimos 30 dias, status relevantes)
+- Limite de 50 itens na lista; "Ver todas" leva à rota relacionada
+
+## UI/UX
+
+```text
+┌─ Header ──────────────────────────────┐
+│              🔔(8) 🌙 👤              │
+└────────────────┬──────────────────────┘
+                 │ click
+                 ▼
+   ┌──────────────────────────────────────┐
+   │ Notificações          [Marcar todas] │
+   ├──────────────────────────────────────┤
+   │ [Tudo] [Pendências] [$ ] [Clientes]  │
+   ├──────────────────────────────────────┤
+   │ ● 🔴 Conta vencida                   │
+   │   R$ 1.700,00 — Aluguel · há 2h     │
+   │   [Ver] [Dispensar]                  │
+   ├──────────────────────────────────────┤
+   │ ● 📦 Produto pendente                │
+   │   4x Foto Impressa — Bárbara Gündel  │
+   │   [Ir ao Workflow]                   │
+   ├──────────────────────────────────────┤
+   │ ○ ✅ Contrato assinado               │
+   │   Priscila Richa · há 1d            │
+   ├──────────────────────────────────────┤
+   │           [Ver todas]                │
+   └──────────────────────────────────────┘
 ```
-https://app.autentique.com.br/documentos/visualizar/{id}  → 404
-```
 
-A URL correta no painel da Autentique é:
+Detalhes visuais:
 
-```
-https://app.autentique.com.br/documentos/{id}
-```
+- Largura ~400px, altura máx 600px com scroll nativo
+- Glassmorphism igual ao restante do app
+- Bolinha colorida à esquerda = não lida; cinza = lida
+- Ícone categórico (Bell/DollarSign/Package/User/FileText/Calendar)
+- Cores de prioridade: vermelho (vencida/atrasada), âmbar (próxima), verde (sucesso/pago/assinado), azul (info)
+- Timestamp relativo em pt-BR (`date-fns` formatDistance)
+- Click no item: marca como lida + navega para a rota de origem
+- Botão "Marcar todas como lidas" no header do popover
+- Badge desaparece quando `unreadCount === 0`
 
-### Mudança
+## Priorização e ordenação
 
-Em `src/utils/contratoSigners.ts`, dentro de `getFotografoPendente`, ajustar o `fallbackLink`:
+1. Críticas (vencidas, atrasadas) primeiro
+2. Próximas 24h
+3. Sucessos recentes (pagamento, assinatura)
+4. Informativas
 
-```ts
-const fallbackLink = contrato.signature_external_id
-  ? `https://app.autentique.com.br/documentos/${contrato.signature_external_id}`
-  : null;
-```
+Dentro de cada nível, mais recente primeiro.
 
-### Propagar para o backend
+## Fora do escopo (v2 futura)
 
-A mesma URL é montada no e-mail enviado pela edge function `autentique-notify-signer` (caso ela use fallback) e em qualquer outro ponto que referencie `documentos/visualizar/`. Buscar e substituir todas as ocorrências de `documentos/visualizar/` por `documentos/` em:
+- Tabela `notifications` no Supabase para multi-device sync
+- Notificações push (PWA)
+- Configuração de quais categorias ativar por usuário
+- Email digest diário
 
-- `src/utils/contratoSigners.ts`
-- `supabase/functions/autentique-notify-signer/index.ts` (se houver)
-- Qualquer outro lugar do código que monte essa URL.
+## Arquivos que serão criados/editados
 
----
-
-## Arquivos afetados
-
-- `src/components/contratos/ContratoViewerModal.tsx` — card colapsável + reordenação.
-- `src/utils/contratoSigners.ts` — corrigir URL de fallback.
-- `supabase/functions/autentique-notify-signer/index.ts` — corrigir URL se construída lá também.
-
-## Resultado esperado
-
-- Ao reabrir um contrato enviado, o usuário vê de imediato: status, banner âmbar com "Assinar agora", lista de signers e ações — sem rolar. O conteúdo do contrato fica disponível em um card recolhível ao final.
-- O botão/link "Assinar agora" e "Copiar link" passam a abrir corretamente o painel da Autentique, sem 404.
+- Criados: 11 arquivos (tipos, hooks, serviço, 4 componentes UI)
+- Editados: 1 arquivo (`Header.tsx`)

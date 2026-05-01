@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Moon, Sun, User, CreditCard, Shield, FileText, Package } from 'lucide-react';
+import { Moon, Sun, User, CreditCard, Shield, FileText, Package } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -49,7 +50,6 @@ const getPageTitleFromPath = (pathname: string): string => {
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [notificationCount] = useState(2);
   const { toggleTheme, currentTheme } = useTheme();
   const { signOut } = useAuth();
   const { accessState } = useAccessControl();
@@ -87,14 +87,7 @@ export default function Header() {
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" className="relative h-8 w-8 hover:bg-muted/50">
-            <Bell className="h-3.5 w-3.5" />
-            {notificationCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-2xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                {notificationCount}
-              </span>
-            )}
-          </Button>
+          <NotificationBell />
 
           <Button 
             variant="ghost" 
