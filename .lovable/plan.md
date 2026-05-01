@@ -1,150 +1,73 @@
-# Centro de Notificações — Plano de Implementação
+## Diagnóstico (causa raiz)
 
-## Estado atual
+A duplicação está confirmada no banco: **12 usuários afetados, 300 itens marcados como `is_default=true`** (deveriam ser 20 por usuário = 240). Cada item padrão aparece exatamente 2x (e em alguns casos 3x).
 
-O sino no Header (`src/components/layout/Header.tsx`, linha 52) usa `useState(2)` hardcoded e não abre nada ao clicar. Decorativo. O sistema já tem várias fontes de eventos espalhadas (lembretes de produção, tarefas, cobranças, contratos, leads, formulários, galerias, aniversários) mas sem um ponto único de acesso.
+**Por que aconteceu:**
+1. `SupabaseFinancialItemsAdapter.initializeDefaultItems()` é chamado dentro de `getAllItems()` e usa um check "se existe ao menos 1, não insere". Quando o app monta vários hooks de finanças em paralelo (Lançamentos + Dashboard + Configurações), **duas chamadas a `getAllItems()` rodam ao mesmo tempo**, ambas veem a tabela vazia e ambas fazem o `INSERT` dos 20 itens — gerando 40 linhas.
+2. Não existe **constraint de unicidade** em `fin_items_master(user_id, nome, grupo_principal)`, então o banco aceita as duplicatas silenciosamente.
+3. O campo `is_default` existe mas não é usado para bloquear exclusão definitiva — hoje o `deleteItem` só faz soft delete (`ativo=false`), o que impede o usuário de remover de vez.
 
-## Visão geral da solução
+**Verificação adicional:** das 60 linhas extras, apenas 8 têm transações vinculadas (`fin_transactions.item_id`). As 52 restantes podem ser removidas sem qualquer impacto financeiro.
 
-Transformar o sino num **Popover lateral** (estilo Notion/Linear) com:
+## Plano de correção
 
-- Lista agregada e ordenada por prioridade/recência
-- Agrupamento por categoria (com tabs: "Tudo", "Pendências", "Financeiro", "Clientes")
-- Badge com contagem de **não lidas**
-- Ações rápidas inline (marcar lida, dispensar, "ir para...")
-- Atualização em tempo real via canais Supabase já existentes
-- Persistência leve do estado lido/dispensado (sem nova tabela na v1 — usa `localStorage` por usuário; v2 opcional migra para tabela)
+### 1. Migration de banco (estrutural + limpeza)
 
-## Fontes de notificação (mapeadas no banco/hooks atuais)
+**a) Limpar duplicatas existentes preservando integridade financeira:**
+- Para cada grupo `(user_id, nome, grupo_principal)` com `is_default=true`, manter o registro **mais antigo** (menor `created_at`).
+- Para os "extras" (rn ≥ 2):
+  - Se houver transações vinculadas em `fin_transactions.item_id`, fazer **UPDATE** apontando essas transações para o item canônico (rn=1) — preserva todo o histórico financeiro.
+  - Em seguida, **DELETE** dos extras.
 
-Categoria **Pendências (Produção/Tarefas)**
+**b) Constraint de unicidade** em `fin_items_master`:
+```sql
+CREATE UNIQUE INDEX fin_items_master_user_nome_grupo_uniq
+  ON fin_items_master (user_id, lower(nome), grupo_principal);
+```
+Isso impede para sempre que o mesmo nome+grupo seja inserido duas vezes para o mesmo usuário (race condition fica naturalmente bloqueada — o segundo INSERT falha em vez de duplicar).
 
-- Produtos não produzidos → reaproveita `useProductionReminders` (já existe)
-- Tarefas com `due_date <= hoje` e `status != done` → query em `tasks`
-- Tarefas atrasadas (vencidas há >1 dia) → mesma query, prioridade alta
+### 2. Adapter (`src/adapters/SupabaseFinancialItemsAdapter.ts`)
 
-Categoria **Financeiro**
+**a) Hard delete em vez de soft delete:** trocar `deleteItem()` para fazer `DELETE FROM fin_items_master WHERE id = ?`. Se o item tiver transações vinculadas, capturar o erro de FK e retornar mensagem clara ao usuário ("Item possui lançamentos. Arquive em vez de excluir."). Adicionar método separado `archiveItem()` que mantém o comportamento atual (`ativo=false`) para esses casos.
 
-- Contas faturadas e **vencidas** (`fin_transactions` onde `status='faturado'` AND `data_vencimento < hoje`)
-- Contas vencendo em ≤3 dias
-- Pagamentos confirmados via cobrança hoje (`cobrancas` com `status='pago'` e `created_at` recente, ou via `clientes_transacoes`)
-- Cobranças enviadas e ainda não pagas há >7 dias
+**b) Inicialização à prova de race condition:**
+- Promover `initializeDefaultItems()` a singleton por sessão: usar uma `Promise` cacheada por `userId` para que chamadas paralelas aguardem a mesma execução.
+- Tratar erro de unique constraint (código `23505`) como sucesso silencioso (idempotente).
+- Usar `INSERT ... ON CONFLICT DO NOTHING` para garantir idempotência mesmo se o cache falhar.
 
-Categoria **Clientes / Comercial**
+### 3. UI (`src/components/financas/ConfiguracoesFinanceirasTab.tsx` e itens relacionados)
 
-- Aniversários hoje/amanhã → reaproveita `useBirthdayAlert`
-- Leads novos sem follow-up há >2 dias (`leads` por `status` + `created_at`)
-- Respostas de formulário recebidas (`formulario_respostas` recentes)
+- Confirmar que cada item padrão tem botão de exclusão **funcional e definitivo** (mesmo com `is_default=true` — o usuário deve poder remover qualquer item que não usa).
+- Diálogo de confirmação ao excluir item padrão: "Esta categoria padrão será removida permanentemente. Você poderá adicionar manualmente depois se quiser."
+- Se houver lançamentos vinculados, oferecer duas opções no diálogo:
+  - "Arquivar" (oculta da lista, preserva histórico)
+  - "Cancelar"
 
-Categoria **Documentos**
+### 4. Hook `useFinancialItemsManagement`
 
-- Contratos assinados (`contratos.status='assinado'` recente)
-- Contratos enviados há >3 dias sem assinatura
+Atualizar `handleRemoverItem` para tratar a nova mensagem de erro (item com transações) e direcionar o usuário ao diálogo de arquivar.
 
-Categoria **Agenda**
+## Arquivos a alterar
 
-- Agendamentos confirmados nas últimas 24h
+- **Nova migration SQL:** dedupe + unique index
+- `src/adapters/SupabaseFinancialItemsAdapter.ts` — singleton de init, hard delete, archive separado
+- `src/components/financas/ConfiguracoesFinanceirasTab.tsx` (e `FinancialItems*`) — diálogo de confirmação e fluxo de arquivar
+- `src/hooks/useFinancialItemsManagement.ts` — tratamento de erro
 
-## Arquitetura técnica
-
-### Novos arquivos
-
-- `src/types/notifications.ts` — tipos `Notification`, `NotificationCategory`, `NotificationPriority`
-- `src/hooks/useNotifications.ts` — hook agregador central que combina todas as fontes, aplica estado lido/dispensado e expõe `notifications`, `unreadCount`, `markAsRead`, `markAllAsRead`, `dismiss`
-- `src/hooks/notifications/useFinancialNotifications.ts`
-- `src/hooks/notifications/useTaskNotifications.ts`
-- `src/hooks/notifications/useContractNotifications.ts`
-- `src/hooks/notifications/useClientNotifications.ts` (aniversários + leads + formulários)
-- `src/hooks/notifications/useAgendaNotifications.ts`
-- `src/services/NotificationStateService.ts` — persistência localStorage com chave por user_id (`notif_state_${userId}`) guardando `{ readIds: string[], dismissedIds: string[], lastSeenAt }`
-- `src/components/notifications/NotificationBell.tsx` — sino + Popover
-- `src/components/notifications/NotificationList.tsx` — lista agrupada com tabs
-- `src/components/notifications/NotificationItem.tsx` — item individual com ícone por categoria, título, descrição, timestamp relativo, ações
-- `src/components/notifications/NotificationEmptyState.tsx`
-
-### Modificações
-
-- `src/components/layout/Header.tsx` — substituir o Button do sino por `<NotificationBell />`
-
-### Identidade estável dos itens
-
-Cada notificação tem ID determinístico baseado em fonte+entidade:
-
-- `task-overdue-${taskId}`
-- `fin-overdue-${transactionId}`
-- `cobranca-paid-${cobrancaId}`
-- `birthday-${clienteId}-${YYYYMMDD}`
-- `contract-signed-${contratoId}`
-
-Isso garante que "marcar como lida" persiste mesmo após refetch.
-
-### Realtime
-
-Reusar `useSupabaseRealtime` nas tabelas-chave (`tasks`, `fin_transactions`, `cobrancas`, `contratos`, `formulario_respostas`, `appointments`) já suportadas pelo `RealtimeSubscriptionManager`. As notificações se atualizam automaticamente.
-
-### Performance
-
-- Hook agregador com `useMemo` para combinar/ordenar
-- Queries com filtros restritivos (últimos 30 dias, status relevantes)
-- Limite de 50 itens na lista; "Ver todas" leva à rota relacionada
-
-## UI/UX
+## Resultado esperado
 
 ```text
-┌─ Header ──────────────────────────────┐
-│              🔔(8) 🌙 👤              │
-└────────────────┬──────────────────────┘
-                 │ click
-                 ▼
-   ┌──────────────────────────────────────┐
-   │ Notificações          [Marcar todas] │
-   ├──────────────────────────────────────┤
-   │ [Tudo] [Pendências] [$ ] [Clientes]  │
-   ├──────────────────────────────────────┤
-   │ ● 🔴 Conta vencida                   │
-   │   R$ 1.700,00 — Aluguel · há 2h     │
-   │   [Ver] [Dispensar]                  │
-   ├──────────────────────────────────────┤
-   │ ● 📦 Produto pendente                │
-   │   4x Foto Impressa — Bárbara Gündel  │
-   │   [Ir ao Workflow]                   │
-   ├──────────────────────────────────────┤
-   │ ○ ✅ Contrato assinado               │
-   │   Priscila Richa · há 1d            │
-   ├──────────────────────────────────────┤
-   │           [Ver todas]                │
-   └──────────────────────────────────────┘
+Antes:                          Depois:
+Despesas (31)                   Despesas (15)
+  Adobe                           Adobe
+  Água                            Água
+  Água    ← duplicada             Aluguel
+  Aluguel                         Assinatura
+  Aluguel ← duplicada             Canva
+  ...                             ...
 ```
 
-Detalhes visuais:
-
-- Largura ~400px, altura máx 600px com scroll nativo
-- Glassmorphism igual ao restante do app
-- Bolinha colorida à esquerda = não lida; cinza = lida
-- Ícone categórico (Bell/DollarSign/Package/User/FileText/Calendar)
-- Cores de prioridade: vermelho (vencida/atrasada), âmbar (próxima), verde (sucesso/pago/assinado), azul (info)
-- Timestamp relativo em pt-BR (`date-fns` formatDistance)
-- Click no item: marca como lida + navega para a rota de origem
-- Botão "Marcar todas como lidas" no header do popover
-- Badge desaparece quando `unreadCount === 0`
-
-## Priorização e ordenação
-
-1. Críticas (vencidas, atrasadas) primeiro
-2. Próximas 24h
-3. Sucessos recentes (pagamento, assinatura)
-4. Informativas
-
-Dentro de cada nível, mais recente primeiro.
-
-## Fora do escopo (v2 futura)
-
-- Tabela `notifications` no Supabase para multi-device sync
-- Notificações push (PWA)
-- Configuração de quais categorias ativar por usuário
-- Email digest diário
-
-## Arquivos que serão criados/editados
-
-- Criados: 11 arquivos (tipos, hooks, serviço, 4 componentes UI)
-- Editados: 1 arquivo (`Header.tsx`)
+- Lista limpa, sem duplicatas, em todos os usuários afetados.
+- Banco impede novas duplicações via constraint.
+- Usuário pode excluir definitivamente qualquer item (padrão ou não).
+- Histórico financeiro 100% preservado (transações religadas ao item canônico antes de remover duplicatas).
