@@ -85,6 +85,20 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     if (downloadingPdf) return;
     setDownloadingPdf(true);
     try {
+      // Se já existe PDF assinado, baixa ele direto
+      if (contrato.arquivo_assinado_path) {
+        const url = await getSignedUrl(contrato.arquivo_assinado_path);
+        if (url) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = contrato.arquivo_assinado_nome || `${titulo}-assinado.pdf`;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+      }
       const snap = (contrato.variaveis_snapshot || {}) as Record<string, any>;
       await downloadContratoPdf({
         titulo,
