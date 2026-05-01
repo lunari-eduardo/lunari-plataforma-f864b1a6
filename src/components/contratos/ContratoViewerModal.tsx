@@ -88,10 +88,10 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
   };
 
   const fotografoSigner = signers.find(isFotografoSigner);
-  const fotografoPendente =
-    fotografoSigner && fotografoSigner.status !== 'assinado' && fotografoSigner.status !== 'recusado' && fotografoSigner.link
-      ? fotografoSigner
-      : null;
+  const fotografoPendente = getFotografoPendente(contrato, {
+    profileEmail: profile?.email,
+    userEmail: user?.email,
+  });
 
   const assinadosCount = signers.filter((s: any) => s.status === 'assinado').length;
   const totalSigners = signers.length;
