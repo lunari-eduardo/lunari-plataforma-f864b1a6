@@ -235,13 +235,18 @@ export function ContratoViewerModal({ open, onClose, contrato }: ContratoViewerM
     }
   };
 
-  const isFotografoSigner = (s: any) => {
-    const e = (s?.email || '').trim().toLowerCase();
-    return !!e && !!fotografoEmail && e === fotografoEmail;
+  const handleNotifyMe = async () => {
+    if (!fotografoPendente?.email || !fotografoPendente?.link) return;
+    try {
+      await notifySigner({
+        contratoId: contrato.id,
+        signerEmail: fotografoPendente.email,
+        link: fotografoPendente.link,
+        tipo: 'envio',
+      });
+      toast({ title: 'E-mail enviado', description: `Verifique a caixa de entrada de ${fotografoPendente.email}.` });
+    } catch {/* tratado no hook */}
   };
-  const fotografoPendente = signers.find(
-    (s: any) => isFotografoSigner(s) && s.status !== 'assinado' && s.status !== 'recusado' && s.link
-  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
