@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useContratos } from '@/hooks/useContratos';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { downloadContratoPdf } from '@/utils/contratoPdf';
+import { getFotografoPendente } from '@/utils/contratoSigners';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -37,6 +39,7 @@ interface ClienteContratosListProps {
 export function ClienteContratosList({ clienteId, clienteNome }: ClienteContratosListProps) {
   const { contratos, isLoading, remove, setStatus } = useContratos({ clienteId });
   const { profile } = useUserProfile();
+  const { user } = useAuth();
   const [novoOpen, setNovoOpen] = useState(false);
   const [viewing, setViewing] = useState<Contrato | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Contrato | null>(null);
