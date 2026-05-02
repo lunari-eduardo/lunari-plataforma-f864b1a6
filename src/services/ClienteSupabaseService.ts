@@ -8,8 +8,8 @@ import type { ClienteDocumento } from '@/types/cliente-supabase';
 
 export class ClienteSupabaseService {
   
-  // ============= DOCUMENT UPLOAD =============
-  
+  // ============= DOCUMENT UPLOAD (Cloudflare R2) =============
+
   static async uploadDocument(
     clienteId: string,
     file: File,
@@ -19,46 +19,41 @@ export class ClienteSupabaseService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Validate file type (security: prevent executable uploads)
       const ALLOWED_DOCUMENT_TYPES = [
         'application/pdf',
-        'image/jpeg', 
-        'image/png', 
+        'image/jpeg',
+        'image/png',
         'image/webp',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ];
-
       if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) {
         throw new Error('Tipo de arquivo não permitido. Apenas PDF, imagens e documentos Office são aceitos.');
       }
-
-      // Validate file size (10MB max for documents)
-      const MAX_SIZE = 10 * 1024 * 1024;
-      if (file.size > MAX_SIZE) {
+      if (file.size > 10 * 1024 * 1024) {
         throw new Error('Arquivo muito grande. Tamanho máximo: 10MB');
       }
-
-      // Validate file extension (double-check security)
       const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
       const fileExt = file.name.split('.').pop()?.toLowerCase();
       if (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
         throw new Error('Extensão de arquivo inválida');
       }
 
-      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-      const filePath = `${user.id}/${clienteId}/${fileName}`;
+      // Upload via edge function (R2 privado)
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('context', 'client-document');
+      formData.append('entityId', clienteId);
 
-      // Upload file to storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('client-documents')
-        .upload(filePath, file);
+      const { data: upRes, error: upErr } = await supabase.functions.invoke('r2-upload', { body: formData });
+      if (upErr) throw upErr;
+      if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
 
-      if (uploadError) throw uploadError;
+      const r2Path = upRes.storagePath as string;
 
-      // Save document metadata
+      // Salvar metadados (storage_path = r2Path para novos registros)
       const { data: docData, error: docError } = await supabase
         .from('clientes_documentos')
         .insert({
@@ -67,15 +62,15 @@ export class ClienteSupabaseService {
           nome: file.name,
           tipo: file.type,
           tamanho: file.size,
-          storage_path: filePath,
-          descricao
+          storage_path: r2Path,
+          r2_storage_path: r2Path,
+          descricao,
         })
         .select()
         .single();
 
       if (docError) throw docError;
-
-      return docData;
+      return docData as ClienteDocumento;
     } catch (error) {
       console.error('❌ Error uploading document:', error);
       throw error;
@@ -83,48 +78,46 @@ export class ClienteSupabaseService {
   }
 
   // ============= DOCUMENT DOWNLOAD =============
-  
-  static async downloadDocument(documento: ClienteDocumento): Promise<Blob> {
-    try {
-      const { data, error } = await supabase.storage
-        .from('client-documents')
-        .download(documento.storage_path);
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('❌ Error downloading document:', error);
-      throw error;
-    }
+  static async downloadDocument(documento: ClienteDocumento): Promise<Blob> {
+    const url = await this.getDocumentUrl(documento);
+    if (!url) throw new Error('URL não disponível');
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Falha ao baixar documento');
+    return await res.blob();
   }
 
   // ============= DOCUMENT URL =============
-  
-  static getDocumentUrl(documento: ClienteDocumento): string {
-    const { data } = supabase.storage
-      .from('client-documents')
-      .getPublicUrl(documento.storage_path);
-    
+
+  static async getDocumentUrl(documento: ClienteDocumento): Promise<string> {
+    const r2Path = documento.r2_storage_path || (documento.storage_path?.startsWith('client-documents/') ? documento.storage_path : null);
+    if (r2Path) {
+      const { data, error } = await supabase.functions.invoke('r2-signed-url', {
+        body: { storagePath: r2Path, expiresIn: 300 },
+      });
+      if (error || !data?.url) throw new Error('Falha ao gerar URL');
+      return data.url as string;
+    }
+    // Legacy Supabase Storage
+    const { data } = supabase.storage.from('client-documents').getPublicUrl(documento.storage_path);
     return data.publicUrl;
   }
 
   // ============= DELETE DOCUMENT =============
-  
+
   static async deleteDocument(documento: ClienteDocumento): Promise<void> {
     try {
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('client-documents')
-        .remove([documento.storage_path]);
+      const r2Path = documento.r2_storage_path || (documento.storage_path?.startsWith('client-documents/') ? documento.storage_path : null);
+      if (r2Path) {
+        await supabase.functions.invoke('r2-delete', { body: { storagePath: r2Path } });
+      } else if (documento.storage_path) {
+        await supabase.storage.from('client-documents').remove([documento.storage_path]);
+      }
 
-      if (storageError) throw storageError;
-
-      // Delete metadata
       const { error: dbError } = await supabase
         .from('clientes_documentos')
         .delete()
         .eq('id', documento.id);
-
       if (dbError) throw dbError;
     } catch (error) {
       console.error('❌ Error deleting document:', error);

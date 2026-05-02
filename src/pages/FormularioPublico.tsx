@@ -43,16 +43,15 @@ export default function FormularioPublico() {
     const uploadedUrls: string[] = respostas[campoId] || [];
     try {
       for (const file of files) {
-        const fileName = `${Date.now()}_${file.name}`;
-        const filePath = `${token}/${campoId}/${fileName}`;
-        const { error: uploadError } = await supabase.storage
-          .from('formulario-uploads')
-          .upload(filePath, file);
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage
-          .from('formulario-uploads')
-          .getPublicUrl(filePath);
-        uploadedUrls.push(urlData.publicUrl);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('token', token || '');
+        formData.append('campoId', campoId);
+
+        const { data, error } = await supabase.functions.invoke('r2-public-upload', { body: formData });
+        if (error) throw error;
+        if (!data?.success || !data?.url) throw new Error(data?.error || 'Falha no upload');
+        uploadedUrls.push(data.url as string);
       }
       handleChange(campoId, uploadedUrls);
     } catch (err) {

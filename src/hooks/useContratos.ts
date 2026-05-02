@@ -113,22 +113,27 @@ export function useContratos(opts: UseContratosOpts = {}) {
   });
 
   /**
-   * Faz upload do PDF assinado para o storage privado.
+   * Faz upload do PDF assinado para o Cloudflare R2 (privado).
    */
   const uploadAssinadoMutation = useMutation({
     mutationFn: async ({ contratoId, file }: { contratoId: string; file: File }) => {
       if (!user) throw new Error('Usuário não autenticado');
-      const ext = file.name.split('.').pop() || 'pdf';
-      const path = `${user.id}/${contratoId}/assinado-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('contratos-assinados')
-        .upload(path, file, { upsert: true, contentType: file.type });
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('context', 'contrato-assinado');
+      formData.append('entityId', contratoId);
+
+      const { data: upRes, error: upErr } = await supabase.functions.invoke('r2-upload', { body: formData });
       if (upErr) throw upErr;
+      if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
+      const r2Path = upRes.storagePath as string;
 
       const { data, error } = await supabase
         .from('contratos')
         .update({
-          arquivo_assinado_path: path,
+          arquivo_assinado_path: r2Path,
+          r2_arquivo_assinado_path: r2Path,
           arquivo_assinado_nome: file.name,
           arquivo_assinado_tamanho: file.size,
           status: 'assinado',
@@ -147,6 +152,16 @@ export function useContratos(opts: UseContratosOpts = {}) {
   });
 
   const getSignedUrl = async (path: string): Promise<string | null> => {
+    if (!path) return null;
+    // Novo: caminho do R2 (contratos-assinados/...)
+    if (path.startsWith('contratos-assinados/')) {
+      const { data, error } = await supabase.functions.invoke('r2-signed-url', {
+        body: { storagePath: path, expiresIn: 300 },
+      });
+      if (error || !data?.url) return null;
+      return data.url as string;
+    }
+    // Legado: bucket Supabase
     const { data, error } = await supabase.storage
       .from('contratos-assinados')
       .createSignedUrl(path, 60 * 5);

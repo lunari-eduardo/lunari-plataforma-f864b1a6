@@ -18,7 +18,7 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
   const [urlInput, setUrlInput] = useState(imageUrl);
   const { uploadFile, uploading } = useR2Upload({
     context: 'blog',
-    onSuccess: (url) => {
+    onSuccess: ({ url }) => {
       onUpdate({ imageUrl: url });
       setUrlInput(url);
       toast.success('Imagem enviada com sucesso!');

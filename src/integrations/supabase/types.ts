@@ -699,6 +699,7 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          r2_storage_path: string | null
           storage_path: string
           tamanho: number
           tipo: string
@@ -710,6 +711,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          r2_storage_path?: string | null
           storage_path: string
           tamanho: number
           tipo: string
@@ -721,6 +723,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          r2_storage_path?: string | null
           storage_path?: string
           tamanho?: number
           tipo?: string
@@ -1232,6 +1235,7 @@ export type Database = {
           enviado_em: string | null
           id: string
           observacoes: string | null
+          r2_arquivo_assinado_path: string | null
           session_id: string | null
           signature_external_id: string | null
           signature_provider: string | null
@@ -1254,6 +1258,7 @@ export type Database = {
           enviado_em?: string | null
           id?: string
           observacoes?: string | null
+          r2_arquivo_assinado_path?: string | null
           session_id?: string | null
           signature_external_id?: string | null
           signature_provider?: string | null
@@ -1276,6 +1281,7 @@ export type Database = {
           enviado_em?: string | null
           id?: string
           observacoes?: string | null
+          r2_arquivo_assinado_path?: string | null
           session_id?: string | null
           signature_external_id?: string | null
           signature_provider?: string | null
@@ -3475,6 +3481,39 @@ export type Database = {
         }
         Relationships: []
       }
+      r2_migration_log: {
+        Row: {
+          bytes: number | null
+          created_at: string
+          error_message: string | null
+          id: string
+          source_bucket: string
+          source_path: string
+          status: string
+          target_path: string | null
+        }
+        Insert: {
+          bytes?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          source_bucket: string
+          source_path: string
+          status?: string
+          target_path?: string | null
+        }
+        Update: {
+          bytes?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          source_bucket?: string
+          source_path?: string
+          status?: string
+          target_path?: string | null
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           created_at: string | null
@@ -3690,6 +3729,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      task_attachments: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          storage_path: string
+          tamanho: number
+          task_id: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          storage_path: string
+          tamanho?: number
+          task_id: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          storage_path?: string
+          tamanho?: number
+          task_id?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       task_people: {
         Row: {

@@ -40,7 +40,7 @@ export function VideoBlock({ videoUrl, onUpdate }: VideoBlockProps) {
   const [urlInput, setUrlInput] = useState(videoUrl);
   const { uploadFile, uploading } = useR2Upload({
     context: 'blog',
-    onSuccess: (url) => {
+    onSuccess: ({ url }) => {
       onUpdate({ videoUrl: url });
       setUrlInput(url);
       toast.success('Vídeo enviado com sucesso!');

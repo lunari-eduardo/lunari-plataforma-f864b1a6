@@ -9,6 +9,7 @@ import { useFileUpload, UploadedFile } from '@/hooks/useFileUpload';
 interface FileUploadZoneProps {
   clienteId?: string;
   orcamentoId?: string;
+  taskId?: string;
   description?: string;
   showExisting?: boolean;
   onFileUploaded?: (file: UploadedFile) => void;
@@ -17,17 +18,19 @@ interface FileUploadZoneProps {
 export function FileUploadZone({
   clienteId,
   orcamentoId,
+  taskId,
   description,
   showExisting = true,
   onFileUploaded
 }: FileUploadZoneProps) {
-  const { uploadFile, deleteFile, getFilesByClient, getFilesByOrcamento, uploading } = useFileUpload();
+  const { uploadFile, deleteFile, getFilesByClient, getFilesByOrcamento, getFilesByTask, uploading } = useFileUpload();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     for (const file of acceptedFiles) {
       const uploadedFile = await uploadFile(file, {
         clienteId,
         orcamentoId,
+        taskId,
         description
       });
       
@@ -35,7 +38,7 @@ export function FileUploadZone({
         onFileUploaded(uploadedFile);
       }
     }
-  }, [uploadFile, clienteId, orcamentoId, description, onFileUploaded]);
+  }, [uploadFile, clienteId, orcamentoId, taskId, description, onFileUploaded]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -49,7 +52,13 @@ export function FileUploadZone({
   });
 
   const existingFiles = showExisting 
-    ? (clienteId ? getFilesByClient(clienteId) : orcamentoId ? getFilesByOrcamento(orcamentoId) : [])
+    ? (clienteId
+        ? getFilesByClient(clienteId)
+        : taskId
+        ? getFilesByTask(taskId)
+        : orcamentoId
+        ? getFilesByOrcamento(orcamentoId)
+        : [])
     : [];
 
   const formatFileSize = (bytes: number) => {
