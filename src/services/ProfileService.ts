@@ -86,139 +86,126 @@ export class ProfileService {
   }
 
   /**
-   * Fazer upload de avatar
+   * Fazer upload de avatar (Cloudflare R2)
    */
   static async uploadAvatar(userId: string, file: File): Promise<string> {
-    // Validate file type
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new Error('Tipo de arquivo inválido. Apenas JPG, PNG e WEBP são permitidos.');
     }
-
-    // Validate file size (5MB max)
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
+    if (file.size > 5 * 1024 * 1024) {
       throw new Error('Arquivo muito grande. Tamanho máximo: 5MB');
     }
 
-    // Sanitize file extension
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
-      throw new Error('Extensão de arquivo inválida');
+    // Remover avatar anterior (se existir e estiver no R2)
+    const current = await this.getProfile(userId);
+    if (current?.avatar_url && current.avatar_url.includes('media.lunarihub.com/avatars/')) {
+      const oldPath = current.avatar_url.split('media.lunarihub.com/')[1];
+      if (oldPath) {
+        try {
+          await supabase.functions.invoke('r2-delete', { body: { storagePath: oldPath } });
+        } catch (e) {
+          console.warn('Falha ao remover avatar antigo:', e);
+        }
+      }
     }
 
-    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('context', 'avatar');
 
-    // Upload do arquivo
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, file, { upsert: true });
+    const { data, error } = await supabase.functions.invoke('r2-upload', { body: formData });
+    if (error) throw new Error(error.message || 'Erro no upload');
+    if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
-    if (uploadError) {
-      console.error('Erro ao fazer upload:', uploadError);
-      throw uploadError;
-    }
-
-    // Obter URL pública
-    const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
-    // Atualizar perfil com a nova URL
-    await this.updateProfile(userId, { avatar_url: data.publicUrl });
-
-    return data.publicUrl;
+    await this.updateProfile(userId, { avatar_url: data.url });
+    return data.url;
   }
 
   /**
-   * Remover avatar
+   * Remover avatar (Cloudflare R2)
    */
   static async deleteAvatar(userId: string, currentUrl: string | null): Promise<void> {
     if (!currentUrl) return;
 
-    // Extrair o path do arquivo da URL
-    const urlParts = currentUrl.split('/avatars/');
-    if (urlParts.length < 2) return;
-
-    const filePath = urlParts[1];
-
-    // Deletar arquivo do storage
-    const { error } = await supabase.storage
-      .from('avatars')
-      .remove([filePath]);
-
-    if (error) {
-      console.error('Erro ao deletar avatar:', error);
-      throw error;
+    if (currentUrl.includes('media.lunarihub.com/')) {
+      const storagePath = currentUrl.split('media.lunarihub.com/')[1];
+      if (storagePath) {
+        try {
+          await supabase.functions.invoke('r2-delete', { body: { storagePath } });
+        } catch (e) {
+          console.warn('Falha ao remover avatar do R2:', e);
+        }
+      }
+    } else {
+      // Compatibilidade com avatares legados no Supabase Storage
+      const urlParts = currentUrl.split('/avatars/');
+      if (urlParts.length >= 2) {
+        await supabase.storage.from('avatars').remove([urlParts[1]]);
+      }
     }
 
-    // Atualizar perfil removendo a URL
     await this.updateProfile(userId, { avatar_url: null });
   }
 
   /**
-   * Fazer upload de logo da empresa
+   * Fazer upload de logo da empresa (Cloudflare R2)
    */
   static async uploadLogo(userId: string, file: File): Promise<string> {
-    // Validate file type
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new Error('Tipo de arquivo inválido. Apenas JPG, PNG e WEBP são permitidos.');
     }
-
-    // Validate file size (5MB max)
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
+    if (file.size > 5 * 1024 * 1024) {
       throw new Error('Arquivo muito grande. Tamanho máximo: 5MB');
     }
 
-    // Sanitize file extension
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
-      throw new Error('Extensão de arquivo inválida');
+    const current = await this.getProfile(userId);
+    if (current?.logo_url && current.logo_url.includes('media.lunarihub.com/avatars/')) {
+      const oldPath = current.logo_url.split('media.lunarihub.com/')[1];
+      if (oldPath) {
+        try {
+          await supabase.functions.invoke('r2-delete', { body: { storagePath: oldPath } });
+        } catch (e) {
+          console.warn('Falha ao remover logo antigo:', e);
+        }
+      }
     }
 
-    const fileName = `${userId}/logo_${Date.now()}.${fileExt}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('context', 'logo');
 
-    // Upload do arquivo
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, file, { upsert: true });
+    const { data, error } = await supabase.functions.invoke('r2-upload', { body: formData });
+    if (error) throw new Error(error.message || 'Erro no upload');
+    if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
-    if (uploadError) {
-      console.error('Erro ao fazer upload do logo:', uploadError);
-      throw uploadError;
-    }
-
-    // Obter URL pública
-    const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
-    // Atualizar perfil com a nova URL
-    await this.updateProfile(userId, { logo_url: data.publicUrl });
-
-    return data.publicUrl;
+    await this.updateProfile(userId, { logo_url: data.url });
+    return data.url;
   }
 
   /**
-   * Remover logo
+   * Remover logo (Cloudflare R2)
    */
   static async deleteLogo(userId: string, currentUrl: string | null): Promise<void> {
     if (!currentUrl) return;
 
-    // Extrair o path do arquivo da URL
-    const urlParts = currentUrl.split('/avatars/');
-    if (urlParts.length >= 2) {
-      const filePath = urlParts[1];
-
-      // Deletar arquivo do storage
-      await supabase.storage
-        .from('avatars')
-        .remove([filePath]);
+    if (currentUrl.includes('media.lunarihub.com/')) {
+      const storagePath = currentUrl.split('media.lunarihub.com/')[1];
+      if (storagePath) {
+        try {
+          await supabase.functions.invoke('r2-delete', { body: { storagePath } });
+        } catch (e) {
+          console.warn('Falha ao remover logo do R2:', e);
+        }
+      }
+    } else {
+      const urlParts = currentUrl.split('/avatars/');
+      if (urlParts.length >= 2) {
+        await supabase.storage.from('avatars').remove([urlParts[1]]);
+      }
     }
 
-    // Atualizar perfil removendo a URL
     await this.updateProfile(userId, { logo_url: null });
   }
 
