@@ -125,19 +125,17 @@ async function syncDocument({
       try {
         const pdfRes = await fetch(signedUrl);
         if (pdfRes.ok) {
-          const pdfBuf = new Uint8Array(await pdfRes.arrayBuffer());
-          const path = `${contrato.user_id}/${contrato.id}/autentique-${doc.id}.pdf`;
-          const { error: upErr } = await admin.storage
-            .from("contratos-assinados")
-            .upload(path, pdfBuf, { upsert: true, contentType: "application/pdf" });
-          if (!upErr) {
-            patch.arquivo_assinado_path = path;
-            patch.arquivo_assinado_nome = `${contrato.titulo || "contrato"}-assinado.pdf`;
-            patch.arquivo_assinado_tamanho = pdfBuf.byteLength;
-          }
+          const pdfBuf = await pdfRes.arrayBuffer();
+          const path = `contratos-assinados/${contrato.user_id}/${contrato.id}/autentique-${doc.id}.pdf`;
+          const { r2Put, getR2Creds } = await import("../_shared/r2.ts");
+          await r2Put(getR2Creds(), path, pdfBuf, "application/pdf");
+          patch.arquivo_assinado_path = path;
+          patch.r2_arquivo_assinado_path = path;
+          patch.arquivo_assinado_nome = `${contrato.titulo || "contrato"}-assinado.pdf`;
+          patch.arquivo_assinado_tamanho = pdfBuf.byteLength;
         }
       } catch (e) {
-        console.error("[autentique-webhook] download falhou", e);
+        console.error("[autentique-webhook] R2 upload falhou", e);
       }
     }
   }
