@@ -1,104 +1,202 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { resolveR2SignedUrl, deleteR2Object } from '@/hooks/useR2SignedUrl';
 
 export interface UploadedFile {
   id: string;
   nome: string;
   tipo: string;
   tamanho: number;
-  url: string;
+  url: string;          // CDN público OU URL pré-assinada (R2)
+  storagePath?: string; // chave no R2 (privado)
   uploadDate: string;
   clienteId?: string;
   orcamentoId?: string;
+  taskId?: string;
   description?: string;
 }
+
+interface UploadMeta {
+  clienteId?: string;
+  orcamentoId?: string;
+  taskId?: string;
+  description?: string;
+}
+
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
 export function useFileUpload() {
   const [uploading, setUploading] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
 
-  // Carregar arquivos do localStorage
-  const loadFiles = useCallback(() => {
+  const loadFiles = useCallback(async () => {
     try {
-      const saved = localStorage.getItem('uploaded_files');
-      const uploadedFiles = saved ? JSON.parse(saved) : [];
-      setFiles(uploadedFiles);
-    } catch (error) {
-      console.error('❌ Erro ao carregar arquivos:', error);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setFiles([]);
+        return;
+      }
+
+      // Carrega documentos de clientes + anexos de tarefas em paralelo
+      const [docsRes, attRes] = await Promise.all([
+        supabase
+          .from('clientes_documentos')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('task_attachments')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+      ]);
+
+      const all: UploadedFile[] = [];
+
+      for (const d of docsRes.data || []) {
+        const path = (d as any).r2_storage_path || (d as any).storage_path;
+        const url = path ? (await resolveR2SignedUrl(path)) || '' : '';
+        all.push({
+          id: d.id,
+          nome: d.nome,
+          tipo: d.tipo,
+          tamanho: d.tamanho,
+          url,
+          storagePath: path,
+          uploadDate: d.created_at,
+          clienteId: d.cliente_id,
+          description: d.descricao || undefined,
+        });
+      }
+
+      for (const a of attRes.data || []) {
+        const url = a.storage_path ? (await resolveR2SignedUrl(a.storage_path)) || '' : '';
+        all.push({
+          id: a.id,
+          nome: a.nome,
+          tipo: a.tipo,
+          tamanho: a.tamanho,
+          url,
+          storagePath: a.storage_path,
+          uploadDate: a.created_at,
+          taskId: a.task_id,
+          description: a.descricao || undefined,
+        });
+      }
+
+      setFiles(all);
+    } catch (err) {
+      console.error('❌ Erro ao carregar arquivos:', err);
       setFiles([]);
     }
   }, []);
 
-  // Salvar arquivos no localStorage
-  const saveFiles = (newFiles: UploadedFile[]) => {
-    try {
-      localStorage.setItem('uploaded_files', JSON.stringify(newFiles));
-      setFiles(newFiles);
-    } catch (error) {
-      console.error('❌ Erro ao salvar arquivos:', error);
-      toast.error('Erro ao salvar arquivo');
-    }
-  };
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
-  // Upload de arquivo (simula upload - converte para base64)
   const uploadFile = async (
-    file: File, 
-    metadata: { 
-      clienteId?: string; 
-      orcamentoId?: string; 
-      description?: string; 
-    } = {}
+    file: File,
+    metadata: UploadMeta = {}
   ): Promise<UploadedFile | null> => {
     if (!file) return null;
 
-    // Validar tipo de arquivo
-    const allowedTypes = [
-      'application/pdf', 
-      'image/jpeg', 
-      'image/png', 
-      'image/jpg',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error('Tipo de arquivo não permitido. Use PDF, JPG, PNG ou DOC');
       return null;
     }
-
-    // Validar tamanho (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error('Arquivo muito grande. Tamanho máximo: 10MB');
       return null;
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('Sessão expirada');
+      return null;
+    }
+
     setUploading(true);
-
     try {
-      // Converter arquivo para base64 (simulação de upload)
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // Define contexto/entidade para o R2
+      const isTask = !!metadata.taskId;
+      const isClient = !!metadata.clienteId;
+      const context = isClient ? 'client-document' : 'task';
+      const entityId = metadata.clienteId || metadata.taskId;
 
-      const uploadedFile: UploadedFile = {
-        id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('context', context);
+      if (entityId) formData.append('entityId', entityId);
+
+      const { data: upRes, error: upErr } = await supabase.functions.invoke('r2-upload', { body: formData });
+      if (upErr) throw upErr;
+      if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
+      const storagePath = upRes.storagePath as string;
+
+      // Persiste metadados conforme contexto
+      let id = `tmp_${Date.now()}`;
+      let createdAt = new Date().toISOString();
+
+      if (isClient) {
+        const { data, error } = await supabase
+          .from('clientes_documentos')
+          .insert({
+            cliente_id: metadata.clienteId!,
+            user_id: user.id,
+            nome: file.name,
+            tipo: file.type,
+            tamanho: file.size,
+            storage_path: storagePath,
+            r2_storage_path: storagePath,
+            descricao: metadata.description,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        id = data.id;
+        createdAt = data.created_at;
+      } else if (isTask) {
+        const { data, error } = await supabase
+          .from('task_attachments')
+          .insert({
+            task_id: metadata.taskId!,
+            user_id: user.id,
+            nome: file.name,
+            tipo: file.type,
+            tamanho: file.size,
+            storage_path: storagePath,
+            descricao: metadata.description,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        id = data.id;
+        createdAt = data.created_at;
+      }
+      // Para orçamento (sem tabela dedicada), só devolvemos o objeto (não persiste DB).
+
+      const url = await resolveR2SignedUrl(storagePath);
+      const uploaded: UploadedFile = {
+        id,
         nome: file.name,
         tipo: file.type,
         tamanho: file.size,
-        url: base64, // Em produção seria uma URL real
-        uploadDate: new Date().toISOString(),
-        ...metadata
+        url: url || '',
+        storagePath,
+        uploadDate: createdAt,
+        ...metadata,
       };
-
-      const currentFiles = [...files, uploadedFile];
-      saveFiles(currentFiles);
-
-      toast.success('Arquivo enviado com sucesso!');
-      return uploadedFile;
-
+      setFiles((prev) => [uploaded, ...prev]);
+      return uploaded;
     } catch (error) {
       console.error('❌ Erro no upload:', error);
       toast.error('Erro ao fazer upload do arquivo');
@@ -108,22 +206,31 @@ export function useFileUpload() {
     }
   };
 
-  // Deletar arquivo
-  const deleteFile = (fileId: string) => {
-    const updatedFiles = files.filter(f => f.id !== fileId);
-    saveFiles(updatedFiles);
-    toast.success('Arquivo removido');
+  const deleteFile = async (fileId: string) => {
+    const file = files.find((f) => f.id === fileId);
+    if (!file) return;
+
+    try {
+      // Apaga do R2
+      if (file.storagePath) {
+        await deleteR2Object(file.storagePath);
+      }
+      // Apaga metadados
+      if (file.clienteId) {
+        await supabase.from('clientes_documentos').delete().eq('id', fileId);
+      } else if (file.taskId) {
+        await supabase.from('task_attachments').delete().eq('id', fileId);
+      }
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    } catch (e) {
+      console.error('❌ Erro ao remover arquivo:', e);
+      toast.error('Erro ao remover arquivo');
+    }
   };
 
-  // Buscar arquivos por cliente
-  const getFilesByClient = (clienteId: string) => {
-    return files.filter(f => f.clienteId === clienteId);
-  };
-
-  // Buscar arquivos por orçamento
-  const getFilesByOrcamento = (orcamentoId: string) => {
-    return files.filter(f => f.orcamentoId === orcamentoId);
-  };
+  const getFilesByClient = (clienteId: string) => files.filter((f) => f.clienteId === clienteId);
+  const getFilesByOrcamento = (orcamentoId: string) => files.filter((f) => f.orcamentoId === orcamentoId);
+  const getFilesByTask = (taskId: string) => files.filter((f) => f.taskId === taskId);
 
   return {
     files,
@@ -132,6 +239,7 @@ export function useFileUpload() {
     deleteFile,
     getFilesByClient,
     getFilesByOrcamento,
-    loadFiles
+    getFilesByTask,
+    loadFiles,
   };
 }
