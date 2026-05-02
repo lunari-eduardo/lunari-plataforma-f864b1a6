@@ -30,7 +30,8 @@ export interface ClienteDocumento {
   nome: string;
   tipo: string;
   tamanho: number;
-  storage_path: string;
+  storage_path: string;          // legacy Supabase Storage
+  r2_storage_path?: string | null; // novo Cloudflare R2
   descricao?: string;
   created_at: string;
 }
