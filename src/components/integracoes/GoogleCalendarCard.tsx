@@ -190,7 +190,7 @@ export function GoogleCalendarCard() {
             </Button>
             <Button 
               variant="outline" 
-              onClick={disconnect}
+              onClick={() => disconnect()}
               disabled={connecting}
               className="w-full"
             >
@@ -292,7 +292,12 @@ export function GoogleCalendarCard() {
             {/* Botão desconectar */}
             <Button 
               variant="outline" 
-              onClick={disconnect}
+              onClick={() => {
+                const remove = window.confirm(
+                  'Deseja também remover do Google Calendar todos os eventos sincronizados pelo Lunari?\n\nOK = Remover eventos\nCancelar = Manter eventos no Google'
+                );
+                disconnect({ removeRemoteEvents: remove });
+              }}
               disabled={connecting}
               className="w-full"
             >
