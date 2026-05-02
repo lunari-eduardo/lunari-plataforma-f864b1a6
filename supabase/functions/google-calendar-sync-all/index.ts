@@ -1,58 +1,18 @@
+import {
+  corsHeaders,
+  buildEventBody,
+  ensureValidAccessToken,
+  makeSupabaseService,
+} from '../_shared/google-calendar.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface SyncResult {
   total: number;
   synced: number;
+  updated: number;
   failed: number;
   errors: string[];
   needs_reconnect?: boolean;
-}
-
-interface TokenRefreshResult {
-  accessToken: string | null;
-  error?: 'token_revoked' | 'refresh_failed';
-}
-
-async function refreshAccessToken(
-  refreshToken: string,
-  clientId: string,
-  clientSecret: string
-): Promise<TokenRefreshResult> {
-  try {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (data.access_token) {
-      return { accessToken: data.access_token };
-    }
-    
-    // Check for revoked token
-    if (data.error === 'invalid_grant') {
-      console.error('[google-calendar-sync-all] Token revoked by user:', data.error_description);
-      return { accessToken: null, error: 'token_revoked' };
-    }
-    
-    console.error('[google-calendar-sync-all] Token refresh failed:', data);
-    return { accessToken: null, error: 'refresh_failed' };
-  } catch (error) {
-    console.error('[google-calendar-sync-all] Token refresh error:', error);
-    return { accessToken: null, error: 'refresh_failed' };
-  }
 }
 
 Deno.serve(async (req) => {
@@ -62,33 +22,20 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!authHeader) return jsonResponse({ error: 'Missing authorization header' }, 401);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Validar usuário
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) return jsonResponse({ error: 'Invalid token' }, 401);
 
-    // Get user from token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('[google-calendar-sync-all] User error:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const supabase = makeSupabaseService();
 
-    console.log(`[google-calendar-sync-all] Starting sync for user: ${user.id}`);
-
-    // Get user's Google Calendar integration
-    const { data: integration, error: integrationError } = await supabase
+    const { data: integration } = await supabase
       .from('usuarios_integracoes')
       .select('*')
       .eq('user_id', user.id)
@@ -96,247 +43,141 @@ Deno.serve(async (req) => {
       .eq('status', 'ativo')
       .maybeSingle();
 
-    if (integrationError || !integration) {
-      console.log('[google-calendar-sync-all] No active integration found');
-      return new Response(
-        JSON.stringify({ error: 'Google Calendar não está conectado' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!integration) {
+      return jsonResponse({ error: 'Google Calendar não está conectado' }, 400);
     }
 
-    // Check if sync is enabled
     const syncEnabled = (integration.dados_extras as any)?.sync_enabled !== false;
     if (!syncEnabled) {
-      return new Response(
-        JSON.stringify({ error: 'Sincronização está desativada' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: 'Sincronização está desativada' }, 400);
     }
 
     const calendarId = (integration.dados_extras as any)?.calendar_id;
-    if (!calendarId) {
-      return new Response(
-        JSON.stringify({ error: 'Calendar ID não encontrado' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (!calendarId) return jsonResponse({ error: 'Calendar ID não encontrado' }, 400);
+
+    const tk = await ensureValidAccessToken(supabase, integration);
+    if (tk.revoked) {
+      return jsonResponse(
+        { error: 'Token revogado. Reconecte o Google Calendar.', needs_reconnect: true },
+        401,
       );
     }
-
-    // Check token expiration and refresh if needed
-    let accessToken = integration.access_token;
-    const expiresAt = integration.expira_em ? new Date(integration.expira_em) : null;
-    
-    if (expiresAt && expiresAt <= new Date()) {
-      console.log('[google-calendar-sync-all] Token expired, refreshing...');
-      
-      const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID')!;
-      const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET')!;
-      
-      const refreshResult = await refreshAccessToken(
-        integration.refresh_token!,
-        clientId,
-        clientSecret
-      );
-
-      if (!refreshResult.accessToken) {
-        // Handle token revocation
-        if (refreshResult.error === 'token_revoked') {
-          console.error('[google-calendar-sync-all] Token revoked, marking integration as error');
-          
-          // Update integration status to error
-          await supabase
-            .from('usuarios_integracoes')
-            .update({ 
-              status: 'erro',
-              dados_extras: {
-                ...(integration.dados_extras as any),
-                error: 'token_revoked',
-                error_at: new Date().toISOString(),
-              },
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', integration.id);
-          
-          return new Response(
-            JSON.stringify({ 
-              error: 'Token revogado. Por favor, reconecte o Google Calendar.',
-              needs_reconnect: true 
-            }),
-            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        console.error('[google-calendar-sync-all] Token refresh failed');
-        return new Response(
-          JSON.stringify({ error: 'Falha ao renovar token do Google' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      accessToken = refreshResult.accessToken;
-
-      // Update token in database
-      await supabase
-        .from('usuarios_integracoes')
-        .update({
-          access_token: accessToken,
-          expira_em: new Date(Date.now() + 3600 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', integration.id);
+    if (!tk.accessToken) {
+      return jsonResponse({ error: 'Falha ao renovar token do Google' }, 500);
     }
+    const accessToken = tk.accessToken;
 
-    // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
 
-    // Fetch confirmed appointments from today onwards that don't have google_event_id
-    // Also include appointments with pending or error status
-    const { data: appointments, error: appointmentsError } = await supabase
+    // Buscar appointments confirmados de hoje em diante que precisam sync
+    const { data: appointments, error: apptErr } = await supabase
       .from('appointments')
       .select('*, clientes(nome, email, telefone)')
       .eq('user_id', user.id)
       .eq('status', 'confirmado')
       .gte('date', today)
-      .or('google_event_id.is.null,google_sync_status.eq.pending,google_sync_status.eq.error')
+      .or('google_event_id.is.null,google_sync_status.in.(pending,error)')
       .order('date', { ascending: true });
 
-    if (appointmentsError) {
-      console.error('[google-calendar-sync-all] Error fetching appointments:', appointmentsError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao buscar agendamentos' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (apptErr) {
+      console.error('[sync-all] Fetch error:', apptErr);
+      return jsonResponse({ error: 'Erro ao buscar agendamentos' }, 500);
     }
-
-    console.log(`[google-calendar-sync-all] Found ${appointments?.length || 0} appointments to sync`);
 
     const result: SyncResult = {
       total: appointments?.length || 0,
       synced: 0,
+      updated: 0,
       failed: 0,
       errors: [],
     };
 
-    if (!appointments || appointments.length === 0) {
-      return new Response(
-        JSON.stringify(result),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Helper function to add 1 hour to time string (HH:mm)
-    function addHour(time: string): string {
-      const [hours, minutes] = time.split(':').map(Number);
-      const newHours = (hours + 1) % 24;
-      return `${String(newHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    }
-
-    // Sync each appointment
-    for (const appointment of appointments) {
+    for (const appt of appointments || []) {
+      const clientName = appt.clientes?.nome || appt.title;
       try {
-        // Use client name as summary for cleaner display (consistent with google-calendar-sync)
-        const clientName = appointment.clientes?.nome || appointment.title;
+        const body = buildEventBody(appt);
+        let response: Response;
+        let createdEventId: string | null = null;
+        let isUpdate = false;
 
-        // Build event description
-        const descriptionParts = [
-          `📋 ${appointment.type}`,
-          appointment.description,
-          appointment.clientes?.telefone ? `📞 ${appointment.clientes.telefone}` : '',
-          appointment.clientes?.email ? `📧 ${appointment.clientes.email}` : '',
-          '',
-          '⚠️ Este evento é gerenciado pelo Lunari. Alterações aqui não afetam o Lunari.',
-        ].filter(Boolean);
-
-        // Use local time format (without UTC conversion) - same as google-calendar-sync
-        const event = {
-          summary: clientName,
-          description: descriptionParts.join('\n'),
-          start: {
-            dateTime: `${appointment.date}T${appointment.time}:00`,
-            timeZone: 'America/Sao_Paulo',
-          },
-          end: {
-            dateTime: `${appointment.date}T${addHour(appointment.time)}:00`,
-            timeZone: 'America/Sao_Paulo',
-          },
-          colorId: '9', // Blue
-          reminders: {
-            useDefault: false,
-            overrides: [
-              { method: 'popup', minutes: 60 },
-              { method: 'popup', minutes: 1440 }, // 1 day
-            ],
-          },
-        };
-
-        // Create event in Google Calendar
-        const createResponse = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
+        if (appt.google_event_id) {
+          isUpdate = true;
+          response = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${appt.google_event_id}`,
+            {
+              method: 'PUT',
+              headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
             },
-            body: JSON.stringify(event),
+          );
+          if (response.status === 404 || response.status === 410) {
+            // Evento removido externamente — recria
+            isUpdate = false;
+            response = await fetch(
+              `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+              {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              },
+            );
+            if (response.ok) {
+              const j = await response.json();
+              createdEventId = j.id;
+            }
           }
-        );
+        } else {
+          response = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+            {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            },
+          );
+          if (response.ok) {
+            const j = await response.json();
+            createdEventId = j.id;
+          }
+        }
 
-        if (!createResponse.ok) {
-          const errorText = await createResponse.text();
-          console.error(`[google-calendar-sync-all] Failed to create event for ${appointment.id}:`, errorText);
+        if (!response.ok) {
+          const txt = await response.text();
+          console.error(`[sync-all] Failed for ${appt.id}:`, txt);
           result.failed++;
-          result.errors.push(`${clientName}: ${errorText}`);
-          
-          // Mark as error
+          result.errors.push(`${clientName}: ${txt.slice(0, 200)}`);
           await supabase
             .from('appointments')
-            .update({
-              google_sync_status: 'error',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', appointment.id);
-          
+            .update({ google_sync_status: 'error' })
+            .eq('id', appt.id);
           continue;
         }
 
-        const createdEvent = await createResponse.json();
-        console.log(`[google-calendar-sync-all] Created event: ${createdEvent.id} for appointment ${appointment.id}`);
+        const update: any = { google_sync_status: 'synced' };
+        if (createdEventId) update.google_event_id = createdEventId;
 
-        // Update appointment with google_event_id
-        const { error: updateError } = await supabase
-          .from('appointments')
-          .update({
-            google_event_id: createdEvent.id,
-            google_sync_status: 'synced',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', appointment.id);
+        await supabase.from('appointments').update(update).eq('id', appt.id);
 
-        if (updateError) {
-          console.error(`[google-calendar-sync-all] Failed to update appointment ${appointment.id}:`, updateError);
-          result.failed++;
-          result.errors.push(`${clientName}: Erro ao atualizar banco de dados`);
-        } else {
-          result.synced++;
-        }
-      } catch (error) {
-        console.error(`[google-calendar-sync-all] Error syncing appointment ${appointment.id}:`, error);
+        if (isUpdate) result.updated++;
+        else result.synced++;
+      } catch (e: any) {
+        console.error(`[sync-all] Error appt ${appt.id}:`, e);
         result.failed++;
-        result.errors.push(`${appointment.clientes?.nome || appointment.title}: ${error.message}`);
+        result.errors.push(`${clientName}: ${e?.message || 'erro'}`);
       }
     }
 
-    console.log(`[google-calendar-sync-all] Sync completed: ${result.synced}/${result.total} synced, ${result.failed} failed`);
-
-    return new Response(
-      JSON.stringify(result),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('[google-calendar-sync-all] Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.log(`[sync-all] Done: created=${result.synced} updated=${result.updated} failed=${result.failed}`);
+    return jsonResponse(result);
+  } catch (error: any) {
+    console.error('[sync-all] Fatal:', error);
+    return jsonResponse({ error: error?.message || 'fatal' }, 500);
   }
 });
+
+function jsonResponse(body: any, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
