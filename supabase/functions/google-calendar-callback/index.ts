@@ -85,7 +85,7 @@ serve(async (req) => {
     }
 
     // Calculate expiration
-    const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString();
+    const expiresAt = new Date(Date.now() + ((tokenData.expires_in || 3600) * 1000)).toISOString();
 
     // Save to database using service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);

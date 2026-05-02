@@ -1,286 +1,132 @@
-## Diagnóstico da varredura
 
-O erro de upload continua por um problema estrutural mais importante do que apenas permissão de bucket:
+# Análise da Integração Google Calendar — Diagnóstico e Plano de Correção
 
-1. **Conflito de Edge Function com o Gallery**
-   - O projeto Gestão e o projeto `lunari_gallery` usam o mesmo Supabase.
-   - No Supabase, o nome da Edge Function é global dentro do projeto.
-   - Já existe no Gallery uma função chamada `r2-upload` usada para upload de fotos de galerias.
-   - A função `r2-upload` publicada atualmente tem comportamento de Gallery: ela espera `galleryId` e salva em `galeria_fotos`.
-   - O Gestão está chamando `r2-upload` para logo/blog/documentos enviando `context=logo`, `context=blog`, etc.
-   - Resultado: a função publicada recebe um upload sem `galleryId` e responde **400 Bad Request**.
+## Estado atual
 
-2. **Não devemos sobrescrever a função `r2-upload` do Gallery**
-   - Se eu simplesmente publicar a função genérica do Gestão com o mesmo nome `r2-upload`, o upload de fotos no Gallery pode quebrar.
-   - A correção segura é criar funções com nomes exclusivos para o Gestão.
+A integração existe e funciona em casos básicos: conectar/desconectar, criar evento ao confirmar, sync manual em massa. Porém uma varredura completa (`google-calendar-sync`, `google-calendar-sync-all`, `google-calendar-callback`, `google-calendar-disconnect`, `googleCalendarSync.ts`, `useGoogleCalendarIntegration.ts`, `SupabaseAgendaAdapter.ts`) revelou problemas reais que afetam confiabilidade, especialmente para "agendamentos futuros existentes" e "alterações em tempo real".
 
-3. **Bucket do Gallery pode ser usado, mas não para tudo**
-   - O bucket `lunari-previews` é o bucket público do Gallery e está ligado ao domínio `media.lunarihub.com`.
-   - Ele é adequado para arquivos públicos: logos, avatares, imagens de blog, imagens públicas de formulários e previews.
-   - Ele **não é adequado para documentos privados**, como documentos de clientes, anexos internos de tarefas e contratos assinados. Mesmo que a UI use URL assinada, se o bucket tem domínio público, qualquer objeto pode ficar acessível por URL se o caminho for conhecido.
+Diagnóstico no banco:
+- 288 appointments confirmados — 217 com `google_sync_status='pending'` e **0 com `google_event_id`** (ou seja, nenhum sincronizado de fato), 71 sem status nenhum.
+- Nenhum usuário com integração ativa no momento (tabela `usuarios_integracoes` para `google_calendar` está vazia → última conexão foi removida/expirou). Isso explica o backlog enorme de "pending".
 
-4. **Recomendação de arquitetura**
+## Bugs e problemas encontrados
 
-```text
-Cloudflare R2
+### 1. Duração do evento é sempre 1h fixa (CRÍTICO)
+`google-calendar-sync/index.ts` linha 202–204 e `google-calendar-sync-all` linha 254–259 fazem `end = addHour(time)`. Ignora completamente:
+- A duração real do tipo de agendamento (`type`/categoria) configurada pelo usuário.
+- Pacotes que duram 2h, 3h, ensaios curtos de 30min, etc.
 
-1) lunari-previews  [público]
-   Domínio: https://media.lunarihub.com
-   Usar para:
-   - Gallery previews
-   - logos
-   - avatares
-   - blog
-   - mídia pública de formulários
+Resultado: todos os eventos no Google Calendar aparecem com 1h, criando sobreposições falsas e eventos errados.
 
-2) lunari-private  [privado, sem domínio público]
-   Sem custom domain público
-   Usar para:
-   - documentos de clientes
-   - anexos de tarefas
-   - contratos assinados
-   - qualquer arquivo sensível
-```
+### 2. Sync em "create" depende de status já estar 'confirmado' no momento do INSERT
+`SupabaseAgendaAdapter.addAppointment` (linha 344–349) chama sync sempre, mas a edge function só sincroniza se `appointment.status === 'confirmado'`. Para appointments criados como "a confirmar" e depois mudados para "confirmado", o `updateAppointment` (linha 396–479) só dispara sync se `wasConfirmed` for true E não dispara se mudaram **outros** campos depois — ok aqui, mas:
+- Se o usuário muda **cliente, descrição, tipo** em um appointment já confirmado e sincronizado, **NÃO** há sync (linhas 471–479 só checam `date || time`). O evento no Google fica desatualizado.
 
-## Plano de correção
+### 3. Race condition no UPDATE
+Linha 462–464: ao confirmar, dispara sync **sem await** (`syncAppointmentToGoogleCalendar(...)` sem await). O `try/catch` envolvente sugere espera, mas a Promise é fire-and-forget. Combinado com o fato de que a edge function busca o appointment do banco, geralmente funciona, mas se o cliente fizer outra mudança imediata, há risco de sobrescrita inversa.
 
-### 1. Eliminar conflito com o Gallery
+### 4. Falta retry automático para "pending" e "error"
+Quando o Google retorna erro (token expirado entre chamadas, rate limit, 5xx), o appointment é marcado como `pending`/`error` mas **nada** tenta sincronizar de novo automaticamente. Só o botão manual "Sincronizar agora" (`syncExisting`) limpa o backlog. Isso explica os 217 pendentes.
 
-Criar novas Edge Functions exclusivas do Gestão:
+### 5. `google-calendar-sync-all` só CRIA, nunca atualiza/remove
+Linha 272–282 sempre faz POST. Se um appointment tinha `google_event_id` mas ficou marcado `error`, o sync em massa **cria um evento duplicado** em vez de tentar PUT no existente. Também não trata appointments que foram removidos no Lunari mas continuam no Google.
 
-- `gestao-r2-upload`
-- `gestao-r2-signed-url`
-- `gestao-r2-delete`
-- `gestao-r2-public-upload`
-- `gestao-migrate-supabase-to-r2`
+### 6. `expira_em` calculado errado após refresh
+Linhas 177 e 182 do sync: usam `Date.now() + 3600 * 1000` (1h fixa) em vez do `expires_in` retornado pelo Google. Funciona, mas pode marcar como expirado antes ou depois do real. Pequeno, mas inconsistente.
 
-E manter a função `r2-upload` do Gallery intacta.
+### 7. Sem realtime/postgres trigger
+Toda a sync depende do código frontend chamar a edge function. Se a alteração vier de outro lugar (webhook, edge function de pagamento, RPC, importação), o Google Calendar **não recebe**. Não há trigger no banco que dispare sync via `pg_net`.
 
-Depois, atualizar todas as chamadas no Gestão:
+### 8. CORS desatualizado
+Faltam headers `x-supabase-client-platform`, `x-supabase-client-platform-version`, `x-supabase-client-runtime`, `x-supabase-client-runtime-version` em todas as 4 edge functions. Pode causar falhas intermitentes em browsers/SDKs novos.
 
-- `ProfileService.ts`: logo/avatar passam a chamar `gestao-r2-upload` e `gestao-r2-delete`.
-- `useR2Upload.ts`: blog e mídia passam a chamar `gestao-r2-upload`.
-- `useR2SignedUrl.ts`: URLs privadas passam a chamar `gestao-r2-signed-url` e `gestao-r2-delete`.
-- `useFileUpload.ts`: documentos e tarefas passam a chamar `gestao-r2-upload`.
-- `ClienteSupabaseService.ts`: documentos de clientes passam a chamar `gestao-r2-upload`, `gestao-r2-signed-url` e `gestao-r2-delete`.
-- `useContratos.ts`: contratos assinados passam a chamar `gestao-r2-upload` e `gestao-r2-signed-url`.
-- `FormularioPublico.tsx`: upload público passa a chamar `gestao-r2-public-upload`.
+### 9. Disconnect apaga `google_event_id` mas deixa eventos no Google
+Linha 82–88 do disconnect: zera referências locais mas **não deleta eventos** do calendário antes de revogar token. Eventos órfãos ficam no Google Calendar do usuário.
 
-### 2. Separar bucket público e bucket privado
+### 10. Sem indicador visual de sync por appointment
+UI mostra apenas `pendingCount` agregado. Nenhum badge/ícone por agendamento mostrando "sincronizado", "pendente" ou "erro" — usuário não sabe qual evento específico falhou.
 
-Atualizar o helper R2 para escolher bucket por contexto:
+## Plano de Correção
 
-- Contextos públicos:
-  - `avatar`
-  - `logo`
-  - `blog`
-  - `form`
-  - `general`
+### Fase 1 — Correções críticas de dados (maior impacto)
 
-  Bucket: `lunari-previews`  
-  URL retornada: `https://media.lunarihub.com/...`
+1. **Duração real do evento**
+   - Em `google-calendar-sync` e `google-calendar-sync-all`: buscar `availability_types.duration` (ou tabela equivalente que mapeia categoria → duração) com base em `appointment.type` e usuário. Fallback 60min se não encontrar.
+   - Adicionar coluna opcional `duration_minutes` em `appointments` (migration) para sobrescrever quando o agendamento tiver duração customizada (ex.: vinda de pacote/sessão).
 
-- Contextos privados:
-  - `task`
-  - `client-document`
-  - `contrato-assinado`
+2. **Sync em qualquer mudança relevante de appointment confirmado**
+   - Em `SupabaseAgendaAdapter.updateAppointment`: disparar sync sempre que o appointment estiver confirmado E qualquer um destes mudar: `date, time, type, description, cliente_id, status`.
+   - Aguardar (`await`) a Promise para garantir consistência sequencial.
 
-  Bucket: `lunari-private`  
-  URL retornada no upload: vazia ou apenas `storagePath`  
-  Acesso posterior: somente via `gestao-r2-signed-url`.
+3. **Trigger no banco como rede de segurança**
+   - Migration: criar trigger `AFTER INSERT OR UPDATE OR DELETE ON appointments` que enfileira na nova tabela `google_calendar_sync_queue (appointment_id, action, attempts, last_error, scheduled_at)`.
+   - Função RPC + cron job (`pg_cron` a cada 1 min) chama edge function `google-calendar-sync-worker` que processa a fila com backoff exponencial (1min, 5min, 15min, 1h, 6h, max 5 tentativas).
+   - Garante que mudanças vindas de qualquer origem (webhook de pagamento, RPC, admin) sejam refletidas.
 
-### 3. Preservar organização por prefixos
+4. **Refazer `google-calendar-sync-all` para suportar UPDATE e DELETE**
+   - Se `google_event_id` existe → PUT para reconciliar.
+   - Se appointment foi cancelado/excluído mas tem `google_event_id` órfão (caso `disconnect` não tenha rodado) → DELETE no Google.
+   - Atualizar `expira_em` usando `data.expires_in` real.
 
-Usar prefixos claros para evitar colisão com arquivos do Gallery:
+### Fase 2 — UX e robustez
+
+5. **Indicador por appointment**
+   - Badge no card da agenda: ícone Google Calendar com cores: verde (synced), amarelo (pending), vermelho (error + tooltip com erro), cinza (sem integração).
+   - Botão "Tentar novamente" inline para appointments em erro.
+
+6. **Disconnect mais limpo**
+   - Antes de revogar token: opcionalmente deletar todos `google_event_id` do calendário do Lunari (modal de confirmação: "Manter eventos no Google" vs "Remover eventos sincronizados").
+
+7. **CORS atualizado**
+   - Adicionar headers ausentes em todas as 4 edge functions.
+
+8. **Feedback realtime na UI**
+   - Subscribe em `appointments` (campo `google_sync_status`) via Supabase Realtime para atualizar badges sem reload.
+
+### Fase 3 — Recuperação do backlog atual
+
+9. **Migration one-shot** que reseta o backlog atual:
+   - Marcar todos os 217 `pending` para reentrarem na fila do worker assim que a Fase 1.3 estiver no ar.
+   - Como nenhum usuário tem integração ativa no momento, o worker simplesmente vai pular e zerar o status quando não houver integração — sem chamadas inúteis ao Google.
+
+## Detalhes técnicos
 
 ```text
-lunari-previews:
-  galleries/{galleryId}/...              # já usado pelo Gallery
-  gestao/avatars/{userId}/...
-  gestao/logos/{userId}/...
-  gestao/blog/{userId}/...
-  gestao/formulario-uploads/{token}/...
-  gestao/general/{userId}/...
-
-lunari-private:
-  gestao/client-documents/{userId}/{clienteId}/...
-  gestao/task-attachments/{userId}/{taskId}/...
-  gestao/contratos-assinados/{userId}/{contratoId}/...
+appointments ──(trigger)──► google_calendar_sync_queue
+                                       │
+              pg_cron (1 min) ─────────┘
+                     │
+                     ▼
+        google-calendar-sync-worker (edge fn)
+                     │
+        ┌────────────┴────────────┐
+        ▼                         ▼
+   refresh token             Google API
+   se necessário        (POST/PUT/DELETE)
+        │                         │
+        └──────────► UPDATE appointments
+                     SET google_event_id, google_sync_status
+                     UPDATE queue SET attempts++, last_error
 ```
 
-### 4. Corrigir permissões e validações das funções
+Tabelas/colunas novas:
+- `appointments.duration_minutes integer` (nullable, default null).
+- `google_calendar_sync_queue (id uuid pk, appointment_id uuid, user_id uuid, action text check in (create,update,delete), attempts int default 0, last_error text, next_attempt_at timestamptz default now(), created_at timestamptz default now())`.
+- Index `(next_attempt_at, attempts)` para o worker escolher próximos.
 
-Nas novas funções do Gestão:
+Edge functions:
+- Nova: `google-calendar-sync-worker` (sem JWT, chamada apenas pelo cron com header secreto).
+- Atualizar: `google-calendar-sync`, `google-calendar-sync-all`, `google-calendar-disconnect`, `google-calendar-callback` (CORS, duração, expires_in real, suporte a delete de órfãos).
 
-- Validar JWT dentro do código para uploads autenticados.
-- Manter `verify_jwt = false` no `config.toml`, seguindo o padrão atual do projeto, mas com autenticação manual no handler.
-- Garantir CORS completo em todas as respostas, inclusive erros.
-- Retornar mensagens de erro claras, por exemplo:
-  - `R2 credentials not configured`
-  - `Bucket privado não configurado`
-  - `Token R2 sem permissão para este bucket`
-  - `Arquivo excede o limite`
-  - `Tipo de arquivo não permitido`
-- Melhorar o frontend para extrair o corpo do erro da Edge Function em vez de mostrar apenas “Edge Function returned a non-2xx status code”.
+Frontend:
+- `useAppointmentSyncStatus(appointmentId)` hook com realtime.
+- Badge `<GoogleSyncBadge status="synced|pending|error|none" error?="..." onRetry?={...}/>`.
+- Modal de disconnect com opção de remoção em massa.
 
-### 5. Não quebrar arquivos legados do Supabase Storage
+## Itens fora de escopo (mencionar mas não fazer agora)
 
-Manter fallback para arquivos antigos:
+- Sync **bidirecional** (Google → Lunari): hoje só Lunari → Google. Implementar webhooks Google Calendar Push é trabalho grande, fica para depois.
+- Múltiplos calendários por usuário.
+- Convites para participantes via email.
 
-- `avatars`
-- `blog-images`
-- `client-documents`
-- `contratos-assinados`
-- `formulario-uploads`
-
-Enquanto nem tudo estiver migrado, a UI deve continuar abrindo arquivos antigos via Supabase Storage e arquivos novos via R2.
-
-### 6. Atualizar rotina de migração
-
-Renomear a função de migração para `gestao-migrate-supabase-to-r2` e ajustar o destino:
-
-- Buckets públicos legados vão para `lunari-previews`:
-  - `avatars`
-  - `blog-images`
-  - `formulario-uploads`
-
-- Buckets privados legados vão para `lunari-private`:
-  - `client-documents`
-  - `contratos-assinados`
-
-Atualizar metadados no banco:
-
-- `profiles.avatar_url`
-- `profiles.logo_url`
-- `blog_posts.featured_image_url`
-- `clientes_documentos.r2_storage_path`
-- `contratos.r2_arquivo_assinado_path`
-- `task_attachments.storage_path`
-
-### 7. Limpar inconsistências de UI/UX
-
-- Remover toast de sucesso em upload de imagem de blog, porque o projeto tem padrão de não usar toast de sucesso para CRUD/upload simples.
-- Mostrar erro específico quando a Edge Function retornar erro.
-- Em uploads, manter feedback visual de “enviando” e permitir nova tentativa.
-
-### 8. Validação pós-correção
-
-Testar os fluxos principais:
-
-1. Minha Conta → Trocar Logo
-   - Deve salvar em `https://media.lunarihub.com/gestao/logos/...`
-   - Deve atualizar `profiles.logo_url`.
-
-2. Avatar/perfil, se existir no fluxo
-   - Deve salvar em `https://media.lunarihub.com/gestao/avatars/...`
-
-3. Blog/conteúdo
-   - Upload de imagem deve salvar em `gestao/blog/...` no bucket público.
-
-4. Formulário público
-   - Upload sem login deve funcionar via `gestao-r2-public-upload`.
-
-5. Documento de cliente
-   - Deve salvar no bucket privado.
-   - Deve abrir somente por URL assinada.
-
-6. Contrato assinado
-   - Upload manual e sync Autentique devem salvar no bucket privado.
-   - Visualização/download deve usar URL assinada.
-
-7. Gallery
-   - Confirmar que o upload de fotos do Gallery continua usando a função `r2-upload` original e não foi sobrescrito.
-
-## Passo a passo manual necessário no Cloudflare
-
-### A. Verificar bucket público existente
-
-1. Entrar no painel Cloudflare.
-2. Ir em **R2 Object Storage**.
-3. Abrir o bucket `lunari-previews`.
-4. Confirmar que o domínio público/custom domain é:
-
-```text
-media.lunarihub.com
-```
-
-5. Manter esse bucket para arquivos públicos e previews do Gallery.
-
-### B. Criar bucket privado recomendado
-
-1. Em **R2 Object Storage**, clicar em **Create bucket**.
-2. Nome sugerido:
-
-```text
-lunari-private
-```
-
-3. Não conectar custom domain público nesse bucket.
-4. Não ativar acesso público direto.
-
-### C. Ajustar token/API key R2
-
-1. Ir em **R2 → Manage R2 API Tokens**.
-2. Criar ou editar um token com permissão:
-
-```text
-Object Read & Write
-```
-
-3. Escopo recomendado:
-
-```text
-lunari-previews
-lunari-private
-```
-
-4. Copiar:
-
-```text
-Account ID
-Access Key ID
-Secret Access Key
-```
-
-5. Se o token atual só tiver acesso ao bucket do Gallery, será necessário gerar um novo token com acesso aos dois buckets.
-
-### D. Secrets no Supabase
-
-Já existem estes secrets:
-
-```text
-R2_ACCOUNT_ID
-R2_ACCESS_KEY_ID
-R2_SECRET_ACCESS_KEY
-```
-
-Após criar o bucket privado, eu vou configurar o código para usar:
-
-```text
-R2_PUBLIC_BUCKET = lunari-previews
-R2_PRIVATE_BUCKET = lunari-private
-R2_CDN_BASE = https://media.lunarihub.com
-```
-
-Esses três podem ser hardcoded como configuração segura não secreta ou adicionados como secrets/config runtime para facilitar manutenção. Minha recomendação é usar runtime env/secrets para evitar novo deploy se algum nome mudar.
-
-### E. CORS
-
-O CORS que você colocou no bucket público está adequado para leitura pública e cenários futuros de upload direto. Para o fluxo atual, o upload real acontece assim:
-
-```text
-Browser → Supabase Edge Function → Cloudflare R2
-```
-
-Ou seja, CORS do bucket não é a causa principal do erro 400 atual. O erro atual vem do conflito da função `r2-upload` com o Gallery.
-
-## Resultado esperado
-
-Depois da correção:
-
-- O upload de logo deixa de chamar a função do Gallery.
-- O Gallery continua funcionando sem regressão.
-- Arquivos públicos usam `media.lunarihub.com`.
-- Arquivos privados deixam de ficar no bucket público e passam a usar URL assinada real.
-- Os erros de upload passam a mostrar mensagens úteis para diagnóstico.
-- A migração do Supabase Storage para R2 fica segura e separada por tipo de dado.
+Após aprovação implemento Fases 1–3 nesta ordem; UI da Fase 2 pode ser entregue logo após a 1 para feedback imediato.

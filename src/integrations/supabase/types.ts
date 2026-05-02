@@ -133,6 +133,7 @@ export type Database = {
           created_at: string | null
           date: string
           description: string | null
+          duration_minutes: number | null
           google_event_id: string | null
           google_sync_status: string | null
           id: string
@@ -153,6 +154,7 @@ export type Database = {
           created_at?: string | null
           date: string
           description?: string | null
+          duration_minutes?: number | null
           google_event_id?: string | null
           google_sync_status?: string | null
           id?: string
@@ -173,6 +175,7 @@ export type Database = {
           created_at?: string | null
           date?: string
           description?: string | null
+          duration_minutes?: number | null
           google_event_id?: string | null
           google_sync_status?: string | null
           id?: string
@@ -2696,6 +2699,48 @@ export type Database = {
           },
         ]
       }
+      google_calendar_sync_queue: {
+        Row: {
+          action: string
+          appointment_id: string
+          attempts: number
+          created_at: string
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          payload: Json | null
+          processed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          appointment_id: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          payload?: Json | null
+          processed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          appointment_id?: string
+          attempts?: number
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          payload?: Json | null
+          processed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       lead_follow_up_config: {
         Row: {
           ativo: boolean | null
@@ -4405,6 +4450,15 @@ export type Database = {
       delete_workflow_session_cascade: {
         Args: { p_action?: string; p_session_pk: string }
         Returns: Json
+      }
+      enqueue_google_calendar_sync: {
+        Args: {
+          p_action: string
+          p_appointment_id: string
+          p_payload?: Json
+          p_user_id: string
+        }
+        Returns: undefined
       }
       ensure_referral_code: { Args: never; Returns: string }
       expire_subscription_credits: {

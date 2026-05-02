@@ -343,7 +343,7 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
       // Google Calendar sync for confirmed appointments
       try {
         const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
-        syncAppointmentToGoogleCalendar(data.id, 'create');
+        await syncAppointmentToGoogleCalendar(data.id, 'create');
       } catch (syncError) {
         console.warn('⚠️ [SupabaseAdapter] Google Calendar sync failed (non-fatal):', syncError);
       }
@@ -461,18 +461,23 @@ export class SupabaseAgendaAdapter extends AgendaStorageAdapter {
         // Google Calendar sync for confirmed appointments
         try {
           const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
-          syncAppointmentToGoogleCalendar(id, 'update');
+          await syncAppointmentToGoogleCalendar(id, 'update');
         } catch (syncError) {
           console.warn('⚠️ [SupabaseAdapter] Google Calendar sync failed (non-fatal):', syncError);
         }
       } catch (sessionError) {
         console.error('⚠️ [SupabaseAdapter] Erro ao criar sessão (não fatal):', sessionError);
       }
-    } else if (updates.date || updates.time) {
-      // If date/time changed but not status, still sync
+    } else if (
+      // Sync de qualquer mudança relevante em appointment já confirmado
+      // (o trigger no banco também enfileira; chamar aqui antecipa o sync sem esperar o cron)
+      updates.date || updates.time || updates.title || updates.type ||
+      updates.description !== undefined || updates.clienteId !== undefined ||
+      (updates as any).clientId !== undefined
+    ) {
       try {
         const { syncAppointmentToGoogleCalendar } = await import('@/services/googleCalendarSync');
-        syncAppointmentToGoogleCalendar(id, 'update');
+        await syncAppointmentToGoogleCalendar(id, 'update');
       } catch (syncError) {
         console.warn('⚠️ [SupabaseAdapter] Google Calendar sync failed (non-fatal):', syncError);
       }
