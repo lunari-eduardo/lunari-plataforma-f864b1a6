@@ -122,7 +122,7 @@ export class ProfileService {
 
     // Remover avatar anterior (se existir e estiver no R2)
     const current = await this.getProfile(userId);
-    if (current?.avatar_url && current.avatar_url.includes('media.lunarihub.com/avatars/')) {
+    if (current?.avatar_url && current.avatar_url.includes('media.lunarihub.com/')) {
       const oldPath = current.avatar_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
@@ -138,7 +138,7 @@ export class ProfileService {
     formData.append('context', 'avatar');
 
     const { data, error } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
-    if (error) throw new Error(error.message || 'Erro no upload');
+    if (error) throw new Error(await extractEdgeError(error, 'Erro no upload'));
     if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
     await this.updateProfile(userId, { avatar_url: data.url });
@@ -184,7 +184,7 @@ export class ProfileService {
     }
 
     const current = await this.getProfile(userId);
-    if (current?.logo_url && current.logo_url.includes('media.lunarihub.com/avatars/')) {
+    if (current?.logo_url && current.logo_url.includes('media.lunarihub.com/')) {
       const oldPath = current.logo_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
@@ -200,7 +200,7 @@ export class ProfileService {
     formData.append('context', 'logo');
 
     const { data, error } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
-    if (error) throw new Error(error.message || 'Erro no upload');
+    if (error) throw new Error(await extractEdgeError(error, 'Erro no upload'));
     if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
     await this.updateProfile(userId, { logo_url: data.url });
