@@ -1,10 +1,10 @@
 /**
- * Public R2 upload for FormularioPublico (no auth).
+ * Gestao R2 Public Upload — upload sem auth para FormularioPublico.
  * Body: multipart/form-data { file, token, campoId }
- * Validates that the form token exists and is published.
+ * Salva no bucket público lunari-previews em gestao/form-uploads/{token}/{campoId}/...
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { corsHeaders, getR2Creds, r2Put, R2_CDN_BASE } from "../_shared/r2.ts";
+import { corsHeaders, getR2Creds, r2Put, R2_CDN_BASE, R2_PUBLIC_BUCKET } from "../_shared/r2.ts";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -12,7 +12,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -23,7 +26,6 @@ Deno.serve(async (req) => {
     if (!token) return json({ error: "Token obrigatório" }, 400);
     if (file.size > MAX_BYTES) return json({ error: "Arquivo excede 10MB" }, 400);
 
-    // Validar token
     const { data: form, error: fErr } = await supabase
       .from("formularios")
       .select("id, status")
@@ -35,14 +37,20 @@ Deno.serve(async (req) => {
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
     const filename = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-    const storagePath = `formulario-uploads/${token}/${campoId}/${filename}`;
+    const storagePath = `gestao/form-uploads/${token}/${campoId}/${filename}`;
     const data = await file.arrayBuffer();
 
-    await r2Put(getR2Creds(), storagePath, data, file.type || "application/octet-stream");
+    await r2Put(
+      getR2Creds(),
+      storagePath,
+      data,
+      file.type || "application/octet-stream",
+      R2_PUBLIC_BUCKET
+    );
     const url = `${R2_CDN_BASE}/${storagePath}`;
     return json({ success: true, url, storagePath }, 200);
   } catch (e) {
-    console.error("[r2-public-upload] error", e);
+    console.error("[gestao-r2-public-upload] error", e);
     return json({ error: e instanceof Error ? e.message : "Erro interno" }, 500);
   }
 });

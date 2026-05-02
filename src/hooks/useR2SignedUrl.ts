@@ -13,7 +13,7 @@ export async function resolveR2SignedUrl(storagePath: string): Promise<string | 
   const cached = CACHE.get(storagePath);
   if (cached && cached.expiresAt > Date.now()) return cached.url;
 
-  const { data, error } = await supabase.functions.invoke('r2-signed-url', {
+  const { data, error } = await supabase.functions.invoke('gestao-r2-signed-url', {
     body: { storagePath, expiresIn: 300 },
   });
   if (error || !data?.url) return null;
@@ -23,7 +23,7 @@ export async function resolveR2SignedUrl(storagePath: string): Promise<string | 
 
 export async function deleteR2Object(storagePath: string): Promise<boolean> {
   if (!storagePath) return true;
-  const { data, error } = await supabase.functions.invoke('r2-delete', {
+  const { data, error } = await supabase.functions.invoke('gestao-r2-delete', {
     body: { storagePath },
   });
   CACHE.delete(storagePath);

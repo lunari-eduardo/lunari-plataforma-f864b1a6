@@ -124,7 +124,7 @@ export function useContratos(opts: UseContratosOpts = {}) {
       formData.append('context', 'contrato-assinado');
       formData.append('entityId', contratoId);
 
-      const { data: upRes, error: upErr } = await supabase.functions.invoke('r2-upload', { body: formData });
+      const { data: upRes, error: upErr } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
       if (upErr) throw upErr;
       if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
       const r2Path = upRes.storagePath as string;
@@ -155,7 +155,7 @@ export function useContratos(opts: UseContratosOpts = {}) {
     if (!path) return null;
     // Novo: caminho do R2 (contratos-assinados/...)
     if (path.startsWith('contratos-assinados/')) {
-      const { data, error } = await supabase.functions.invoke('r2-signed-url', {
+      const { data, error } = await supabase.functions.invoke('gestao-r2-signed-url', {
         body: { storagePath: path, expiresIn: 300 },
       });
       if (error || !data?.url) return null;

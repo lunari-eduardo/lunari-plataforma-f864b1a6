@@ -23,6 +23,29 @@ export interface UserProfile {
   updated_at: string;
 }
 
+/**
+ * Extrai a mensagem real de erro de uma Edge Function (que vem como JSON no body),
+ * pois o cliente Supabase só expõe "Edge Function returned a non-2xx status code".
+ */
+async function extractEdgeError(error: any, fallback: string): Promise<string> {
+  try {
+    const ctx = error?.context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = await ctx.json();
+      if (body?.error) return String(body.error);
+    }
+    if (ctx && typeof ctx.text === 'function') {
+      const txt = await ctx.text();
+      try {
+        const parsed = JSON.parse(txt);
+        if (parsed?.error) return String(parsed.error);
+      } catch {}
+      if (txt) return txt;
+    }
+  } catch {}
+  return error?.message || fallback;
+}
+
 export class ProfileService {
   /**
    * Buscar perfil do usuário
@@ -99,11 +122,11 @@ export class ProfileService {
 
     // Remover avatar anterior (se existir e estiver no R2)
     const current = await this.getProfile(userId);
-    if (current?.avatar_url && current.avatar_url.includes('media.lunarihub.com/avatars/')) {
+    if (current?.avatar_url && current.avatar_url.includes('media.lunarihub.com/')) {
       const oldPath = current.avatar_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath: oldPath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: oldPath } });
         } catch (e) {
           console.warn('Falha ao remover avatar antigo:', e);
         }
@@ -114,8 +137,8 @@ export class ProfileService {
     formData.append('file', file);
     formData.append('context', 'avatar');
 
-    const { data, error } = await supabase.functions.invoke('r2-upload', { body: formData });
-    if (error) throw new Error(error.message || 'Erro no upload');
+    const { data, error } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
+    if (error) throw new Error(await extractEdgeError(error, 'Erro no upload'));
     if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
     await this.updateProfile(userId, { avatar_url: data.url });
@@ -132,7 +155,7 @@ export class ProfileService {
       const storagePath = currentUrl.split('media.lunarihub.com/')[1];
       if (storagePath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath } });
         } catch (e) {
           console.warn('Falha ao remover avatar do R2:', e);
         }
@@ -161,11 +184,11 @@ export class ProfileService {
     }
 
     const current = await this.getProfile(userId);
-    if (current?.logo_url && current.logo_url.includes('media.lunarihub.com/avatars/')) {
+    if (current?.logo_url && current.logo_url.includes('media.lunarihub.com/')) {
       const oldPath = current.logo_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath: oldPath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: oldPath } });
         } catch (e) {
           console.warn('Falha ao remover logo antigo:', e);
         }
@@ -176,8 +199,8 @@ export class ProfileService {
     formData.append('file', file);
     formData.append('context', 'logo');
 
-    const { data, error } = await supabase.functions.invoke('r2-upload', { body: formData });
-    if (error) throw new Error(error.message || 'Erro no upload');
+    const { data, error } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
+    if (error) throw new Error(await extractEdgeError(error, 'Erro no upload'));
     if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
     await this.updateProfile(userId, { logo_url: data.url });
@@ -194,7 +217,7 @@ export class ProfileService {
       const storagePath = currentUrl.split('media.lunarihub.com/')[1];
       if (storagePath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath } });
         } catch (e) {
           console.warn('Falha ao remover logo do R2:', e);
         }

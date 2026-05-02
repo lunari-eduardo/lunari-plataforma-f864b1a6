@@ -137,7 +137,7 @@ export function useFileUpload() {
       formData.append('context', context);
       if (entityId) formData.append('entityId', entityId);
 
-      const { data: upRes, error: upErr } = await supabase.functions.invoke('r2-upload', { body: formData });
+      const { data: upRes, error: upErr } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
       if (upErr) throw upErr;
       if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
       const storagePath = upRes.storagePath as string;
