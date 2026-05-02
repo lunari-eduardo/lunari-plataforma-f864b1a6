@@ -102,26 +102,23 @@ verify_jwt = false
 [functions.gestao-asaas-anticipation]
 verify_jwt = false
 
-[functions.r2-media-upload]
-verify_jwt = false
-
 [functions.gestao-asaas-refund]
 verify_jwt = false
 
 [functions.gestao-mercadopago-refund]
 verify_jwt = false
 
-[functions.r2-upload]
+[functions.gestao-r2-upload]
 verify_jwt = false
 
-[functions.r2-signed-url]
+[functions.gestao-r2-signed-url]
 verify_jwt = false
 
-[functions.r2-delete]
+[functions.gestao-r2-delete]
 verify_jwt = false
 
-[functions.r2-public-upload]
+[functions.gestao-r2-public-upload]
 verify_jwt = false
 
-[functions.migrate-supabase-to-r2]
+[functions.gestao-migrate-supabase-to-r2]
 verify_jwt = false
