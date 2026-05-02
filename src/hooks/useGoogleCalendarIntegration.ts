@@ -39,7 +39,7 @@ interface UseGoogleCalendarReturn {
   pendingCount: number;
   hasTokenError: boolean;
   connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
+  disconnect: (options?: { removeRemoteEvents?: boolean }) => Promise<void>;
   toggleSync: (enabled: boolean) => Promise<void>;
   syncExisting: () => Promise<SyncResult | null>;
   refetch: () => Promise<void>;
@@ -138,10 +138,12 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     }
   }, []);
 
-  const disconnect = useCallback(async () => {
+  const disconnect = useCallback(async (options?: { removeRemoteEvents?: boolean }) => {
     setConnecting(true);
     try {
-      const { error } = await supabase.functions.invoke('google-calendar-disconnect');
+      const { error } = await supabase.functions.invoke('google-calendar-disconnect', {
+        body: { removeRemoteEvents: options?.removeRemoteEvents === true },
+      });
 
       if (error) {
         console.error('[useGoogleCalendarIntegration] Disconnect error:', error);
