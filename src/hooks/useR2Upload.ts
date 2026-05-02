@@ -41,7 +41,7 @@ export function useR2Upload({ context, entityId, onSuccess, onError }: UseR2Uplo
         const eid = overrideEntityId ?? entityId;
         if (eid) formData.append('entityId', eid);
 
-        const { data, error } = await supabase.functions.invoke('r2-upload', {
+        const { data, error } = await supabase.functions.invoke('gestao-r2-upload', {
           body: formData,
         });
 

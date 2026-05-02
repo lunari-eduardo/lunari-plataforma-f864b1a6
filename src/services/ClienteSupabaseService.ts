@@ -47,7 +47,7 @@ export class ClienteSupabaseService {
       formData.append('context', 'client-document');
       formData.append('entityId', clienteId);
 
-      const { data: upRes, error: upErr } = await supabase.functions.invoke('r2-upload', { body: formData });
+      const { data: upRes, error: upErr } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
       if (upErr) throw upErr;
       if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
 
@@ -92,7 +92,7 @@ export class ClienteSupabaseService {
   static async getDocumentUrl(documento: ClienteDocumento): Promise<string> {
     const r2Path = documento.r2_storage_path || (documento.storage_path?.startsWith('client-documents/') ? documento.storage_path : null);
     if (r2Path) {
-      const { data, error } = await supabase.functions.invoke('r2-signed-url', {
+      const { data, error } = await supabase.functions.invoke('gestao-r2-signed-url', {
         body: { storagePath: r2Path, expiresIn: 300 },
       });
       if (error || !data?.url) throw new Error('Falha ao gerar URL');
@@ -109,7 +109,7 @@ export class ClienteSupabaseService {
     try {
       const r2Path = documento.r2_storage_path || (documento.storage_path?.startsWith('client-documents/') ? documento.storage_path : null);
       if (r2Path) {
-        await supabase.functions.invoke('r2-delete', { body: { storagePath: r2Path } });
+        await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: r2Path } });
       } else if (documento.storage_path) {
         await supabase.storage.from('client-documents').remove([documento.storage_path]);
       }

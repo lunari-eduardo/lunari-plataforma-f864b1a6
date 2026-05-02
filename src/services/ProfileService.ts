@@ -103,7 +103,7 @@ export class ProfileService {
       const oldPath = current.avatar_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath: oldPath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: oldPath } });
         } catch (e) {
           console.warn('Falha ao remover avatar antigo:', e);
         }
@@ -114,7 +114,7 @@ export class ProfileService {
     formData.append('file', file);
     formData.append('context', 'avatar');
 
-    const { data, error } = await supabase.functions.invoke('r2-upload', { body: formData });
+    const { data, error } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
     if (error) throw new Error(error.message || 'Erro no upload');
     if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
@@ -132,7 +132,7 @@ export class ProfileService {
       const storagePath = currentUrl.split('media.lunarihub.com/')[1];
       if (storagePath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath } });
         } catch (e) {
           console.warn('Falha ao remover avatar do R2:', e);
         }
@@ -165,7 +165,7 @@ export class ProfileService {
       const oldPath = current.logo_url.split('media.lunarihub.com/')[1];
       if (oldPath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath: oldPath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath: oldPath } });
         } catch (e) {
           console.warn('Falha ao remover logo antigo:', e);
         }
@@ -176,7 +176,7 @@ export class ProfileService {
     formData.append('file', file);
     formData.append('context', 'logo');
 
-    const { data, error } = await supabase.functions.invoke('r2-upload', { body: formData });
+    const { data, error } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
     if (error) throw new Error(error.message || 'Erro no upload');
     if (!data?.success || !data?.url) throw new Error(data?.error || 'Upload falhou');
 
@@ -194,7 +194,7 @@ export class ProfileService {
       const storagePath = currentUrl.split('media.lunarihub.com/')[1];
       if (storagePath) {
         try {
-          await supabase.functions.invoke('r2-delete', { body: { storagePath } });
+          await supabase.functions.invoke('gestao-r2-delete', { body: { storagePath } });
         } catch (e) {
           console.warn('Falha ao remover logo do R2:', e);
         }

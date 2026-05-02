@@ -48,7 +48,7 @@ export default function FormularioPublico() {
         formData.append('token', token || '');
         formData.append('campoId', campoId);
 
-        const { data, error } = await supabase.functions.invoke('r2-public-upload', { body: formData });
+        const { data, error } = await supabase.functions.invoke('gestao-r2-public-upload', { body: formData });
         if (error) throw error;
         if (!data?.success || !data?.url) throw new Error(data?.error || 'Falha no upload');
         uploadedUrls.push(data.url as string);
