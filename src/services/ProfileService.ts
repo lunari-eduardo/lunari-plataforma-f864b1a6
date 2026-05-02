@@ -23,6 +23,29 @@ export interface UserProfile {
   updated_at: string;
 }
 
+/**
+ * Extrai a mensagem real de erro de uma Edge Function (que vem como JSON no body),
+ * pois o cliente Supabase só expõe "Edge Function returned a non-2xx status code".
+ */
+async function extractEdgeError(error: any, fallback: string): Promise<string> {
+  try {
+    const ctx = error?.context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = await ctx.json();
+      if (body?.error) return String(body.error);
+    }
+    if (ctx && typeof ctx.text === 'function') {
+      const txt = await ctx.text();
+      try {
+        const parsed = JSON.parse(txt);
+        if (parsed?.error) return String(parsed.error);
+      } catch {}
+      if (txt) return txt;
+    }
+  } catch {}
+  return error?.message || fallback;
+}
+
 export class ProfileService {
   /**
    * Buscar perfil do usuário
