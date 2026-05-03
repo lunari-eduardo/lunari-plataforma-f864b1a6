@@ -134,34 +134,44 @@ export default function AppointmentDetails({
     setDateInputValue(formatDateForInput(formData.date));
   };
 
-  // Salvar alterações
-  const handleSave = () => {
-    const selectedPackage = pacotes.find(p => p.id === formData.packageId);
-    
-    // Buscar categoria do pacote (se disponível)
+  // Construir payload de salvamento (compartilhado entre auto-save e botão Salvar)
+  const buildPayload = useCallback((data: typeof formData) => {
+    const selectedPkg = pacotes.find(p => p.id === data.packageId);
     let packageCategory = '';
-    if (selectedPackage && (selectedPackage as any).categorias) {
-      packageCategory = (selectedPackage as any).categorias.nome || '';
-    } else if (selectedPackage && (selectedPackage as any).categoria) {
-      packageCategory = (selectedPackage as any).categoria;
+    if (selectedPkg && (selectedPkg as any).categorias) {
+      packageCategory = (selectedPkg as any).categorias.nome || '';
+    } else if (selectedPkg && (selectedPkg as any).categoria) {
+      packageCategory = (selectedPkg as any).categoria;
     }
-    
-    const appointmentData = {
+    return {
       id: appointment.id,
-      date: formatDateForStorage(formData.date),
-      time: formData.time,
-      title: formData.title,
-      client: formData.title,
-      type: packageCategory || formData.type,
-      category: selectedPackage?.nome,
-      status: formData.status as 'confirmado' | 'a confirmar',
-      description: formData.description,
-      packageId: formData.packageId,
-      paidAmount: formData.paidAmount
+      date: formatDateForStorage(data.date),
+      time: data.time,
+      title: data.title,
+      client: data.title,
+      type: packageCategory || data.type,
+      category: selectedPkg?.nome,
+      status: data.status as 'confirmado' | 'a confirmar',
+      description: data.description,
+      packageId: data.packageId,
+      paidAmount: data.paidAmount,
     };
-    
-    onSave(appointmentData);
-    
+  }, [appointment.id, pacotes]);
+
+  // Auto-save (apenas para pendentes)
+  const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
+    data: formData,
+    enabled: isEditable,
+    delay: 800,
+    buildPayload,
+    onSave: async (payload) => {
+      await onSave(payload);
+    },
+  });
+
+  // Salvar alterações (botão manual)
+  const handleSave = async () => {
+    await onSave(buildPayload(formData));
   };
 
   const handleDeleteConfirm = (action: 'preserve' | 'refund' | 'remove') => {
