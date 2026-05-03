@@ -175,6 +175,16 @@ export default function AppointmentDetails({
     },
   });
 
+  // Manter ref atualizada para flush no unmount
+  const flushNowRef = useRef(flushNow);
+  useEffect(() => { flushNowRef.current = flushNow; }, [flushNow]);
+  useEffect(() => {
+    return () => {
+      // Ao desmontar (modal fechado), garantir persistência de qualquer alteração pendente
+      flushNowRef.current?.();
+    };
+  }, []);
+
   // Salvar alterações (botão manual)
   const handleSave = async () => {
     await onSave(buildPayload(formData));
