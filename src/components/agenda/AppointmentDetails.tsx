@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { useAppointmentAutosave } from '@/hooks/useAppointmentAutosave';
 import { ptBR } from 'date-fns/locale';
