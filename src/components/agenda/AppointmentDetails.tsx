@@ -106,11 +106,17 @@ export default function AppointmentDetails({
   };
 
   // Manipular seleção de status
-  const handleStatusSelect = (status: 'confirmado' | 'a confirmar') => {
-    setFormData(prev => ({
-      ...prev,
-      status
-    }));
+  const handleStatusSelect = async (status: 'confirmado' | 'a confirmar') => {
+    const next = { ...formData, status };
+    setFormData(next);
+    // Quando confirmar, autosave fica disabled — salvar imediatamente para garantir persistência
+    if (status === 'confirmado') {
+      try {
+        await onSave(buildPayload(next));
+      } catch (err) {
+        console.error('[AppointmentDetails] Erro ao confirmar:', err);
+      }
+    }
   };
 
   // Manipular input de data (somente atualiza o texto)
