@@ -625,12 +625,26 @@ export default function AppointmentDetails({
           Excluir
         </Button>
         <div className="space-x-2">
-          <Button variant="outline" onClick={onCancel} className="text-xs h-9">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} className="text-xs h-9">
-            Salvar
-          </Button>
+          {isEditable ? (
+            <Button
+              onClick={async () => {
+                try { await flushNow(); } catch (_) {}
+                onCancel();
+              }}
+              className="text-xs h-9"
+            >
+              Fechar
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} className="text-xs h-9">
+                Salvar
+              </Button>
+            </>
+          )}
         </div>
       </div>
       </div>
