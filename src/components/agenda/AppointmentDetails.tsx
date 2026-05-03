@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
+import { useAppointmentAutosave } from '@/hooks/useAppointmentAutosave';
 import { ptBR } from 'date-fns/locale';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard, Check, CloudOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AppointmentDetailsProps {
@@ -105,11 +106,17 @@ export default function AppointmentDetails({
   };
 
   // Manipular seleção de status
-  const handleStatusSelect = (status: 'confirmado' | 'a confirmar') => {
-    setFormData(prev => ({
-      ...prev,
-      status
-    }));
+  const handleStatusSelect = async (status: 'confirmado' | 'a confirmar') => {
+    const next = { ...formData, status };
+    setFormData(next);
+    // Quando confirmar, autosave fica disabled — salvar imediatamente para garantir persistência
+    if (status === 'confirmado') {
+      try {
+        await onSave(buildPayload(next));
+      } catch (err) {
+        console.error('[AppointmentDetails] Erro ao confirmar:', err);
+      }
+    }
   };
 
   // Manipular input de data (somente atualiza o texto)
@@ -133,34 +140,54 @@ export default function AppointmentDetails({
     setDateInputValue(formatDateForInput(formData.date));
   };
 
-  // Salvar alterações
-  const handleSave = () => {
-    const selectedPackage = pacotes.find(p => p.id === formData.packageId);
-    
-    // Buscar categoria do pacote (se disponível)
+  // Construir payload de salvamento (compartilhado entre auto-save e botão Salvar)
+  const buildPayload = useCallback((data: typeof formData) => {
+    const selectedPkg = pacotes.find(p => p.id === data.packageId);
     let packageCategory = '';
-    if (selectedPackage && (selectedPackage as any).categorias) {
-      packageCategory = (selectedPackage as any).categorias.nome || '';
-    } else if (selectedPackage && (selectedPackage as any).categoria) {
-      packageCategory = (selectedPackage as any).categoria;
+    if (selectedPkg && (selectedPkg as any).categorias) {
+      packageCategory = (selectedPkg as any).categorias.nome || '';
+    } else if (selectedPkg && (selectedPkg as any).categoria) {
+      packageCategory = (selectedPkg as any).categoria;
     }
-    
-    const appointmentData = {
+    return {
       id: appointment.id,
-      date: formatDateForStorage(formData.date),
-      time: formData.time,
-      title: formData.title,
-      client: formData.title,
-      type: packageCategory || formData.type,
-      category: selectedPackage?.nome,
-      status: formData.status as 'confirmado' | 'a confirmar',
-      description: formData.description,
-      packageId: formData.packageId,
-      paidAmount: formData.paidAmount
+      date: formatDateForStorage(data.date),
+      time: data.time,
+      title: data.title,
+      client: data.title,
+      type: packageCategory || data.type,
+      category: selectedPkg?.nome,
+      status: data.status as 'confirmado' | 'a confirmar',
+      description: data.description,
+      packageId: data.packageId,
+      paidAmount: data.paidAmount,
     };
-    
-    onSave(appointmentData);
-    
+  }, [appointment.id, pacotes]);
+
+  // Auto-save (apenas para pendentes)
+  const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
+    data: formData,
+    enabled: isEditable,
+    delay: 800,
+    buildPayload,
+    onSave: async (payload) => {
+      await onSave(payload);
+    },
+  });
+
+  // Manter ref atualizada para flush no unmount
+  const flushNowRef = useRef(flushNow);
+  useEffect(() => { flushNowRef.current = flushNow; }, [flushNow]);
+  useEffect(() => {
+    return () => {
+      // Ao desmontar (modal fechado), garantir persistência de qualquer alteração pendente
+      flushNowRef.current?.();
+    };
+  }, []);
+
+  // Salvar alterações (botão manual)
+  const handleSave = async () => {
+    await onSave(buildPayload(formData));
   };
 
   const handleDeleteConfirm = (action: 'preserve' | 'refund' | 'remove') => {
@@ -201,6 +228,47 @@ export default function AppointmentDetails({
           >
             <UserRoundPen className="h-4 w-4" />
           </button>
+          {isEditable && autosaveStatus !== 'idle' && (
+            <span
+              className={cn(
+                "ml-auto flex items-center gap-1 text-[11px] transition-opacity",
+                autosaveStatus === 'saving' && "text-lunar-muted",
+                autosaveStatus === 'saved' && "text-lunar-success",
+                autosaveStatus === 'error' && "text-lunar-error"
+              )}
+              title={
+                autosaveStatus === 'error'
+                  ? 'Falha ao salvar — suas alterações ainda não foram persistidas'
+                  : undefined
+              }
+            >
+              {autosaveStatus === 'saving' && (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Salvando…
+                </>
+              )}
+              {autosaveStatus === 'saved' && (
+                <>
+                  <Check className="h-3 w-3" />
+                  Salvo
+                </>
+              )}
+              {autosaveStatus === 'error' && (
+                <>
+                  <CloudOff className="h-3 w-3" />
+                  Erro ao salvar
+                  <button
+                    type="button"
+                    onClick={() => flushNow()}
+                    className="underline ml-1"
+                  >
+                    tentar novamente
+                  </button>
+                </>
+              )}
+            </span>
+          )}
         </div>
         <p className="text-sm text-lunar-muted mt-1">
           {format(formData.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} às {formData.time}
@@ -369,6 +437,9 @@ export default function AppointmentDetails({
                   toast.error('Erro ao preparar cobrança.');
                   return;
                 }
+
+                // Garantir persistência do pacote/valor antes de gerar a cobrança
+                try { await flushNow(); } catch (_) { /* erro já tratado no hook */ }
 
                 setShowChargeModal(true);
               }}
@@ -564,12 +635,26 @@ export default function AppointmentDetails({
           Excluir
         </Button>
         <div className="space-x-2">
-          <Button variant="outline" onClick={onCancel} className="text-xs h-9">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} className="text-xs h-9">
-            Salvar
-          </Button>
+          {isEditable ? (
+            <Button
+              onClick={async () => {
+                try { await flushNow(); } catch (_) {}
+                onCancel();
+              }}
+              className="text-xs h-9"
+            >
+              Fechar
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} className="text-xs h-9">
+                Salvar
+              </Button>
+            </>
+          )}
         </div>
       </div>
       </div>
