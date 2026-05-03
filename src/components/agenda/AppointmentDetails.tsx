@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
+import { useAppointmentAutosave } from '@/hooks/useAppointmentAutosave';
+import { Check, CloudOff } from 'lucide-react';
 import { ptBR } from 'date-fns/locale';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { Button } from "@/components/ui/button";
