@@ -907,6 +907,42 @@ export type Database = {
           },
         ]
       }
+      clientes_sessoes_status_audit: {
+        Row: {
+          contexto: Json | null
+          created_at: string
+          id: string
+          origem: string | null
+          sessao_id: string
+          session_id: string | null
+          status_anterior: string | null
+          status_novo: string | null
+          user_id: string
+        }
+        Insert: {
+          contexto?: Json | null
+          created_at?: string
+          id?: string
+          origem?: string | null
+          sessao_id: string
+          session_id?: string | null
+          status_anterior?: string | null
+          status_novo?: string | null
+          user_id: string
+        }
+        Update: {
+          contexto?: Json | null
+          created_at?: string
+          id?: string
+          origem?: string | null
+          sessao_id?: string
+          session_id?: string | null
+          status_anterior?: string | null
+          status_novo?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       clientes_transacoes: {
         Row: {
           cliente_id: string
@@ -4541,6 +4577,7 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: undefined
       }
+      reconcile_gallery_extras_counters: { Args: never; Returns: Json }
       reconcile_session_extras: {
         Args: {
           p_destino_sobra?: string
