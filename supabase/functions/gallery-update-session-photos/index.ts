@@ -66,12 +66,13 @@ serve(async (req) => {
       });
     }
 
-    // Primeiro, buscar a sessão para obter user_id (necessário para verificar system status)
+    // Primeiro, buscar a sessão para obter user_id e status atual (necessário para guarda anti-regressão)
     let sessionUserId: string | null = null;
     let sessionId: string | null = null;
-    
+    let sessionCurrentStatus: string | null = null;
+
     // Buscar a sessão primeiro
-    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id');
+    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id, status');
     
     if (body.sessionUuid) {
       findQuery = findQuery.eq('id', body.sessionUuid);
@@ -86,7 +87,8 @@ serve(async (req) => {
     if (sessionData) {
       sessionUserId = sessionData.user_id;
       sessionId = sessionData.id;
-      console.log('📍 Sessão encontrada, user_id:', sessionUserId);
+      sessionCurrentStatus = (sessionData as any).status ?? null;
+      console.log('📍 Sessão encontrada, user_id:', sessionUserId, '| status atual:', sessionCurrentStatus);
     }
 
     // Montar objeto de atualização
@@ -117,16 +119,53 @@ serve(async (req) => {
       // Verificar se o usuário tem o status de sistema "Seleção finalizada"
       const { data: systemStatus } = await supabase
         .from('etapas_trabalho')
-        .select('nome')
+        .select('nome, ordem')
         .eq('user_id', sessionUserId)
         .eq('nome', 'Seleção finalizada')
         .eq('is_system_status', true)
         .maybeSingle();
       
       if (systemStatus) {
-        console.log('✅ Status de sistema encontrado, atualizando status da sessão para "Seleção finalizada"');
-        updateData.status = 'Seleção finalizada';
-        updateData.status_galeria = 'selecao_completa';
+        // GUARDA ANTI-REGRESSÃO: nunca sobrescrever status que já avançou no workflow.
+        // Lista hardcoded de fallback (cobre instalações sem ordem definida)
+        const STATUS_POSTERIORES = [
+          'Editando',
+          'Enviado Impressão',
+          'Enviado para impressão',
+          'Finalizado',
+          'Entregue',
+        ];
+
+        let naoRegredir = false;
+        let motivo = '';
+
+        if (sessionCurrentStatus && STATUS_POSTERIORES.includes(sessionCurrentStatus)) {
+          naoRegredir = true;
+          motivo = `status atual "${sessionCurrentStatus}" está na lista de etapas posteriores`;
+        } else if (sessionCurrentStatus && (systemStatus as any).ordem != null) {
+          // Verifica por ordem (cobre status custom)
+          const { data: etapaAtual } = await supabase
+            .from('etapas_trabalho')
+            .select('nome, ordem')
+            .eq('user_id', sessionUserId)
+            .eq('nome', sessionCurrentStatus)
+            .maybeSingle();
+
+          if (etapaAtual && (etapaAtual as any).ordem != null && (etapaAtual as any).ordem > (systemStatus as any).ordem) {
+            naoRegredir = true;
+            motivo = `status atual "${sessionCurrentStatus}" (ordem ${(etapaAtual as any).ordem}) é posterior a "Seleção finalizada" (ordem ${(systemStatus as any).ordem})`;
+          }
+        }
+
+        if (naoRegredir) {
+          console.log(`⚠️ Preservando status do workflow — ${motivo}. Apenas status_galeria será atualizado.`);
+          // Mantém o status do workflow, mas ainda marca status_galeria como completa
+          updateData.status_galeria = 'selecao_completa';
+        } else {
+          console.log('✅ Atualizando status da sessão para "Seleção finalizada"');
+          updateData.status = 'Seleção finalizada';
+          updateData.status_galeria = 'selecao_completa';
+        }
       } else {
         console.log('ℹ️ Usuário não tem status de sistema PRO + Gallery, ignorando atualização automática de status');
       }
