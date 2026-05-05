@@ -66,12 +66,13 @@ serve(async (req) => {
       });
     }
 
-    // Primeiro, buscar a sessão para obter user_id (necessário para verificar system status)
+    // Primeiro, buscar a sessão para obter user_id e status atual (necessário para guarda anti-regressão)
     let sessionUserId: string | null = null;
     let sessionId: string | null = null;
-    
+    let sessionCurrentStatus: string | null = null;
+
     // Buscar a sessão primeiro
-    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id');
+    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id, status');
     
     if (body.sessionUuid) {
       findQuery = findQuery.eq('id', body.sessionUuid);
