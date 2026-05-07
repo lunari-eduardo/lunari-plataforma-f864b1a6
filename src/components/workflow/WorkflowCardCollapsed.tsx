@@ -241,12 +241,16 @@ export function WorkflowCardCollapsed({
       tipoAssinatura: accessState.planCode
     });
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [session, hasGaleryAccess, accessState.planCode]);
+  }, [session, hasGaleryAccess, accessState.planCode, galerias]);
 
   // Handler para criar galeria de entrega
   const handleCreateEntrega = useCallback(() => {
     if (!hasGaleryAccess) {
       setGalleryModalOpen(true);
+      return;
+    }
+    if (galerias.some((g) => g.tipo === 'entrega' || g.tipo === 'transfer')) {
+      toast.error('Esta sessão já possui uma Galeria de Entrega');
       return;
     }
     const url = buildGalleryDeliverUrl({
@@ -256,7 +260,7 @@ export function WorkflowCardCollapsed({
       clienteNome: session.nome,
     });
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [session, hasGaleryAccess]);
+  }, [session, hasGaleryAccess, galerias]);
 
   // Helper para label de tipo de galeria
   const getGaleriaTipoLabel = (tipo: string) => {
