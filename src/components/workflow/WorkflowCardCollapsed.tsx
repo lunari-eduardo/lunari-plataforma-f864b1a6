@@ -18,6 +18,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { buildGalleryNewUrl } from "@/utils/galleryRedirect";
 import { buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useSessionGalerias } from "@/hooks/useSessionGalerias";
+import { toast } from "sonner";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
 import { WorkflowDeleteConfirmModal, type DeleteAction } from "./WorkflowDeleteConfirmModal";
@@ -210,6 +211,10 @@ export function WorkflowCardCollapsed({
       setGalleryModalOpen(true);
       return;
     }
+    if (galerias.some((g) => g.tipo === 'selecao')) {
+      toast.error('Esta sessão já possui uma Galeria de Seleção');
+      return;
+    }
 
     // Prioridade do preço da foto extra:
     // 1) Valor atual editado na sessão (string formatada "R$ 25,00")
@@ -236,12 +241,16 @@ export function WorkflowCardCollapsed({
       tipoAssinatura: accessState.planCode
     });
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [session, hasGaleryAccess, accessState.planCode]);
+  }, [session, hasGaleryAccess, accessState.planCode, galerias]);
 
   // Handler para criar galeria de entrega
   const handleCreateEntrega = useCallback(() => {
     if (!hasGaleryAccess) {
       setGalleryModalOpen(true);
+      return;
+    }
+    if (galerias.some((g) => g.tipo === 'entrega' || g.tipo === 'transfer')) {
+      toast.error('Esta sessão já possui uma Galeria de Entrega');
       return;
     }
     const url = buildGalleryDeliverUrl({
@@ -251,7 +260,7 @@ export function WorkflowCardCollapsed({
       clienteNome: session.nome,
     });
     window.open(url, '_blank', 'noopener,noreferrer');
-  }, [session, hasGaleryAccess]);
+  }, [session, hasGaleryAccess, galerias]);
 
   // Helper para label de tipo de galeria
   const getGaleriaTipoLabel = (tipo: string) => {
@@ -260,36 +269,46 @@ export function WorkflowCardCollapsed({
   };
 
   // Componente reutilizável para botões de galeria
+  const temSelecao = galerias.some((g) => g.tipo === 'selecao');
+  const temEntrega = galerias.some((g) => g.tipo === 'entrega' || g.tipo === 'transfer');
+  const temTodas = temSelecao && temEntrega;
+
   const GalleryButtons = ({ compact = false }: { compact?: boolean }) => (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size={compact ? "sm" : "default"}
-            className={compact ? "h-6 px-2 text-[10px] gap-1" : "h-7 px-2.5 text-xs gap-1"}
-          >
-            <Plus className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
-            Criar
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-1" align="end" side="bottom">
-          <button
-            onClick={handleCreateSelecao}
-            className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
-          >
-            <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-            Galeria de Seleção
-          </button>
-          <button
-            onClick={handleCreateEntrega}
-            className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
-          >
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-            Galeria de Entrega
-          </button>
-        </PopoverContent>
-      </Popover>
+      {!temTodas && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size={compact ? "sm" : "default"}
+              className={compact ? "h-6 px-2 text-[10px] gap-1" : "h-7 px-2.5 text-xs gap-1"}
+            >
+              <Plus className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+              Criar
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1" align="end" side="bottom">
+            {!temSelecao && (
+              <button
+                onClick={handleCreateSelecao}
+                className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
+              >
+                <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                Galeria de Seleção
+              </button>
+            )}
+            {!temEntrega && (
+              <button
+                onClick={handleCreateEntrega}
+                className="w-full text-left px-3 py-2 text-xs rounded hover:bg-muted transition-colors flex items-center gap-2"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                Galeria de Entrega
+              </button>
+            )}
+          </PopoverContent>
+        </Popover>
+      )}
 
       {hasGalerias && (
         <Popover>

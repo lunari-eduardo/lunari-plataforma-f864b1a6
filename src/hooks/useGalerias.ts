@@ -67,7 +67,11 @@ export function useGalerias() {
 
       if (error) {
         console.error('Error creating galeria:', error);
-        toast.error('Erro ao criar galeria');
+        if ((error as any).code === '23505') {
+          toast.error('Esta sessão já possui uma galeria deste tipo');
+        } else {
+          toast.error('Erro ao criar galeria');
+        }
         return null;
       }
 
