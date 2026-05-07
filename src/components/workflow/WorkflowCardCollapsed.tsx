@@ -210,6 +210,10 @@ export function WorkflowCardCollapsed({
       setGalleryModalOpen(true);
       return;
     }
+    if (galerias.some((g) => g.tipo === 'selecao')) {
+      toast.error('Esta sessão já possui uma Galeria de Seleção');
+      return;
+    }
 
     // Prioridade do preço da foto extra:
     // 1) Valor atual editado na sessão (string formatada "R$ 25,00")
