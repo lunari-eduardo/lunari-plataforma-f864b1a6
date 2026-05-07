@@ -18,6 +18,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { buildGalleryNewUrl } from "@/utils/galleryRedirect";
 import { buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useSessionGalerias } from "@/hooks/useSessionGalerias";
+import { toast } from "sonner";
 import debounce from 'lodash.debounce';
 import type { SessionData } from "@/types/workflow";
 import { WorkflowDeleteConfirmModal, type DeleteAction } from "./WorkflowDeleteConfirmModal";
