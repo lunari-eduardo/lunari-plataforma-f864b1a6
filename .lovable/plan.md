@@ -1,119 +1,82 @@
-# Bug: Status revertendo para "Seleção finalizada"
 
-## Causa Raiz Identificada
+## Diagnóstico
 
-A edge function `supabase/functions/gallery-update-session-photos/index.ts` (chamada pelo projeto Gallery) contém uma lógica que **sobrescreve incondicionalmente** o `status` da sessão para `"Seleção finalizada"` sempre que recebe `selecaoFinalizada: true` no payload.
+**Sessão analisada:** `c30f6d83-a047-469c-9835-a7da61dfd7c8` (workflow-1777784100600-q0fg97pis9s)
+- Cobrança: `tipo_cobranca='card'`, `qtd_fotos=1`, `valor=5`, `status='pago'` (Asaas)
+- Galeria: `total_fotos_extras_vendidas=0`, `valor_total_vendido=0` ❌
+- Sessão: `qtd_fotos_extra=0`, `valor_total_foto_extra=0` ❌, mas `valor_pago=5` ✅
 
-Trecho problemático (linhas 113–133):
+### Causa raiz (banco de dados — não é falha do Gallery nem do Studio em si)
 
-```ts
-if (body.selecaoFinalizada === true && sessionUserId) {
-  const { data: systemStatus } = await supabase
-    .from('etapas_trabalho')
-    .select('nome')
-    .eq('user_id', sessionUserId)
-    .eq('nome', 'Seleção finalizada')
-    .eq('is_system_status', true)
-    .maybeSingle();
+A função RPC `public.finalize_gallery_payment` (executada quando o webhook confirma o pagamento Asaas) reconsolida `total_fotos_extras_vendidas` e `valor_total_vendido` na galeria — e depois propaga para `clientes_sessoes` — fazendo um SOMATÓRIO das cobranças pagas com este filtro:
 
-  if (systemStatus) {
-    updateData.status = 'Seleção finalizada';        // ⚠️ sobrescreve sem checar status atual
-    updateData.status_galeria = 'selecao_completa';
-  }
-}
+```sql
+WHERE galeria_id = v_galeria_id
+  AND status IN ('pago', 'pago_manual')
+  AND tipo_cobranca IN ('foto_extra', 'link', 'venda_galeria')
 ```
 
-### Cenário que reproduz o bug (Amanda Agne, Luize Baumart, Emily Zuge)
+O `asaas-gallery-payment` (Gallery) grava as cobranças de cartão/PIX com `tipo_cobranca = 'card'` ou `'pix'` (linha 421-423), que **NÃO estão na lista do filtro**. Resultado: o SUM retorna 0/0 e sobrescreve para zero a galeria e a sessão, mesmo a cobrança estando paga.
 
-1. Cliente finaliza seleção no Gallery → status passa para **"Seleção finalizada"**.
-2. Fotógrafo move manualmente o status no Gestão para **"Editando"**, **"Enviado Impressão"** ou **"Finalizado"**.
-3. Qualquer evento posterior do Gallery que reenvie a função com `selecaoFinalizada: true` (re-cálculo de fotos extras, reabertura, retry de webhook, ação acidental do cliente, sync de pagamento que dispara o flag) → o Gestão **regrava `status = 'Seleção finalizada'`**, descartando o avanço do workflow.
+### Sequência reproduzida (timestamps reais)
 
-Confirma o padrão: a maioria das sessões impactadas mostradas no banco têm `status_galeria = 'selecao_completa'` e foram movidas adiante manualmente — exatamente as candidatas a serem revertidas.
-
-Não há trigger no Postgres que altere `status` (verificado em `pg_trigger` de `clientes_sessoes`). O ponto único de falha é essa edge function.
-
-## Correção (Edge Function)
-
-Aplicar **regra de não-regressão** em `gallery-update-session-photos`:
-
-1. Buscar o `status` atual da sessão (já temos `findQuery` retornando a sessão — incluir `status` no select).
-2. Definir uma lista ordenada do workflow pós-seleção que **não pode ser sobrescrita**:
-   - `Editando`
-   - `Enviado Impressão`
-   - `Enviado para impressão`
-   - `Finalizado`
-   - Qualquer status custom do usuário cujo `ordem`/posição em `etapas_trabalho` seja **maior** que a etapa "Seleção finalizada" (consulta a `etapas_trabalho` para ser robusto a status customizados).
-3. Se o status atual já for um desses, **não** sobrescrever para `"Seleção finalizada"`. Ainda atualizar `status_galeria = 'selecao_completa'` (campo informativo do Gallery), mas preservar o `status` do workflow.
-4. Adicionar log explícito: `"⚠️ Status atual '<X>' é posterior a Seleção finalizada — preservando workflow"`.
-
-Pseudo-código do trecho corrigido:
-
-```ts
-if (body.selecaoFinalizada === true && sessionUserId && sessionData) {
-  // Buscar etapas do usuário com ordem
-  const { data: etapas } = await supabase
-    .from('etapas_trabalho')
-    .select('nome, ordem, is_system_status')
-    .eq('user_id', sessionUserId)
-    .order('ordem', { ascending: true });
-
-  const etapaSelecaoFinalizada = etapas?.find(e => e.nome === 'Seleção finalizada');
-  const ordemSelecao = etapaSelecaoFinalizada?.ordem ?? null;
-  const statusAtual = sessionData.status;
-  const etapaAtual = etapas?.find(e => e.nome === statusAtual);
-
-  const statusAtualEhPosterior =
-    etapaAtual && ordemSelecao !== null && etapaAtual.ordem > ordemSelecao;
-
-  // Lista hardcoded de fallback para nomes conhecidos
-  const STATUS_POSTERIORES = ['Editando', 'Enviado Impressão', 'Enviado para impressão', 'Finalizado', 'Entregue'];
-
-  const naoRegredir = statusAtualEhPosterior || STATUS_POSTERIORES.includes(statusAtual);
-
-  if (etapaSelecaoFinalizada && !naoRegredir) {
-    updateData.status = 'Seleção finalizada';
-  } else if (naoRegredir) {
-    console.log(`⚠️ Preservando status atual '${statusAtual}' (posterior a Seleção finalizada)`);
-  }
-
-  updateData.status_galeria = 'selecao_completa';
-}
+```text
+03:28:48.72  confirm-selection cria cobrança card status=pendente
+03:28:48.93  Asaas confirma pagamento (data_pagamento)
+03:28:49.31  confirm-selection chama set_session_extras → sessão fica qtd=1, valor=5  ✓
+03:28:52.45  webhook → finalize_gallery_payment → SUM filtrado exclui 'card' → 0,0
+             → galeria zera, sessão zera (qtd_fotos_extra=0, valor_total_foto_extra=0)
 ```
 
-## Hardening complementar
+O `valor_pago=5` da sessão veio da trigger de cobranças (que soma todas as cobranças pagas e está correta), por isso ele aparece certo. Os campos de extras é que ficaram inconsistentes.
 
-### 1. Auditoria (nova tabela)
-Criar `clientes_sessoes_status_audit` para registrar toda mudança de `status` (origem, valor antigo, valor novo, timestamp, contexto). Trigger AFTER UPDATE OF status grava o histórico. Permite investigar qualquer regressão futura e dar visibilidade ao usuário.
+### Quem é afetado
 
-### 2. Trigger guard no banco (defesa em profundidade)
-Criar função `prevent_session_status_regression()` em BEFORE UPDATE OF status:
-- Lê `etapas_trabalho` do user, identifica `ordem` do status antigo e novo.
-- Se o novo status tiver `ordem` menor que o atual **e** a transição não for explicitamente permitida (ex.: usuário movendo manualmente — exigir um GUC/`current_setting('app.allow_status_regression')` setado pela UI quando intencional), bloqueia ou apenas loga em `RAISE WARNING`.
-- Implementação inicial conservadora: apenas **bloquear** regressões para `'Seleção finalizada'` quando o atual estiver na lista pós-seleção. Ações manuais do fotógrafo continuam livres (mais permissivo) — escolha mais segura.
+Toda sessão cuja galeria recebeu pagamento de fotos extras via **Asaas (cartão ou PIX)** terá o mesmo sintoma. Pagamentos `'foto_extra'` (manual/PIX manual), `'link'` (InfinitePay/MercadoPago link) e `'venda_galeria'` funcionam.
 
-Recomendação: começar só com **bloqueio específico** (`'Seleção finalizada'` não pode sobrescrever `Editando|Enviado Impressão|Finalizado|Entregue`), sem GUC, para evitar quebra de UX.
+## Plano de correção
 
-### 3. Memory de projeto
-Registrar regra em `mem://features/workflow/gallery-status-sync` (já existe) acrescentando:
-- "Gallery NUNCA pode regredir `status` que já passou de 'Seleção finalizada'. Edge function `gallery-update-session-photos` deve checar status atual antes de sobrescrever."
+### 1. Corrigir a função `finalize_gallery_payment` (migration)
 
-## Arquivos afetados
+Expandir o filtro de `tipo_cobranca` nos dois pontos onde ele aparece (BRANCH 1 — já paga; e bloco final de consolidação) para incluir `'card'` e `'pix'`:
 
-- `supabase/functions/gallery-update-session-photos/index.ts` — adicionar guarda de não-regressão + log.
-- Migração: criar `clientes_sessoes_status_audit` + trigger de auditoria + trigger `prevent_session_status_regression` (escopo restrito).
-- `mem://features/workflow/gallery-status-sync` — atualizar regra.
+```sql
+AND tipo_cobranca IN ('foto_extra', 'link', 'venda_galeria', 'card', 'pix')
+```
 
-## Não inclui
+Manter o restante da lógica intacta (advisory lock, parcelas Asaas, inferência de qtd_fotos, etc.).
 
-- Não alteramos a UI do Gestão — fotógrafo continua podendo mover manualmente para qualquer status.
-- Não corrigimos sessões já revertidas (usuário informou que já corrigiu manualmente).
-- Não tocamos em outras edge functions; o ponto único confirmado é `gallery-update-session-photos`.
+### 2. Backfill de sessões/galerias afetadas (mesma migration)
 
-## Resultado esperado
+Recalcular `total_fotos_extras_vendidas`, `valor_total_vendido` em galerias e propagar para `clientes_sessoes` para todas as galerias que tenham cobranças pagas com `tipo_cobranca IN ('card','pix')` mas com totais zerados:
 
-Após aprovação:
-- Gallery pode reenviar `selecaoFinalizada: true` quantas vezes quiser sem regredir o workflow.
-- `status_galeria` continua refletindo o estado real da galeria.
-- Auditoria permite diagnosticar qualquer outra origem de mudança de status no futuro.
-- Trigger de banco impede regressão indevida mesmo se outra função/cliente tentar.
+```text
+UPDATE galerias SET
+  total_fotos_extras_vendidas = SUM(qtd_fotos das cobrancas pagas),
+  valor_total_vendido        = SUM(valor das cobrancas pagas)
+WHERE id IN (galerias com cobranças card/pix pagas)
+
+-- depois propagar para clientes_sessoes via session_id
+```
+
+Isso conserta automaticamente todos os históricos (a sessão "Cliente Novo 09/06" volta a mostrar qtd=1 e valor R$5,00).
+
+### 3. Reforço de proteção (mesma migration)
+
+A trigger `protect_session_extras_consistency` já força a sessão a refletir a galeria — só não dispara hoje porque a galeria está zerada. Após o fix do finalize, ela passa a operar corretamente. Nenhuma mudança necessária aqui.
+
+### 4. Verificação pós-deploy
+
+- Rodar SELECT na sessão alvo e em outras 5–10 sessões com galeria + cobrança Asaas card/pix paga, confirmando qtd_fotos_extra e valor_total_foto_extra batem com SUM das cobranças.
+- Conferir audit_log da galeria.
+
+## Por que não mudar o `tipo_cobranca` no Gallery em vez disso
+
+Mudar `'card'/'pix'` para `'foto_extra'` no Gallery seria mais arriscado: vários relatórios/filtros e a UI do Studio já dependem da semântica `'card'/'pix'` para distinguir método de pagamento no extrato e na lista de cobranças. Ajustar o filtro do consolidador é cirúrgico e preserva semântica em todo o sistema.
+
+## Detalhes técnicos
+
+- **Arquivo de função afetado (única alteração de lógica):** `public.finalize_gallery_payment` (Postgres function) — atualizada via `supabase--migration`.
+- **Backfill:** SQL idempotente na mesma migration.
+- **Sem alteração de código frontend nem de Edge Function.** O Gallery e o Studio continuam iguais.
+- **Sem risco de regressão de status** (a guarda anti-regressão criada anteriormente segue válida e independente).
