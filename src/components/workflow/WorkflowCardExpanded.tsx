@@ -397,6 +397,24 @@ export function WorkflowCardExpanded({
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
                 <FotosExtrasPaymentBadge status={session.galeriaStatusPagamento} />
+                {session.extrasOverridden && isLinkedToGallery && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => onFieldUpdate(session.id, 'resyncExtrasWithGallery', true)}
+                          className="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200 dark:border-amber-500/30 hover:bg-amber-200/70 dark:hover:bg-amber-950/60 transition-colors"
+                        >
+                          Manual
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-xs">
+                        Valores foram editados manualmente e não estão sincronizando com a galeria. Clique para re-sincronizar com os dados do Gallery.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
             

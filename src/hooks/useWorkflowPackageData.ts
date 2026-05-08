@@ -140,7 +140,8 @@ export const useWorkflowPackageData = () => {
         // Campos de integração com Galeria (usando casting para campos dinâmicos)
         galeriaId: (session as any).galeria_id,
         galeriaStatus: (session as any).status_galeria as any,
-        galeriaStatusPagamento: (session as any).status_pagamento_fotos_extra as any
+        galeriaStatusPagamento: (session as any).status_pagamento_fotos_extra as any,
+        extrasOverridden: (session as any).extras_overridden === true
       };
 
       console.log('✅ Converted session to SessionData:', converted.id, 'package:', converted.pacote, 'category:', converted.categoria, 'frozen data:', !!session.regras_congeladas?.pacote);

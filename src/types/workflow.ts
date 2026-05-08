@@ -69,6 +69,9 @@ export interface SessionData {
   galeriaId?: string;
   galeriaStatus?: 'rascunho' | 'publicada' | 'em_selecao' | 'finalizada';
   galeriaStatusPagamento?: 'sem_vendas' | 'pendente' | 'pago';
+  // Flag de override manual (quando true, valores de fotos extras foram editados manualmente
+  // e não devem ser sincronizados automaticamente com a galeria)
+  extrasOverridden?: boolean;
 }
 
 export interface CategoryOption {
