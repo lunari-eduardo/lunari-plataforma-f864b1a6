@@ -96,7 +96,10 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
-    // Campos de fotos extras
+    // Campos de fotos extras - sync vinda do Gallery sempre limpa override manual
+    const hasExtrasSync = body.qtdFotosExtra !== undefined
+      || body.valorFotoExtra !== undefined
+      || body.valorTotalFotoExtra !== undefined;
     if (body.qtdFotosExtra !== undefined) {
       updateData.qtd_fotos_extra = body.qtdFotosExtra;
     }
@@ -105,6 +108,11 @@ serve(async (req) => {
     }
     if (body.valorTotalFotoExtra !== undefined) {
       updateData.valor_total_foto_extra = body.valorTotalFotoExtra;
+    }
+    if (hasExtrasSync) {
+      // Reset do override: dados reais do Gallery têm prioridade sobre ajuste manual
+      updateData.extras_overridden = false;
+      updateData.extras_overridden_at = null;
     }
     
     // Status da galeria
