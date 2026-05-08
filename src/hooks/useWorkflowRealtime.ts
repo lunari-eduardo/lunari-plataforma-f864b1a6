@@ -457,35 +457,36 @@ export const useWorkflowRealtime = () => {
           case 'categoria':
             (sanitizedUpdates as any)[field] = value;
             break;
-          // Map extra photo fields to database columns
-          case 'valorFotoExtra':
-            sanitizedUpdates.valor_foto_extra = typeof value === 'string' 
+          // Map extra photo fields to database columns - edição manual marca override
+          case 'valorFotoExtra': {
+            const novoUnit = typeof value === 'string'
               ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
               : Number(value) || 0;
+            sanitizedUpdates.valor_foto_extra = novoUnit;
+            (sanitizedUpdates as any).extras_overridden = true;
+            (sanitizedUpdates as any).extras_overridden_at = new Date().toISOString();
+            const qtdAtual = Number(currentSession?.qtd_fotos_extra) || 0;
+            sanitizedUpdates.valor_total_foto_extra = Math.round(qtdAtual * novoUnit * 100) / 100;
+            console.log('📸 [Override] valorFotoExtra manual:', novoUnit, 'qtd=', qtdAtual);
             break;
-          case 'qtdFotosExtra':
-            // FASE 3: Cálculo atômico de fotos extras
+          }
+          case 'qtdFotosExtra': {
             const qtd = Number(value) || 0;
             sanitizedUpdates.qtd_fotos_extra = qtd;
-            
-            // CORREÇÃO: Não recalcular para sessões históricas manuais
-            const isManualHistorical = currentSession?.regras_congeladas?.isManualHistorical === true ||
-                                       currentSession?.regras_congeladas?.source === 'manual_historical';
-            
-            // Calcular valores apenas se NÃO for sessão histórica manual
-            if (currentSession?.regras_congeladas && !isManualHistorical) {
-              const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-              const { valorUnitario, valorTotal } = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
-                qtd,
-                currentSession.regras_congeladas
-              );
-              sanitizedUpdates.valor_foto_extra = valorUnitario;
-              sanitizedUpdates.valor_total_foto_extra = valorTotal;
-              console.log('📸 [Atomic] Fotos extras calculadas: qtd=', qtd, 'unit=', valorUnitario, 'total=', valorTotal);
-            } else if (isManualHistorical) {
-              console.log('📸 [Manual] Sessão histórica - mantendo valores originais');
-            }
+            (sanitizedUpdates as any).extras_overridden = true;
+            (sanitizedUpdates as any).extras_overridden_at = new Date().toISOString();
+            const unitAtual = Number(currentSession?.valor_foto_extra) || 0;
+            sanitizedUpdates.valor_foto_extra = unitAtual;
+            sanitizedUpdates.valor_total_foto_extra = Math.round(qtd * unitAtual * 100) / 100;
+            console.log('📸 [Override] qtdFotosExtra manual:', qtd, 'unit=', unitAtual);
             break;
+          }
+          case 'resyncExtrasWithGallery': {
+            (sanitizedUpdates as any).extras_overridden = false;
+            (sanitizedUpdates as any).extras_overridden_at = null;
+            console.log('🔄 [Resync] Removendo override de extras para sessão', id);
+            break;
+          }
           case 'valorTotalFotoExtra':
             sanitizedUpdates.valor_total_foto_extra = typeof value === 'string' 
               ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
