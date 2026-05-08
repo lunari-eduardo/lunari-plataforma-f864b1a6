@@ -79,3 +79,5 @@ No `case 'qtdFotosExtra'` e `case 'valorFotoExtra'`:
 3. Editar em sessão com galeria com vendas → confirma diálogo → persiste, badge "Manual" aparece.
 4. Cliente seleciona fotos no Gallery → edge function reseta override → valores voltam a sincronizar.
 5. Botão "Re-sincronizar com galeria" → limpa override → trigger reaplica valores da galeria.
+
+## Status: Implementado
