@@ -1,58 +1,81 @@
-## Objetivo
+## Diagnóstico da causa raiz
 
-Impedir a criação de galerias duplicadas para a mesma sessão, permitindo no máximo 1 Galeria de Seleção e 1 Galeria de Entrega por sessão. Bloquear no frontend (UX) e no banco (integridade).
+A edição de **Qtd fotos extras** e **Vlr foto extra** no card expandido do Workflow (e CRM) não persiste porque existe uma trigger no banco que **força reescrita** dos valores sempre que a sessão está vinculada a uma galeria com vendas:
 
-## Frontend — `WorkflowCardCollapsed.tsx`
-
-No componente `GalleryButtons` (linhas 262-321):
-
-1. Calcular tipos já existentes a partir de `galerias`:
-   - `temSelecao = galerias.some(g => g.tipo === 'selecao')`
-   - `temEntrega = galerias.some(g => g.tipo === 'entrega')`
-   - `temTodas = temSelecao && temEntrega`
-
-2. Botão **Criar**:
-   - Esconder completamente quando `temTodas === true`.
-   - No popover, esconder a opção "Galeria de Seleção" se `temSelecao`, e "Galeria de Entrega" se `temEntrega`.
-   - Se sobrar apenas 1 opção, ainda assim manter o popover (consistência visual) — ou opcionalmente clicar direto. Manter popover é mais simples.
-
-3. Botão **Ver**: continua aparecendo quando `hasGalerias` (sem mudança).
-
-4. Resultado visual:
-   - Sem galerias → só "Criar" (2 opções).
-   - Só Seleção → "Criar" (1 opção: Entrega) + "Ver".
-   - Só Entrega → "Criar" (1 opção: Seleção) + "Ver".
-   - Ambas → só "Ver".
-
-5. Defesa adicional nos handlers `handleCreateSelecao` / `handleCreateEntrega`: re-checar `galerias` antes de prosseguir e exibir `toast.error` se já existir aquele tipo (evita corrida com clique duplo / cache desatualizado).
-
-Nenhum outro componente do CRM/Workflow chama criação de galeria — confirmado via `rg`.
-
-## Backend — Migração Supabase
-
-Criar índice único parcial em `public.galerias` para garantir 1 galeria por (sessão, tipo) entre galerias ativas:
-
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS uniq_galerias_session_tipo
-  ON public.galerias (session_id, tipo)
-  WHERE session_id IS NOT NULL;
+**Trigger `z_protect_session_extras_consistency`** (`protect_session_extras_consistency`):
+```
+IF galeria.valor_total_vendido > 0 AND galeria.total_fotos_extras_vendidas > 0 THEN
+  NEW.qtd_fotos_extra        := v_gal_qtd
+  NEW.valor_total_foto_extra := v_gal_total
+  NEW.valor_foto_extra       := v_gal_total / v_gal_qtd
+END IF
 ```
 
-Observações:
-- Hoje não há duplicatas (`SELECT ... HAVING COUNT(*) > 1` retornou vazio), então o índice será criado sem conflito.
-- `session_id IS NOT NULL` permite galerias avulsas (sem sessão) sem restrição.
-- O índice cobre tanto inserts diretos via cliente quanto qualquer edge function (gallery-create-payment etc.).
+E a trigger `recalc_fotos_extras` faz coisa similar quando `qtd_fotos_extra = v_gal_qtd`.
 
-Tratamento do erro no frontend: no `createGaleria` de `useGalerias.ts`, mapear erro Postgres `23505` (unique_violation) com mensagem `"Já existe uma galeria deste tipo para esta sessão"`.
+Resultado: o frontend manda `UPDATE`, o banco aceita, mas a própria trigger BEFORE UPDATE sobrescreve os campos com os valores da galeria. Após o realtime devolver a linha, os valores antigos voltam (~1s depois) — exatamente o sintoma relatado.
 
-## Verificação
+Esse comportamento foi criado de propósito para evitar divergência sessão ↔ galeria, mas **bloqueia o caso legítimo** em que o fotógrafo precisa ajustar manualmente (vendas por fora, brindes, ajuste financeiro).
 
-- Criar 1 Seleção → botão "Criar" passa a oferecer só "Entrega"; "Ver" aparece.
-- Criar 1 Entrega → botão "Criar" some; só "Ver" permanece com 2 itens.
-- Tentativa de insert duplicado via SQL ou edge function → erro 23505 do Postgres.
+## Estratégia (mínima, sem quebrar lógica existente)
+
+Introduzir um **flag explícito de override por sessão**. Quando o usuário edita manualmente os campos no Workflow/CRM, marcamos a sessão como "override" e a trigger respeita os valores manuais. Sincronização da galeria continua funcionando normalmente para todas as sessões não-override.
+
+### 1. Banco (migration)
+
+- Adicionar coluna `extras_overridden boolean NOT NULL DEFAULT false` em `clientes_sessoes`.
+- Adicionar coluna `extras_overridden_at timestamptz` (auditoria).
+- Atualizar `protect_session_extras_consistency`: se `NEW.extras_overridden = true`, `RETURN NEW` sem reescrever.
+- Atualizar `recalculate_fotos_extras_total`: se `NEW.extras_overridden = true`, ignorar ramo da galeria e usar `qtd × valor_foto_extra` direto (mantém ramo padrão).
+- A edge function `gallery-update-session-photos` deve **resetar** `extras_overridden = false` quando vier sincronização real do Gallery (cliente comprando), para não travar a sincronização futura.
+
+### 2. Frontend — `useWorkflowRealtime.ts`
+
+No `case 'qtdFotosExtra'` e `case 'valorFotoExtra'`:
+- Setar `sanitizedUpdates.extras_overridden = true` e `extras_overridden_at = now()`.
+- Manter o cálculo atual de `valor_total_foto_extra = qtd × valor_foto_extra` no próprio update (snapshot já existe).
+- Não recalcular pelo `regras_congeladas` quando override ativo (já há ramo `isManualHistorical`, replicar lógica).
+
+### 3. Frontend — `WorkflowCardExpanded.tsx`
+
+- Quando `session.extras_overridden`, mostrar pequeno badge "Manual" ao lado do Lock (substituindo a mensagem "Sincronizado com galeria").
+- Adicionar botão discreto "Re-sincronizar com galeria" (aparece só se `galeriaId && extras_overridden`) que faz update setando `extras_overridden = false` — trigger volta a aplicar valores da galeria automaticamente.
+- Manter o `AlertDialog` de confirmação atual quando `galeriaHasSales` (já existe), apenas atualizando o texto: "Esta sessão tem galeria vinculada. Ao salvar, os valores não serão mais sincronizados automaticamente com o Gallery."
+
+### 4. Tipos
+
+- Atualizar `SessionData` (`src/types/workflow.ts`) com `extrasOverridden?: boolean`.
+- Mapear em `useWorkflowPackageData.convertSessionToData`.
+- `src/integrations/supabase/types.ts` é regenerado pela migration.
+
+## Detalhes técnicos
+
+**Triggers afetadas (BEFORE INSERT/UPDATE em clientes_sessoes):**
+- `recalc_fotos_extras` — adicionar guard `IF NEW.extras_overridden THEN ramo padrão`.
+- `z_protect_session_extras_consistency` — adicionar `IF NEW.extras_overridden THEN RETURN NEW`.
+- `trigger_recalculate_valor_total` — não precisa mudar (já lê `valor_total_foto_extra` que persistirá correto).
+- `sync_session_extra_price_to_frozen` — não precisa mudar (faz patch do JSON congelado, comportamento desejado).
+
+**Edge function `gallery-update-session-photos`:**
+- Adicionar `updateData.extras_overridden = false` quando vier um POST com `qtdFotosExtra/valorFotoExtra` definidos, para que sincronizações reais do Gallery (cliente fechando seleção) tenham prioridade e limpem o override.
+
+**Backfill:** sessões existentes ficam com `extras_overridden = false` (default), comportamento atual preservado 100%.
+
+**Multiusuário:** flag por linha, sem estado global; cada sessão decide independente. Sem complexidade adicional.
 
 ## Arquivos afetados
 
-- `src/components/workflow/WorkflowCardCollapsed.tsx` (lógica do `GalleryButtons` + handlers).
-- `src/hooks/useGalerias.ts` (tratamento do erro 23505).
-- Nova migração SQL com o índice único parcial.
+- `supabase/migrations/<timestamp>_extras_override.sql` (nova migration)
+- `supabase/functions/gallery-update-session-photos/index.ts`
+- `src/hooks/useWorkflowRealtime.ts`
+- `src/components/workflow/WorkflowCardExpanded.tsx`
+- `src/types/workflow.ts`
+- `src/hooks/useWorkflowPackageData.ts`
+
+## Verificação
+
+1. Editar qtd/valor em sessão sem galeria → persiste (já funciona, comportamento mantido).
+2. Editar em sessão com galeria sem vendas → persiste (já funciona).
+3. Editar em sessão com galeria com vendas → confirma diálogo → persiste, badge "Manual" aparece.
+4. Cliente seleciona fotos no Gallery → edge function reseta override → valores voltam a sincronizar.
+5. Botão "Re-sincronizar com galeria" → limpa override → trigger reaplica valores da galeria.
