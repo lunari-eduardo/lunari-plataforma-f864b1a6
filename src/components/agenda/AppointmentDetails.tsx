@@ -173,7 +173,7 @@ export default function AppointmentDetails({
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
-      await onSave(payload);
+      await (onAutoSave ?? onSave)(payload);
     },
   });
 
