@@ -165,6 +165,21 @@ export default function Agenda() {
     }
   }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
+  // Auto-save silencioso (NÃO fecha o modal) — usado pelo autosave do AppointmentDetails
+  const handleAutoSaveAppointment = useCallback(async (appointmentData: any) => {
+    const id = editingAppointment?.id ?? viewingAppointment?.id;
+    if (!id) return;
+    try {
+      await updateAppointment(id, appointmentData);
+    } catch (error: any) {
+      if (error?.message?.includes('agendamento confirmado neste horário')) {
+        toast.error('Não é possível salvar: já existe um agendamento confirmado neste horário.');
+      } else {
+        toast.error('Erro ao salvar agendamento: ' + (error?.message || 'erro desconhecido'));
+      }
+    }
+  }, [editingAppointment, viewingAppointment, updateAppointment]);
+
   // Handle appointment deletion
   const handleDeleteAppointment = useCallback(async (id: string, action?: 'preserve' | 'refund' | 'remove') => {
     try {
