@@ -1,83 +1,51 @@
-## Diagnóstico da causa raiz
+## Causa raiz
 
-A edição de **Qtd fotos extras** e **Vlr foto extra** no card expandido do Workflow (e CRM) não persiste porque existe uma trigger no banco que **força reescrita** dos valores sempre que a sessão está vinculada a uma galeria com vendas:
+`AppointmentDetails` já tem autosave (debounce 800ms) que dispara `onSave` a cada alteração. Esse `onSave` aponta para `handleSaveAppointment` em `src/pages/Agenda.tsx`, que no branch `viewingAppointment` executa `setIsDetailsOpen(false)` — ou seja, **toda gravação automática fecha o modal**, inclusive ao digitar uma letra na descrição ou mudar o horário.
 
-**Trigger `z_protect_session_extras_consistency`** (`protect_session_extras_consistency`):
-```
-IF galeria.valor_total_vendido > 0 AND galeria.total_fotos_extras_vendidas > 0 THEN
-  NEW.qtd_fotos_extra        := v_gal_qtd
-  NEW.valor_total_foto_extra := v_gal_total
-  NEW.valor_foto_extra       := v_gal_total / v_gal_qtd
-END IF
-```
+Além disso, ao desmontar o modal, o `useEffect` de cleanup já chama `flushNow()`, então qualquer alteração pendente é persistida no fechamento. Logo, não precisamos fechar o modal no autosave.
 
-E a trigger `recalc_fotos_extras` faz coisa similar quando `qtd_fotos_extra = v_gal_qtd`.
+## Solução
 
-Resultado: o frontend manda `UPDATE`, o banco aceita, mas a própria trigger BEFORE UPDATE sobrescreve os campos com os valores da galeria. Após o realtime devolver a linha, os valores antigos voltam (~1s depois) — exatamente o sintoma relatado.
+Separar autosave (silencioso, mantém modal aberto) de save manual (fecha modal). Sem mudar lógica de banco, multiusuário ou triggers.
 
-Esse comportamento foi criado de propósito para evitar divergência sessão ↔ galeria, mas **bloqueia o caso legítimo** em que o fotógrafo precisa ajustar manualmente (vendas por fora, brindes, ajuste financeiro).
+### 1. `src/components/agenda/AgendaModals.tsx`
+- Adicionar prop `onAutoSaveAppointment: (data) => Promise<void> | void`.
+- Passar essa prop para `<AppointmentDetails onAutoSave={...} onSave={...} />`.
 
-## Estratégia (mínima, sem quebrar lógica existente)
+### 2. `src/components/agenda/AppointmentDetails.tsx`
+- Adicionar prop opcional `onAutoSave?: (data) => Promise<void>`.
+- No hook `useAppointmentAutosave`, usar `onAutoSave ?? onSave` (fallback compatível).
+- `handleStatusSelect('confirmado')` continua usando `onSave` (queremos fechar/atualizar ao confirmar — manter comportamento atual). Opcional: também usar autosave silencioso aqui se a UX preferir manter aberto. Manter `onSave` por enquanto para não mudar fluxo de confirmação.
+- Botão "Salvar" (status confirmado, não editável) e "Fechar" (após `flushNow`) continuam usando `onSave` → fecham normalmente.
 
-Introduzir um **flag explícito de override por sessão**. Quando o usuário edita manualmente os campos no Workflow/CRM, marcamos a sessão como "override" e a trigger respeita os valores manuais. Sincronização da galeria continua funcionando normalmente para todas as sessões não-override.
+### 3. `src/pages/Agenda.tsx`
+- Criar `handleAutoSaveAppointment`:
+  ```ts
+  const handleAutoSaveAppointment = useCallback(async (data) => {
+    const id = editingAppointment?.id ?? viewingAppointment?.id;
+    if (!id) return;
+    try {
+      await updateAppointment(id, data);
+    } catch (e: any) {
+      toast.error('Erro ao salvar: ' + e.message);
+    }
+    // NÃO fecha o modal
+  }, [editingAppointment, viewingAppointment, updateAppointment]);
+  ```
+- Passar `onAutoSaveAppointment={handleAutoSaveAppointment}` ao `AgendaModals`.
+- `handleSaveAppointment` (manual) permanece como está, fechando o modal.
 
-### 1. Banco (migration)
-
-- Adicionar coluna `extras_overridden boolean NOT NULL DEFAULT false` em `clientes_sessoes`.
-- Adicionar coluna `extras_overridden_at timestamptz` (auditoria).
-- Atualizar `protect_session_extras_consistency`: se `NEW.extras_overridden = true`, `RETURN NEW` sem reescrever.
-- Atualizar `recalculate_fotos_extras_total`: se `NEW.extras_overridden = true`, ignorar ramo da galeria e usar `qtd × valor_foto_extra` direto (mantém ramo padrão).
-- A edge function `gallery-update-session-photos` deve **resetar** `extras_overridden = false` quando vier sincronização real do Gallery (cliente comprando), para não travar a sincronização futura.
-
-### 2. Frontend — `useWorkflowRealtime.ts`
-
-No `case 'qtdFotosExtra'` e `case 'valorFotoExtra'`:
-- Setar `sanitizedUpdates.extras_overridden = true` e `extras_overridden_at = now()`.
-- Manter o cálculo atual de `valor_total_foto_extra = qtd × valor_foto_extra` no próprio update (snapshot já existe).
-- Não recalcular pelo `regras_congeladas` quando override ativo (já há ramo `isManualHistorical`, replicar lógica).
-
-### 3. Frontend — `WorkflowCardExpanded.tsx`
-
-- Quando `session.extras_overridden`, mostrar pequeno badge "Manual" ao lado do Lock (substituindo a mensagem "Sincronizado com galeria").
-- Adicionar botão discreto "Re-sincronizar com galeria" (aparece só se `galeriaId && extras_overridden`) que faz update setando `extras_overridden = false` — trigger volta a aplicar valores da galeria automaticamente.
-- Manter o `AlertDialog` de confirmação atual quando `galeriaHasSales` (já existe), apenas atualizando o texto: "Esta sessão tem galeria vinculada. Ao salvar, os valores não serão mais sincronizados automaticamente com o Gallery."
-
-### 4. Tipos
-
-- Atualizar `SessionData` (`src/types/workflow.ts`) com `extrasOverridden?: boolean`.
-- Mapear em `useWorkflowPackageData.convertSessionToData`.
-- `src/integrations/supabase/types.ts` é regenerado pela migration.
-
-## Detalhes técnicos
-
-**Triggers afetadas (BEFORE INSERT/UPDATE em clientes_sessoes):**
-- `recalc_fotos_extras` — adicionar guard `IF NEW.extras_overridden THEN ramo padrão`.
-- `z_protect_session_extras_consistency` — adicionar `IF NEW.extras_overridden THEN RETURN NEW`.
-- `trigger_recalculate_valor_total` — não precisa mudar (já lê `valor_total_foto_extra` que persistirá correto).
-- `sync_session_extra_price_to_frozen` — não precisa mudar (faz patch do JSON congelado, comportamento desejado).
-
-**Edge function `gallery-update-session-photos`:**
-- Adicionar `updateData.extras_overridden = false` quando vier um POST com `qtdFotosExtra/valorFotoExtra` definidos, para que sincronizações reais do Gallery (cliente fechando seleção) tenham prioridade e limpem o override.
-
-**Backfill:** sessões existentes ficam com `extras_overridden = false` (default), comportamento atual preservado 100%.
-
-**Multiusuário:** flag por linha, sem estado global; cada sessão decide independente. Sem complexidade adicional.
+### 4. UX
+- Indicador "Salvando…/Salvo" já existe no header (linhas 231-271). Mantém feedback visual claro.
+- Botão "Fechar" continua chamando `flushNow()` antes de fechar — garante persistência final.
+- Sem toasts de sucesso (regra do projeto).
 
 ## Arquivos afetados
+- `src/components/agenda/AppointmentDetails.tsx` (1 prop nova + 1 linha no hook)
+- `src/components/agenda/AgendaModals.tsx` (passar nova prop)
+- `src/pages/Agenda.tsx` (nova função `handleAutoSaveAppointment`)
 
-- `supabase/migrations/<timestamp>_extras_override.sql` (nova migration)
-- `supabase/functions/gallery-update-session-photos/index.ts`
-- `src/hooks/useWorkflowRealtime.ts`
-- `src/components/workflow/WorkflowCardExpanded.tsx`
-- `src/types/workflow.ts`
-- `src/hooks/useWorkflowPackageData.ts`
-
-## Verificação
-
-1. Editar qtd/valor em sessão sem galeria → persiste (já funciona, comportamento mantido).
-2. Editar em sessão com galeria sem vendas → persiste (já funciona).
-3. Editar em sessão com galeria com vendas → confirma diálogo → persiste, badge "Manual" aparece.
-4. Cliente seleciona fotos no Gallery → edge function reseta override → valores voltam a sincronizar.
-5. Botão "Re-sincronizar com galeria" → limpa override → trigger reaplica valores da galeria.
-
-## Status: Implementado
+## Riscos
+- Nenhum impacto em multiusuário: usa o mesmo `updateAppointment` já existente.
+- Nenhuma mudança em triggers, RLS ou edge functions.
+- Compatível: se `onAutoSave` não for passado, cai no `onSave` (comportamento antigo).

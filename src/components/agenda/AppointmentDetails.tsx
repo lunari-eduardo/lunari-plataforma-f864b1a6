@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 interface AppointmentDetailsProps {
   appointment: Appointment;
   onSave: (appointmentData: any) => void;
+  onAutoSave?: (appointmentData: any) => void | Promise<void>;
   onCancel: () => void;
   onDelete: (id: string, action?: 'preserve' | 'refund' | 'remove') => void;
 }
@@ -37,6 +38,7 @@ interface AppointmentDetailsProps {
 export default function AppointmentDetails({
   appointment,
   onSave,
+  onAutoSave,
   onCancel,
   onDelete
 }: AppointmentDetailsProps) {
@@ -171,7 +173,7 @@ export default function AppointmentDetails({
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
-      await onSave(payload);
+      await (onAutoSave ?? onSave)(payload);
     },
   });
 
