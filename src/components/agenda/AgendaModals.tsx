@@ -99,6 +99,7 @@ export default function AgendaModals({
             <AppointmentDetails
               appointment={viewingAppointment}
               onSave={onSaveAppointment}
+              onAutoSave={onAutoSaveAppointment}
               onCancel={() => setIsDetailsOpen(false)}
               onDelete={onDeleteAppointment}
             />
