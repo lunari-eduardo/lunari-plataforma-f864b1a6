@@ -33,6 +33,7 @@ interface AgendaModalsProps {
   
   // Event handlers
   onSaveAppointment: (appointmentData: any) => void;
+  onAutoSaveAppointment?: (appointmentData: any) => void | Promise<void>;
   onDeleteAppointment: (id: string, action?: 'preserve' | 'refund' | 'remove') => void;
   onSaveBudgetAppointment: (data: { date: Date; time: string; description?: string; }) => void;
   onViewFullBudget: () => void;
