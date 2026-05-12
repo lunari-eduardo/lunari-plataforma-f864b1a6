@@ -65,6 +65,7 @@ export default function AgendaModals({
   
   // Event handlers
   onSaveAppointment,
+  onAutoSaveAppointment,
   onDeleteAppointment,
   onSaveBudgetAppointment,
   onViewFullBudget
