@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, ChevronRight, ChevronLeft, PieChart, LayoutGrid, CheckSquare, FlaskConical, Crown, Plug } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, FlaskConical, Crown, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { cn } from '@/lib/utils';
 
@@ -15,106 +16,131 @@ interface NavItemProps {
   to: string;
   icon: React.ReactNode;
   label: string;
-  iconOnly?: boolean;
   isPro?: boolean;
   showProBadge?: boolean;
   end?: boolean;
 }
 
-const NavItem = ({
+// Mobile/drawer variant — always shows label
+const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps) => (
+  <NavLink
+    to={to}
+    end={end}
+    className={({ isActive }) =>
+      cn(
+        "nav-item-lunar mb-1 flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
+        isActive && "active bg-lunar-surface text-lunar-accent"
+      )
+    }
+  >
+    <span className="text-sm flex-shrink-0 relative">
+      {icon}
+      {isPro && showProBadge && (
+        <span className="absolute -top-1 -right-1">
+          <ProCrown />
+        </span>
+      )}
+    </span>
+    <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+  </NavLink>
+);
+
+// Desktop variant — icon always visible, label fades in when expanded
+const DesktopNavItem = ({
   to,
   icon,
   label,
-  iconOnly = false,
-  isPro = false,
-  showProBadge = false,
-  end = false
-}: NavItemProps) => {
-  return <NavLink to={to} end={end} className={({
-    isActive
-  }) => cn("nav-item-lunar mb-1 flex items-center transition-all duration-200", iconOnly ? "w-12 h-12 rounded-lg justify-center" : "gap-3 px-3 py-2 justify-start", isActive && "active bg-lunar-surface text-lunar-accent")} title={iconOnly ? label : undefined}>
-      <span className="text-sm flex-shrink-0 relative">
+  isPro,
+  showProBadge,
+  end,
+  expanded,
+}: NavItemProps & { expanded: boolean }) => {
+  const link = (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        cn(
+          "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden",
+          isActive && "active bg-lunar-surface text-lunar-accent"
+        )
+      }
+    >
+      <span className="flex items-center justify-center w-12 h-10 flex-shrink-0 relative">
         {icon}
         {isPro && showProBadge && (
-          <span className="absolute -top-1 -right-1">
+          <span className="absolute top-1.5 right-1.5">
             <ProCrown />
           </span>
         )}
       </span>
-      {!iconOnly && <span className="text-xs font-medium whitespace-nowrap">{label}</span>}
-    </NavLink>;
+      <span
+        className={cn(
+          "text-xs font-medium whitespace-nowrap transition-opacity duration-150 ease-out",
+          expanded ? "opacity-100 delay-[60ms]" : "opacity-0 pointer-events-none"
+        )}
+      >
+        {label}
+      </span>
+    </NavLink>
+  );
+
+  if (expanded) return link;
+
+  return (
+    <Tooltip delayDuration={400}>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right" className="text-xs">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
 };
 
 export default function Sidebar() {
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
   const { accessState } = useAccessControl();
   const [isOpen, setIsOpen] = useState(false);
-  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const enterTimer = useRef<number | null>(null);
+  const leaveTimer = useRef<number | null>(null);
 
-  const navItems = [{
-    to: "/app",
-    icon: <LayoutGrid size={14} />,
-    label: "Início",
-    end: true
-  }, {
-    to: "/app/agenda",
-    icon: <CalendarClock size={14} />,
-    label: "Agenda"
-  }, {
-    to: "/app/leads",
-    icon: <Filter size={14} />,
-    label: "Leads",
-    isPro: true
-  }, {
-    to: "/app/workflow",
-    icon: <GitBranch size={14} />,
-    label: "Workflow"
-  }, {
-    to: "/app/tarefas",
-    icon: <CheckSquare size={14} />,
-    label: "Tarefas",
-    isPro: true
-  }, {
-    to: "/app/financas",
-    icon: <Wallet size={14} />,
-    label: "Finanças",
-    isPro: true
-  }, {
-    to: "/app/clientes",
-    icon: <UserCheck size={14} />,
-    label: "Clientes"
-  }, {
-    to: "/app/precificacao",
-    icon: <Tag size={14} />,
-    label: "Precificação",
-    isPro: true
-  }, {
-    to: "/app/analise-vendas",
-    icon: <PieChart size={14} />,
-    label: "Análise de Vendas",
-    isPro: true
-  }, {
-    to: "/app/feed-test",
-    icon: <FlaskConical size={14} />,
-    label: "Feed Test",
-    isPro: true
-  }, {
-    to: "/app/configuracoes",
-    icon: <Settings size={14} />,
-    label: "Configurações"
-  }, {
-    to: "/app/integracoes",
-    icon: <Plug size={14} />,
-    label: "Integrações"
-  }];
+  const clearTimers = useCallback(() => {
+    if (enterTimer.current) { window.clearTimeout(enterTimer.current); enterTimer.current = null; }
+    if (leaveTimer.current) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
+  }, []);
 
-  const isStarterPlan = accessState.planCode?.startsWith('starter') && 
-    !accessState.isAdmin && 
-    !accessState.isVip && 
-    !accessState.isAuthorized;
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
-  const toggleDesktopSidebar = () => setIsDesktopExpanded(!isDesktopExpanded);
+  const handleEnter = useCallback(() => {
+    if (leaveTimer.current) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
+    if (isHovered) return;
+    enterTimer.current = window.setTimeout(() => setIsHovered(true), 60);
+  }, [isHovered]);
+
+  const handleLeave = useCallback(() => {
+    if (enterTimer.current) { window.clearTimeout(enterTimer.current); enterTimer.current = null; }
+    leaveTimer.current = window.setTimeout(() => setIsHovered(false), 120);
+  }, []);
+
+  const navItems = [
+    { to: "/app", icon: <LayoutGrid size={14} />, label: "Início", end: true },
+    { to: "/app/agenda", icon: <CalendarClock size={14} />, label: "Agenda" },
+    { to: "/app/leads", icon: <Filter size={14} />, label: "Leads", isPro: true },
+    { to: "/app/workflow", icon: <GitBranch size={14} />, label: "Workflow" },
+    { to: "/app/tarefas", icon: <CheckSquare size={14} />, label: "Tarefas", isPro: true },
+    { to: "/app/financas", icon: <Wallet size={14} />, label: "Finanças", isPro: true },
+    { to: "/app/clientes", icon: <UserCheck size={14} />, label: "Clientes" },
+    { to: "/app/precificacao", icon: <Tag size={14} />, label: "Precificação", isPro: true },
+    { to: "/app/analise-vendas", icon: <PieChart size={14} />, label: "Análise de Vendas", isPro: true },
+    { to: "/app/feed-test", icon: <FlaskConical size={14} />, label: "Feed Test", isPro: true },
+    { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" },
+    { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" },
+  ];
+
+  const isStarterPlan = accessState.planCode?.startsWith('starter') &&
+    !accessState.isAdmin && !accessState.isVip && !accessState.isAuthorized;
+
   const toggleSidebar = () => setIsOpen(!isOpen);
 
   // Mobile bottom navigation
@@ -158,25 +184,64 @@ export default function Sidebar() {
               </Button>
             </div>
             <div className="p-3 space-y-1">
-              {navItems.map(item => <NavItem key={item.to} {...item} showProBadge={isStarterPlan} />)}
+              {navItems.map(item => <DrawerNavItem key={item.to} {...item} showProBadge={isStarterPlan} />)}
             </div>
           </div>
         </div>
       </>;
   }
 
-  // Desktop sidebar
-  return <div className={cn("flex flex-col h-screen p-2 bg-background border-r border-border/50 transition-all duration-300 relative z-20", isDesktopExpanded ? "w-48" : "w-16")}>
-      <div className="flex-1 pt-4">
-        <div className="space-y-2">
-          {navItems.map(item => <NavItem key={item.to} {...item} iconOnly={!isDesktopExpanded} showProBadge={isStarterPlan} />)}
-        </div>
+  // Desktop: fixed spacer (w-16) + absolutely-positioned sidebar that expands on hover.
+  // The spacer reserves layout space so main content never shifts.
+  const expandDuration = isHovered ? 200 : 240;
+
+  return (
+    <TooltipProvider delayDuration={400}>
+      <div className="w-16 shrink-0 h-screen relative z-20">
+        <aside
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+          onFocusCapture={handleEnter}
+          onBlurCapture={handleLeave}
+          aria-expanded={isHovered}
+          style={{
+            width: isHovered ? '12rem' : '4rem',
+            transitionDuration: `${expandDuration}ms`,
+            transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
+            transitionProperty: 'width, box-shadow',
+            willChange: 'width',
+          }}
+          className={cn(
+            "absolute inset-y-0 left-0 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden",
+            isHovered && "shadow-lunar-md"
+          )}
+        >
+          {/* Logo */}
+          <div className="h-10 flex items-center px-3 mb-2 overflow-hidden">
+            <span
+              className={cn(
+                "text-sm font-semibold text-foreground whitespace-nowrap transition-opacity duration-150 ease-out",
+                isHovered ? "opacity-100 delay-[60ms]" : "opacity-0"
+              )}
+            >
+              Lunari
+            </span>
+          </div>
+
+          <div className="flex-1 pt-2">
+            <div className="space-y-1">
+              {navItems.map(item => (
+                <DesktopNavItem
+                  key={item.to}
+                  {...item}
+                  showProBadge={isStarterPlan}
+                  expanded={isHovered}
+                />
+              ))}
+            </div>
+          </div>
+        </aside>
       </div>
-      
-      <div className="flex justify-center pb-2">
-        <Button variant="ghost" size="icon" onClick={toggleDesktopSidebar} className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50" title={isDesktopExpanded ? "Recolher menu" : "Expandir menu"}>
-          {isDesktopExpanded ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-        </Button>
-      </div>
-    </div>;
+    </TooltipProvider>
+  );
 }
