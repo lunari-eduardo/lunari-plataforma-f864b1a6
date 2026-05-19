@@ -413,8 +413,8 @@ export function QuickSessionAdd({ onSubmit, currentMonth }: QuickSessionAddProps
     return () => node.removeEventListener('keydown', handler);
   }, [isOpen, handleAddProduct, handleClear, handleClose, doSubmit]);
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = (value: any) => {
+    return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
   };
 
   return (
