@@ -55,7 +55,7 @@ export function RegrasCongeladasIndicator({
     const data = new Date(regras.timestampCongelamento).toLocaleDateString('pt-BR');
     switch (regras.modelo) {
       case 'fixo':
-        return `Valor fixo: R$ ${regras.valorFixo?.toFixed(2) || '0,00'} (congelado em ${data})`;
+        return `Valor fixo: R$ ${(Number(regras.valorFixo) || 0).toFixed(2)} (congelado em ${data})`;
       case 'global':
         return `Tabela global: ${regras.tabelaGlobal?.nome || 'N/A'} (congelada em ${data})`;
       case 'categoria':
