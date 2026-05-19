@@ -1060,29 +1060,6 @@ function WorkflowContent() {
         </Button>
       </div>
 
-      {/* Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-muted p-4 rounded-lg text-sm">
-          <h3 className="font-bold mb-2">Debug Info:</h3>
-          <div>Total sessions: {workflowSessions?.length || 0}</div>
-          <div>Session data list: {sessionDataList?.length || 0}</div>
-          <div>Filtered sessions: {filteredSessions?.length || 0}</div>
-          <div>Sorted sessions: {sortedSessions?.length || 0}</div>
-          <div>Current month: {getMonthName(currentMonth.month)} {currentMonth.year}</div>
-          <div>Loading: {loading ? 'Yes' : 'No'}</div>
-          <div>Error: {error ? String(error) : 'None'}</div>
-          
-          {/* FASE 3: Validação visual do mês correto */}
-          <div className={`mt-2 p-2 rounded font-semibold ${
-            isLoadingCurrentMonth 
-              ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400' 
-              : 'bg-green-500/20 text-green-700 dark:text-green-400'
-          }`}>
-            📊 Exibindo {filteredSessions.length} sessões de {getMonthName(currentMonth.month)} {currentMonth.year}
-            {isLoadingCurrentMonth && ' (carregando...)'}
-          </div>
-        </div>
-      )}
 
       {/* Workflow Table */}
       <div className="rounded-lg bg-white/30 backdrop-blur-xl dark:bg-white/[0.04] border border-white/50 dark:border-white/10">
