@@ -137,8 +137,8 @@ const WorkflowPackageComboboxComponent = ({
                       onValueChange({
                         id: pkg.id,
                         nome: pkg.nome,
-                        valor: `R$ ${(pkg.valor || 0).toFixed(2).replace('.', ',')}`,
-                        valorFotoExtra: `R$ ${(pkg.valorFotoExtra || 35).toFixed(2).replace('.', ',')}`,
+                        valor: `R$ ${(Number(pkg.valor) || 0).toFixed(2).replace('.', ',')}`,
+                        valorFotoExtra: `R$ ${(Number(pkg.valorFotoExtra) || 35).toFixed(2).replace('.', ',')}`,
                         categoria: pkg.categoria,
                         produtosIncluidos: pkg.produtosIncluidos || []
                       });
