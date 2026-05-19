@@ -971,7 +971,6 @@ function WorkflowContent() {
   }
 
   return (
-    <ErrorBoundary label="Workflow">
     <div className="flex flex-col gap-4">
       {/* Main content - full width */}
       <div className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${isTasksPanelOpen ? 'lg:pr-[340px]' : 'lg:pr-12'}`}>
