@@ -1208,6 +1208,5 @@ function WorkflowContent() {
         )}
       </div>
     </div>
-    </ErrorBoundary>
   );
 }
