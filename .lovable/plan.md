@@ -1,64 +1,65 @@
+# Correção: Workflow em branco + 400 em fin_transactions
 
-# Sidebar com Expansão por Hover (Desktop)
+## Diagnóstico
 
-## Objetivo
-Transformar a sidebar desktop atual (`src/components/layout/Sidebar.tsx`) — hoje controlada por clique no botão chevron — em uma sidebar que expande automaticamente ao hover e recolhe ao sair, com animação suave, sem layout shift agressivo e sem afetar o comportamento mobile (bottom nav + drawer continua igual).
+**Problema 1 — Tela em branco no Workflow (TypeError: Cannot read properties of undefined reading 'toFixed')**
 
-## Comportamento
+Em `src/hooks/useWorkflowRealtime.ts`, a função `convertToSessionData` (linhas ~1040–1083) chama `.toFixed()` **direto** em valores que são `NULL` no banco:
 
-**Recolhida (default, 64px / `w-16`)**
-- Apenas ícones centralizados
-- Tooltip suave ao hover de cada ícone (Radix Tooltip, delay ~400ms)
-- Item ativo continua destacado como hoje
+- Linha 1042: `packageValue = Number(pkg.valor_base) || session.valor_total;` — se ambos forem null, fica `undefined`.
+- Linha 1064: `packageValue.toFixed(2)` — crasha.
+- Linha 1074–1076: `session.valor_total.toFixed(...)`, `session.valor_pago.toFixed(...)` — sem fallback.
+- Linha 1077: `(session.valor_total - session.valor_pago).toFixed(...)` — `NaN.toFixed` retorna string mas a subtração com null gera `NaN`.
 
-**Expandida (hover, 192px / `w-48`)**
-- Ícones + labels (mesma estrutura atual)
-- Logo "Lunari" aparece no topo com fade
-- Labels com fade-in leve (não slide brusco)
+Confirmado no schema (`clientes_sessoes`): `valor_total`, `valor_pago`, `valor_foto_extra`, `valor_total_foto_extra`, `valor_adicional`, `desconto` são todos `nullable`. Basta uma sessão recém-criada (ou afetada por trigger) com esses campos `null` para quebrar o `useMemo`/`map` do Workflow inteiro — daí a tela em branco "sem ninguém ter mexido".
 
-**Transições**
-- Expandir: 200ms `cubic-bezier(0.32, 0.72, 0, 1)` (curva Linear/Vercel)
-- Recolher: 240ms mesma curva
-- Labels: opacidade com 120ms, atrasada ~60ms na expansão; some primeiro no recolhimento
-- Pequeno delay de intent: 60ms antes de expandir, 120ms antes de recolher (evita "piscar" ao passar de raspão)
+**Problema 2 — 400 Bad Request em `fin_transactions`**
 
-## Mudanças técnicas
+A query em `src/hooks/notifications/useFinancialNotifications.ts:29-36` faz:
+```
+.select('id, valor, data_vencimento, status, item_id, financial_items!inner(descricao, categoria, tipo)')
+```
+Mas a FK real de `fin_transactions.item_id` aponta para `fin_items_master` (não `financial_items`). E `fin_items_master` só tem colunas `nome, grupo_principal, ativo, is_default` — não tem `descricao/categoria/tipo`. Por isso o PostgREST devolve 400. Esse hook roda no shell de notificações em quase toda página, gerando ruído e abortando o fetch.
 
-### `src/components/layout/Sidebar.tsx`
-1. Remover botão chevron e estado `isDesktopExpanded` controlado por clique.
-2. Estado novo: `isHovered` controlado por `onMouseEnter` / `onMouseLeave` no container desktop, com `setTimeout` de intent (refs para clear no unmount).
-3. Container desktop:
-   - `transition-[width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]`
-   - Largura: `w-16` → `w-48` baseada em `isHovered`
-   - `will-change: width` durante transição
-4. NavItem desktop: sempre renderiza ícone + label; label envolto em `<span>` com `transition-opacity duration-150` + `opacity-0 pointer-events-none` quando recolhido, `opacity-100 delay-[60ms]` quando expandido. `whitespace-nowrap overflow-hidden` no container do label para evitar quebra durante animação.
-5. Tooltips: quando recolhido, envolver cada `NavItem` com `<Tooltip>` (shadcn) `side="right"`. Quando expandido, tooltip desabilitado (`open={false}` ou `disabled`).
-6. Logo "Lunari" opcional no topo da sidebar desktop, mesma técnica de fade do label.
-7. Mobile (bottom nav + drawer): intocado.
+## Plano de correção
 
-### Evitar layout shift no conteúdo principal
-- Verificar `src/App.tsx` / layout pai: se o conteúdo usa `flex` ao lado da sidebar, ele vai redimensionar a cada hover. Solução: a sidebar desktop fica `fixed` (ou `absolute`) sobre o conteúdo quando expandida, mantendo um spacer `w-16` fixo no fluxo.
-  - Implementação: wrapper externo `w-16 shrink-0` (spacer), sidebar real `fixed top-0 left-0 h-screen w-16 hover:w-48`. Conteúdo principal nunca se move.
-- Confirma o requisito "não empurrar conteúdo principal bruscamente".
+### 1. `src/hooks/useWorkflowRealtime.ts` — hardening de `convertToSessionData`
+Normalizar todos os valores numéricos com `Number(x) || 0` antes de qualquer `toFixed`, e envolver a função inteira em `try/catch` retornando um objeto seguro em caso de erro (para nunca derrubar o `map` do Workflow).
 
-### Performance
-- Animar apenas `width` (com `will-change`) e `opacity` — propriedades baratas.
-- Sem re-render: `isHovered` afeta apenas classes, NavItems não remontam.
-- `React.memo` no NavItem se necessário (verificar se já há renders custosos).
+- Criar helper local `fmtBRL(n)` que faz `Number(n || 0).toFixed(2).replace('.', ',')`.
+- Substituir todas as ocorrências nas linhas 1064–1078 por `fmtBRL(...)`.
+- `packageValue` recebe fallback final `|| 0`.
+- Try/catch no corpo: se algo der errado para uma sessão específica, logar `console.warn` e retornar o registro com strings `'R$ 0,00'` em vez de explodir o array todo.
 
-### Acessibilidade
-- `aria-expanded` no container
-- Foco via teclado também expande (via `onFocus`/`onBlur` capture na sidebar) — mantém usabilidade keyboard
-- Tooltips com `aria-label` já vêm do shadcn
+### 2. `src/hooks/notifications/useFinancialNotifications.ts` — corrigir 400
+Trocar o embed para a tabela correta (`fin_items_master`) e usar colunas existentes:
+```
+.select('id, valor, data_vencimento, status, item_id, fin_items_master!inner(nome, grupo_principal)')
+```
+Ajustar o uso (`t.fin_items_master?.nome ?? 'Conta'`).
+Adicionar `if (error) { console.warn(...); return; }` em todos os `await supabase.from(...)` deste hook para falhar silenciosamente sem travar o sino de notificações.
 
-## Arquivos afetados
-- `src/components/layout/Sidebar.tsx` (refactor principal)
-- `src/App.tsx` ou layout pai (verificar e ajustar wrapper se necessário para fixed + spacer)
-- Nenhuma mudança em mobile, em rotas, em lógica de plano/PRO badge
+### 3. Hardening defensivo (prevenção para escala)
+- **`src/hooks/useWorkflowPackageData.ts`**: já tem normalização (BLOCO B). Validar e adicionar `try/catch` no map externo.
+- **`src/pages/Workflow.tsx` (linhas 509, 517, 756)**: revisar uso de `pacote.valor_base`, `produto.preco_venda` — já têm `|| 0`, ok.
+- **`src/components/workflow/WorkflowTable.tsx` (linhas 562, 691)**: garantir `Number(value) || 0` antes de `toFixed` (defesa contra strings ou null vindos de regras congeladas).
+- **`src/components/workflow/WorkflowCardCollapsed.tsx` / `WorkflowCardExpanded.tsx`**: idem, blindar `formatCurrency` interno.
+- Adicionar `ErrorBoundary` ao redor do conteúdo principal de `Workflow.tsx` para que um futuro erro em um card não pinte a página inteira de branco.
+
+### 4. Verificação
+- Após edits, abrir `/app/workflow` e validar carregamento, sem erro no console.
+- Confirmar que `GET /rest/v1/fin_transactions?...` retorna 200.
+- Conferir notificações financeiras populando corretamente.
 
 ## Fora de escopo
-- Submenus (estrutura preparada via espaço para children, mas não implementados agora)
-- Persistir preferência de "sempre expandida" (removendo o chevron, perdemos esse toggle — confirmar se OK ou se devo manter um pin opcional)
+- Não migrar `financial_items` ↔ `fin_items_master` (são tabelas distintas; o hook simplesmente apontava para a errada).
+- Não tornar colunas `valor_*` em `NOT NULL` no banco — risco em dados legados; preferimos hardening no app.
+- Não mexer no sidebar, Google Calendar, sync, etc.
 
-## Ponto a confirmar
-Devo **remover totalmente** o botão chevron de expandir/recolher, ou manter um botão "pin" que fixa a sidebar expandida (ignorando hover)? Recomendação: remover (mais clean, alinhado com Linear/Raycast). Se preferir pin, adiciono um ícone discreto no rodapé.
+## Arquivos a editar
+1. `src/hooks/useWorkflowRealtime.ts`
+2. `src/hooks/notifications/useFinancialNotifications.ts`
+3. `src/components/workflow/WorkflowTable.tsx` (defensivo)
+4. `src/components/workflow/WorkflowCardCollapsed.tsx` (defensivo)
+5. `src/components/workflow/WorkflowCardExpanded.tsx` (defensivo)
+6. `src/pages/Workflow.tsx` (adicionar `ErrorBoundary` no wrapper principal)
