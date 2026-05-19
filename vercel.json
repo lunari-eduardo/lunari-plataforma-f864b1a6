@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/auth/google/callback",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/google-calendar-callback"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
