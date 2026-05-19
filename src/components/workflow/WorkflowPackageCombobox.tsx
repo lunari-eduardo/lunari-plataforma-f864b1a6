@@ -151,7 +151,7 @@ const WorkflowPackageComboboxComponent = ({
                   <div className="flex flex-col">
                     <span className="font-medium">{pkg.nome}</span>
                     <span className="text-2xs text-muted-foreground">
-                      R$ {(pkg.valor || 0).toFixed(2).replace('.', ',')} • {pkg.categoria}
+                      R$ {(Number(pkg.valor) || 0).toFixed(2).replace('.', ',')} • {pkg.categoria}
                     </span>
                     {pkg.fotosIncluidas > 0 && (
                       <span className="text-2xs text-primary/80 font-medium">
