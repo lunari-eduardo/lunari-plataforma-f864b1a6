@@ -515,15 +515,15 @@ function WorkflowContent() {
   const packageOptions: PackageOption[] = pacotes.map(pacote => ({
     id: pacote.id,
     nome: pacote.nome,
-    valor: `R$ ${(pacote.valor_base || 0).toFixed(2).replace('.', ',')}`,
-    valorFotoExtra: `R$ ${(pacote.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`,
+    valor: `R$ ${(Number(pacote.valor_base) || 0).toFixed(2).replace('.', ',')}`,
+    valorFotoExtra: `R$ ${(Number(pacote.valor_foto_extra) || 35).toFixed(2).replace('.', ',')}`,
     categoria: pacote.categoria_id
   }));
   
   const productOptions: ProductOption[] = produtos.map(produto => ({
     id: produto.id,
     nome: produto.nome,
-    valor: `R$ ${(produto.preco_venda || 0).toFixed(2).replace('.', ',')}`
+    valor: `R$ ${(Number(produto.preco_venda) || 0).toFixed(2).replace('.', ',')}`
   }));
 
   // Mapa para lookup rápido dos dados crus do banco (fonte de verdade do status financeiro)
