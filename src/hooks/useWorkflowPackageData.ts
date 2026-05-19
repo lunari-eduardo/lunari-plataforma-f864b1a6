@@ -14,34 +14,27 @@ export const useWorkflowPackageData = () => {
   // Helper function to resolve package data with ABSOLUTE PRIORITY for frozen data
   const resolvePackageData = useMemo(() => {
     return (session: WorkflowSession) => {
-      console.log('📦 [FASE 2] Resolving package data for session:', session.id, 'package:', session.pacote);
-      
       // FASE 2: PRIORIDADE ABSOLUTA para dados congelados - NUNCA usar resolução dinâmica
-      if (session.regras_congeladas?.pacote) {
-        const frozenPackage = session.regras_congeladas.pacote;
-        console.log('❄️ Usando dados congelados do pacote (PRIORIDADE ABSOLUTA):', frozenPackage.nome);
-        
+      const frozenPackage = session?.regras_congeladas?.pacote;
+      if (frozenPackage && typeof frozenPackage === 'object') {
         return {
-          packageName: frozenPackage.nome,
-          packageValue: frozenPackage.valorBase,
-          packageFotoExtraValue: frozenPackage.valorFotoExtra,
-          fotosIncluidas: frozenPackage.fotosIncluidas || 0,
-          categoria: session.categoria || frozenPackage.categoria
+          packageName: frozenPackage.nome || session.pacote || '',
+          packageValue: toSafeNumber(frozenPackage.valorBase),
+          packageFotoExtraValue: toSafeNumber(frozenPackage.valorFotoExtra),
+          fotosIncluidas: toSafeNumber(frozenPackage.fotosIncluidas),
+          categoria: session.categoria || frozenPackage.categoria || ''
         };
       }
-      
-      // FALLBACK CRÍTICO: Se não tem dados congelados, exibir erro
-      console.error('❌ SESSÃO SEM DADOS CONGELADOS:', session.id, 'pacote:', session.pacote);
-      
+
       return {
-        packageName: session.pacote || '⚠️ Pacote Indisponível',
+        packageName: session?.pacote || '⚠️ Pacote Indisponível',
         packageValue: 0,
         packageFotoExtraValue: 0,
         fotosIncluidas: 0,
-        categoria: session.categoria || ''
+        categoria: session?.categoria || ''
       };
     };
-  }, []); // NUNCA depender de pacotes/categorias do contexto global
+  }, []);
 
   // Convert session to SessionData with frozen data priority
   const convertSessionToData = useMemo(() => {
