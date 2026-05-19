@@ -321,8 +321,8 @@ export function WorkflowCardExpanded({
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs text-xs">
                         <div className="font-semibold mb-1">Desconto progressivo aplicado</div>
-                        <div>Preço de tabela: R$ {precoBaseTabela.toFixed(2).replace('.', ',')}</div>
-                        <div>Preço cobrado: <strong>R$ {precoEfetivo.toFixed(2).replace('.', ',')}</strong></div>
+                        <div>Preço de tabela: {formatCurrency(precoBaseTabela)}</div>
+                        <div>Preço cobrado: <strong>{formatCurrency(precoEfetivo)}</strong></div>
                         <div className="mt-1 text-muted-foreground">
                           Faixa de quantidade aplicada na galeria.
                         </div>
