@@ -29,6 +29,14 @@ const removeAccents = (str: string) => {
 };
 
 export default function Workflow() {
+  return (
+    <ErrorBoundary label="Workflow">
+      <WorkflowContent />
+    </ErrorBoundary>
+  );
+}
+
+function WorkflowContent() {
   const {
     getStatusOptions
   } = useWorkflowStatus();
