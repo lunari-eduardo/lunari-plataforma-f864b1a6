@@ -86,8 +86,8 @@ export function WorkflowCardExpanded({
     setQtdFotosExtraValue(String(session.qtdFotosExtra || 0));
   }, [session.desconto, session.valorAdicional, session.observacoes, session.descricao, session.valorFotoExtra, session.qtdFotosExtra]);
 
-  const formatCurrency = useCallback((value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = useCallback((value: any) => {
+    return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
   }, []);
 
   const parseCurrency = useCallback((value: string): number => {
