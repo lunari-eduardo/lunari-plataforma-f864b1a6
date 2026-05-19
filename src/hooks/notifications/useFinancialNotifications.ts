@@ -26,17 +26,21 @@ export function useFinancialNotifications(): AppNotification[] {
     const next: AppNotification[] = [];
 
     // Contas vencidas e a vencer
-    const { data: txs } = await supabase
+    const { data: txs, error: txsError } = await supabase
       .from('fin_transactions')
-      .select('id, valor, data_vencimento, status, item_id, financial_items!inner(descricao, categoria, tipo)')
+      .select('id, valor, data_vencimento, status, item_id, fin_items_master!inner(nome, grupo_principal)')
       .eq('user_id', user.id)
       .eq('status', 'faturado')
       .lte('data_vencimento', in3DaysISO)
       .order('data_vencimento', { ascending: true })
       .limit(50);
 
+    if (txsError) {
+      console.warn('useFinancialNotifications: fin_transactions query falhou', txsError);
+    }
+
     (txs || []).forEach((t: any) => {
-      const desc = t.financial_items?.descricao || t.financial_items?.categoria || 'Conta';
+      const desc = t.fin_items_master?.nome || t.fin_items_master?.grupo_principal || 'Conta';
       const venc = t.data_vencimento;
       const isOverdue = venc < todayISO;
       const valor = Number(t.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

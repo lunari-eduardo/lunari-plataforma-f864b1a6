@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -962,6 +963,7 @@ export default function Workflow() {
   }
 
   return (
+    <ErrorBoundary label="Workflow">
     <div className="flex flex-col gap-4">
       {/* Main content - full width */}
       <div className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${isTasksPanelOpen ? 'lg:pr-[340px]' : 'lg:pr-12'}`}>
@@ -1199,5 +1201,6 @@ export default function Workflow() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

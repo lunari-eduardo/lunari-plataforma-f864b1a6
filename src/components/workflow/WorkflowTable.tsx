@@ -558,8 +558,8 @@ export function WorkflowTable({
       stopContinuousScroll();
     };
   }, [stopContinuousScroll]);
-  const formatCurrency = useCallback((value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = useCallback((value: any) => {
+    return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
   }, []);
   const getEditingKey = (sessionId: string, field: string) => `${sessionId}-${field}`;
   const handleEditStart = (sessionId: string, field: string, currentValue: string) => {
