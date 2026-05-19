@@ -111,29 +111,65 @@ export async function ensureValidAccessToken(
 
   if (!result.accessToken) {
     if (result.error === 'token_revoked') {
+      // Grace period: invalid_grant pode ser transitório (Google instável,
+      // race condition em refresh concorrente). Só marcamos erro definitivo
+      // após 3 falhas consecutivas em janela de >10min.
+      const prev = integration.dados_extras || {};
+      const failCount = (prev.refresh_fail_count || 0) + 1;
+      const firstFailAt = prev.refresh_first_fail_at || new Date().toISOString();
+      const minutesSinceFirst = (Date.now() - new Date(firstFailAt).getTime()) / 60_000;
+
+      if (failCount >= 3 && minutesSinceFirst >= 10) {
+        await supabase
+          .from('usuarios_integracoes')
+          .update({
+            status: 'erro',
+            dados_extras: {
+              ...prev,
+              error: 'token_revoked',
+              error_at: new Date().toISOString(),
+              refresh_fail_count: failCount,
+              refresh_first_fail_at: firstFailAt,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', integration.id);
+        return { accessToken: null, revoked: true };
+      }
+
+      // Ainda dentro do grace period — apenas incrementa contador
       await supabase
         .from('usuarios_integracoes')
         .update({
-          status: 'erro',
           dados_extras: {
-            ...(integration.dados_extras || {}),
-            error: 'token_revoked',
-            error_at: new Date().toISOString(),
+            ...prev,
+            refresh_fail_count: failCount,
+            refresh_first_fail_at: firstFailAt,
+            last_refresh_error: 'invalid_grant',
+            last_refresh_error_at: new Date().toISOString(),
           },
           updated_at: new Date().toISOString(),
         })
         .eq('id', integration.id);
-      return { accessToken: null, revoked: true };
+      return { accessToken: null, revoked: false };
     }
     return { accessToken: null, revoked: false };
   }
 
   const newExpiry = new Date(Date.now() + (result.expiresIn ?? 3600) * 1000).toISOString();
+  // Resetar contadores de falha em refresh bem-sucedido
+  const cleanedExtras = { ...(integration.dados_extras || {}) };
+  delete cleanedExtras.refresh_fail_count;
+  delete cleanedExtras.refresh_first_fail_at;
+  delete cleanedExtras.last_refresh_error;
+  delete cleanedExtras.last_refresh_error_at;
+
   await supabase
     .from('usuarios_integracoes')
     .update({
       access_token: result.accessToken,
       expira_em: newExpiry,
+      dados_extras: cleanedExtras,
       updated_at: new Date().toISOString(),
     })
     .eq('id', integration.id);

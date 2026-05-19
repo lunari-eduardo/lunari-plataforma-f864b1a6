@@ -55,7 +55,9 @@ serve(async (req) => {
       'https://www.googleapis.com/auth/calendar.events',
     ];
 
-    const callbackUrl = `${SUPABASE_URL}/functions/v1/google-calendar-callback`;
+    // Callback proxied via app.lunarihub.com (Vercel rewrite) so the Google
+    // consent screen shows our production domain instead of the Supabase URL.
+    const callbackUrl = 'https://app.lunarihub.com/auth/google/callback';
     
     // Store state with user info for callback
     const state = btoa(JSON.stringify({ 

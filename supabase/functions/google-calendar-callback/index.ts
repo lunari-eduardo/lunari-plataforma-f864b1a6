@@ -37,8 +37,8 @@ serve(async (req) => {
       return Response.redirect(`${redirectUri}?google_error=missing_params`, 302);
     }
 
-    // Exchange code for tokens
-    const callbackUrl = `${SUPABASE_URL}/functions/v1/google-calendar-callback`;
+    // Exchange code for tokens — must match exactly the redirect_uri used in connect step.
+    const callbackUrl = 'https://app.lunarihub.com/auth/google/callback';
     
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
