@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
 import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
