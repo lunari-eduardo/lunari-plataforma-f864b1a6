@@ -157,11 +157,19 @@ export async function ensureValidAccessToken(
   }
 
   const newExpiry = new Date(Date.now() + (result.expiresIn ?? 3600) * 1000).toISOString();
+  // Resetar contadores de falha em refresh bem-sucedido
+  const cleanedExtras = { ...(integration.dados_extras || {}) };
+  delete cleanedExtras.refresh_fail_count;
+  delete cleanedExtras.refresh_first_fail_at;
+  delete cleanedExtras.last_refresh_error;
+  delete cleanedExtras.last_refresh_error_at;
+
   await supabase
     .from('usuarios_integracoes')
     .update({
       access_token: result.accessToken,
       expira_em: newExpiry,
+      dados_extras: cleanedExtras,
       updated_at: new Date().toISOString(),
     })
     .eq('id', integration.id);
