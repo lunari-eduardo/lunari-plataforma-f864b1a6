@@ -761,17 +761,18 @@ function WorkflowContent() {
   }, [filteredSessions, sortField, sortDirection, getSortValue]);
 
   // Format currency
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = (value: any) => {
+    return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
   };
 
   const renderPercentageChange = (current: number, previous: number) => {
-    if (previous === 0) return null;
+    if (!previous) return null;
     const change = ((current - previous) / previous) * 100;
-    const isPositive = change > 0;
+    const safeChange = Number.isFinite(change) ? change : 0;
+    const isPositive = safeChange > 0;
     return (
       <span className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-        {isPositive ? '+' : ''}{change.toFixed(1)}%
+        {isPositive ? '+' : ''}{safeChange.toFixed(1)}%
       </span>
     );
   };
