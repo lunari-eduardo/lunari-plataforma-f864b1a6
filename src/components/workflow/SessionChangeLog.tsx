@@ -83,7 +83,7 @@ export function SessionChangeLog({ sessionId, clienteId }: SessionChangeLogProps
             tipo: 'pagamento',
             acao: 'pagamento',
             timestamp: payment.created_at || payment.data_transacao,
-            descricao: payment.descricao || `Pagamento de R$ ${payment.valor.toFixed(2)}`,
+            descricao: payment.descricao || `Pagamento de R$ ${(Number(payment.valor) || 0).toFixed(2)}`,
             valor: payment.valor,
             usuario: payment.updated_by
           });
