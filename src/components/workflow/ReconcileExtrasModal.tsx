@@ -27,7 +27,7 @@ interface ReconcileExtrasModalProps {
   onReconciled?: () => void;
 }
 
-const formatBRL = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`;
+const formatBRL = (n: any) => `R$ ${(Number(n) || 0).toFixed(2).replace('.', ',')}`;
 
 export function ReconcileExtrasModal({
   open, onOpenChange, sessionId, galeriaId, clienteNome, dataSessao,

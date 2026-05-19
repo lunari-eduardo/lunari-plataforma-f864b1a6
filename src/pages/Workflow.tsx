@@ -29,6 +29,14 @@ const removeAccents = (str: string) => {
 };
 
 export default function Workflow() {
+  return (
+    <ErrorBoundary label="Workflow">
+      <WorkflowContent />
+    </ErrorBoundary>
+  );
+}
+
+function WorkflowContent() {
   const {
     getStatusOptions
   } = useWorkflowStatus();
@@ -507,15 +515,15 @@ export default function Workflow() {
   const packageOptions: PackageOption[] = pacotes.map(pacote => ({
     id: pacote.id,
     nome: pacote.nome,
-    valor: `R$ ${(pacote.valor_base || 0).toFixed(2).replace('.', ',')}`,
-    valorFotoExtra: `R$ ${(pacote.valor_foto_extra || 35).toFixed(2).replace('.', ',')}`,
+    valor: `R$ ${(Number(pacote.valor_base) || 0).toFixed(2).replace('.', ',')}`,
+    valorFotoExtra: `R$ ${(Number(pacote.valor_foto_extra) || 35).toFixed(2).replace('.', ',')}`,
     categoria: pacote.categoria_id
   }));
   
   const productOptions: ProductOption[] = produtos.map(produto => ({
     id: produto.id,
     nome: produto.nome,
-    valor: `R$ ${(produto.preco_venda || 0).toFixed(2).replace('.', ',')}`
+    valor: `R$ ${(Number(produto.preco_venda) || 0).toFixed(2).replace('.', ',')}`
   }));
 
   // Mapa para lookup rápido dos dados crus do banco (fonte de verdade do status financeiro)
@@ -753,17 +761,18 @@ export default function Workflow() {
   }, [filteredSessions, sortField, sortDirection, getSortValue]);
 
   // Format currency
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  const formatCurrency = (value: any) => {
+    return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
   };
 
   const renderPercentageChange = (current: number, previous: number) => {
-    if (previous === 0) return null;
+    if (!previous) return null;
     const change = ((current - previous) / previous) * 100;
-    const isPositive = change > 0;
+    const safeChange = Number.isFinite(change) ? change : 0;
+    const isPositive = safeChange > 0;
     return (
       <span className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-        {isPositive ? '+' : ''}{change.toFixed(1)}%
+        {isPositive ? '+' : ''}{safeChange.toFixed(1)}%
       </span>
     );
   };
@@ -963,7 +972,6 @@ export default function Workflow() {
   }
 
   return (
-    <ErrorBoundary label="Workflow">
     <div className="flex flex-col gap-4">
       {/* Main content - full width */}
       <div className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${isTasksPanelOpen ? 'lg:pr-[340px]' : 'lg:pr-12'}`}>
@@ -1201,6 +1209,5 @@ export default function Workflow() {
         )}
       </div>
     </div>
-    </ErrorBoundary>
   );
 }

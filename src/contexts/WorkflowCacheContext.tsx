@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { supabase } from '@/integrations/supabase/client';
 import { indexedDBCache } from '@/services/IndexedDBCache';
 import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { normalizeWorkflowSession, normalizeWorkflowSessions } from '@/utils/workflowNormalization';
 
 // Helper para extrair ano/mês de string YYYY-MM-DD sem conversão de timezone
 const getYearMonthFromDateString = (dateString: string): { year: number; month: number } => {
@@ -113,10 +114,11 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setMonthData = useCallback((year: number, month: number, sessions: WorkflowSession[]) => {
     const key = getCacheKey(year, month);
-    memoryCache.current.set(key, sessions);
+    const normalized = normalizeWorkflowSessions(sessions);
+    memoryCache.current.set(key, normalized);
     
     if (userId) {
-      indexedDBCache.set(userId, year, month, sessions);
+      indexedDBCache.set(userId, year, month, normalized);
       broadcastChannel.current?.postMessage({ type: 'cache-updated', year, month });
     }
     
@@ -124,20 +126,21 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [userId]);
 
   const mergeUpdate = useCallback((session: WorkflowSession) => {
-    console.log('🔀 [WorkflowCache] mergeUpdate called for session:', session.id, 'updated_at:', session.updated_at);
-    // CORREÇÃO: Parse direto da string para evitar bug de timezone
-    const { year, month } = getYearMonthFromDateString(session.data_sessao);
+    if (!session) return;
+    const normalized = normalizeWorkflowSession(session);
+    console.log('🔀 [WorkflowCache] mergeUpdate called for session:', normalized.id, 'updated_at:', normalized.updated_at);
+    const { year, month } = getYearMonthFromDateString(normalized.data_sessao);
     const key = getCacheKey(year, month);
     
     const currentSessions = memoryCache.current.get(key) || [];
-    const index = currentSessions.findIndex(s => s.id === session.id);
+    const index = currentSessions.findIndex(s => s.id === normalized.id);
     
     let updatedSessions: WorkflowSession[];
     if (index >= 0) {
       updatedSessions = [...currentSessions];
-      updatedSessions[index] = { ...updatedSessions[index], ...session };
+      updatedSessions[index] = { ...updatedSessions[index], ...normalized };
     } else {
-      updatedSessions = [...currentSessions, session];
+      updatedSessions = [...currentSessions, normalized];
     }
     
     setMonthData(year, month, updatedSessions);
