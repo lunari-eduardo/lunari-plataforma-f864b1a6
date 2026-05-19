@@ -1200,5 +1200,6 @@ export default function Workflow() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
