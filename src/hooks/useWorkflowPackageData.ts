@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { SessionData } from '@/types/workflow';
+import { toSafeNumber, formatBRL, safeArray } from '@/utils/workflowNormalization';
 
 /**
  * Hook to provide package data resolution for workflow sessions
