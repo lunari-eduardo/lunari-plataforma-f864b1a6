@@ -111,6 +111,7 @@ function App() {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
+          <VisualThemeProvider>
           <AuthProvider>
             <ConfigurationProvider>
               <WorkflowCacheProvider>
