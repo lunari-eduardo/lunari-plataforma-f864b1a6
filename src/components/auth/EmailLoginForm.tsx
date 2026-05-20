@@ -48,7 +48,7 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-white/90 text-sm">
+        <Label htmlFor="email" className="text-primary-foreground/90 text-sm">
           Email
         </Label>
         <Input
@@ -57,14 +57,14 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
           placeholder="seu@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11"
+          className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11"
           disabled={isLoading}
           autoComplete="email"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-white/90 text-sm">
+        <Label htmlFor="password" className="text-primary-foreground/90 text-sm">
           Senha
         </Label>
         <div className="relative">
@@ -74,14 +74,14 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11 pr-10"
+            className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11 pr-10"
             disabled={isLoading}
             autoComplete="current-password"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/80"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/60 hover:text-primary-foreground/80"
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -101,7 +101,7 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
       <Button
         type="submit"
         disabled={isLoading}
-        className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-white font-medium"
+        className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-primary-foreground font-medium"
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />

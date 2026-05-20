@@ -73,12 +73,12 @@ export function EmailSignupForm() {
     return (
       <div className="text-center py-6 space-y-4">
         <CheckCircle className="h-16 w-16 text-green-400 mx-auto" />
-        <h3 className="text-xl font-semibold text-white">Verifique seu email</h3>
-        <p className="text-white/70 text-sm">
+        <h3 className="text-xl font-semibold text-primary-foreground">Verifique seu email</h3>
+        <p className="text-primary-foreground/70 text-sm">
           Enviamos um link de confirmação para <br />
-          <span className="text-white font-medium">{email}</span>
+          <span className="text-primary-foreground font-medium">{email}</span>
         </p>
-        <p className="text-white/60 text-xs">
+        <p className="text-primary-foreground/60 text-xs">
           Clique no link do email para ativar sua conta.
         </p>
       </div>
@@ -88,7 +88,7 @@ export function EmailSignupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="nome" className="text-white/90 text-sm">
+        <Label htmlFor="nome" className="text-primary-foreground/90 text-sm">
           Nome completo
         </Label>
         <Input
@@ -97,14 +97,14 @@ export function EmailSignupForm() {
           placeholder="Seu nome"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11"
+          className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11"
           disabled={isLoading}
           autoComplete="name"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="signup-email" className="text-white/90 text-sm">
+        <Label htmlFor="signup-email" className="text-primary-foreground/90 text-sm">
           Email
         </Label>
         <Input
@@ -113,14 +113,14 @@ export function EmailSignupForm() {
           placeholder="seu@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11"
+          className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11"
           disabled={isLoading}
           autoComplete="email"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="signup-password" className="text-white/90 text-sm">
+        <Label htmlFor="signup-password" className="text-primary-foreground/90 text-sm">
           Senha
         </Label>
         <div className="relative">
@@ -130,14 +130,14 @@ export function EmailSignupForm() {
             placeholder="Mínimo 6 caracteres"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11 pr-10"
+            className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11 pr-10"
             disabled={isLoading}
             autoComplete="new-password"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/80"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/60 hover:text-primary-foreground/80"
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -145,7 +145,7 @@ export function EmailSignupForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirm-password" className="text-white/90 text-sm">
+        <Label htmlFor="confirm-password" className="text-primary-foreground/90 text-sm">
           Confirmar senha
         </Label>
         <Input
@@ -154,7 +154,7 @@ export function EmailSignupForm() {
           placeholder="Repita a senha"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11"
+          className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11"
           disabled={isLoading}
           autoComplete="new-password"
         />
@@ -163,7 +163,7 @@ export function EmailSignupForm() {
       <Button
         type="submit"
         disabled={isLoading}
-        className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-white font-medium"
+        className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-primary-foreground font-medium"
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />

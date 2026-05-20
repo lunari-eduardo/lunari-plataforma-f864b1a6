@@ -98,7 +98,7 @@ export function ProductCombobox({
                     !hasValue ? "opacity-100" : "opacity-0"
                   )}
                 />
-                <span className="font-medium text-gray-500">Nenhum produto</span>
+                <span className="font-medium text-muted-foreground">Nenhum produto</span>
               </CommandItem>
               {productOptions.map((product) => (
                 <CommandItem

@@ -156,8 +156,8 @@ export default function LeadCard({
   return (
     <li
       className={`relative overflow-hidden rounded-xl p-2 transition-all cursor-grab active:cursor-grabbing select-none touch-none transform-gpu border ${isDragging ? "opacity-50 scale-95" : ""} ${isPressing ? "scale-[0.98]" : ""} 
-      bg-white/50 backdrop-blur-md border-white/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:bg-white/70 hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.1)]
-      dark:bg-white/[0.06] dark:backdrop-blur-md dark:border-white/[0.08] dark:shadow-[0_2px_8px_-2px_rgba(0,0,0,0.25)] dark:hover:bg-white/[0.10] dark:hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.4)]
+      bg-card/50 backdrop-blur-md border-white/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] hover:bg-card/70 hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.1)]
+      dark:bg-card/[0.06] dark:backdrop-blur-md dark:border-white/[0.08] dark:shadow-[0_2px_8px_-2px_rgba(0,0,0,0.25)] dark:hover:bg-white/[0.10] dark:hover:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.4)]
       `}
       style={dndStyle}
       ref={dndRef as any}
@@ -292,11 +292,11 @@ export default function LeadCard({
 
       {/* Direct scheduling button for converted leads */}
       {isConverted && onDirectScheduling && (
-        <div className="mt-3 pt-3 border-t border-gray-200/60 dark:border-gray-700/60">
+        <div className="mt-3 pt-3 border-t border-border/60 dark:border-border/60">
           <Button
             onClick={onDirectScheduling}
             size="sm"
-            className="w-full bg-lunar-accent hover:bg-lunar-accent/90 text-white"
+            className="w-full bg-lunar-accent hover:bg-lunar-accent/90 text-primary-foreground"
             data-no-drag="true"
           >
             <Calendar className="h-4 w-4 mr-2" />

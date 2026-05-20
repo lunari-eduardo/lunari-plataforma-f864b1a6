@@ -78,7 +78,7 @@ function SummaryCard({
             )}
           </div>
           <div className={cn("p-2 rounded-lg shrink-0", iconBgClass)}>
-            <Icon className="h-4 w-4 text-white" />
+            <Icon className="h-4 w-4 text-primary-foreground" />
           </div>
         </div>
       </CardContent>

@@ -173,7 +173,7 @@ export function MetasIndicadores({
           Erro
         </div>;
       default:
-        return <div className="flex items-center gap-1 text-xs text-gray-500">
+        return <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <AlertCircle className="h-3 w-3" />
           Não salvo
         </div>;

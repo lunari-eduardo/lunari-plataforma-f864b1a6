@@ -230,7 +230,7 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome }: Tabela
                     Marca Pessoal, etc.
                   </p>
                   {tabela?.usar_valor_fixo_pacote && (
-                    <div className="mt-2 p-2 bg-white dark:bg-gray-900 rounded border text-xs">
+                    <div className="mt-2 p-2 bg-card dark:bg-foreground rounded border text-xs">
                       <strong>💡 Importante:</strong> A tabela abaixo será ignorada. 
                       O valor será sempre o configurado no pacote da categoria.
                     </div>

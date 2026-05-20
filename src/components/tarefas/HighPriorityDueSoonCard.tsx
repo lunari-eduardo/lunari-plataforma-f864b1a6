@@ -64,7 +64,7 @@ export function HighPriorityDueSoonCard() {
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <Calendar className="h-5 w-5 text-white" />
+            <Calendar className="h-5 w-5 text-primary-foreground" />
           </div>
           <CardTitle className="font-semibold text-base">Tarefas Pendentes</CardTitle>
           <Badge variant="secondary" className="dashboard-badge bg-card-gradient border-0 shadow-theme-subtle hover:shadow-theme text-sm font-semibold transition-shadow duration-300" aria-label={`Quantidade de tarefas: ${count}`}>{count}</Badge>

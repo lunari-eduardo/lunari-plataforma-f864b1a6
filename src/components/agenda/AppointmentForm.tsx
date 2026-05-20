@@ -431,7 +431,7 @@ export default function AppointmentForm({
   return (
     <div className="space-y-5">
       {isFromBudgetAppointment && (
-        <div className="p-4 bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
+        <div className="p-4 bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
           <p className="text-sm font-medium text-foreground mb-1">📋 Agendamento de Orçamento</p>
           <p className="text-xs text-muted-foreground">
             Este agendamento foi criado automaticamente a partir de um orçamento fechado. 
@@ -558,7 +558,7 @@ export default function AppointmentForm({
             </div>
             
             {formData.packageId && getIncludedProducts().length > 0 && (
-              <div className="p-3 bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
+              <div className="p-3 bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
                 <h4 className="text-sm font-medium text-foreground mb-2">📦 Produtos Incluídos</h4>
                 <div className="space-y-1">
                   {getIncludedProducts().map((produto, index) => (
@@ -618,8 +618,8 @@ export default function AppointmentForm({
                     index === 1 && "rounded-l-none",
                     formData.status === status.value 
                       ? status.value === 'a confirmar' 
-                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' 
-                        : 'bg-green-600 hover:bg-green-700 text-white border-green-600'
+                        ? 'bg-amber-500 hover:bg-amber-600 text-primary-foreground border-amber-500' 
+                        : 'bg-green-600 hover:bg-green-700 text-primary-foreground border-green-600'
                       : status.value === 'a confirmar' 
                         ? 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20' 
                         : 'border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20'

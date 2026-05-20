@@ -25,13 +25,13 @@ export default function DailyKPIs() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Item
-        icon={<Calendar className="h-5 w-5 text-white" />}
+        icon={<Calendar className="h-5 w-5 text-primary-foreground" />}
         title="Sessões Hoje"
         value={`${sessionsToday}`}
         hint={sessionsToday === 1 ? "1 sessão agendada hoje" : `${sessionsToday} sessões agendadas hoje`}
       />
       <Item
-        icon={<CheckCircle className="h-5 w-5 text-white" />}
+        icon={<CheckCircle className="h-5 w-5 text-primary-foreground" />}
         title="Tarefas para Hoje"
         value={`${tasksToday}`}
         hint={tasksToday === 1 ? "1 tarefa vence hoje" : `${tasksToday} tarefas vencem hoje`}

@@ -154,7 +154,7 @@ export function PixManualSection({
       {/* QR Code */}
       <div className="flex justify-center">
         {qrCodeDataUrl ? (
-          <div className="p-3 bg-white rounded-lg shadow-sm">
+          <div className="p-3 bg-card rounded-lg shadow-sm">
             <img 
               src={qrCodeDataUrl} 
               alt="QR Code PIX" 

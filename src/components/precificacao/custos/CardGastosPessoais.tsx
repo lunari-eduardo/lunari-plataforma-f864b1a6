@@ -41,7 +41,7 @@ export function CardGastosPessoais({
   };
 
   return (
-    <Card className="border shadow-lg bg-white dark:bg-card">
+    <Card className="border shadow-lg bg-card dark:bg-card">
       <CardHeader className="pb-3 bg-gradient-to-r from-amber-500/20 to-amber-500/5 border-b border-amber-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

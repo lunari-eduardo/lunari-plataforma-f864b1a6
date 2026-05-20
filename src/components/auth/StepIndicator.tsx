@@ -25,8 +25,8 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
                   w-8 h-8 md:w-10 md:h-10 rounded-full border-2 flex items-center justify-center
                   transition-all duration-300
                   ${step.number <= currentStep 
-                    ? 'bg-[#CD7F5E] border-[#CD7F5E] text-white' 
-                    : 'bg-white/20 border-white/30 text-white/60'
+                    ? 'bg-[#CD7F5E] border-[#CD7F5E] text-primary-foreground' 
+                    : 'bg-card/20 border-white/30 text-primary-foreground/60'
                   }
                 `}
               >
@@ -39,7 +39,7 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
               <span 
                 className={`
                   mt-2 text-xs font-light hidden sm:block
-                  ${step.number <= currentStep ? 'text-[#CD7F5E]' : 'text-white/60'}
+                  ${step.number <= currentStep ? 'text-[#CD7F5E]' : 'text-primary-foreground/60'}
                 `}
               >
                 {step.label}
@@ -52,7 +52,7 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
                 className={`
                   flex-1 h-[2px] mx-1 md:mx-2
                   transition-all duration-300
-                  ${step.number < currentStep ? 'bg-[#CD7F5E]' : 'bg-white/30'}
+                  ${step.number < currentStep ? 'bg-[#CD7F5E]' : 'bg-card/30'}
                 `}
               />
             )}

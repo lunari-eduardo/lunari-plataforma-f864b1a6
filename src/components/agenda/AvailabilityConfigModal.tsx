@@ -339,7 +339,7 @@ export default function AvailabilityConfigModal({
             </button>
 
             {showWorkingHours && (
-              <div className="mt-3 space-y-3 p-3 rounded-lg bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10">
+              <div className="mt-3 space-y-3 p-3 rounded-lg bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10">
                 <p className="text-xs text-muted-foreground">
                   Defina os horários padrão que aparecerão na agenda para todos os dias sem personalização.
                 </p>
@@ -427,14 +427,14 @@ export default function AvailabilityConfigModal({
           {/* === Seção 1: Ação === */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">O que deseja fazer?</Label>
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/30 dark:bg-white/[0.05] p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-card/30 dark:bg-card/[0.05] p-1">
               <button
                 type="button"
                 onClick={() => setAction('liberar')}
                 className={cn(
                   'rounded-md px-3 py-2 text-sm font-medium transition-all',
                   action === 'liberar'
-                    ? 'bg-white/70 dark:bg-white/[0.1] text-foreground shadow-sm'
+                    ? 'bg-card/70 dark:bg-card/[0.1] text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -446,7 +446,7 @@ export default function AvailabilityConfigModal({
                 className={cn(
                   'rounded-md px-3 py-2 text-sm font-medium transition-all',
                   action === 'bloquear'
-                    ? 'bg-white/70 dark:bg-white/[0.1] text-foreground shadow-sm'
+                    ? 'bg-card/70 dark:bg-card/[0.1] text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >

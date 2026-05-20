@@ -45,7 +45,7 @@ export default function DailyHero() {
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-2 rounded-xl bg-brand-gradient">
-                  <Icon className="h-5 w-5 text-white" />
+                  <Icon className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-lunar-text">
@@ -98,7 +98,7 @@ export default function DailyHero() {
               <div>
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-brand-gradient">
-                    <Icon className="h-6 w-6 text-white" />
+                    <Icon className="h-6 w-6 text-primary-foreground" />
                   </div>
                   <h1 className="text-xl font-bold text-lunar-text">
                     {label}

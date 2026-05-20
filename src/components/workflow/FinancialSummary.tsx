@@ -61,7 +61,7 @@ export function FinancialSummary({
         <div className="p-3">
           <div className="flex items-center mb-1">
             <CreditCard className="h-3 w-3 text-emerald-600 mr-1" />
-            <h3 className="text-xs font-medium text-gray-600">Receita</h3>
+            <h3 className="text-xs font-medium text-muted-foreground">Receita</h3>
           </div>
           <div className="flex justify-between items-end">
             <p className="text-xs font-bold">{formatCurrency(revenue)}</p>
@@ -73,7 +73,7 @@ export function FinancialSummary({
         <div className="p-3">
           <div className="flex items-center mb-1">
             <Clock className="h-3 w-3 text-blue-600 mr-1" />
-            <h3 className="text-xs font-medium text-gray-600">Previsto</h3>
+            <h3 className="text-xs font-medium text-muted-foreground">Previsto</h3>
           </div>
           <div className="flex justify-between items-end">
             <p className="text-xs font-bold">{formatCurrency(forecasted)}</p>
@@ -85,7 +85,7 @@ export function FinancialSummary({
         <div className="p-3">
           <div className="flex items-center mb-1">
             <Clock className="h-3 w-3 text-amber-600 mr-1" />
-            <h3 className="text-xs font-medium text-gray-600">A Receber</h3>
+            <h3 className="text-xs font-medium text-muted-foreground">A Receber</h3>
           </div>
           <div className="flex justify-between items-end">
             <p className="text-xs font-bold">{formatCurrency(outstanding)}</p>
@@ -97,7 +97,7 @@ export function FinancialSummary({
         <div className="p-3">
           <div className="flex items-center mb-1">
             <CreditCard className="h-3 w-3 text-violet-600 mr-1" />
-            <h3 className="text-xs font-medium text-gray-600">Sessões</h3>
+            <h3 className="text-xs font-medium text-muted-foreground">Sessões</h3>
           </div>
           <div className="flex justify-between items-end">
             <p className="text-xs font-bold">{sessionCount}</p>
@@ -114,7 +114,7 @@ export function FinancialSummary({
       <div className="p-4">
         <div className="flex items-center mb-2">
           <CreditCard className="h-4 w-4 text-emerald-600 mr-2" />
-          <h3 className="text-sm font-medium text-gray-600">Receita</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">Receita</h3>
         </div>
         <div className="flex justify-between items-end">
           <p className="text-sm font-bold">{formatCurrency(revenue)}</p>
@@ -126,7 +126,7 @@ export function FinancialSummary({
       <div className="p-4">
         <div className="flex items-center mb-2">
           <Clock className="h-4 w-4 text-blue-600 mr-2" />
-          <h3 className="text-sm font-medium text-gray-600">Previsto</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">Previsto</h3>
         </div>
         <div className="flex justify-between items-end">
           <p className="text-sm font-bold">{formatCurrency(forecasted)}</p>
@@ -138,7 +138,7 @@ export function FinancialSummary({
       <div className="p-4">
         <div className="flex items-center mb-2">
           <Clock className="h-4 w-4 text-amber-600 mr-2" />
-          <h3 className="text-sm font-medium text-gray-600">A Receber</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">A Receber</h3>
         </div>
         <div className="flex justify-between items-end">
           <p className="text-sm font-bold">{formatCurrency(outstanding)}</p>
@@ -150,7 +150,7 @@ export function FinancialSummary({
       <div className="p-4">
         <div className="flex items-center mb-2">
           <CreditCard className="h-4 w-4 text-violet-600 mr-2" />
-          <h3 className="text-sm font-medium text-gray-600">Sessões</h3>
+          <h3 className="text-sm font-medium text-muted-foreground">Sessões</h3>
         </div>
         <div className="flex justify-between items-end">
           <p className="text-sm font-bold">{sessionCount}</p>

@@ -58,7 +58,7 @@ export function InfinitePayCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600">
-              <CreditCard className="h-5 w-5 text-white" />
+              <CreditCard className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
               <CardTitle className="text-lg">InfinitePay</CardTitle>

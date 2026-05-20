@@ -369,7 +369,7 @@ export default function LeadsKanban({
           ref={setNodeRef}
           className={cn(
             "flex-1 overflow-hidden flex flex-col rounded-2xl transition-all",
-            "bg-white/25 dark:bg-white/[0.04] backdrop-blur-xl border border-white/35 dark:border-white/[0.08]",
+            "bg-card/25 dark:bg-card/[0.04] backdrop-blur-xl border border-white/35 dark:border-white/[0.08]",
             "shadow-[0_4px_30px_-4px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_30px_-4px_rgba(0,0,0,0.3)]",
             isMobile ? "p-1" : "p-2",
             isOver && "ring-2 shadow-[0_0_40px_-4px_rgba(0,0,0,0.1)]",
@@ -473,7 +473,7 @@ export default function LeadsKanban({
           </div>
 
           <DragOverlay dropAnimation={null}>
-            <div className="pointer-events-none bg-white/60 dark:bg-white/[0.10] backdrop-blur-[30px] border-[1.5px] border-white/60 dark:border-white/[0.12] rounded-xl shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] dark:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] scale-[1.04]">
+            <div className="pointer-events-none bg-card/60 dark:bg-card/[0.10] backdrop-blur-[30px] border-[1.5px] border-white/60 dark:border-white/[0.12] rounded-xl shadow-[0_24px_48px_-12px_rgba(0,0,0,0.15)] dark:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] scale-[1.04]">
               {activeId
                 ? (() => {
                     const lead = leads.find((l) => l.id === activeId);

@@ -55,7 +55,7 @@ export function ReceitaPrevistaCard() {
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <TrendingUp className="h-5 w-5 text-white" />
+            <TrendingUp className="h-5 w-5 text-primary-foreground" />
           </div>
           <CardTitle className="font-semibold text-base">Receita Prevista do Mês</CardTitle>
         </div>
@@ -67,7 +67,7 @@ export function ReceitaPrevistaCard() {
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Total Previsto</span>
               <div className="p-2 rounded-lg bg-brand-gradient">
-                <DollarSign className="h-4 w-4 text-white" />
+                <DollarSign className="h-4 w-4 text-primary-foreground" />
               </div>
             </div>
             <div className="text-2xl font-bold text-lunar-text mt-2">
@@ -80,7 +80,7 @@ export function ReceitaPrevistaCard() {
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">Recebido</span>
               <div className="p-2 rounded-lg bg-brand-gradient">
-                <TrendingUp className="h-4 w-4 text-white" />
+                <TrendingUp className="h-4 w-4 text-primary-foreground" />
               </div>
             </div>
             <div className="text-2xl font-bold text-lunar-success mt-2">
@@ -96,7 +96,7 @@ export function ReceitaPrevistaCard() {
             <div className="flex items-center justify-between">
               <span className="text-xs text-lunar-textSecondary font-medium">A Receber</span>
               <div className="p-2 rounded-lg bg-brand-gradient">
-                <DollarSign className="h-4 w-4 text-white" />
+                <DollarSign className="h-4 w-4 text-primary-foreground" />
               </div>
             </div>
             <div className="text-2xl font-bold text-chart-primary mt-2">

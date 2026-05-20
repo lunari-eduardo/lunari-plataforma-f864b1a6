@@ -38,8 +38,8 @@ export function TrialBanner() {
     <div
       className={`w-full px-4 py-2 flex items-center justify-between gap-4 ${
         isUrgent
-          ? "bg-orange-500 text-white"
-          : "bg-blue-500 text-white"
+          ? "bg-orange-500 text-primary-foreground"
+          : "bg-blue-500 text-primary-foreground"
       }`}
     >
       <div className="flex items-center gap-2 text-sm">
@@ -64,7 +64,7 @@ export function TrialBanner() {
         </Button>
         <button
           onClick={handleDismiss}
-          className="p-1 hover:bg-white/20 rounded transition-colors"
+          className="p-1 hover:bg-card/20 rounded transition-colors"
           aria-label="Fechar"
         >
           <X className="w-4 h-4" />
