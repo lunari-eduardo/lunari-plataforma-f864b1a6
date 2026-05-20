@@ -3,7 +3,22 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /* ─── 3D Orbital Scene — Premium Orbital Field ─── */
-const COPPER = '#F28C52';
+// Lê a cor brand atual (token CSS) e converte para hex para o THREE.
+function readBrandColor(): string {
+  if (typeof window === 'undefined') return '#F28C52';
+  const root = getComputedStyle(document.documentElement);
+  const h = parseFloat(root.getPropertyValue('--brand-h')) || 19;
+  const s = parseFloat(root.getPropertyValue('--brand-s')) || 49;
+  const l = parseFloat(root.getPropertyValue('--brand-l')) || 55;
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+const COPPER = typeof window !== 'undefined' ? readBrandColor() : '#F28C52';
 
 const RING_CONFIGS = [
   { initialRotation: [65 * Math.PI / 180, 0, 0] as [number, number, number], axis: 'y' as const, period: 72, direction: 1, tube: 0.025, opacityLight: 0.35, opacityDark: 0.12 },
