@@ -119,13 +119,13 @@ export default function DashboardBackground() {
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
-      {/* Base gradient */}
+      {/* Base gradient — tokenizado */}
       <div
         className="absolute inset-0 transition-colors duration-700"
         style={{
           background: isDark
-            ? 'linear-gradient(135deg, #0D0A08 0%, #141010 50%, #0D0A08 100%)'
-            : '#FFFFFF',
+            ? `linear-gradient(135deg, hsl(var(--surface-0)) 0%, hsl(var(--surface-1)) 50%, hsl(var(--surface-0)) 100%)`
+            : `hsl(var(--surface-2))`,
         }}
       />
 
@@ -143,17 +143,17 @@ export default function DashboardBackground() {
         </div>
       )}
 
-      {/* Aurora gradient */}
+      {/* Aurora gradient — derivado do brand token */}
       <div
         className="absolute inset-[-20%] aurora-animate"
         style={{
           background: isDark
-            ? `linear-gradient(120deg, rgba(242,170,100,0.05), transparent 50%),
-               linear-gradient(240deg, rgba(255,200,140,0.04), transparent 50%),
-               linear-gradient(0deg, rgba(230,180,130,0.03), transparent 60%)`
-            : `linear-gradient(120deg, rgba(172,94,58,0.25), transparent 50%),
-               linear-gradient(240deg, rgba(194,149,106,0.20), transparent 50%),
-               linear-gradient(0deg, rgba(172,94,58,0.15), transparent 60%)`,
+            ? `linear-gradient(120deg, hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.05), transparent 50%),
+               linear-gradient(240deg, hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.04), transparent 50%),
+               linear-gradient(0deg,   hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.03), transparent 60%)`
+            : `linear-gradient(120deg, hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.25), transparent 50%),
+               linear-gradient(240deg, hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.20), transparent 50%),
+               linear-gradient(0deg,   hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.15), transparent 60%)`,
           filter: isDark ? 'blur(60px)' : 'blur(40px)',
         }}
       />
