@@ -144,7 +144,7 @@ export default function TabelaTransacoesInline({
       case 'pago': return 'text-green-600 bg-green-50';
       case 'agendado': return 'text-yellow-600 bg-yellow-50';
       case 'cancelado': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      default: return 'text-muted-foreground bg-muted/40';
     }
   };
 
@@ -248,7 +248,7 @@ export default function TabelaTransacoesInline({
                     </div>
                   </TableCell>
                   <TableCell className="p-3 hidden sm:table-cell">
-                    <span className="text-sm text-gray-500">{configuracaoParcelamento.tipo === 'parcelado' ? `${configuracaoParcelamento.quantidadeParcelas}x` : 'Única'}</span>
+                    <span className="text-sm text-muted-foreground">{configuracaoParcelamento.tipo === 'parcelado' ? `${configuracaoParcelamento.quantidadeParcelas}x` : 'Única'}</span>
                   </TableCell>
                   <TableCell className="p-3">
                     <span className="text-sm text-yellow-600">Agendado</span>
@@ -363,7 +363,7 @@ export default function TabelaTransacoesInline({
                     )}
                   </TableCell>
                   <TableCell className="p-3 hidden sm:table-cell">
-                    <span className="text-sm text-gray-600">{formatarParcelas(transacao)}</span>
+                    <span className="text-sm text-muted-foreground">{formatarParcelas(transacao)}</span>
                   </TableCell>
                   <TableCell className="p-3">
                     {editandoId === transacao.id ? (
@@ -409,7 +409,7 @@ export default function TabelaTransacoesInline({
                         placeholder="Obs..."
                       />
                     ) : (
-                      <span className="text-sm text-gray-600">{transacao.observacoes}</span>
+                      <span className="text-sm text-muted-foreground">{transacao.observacoes}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-center p-3">
@@ -461,9 +461,9 @@ export default function TabelaTransacoesInline({
         </div>
 
         {transacoesOrdenadas.length === 0 && !adicionandoNova && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             <div className="text-sm">Nenhuma transação encontrada.</div>
-            <div className="text-xs text-gray-400 mt-2">
+            <div className="text-xs text-muted-foreground mt-2">
               Clique em "Nova {tipo === 'receita_nao_operacional' ? 'Receita' : 'Despesa'}" para adicionar.
             </div>
           </div>

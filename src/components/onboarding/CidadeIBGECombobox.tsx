@@ -125,7 +125,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
   const dropdownContent = isOpen ? createPortal(
     <div 
       id="cidade-dropdown-portal"
-      className="fixed z-[9999] bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-2xl overflow-hidden"
+      className="fixed z-[9999] bg-card/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-2xl overflow-hidden"
       style={{
         top: dropdownPosition.top,
         left: dropdownPosition.left,
@@ -135,16 +135,16 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
       <ScrollArea className="h-[320px]">
         <div className="py-1">
           {isLoading ? (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
+            <div className="px-4 py-3 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               Buscando...
             </div>
           ) : searchTerm.length < 2 ? (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+            <div className="px-4 py-3 text-sm text-muted-foreground text-center">
               Digite pelo menos 2 caracteres
             </div>
           ) : cities.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+            <div className="px-4 py-3 text-sm text-muted-foreground text-center">
               Nenhuma cidade encontrada
             </div>
           ) : (
@@ -159,7 +159,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
                   "hover:bg-[#CD7F5E]/10",
                   value?.id === city.id 
                     ? "bg-[#CD7F5E]/15 text-[#CD7F5E] font-medium border-l-2 border-[#CD7F5E]" 
-                    : "text-gray-700"
+                    : "text-foreground"
                 )}
               >
                 <span>{city.nome} – {city.uf}</span>
@@ -177,10 +177,10 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col items-center text-center space-y-3">
         <div className="space-y-2">
-          <h2 className="text-2xl md:text-3xl font-light text-white">
+          <h2 className="text-2xl md:text-3xl font-light text-primary-foreground">
             Onde você mora?
           </h2>
-          <p className="text-white/80 text-sm font-light">
+          <p className="text-primary-foreground/80 text-sm font-light">
             Selecione sua cidade
           </p>
         </div>
@@ -188,7 +188,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
 
       <div className="space-y-2" ref={containerRef}>
         <div className="relative">
-          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 z-10" />
+          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/60 z-10" />
           <input
             ref={inputRef}
             type="text"
@@ -201,18 +201,18 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
             onFocus={() => setIsOpen(true)}
             placeholder="Digite o nome da cidade..."
             className={cn(
-              "w-full pl-12 pr-10 h-12 bg-white/10 border border-white/30 rounded-md",
-              "text-center font-light text-white placeholder:text-white/50",
+              "w-full pl-12 pr-10 h-12 bg-card/10 border border-white/30 rounded-md",
+              "text-center font-light text-primary-foreground placeholder:text-primary-foreground/50",
               "focus:outline-none focus:ring-2 focus:ring-[#CD7F5E] focus:border-transparent",
               error && "border-red-400"
             )}
           />
           {isLoading ? (
-            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 animate-spin" />
+            <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/60 animate-spin" />
           ) : (
             <ChevronDown 
               className={cn(
-                "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 transition-transform duration-200",
+                "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/60 transition-transform duration-200",
                 isOpen && "rotate-180"
               )} 
             />

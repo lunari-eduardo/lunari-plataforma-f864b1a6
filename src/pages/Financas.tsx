@@ -136,8 +136,8 @@ export default function Financas() {
                         </h3>
                       </div>
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
-                      <div className="text-center text-gray-500">
+                    <div className="bg-card rounded-lg border border-border p-4">
+                      <div className="text-center text-muted-foreground">
                         Tabela de Despesas Fixas - Nova Arquitetura
                         <div className="mt-2 text-sm">
                           {transacoesPorGrupo['Despesa Fixa'].length} transações encontradas
@@ -157,8 +157,8 @@ export default function Financas() {
                         </h3>
                       </div>
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
-                      <div className="text-center text-gray-500">
+                    <div className="bg-card rounded-lg border border-border p-4">
+                      <div className="text-center text-muted-foreground">
                         Tabela de Despesas Variáveis - Nova Arquitetura
                         <div className="mt-2 text-sm">
                           {transacoesPorGrupo['Despesa Variável'].length} transações encontradas
@@ -178,8 +178,8 @@ export default function Financas() {
                         </h3>
                       </div>
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
-                      <div className="text-center text-gray-500">
+                    <div className="bg-card rounded-lg border border-border p-4">
+                      <div className="text-center text-muted-foreground">
                         Tabela de Receitas Não Operacionais - Nova Arquitetura
                         <div className="mt-2 text-sm">
                           {transacoesPorGrupo['Receita Não Operacional'].length} transações encontradas
@@ -193,7 +193,7 @@ export default function Financas() {
           </TabsContent>
 
           <TabsContent value="categorias" className="mt-6">
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-muted-foreground py-8">
               Gerenciamento de categorias será implementado na nova arquitetura
             </div>
           </TabsContent>

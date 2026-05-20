@@ -5,74 +5,180 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   LUNARI DESIGN TOKENS — Centralized Visual Architecture
+   ------------------------------------------------------------
+   All visual decisions derive from this file.
+   Editing the brand trio (--brand-h/s/l) propagates everywhere.
+   Tokens are organized in layers:
+     1. Brand              (HSL components, no alpha)
+     2. Surface scale      (0 = lowest / app bg → 5 = inverse)
+     3. Text               (primary / secondary / muted / inverse)
+     4. Borders            (subtle / default / strong)
+     5. Glass              (alpha + blur tokens)
+     6. Overlays
+     7. Shadows            (5 levels + glow)
+     8. Interaction states
+     9. Semantic           (success / warning / error / info)
+    10. Charts             (10 slots derived from brand)
+    11. Shadcn aliases     (backward compatibility — do NOT inline)
+    12. Legacy aliases     (lunar-*, glass-*, etc.)
+   ============================================================ */
+
 @layer base {
-  html {
-    font-size: 90%;
-  }
+  html { font-size: 90%; }
 
   :root {
-    --lunar-bg: 0 0% 100%;
-    --lunar-surface: 0 0% 100%;
-    --lunar-text: 25 20% 15%;
-    --lunar-textSecondary: 25 10% 45%;
-    --lunar-border: 220 10% 90%;
-    --lunar-accent: 18 55% 55%;
-    --lunar-accentHover: 18 55% 48%;
-    --lunar-error: 0 72% 51%;
-    --lunar-success: 150 53% 55%;
-    --lunar-warning: 42 35% 62%;
+    /* ── 1. BRAND ─────────────────────────────────────────── */
+    --brand-h: 19;
+    --brand-s: 49%;
+    --brand-l: 45%;
+    --brand-hover-l: 38%;
+    --brand-glow-l: 60%;
 
-    /* Landing page colors */
+    /* ── 2. SURFACE SCALE (light) ─────────────────────────── */
+    --surface-0: 30 40% 96%;   /* app background */
+    --surface-1: 30 30% 98%;   /* base panels / sidebar */
+    --surface-2: 0 0% 100%;    /* elevated cards / popovers */
+    --surface-3: 30 20% 92%;   /* hover / selected */
+    --surface-4: 30 15% 90%;   /* deep wells / muted bg */
+    --surface-5: 20 12% 10%;   /* inverse / dark on light */
+
+    /* ── 3. TEXT ──────────────────────────────────────────── */
+    --text-primary:   20 20% 12%;
+    --text-secondary: 20 15% 25%;
+    --text-muted:     20 10% 45%;
+    --text-inverse:   30 30% 98%;
+
+    /* ── 4. BORDERS ───────────────────────────────────────── */
+    --border-subtle:  30 30% 88%;
+    --border-default: 30 30% 80%;
+    --border-strong:  30 25% 70%;
+
+    /* ── 5. GLASS ─────────────────────────────────────────── */
+    --glass-tint:         0 0% 100%;  /* base color of the glass */
+    --glass-alpha-light:  0.45;
+    --glass-alpha-medium: 0.55;
+    --glass-alpha-heavy:  0.75;
+    --glass-blur-sm:      8px;
+    --glass-blur-md:      16px;
+    --glass-blur-lg:      24px;
+
+    /* ── 6. OVERLAYS ──────────────────────────────────────── */
+    --overlay-scrim:   20 20% 12% / 0.40;
+    --overlay-modal:   20 20% 12% / 0.55;
+    --overlay-tooltip: 20 20% 12% / 0.92;
+
+    /* ── 7. SHADOWS ───────────────────────────────────────── */
+    --shadow-1: 0 1px 2px  hsl(20 20% 12% / 0.03);
+    --shadow-2: 0 3px 8px  hsl(20 20% 12% / 0.04);
+    --shadow-3: 0 6px 16px hsl(20 20% 12% / 0.06);
+    --shadow-4: 0 12px 28px hsl(20 20% 12% / 0.10);
+    --shadow-5: 0 24px 48px hsl(20 20% 12% / 0.14);
+    --shadow-glow: 0 0 30px hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.15);
+
+    /* ── 8. INTERACTION STATES ────────────────────────────── */
+    --state-hover-alpha:  0.08;
+    --state-active-alpha: 0.12;
+    --state-focus-ring:   var(--brand-h) var(--brand-s) var(--brand-l);
+
+    /* ── 9. SEMANTIC ──────────────────────────────────────── */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 20 20% 12%;
+    --error:   0 84% 60%;
+    --error-foreground: 0 0% 100%;
+    --info:    210 90% 56%;
+    --info-foreground: 0 0% 100%;
+
+    /* ── 10. CHARTS (10 slots) ───────────────────────────── */
+    --chart-1: var(--brand-h) var(--brand-s) var(--brand-l);
+    --chart-2: 16 55% 40%;
+    --chart-3: 14 52% 33%;
+    --chart-4: 17 43% 50%;
+    --chart-5: 24 35% 59%;
+    --chart-6: 18 48% 41%;
+    --chart-7: 22 45% 65%;
+    --chart-8: 28 38% 78%;
+    --chart-9: 19 23% 74%;
+    --chart-10: 30 40% 88%;
+
+    /* ── 11. SHADCN ALIASES ──────────────────────────────── */
+    --background: var(--surface-0);
+    --foreground: var(--text-primary);
+    --card: var(--surface-2);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface-2);
+    --popover-foreground: var(--text-primary);
+    --primary: var(--brand-h) var(--brand-s) var(--brand-l);
+    --primary-foreground: var(--text-inverse);
+    --primary-hover: var(--brand-h) var(--brand-s) var(--brand-hover-l);
+    --primary-glow:  var(--brand-h) var(--brand-s) var(--brand-glow-l);
+    --secondary: var(--surface-3);
+    --secondary-foreground: var(--text-secondary);
+    --muted: var(--surface-4);
+    --muted-foreground: var(--text-muted);
+    --accent: var(--brand-h) var(--brand-s) var(--brand-l);
+    --accent-foreground: var(--text-inverse);
+    --destructive: var(--error);
+    --destructive-foreground: var(--error-foreground);
+    --border: var(--border-default);
+    --input: var(--border-default);
+    --ring: var(--brand-h) var(--brand-s) var(--brand-l);
+    --radius: 0.625rem;
+
+    /* ── 12. LEGACY ALIASES (kept for backward compat) ───── */
+    --lunar-bg: var(--surface-0);
+    --lunar-surface: var(--surface-2);
+    --lunar-text: var(--text-primary);
+    --lunar-textSecondary: var(--text-muted);
+    --lunar-border: var(--border-default);
+    --lunar-accent: var(--brand-h) var(--brand-s) var(--brand-l);
+    --lunar-accentHover: var(--brand-h) var(--brand-s) var(--brand-hover-l);
+    --lunar-accent-foreground: var(--text-inverse);
+    --lunar-error: var(--error);
+    --lunar-success: var(--success);
+    --lunar-warning: var(--warning);
+
+    /* glass legacy (composed values — already include alpha) */
+    --glass-bg: var(--glass-tint) / var(--glass-alpha-medium);
+    --glass-border: var(--glass-tint) / 0.60;
+    --glass-shadow: var(--shadow-3);
+    --glass-hover-shadow: var(--shadow-4);
+
+    --shadow-sm: var(--shadow-1);
+    --shadow-md: var(--shadow-2);
+    --shadow-lg: var(--shadow-3);
+
+    /* sidebar (tokenized — light) */
+    --sidebar-bg: 30 25% 97%;
+    --sidebar-fg: var(--text-primary);
+    --sidebar-accent: 30 18% 70%;
+    --sidebar-accent-fg: var(--text-primary);
+    --sidebar-muted: 30 20% 94%;
+    --sidebar-muted-fg: var(--text-primary);
+    --sidebar-border: 30 12% 90%;
+    --sidebar-ring: 30 18% 70%;
+
+    /* Landing (keep as historical aliases) */
     --landing-bg: 34 24% 95%;
     --landing-text: 0 0% 12%;
-    --landing-accent: 18 55% 55%;
-    --landing-brand: 18 55% 55%;
+    --landing-accent: var(--brand-h) var(--brand-s) var(--brand-l);
+    --landing-brand:  var(--brand-h) var(--brand-s) var(--brand-l);
 
-    /* Brand colors */
     --brand: 27 96% 61%;
     --brand-foreground: 31 97% 72%;
 
-    /* Task priorities (HSL) */
     --task-priority-high: 0 100% 67%;
     --task-priority-medium: 48 100% 75%;
-    
-    /* Availability */
-    --availability: 210 60% 70%;
-    
-    /* Brand gradient */
-    --brand-gradient-start: 210 90% 60%;
-    --brand-gradient-end: 224 76% 52%;
-    
-    /* Shadcn compatible — Premium Glassmorphism palette */
-    --background: 30 40% 96%;
-    --foreground: 20 20% 12%;
-    --muted: 30 15% 90%;
-    --muted-foreground: 20 10% 45%;
-    --popover: 30 30% 98% / 0.7;
-    --popover-foreground: 20 20% 12%;
-    --card: 30 30% 98% / 0.65;
-    --card-foreground: 20 20% 12%;
-    --border: 30 30% 80%;
-    --input: 30 30% 80%;
-    --primary: 19 49% 45%;
-    --primary-hover: 24 35% 59%;
-    --primary-glow: 19 49% 60%;
-    --primary-foreground: 30 30% 98%;
-    --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 30 20% 92%;
-    --secondary-foreground: 20 15% 25%;
-    --accent: 19 49% 45%;
-    --accent-foreground: 30 30% 98%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 20 20% 12%;
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --ring: 19 49% 45%;
-    --radius: 0.625rem;
 
-    /* Escala terra-cota */
+    --availability: 210 60% 70%;
+
+    --brand-gradient-start: var(--brand-h) var(--brand-s) var(--brand-l);
+    --brand-gradient-end:   var(--brand-h) var(--brand-s) var(--brand-hover-l);
+
+    /* Escala terracota (kept) */
     --terra-50: 30 40% 95%;
     --terra-100: 28 38% 88%;
     --terra-200: 26 35% 78%;
@@ -84,155 +190,100 @@
     --terra-800: 12 50% 26%;
     --terra-900: 10 45% 20%;
 
-    /* Glass tokens */
-    --glass-bg: 0 0% 100% / 0.55;
-    --glass-border: 0 0% 100% / 0.60;
-    --glass-shadow: 0 8px 25px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
-    --glass-hover-shadow: 0 8px 32px rgba(194, 149, 106, 0.15);
-
-    /* Shadow system */
-    --shadow-sm: 0 1px 2px hsl(20 20% 12% / 0.03);
-    --shadow-md: 0 3px 8px hsl(20 20% 12% / 0.04);
-    --shadow-lg: 0 6px 16px hsl(20 20% 12% / 0.06);
-    --shadow-glow: 0 0 30px hsl(19 49% 45% / 0.15);
-
-    /* Paleta fixa baseada no tema terracotta */
-    --chart-primary: 18 55% 55%;
-    --chart-secondary: 16 48% 35%;
-    --chart-tertiary: 15 37% 20%;
-    --chart-quaternary: 17 43% 39%;
-    --chart-quinary: 16 47% 38%;
-    --chart-senary: 18 48% 41%;
-    --chart-revenue: 18 55% 55%;
-    --chart-expense: 15 37% 20%;
-    --chart-profit: 18 55% 55%;
-    --chart-neutral: 19 23% 74%;
-  }
-}
-
-@layer base {
-  /* Kanban scrollbar styles */
-  .scrollbar-kanban {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground)) transparent;
-  }
-
-  .scrollbar-kanban::-webkit-scrollbar {
-    height: 6px;
-    width: 6px;
-  }
-
-  .scrollbar-kanban::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-kanban::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground));
-    border-radius: 3px;
-  }
-
-  .scrollbar-kanban::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--foreground) / 0.7);
-  }
-
-  /* Elegant scrollbar for modal content */
-  .scrollbar-elegant {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground)) transparent;
-  }
-
-  .scrollbar-elegant::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .scrollbar-elegant::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scrollbar-elegant::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--muted-foreground) / 0.5);
-    border-radius: 4px;
-  }
-
-  .scrollbar-elegant::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground));
+    /* Charts legacy aliases */
+    --chart-primary:    var(--chart-1);
+    --chart-secondary:  var(--chart-2);
+    --chart-tertiary:   var(--chart-3);
+    --chart-quaternary: var(--chart-4);
+    --chart-quinary:    var(--chart-5);
+    --chart-senary:     var(--chart-6);
+    --chart-revenue:    var(--chart-1);
+    --chart-expense:    var(--chart-3);
+    --chart-profit:     var(--chart-1);
+    --chart-neutral:    var(--chart-9);
   }
 
   .dark {
-    --lunar-bg: 20 15% 6%;
-    --lunar-surface: 20 12% 10%;
-    --lunar-text: 30 15% 95%;
-    --lunar-textSecondary: 30 10% 55%;
-    --lunar-border: 20 15% 20%;
-    --lunar-accent: var(--primary);
-    --lunar-accentHover: var(--primary);
-    --lunar-error: 0 72% 55%;
-    --lunar-success: 150 53% 55%;
-    --lunar-warning: 42 35% 62%;
+    /* surfaces dark */
+    --surface-0: 20 15% 6%;
+    --surface-1: 20 12% 10%;
+    --surface-2: 20 11% 13%;
+    --surface-3: 20 10% 17%;
+    --surface-4: 20 10% 15%;
+    --surface-5: 30 15% 95%;
 
-    /* Brand colors for dark mode */
+    --text-primary:   30 15% 95%;
+    --text-secondary: 30 12% 80%;
+    --text-muted:     30 10% 55%;
+    --text-inverse:   20 15% 6%;
+
+    --border-subtle:  20 15% 18%;
+    --border-default: 20 15% 22%;
+    --border-strong:  20 15% 30%;
+
+    --glass-tint:         0 0% 100%;
+    --glass-alpha-light:  0.03;
+    --glass-alpha-medium: 0.05;
+    --glass-alpha-heavy:  0.08;
+
+    --overlay-scrim:   0 0% 0% / 0.55;
+    --overlay-modal:   0 0% 0% / 0.70;
+    --overlay-tooltip: 0 0% 100% / 0.92;
+
+    --shadow-1: 0 1px 2px  rgba(0, 0, 0, 0.20);
+    --shadow-2: 0 3px 8px  rgba(0, 0, 0, 0.25);
+    --shadow-3: 0 6px 16px rgba(0, 0, 0, 0.30);
+    --shadow-4: 0 12px 28px rgba(0, 0, 0, 0.40);
+    --shadow-5: 0 24px 48px rgba(0, 0, 0, 0.50);
+    --shadow-glow: 0 0 30px hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.10);
+
+    --state-hover-alpha:  0.10;
+    --state-active-alpha: 0.16;
+
+    --success: 150 53% 55%;
+    --warning: 42 80% 60%;
+    --error:   0 72% 55%;
+    --info:    210 85% 60%;
+
+    /* Brand colors override */
     --brand: 31 97% 72%;
     --brand-foreground: 27 96% 61%;
 
-    /* Shadcn-compatible variables for dark mode — Premium Glassmorphism */
-    --background: 20 15% 6%;
-    --foreground: 30 15% 95%;
-    --muted: 20 10% 15%;
-    --muted-foreground: 30 10% 55%;
-    --popover: 20 12% 10% / 0.80;
-    --popover-foreground: 30 15% 95%;
-    --card: 20 12% 10% / 0.72;
-    --card-foreground: 30 15% 95%;
-    --border: 20 15% 20%;
-    --input: 20 15% 20%;
-    --primary: 19 49% 45%;
-    --primary-hover: 24 35% 59%;
-    --primary-glow: 19 49% 35%;
-    --primary-foreground: 30 30% 98%;
-    --lunar-accent-foreground: 0 0% 100%;
-    --secondary: 20 10% 15%;
-    --secondary-foreground: 30 15% 95%;
-    --accent: 20 10% 14%;
-    --accent-foreground: 30 15% 95%;
-    --destructive: 0 72% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --ring: 19 49% 45%;
+    /* Chart dark adjustments */
+    --chart-1: 18 45% 50%;
+    --chart-2: 16 40% 55%;
+    --chart-3: 15 30% 45%;
+    --chart-4: 17 35% 60%;
+    --chart-5: 16 38% 58%;
+    --chart-6: 18 40% 62%;
+    --chart-7: 22 38% 65%;
+    --chart-8: 28 30% 70%;
+    --chart-9: 19 15% 80%;
+    --chart-10: 30 20% 75%;
 
-    /* Glass tokens dark */
-    --glass-bg: 0 0% 100% / 0.03;
-    --glass-border: 0 0% 100% / 0.05;
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    --glass-hover-shadow: 0 8px 32px rgba(194, 149, 106, 0.08);
+    /* sidebar dark */
+    --sidebar-bg: 20 12% 9%;
+    --sidebar-fg: var(--text-primary);
+    --sidebar-accent: var(--brand-h) var(--brand-s) var(--brand-l);
+    --sidebar-accent-fg: var(--text-inverse);
+    --sidebar-muted: 20 10% 14%;
+    --sidebar-muted-fg: var(--text-primary);
+    --sidebar-border: 20 15% 18%;
+    --sidebar-ring: var(--brand-h) var(--brand-s) var(--brand-l);
 
-    /* Shadow system (dark) */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.15);
-    --shadow-lg: 0 6px 16px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 30px hsl(19 49% 45% / 0.1);
+    /* terra dark — manter ligeiramente diferentes para gradientes */
+    --terra-50: 20 15% 14%;
+    --terra-100: 20 18% 18%;
 
-    /* Gradientes modernos */
-    --gradient-brand: linear-gradient(135deg, hsl(var(--lunar-accent)), hsl(var(--lunar-accent) / 0.8));
-    --gradient-card: linear-gradient(135deg, hsl(var(--lunar-surface)), hsl(var(--lunar-bg)));
-    --gradient-subtle: linear-gradient(180deg, hsl(var(--lunar-surface) / 0.5), transparent);
-
-    /* Paleta fixa para modo escuro */
-    --chart-primary: 18 45% 50%;
-    --chart-secondary: 16 40% 55%;
-    --chart-tertiary: 15 30% 45%;
-    --chart-quaternary: 17 35% 60%;
-    --chart-quinary: 16 38% 58%;
-    --chart-senary: 18 40% 62%;
-    --chart-revenue: 18 45% 50%;
-    --chart-expense: 15 30% 45%;
-    --chart-profit: 18 45% 50%;
-    --chart-neutral: 19 15% 80%;
+    /* Gradientes modernos (dark) */
+    --gradient-brand: linear-gradient(135deg, hsl(var(--brand-h) var(--brand-s) var(--brand-l)), hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.8));
+    --gradient-card: linear-gradient(135deg, hsl(var(--surface-2)), hsl(var(--surface-1)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--surface-2) / 0.5), transparent);
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
 
   body {
     @apply font-sans antialiased text-sm;
@@ -242,12 +293,12 @@
     background: hsl(var(--background));
     min-height: 100vh;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-medium;
     color: hsl(var(--foreground));
   }
-  
+
   h1 { @apply text-base font-semibold; }
   h2 { @apply text-sm font-medium; }
   h3 { @apply text-sm font-medium; }
@@ -255,7 +306,6 @@
   h5 { @apply text-xs; }
   h6 { @apply text-2xs; }
 
-  /* Mobile zoom for workflow table */
   @media (max-width: 768px) {
     .mobile-zoom {
       transform: scale(0.75);
@@ -266,109 +316,77 @@
   }
 
   /* Global scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: hsl(24 35% 59% / 0.3);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.30);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(24 35% 59% / 0.5);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.50);
+  }
+
+  input[type="date"] { color-scheme: light dark; }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
+    opacity: 0.8;
+    cursor: pointer;
+  }
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
   }
 }
 
+/* ============================================================
+   GLASS PRIMITIVES — 3 elevations
+   Use these going forward; legacy classes alias to them.
+   ============================================================ */
 @layer components {
-  /* Glass utility */
-  .glass {
-    @apply backdrop-blur-xl rounded-2xl border transition-all duration-300;
-    background: hsl(var(--glass-bg)) !important;
-    border-color: hsl(var(--glass-border));
-    box-shadow: var(--glass-shadow);
+  .glass-1 {
+    @apply rounded-xl border;
+    background: hsl(var(--glass-tint) / var(--glass-alpha-light));
+    backdrop-filter: blur(var(--glass-blur-md));
+    border-color: hsl(var(--border-subtle));
+    box-shadow: var(--shadow-1);
+    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+  .glass-1:hover {
+    background: hsl(var(--glass-tint) / var(--glass-alpha-medium));
+    box-shadow: var(--shadow-2);
   }
 
-  :root:not(.dark) .glass {
-    background: linear-gradient(180deg, hsl(0 0% 100% / 0.75), hsl(0 0% 100% / 0.45)) !important;
+  .glass-2 {
+    @apply rounded-xl border;
+    background: hsl(var(--glass-tint) / var(--glass-alpha-medium));
+    backdrop-filter: blur(var(--glass-blur-md));
+    border-color: hsl(var(--border-subtle));
+    box-shadow: var(--shadow-2);
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+  }
+  .glass-2:hover {
+    background: hsl(var(--glass-tint) / var(--glass-alpha-heavy));
+    box-shadow: var(--shadow-3);
   }
 
-  .glass:hover {
-    background: hsl(0 0% 100% / 0.70) !important;
-    box-shadow: var(--glass-hover-shadow);
+  .glass-3 {
+    @apply rounded-xl border;
+    background: hsl(var(--glass-tint) / var(--glass-alpha-heavy));
+    backdrop-filter: blur(var(--glass-blur-lg));
+    border-color: hsl(var(--border-default));
+    box-shadow: var(--shadow-3);
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+  }
+  .glass-3:hover {
+    box-shadow: var(--shadow-4);
   }
 
-  .dark .glass:hover {
-    background: hsl(0 0% 100% / 0.06) !important;
-  }
+  /* ── Legacy glass aliases (mantém compat 1-pra-1) ─── */
+  .glass            { @apply glass-2; @apply backdrop-blur-xl rounded-2xl; }
+  .card-lunar       { @apply glass-1 p-4; }
+  .lunari-card      { @apply glass-2; }
+  .lunari-panel     { @apply glass-2 p-6; }
+  .lunari-list-card { @apply glass-1; padding: 14px 18px; display: grid; align-items: center; }
 
-  /* Lunar Card */
-  .card-lunar {
-    @apply rounded-xl p-4 border border-border/50;
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(16px);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.2s ease-out;
-  }
-
-  /* Gallery-style card with gradient */
-  .lunari-card {
-    @apply border border-border/50 rounded-xl;
-    background: rgba(255,255,255,0.55);
-    backdrop-filter: blur(16px);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.18s ease;
-  }
-  .lunari-card:hover {
-    background: rgba(255,255,255,0.75);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
-  }
-  .dark .lunari-card {
-    background: rgba(40,40,42,0.55);
-  }
-  .dark .lunari-card:hover {
-    background: rgba(60,60,62,0.70);
-  }
-
-  /* Lunari Panel — dashboard widgets, no hover lift */
-  .lunari-panel {
-    @apply border border-border/50 rounded-xl;
-    background: rgba(255,255,255,0.55);
-    backdrop-filter: blur(16px);
-    padding: 24px;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.18s ease;
-  }
-  .lunari-panel:hover {
-    box-shadow: var(--shadow-md);
-  }
-  .dark .lunari-panel {
-    background: rgba(40,40,42,0.55);
-  }
-
-  /* Lunari List Card — compact workflow rows */
-  .lunari-list-card {
-    @apply border border-border/50 rounded-xl;
-    background: rgba(255,255,255,0.45);
-    backdrop-filter: blur(16px);
-    padding: 14px 18px;
-    display: grid;
-    align-items: center;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.18s ease;
-  }
-  .lunari-list-card:hover {
-    background: rgba(255,255,255,0.65);
-    box-shadow: var(--shadow-md);
-  }
-  .dark .lunari-list-card {
-    background: rgba(40,40,42,0.45);
-  }
-  .dark .lunari-list-card:hover {
-    background: rgba(60,60,62,0.60);
-  }
-  
   /* Brand utilities */
   .bg-brand-gradient {
     background: linear-gradient(135deg, hsl(var(--brand-gradient-start)), hsl(var(--brand-gradient-end)));
@@ -377,315 +395,174 @@
     box-shadow: 0 8px 24px -12px hsl(var(--brand-gradient-end) / 0.35);
   }
 
-  /* Lunar Button */
+  /* ── Buttons / inputs / nav / table (legacy, tokenized) ─── */
   .btn-lunar {
     @apply rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ease-out;
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-1);
   }
-
   .btn-lunar:hover {
     background: hsl(var(--primary-hover));
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-2);
     transform: translateY(-1px);
   }
+  .btn-lunar:active { transform: translateY(0); }
 
-  .btn-lunar:active {
-    transform: translateY(0);
-  }
-
-  /* Lunar Input */
   .input-lunar {
     @apply bg-background rounded-lg px-4 py-2.5 text-sm w-full border border-input transition-all duration-200;
     color: hsl(var(--foreground));
   }
-
-  /* Dropdown com fundo sólido garantido (cores fixas sem alpha) */
-  .dropdown-solid {
-    background-color: hsl(30 30% 98%) !important;
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
-  }
-
-  .dropdown-solid-item {
-    background-color: hsl(30 30% 98%) !important;
-  }
-
-  .dropdown-solid-item:hover {
-    background-color: hsl(30 15% 90%) !important;
-  }
-
-  .dropdown-solid-header {
-    background-color: hsl(30 15% 90%) !important;
-    border: 1px solid transparent;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .dark .dropdown-solid {
-    background-color: hsl(20 12% 10%) !important;
-  }
-
-  .dark .dropdown-solid-item {
-    background-color: hsl(20 12% 10%) !important;
-  }
-
-  .dark .dropdown-solid-item:hover {
-    background-color: hsl(20 10% 15%) !important;
-  }
-
-  .dark .dropdown-solid-header {
-    background-color: hsl(20 10% 15%) !important;
-  }
-
   .input-lunar:focus {
     @apply ring-1 border-primary;
-    ring-color: hsl(var(--primary));
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px hsl(var(--primary) / 0.1);
+    ring-color: hsl(var(--state-focus-ring));
+    box-shadow: inset 0 1px 2px hsl(var(--text-primary) / 0.05),
+                0 0 0 1px hsl(var(--state-focus-ring) / 0.10);
   }
-
   .input-lunar::placeholder {
     color: hsl(var(--muted-foreground));
     opacity: 0.5;
   }
 
-  /* Lunar Navigation */
+  /* ── Solid dropdown (no glass) — tokenized ─── */
+  .dropdown-solid {
+    background-color: hsl(var(--surface-2)) !important;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+  }
+  .dropdown-solid-item { background-color: hsl(var(--surface-2)) !important; }
+  .dropdown-solid-item:hover { background-color: hsl(var(--surface-3)) !important; }
+  .dropdown-solid-header {
+    background-color: hsl(var(--surface-3)) !important;
+    border: 1px solid transparent;
+    box-shadow: inset 0 1px 2px hsl(var(--text-primary) / 0.05);
+  }
+  .dark .dropdown-solid,
+  .dark .dropdown-solid-item { background-color: hsl(var(--surface-1)) !important; }
+  .dark .dropdown-solid-item:hover { background-color: hsl(var(--surface-3)) !important; }
+  .dark .dropdown-solid-header { background-color: hsl(var(--surface-3)) !important; }
+
   .nav-item-lunar {
     @apply flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all duration-150;
     color: hsl(var(--foreground));
     background: transparent;
   }
-
   .nav-item-lunar.active {
     color: hsl(var(--primary));
-    background: hsl(var(--glass-bg));
-    box-shadow: inset 0 1px 2px hsl(var(--primary) / 0.1);
+    background: hsl(var(--primary) / 0.08);
+    box-shadow: inset 0 1px 2px hsl(var(--primary) / 0.10);
   }
 
-  /* Lunar Table */
   .table-lunar {
-    @apply rounded-md overflow-hidden border border-border/50;
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(16px);
-    box-shadow: var(--shadow-sm);
+    @apply rounded-md overflow-hidden border;
+    border-color: hsl(var(--border-subtle));
+    background: hsl(var(--glass-tint) / var(--glass-alpha-medium));
+    backdrop-filter: blur(var(--glass-blur-md));
+    box-shadow: var(--shadow-1);
   }
-
   .table-lunar th {
     @apply font-medium py-2 px-3 text-xs;
     color: hsl(var(--foreground));
     background: hsl(var(--background) / 0.5);
     border-bottom: 1px solid hsl(var(--border) / 0.5);
   }
-
   .table-lunar td {
     @apply py-2 px-3 text-xs;
     color: hsl(var(--foreground));
   }
 
-  /* Utilidades de espaçamento compacto */
-  .space-compact > * + * {
-    margin-top: 0.5rem;
-  }
+  /* Spacing utilities */
+  .space-compact > * + * { margin-top: 0.5rem; }
+  .gap-compact { gap: 0.5rem; }
+  .p-compact { padding: 0.75rem; }
+  .px-compact { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .py-compact { padding-top: 0.5rem; padding-bottom: 0.5rem; }
 
-  .gap-compact {
-    gap: 0.5rem;
-  }
-
-  .p-compact {
-    padding: 0.75rem;
-  }
-
-  .px-compact {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-
-  .py-compact {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-  }
-
-  /* Scrollbars Elegantes Padronizadas */
+  /* ── Scrollbars (consolidated — no duplicates) ─── */
   .scrollbar-elegant {
     scrollbar-width: thin;
-    scrollbar-color: hsl(24 35% 59% / 0.3) transparent;
+    scrollbar-color: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.30) transparent;
   }
-
-  .scrollbar-elegant::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-
-  .scrollbar-elegant::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 2px;
-  }
-
+  .scrollbar-elegant::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-elegant::-webkit-scrollbar-track { background: transparent; border-radius: 2px; }
   .scrollbar-elegant::-webkit-scrollbar-thumb {
-    background: hsl(24 35% 59% / 0.3);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.30);
     border-radius: 2px;
     transition: all 0.2s ease;
   }
-
   .scrollbar-elegant::-webkit-scrollbar-thumb:hover {
-    background: hsl(24 35% 59% / 0.5);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.50);
   }
 
-  /* Scrollbar Minimal */
   .scrollbar-minimal {
     scrollbar-width: thin;
-    scrollbar-color: hsl(24 35% 59% / 0.15) transparent;
+    scrollbar-color: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.15) transparent;
   }
-
-  .scrollbar-minimal::-webkit-scrollbar {
-    width: 2px;
-    height: 2px;
-  }
-
-  .scrollbar-minimal::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
+  .scrollbar-minimal::-webkit-scrollbar { width: 2px; height: 2px; }
+  .scrollbar-minimal::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-minimal::-webkit-scrollbar-thumb {
-    background: hsl(24 35% 59% / 0.15);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.15);
     border-radius: 1px;
     transition: all 0.2s ease;
   }
-
   .scrollbar-minimal::-webkit-scrollbar-thumb:hover {
-    background: hsl(24 35% 59% / 0.3);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.30);
   }
 
-  /* Scrollbar Kanban */
   .scrollbar-kanban {
     scrollbar-width: thin;
-    scrollbar-color: hsl(24 35% 59% / 0.2) transparent;
+    scrollbar-color: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.20) transparent;
   }
-
-  .scrollbar-kanban::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .scrollbar-kanban::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 3px;
-    margin: 2px;
-  }
-
+  .scrollbar-kanban::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-kanban::-webkit-scrollbar-track { background: transparent; border-radius: 3px; margin: 2px; }
   .scrollbar-kanban::-webkit-scrollbar-thumb {
-    background: hsl(24 35% 59% / 0.2);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.20);
     border-radius: 3px;
     transition: all 0.2s ease;
   }
-
   .scrollbar-kanban::-webkit-scrollbar-thumb:hover {
-    background: hsl(24 35% 59% / 0.4);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.40);
   }
+  .scrollbar-kanban::-webkit-scrollbar-corner { background: transparent; }
 
-  .scrollbar-kanban::-webkit-scrollbar-corner {
-    background: transparent;
-  }
+  .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
 
-  /* Scrollbar None */
-  .scrollbar-none {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
+  .scrollbar-lunar { @apply scrollbar-elegant; }
 
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
+  /* Animations */
+  .animate-lunar { animation: fade-in 0.2s ease-out, scale-in 0.15s ease-out; }
 
-  /* Compat */
-  .scrollbar-lunar {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(24 35% 59% / 0.2) transparent;
-  }
-
-  .scrollbar-lunar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-  }
-
-  .scrollbar-lunar::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 2px;
-  }
-
-  .scrollbar-lunar::-webkit-scrollbar-thumb {
-    background: hsl(24 35% 59% / 0.2);
-    border-radius: 2px;
-    transition: all 0.2s ease;
-  }
-
-  .scrollbar-lunar::-webkit-scrollbar-thumb:hover {
-    background: hsl(24 35% 59% / 0.4);
-  }
-
-  /* Animações suaves */
-  .animate-lunar {
-    animation: fade-in 0.2s ease-out, scale-in 0.15s ease-out;
-  }
-
-  /* Toast lunar */
+  /* Toast */
   .toast-lunar {
     @apply border text-foreground;
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(16px);
+    background: hsl(var(--glass-tint) / var(--glass-alpha-heavy));
+    backdrop-filter: blur(var(--glass-blur-md));
     border-color: hsl(var(--border));
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-2);
   }
 
-  /* Estilo para input de data */
-  input[type="date"] {
-    color-scheme: light dark;
-  }
-
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.5);
-    opacity: 0.8;
-    cursor: pointer;
-  }
-
-  .dark input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.8);
-  }
-
-  /* Custom scrollbar styles for kanban view */
-  .overflow-x-auto::-webkit-scrollbar {
-    height: 8px;
-  }
-  
+  /* Generic overflow-x scrollbar */
+  .overflow-x-auto::-webkit-scrollbar { height: 8px; }
   .overflow-x-auto::-webkit-scrollbar-track {
     background: hsl(var(--muted));
     border-radius: 4px;
   }
-  
   .overflow-x-auto::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
     border-radius: 4px;
   }
-  
   .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--accent-foreground) / 0.5);
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
-/* Utility classes for animations */
+/* Utility animation delays */
 @layer utilities {
-  .delay-100 {
-    animation-delay: 100ms;
-  }
-  .delay-300 {
-    animation-delay: 300ms;
-  }
-  .delay-700 {
-    animation-delay: 700ms;
-  }
-  .delay-1000 {
-    animation-delay: 1000ms;
-  }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-700 { animation-delay: 700ms; }
+  .delay-1000 { animation-delay: 1000ms; }
 }
 
 /* Aurora animation */
@@ -694,22 +571,14 @@
   33% { transform: translate(2%, -3%) rotate(2deg); }
   66% { transform: translate(-2%, 2%) rotate(-1deg); }
 }
-
-.aurora-animate {
-  animation: aurora 20s ease infinite;
-}
-
+.aurora-animate { animation: aurora 20s ease infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .aurora-animate {
-    animation: none !important;
-  }
+  .aurora-animate { animation: none !important; }
 }
 
 /* ============================================================
    Contratos — variáveis automáticas e campos editáveis
    ============================================================ */
-
-/* Variável automática preenchida pelo sistema (somente leitura visual) */
 .contrato-var-auto {
   background: hsl(var(--primary) / 0.10);
   color: hsl(var(--primary));
@@ -717,12 +586,10 @@
   border-radius: 3px;
   font-weight: 500;
 }
-
-/* Campo editável manual — destaque suave + cursor de texto */
 .contrato-campo-editavel {
-  background: hsl(45 100% 92%);
-  border-bottom: 1px dashed hsl(35 90% 50%);
-  color: hsl(25 50% 25%);
+  background: hsl(var(--warning) / 0.18);
+  border-bottom: 1px dashed hsl(var(--warning));
+  color: hsl(var(--text-primary));
   padding: 0 3px;
   border-radius: 2px 2px 0 0;
   cursor: text;
@@ -730,23 +597,18 @@
 }
 .contrato-campo-editavel:hover,
 .contrato-campo-editavel:focus {
-  background: hsl(45 100% 85%);
+  background: hsl(var(--warning) / 0.28);
   outline: none;
 }
-
-/* Tema escuro */
 .dark .contrato-campo-editavel {
-  background: hsl(45 60% 22%);
-  color: hsl(45 90% 88%);
-  border-bottom-color: hsl(35 80% 55%);
+  background: hsl(var(--warning) / 0.18);
+  color: hsl(var(--text-primary));
+  border-bottom-color: hsl(var(--warning));
 }
 .dark .contrato-campo-editavel:hover,
 .dark .contrato-campo-editavel:focus {
-  background: hsl(45 60% 30%);
+  background: hsl(var(--warning) / 0.30);
 }
-
-/* No PDF/visualização final, neutralizar destaques visuais
-   para o documento ficar limpo (sem cores) */
 @media print {
   .contrato-var-auto,
   .contrato-campo-editavel {

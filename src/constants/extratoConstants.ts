@@ -18,7 +18,7 @@ export const ORIGEM_COLORS = {
 export const STATUS_COLORS = {
   Pago: 'bg-green-500/10 text-green-700 border-green-200',
   Faturado: 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
-  Agendado: 'bg-gray-500/10 text-gray-700 border-gray-200'
+  Agendado: 'bg-muted-foreground/40/10 text-foreground border-border'
 } as const;
 
 export const TIPO_COLORS = {

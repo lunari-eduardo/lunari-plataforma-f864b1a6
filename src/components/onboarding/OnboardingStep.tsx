@@ -28,11 +28,11 @@ export function OnboardingStep({
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col items-center text-center space-y-3">
         <div className="space-y-2">
-          <h2 className="text-2xl md:text-3xl font-light text-white">
+          <h2 className="text-2xl md:text-3xl font-light text-primary-foreground">
             {title}
           </h2>
           {subtitle && (
-            <p className="text-white/80 text-sm font-light">
+            <p className="text-primary-foreground/80 text-sm font-light">
               {subtitle}
             </p>
           )}
@@ -44,7 +44,7 @@ export function OnboardingStep({
           {title}
         </Label>
         <div className="relative">
-          <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
+          <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/60" />
           <Input
             id="step-input"
             type="text"
@@ -52,7 +52,7 @@ export function OnboardingStep({
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className="pl-12 h-12 bg-white/10 border border-white/30 focus:border-[#CD7F5E] text-center font-light text-white placeholder:text-white/50"
+            className="pl-12 h-12 bg-card/10 border border-white/30 focus:border-[#CD7F5E] text-center font-light text-primary-foreground placeholder:text-primary-foreground/50"
           />
         </div>
         {error && (

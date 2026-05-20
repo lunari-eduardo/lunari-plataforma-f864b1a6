@@ -265,7 +265,7 @@ export default function ShareAvailabilityModal({
 
           {/* Preview */}
           {selectedTypeIds.length > 0 && (
-            <div className="p-3 bg-white/30 dark:bg-white/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
+            <div className="p-3 bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
               <Label className="text-xs font-medium text-muted-foreground">Preview:</Label>
               <div className="text-sm mt-1 whitespace-pre-line max-h-32 overflow-y-auto">
                 {generateShareText()}

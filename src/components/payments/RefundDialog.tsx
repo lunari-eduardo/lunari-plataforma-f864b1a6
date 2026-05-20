@@ -136,7 +136,7 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
         <AlertDialogFooter>
           <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-orange-600 text-white hover:bg-orange-700"
+            className="bg-orange-600 text-primary-foreground hover:bg-orange-700"
             onClick={(e) => { e.preventDefault(); handleConfirm(); }}
             disabled={submitting}
           >

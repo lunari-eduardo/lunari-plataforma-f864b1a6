@@ -95,7 +95,7 @@ const ExtraPhotoQtyInput = React.memo(({
       value={localValue} 
       onChange={handleChange}
       onBlur={handleBlur}
-      className={`h-7 text-xs p-1 w-14 text-center border border-border/40 rounded-md bg-transparent focus:bg-white/60 dark:focus:bg-white/10 transition-colors [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`}
+      className={`h-7 text-xs p-1 w-14 text-center border border-border/40 rounded-md bg-transparent focus:bg-card/60 dark:focus:bg-card/10 transition-colors [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${hasUnsavedChanges ? 'bg-yellow-50' : ''}`}
       placeholder="0"
       autoComplete="off"
     />
@@ -395,7 +395,7 @@ export function WorkflowCardCollapsed({
             onBlur={handleDescriptionBlur}
             placeholder="Descrição..."
             className={cn(
-              "text-[11px] border border-border/40 rounded-md bg-transparent focus:bg-white/60 dark:focus:bg-white/10 transition-colors",
+              "text-[11px] border border-border/40 rounded-md bg-transparent focus:bg-card/60 dark:focus:bg-card/10 transition-colors",
               isExpanded
                 ? "min-h-[28px] h-auto whitespace-normal break-words py-1 px-2"
                 : "h-7 truncate"

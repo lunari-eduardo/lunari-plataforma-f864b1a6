@@ -65,7 +65,7 @@ export function KPIGroupCard({
       <div className="flex items-center justify-between">
         <span className="text-xs text-lunar-textSecondary font-medium">Receita do mês</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
-          <DollarSign className="h-4 w-4 text-white" />
+          <DollarSign className="h-4 w-4 text-primary-foreground" />
         </div>
       </div>
       <div className="mt-2 flex items-baseline justify-between">
@@ -93,7 +93,7 @@ export function KPIGroupCard({
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Categoria mais rentável</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
-          <BarChart3 className="h-4 w-4 text-white" />
+          <BarChart3 className="h-4 w-4 text-primary-foreground" />
         </div>
       </div>
       <div className="flex-1 flex flex-col justify-center">
@@ -116,7 +116,7 @@ export function KPIGroupCard({
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Novos clientes (60 dias)</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
-          <Users className="h-4 w-4 text-white" />
+          <Users className="h-4 w-4 text-primary-foreground" />
         </div>
       </div>
       <div className="flex-1 flex flex-col justify-center">
@@ -131,7 +131,7 @@ export function KPIGroupCard({
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-lunar-textSecondary font-medium">Total Previsto</span>
         <div className="p-2 rounded-lg bg-brand-gradient">
-          <DollarSign className="h-4 w-4 text-white" />
+          <DollarSign className="h-4 w-4 text-primary-foreground" />
         </div>
       </div>
       <div className="flex-1 flex items-center">

@@ -121,7 +121,7 @@ export function CardCustosEstudio({
   };
 
   return (
-    <Card className="border shadow-lg bg-white dark:bg-card">
+    <Card className="border shadow-lg bg-card dark:bg-card">
       <CardHeader className="pb-3 bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 border-b border-emerald-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

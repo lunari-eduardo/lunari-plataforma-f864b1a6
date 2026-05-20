@@ -182,14 +182,14 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
-					DEFAULT: '#FAF8F5',
-					foreground: '#3A3A3A',
-					primary: '#CBA977',
-					'primary-foreground': '#3A3A3A',
-					accent: '#F3F1ED',
-					'accent-foreground': '#3A3A3A',
-					border: '#E1DFDA',
-					ring: '#CBA977'
+					DEFAULT: 'hsl(var(--sidebar-bg))',
+					foreground: 'hsl(var(--sidebar-fg))',
+					primary: 'hsl(var(--sidebar-accent))',
+					'primary-foreground': 'hsl(var(--sidebar-accent-fg))',
+					accent: 'hsl(var(--sidebar-muted))',
+					'accent-foreground': 'hsl(var(--sidebar-muted-fg))',
+					border: 'hsl(var(--sidebar-border))',
+					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
 			borderRadius: {

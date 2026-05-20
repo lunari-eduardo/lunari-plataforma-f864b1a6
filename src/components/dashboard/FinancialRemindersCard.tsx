@@ -42,7 +42,7 @@ export function FinancialRemindersCard() {
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-brand-gradient">
-            <TrendingDown className="h-5 w-5 text-white" />
+            <TrendingDown className="h-5 w-5 text-primary-foreground" />
           </div>
           <CardTitle className="font-semibold text-base">Contas a Pagar</CardTitle>
         </div>

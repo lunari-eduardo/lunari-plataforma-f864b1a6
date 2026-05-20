@@ -1,8 +1,12 @@
 export default function InternalBackground() {
+  // Cor derivada do brand token — segue tema light/dark e mudanças de identidade.
+  const blob = 'radial-gradient(circle, hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.22) 0%, transparent 75%)';
+  const glowStrong = 'radial-gradient(circle, hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.05) 0%, transparent 70%)';
+  const glowSoft = 'radial-gradient(circle, hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.03) 0%, transparent 70%)';
+
   return (
     <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
       <div className="w-full h-full opacity-90 dark:opacity-25">
-        {/* Main blob - right */}
         <div
           className="absolute animate-eclipse-float"
           style={{
@@ -10,13 +14,12 @@ export default function InternalBackground() {
             right: '-5%',
             width: 'min(50vw, 800px)',
             height: 'min(50vw, 800px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.22) 0%, transparent 75%)',
+            background: blob,
             filter: 'blur(22px)',
             borderRadius: '50%',
           }}
         />
 
-        {/* Secondary blob - left */}
         <div
           className="absolute animate-eclipse-float-reverse"
           style={{
@@ -24,13 +27,12 @@ export default function InternalBackground() {
             left: '-5%',
             width: 'min(35vw, 550px)',
             height: 'min(35vw, 550px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.22) 0%, transparent 75%)',
+            background: blob,
             filter: 'blur(20px)',
             borderRadius: '50%',
           }}
         />
 
-        {/* External glow - right */}
         <div
           className="absolute"
           style={{
@@ -38,13 +40,12 @@ export default function InternalBackground() {
             right: '-10%',
             width: 'min(60vw, 1000px)',
             height: 'min(60vw, 1000px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.05) 0%, transparent 70%)',
+            background: glowStrong,
             filter: 'blur(45px)',
             borderRadius: '50%',
           }}
         />
 
-        {/* External glow - left */}
         <div
           className="absolute"
           style={{
@@ -52,14 +53,13 @@ export default function InternalBackground() {
             left: '-10%',
             width: 'min(45vw, 700px)',
             height: 'min(45vw, 700px)',
-            background: 'radial-gradient(circle, rgba(172, 94, 58, 0.03) 0%, transparent 70%)',
+            background: glowSoft,
             filter: 'blur(40px)',
             borderRadius: '50%',
           }}
         />
       </div>
 
-      {/* Noise overlay */}
       <svg className="absolute inset-0 w-full h-full opacity-[0.045]" aria-hidden="true">
         <filter id="internal-noise">
           <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />

@@ -606,7 +606,7 @@ export default function Clientes() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-muted/40 text-muted-foreground'}`}>
                         {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                       </span>
                     </TableCell>
@@ -683,7 +683,7 @@ export default function Clientes() {
                   <span className="text-xs text-muted-foreground">
                     {cliente.sessoes} sessões
                   </span>
-                  <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-muted/40 text-muted-foreground'}`}>
                     {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                   </span>
                 </div>

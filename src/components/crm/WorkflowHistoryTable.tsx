@@ -51,7 +51,7 @@ export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
       'concluido': 'bg-green-100 text-green-800',
       'cancelado': 'bg-red-100 text-red-800',
       'em_andamento': 'bg-yellow-100 text-yellow-800',
-      'historico': 'bg-gray-100 text-gray-600 border border-gray-300'
+      'historico': 'bg-muted/40 text-muted-foreground border border-border'
     };
     return colors[status as keyof typeof colors] || 'bg-muted text-foreground';
   };

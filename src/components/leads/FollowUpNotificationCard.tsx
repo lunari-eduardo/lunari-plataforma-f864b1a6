@@ -41,7 +41,7 @@ export default function FollowUpNotificationCard() {
           return (
             <div 
               key={lead.id}
-              className="flex items-center justify-between p-3 bg-white rounded-md border border-red-200"
+              className="flex items-center justify-between p-3 bg-card rounded-md border border-red-200"
             >
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-red-900 truncate">

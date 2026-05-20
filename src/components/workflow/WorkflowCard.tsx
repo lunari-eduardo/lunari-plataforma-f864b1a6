@@ -37,7 +37,7 @@ export function WorkflowCard({
         !isExpanded && [
           "bg-transparent",
           "border border-transparent",
-          "hover:bg-white/55 hover:backdrop-blur-xl hover:backdrop-saturate-[1.8]",
+          "hover:bg-card/55 hover:backdrop-blur-xl hover:backdrop-saturate-[1.8]",
           "hover:border-white/50 dark:hover:border-white/10",
           "hover:shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.7)]",
           "dark:hover:bg-white/[0.06] dark:hover:backdrop-blur-xl dark:hover:backdrop-saturate-[1.6]",
@@ -45,12 +45,12 @@ export function WorkflowCard({
         ],
         // Expanded: glass always visible
         isExpanded && [
-          "bg-white/50 backdrop-blur-xl backdrop-saturate-[1.8]",
-          "dark:bg-white/[0.06] dark:backdrop-blur-xl dark:backdrop-saturate-[1.6]",
+          "bg-card/50 backdrop-blur-xl backdrop-saturate-[1.8]",
+          "dark:bg-card/[0.06] dark:backdrop-blur-xl dark:backdrop-saturate-[1.6]",
           "border border-white/50 dark:border-white/10",
           "shadow-[0_4px_16px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.8)]",
           "dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
-          "hover:bg-white/60 dark:hover:bg-white/[0.08]"
+          "hover:bg-card/60 dark:hover:bg-white/[0.08]"
         ]
       )}
     >

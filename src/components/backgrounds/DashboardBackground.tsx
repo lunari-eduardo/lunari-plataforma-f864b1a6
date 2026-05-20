@@ -3,7 +3,22 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /* ─── 3D Orbital Scene — Premium Orbital Field ─── */
-const COPPER = '#F28C52';
+// Lê a cor brand atual (token CSS) e converte para hex para o THREE.
+function readBrandColor(): string {
+  if (typeof window === 'undefined') return '#F28C52';
+  const root = getComputedStyle(document.documentElement);
+  const h = parseFloat(root.getPropertyValue('--brand-h')) || 19;
+  const s = parseFloat(root.getPropertyValue('--brand-s')) || 49;
+  const l = parseFloat(root.getPropertyValue('--brand-l')) || 55;
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+const COPPER = typeof window !== 'undefined' ? readBrandColor() : '#F28C52';
 
 const RING_CONFIGS = [
   { initialRotation: [65 * Math.PI / 180, 0, 0] as [number, number, number], axis: 'y' as const, period: 72, direction: 1, tube: 0.025, opacityLight: 0.35, opacityDark: 0.12 },
@@ -104,13 +119,13 @@ export default function DashboardBackground() {
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
-      {/* Base gradient */}
+      {/* Base gradient — tokenizado */}
       <div
         className="absolute inset-0 transition-colors duration-700"
         style={{
           background: isDark
-            ? 'linear-gradient(135deg, #0D0A08 0%, #141010 50%, #0D0A08 100%)'
-            : '#FFFFFF',
+            ? `linear-gradient(135deg, hsl(var(--surface-0)) 0%, hsl(var(--surface-1)) 50%, hsl(var(--surface-0)) 100%)`
+            : `hsl(var(--surface-2))`,
         }}
       />
 
@@ -128,17 +143,17 @@ export default function DashboardBackground() {
         </div>
       )}
 
-      {/* Aurora gradient */}
+      {/* Aurora gradient — derivado do brand token */}
       <div
         className="absolute inset-[-20%] aurora-animate"
         style={{
           background: isDark
-            ? `linear-gradient(120deg, rgba(242,170,100,0.05), transparent 50%),
-               linear-gradient(240deg, rgba(255,200,140,0.04), transparent 50%),
-               linear-gradient(0deg, rgba(230,180,130,0.03), transparent 60%)`
-            : `linear-gradient(120deg, rgba(172,94,58,0.25), transparent 50%),
-               linear-gradient(240deg, rgba(194,149,106,0.20), transparent 50%),
-               linear-gradient(0deg, rgba(172,94,58,0.15), transparent 60%)`,
+            ? `linear-gradient(120deg, hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.05), transparent 50%),
+               linear-gradient(240deg, hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.04), transparent 50%),
+               linear-gradient(0deg,   hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.03), transparent 60%)`
+            : `linear-gradient(120deg, hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.25), transparent 50%),
+               linear-gradient(240deg, hsl(var(--brand-h) var(--brand-s) var(--brand-glow-l) / 0.20), transparent 50%),
+               linear-gradient(0deg,   hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.15), transparent 60%)`,
           filter: isDark ? 'blur(60px)' : 'blur(40px)',
         }}
       />

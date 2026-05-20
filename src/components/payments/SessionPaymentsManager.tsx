@@ -128,7 +128,7 @@ export function SessionPaymentsManager({
         case 'antecipado':
           return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Antecipado</Badge>;
         case 'pendente':
-          return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Pendente</Badge>;
+          return <Badge className="bg-muted/40 text-foreground border-border">Pendente</Badge>;
       }
     }
 

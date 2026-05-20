@@ -95,7 +95,7 @@ export default function Index() {
               <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-brand-gradient">
-                    <Calendar className="h-5 w-5 text-white" />
+                    <Calendar className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
                 </div>

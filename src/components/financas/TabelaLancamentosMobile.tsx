@@ -106,7 +106,7 @@ export default function TabelaLancamentosMobile({
       </div>;
   }
   return <div className="space-y-3">
-      {transacoes.map(transacao => <Card key={transacao.id} className="border border-gray-200">
+      {transacoes.map(transacao => <Card key={transacao.id} className="border border-border">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export default function TabelaLancamentosMobile({
                     <Button size="sm" variant="ghost" onClick={() => saveEdit(transacao.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
                       <Check className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-gray-600 hover:text-gray-700 hover:bg-gray-50">
+                    <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-muted-foreground hover:text-foreground hover:bg-muted/40">
                       <X className="h-4 w-4" />
                     </Button>
                   </> : <>
@@ -154,17 +154,17 @@ export default function TabelaLancamentosMobile({
               </div> : <>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-gray-400" />
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{formatCurrency(transacao.valor)}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>{formatarData(transacao.data_vencimento)}</span>
                   </div>
                 </div>
 
-                {(transacao.parcelas || transacao.parcelaInfo) && <div className="mt-2 text-sm text-gray-500">
+                {(transacao.parcelas || transacao.parcelaInfo) && <div className="mt-2 text-sm text-muted-foreground">
                     Parcela {transacao.parcelas?.atual || transacao.parcelaInfo?.atual || 1} de {transacao.parcelas?.total || transacao.parcelaInfo?.total || 1}
                   </div>}
 

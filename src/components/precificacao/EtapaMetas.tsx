@@ -66,7 +66,7 @@ export function EtapaMetas({ custosFixosTotal }: EtapaMetasProps) {
       defaultOpen={false}
       statusSalvamento={statusSalvamento}
     >
-      <Card className="border shadow-lg bg-white dark:bg-card overflow-hidden">
+      <Card className="border shadow-lg bg-card dark:bg-card overflow-hidden">
         {/* NÍVEL 1: Entrada do Usuário */}
         <div className="p-5 border-b border-border/50">
           <div className="space-y-4">

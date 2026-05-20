@@ -45,18 +45,18 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
     return (
       <div className="text-center py-6 space-y-4">
         <CheckCircle className="h-16 w-16 text-green-400 mx-auto" />
-        <h3 className="text-xl font-semibold text-white">Email enviado!</h3>
-        <p className="text-white/70 text-sm">
+        <h3 className="text-xl font-semibold text-primary-foreground">Email enviado!</h3>
+        <p className="text-primary-foreground/70 text-sm">
           Enviamos um link de recuperação para <br />
-          <span className="text-white font-medium">{email}</span>
+          <span className="text-primary-foreground font-medium">{email}</span>
         </p>
-        <p className="text-white/60 text-xs">
+        <p className="text-primary-foreground/60 text-xs">
           Verifique sua caixa de entrada e spam.
         </p>
         <Button
           onClick={onBack}
           variant="ghost"
-          className="text-[#CD7F5E] hover:text-[#CD7F5E]/80 hover:bg-white/10"
+          className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80 hover:bg-card/10"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar ao login
@@ -70,22 +70,22 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
       <button
         type="button"
         onClick={onBack}
-        className="flex items-center text-white/70 hover:text-white text-sm mb-2"
+        className="flex items-center text-primary-foreground/70 hover:text-primary-foreground text-sm mb-2"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
         Voltar
       </button>
 
       <div className="text-center mb-4">
-        <h3 className="text-lg font-semibold text-white">Recuperar senha</h3>
-        <p className="text-white/70 text-sm mt-1">
+        <h3 className="text-lg font-semibold text-primary-foreground">Recuperar senha</h3>
+        <p className="text-primary-foreground/70 text-sm mt-1">
           Digite seu email para receber um link de recuperação
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="recovery-email" className="text-white/90 text-sm">
+          <Label htmlFor="recovery-email" className="text-primary-foreground/90 text-sm">
             Email
           </Label>
           <Input
@@ -94,7 +94,7 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50 h-11"
+            className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11"
             disabled={isLoading}
             autoComplete="email"
             autoFocus
@@ -104,7 +104,7 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-white font-medium"
+          className="w-full h-11 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-primary-foreground font-medium"
         >
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />

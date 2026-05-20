@@ -90,7 +90,7 @@ export function ProductCombobox({
               <CommandItem
                 value="__none__"
                 onSelect={handleSelectNone}
-                className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer border-b border-border"
+                className="text-xs hover:bg-foreground/[0.05] rounded cursor-pointer border-b border-border"
               >
                 <Check
                   className={cn(
@@ -98,14 +98,14 @@ export function ProductCombobox({
                     !hasValue ? "opacity-100" : "opacity-0"
                   )}
                 />
-                <span className="font-medium text-gray-500">Nenhum produto</span>
+                <span className="font-medium text-muted-foreground">Nenhum produto</span>
               </CommandItem>
               {productOptions.map((product) => (
                 <CommandItem
                   key={product.id}
                   value={product.nome}
                   onSelect={() => handleSelectProduct(product)}
-                  className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer"
+                  className="text-xs hover:bg-foreground/[0.05] rounded cursor-pointer"
                 >
                   <Check
                     className={cn(

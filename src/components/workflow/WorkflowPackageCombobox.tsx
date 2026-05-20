@@ -104,7 +104,7 @@ const WorkflowPackageComboboxComponent = ({
           role="combobox" 
           aria-expanded={open} 
           disabled={disabled || isLoadingPacotes}
-          className="w-full justify-between h-7 text-xs font-normal border border-border/40 rounded-md bg-transparent hover:bg-white/60 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full justify-between h-7 text-xs font-normal border border-border/40 rounded-md bg-transparent hover:bg-card/60 dark:hover:bg-card/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoadingPacotes ? "Carregando..." : displayName || selectedPackage?.nome || (typeof value === 'string' ? value : 'Selecione')}
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
@@ -122,7 +122,7 @@ const WorkflowPackageComboboxComponent = ({
               <CommandItem 
                 value="nenhum-pacote"
                 onSelect={handleClearPackage}
-                className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer"
+                className="text-xs hover:bg-foreground/[0.05] rounded cursor-pointer"
               >
                 <Check className={cn("mr-2 h-3 w-3", !value ? "opacity-100" : "opacity-0")} />
                 <span className="font-medium">Nenhum pacote</span>
@@ -145,7 +145,7 @@ const WorkflowPackageComboboxComponent = ({
                     }
                     setOpen(false);
                   }}
-                  className="text-xs hover:bg-black/[0.04] dark:hover:bg-white/[0.08] rounded cursor-pointer"
+                  className="text-xs hover:bg-foreground/[0.05] rounded cursor-pointer"
                 >
                   <Check className={cn("mr-2 h-3 w-3", (pkg.id === value || pkg.nome === value || String(pkg.id) === String(value)) ? "opacity-100" : "opacity-0")} />
                   <div className="flex flex-col">

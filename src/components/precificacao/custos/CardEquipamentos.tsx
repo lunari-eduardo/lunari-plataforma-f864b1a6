@@ -61,7 +61,7 @@ export function CardEquipamentos({
     : 0;
 
   return (
-    <Card className="border shadow-lg bg-white dark:bg-card">
+    <Card className="border shadow-lg bg-card dark:bg-card">
       <CardHeader className="pb-3 bg-gradient-to-r from-purple-500/20 to-purple-500/5 border-b border-purple-500/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -66,7 +66,7 @@ export default function ResumoFinanceiroCompleto({ resumo }: ResumoFinanceiroCom
                 </div>
               )}
             </CardTitle>
-            <div className={`${card.color} p-2 rounded-md text-white`}>
+            <div className={`${card.color} p-2 rounded-md text-primary-foreground`}>
               {card.icon}
             </div>
           </CardHeader>

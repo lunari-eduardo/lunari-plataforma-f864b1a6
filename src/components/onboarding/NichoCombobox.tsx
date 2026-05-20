@@ -103,7 +103,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
   const dropdownContent = isOpen ? createPortal(
     <div 
       id="nicho-dropdown-portal"
-      className="fixed z-[9999] bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-2xl overflow-hidden"
+      className="fixed z-[9999] bg-card/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-2xl overflow-hidden"
       style={{
         top: dropdownPosition.top,
         left: dropdownPosition.left,
@@ -113,7 +113,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
       <ScrollArea className="h-[320px]">
         <div className="py-1">
           {filteredNichos.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+            <div className="px-4 py-3 text-sm text-muted-foreground text-center">
               Nenhum nicho encontrado
             </div>
           ) : (
@@ -128,7 +128,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
                   "hover:bg-[#CD7F5E]/10",
                   value === nicho 
                     ? "bg-[#CD7F5E]/15 text-[#CD7F5E] font-medium border-l-2 border-[#CD7F5E]" 
-                    : "text-gray-700"
+                    : "text-foreground"
                 )}
               >
                 <span>{nicho}</span>
@@ -146,10 +146,10 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col items-center text-center space-y-3">
         <div className="space-y-2">
-          <h2 className="text-2xl md:text-3xl font-light text-white">
+          <h2 className="text-2xl md:text-3xl font-light text-primary-foreground">
             Qual é o seu nicho principal?
           </h2>
-          <p className="text-white/80 text-sm font-light">
+          <p className="text-primary-foreground/80 text-sm font-light">
             Isso nos ajuda a personalizar sua experiência
           </p>
         </div>
@@ -157,7 +157,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
 
       <div className="space-y-2" ref={containerRef}>
         <div className="relative">
-          <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 z-10" />
+          <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/60 z-10" />
           <input
             ref={inputRef}
             type="text"
@@ -170,15 +170,15 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
             onFocus={() => setIsOpen(true)}
             placeholder="Selecione seu nicho"
             className={cn(
-              "w-full pl-12 pr-10 h-12 bg-white/10 border border-white/30 rounded-md",
-              "text-center font-light text-white placeholder:text-white/50",
+              "w-full pl-12 pr-10 h-12 bg-card/10 border border-white/30 rounded-md",
+              "text-center font-light text-primary-foreground placeholder:text-primary-foreground/50",
               "focus:outline-none focus:ring-2 focus:ring-[#CD7F5E] focus:border-transparent",
               error && "border-red-400"
             )}
           />
           <ChevronDown 
             className={cn(
-              "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60 transition-transform duration-200",
+              "absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/60 transition-transform duration-200",
               isOpen && "rotate-180"
             )} 
           />

@@ -47,7 +47,7 @@ export default function TabelaEditavel({
         label: "Faturado"
       },
       cancelado: {
-        color: "bg-gray-100 text-gray-800",
+        color: "bg-muted/40 text-foreground",
         label: "Cancelado"
       }
     };
@@ -116,7 +116,7 @@ export default function TabelaEditavel({
         <h4 className="text-sm font-medium mb-3 text-blue-800">Adicionar Nova Transação</h4>
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Data</label>
+            <label className="text-xs font-medium text-foreground mb-1 block">Data</label>
             <Input type="date" value={novaTransacao.parcelado ? novaTransacao.dataInicio : novaTransacao.data} onChange={e => {
             if (novaTransacao.parcelado) {
               setNovaTransacao(prev => ({
@@ -130,11 +130,11 @@ export default function TabelaEditavel({
               }));
             }
           }} className="h-9" />
-            {novaTransacao.parcelado && <span className="text-xs text-gray-500">Data da 1ª Parcela</span>}
+            {novaTransacao.parcelado && <span className="text-xs text-muted-foreground">Data da 1ª Parcela</span>}
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Descrição</label>
+            <label className="text-xs font-medium text-foreground mb-1 block">Descrição</label>
             <Select value={novaTransacao.subcategoriaId || ''} onValueChange={value => {
             const subcategoria = subcategorias.find(s => s.id === value);
             setNovaTransacao(prev => ({
@@ -155,7 +155,7 @@ export default function TabelaEditavel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Valor</label>
+            <label className="text-xs font-medium text-foreground mb-1 block">Valor</label>
             <Input type="number" step="0.01" placeholder="0,00" value={novaTransacao.valor} onChange={e => setNovaTransacao(prev => ({
             ...prev,
             valor: e.target.value
@@ -163,7 +163,7 @@ export default function TabelaEditavel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Parcelado</label>
+            <label className="text-xs font-medium text-foreground mb-1 block">Parcelado</label>
             <div className="flex items-center gap-2">
               <Switch checked={novaTransacao.parcelado} onCheckedChange={checked => setNovaTransacao(prev => ({
               ...prev,
@@ -177,7 +177,7 @@ export default function TabelaEditavel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Situação</label>
+            <label className="text-xs font-medium text-foreground mb-1 block">Situação</label>
             <Select value={novaTransacao.status} onValueChange={value => setNovaTransacao(prev => ({
             ...prev,
             status: value
@@ -287,7 +287,7 @@ export default function TabelaEditavel({
         </TableBody>
       </Table>
 
-      {transacoes.length === 0 && <div className="text-center py-8 text-gray-500">
+      {transacoes.length === 0 && <div className="text-center py-8 text-muted-foreground">
           Nenhuma transação encontrada. Use o formulário acima para adicionar uma nova.
         </div>}
     </div>;

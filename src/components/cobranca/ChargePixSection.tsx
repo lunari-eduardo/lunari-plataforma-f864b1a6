@@ -78,7 +78,7 @@ export function ChargePixSection({
         {/* QR Code */}
         {showQR && qrCodeBase64 && (
           <div className="flex flex-col items-center gap-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="bg-card p-4 rounded-lg shadow-sm border">
               <img 
                 src={`data:image/png;base64,${qrCodeBase64}`} 
                 alt="QR Code Pix"
