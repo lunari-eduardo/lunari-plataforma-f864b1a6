@@ -52,7 +52,7 @@ export function ConfirmDialog({ state, onConfirm, onCancel, onClose }: ConfirmDi
           <AlertDialogAction
             onClick={onConfirm}
             className={cn(
-              "text-white font-medium",
+              "text-primary-foreground font-medium",
               state.variant === 'destructive'
                 ? "bg-destructive hover:bg-destructive/90"
                 : "bg-primary hover:bg-primary/90"
