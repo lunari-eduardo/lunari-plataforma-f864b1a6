@@ -31,6 +31,7 @@ import EscolherPlanoPagamento from "./pages/EscolherPlanoPagamento";
 import ResetPassword from "./pages/ResetPassword";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminPlanos from "./pages/AdminPlanos";
+import AdminVisualTheme from "./pages/AdminVisualTheme";
 import Conteudos from "./pages/Conteudos";
 import ConteudoDetalhe from "./pages/ConteudoDetalhe";
 import SitemapProxy from "./pages/SitemapProxy";
@@ -49,6 +50,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminRoute } from "./components/auth/AdminRoute";
 import { PlanRestrictionGuard } from "./components/auth/PlanRestrictionGuard";
 import ThemeProvider from "./components/theme/ThemeProvider";
+import { VisualThemeProvider } from "./contexts/VisualThemeContext";
 import { BuildMonitor } from "./components/shared/BuildMonitor";
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
@@ -109,6 +111,7 @@ function App() {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
+          <VisualThemeProvider>
           <AuthProvider>
             <ConfigurationProvider>
               <WorkflowCacheProvider>
@@ -225,6 +228,11 @@ function App() {
                               <AdminConteudoEditar />
                             </AdminRoute>
                           } />
+                          <Route path="admin/visual-theme" element={
+                            <AdminRoute>
+                              <AdminVisualTheme />
+                            </AdminRoute>
+                          } />
                           <Route path="admin/planos" element={
                             <AdminRoute>
                               <AdminPlanos />
@@ -244,6 +252,7 @@ function App() {
               </WorkflowCacheProvider>
             </ConfigurationProvider>
           </AuthProvider>
+          </VisualThemeProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </BrowserRouter>
