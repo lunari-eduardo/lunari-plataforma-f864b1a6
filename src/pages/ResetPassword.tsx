@@ -90,7 +90,7 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-lunar-bg">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[#CD7F5E]" />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-[hsl(var(--primary))]" />
           <p className="text-lunar-textSecondary">Verificando link...</p>
         </div>
       </div>
@@ -115,7 +115,7 @@ export default function ResetPassword() {
             backgroundPosition: 'center'
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary))]/60 via-[hsl(var(--primary-glow))]/50 to-[hsl(var(--primary))]/60" />
           
           <Card className="relative z-10 w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 shadow-2xl">
             <CardContent className="p-6 md:p-8 text-center">
@@ -127,7 +127,7 @@ export default function ResetPassword() {
               </p>
               <Button
                 onClick={() => navigate('/auth')}
-                className="bg-[#CD7F5E] hover:bg-[#B86F4E] text-white"
+                className="bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-white"
               >
                 Voltar ao login
               </Button>
@@ -154,7 +154,7 @@ export default function ResetPassword() {
           backgroundPosition: 'center'
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary))]/60 via-[hsl(var(--primary-glow))]/50 to-[hsl(var(--primary))]/60" />
         
         <Card className="relative z-10 w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 shadow-2xl">
           <CardContent className="p-6 md:p-8">
@@ -225,7 +225,7 @@ export default function ResetPassword() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-white font-medium"
+                    className="w-full h-11 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-white font-medium"
                   >
                     {isLoading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />

@@ -56,7 +56,7 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
         <Button
           onClick={onBack}
           variant="ghost"
-          className="text-[#CD7F5E] hover:text-[#CD7F5E]/80 hover:bg-card/10"
+          className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80 hover:bg-card/10"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar ao login
@@ -104,7 +104,7 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-primary-foreground font-medium"
+          className="w-full h-11 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-primary-foreground font-medium"
         >
           {isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />

@@ -92,7 +92,7 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-sm text-[#CD7F5E] hover:underline"
+          className="text-sm text-[hsl(var(--primary))] hover:underline"
         >
           Esqueci minha senha
         </button>
@@ -101,7 +101,7 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
       <Button
         type="submit"
         disabled={isLoading}
-        className="w-full h-11 bg-[#CD7F5E] hover:bg-[#B86F4E] text-primary-foreground font-medium"
+        className="w-full h-11 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-primary-foreground font-medium"
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
