@@ -228,6 +228,11 @@ function App() {
                               <AdminConteudoEditar />
                             </AdminRoute>
                           } />
+                          <Route path="admin/visual-theme" element={
+                            <AdminRoute>
+                              <AdminVisualTheme />
+                            </AdminRoute>
+                          } />
                           <Route path="admin/planos" element={
                             <AdminRoute>
                               <AdminPlanos />
@@ -247,6 +252,7 @@ function App() {
               </WorkflowCacheProvider>
             </ConfigurationProvider>
           </AuthProvider>
+          </VisualThemeProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </BrowserRouter>
