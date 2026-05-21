@@ -1,108 +1,110 @@
+# Refinamento Visual — Charts, Fundo e Hover
+
 ## Diagnóstico
 
-O erro persistente continua apontando para `.toFixed()` durante o render do Workflow. A correção anterior protegeu parte do fluxo antigo (`useWorkflowRealtime.convertToSessionData`), mas a página atual usa principalmente:
+Após inspeção de `src/index.css`, `src/lib/visualTheme.ts` e dos componentes de gráficos/dashboard, identifiquei 3 problemas concretos:
 
-- `src/pages/Workflow.tsx`
-- `src/hooks/useWorkflowPackageData.ts`
-- `src/contexts/WorkflowCacheContext.tsx`
-- componentes internos de `src/components/workflow/*`
+### 1. Gráficos ignoram o preset de brand
+As variáveis `--chart-2..--chart-10` em `src/index.css` (linhas 97‑105) estão fixadas em hues terracota (`16 55% 40%`, `14 52% 33%`, `24 35% 59%`...). Quando o usuário troca o preset para "Neutro Mono", "Midnight Indigo", etc., apenas `--chart-1` muda (porque deriva de `--brand-h/s/l`); todos os demais continuam terracota — exatamente o que aparece nas screenshots de Finanças e Análise de Vendas (gráficos com barras laranja/bege mesmo após escolher Neutro Mono).
 
-O ponto mais provável de crash agora é `useWorkflowPackageData.ts`, especialmente:
+Além disso, `GraficosFinanceiros.tsx` ainda tem 2 cores hardcoded:
+- L64: `fill="hsl(39, 50%, 70%)"` (barra "Lucro")
+- L127: `fill="#8884d8"` (pie chart fallback)
 
-```ts
-packageData.packageFotoExtraValue.toFixed(2)
+### 2. Fundo bege fixo (light) / marrom (dark)
+`--surface-0..--surface-4` no light usam hue 30 (warm/bege) e no dark hue 20 (warm marrom). Não há controle de temperatura no Visual Theme Studio — `surfaceHue/surfaceSaturation` existem em `visualTheme.ts` mas não são aplicados em `applyTheme()` nem refletidos no CSS.
+
+### 3. Hover invertido
+O padrão atual em `DashboardKpiCards.tsx` e diversos cards usa `bg-card/40` (semi-transparente sempre) + `hover:shadow-md`. Já as primitives `.glass-1/2/3` no `index.css` aumentam alpha no hover (vão de leve→médio→pesado), mas KPIs/cards customizados não usam essas classes — ficam etéreos sempre e "somem" visualmente no hover por contraste insuficiente. O usuário quer: **default mais translúcido / hover mais sólido**, aplicado de forma consistente.
+
+---
+
+## Plano
+
+### Fase A — Charts derivados do brand (5 min, zero risco)
+
+Reescrever `--chart-2..--chart-10` em `src/index.css` para derivarem matematicamente de `--brand-h` (mesma matiz, variando saturação e luminosidade). Resultado: paleta de 10 tons sempre coerente com o preset ativo.
+
+```css
+--chart-1:  var(--brand-h) var(--brand-s) var(--brand-l);
+--chart-2:  var(--brand-h) calc(var(--brand-s) - 10%) calc(var(--brand-l) - 8%);
+--chart-3:  var(--brand-h) calc(var(--brand-s) - 20%) calc(var(--brand-l) + 12%);
+--chart-4:  calc(var(--brand-h) + 20) var(--brand-s) calc(var(--brand-l) + 6%);
+... (escala harmônica até --chart-10)
 ```
 
-Mesmo que os valores da sessão tenham sido normalizados, `packageData.packageFotoExtraValue` vem de `session.regras_congeladas.pacote.valorFotoExtra`. Se esse campo vier `undefined`, `null`, string inválida ou objeto legado, o render quebra antes do `ErrorBoundary` conseguir isolar corretamente a experiência.
+Substituir também as 2 cores hardcoded em `GraficosFinanceiros.tsx` por `hsl(var(--chart-2))` e `hsl(var(--chart-3))`.
 
-Também há chamadas ainda frágeis em:
+Ajustar dark equivalente (linhas 253‑262) com a mesma lógica derivada.
 
-- `Workflow.tsx`: `pacote.valor_base.toFixed`, `produto.preco_venda.toFixed`, `formatCurrency(value.toFixed)` e `change.toFixed`
-- `WorkflowPackageCombobox.tsx`: `pkg.valor.toFixed`
-- `QuickSessionAdd.tsx`: `value.toFixed`
-- `SessionChangeLog.tsx`: `payment.valor.toFixed`, `entry.valor.toFixed`
-- `RegrasCongeladasIndicator.tsx`: `regras.valorFixo?.toFixed` retorna número formatado com ponto antes do fallback
-- `ReconcileExtrasModal.tsx`: `n.toFixed`
+### Fase B — Temperatura de fundo configurável
 
-## Plano de correção
+1. **`src/index.css`** — refatorar surfaces para usarem variáveis de hue/saturação dinâmicas:
+   ```css
+   --surface-hue: 30;
+   --surface-sat: 30%;
+   --surface-0: var(--surface-hue) var(--surface-sat) 96%;
+   --surface-1: var(--surface-hue) calc(var(--surface-sat) - 10%) 98%;
+   ... (etc.)
+   ```
+   E versão dark equivalente com luminosidades baixas.
 
-### 1. Blindar a conversão central do Workflow
-Editar `src/hooks/useWorkflowPackageData.ts` para criar helpers locais:
+2. **`src/lib/visualTheme.ts` → `applyTheme()`** — passar a injetar `--surface-hue` e `--surface-sat` (campos já existem na config, só não eram aplicados).
 
-- `toSafeNumber(value, fallback = 0)`
-- `formatBRL(value, fallback = 0)`
-- `safeArray(value)`
+3. **`src/pages/AdminVisualTheme.tsx`** — adicionar na aba **"Modo & Forma"** dois sliders novos:
+   - **Temperatura do fundo** (hue 0‑360) — quente (laranja/bege) ↔ frio (azul/cinza)
+   - **Saturação do fundo** (0‑40%) — neutro ↔ tingido
+   
+   E atualizar cada preset em `THEME_PRESETS` com valores apropriados (ex.: Neutro Mono já tem `surfaceHue: 220, surfaceSaturation: 6`, mas não estava sendo aplicado).
 
-Aplicar esses helpers em todos os valores monetários e quantidades antes de renderizar `SessionData`.
+### Fase C — Inverter padrão de hover (glass → solid)
 
-Também envolver `convertSessionToData(session)` em `try/catch`, retornando uma sessão mínima segura se um registro específico estiver corrompido. Assim, uma única sessão ruim nunca derruba a página inteira.
+Princípio: cards/painéis ficam **mais translúcidos em repouso** e **se solidificam no hover**, dando feedback de "foco" em vez de desaparecer.
 
-### 2. Higienizar dados antes de salvar/ler no cache
-Editar `src/contexts/WorkflowCacheContext.tsx` para normalizar sessões vindas de:
+1. **`src/index.css`** — reescrever `.glass-1/2/3:hover` para subir o alpha (já fazem isso parcialmente; reforçar contraste). Adicionar nova utility:
+   ```css
+   .interactive-surface {
+     background: hsl(var(--surface-2) / 0.55);
+     backdrop-filter: blur(var(--glass-blur-md));
+     border: 1px solid hsl(var(--border-subtle));
+     transition: background .2s ease, box-shadow .2s ease, border-color .2s ease;
+   }
+   .interactive-surface:hover {
+     background: hsl(var(--surface-2));      /* sólido */
+     border-color: hsl(var(--border-default));
+     box-shadow: var(--shadow-3);
+   }
+   ```
 
-- Supabase
-- IndexedDB
-- realtime
-- eventos customizados
+2. **Sweep dirigido (não global)** — substituir o padrão `bg-card/40 dark:bg-card/5 backdrop-blur-md ... hover:shadow-md` por `interactive-surface` nos arquivos onde esse padrão aparece. Mapeado:
+   - `src/components/financas/dashboard/DashboardKpiCards.tsx` (6 cards)
+   - `src/components/dashboard/KPIGroupCard.tsx`
+   - `src/components/dashboard/ReceitaPrevistaCard.tsx`
+   - `src/components/dashboard/ProductionRemindersCard.tsx`
+   - `src/components/dashboard/FinancialRemindersCard.tsx`
+   - `src/components/dashboard/DailyHero.tsx`
+   - cards equivalentes em `src/components/analise-vendas/` (SalesMetricsCards, OriginHighlightCard, SalesGoalsCard)
+   
+   Não tocar em popover/dialog/sidebar — esses já têm comportamento próprio correto.
 
-Criar `normalizeWorkflowSession(session)` e aplicar antes de `setMonthData`/`mergeUpdate`. A normalização garantirá defaults para:
+3. **Documentar** no `src/styles/lunari-design-rules.md` o novo padrão "interactive-surface" como default para cards navegáveis.
 
-- `valor_total`, `valor_pago`, `valor_base_pacote`
-- `valor_foto_extra`, `valor_total_foto_extra`
-- `valor_adicional`, `desconto`
-- `qtd_fotos_extra`
-- `produtos_incluidos`
-- `regras_congeladas`
-- `clientes`
+---
 
-Isso previne que cache antigo ou payload parcial de realtime continue reintroduzindo valores quebrados.
+## Validação (após implementação)
 
-### 3. Corrigir todas as chamadas frágeis de `.toFixed()` no Workflow
-Editar os arquivos do escopo Workflow para trocar chamadas diretas por `Number(value) || 0` antes de formatar:
+1. Abrir `/app/admin/visual-theme`, aplicar preset **Neutro Mono** → conferir que gráficos de Finanças e Análise de Vendas mudam de terracota para tons azul/cinza.
+2. Mexer no slider **Temperatura do fundo** → fundo deve transicionar de bege quente para neutro/frio em tempo real.
+3. Passar mouse pelos cards do dashboard financeiro → devem ficar **mais sólidos** (não mais transparentes), com leve elevação de sombra.
+4. Conferir dark mode em todos os três casos.
 
-- `src/pages/Workflow.tsx`
-- `src/components/workflow/WorkflowPackageCombobox.tsx`
-- `src/components/workflow/QuickSessionAdd.tsx`
-- `src/components/workflow/SessionChangeLog.tsx`
-- `src/components/workflow/RegrasCongeladasIndicator.tsx`
-- `src/components/workflow/ReconcileExtrasModal.tsx`
+---
 
-Não mexer em telas fora do Workflow para evitar escopo desnecessário.
+## Escopo explícito do que NÃO será feito
 
-### 4. Ajustar o ErrorBoundary para pegar o erro certo
-Hoje o `ErrorBoundary` está dentro do `return` de `Workflow.tsx`; erros que acontecem antes do `return` principal, em `useMemo`, continuam podendo deixar a tela branca.
+- Não tocaremos em lógica de negócio, queries ou hooks.
+- Não migraremos persistência para Supabase (continua em localStorage por agora — já documentado).
+- Não removeremos classes legadas (`lunari-*`, `card-lunar`) — apenas a nova utility convive.
+- Hover de botões, inputs, sidebar e modais permanecem como estão (já estão corretos).
 
-Solução: transformar a página em:
-
-```tsx
-export default function Workflow() {
-  return (
-    <ErrorBoundary label="Workflow">
-      <WorkflowContent />
-    </ErrorBoundary>
-  );
-}
-```
-
-Mover a lógica atual para `WorkflowContent`. Assim o boundary envolve também os hooks/memos internos do conteúdo.
-
-### 5. Adicionar fallback de recuperação de cache
-No fallback do `ErrorBoundary` do Workflow, oferecer ação de recuperação real:
-
-- limpar cache local do Workflow/IndexedDB via `forceRefresh` quando possível
-- ou recarregar a página se o contexto ainda não estiver disponível
-
-Objetivo: se o usuário estiver com cache corrompido no navegador, ele consegue se recuperar sem precisar suporte manual.
-
-### 6. Verificação
-Após implementar:
-
-- navegar para `/app/workflow`
-- verificar console sem `Cannot read properties of undefined (reading 'toFixed')`
-- verificar que a página não fica preta/vazia
-- confirmar que uma sessão com dados financeiros nulos/corrompidos aparece com `R$ 0,00`, não quebra o render
-- confirmar que cache/realtime não reintroduz dados inválidos
-
-## Ajuste manual recomendado para produção
-
-Se ainda houver usuários presos com cache antigo depois do deploy, orientar a limpar cache do app/PWA uma única vez. A correção acima reduz a necessidade disso porque o próprio app passará a normalizar cache legado ao carregar.
+Aprove para eu executar as 3 fases em sequência (A → B → C) sem pausas.
