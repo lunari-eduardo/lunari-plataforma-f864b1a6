@@ -397,6 +397,30 @@
     box-shadow: 0 8px 24px -12px hsl(var(--brand-gradient-end) / 0.35);
   }
 
+  /* ── Interactive surface — translúcido em repouso, sólido no hover ─── */
+  .interactive-surface {
+    @apply rounded-xl border;
+    background: hsl(var(--surface-2) / 0.55);
+    backdrop-filter: blur(var(--glass-blur-md));
+    -webkit-backdrop-filter: blur(var(--glass-blur-md));
+    border-color: hsl(var(--border-subtle));
+    box-shadow: var(--shadow-1);
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .interactive-surface:hover {
+    background: hsl(var(--surface-2));
+    border-color: hsl(var(--border-default));
+    box-shadow: var(--shadow-3);
+  }
+  .dark .interactive-surface {
+    background: hsl(var(--surface-2) / 0.40);
+    border-color: hsl(var(--border-subtle));
+  }
+  .dark .interactive-surface:hover {
+    background: hsl(var(--surface-2));
+    border-color: hsl(var(--border-default));
+  }
+
   /* ── Buttons / inputs / nav / table (legacy, tokenized) ─── */
   .btn-lunar {
     @apply rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ease-out;
