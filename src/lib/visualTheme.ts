@@ -150,6 +150,9 @@ export function applyTheme(theme: VisualThemeConfig): void {
   r.setProperty('--glass-blur-md', `${theme.glassBlurMd}px`);
   r.setProperty('--glass-blur-lg', `${theme.glassBlurLg}px`);
 
+  r.setProperty('--surface-hue', String(theme.surfaceHue));
+  r.setProperty('--surface-sat', `${theme.surfaceSaturation}%`);
+
   r.setProperty('--radius', `${theme.radius}px`);
 
   // Dark / light mode

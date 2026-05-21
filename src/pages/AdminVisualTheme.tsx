@@ -215,6 +215,15 @@ export default function AdminVisualTheme() {
                   <Slider value={[theme.radius]} min={0} max={24} step={1}
                     onValueChange={([v]) => update({ radius: v })} />
                 </Row>
+
+                <Row label="Temperatura do fundo (hue)" value={theme.surfaceHue}>
+                  <Slider value={[theme.surfaceHue]} min={0} max={360} step={1}
+                    onValueChange={([v]) => update({ surfaceHue: v })} />
+                </Row>
+                <Row label="Saturação do fundo" value={`${theme.surfaceSaturation}%`}>
+                  <Slider value={[theme.surfaceSaturation]} min={0} max={50} step={1}
+                    onValueChange={([v]) => update({ surfaceSaturation: v })} />
+                </Row>
               </Card>
 
               <p className="text-xs text-muted-foreground">
