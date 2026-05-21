@@ -36,13 +36,15 @@
     --brand-hover-l: 38%;
     --brand-glow-l: 60%;
 
-    /* ── 2. SURFACE SCALE (light) ─────────────────────────── */
-    --surface-0: 30 40% 96%;   /* app background */
-    --surface-1: 30 30% 98%;   /* base panels / sidebar */
-    --surface-2: 0 0% 100%;    /* elevated cards / popovers */
-    --surface-3: 30 20% 92%;   /* hover / selected */
-    --surface-4: 30 15% 90%;   /* deep wells / muted bg */
-    --surface-5: 20 12% 10%;   /* inverse / dark on light */
+    /* ── 2. SURFACE SCALE (light) — hue/sat configurable ─── */
+    --surface-hue: 30;
+    --surface-sat: 30%;
+    --surface-0: var(--surface-hue) var(--surface-sat) 96%;
+    --surface-1: var(--surface-hue) calc(var(--surface-sat) * 0.7) 98%;
+    --surface-2: 0 0% 100%;
+    --surface-3: var(--surface-hue) calc(var(--surface-sat) * 0.6) 92%;
+    --surface-4: var(--surface-hue) calc(var(--surface-sat) * 0.5) 90%;
+    --surface-5: 20 12% 10%;
 
     /* ── 3. TEXT ──────────────────────────────────────────── */
     --text-primary:   20 20% 12%;
@@ -92,17 +94,17 @@
     --info:    210 90% 56%;
     --info-foreground: 0 0% 100%;
 
-    /* ── 10. CHARTS (10 slots) ───────────────────────────── */
-    --chart-1: var(--brand-h) var(--brand-s) var(--brand-l);
-    --chart-2: 16 55% 40%;
-    --chart-3: 14 52% 33%;
-    --chart-4: 17 43% 50%;
-    --chart-5: 24 35% 59%;
-    --chart-6: 18 48% 41%;
-    --chart-7: 22 45% 65%;
-    --chart-8: 28 38% 78%;
-    --chart-9: 19 23% 74%;
-    --chart-10: 30 40% 88%;
+    /* ── 10. CHARTS (10 slots, all derived from brand) ──── */
+    --chart-1:  var(--brand-h) var(--brand-s) var(--brand-l);
+    --chart-2:  var(--brand-h) calc(var(--brand-s) * 0.85) calc(var(--brand-l) - 10%);
+    --chart-3:  var(--brand-h) calc(var(--brand-s) * 0.70) calc(var(--brand-l) + 15%);
+    --chart-4:  calc(var(--brand-h) + 18) calc(var(--brand-s) * 0.80) calc(var(--brand-l) + 8%);
+    --chart-5:  calc(var(--brand-h) - 12) calc(var(--brand-s) * 0.60) calc(var(--brand-l) + 20%);
+    --chart-6:  var(--brand-h) calc(var(--brand-s) * 0.55) calc(var(--brand-l) - 5%);
+    --chart-7:  calc(var(--brand-h) + 30) calc(var(--brand-s) * 0.50) calc(var(--brand-l) + 25%);
+    --chart-8:  calc(var(--brand-h) - 20) calc(var(--brand-s) * 0.45) calc(var(--brand-l) + 30%);
+    --chart-9:  var(--brand-h) calc(var(--brand-s) * 0.30) calc(var(--brand-l) + 35%);
+    --chart-10: var(--brand-h) calc(var(--brand-s) * 0.20) calc(var(--brand-l) + 40%);
 
     /* ── 11. SHADCN ALIASES ──────────────────────────────── */
     --background: var(--surface-0);
@@ -204,12 +206,12 @@
   }
 
   .dark {
-    /* surfaces dark */
-    --surface-0: 20 15% 6%;
-    --surface-1: 20 12% 10%;
-    --surface-2: 20 11% 13%;
-    --surface-3: 20 10% 17%;
-    --surface-4: 20 10% 15%;
+    /* surfaces dark — também derivadas de surface-hue/sat */
+    --surface-0: var(--surface-hue) calc(var(--surface-sat) * 0.5) 6%;
+    --surface-1: var(--surface-hue) calc(var(--surface-sat) * 0.4) 10%;
+    --surface-2: var(--surface-hue) calc(var(--surface-sat) * 0.35) 13%;
+    --surface-3: var(--surface-hue) calc(var(--surface-sat) * 0.30) 17%;
+    --surface-4: var(--surface-hue) calc(var(--surface-sat) * 0.30) 15%;
     --surface-5: 30 15% 95%;
 
     --text-primary:   30 15% 95%;
@@ -249,17 +251,17 @@
     --brand: 31 97% 72%;
     --brand-foreground: 27 96% 61%;
 
-    /* Chart dark adjustments */
-    --chart-1: 18 45% 50%;
-    --chart-2: 16 40% 55%;
-    --chart-3: 15 30% 45%;
-    --chart-4: 17 35% 60%;
-    --chart-5: 16 38% 58%;
-    --chart-6: 18 40% 62%;
-    --chart-7: 22 38% 65%;
-    --chart-8: 28 30% 70%;
-    --chart-9: 19 15% 80%;
-    --chart-10: 30 20% 75%;
+    /* Charts dark — também derivados, com lightness elevado p/ contraste */
+    --chart-1:  var(--brand-h) var(--brand-s) calc(var(--brand-l) + 8%);
+    --chart-2:  var(--brand-h) calc(var(--brand-s) * 0.85) calc(var(--brand-l) + 18%);
+    --chart-3:  var(--brand-h) calc(var(--brand-s) * 0.70) calc(var(--brand-l) - 5%);
+    --chart-4:  calc(var(--brand-h) + 18) calc(var(--brand-s) * 0.80) calc(var(--brand-l) + 20%);
+    --chart-5:  calc(var(--brand-h) - 12) calc(var(--brand-s) * 0.60) calc(var(--brand-l) + 25%);
+    --chart-6:  var(--brand-h) calc(var(--brand-s) * 0.55) calc(var(--brand-l) + 12%);
+    --chart-7:  calc(var(--brand-h) + 30) calc(var(--brand-s) * 0.50) calc(var(--brand-l) + 30%);
+    --chart-8:  calc(var(--brand-h) - 20) calc(var(--brand-s) * 0.45) calc(var(--brand-l) + 35%);
+    --chart-9:  var(--brand-h) calc(var(--brand-s) * 0.30) calc(var(--brand-l) + 40%);
+    --chart-10: var(--brand-h) calc(var(--brand-s) * 0.20) calc(var(--brand-l) + 45%);
 
     /* sidebar dark */
     --sidebar-bg: 20 12% 9%;
