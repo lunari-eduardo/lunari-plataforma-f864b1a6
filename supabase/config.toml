@@ -125,3 +125,7 @@ verify_jwt = false
 
 [functions.gestao-migrate-supabase-to-r2]
 verify_jwt = false
+
+[functions.get-studio-theme]
+verify_jwt = false
+
