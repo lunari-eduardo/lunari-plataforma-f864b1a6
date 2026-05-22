@@ -56,6 +56,7 @@ export default function Header() {
   const { accessState } = useAccessControl();
   const { getProfileOrDefault } = useUserProfile();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   const currentProfile = getProfileOrDefault();
   const currentTitle = getPageTitleFromPath(location.pathname);
@@ -159,7 +160,15 @@ export default function Header() {
                 </>
               )}
               <DropdownMenuSeparator className="bg-border/30" />
-              <DropdownMenuItem 
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={() => setAppearanceOpen(true)}
+              >
+                <Palette className="mr-2 h-3 w-3" />
+                <span>Aparência</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-border/30" />
+              <DropdownMenuItem
                 className="text-xs cursor-pointer"
                 onClick={handleSignOut}
               >
@@ -167,6 +176,7 @@ export default function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <AppearanceModal open={appearanceOpen} onOpenChange={setAppearanceOpen} />
         </div>
       </header>
     </>
