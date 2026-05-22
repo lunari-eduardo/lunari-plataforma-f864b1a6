@@ -7,13 +7,15 @@ import {
   saveTheme,
   THEME_PRESETS,
   VisualThemeConfig,
+  ThemePresetId,
+  VisualThemeMode,
 } from '@/lib/visualTheme';
+import { useRemoteThemeSync } from '@/hooks/useThemePreference';
 
 interface VisualThemeContextValue {
   theme: VisualThemeConfig;
-  update: (patch: Partial<VisualThemeConfig>) => void;
-  setTheme: (next: VisualThemeConfig) => void;
-  applyPreset: (presetId: string) => void;
+  setPreset: (id: ThemePresetId) => void;
+  setMode: (mode: VisualThemeMode) => void;
   reset: () => void;
   presets: typeof THEME_PRESETS;
 }
@@ -23,12 +25,13 @@ const VisualThemeContext = createContext<VisualThemeContextValue | null>(null);
 export function VisualThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<VisualThemeConfig>(() => loadTheme());
 
-  // Aplica ao montar e sempre que mudar
+  // Aplica ao montar e a cada mudança
   useEffect(() => {
     applyTheme(theme);
+    saveTheme(theme);
   }, [theme]);
 
-  // Acompanha mudança de prefers-color-scheme quando modo === system
+  // Acompanha prefers-color-scheme quando modo === system
   useEffect(() => {
     if (theme.mode !== 'system') return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
@@ -37,27 +40,15 @@ export function VisualThemeProvider({ children }: { children: React.ReactNode })
     return () => mq.removeEventListener('change', handler);
   }, [theme]);
 
-  const setTheme = useCallback((next: VisualThemeConfig) => {
-    setThemeState(next);
-    saveTheme(next);
+  // Sincroniza com Supabase (quando logado)
+  useRemoteThemeSync(theme, setThemeState);
+
+  const setPreset = useCallback((id: ThemePresetId) => {
+    setThemeState((prev) => ({ ...prev, presetId: id }));
   }, []);
 
-  const update = useCallback((patch: Partial<VisualThemeConfig>) => {
-    setThemeState((prev) => {
-      const next = { ...prev, ...patch };
-      saveTheme(next);
-      return next;
-    });
-  }, []);
-
-  const applyPreset = useCallback((presetId: string) => {
-    const preset = THEME_PRESETS.find((p) => p.id === presetId);
-    if (!preset) return;
-    setThemeState((prev) => {
-      const next = { ...prev, ...preset.config };
-      saveTheme(next);
-      return next;
-    });
+  const setMode = useCallback((mode: VisualThemeMode) => {
+    setThemeState((prev) => ({ ...prev, mode }));
   }, []);
 
   const reset = useCallback(() => {
@@ -66,8 +57,8 @@ export function VisualThemeProvider({ children }: { children: React.ReactNode })
   }, []);
 
   const value = useMemo<VisualThemeContextValue>(
-    () => ({ theme, update, setTheme, applyPreset, reset, presets: THEME_PRESETS }),
-    [theme, update, setTheme, applyPreset, reset],
+    () => ({ theme, setPreset, setMode, reset, presets: THEME_PRESETS }),
+    [theme, setPreset, setMode, reset],
   );
 
   return <VisualThemeContext.Provider value={value}>{children}</VisualThemeContext.Provider>;
