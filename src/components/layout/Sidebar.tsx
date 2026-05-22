@@ -136,7 +136,7 @@ export default function Sidebar() {
     { to: "/app/feed-test", icon: <FlaskConical size={14} />, label: "Feed Test", isPro: true },
     { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" },
     { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" },
-    ...(accessState.isAdmin ? [{ to: "/app/admin/visual-theme", icon: <Palette size={14} />, label: "Visual Theme" }] : []),
+    
   ];
 
   const isStarterPlan = accessState.planCode?.startsWith('starter') &&
