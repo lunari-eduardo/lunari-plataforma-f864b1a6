@@ -1,114 +1,56 @@
-# Painel de Tema do Usuário — Lunari
+# Refinamento do Workflow Card
 
-Transformar o atual "Visual Theme Studio" (admin, técnico) em um painel **único, premium e simples** para o usuário final escolher a cor do seu sistema, com persistência multi-dispositivo.
+## Problemas identificados
 
-## 1. Objetivos
+1. **Grid desktop não aproveita a largura disponível** — colunas usam larguras fixas (`160px 160px 130px 120px 70px 70px 80px auto`) que deixam o card "amontoado" à esquerda mesmo em telas largas. A coluna de Pacote precisa respirar e ficar maior.
+2. **Desalinhamento quando não há pacote** — o `WorkflowPackageCombobox` tem `h-7`, mas o ícone do contador de Produtos (`h-7 px-3`), Status (`h-8`) e o número de Fotos Extras (texto puro) começam em alturas diferentes, criando o efeito visual de "colunas amontoadas/desalinhadas".
+3. **Selecionar "Nenhum pacote" não limpa o pacote** (bug crítico). Em `useWorkflowRealtime.ts` linha 298, o handler de `case 'pacote'` faz `if (typeof value === 'string' && value)` — quando o usuário escolhe "Nenhum pacote", o valor enviado é string vazia, então o `if` é pulado e nada é persistido. Além disso, mesmo se persistisse, `WorkflowCardCollapsed` exibe `regras_congeladas?.pacote?.nome || session.pacote`, então o nome do pacote antigo continuaria aparecendo.
+4. **Mobile não usa a mesma estrutura** — hoje o desktop tem grid de 11 colunas e o mobile cai num layout vertical diferente. Pedido é unificar: usar a mesma estrutura horizontal com scroll.
 
-- Cada usuário escolhe **1 cor de tema** entre 7 opções curadas.
-- Modo claro/escuro/sistema continua disponível.
-- Brilho/saturação ajustados **automaticamente** para garantir contraste WCAG AA em ambos os modos — sem sliders manuais expostos.
-- Preferência sincronizada via Supabase entre todos os dispositivos do mesmo usuário.
-- Acesso movido para o **menu do avatar** (Header), removido da Sidebar.
+## Mudanças
 
-## 2. Cores oficiais (presets)
+### 1. `src/hooks/useWorkflowRealtime.ts` — corrigir clear do pacote
+- No `case 'pacote'`, tratar explicitamente o caso `value === ''` (ou `null`):
+  - Persistir `pacote = ''`, `valor_base_pacote = 0`, `valor_foto_extra = 0`, `categoria = ''`.
+  - Zerar `regras_congeladas` para `{ pacote: null, precificacaoFotoExtra: null, produtos: [] }` (não setar NULL — o guard da Fase 3 bloqueia NULL, mas objeto vazio passa).
+  - Filtrar `produtos_incluidos` mantendo só produtos `tipo === 'manual'`.
+  - Disparar recálculo de `valor_total` igual ao fluxo normal.
 
-| ID | Nome | Hex base |
-|---|---|---|
-| `lunari` | Lunari (padrão) | `#893806` (terracota atual) |
-| `sage` | Sage | `#8eb882` |
-| `ocean` | Ocean | `#82b5b8` |
-| `lavender` | Lavender | `#a282b8` |
-| `rose` | Rose | `#b88299` |
-| `coral` | Coral | `#c27e7e` |
-| `mono` | Preto & Branco | `#1a1a1a` |
+### 2. `src/components/workflow/WorkflowCardCollapsed.tsx` — grid e alinhamento
+- **Grid desktop**: trocar template fixo por proporcional usando `fr`:
+  ```
+  grid-cols-[28px_44px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(200px,1.8fr)_minmax(120px,1fr)_72px_80px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]
+  ```
+  Pacote ganha o maior `fr` (1.8). Aumentar `gap-3` → `gap-4` para "desamontoar".
+- **Alinhamento vertical**: padronizar todas as zonas com a mesma altura de campo (`h-8`) e mesma estrutura `flex flex-col gap-1` com label `text-[10px] uppercase` no topo. Hoje algumas zonas (Data, Nome) usam `pt-1` ad-hoc — substituir por wrappers consistentes.
+- **Fotos Extras / Produtos / Pendente / Galerias**: alinhar números/badges em uma baseline única (centro vertical do slot de 32px), usando `min-h-8 flex items-center justify-{start|center|end}`.
+- **Pacote vazio**: quando `displayPackageName` for vazio, mostrar placeholder `"Selecione pacote"` em itálico/muted para não colapsar a célula.
+- **Contador de Produtos = 0**: estilizar o botão com `min-w-[56px]` para igualar largura do badge quando há pacote/produto, evitando o "encolhimento" mostrado no print.
 
-Cada preset gera automaticamente:
-- `--brand-h/s/l` (cor principal)
-- `--brand-hover-l` (−7% no light, +7% no dark)
-- `--brand-glow-l` (+15%)
-- `--primary-foreground` (branco ou preto conforme luminância da base, garantindo contraste ≥ 4.5:1)
-- Em **dark mode**: a lightness é elevada (+10–15%) automaticamente para manter legibilidade de textos/ícones tintados em superfícies escuras.
-- `mono` recebe tratamento especial: saturação 0, brilho que inverte entre modos.
+### 3. `src/components/workflow/WorkflowCardCollapsed.tsx` — clear visual imediato
+- Alterar `displayPackageName` para: se `session.pacote === ''` (clear explícito), ignorar `regras_congeladas?.pacote?.nome` e mostrar vazio. Garantir que após o clear o combobox volte ao estado "Selecione".
+- No handler `onValueChange` do combobox (linha 413), quando `packageData.id === '' && packageData.nome === ''`, chamar `onFieldUpdate(session.id, 'pacote', '')` explicitamente.
 
-A lógica vive em `src/lib/visualTheme.ts` (função `resolvePresetTokens(presetId, mode)`), eliminando a necessidade do usuário tocar em sliders.
+### 4. Mobile — usar mesma estrutura horizontal
+- Hoje o `WorkflowCard` envolve só `WorkflowCardCollapsed`. Em mobile o grid vira ilegível.
+- Solução: manter o **mesmo grid desktop**, envolvido por um wrapper `overflow-x-auto` em telas `<md`, com `min-w-[1100px]` no grid interno. Resultado: rolagem horizontal no mobile preservando a mesma leitura de colunas pedida pelo usuário.
+- Adicionar sombra/indicador sutil de "rolável" nas bordas em mobile.
 
-## 3. Tabela Supabase
+### 5. Pequenos polimentos
+- `ColoredStatusBadge` (Status "Sem status") — manter altura igual a badge ativo para não pular.
+- Coluna "Pendente" — alinhar valor `R$ 0,00` à direita com `tabular-nums` para que valores diferentes não desloquem.
 
-Migração nova:
+## Detalhes técnicos
 
-```text
-create table public.user_theme_preferences (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  preset_id text not null default 'lunari',
-  mode text not null default 'system',  -- 'light' | 'dark' | 'system'
-  updated_at timestamptz not null default now()
-);
-```
+- Arquivos editados:
+  - `src/hooks/useWorkflowRealtime.ts` (case `'pacote'` com branch de clear)
+  - `src/components/workflow/WorkflowCardCollapsed.tsx` (grid, alinhamento, wrapper scroll mobile, displayPackageName)
+  - `src/components/workflow/WorkflowCard.tsx` (wrapper `overflow-x-auto` responsivo)
+  - `src/components/workflow/WorkflowPackageCombobox.tsx` (garantir que `handleClearPackage` envie `id: ''` e `nome: ''`, já está OK — só validar)
 
-- RLS: usuário só lê/escreve a própria linha (`auth.uid() = user_id`).
-- Trigger `update_updated_at_column` para `updated_at`.
-- Upsert no salvar.
+- Sem mudanças de schema/DB. Sem mudanças em `WorkflowCardExpanded` além de eventual ajuste de divisor para casar com novo grid.
 
-## 4. Mudanças de UX
-
-### Remover
-- Item "Visual Theme" da Sidebar (`src/components/layout/Sidebar.tsx`).
-- Sliders de Brand HSL, Hover/Glow Lightness, Glassmorphism alpha/blur, Surface hue/sat, Border radius — todos saem do painel do usuário (a lógica interna permanece e é controlada pelo preset).
-
-### Adicionar no menu do avatar (Header.tsx)
-- Novo item **"Aparência"** com ícone `Palette`, abrindo um **modal** (não rota nova) com:
-  - Grid 2x4 das 7 cores como swatches grandes (com check no selecionado).
-  - Toggle **Claro / Escuro / Sistema** (3 botões segmentados).
-  - Mini preview ao vivo (botão primário, card, badge) dentro do modal.
-  - Botão "Restaurar padrão" (volta para `lunari` + `system`).
-- Salvamento automático ao clicar (sem botão "salvar"), com debounce de 400ms para o upsert no Supabase.
-
-### Rota admin
-- `/app/admin/visual-theme` é **removida**. O arquivo `AdminVisualTheme.tsx` é deletado.
-- (Sem painel admin global nesta fase — cada usuário controla o próprio tema.)
-
-## 5. Arquitetura técnica
-
-```text
-src/
-├── lib/visualTheme.ts         (refatorar: 7 presets + resolvePresetTokens)
-├── contexts/VisualThemeContext.tsx
-│   - carrega de Supabase ao logar (fallback localStorage offline)
-│   - aplica via applyTheme()
-│   - persiste em Supabase via upsert debounced
-├── hooks/useThemePreference.ts (novo: encapsula fetch/upsert)
-└── components/preferences/
-    └── AppearanceModal.tsx    (novo modal aberto pelo Header)
-```
-
-Fluxo:
-1. Login → `VisualThemeProvider` chama `useThemePreference()` → busca `user_theme_preferences` do usuário.
-2. Aplica tokens no `:root` via `applyTheme(resolvePresetTokens(preset, mode))`.
-3. Usuário muda no modal → state local atualiza imediato + upsert debounced no Supabase.
-4. Outras abas/dispositivos: subscription realtime opcional (fase 2) ou refresh ao reabrir.
-
-Garantia de contraste:
-- `resolvePresetTokens` calcula luminância relativa da cor base e decide `primary-foreground` entre `0 0% 100%` e `0 0% 10%`.
-- Em dark mode, eleva `--brand-l` mínimo de 55% e satura levemente para não "sumir" sobre fundos escuros.
-- Surface tokens (`--surface-*`) ficam **fixos** por modo (neutros), independentes do preset, para evitar fundos coloridos demais.
-
-## 6. Migração de dados existentes
-
-- `localStorage` key antiga `lunari:visual-theme:v1` é lida uma vez no primeiro login pós-deploy; se houver `brandH` próximo a um preset, mapeia; caso contrário, default `lunari`. Depois disso, a chave é removida.
-
-## 7. Entregáveis
-
-1. Migração Supabase (`user_theme_preferences` + RLS + trigger).
-2. Refator `src/lib/visualTheme.ts` com os 7 presets e `resolvePresetTokens`.
-3. Hook `useThemePreference` (fetch/upsert/debounce).
-4. Refator `VisualThemeContext` para usar Supabase + fallback localStorage.
-5. Novo `AppearanceModal.tsx` + entrada no `Header.tsx` (ícone Palette, acima de "Sair").
-6. Remoção do link "Visual Theme" da `Sidebar.tsx`.
-7. Deleção de `src/pages/AdminVisualTheme.tsx` e rota correspondente em `App.tsx`.
-8. QA: alternar entre os 7 presets nos dois modos verificando contraste de texto sobre `bg-primary`, badges, botões e cards.
-
-## 8. Fora de escopo (esta fase)
-
-- Painel admin para definir tema padrão global da plataforma.
-- Sincronização realtime entre abas (pode ser adicionada depois sem mudar o contrato).
-- Customização de glassmorphism/blur/radius pelo usuário (permanece controlado pelo design system).
+## Fora de escopo
+- Reescrever `WorkflowTable` (tabela legada) — só o `WorkflowCard`.
+- Mudar lógica financeira de `valor_total` (já recalculado pelo trigger no DB).
+- Adicionar novas colunas.
