@@ -295,7 +295,7 @@ export const useWorkflowRealtime = () => {
         switch (field) {
             case 'pacote':
             // Handle clear (empty string / null) — user picked "Nenhum pacote"
-            if (typeof value === 'string' && value === '' || value === null) {
+            if ((typeof value === 'string' && value === '') || value === null || value === undefined) {
               console.log('🧹 Clearing package selection for session:', id);
               sanitizedUpdates.pacote = '';
               sanitizedUpdates.valor_base_pacote = 0;
