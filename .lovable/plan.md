@@ -1,138 +1,44 @@
+# Atualização dos endpoints InfinitePay Checkout
 
-# Redesign da tela de Login — Lunari Studio
+A InfinitePay desativará as URLs antigas em 01/06/2026. Precisamos trocar o domínio base nos pontos onde o backend chama a API de criação de links.
 
-## Objetivo
-Substituir totalmente a tela atual de login (que herda o tema do usuário) por uma versão **dark fixa**, com novo logotipo, fundo customizado e estética mobile-first idêntica à referência, mantendo toda a lógica de autenticação existente.
+## Auditoria do projeto
 
-## Escopo
-- `src/pages/Auth.tsx` (login + cadastro + esqueci senha)
-- `src/pages/ResetPassword.tsx` (consistência visual)
-- Subcomponentes: `EmailLoginForm`, `EmailSignupForm`, `ForgotPasswordForm` (apenas ajustes de inputs/labels para combinar com o novo visual escuro)
-- Novos assets em `src/assets/auth/`
+Busquei `api.infinitepay.io`, `checkout.infinitepay.io`, `/invoices/public` e `payment_check` em todo o código (`src/` e `supabase/`). Resultado:
 
-Fora do escopo: fluxos de auth, validações, rotas, lógica do Supabase, telas internas do app.
+**Endpoint de criação de link (3 ocorrências — todas em edge functions):**
+- `supabase/functions/infinitepay-create-link/index.ts:21` — `INFINITEPAY_API_URL` (contrato compartilhado Gallery + Gestão)
+- `supabase/functions/gestao-infinitepay-create-link/index.ts:13` — `INFINITEPAY_API_URL` (exclusivo Gestão)
+- `supabase/functions/gallery-create-payment/index.ts:192` — `fetch(...)` inline
 
-## Assets a copiar
-- `user-uploads://background.jpg` → `src/assets/auth/login-background.jpg` (fundo escuro com o "K")
-- `user-uploads://Lunari_Gallery_-_sistema_de_gestão_para_fotógrafos.png` → `src/assets/auth/lunari-studio-logo.png` (logo completo "K + lunari + STUDIO", 250px)
-- Remover o uso de `src/assets/lunari-logo.png` e `src/assets/auth-background.jpg` apenas nestas duas páginas (manter os arquivos no projeto se usados em outros lugares).
+**Endpoint `payment_check`:** nenhuma ocorrência no projeto. Não usamos esse endpoint hoje, então não há troca a fazer. (As ocorrências de `paymentCheck` encontradas são do Asaas, não da InfinitePay.)
 
-## Estrutura visual (mobile-first, espelhando a referência)
+**Frontend / services / hooks:** nenhuma URL da InfinitePay hardcoded. Tudo passa pelas edge functions acima.
 
-```text
-┌─────────────────────────────┐
-│   [fundo background.jpg]    │  cover, center, fixed
-│  ┌───────────────────────┐  │
-│  │                       │  │
-│  │      [LOGO 200px]     │  │  topo: ~10vh
-│  │                       │  │
-│  │   Gestão completa     │  │  título leve, branco
-│  │    para fotógrafos    │  │  subtítulo, branco/70
-│  │                       │  │
-│  │  ┌─────────────────┐  │  │  input email (ícone Mail à esq)
-│  │  │ ✉  E-mail       │  │  │  altura 52, bg #FFFFFF0A
-│  │  └─────────────────┘  │  │  border #FFFFFF1A, radius 12
-│  │  ┌─────────────────┐  │  │  input senha (ícone Lock + Eye)
-│  │  │ 🔒 Senha     👁 │  │  │
-│  │  └─────────────────┘  │  │
-│  │  ☐ Lembrar  Esqueci?  │  │  linha auxiliar
-│  │  ┌─────────────────┐  │  │
-│  │  │     Entrar      │  │  │  botão accent (laranja/cobre)
-│  │  └─────────────────┘  │  │  gradient + shadow
-│  │   ─── ou continue ──  │  │
-│  │  ┌─────────────────┐  │  │
-│  │  │  G  Google      │  │  │  outline branco translúcido
-│  │  └─────────────────┘  │  │
-│  │  Ainda não tem conta? │  │
-│  │       Criar conta     │  │
-│  └───────────────────────┘  │
-└─────────────────────────────┘
+**Variáveis de ambiente / secrets:** o domínio não está em `.env` nem em secrets — está literal nos 3 arquivos.
+
+**Webhook (`infinitepay-webhook`):** apenas recebe callbacks, não chama a API. Sem alteração.
+
+## Mudança
+
+Substituir nos 3 arquivos:
+
+```
+https://api.infinitepay.io/invoices/public/checkout/links
+→ https://api.checkout.infinitepay.io/links
 ```
 
-## Tokens visuais (fixos, sem depender do tema do usuário)
+Payload, headers, tratamento de resposta (`checkout_url`/`url`/`link`), `order_nsu`, `webhook_url` e fluxo de cobrança permanecem idênticos. Compatibilidade com galerias/sessões existentes é preservada — só o host muda.
 
-- Fundo: `bg-[#0a0a0a]` com `background-image: url(background.jpg)` `cover`/`center`
-- Overlay sobre o fundo: `bg-gradient-to-b from-black/40 via-black/30 to-black/60`
-- Card "container" (apenas em desktop ≥ md): largura máx `420px`, sem card visível em mobile (conteúdo direto sobre o fundo, igual à referência). Em desktop o conteúdo fica centralizado, **sem borda/card** — apenas espaço respirando, para preservar o efeito de imersão.
-- Texto principal: `text-white`
-- Texto secundário: `text-white/60`
-- Inputs:
-  - bg `bg-white/[0.04]`, border `border-white/10`, focus border `border-[#C97A4A]/60`
-  - altura `h-12`, radius `rounded-xl`, padding-left `pl-11` para ícone
-  - ícone à esquerda: `Mail`/`Lock` em `text-white/40`, 18px
-  - placeholder `placeholder:text-white/40`
-- Botão primário "Entrar":
-  - gradient `from-[#C97A4A] to-[#A8633A]`
-  - `h-12`, `rounded-xl`, `text-white font-medium`
-  - shadow `shadow-[0_8px_24px_-8px_rgba(201,122,74,0.5)]`
-- Link "Esqueci minha senha" e "Criar conta": `text-[#C97A4A] hover:text-[#E08B5A]`
-- Divider "ou continue com": linhas `bg-white/10`, texto `text-white/40 text-xs`
-- Botão Google: `bg-white/5 border-white/10 hover:bg-white/10`, ícone Google colorido, texto branco
-- Tabs Login/Cadastro: removidas (substituídas por link "Criar conta" no rodapé, como na referência). Alternância de modo via `useState` no `Auth.tsx`.
-- Checkbox "Lembrar de mim": `border-white/30 data-[state=checked]:bg-[#C97A4A]`
+## Validação pós-deploy
 
-## Espaçamentos (mobile-first)
+1. Deploy automático das 3 edge functions.
+2. Teste manual: criar um link de cobrança via Gestão (rota de cobrança InfinitePay) → conferir log `[gestao-infinitepay-create-link] Success! Checkout URL: ...` e abrir o checkout.
+3. Teste fluxo Gallery: gerar pagamento em uma sessão de seleção via Gallery → conferir log `[gallery-create-payment]` e `[infinitepay-create-link]`.
+4. Conferir recepção do webhook (`infinitepay-webhook`) marcando a cobrança como paga após o pagamento de teste.
+5. Se a nova API responder erro inesperado, inspecionar logs em Supabase Functions e ajustar parsing se necessário (não esperado — contrato é o mesmo).
 
-- Container vertical: `flex flex-col items-center justify-center min-h-[100dvh] px-6 py-10`
-- Bloco logo→subtítulo: `gap-3`, margin-bottom `mb-10`
-- Stack de inputs: `space-y-3`
-- Entre linha "lembrar/esqueci" e botão Entrar: `mt-2` / `mt-5`
-- Entre botão Entrar e divider: `my-6`
-- Entre Google e rodapé "Criar conta": `mt-6`
-- Conteúdo respeita `max-w-[400px] w-full`
+## Fora de escopo
 
-## Responsividade
-
-- **Mobile (< 768)**: conteúdo full-bleed sobre o fundo, padding 24px lateral, fundo `bg-cover bg-center` com `background-attachment: fixed` desativado (evita bug iOS), centralizado.
-- **Tablet/Desktop (≥ 768)**: mesmo layout, conteúdo centralizado em `max-w-[400px]`, fundo cobre toda a viewport e mantém o "K" centralizado (`bg-center`). Sem card/borda — apenas o conteúdo flutuando.
-- **Logo**: `w-[200px]` em mobile, `w-[220px]` em desktop, `object-contain`.
-
-## Tema fixo (independente da preferência do usuário)
-
-A página de login NÃO deve seguir `dark`/`light` do usuário — é sempre dark.
-
-Implementação: envolver o conteúdo em uma `<div className="dark">` local e aplicar classes Tailwind dark explícitas (`bg-black`, `text-white`, etc.). Não chamar `useVisualTheme` nesta página. Variáveis CSS de tema do app continuam funcionando para o resto do sistema; aqui usamos classes utilitárias absolutas para garantir consistência.
-
-## Subcomponentes — ajustes mínimos
-
-- `EmailLoginForm`: já recebe `onForgotPassword`. Ajustar:
-  - inputs herdarem o novo estilo (passar `className` ou criar variante "auth-dark"). Mais simples: substituir `<Input>` por inputs locais estilizados dentro do form para evitar afetar o resto do app.
-  - adicionar checkbox "Lembrar de mim" + link "Esqueci minha senha" na mesma linha (substituindo o link isolado atual).
-  - botão "Entrar" no novo estilo cobre.
-- `EmailSignupForm`: mesma estilização; renderizado quando `mode === 'signup'`.
-- `ForgotPasswordForm`: mesma paleta dark, manter botão "Voltar".
-
-Alternativa para evitar tocar nos 3 forms: criar `src/components/auth/AuthInput.tsx` e `AuthButton.tsx` reaproveitáveis (dark fixo) e refatorar os 3 forms para usá-los. **Recomendado** — mantém consistência e facilita replicar no Lunari Gallery.
-
-## ResetPassword.tsx
-
-Aplicar exatamente os mesmos tokens (fundo, logo, inputs, botão cobre) para manter consistência visual no fluxo completo de recuperação de senha.
-
-## Documentação para replicar no Lunari Gallery
-
-Criar `src/styles/auth-login-design-spec.md` com:
-1. Lista de assets necessários (background + logo)
-2. Tokens (cores hex, radius, alturas, sombras, gradients)
-3. Estrutura de layout (ASCII + breakpoints)
-4. Componentes reutilizáveis (`AuthInput`, `AuthButton`, `AuthGoogleButton`)
-5. Snippet completo do JSX da tela de login
-6. Notas sobre tema dark fixo (não usar `useVisualTheme`)
-7. Checklist de paridade Studio ↔ Gallery
-
-Esse arquivo fica versionado no projeto Studio e serve de referência one-to-one quando formos aplicar no Gallery.
-
-## Memória do projeto
-
-Adicionar memória `mem://design/auth-login-dark-spec` referenciando o doc acima, para que futuras alterações em qualquer um dos dois projetos mantenham paridade.
-
-## Arquivos tocados
-
-- **Criados**: `src/assets/auth/login-background.jpg`, `src/assets/auth/lunari-studio-logo.png`, `src/components/auth/AuthInput.tsx`, `src/components/auth/AuthButton.tsx`, `src/components/auth/AuthGoogleButton.tsx`, `src/styles/auth-login-design-spec.md`, `mem://design/auth-login-dark-spec`
-- **Editados**: `src/pages/Auth.tsx`, `src/pages/ResetPassword.tsx`, `src/components/auth/EmailLoginForm.tsx`, `src/components/auth/EmailSignupForm.tsx`, `src/components/auth/ForgotPasswordForm.tsx`, `mem://index.md`
-
-## Riscos / Pontos de atenção
-
-- Tela `Auth` hoje exibe toasts via `reason=suspended|session_expired` e `error=access_denied` — manter intacto.
-- Lógica de redirect (`navigate('/app')`) e `useAuth` — não alterar.
-- Os 3 forms já fazem submit próprio com `supabase.auth.*` — não mexer na lógica, só na apresentação.
-- Garantir contraste AA em todos os textos sobre o fundo escuro.
+- Nenhuma alteração de UI, hooks, types ou DB.
+- Nenhuma alteração no webhook ou em `payment_check` (não usamos).
