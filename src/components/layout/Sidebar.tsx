@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { cn } from '@/lib/utils';
+import { useIsDarkMode } from '@/hooks/useIsDarkMode';
+import logoIconWhite from '@/assets/branding/lunari-icon-white.png';
+import logoIconBlack from '@/assets/branding/lunari-icon-black.png';
+import logoFullWhite from '@/assets/branding/lunari-full-white.png';
+import logoFullBlack from '@/assets/branding/lunari-full-black.png';
 
 // Crown badge component for PRO features
 const ProCrown = ({ className }: { className?: string }) => (
@@ -141,6 +146,7 @@ export default function Sidebar() {
 
   const isStarterPlan = accessState.planCode?.startsWith('starter') &&
     !accessState.isAdmin && !accessState.isVip && !accessState.isAuthorized;
+  const isDark = useIsDarkMode();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -218,15 +224,23 @@ export default function Sidebar() {
           )}
         >
           {/* Logo */}
-          <div className="h-10 flex items-center px-3 mb-2 overflow-hidden">
-            <span
+          <div className="h-10 flex items-center px-2 mb-2 overflow-hidden relative">
+            <img
+              src={isDark ? logoIconWhite : logoIconBlack}
+              alt="Lunari"
               className={cn(
-                "text-sm font-semibold text-foreground whitespace-nowrap transition-opacity duration-150 ease-out",
+                "absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 object-contain transition-opacity duration-150 ease-out",
+                isHovered ? "opacity-0" : "opacity-100 delay-[60ms]"
+              )}
+            />
+            <img
+              src={isDark ? logoFullWhite : logoFullBlack}
+              alt="Lunari"
+              className={cn(
+                "absolute left-3 top-1/2 -translate-y-1/2 h-6 object-contain object-left transition-opacity duration-150 ease-out",
                 isHovered ? "opacity-100 delay-[60ms]" : "opacity-0"
               )}
-            >
-              Lunari
-            </span>
+            />
           </div>
 
           <div className="flex-1 pt-2">
