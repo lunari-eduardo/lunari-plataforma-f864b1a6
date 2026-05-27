@@ -341,16 +341,18 @@ export function WorkflowCardCollapsed({
   );
 
   return (
-    <div className="px-4 py-3 md:px-6 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
-      {/* Grid DESKTOP (≥1024px) - Layout completo */}
-      <div 
-        className="grid grid-cols-[32px_46px_160px_160px_130px_120px_70px_70px_80px_auto_32px] gap-3 items-start"
-      >
-        
-        {/* Zona 1: Expand */}
-        <div 
-          className="h-8 w-8 flex items-center justify-center shrink-0 hover:bg-primary/10 rounded"
+    <div className="px-3 py-3 md:px-5 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
+      {/* Wrapper com scroll horizontal em telas estreitas (paridade desktop/mobile) */}
+      <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible">
+        <div
+          className={cn(
+            "grid items-center gap-x-5 gap-y-2 min-w-[1180px] md:min-w-0",
+            "grid-cols-[28px_46px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(210px,1.9fr)_minmax(120px,1fr)_72px_84px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]"
+          )}
         >
+
+        {/* Zona 1: Expand */}
+        <div className="h-8 w-8 flex items-center justify-center shrink-0 hover:bg-primary/10 rounded">
           {isExpanded ? (
             <ChevronUp className="h-4 w-4 text-primary" />
           ) : (
@@ -359,15 +361,15 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 2: Data */}
-        <div className="text-sm font-medium text-foreground pt-1">
+        <div className="text-sm font-medium text-foreground tabular-nums min-h-8 flex items-center">
           {formatToDayMonth(session.data)}
         </div>
 
         {/* Zona 3: Nome + WhatsApp */}
-        <div className="flex items-start gap-1.5 min-w-0 pt-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 min-w-0 min-h-8" onClick={(e) => e.stopPropagation()}>
           {session.clienteId ? (
-            <Link 
-              to={`/app/clientes/${session.clienteId}`} 
+            <Link
+              to={`/app/clientes/${session.clienteId}`}
               className="text-sm font-medium text-primary hover:text-primary/80 hover:underline break-words leading-tight"
             >
               {session.nome}
@@ -380,7 +382,7 @@ export function WorkflowCardCollapsed({
               href={`https://wa.me/${session.whatsapp.replace(/\D/g, '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 mt-0.5"
+              className="shrink-0"
             >
               <MessageCircle className="h-3.5 w-3.5 text-green-600 hover:text-green-700" />
             </a>
@@ -388,7 +390,7 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 4: Descrição - editável inline */}
-        <div className="flex flex-col gap-0.5 max-w-[160px]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Descrição</span>
           <Input
             value={descriptionValue}
@@ -398,33 +400,38 @@ export function WorkflowCardCollapsed({
             className={cn(
               "text-[11px] border border-border/40 rounded-md bg-transparent focus:bg-card/60 dark:focus:bg-card/10 transition-colors",
               isExpanded
-                ? "min-h-[28px] h-auto whitespace-normal break-words py-1 px-2"
-                : "h-7 truncate"
+                ? "min-h-8 h-auto whitespace-normal break-words py-1 px-2"
+                : "h-8 truncate"
             )}
           />
         </div>
 
         {/* Zona 5: Pacote - Dropdown */}
-        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pacote</span>
           <WorkflowPackageCombobox
-            key={`package-${session.id}-${session.pacote}`}
-            value={session.pacote}
+            key={`package-${session.id}-${pacoteAtual}`}
+            value={pacoteAtual}
             displayName={displayPackageName}
             onValueChange={(packageData) => {
+              // Clear explícito quando usuário escolhe "Nenhum pacote"
+              if (!packageData.id && !packageData.nome) {
+                onFieldUpdate(session.id, 'pacote', '');
+                return;
+              }
               onFieldUpdate(session.id, 'pacote', packageData.id || packageData.nome);
             }}
           />
         </div>
 
         {/* Zona 6: Status como pílula - Dropdown */}
-        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status</span>
           <Select
             value={session.status || ''}
             onValueChange={handleStatusChange}
           >
-            <SelectTrigger 
+            <SelectTrigger
               className="h-8 text-xs border-0 bg-transparent p-0 focus:ring-0 [&>svg]:hidden justify-center"
             >
               <SelectValue placeholder="Status">
@@ -449,9 +456,9 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 7: Fotos Extras (somente leitura — edição no card expandido) */}
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Fotos extras</span>
-          <div className="flex justify-center">
+          <div className="min-h-8 flex items-center justify-center">
             <span className="text-sm font-medium text-foreground tabular-nums">
               {session.qtdFotosExtra || 0}
             </span>
@@ -459,17 +466,17 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 8: Produtos */}
-        <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Produtos</span>
-          <div className="flex justify-center">
+          <div className="min-h-8 flex items-center justify-center">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setModalAberto(true)}
-              className="h-7 px-3 text-xs border rounded-md bg-background hover:bg-muted"
+              className="h-8 min-w-[60px] px-3 text-xs border rounded-md bg-background hover:bg-muted"
             >
               <Package className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? 'text-primary' : 'text-muted-foreground'}`} />
-              {hasProdutos ? session.produtosList.length : 0}
+              <span className="tabular-nums">{hasProdutos ? session.produtosList.length : 0}</span>
               {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
               {parcialmenteCompletos && <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />}
             </Button>
@@ -477,23 +484,27 @@ export function WorkflowCardCollapsed({
         </div>
 
         {/* Zona 9: PENDENTE / CRÉDITO */}
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">
             {pendente < 0 ? 'Crédito' : 'Pendente'}
           </span>
-          <span className={`text-sm font-bold text-right ${pendente > 0 ? 'text-destructive' : pendente < 0 ? 'text-yellow-500' : 'text-green-600'}`}>
-            {pendente < 0 ? `+${formatCurrency(Math.abs(pendente))}` : formatCurrency(pendente)}
-          </span>
+          <div className="min-h-8 flex items-center justify-end">
+            <span className={`text-sm font-bold tabular-nums text-right ${pendente > 0 ? 'text-destructive' : pendente < 0 ? 'text-yellow-500' : 'text-green-600'}`}>
+              {pendente < 0 ? `+${formatCurrency(Math.abs(pendente))}` : formatCurrency(pendente)}
+            </span>
+          </div>
         </div>
 
         {/* Zona 10: Gallery Criar + Ver */}
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Galerias</span>
-          <GalleryButtons />
+          <div className="min-h-8 flex items-center">
+            <GalleryButtons />
+          </div>
         </div>
 
         {/* Zona 11: Excluir sessão */}
-        <div className="flex items-center justify-center pt-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center min-h-8" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => setDeleteModalOpen(true)}
             className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-destructive/10 transition-all"
@@ -502,7 +513,10 @@ export function WorkflowCardCollapsed({
             <Trash2 className="h-3.5 w-3.5 text-destructive" />
           </button>
         </div>
+        </div>
       </div>
+
+
 
 
       {/* Modal de Gerenciamento de Produtos */}
