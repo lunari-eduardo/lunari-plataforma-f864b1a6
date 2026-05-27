@@ -347,7 +347,7 @@ export function WorkflowCardCollapsed({
         <div
           className={cn(
             "grid items-center gap-x-5 gap-y-2 min-w-[1180px] md:min-w-0",
-            "grid-cols-[28px_46px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(210px,1.9fr)_minmax(120px,1fr)_72px_84px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]"
+            "grid-cols-[28px_46px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(210px,1.9fr)_minmax(120px,1fr)_96px_88px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]"
           )}
         >
 
