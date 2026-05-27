@@ -96,6 +96,8 @@ const WorkflowPackageComboboxComponent = ({
     );
   }, [pacotes, value]);
 
+  const hasSelection = Boolean(displayName || selectedPackage?.nome);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -104,9 +106,15 @@ const WorkflowPackageComboboxComponent = ({
           role="combobox" 
           aria-expanded={open} 
           disabled={disabled || isLoadingPacotes}
-          className="w-full justify-between h-7 text-xs font-normal border border-border/40 rounded-md bg-transparent hover:bg-card/60 dark:hover:bg-card/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full justify-between h-8 text-xs font-normal border border-border/40 rounded-md bg-transparent hover:bg-card/60 dark:hover:bg-card/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoadingPacotes ? "Carregando..." : displayName || selectedPackage?.nome || (typeof value === 'string' ? value : 'Selecione')}
+          <span className={cn("truncate", !hasSelection && "italic text-muted-foreground")}>
+            {isLoadingPacotes
+              ? "Carregando..."
+              : hasSelection
+                ? (displayName || selectedPackage?.nome)
+                : "Selecione pacote"}
+          </span>
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

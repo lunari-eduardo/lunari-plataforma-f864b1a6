@@ -294,6 +294,37 @@ export const useWorkflowRealtime = () => {
       for (const [field, value] of Object.entries(updates)) {
         switch (field) {
             case 'pacote':
+            // Handle clear (empty string / null) — user picked "Nenhum pacote"
+            if ((typeof value === 'string' && value === '') || value === null || value === undefined) {
+              console.log('🧹 Clearing package selection for session:', id);
+              sanitizedUpdates.pacote = '';
+              sanitizedUpdates.valor_base_pacote = 0;
+              sanitizedUpdates.valor_foto_extra = 0;
+              sanitizedUpdates.valor_total_foto_extra = 0;
+              sanitizedUpdates.categoria = '';
+              // Zerar regras_congeladas (objeto vazio passa pelo guard NULL)
+              sanitizedUpdates.regras_congeladas = {
+                pacote: null,
+                precificacaoFotoExtra: null,
+                produtos: []
+              } as any;
+              // Preservar apenas produtos manuais
+              const produtosAtuais = currentSession?.produtos_incluidos || [];
+              const produtosManuais = Array.isArray(produtosAtuais)
+                ? produtosAtuais.filter((p: any) => p.tipo === 'manual')
+                : [];
+              sanitizedUpdates.produtos_incluidos = produtosManuais;
+              // Recalcular valor_total
+              const novoTotal = calculateSessionTotal({
+                valorBase: 0,
+                valorFotoExtra: 0,
+                valorProdutos: calculateManualProductsTotal(produtosManuais),
+                valorAdicional: Number(currentSession?.valor_adicional) || 0,
+                desconto: Number(currentSession?.desconto) || 0
+              });
+              sanitizedUpdates.valor_total = novoTotal;
+              break;
+            }
             // Handle both package name and ID
             if (typeof value === 'string' && value) {
               console.log('🔄 Processing package change:', value);
