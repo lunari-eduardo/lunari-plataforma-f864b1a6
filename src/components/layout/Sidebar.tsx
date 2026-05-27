@@ -146,6 +146,7 @@ export default function Sidebar() {
 
   const isStarterPlan = accessState.planCode?.startsWith('starter') &&
     !accessState.isAdmin && !accessState.isVip && !accessState.isAuthorized;
+  const isDark = useIsDarkMode();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -200,7 +201,6 @@ export default function Sidebar() {
   // Desktop: fixed spacer (w-16) + absolutely-positioned sidebar that expands on hover.
   // The spacer reserves layout space so main content never shifts.
   const expandDuration = isHovered ? 200 : 240;
-  const isDark = useIsDarkMode();
 
   return (
     <TooltipProvider delayDuration={400}>
