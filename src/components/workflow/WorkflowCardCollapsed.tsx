@@ -457,7 +457,7 @@ export function WorkflowCardCollapsed({
 
         {/* Zona 7: Fotos Extras (somente leitura — edição no card expandido) */}
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Fotos extras</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center whitespace-nowrap">Fotos extras</span>
           <div className="min-h-8 flex items-center justify-center">
             <span className="text-sm font-medium text-foreground tabular-nums">
               {session.qtdFotosExtra || 0}
