@@ -202,8 +202,9 @@ export function WorkflowCardCollapsed({
   const todosCompletos = hasProdutos && produtosProduzidos.length === session.produtosList.length;
   const parcialmenteCompletos = hasProdutos && produtosProduzidos.length > 0 && produtosProduzidos.length < session.produtosList.length;
 
-  // Obter nome do pacote das regras congeladas ou do pacote atual
-  const displayPackageName = session.regras_congeladas?.pacote?.nome || session.pacote || '';
+  // Obter nome do pacote — quando session.pacote é vazio (limpo), ignorar regras_congeladas
+  const pacoteAtual = (session.pacote ?? '').toString();
+  const displayPackageName = pacoteAtual === '' ? '' : (session.regras_congeladas?.pacote?.nome || pacoteAtual);
 
   // Handler para criar galeria de seleção
   const handleCreateSelecao = useCallback(() => {
