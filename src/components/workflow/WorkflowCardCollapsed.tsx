@@ -347,7 +347,7 @@ export function WorkflowCardCollapsed({
         <div
           className={cn(
             "grid items-center gap-x-5 gap-y-2 min-w-[1180px] md:min-w-0",
-            "grid-cols-[28px_46px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(210px,1.9fr)_minmax(120px,1fr)_72px_84px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]"
+            "grid-cols-[28px_46px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(210px,1.9fr)_minmax(120px,1fr)_96px_88px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]"
           )}
         >
 
@@ -457,7 +457,7 @@ export function WorkflowCardCollapsed({
 
         {/* Zona 7: Fotos Extras (somente leitura — edição no card expandido) */}
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">Fotos extras</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center whitespace-nowrap">Fotos extras</span>
           <div className="min-h-8 flex items-center justify-center">
             <span className="text-sm font-medium text-foreground tabular-nums">
               {session.qtdFotosExtra || 0}
