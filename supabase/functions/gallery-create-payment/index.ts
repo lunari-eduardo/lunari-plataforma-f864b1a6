@@ -189,7 +189,7 @@ serve(async (req) => {
 
       console.log("[gallery-create-payment] Creating InfinitePay link:", JSON.stringify(ipPayload));
 
-      const ipResponse = await fetch("https://api.infinitepay.io/invoices/public/checkout/links", {
+      const ipResponse = await fetch("https://api.checkout.infinitepay.io/links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ipPayload),
