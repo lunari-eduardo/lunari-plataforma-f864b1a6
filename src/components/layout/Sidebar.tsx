@@ -204,7 +204,7 @@ export default function Sidebar() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="w-16 shrink-0 h-screen relative z-20">
+      <div className="w-16 shrink-0 h-screen relative z-40">
         <aside
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
