@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { AuthInput } from './AuthInput';
+import { AuthButton } from './AuthButton';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface EmailLoginFormProps {
   onForgotPassword: () => void;
@@ -14,21 +14,18 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
   const { signInWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email.trim() || !password.trim()) {
       toast.error('Preencha todos os campos');
       return;
     }
-
     setIsLoading(true);
     try {
       const { error } = await signInWithEmail(email.trim(), password);
-      
       if (error) {
         if (error.message?.includes('Invalid login credentials')) {
           toast.error('Email ou senha incorretos');
@@ -38,7 +35,7 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
           toast.error(error.message || 'Erro ao fazer login');
         }
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro inesperado. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -46,69 +43,47 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-primary-foreground/90 text-sm">
-          Email
-        </Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11"
-          disabled={isLoading}
-          autoComplete="email"
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <AuthInput
+        icon={Mail}
+        type="email"
+        placeholder="E-mail"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={isLoading}
+        autoComplete="email"
+      />
+      <AuthInput
+        icon={Lock}
+        type="password"
+        placeholder="Senha"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        disabled={isLoading}
+        autoComplete="current-password"
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="password" className="text-primary-foreground/90 text-sm">
-          Senha
-        </Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-card/10 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 h-11 pr-10"
-            disabled={isLoading}
-            autoComplete="current-password"
+      <div className="flex items-center justify-between pt-1 pb-1">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <Checkbox
+            checked={remember}
+            onCheckedChange={(v) => setRemember(!!v)}
+            className="border-white/30 data-[state=checked]:bg-[#C97A4A] data-[state=checked]:border-[#C97A4A]"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-foreground/60 hover:text-primary-foreground/80"
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
+          <span className="text-sm text-white/70">Lembrar de mim</span>
+        </label>
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-sm text-[hsl(var(--primary))] hover:underline"
+          className="text-sm text-[#C97A4A] hover:text-[#E08B5A] transition-colors"
         >
           Esqueci minha senha
         </button>
       </div>
 
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="w-full h-11 bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-hover))] text-primary-foreground font-medium"
-      >
-        {isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          'Entrar'
-        )}
-      </Button>
+      <AuthButton type="submit" loading={isLoading} className="mt-2">
+        Entrar
+      </AuthButton>
     </form>
   );
 }
