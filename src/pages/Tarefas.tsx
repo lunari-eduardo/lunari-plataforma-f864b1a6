@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 import type { Task, TaskStatus } from '@/types/tasks';
-import UnifiedTaskModal from '@/components/tarefas/UnifiedTaskModal';
+import QuickTaskModal from '@/components/tarefas/QuickTaskModal';
+import QuickCaptureBar from '@/components/tarefas/QuickCaptureBar';
+import ColumnQuickAdd from '@/components/tarefas/ColumnQuickAdd';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { cn } from '@/lib/utils';
@@ -140,25 +142,38 @@ export default function Tarefas() {
           style={{ '--col-color': rgb } as React.CSSProperties}
         >
           <div className="flex-1 overflow-y-auto scrollbar-kanban">
+            <div className="px-1 pb-2">
+              <ColumnQuickAdd
+                onAdd={async (title) => {
+                  await addTask({
+                    title,
+                    status: statusKey,
+                    priority: 'medium',
+                    type: 'simple',
+                    source: 'manual',
+                  } as any);
+                }}
+              />
+            </div>
             <ul className="space-y-2 pb-2">
               {(groups[statusKey] || []).map(t => (
                 <DraggableTaskCard
                   key={t.id}
                   task={t}
                   statusColor={color}
-                  onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }}
-                  onReopen={() => { updateTask(t.id, { status: defaultOpenKey as any }); toast({ title: 'Tarefa reaberta' }); }}
+                  onComplete={() => { updateTask(t.id, { status: doneKey as any }); }}
+                  onReopen={() => { updateTask(t.id, { status: defaultOpenKey as any }); }}
                   onEdit={() => setSelectedTask(t)}
-                  onDelete={() => { deleteTask(t.id); toast({ title: 'Tarefa excluída' }); }}
-                  onRequestMove={status => { updateTask(t.id, { status: status as any }); toast({ title: 'Tarefa movida' }); }}
+                  onDelete={() => { deleteTask(t.id); }}
+                  onRequestMove={status => { updateTask(t.id, { status: status as any }); }}
                   isDone={t.status === doneKey as any}
                   statusOptions={statusOptions}
                   activeId={activeId}
                 />
               ))}
               {(groups[statusKey] || []).length === 0 && (
-                <li className="text-center text-sm text-lunar-textSecondary py-8 opacity-60">
-                  Nenhuma tarefa neste status
+                <li className="text-center text-sm text-lunar-textSecondary py-6 opacity-50">
+                  Vazio
                 </li>
               )}
             </ul>
@@ -206,6 +221,18 @@ export default function Tarefas() {
             </Button>
           </div>
         </header>
+
+        <QuickCaptureBar
+          onCapture={async (title) => {
+            await addTask({
+              title,
+              status: defaultOpenKey,
+              priority: 'medium',
+              type: 'simple',
+              source: 'manual',
+            } as any);
+          }}
+        />
 
         <TaskFiltersBar filters={filters} onFiltersChange={setFilters} statusOptions={statusOptions} assigneeOptions={assigneeOptions} />
         <PriorityLegend />
@@ -270,10 +297,14 @@ export default function Tarefas() {
         )}
       </div>
 
-      <UnifiedTaskModal open={createOpen} onOpenChange={setCreateOpen} mode="create" onSubmit={async (data: any) => {
-        const t = await addTask({ ...data, source: 'manual' });
-        toast({ title: 'Tarefa criada', description: t?.title || 'Nova tarefa' });
-      }} />
+      <QuickTaskModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        defaultStatus={defaultOpenKey}
+        onSubmit={async (data) => {
+          await addTask(data as any);
+        }}
+      />
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
       <TaskDetailsModal task={selectedTask} open={!!selectedTask} onOpenChange={open => !open && setSelectedTask(null)} onUpdate={updateTask} onDelete={deleteTask} statusOptions={statusOptions} />
     </div>

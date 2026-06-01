@@ -1,44 +1,175 @@
-# Atualização dos endpoints InfinitePay Checkout
+# Reformulação do Módulo de Tarefas
 
-A InfinitePay desativará as URLs antigas em 01/06/2026. Precisamos trocar o domínio base nos pontos onde o backend chama a API de criação de links.
+Transformar o módulo atual (formulário pesado) em uma ferramenta de **captura rápida** com profundidade opcional, mantendo 100% das integrações existentes (Workflow + Checklists).
 
-## Auditoria do projeto
+---
 
-Busquei `api.infinitepay.io`, `checkout.infinitepay.io`, `/invoices/public` e `payment_check` em todo o código (`src/` e `supabase/`). Resultado:
+## 1. Captura ultrarrápida (3 segundos)
 
-**Endpoint de criação de link (3 ocorrências — todas em edge functions):**
-- `supabase/functions/infinitepay-create-link/index.ts:21` — `INFINITEPAY_API_URL` (contrato compartilhado Gallery + Gestão)
-- `supabase/functions/gestao-infinitepay-create-link/index.ts:13` — `INFINITEPAY_API_URL` (exclusivo Gestão)
-- `supabase/functions/gallery-create-payment/index.ts:192` — `fetch(...)` inline
+### 1.1. Quick-capture no topo da página
+Adicionar logo acima do Kanban um campo único, sempre visível:
 
-**Endpoint `payment_check`:** nenhuma ocorrência no projeto. Não usamos esse endpoint hoje, então não há troca a fazer. (As ocorrências de `paymentCheck` encontradas são do Asaas, não da InfinitePay.)
-
-**Frontend / services / hooks:** nenhuma URL da InfinitePay hardcoded. Tudo passa pelas edge functions acima.
-
-**Variáveis de ambiente / secrets:** o domínio não está em `.env` nem em secrets — está literal nos 3 arquivos.
-
-**Webhook (`infinitepay-webhook`):** apenas recebe callbacks, não chama a API. Sem alteração.
-
-## Mudança
-
-Substituir nos 3 arquivos:
-
-```
-https://api.infinitepay.io/invoices/public/checkout/links
-→ https://api.checkout.infinitepay.io/links
+```text
+💡 [ Capturar tarefa ou ideia...                            ] ⏎
 ```
 
-Payload, headers, tratamento de resposta (`checkout_url`/`url`/`link`), `order_nsu`, `webhook_url` e fluxo de cobrança permanecem idênticos. Compatibilidade com galerias/sessões existentes é preservada — só o host muda.
+- `Enter` cria a tarefa imediatamente, **sem modal**.
+- Defaults: `status = A Fazer` (defaultOpenKey), `priority = medium`, `type = simple`, sem prazo/responsável.
+- Foco permanece no campo após criar (permite rajadas de captura).
+- `Esc` limpa o campo.
 
-## Validação pós-deploy
+### 1.2. Quick-add por coluna no Kanban
+No rodapé (ou topo) de cada coluna, botão discreto `+ Nova tarefa`. Ao clicar, vira input inline:
 
-1. Deploy automático das 3 edge functions.
-2. Teste manual: criar um link de cobrança via Gestão (rota de cobrança InfinitePay) → conferir log `[gestao-infinitepay-create-link] Success! Checkout URL: ...` e abrir o checkout.
-3. Teste fluxo Gallery: gerar pagamento em uma sessão de seleção via Gallery → conferir log `[gallery-create-payment]` e `[infinitepay-create-link]`.
-4. Conferir recepção do webhook (`infinitepay-webhook`) marcando a cobrança como paga após o pagamento de teste.
-5. Se a nova API responder erro inesperado, inspecionar logs em Supabase Functions e ajustar parsing se necessário (não esperado — contrato é o mesmo).
+```text
+[ Escreva a tarefa... ] ⏎
+```
 
-## Fora de escopo
+- `Enter` cria já no status daquela coluna.
+- `Esc` ou blur sem texto cancela.
 
-- Nenhuma alteração de UI, hooks, types ou DB.
-- Nenhuma alteração no webhook ou em `payment_check` (não usamos).
+### 1.3. Modal "Nova tarefa" simplificado
+Ao clicar no botão principal `Nova tarefa`, abrir modal mínimo:
+
+```text
+Nova Tarefa
+────────────────────────────────
+[ O que precisa ser feito? ]
+
+▸ + Mais opções
+
+                       [Cancelar]  [Criar]
+```
+
+- Único campo obrigatório: **título**.
+- `+ Mais opções` (collapsible) revela: Descrição, Prazo, Responsável, Prioridade, Etiquetas, Checklist, Anexos, Cliente/Evento/Orçamento relacionados.
+- `Enter` no título cria direto (sem precisar abrir avançado).
+
+---
+
+## 2. Eliminar "Tipo de Tarefa"
+
+Hoje existem 4 tipos (`simple`, `checklist`, `content`, `document`) que forçam decisão prévia.
+
+**Mudança:** toda tarefa passa a ser unificada. Os blocos viram **seções opcionais sempre disponíveis dentro do detalhe**:
+- Descrição (texto livre)
+- Checklist (itens ilimitados)
+- Anexos (arquivos)
+- Links (URLs) — pode ser adiado para v2
+- Comentários — adiado para v2
+
+### Compatibilidade
+- O campo `type` permanece no banco para não quebrar dados existentes (mantemos default `simple`).
+- A UI deixa de expor o seletor. Tarefas antigas (`content`, `document`, `checklist`) continuam abrindo normalmente — todas as seções ficam visíveis igualmente.
+- `activeSections` e `checklistItems` continuam sendo persistidos como hoje (preserva integração com ChecklistPanel/Workflow).
+- A regra atual `filterTasks` que esconde checklists "puros" do Kanban é mantida (para não quebrar `ChecklistPanel` no Workflow).
+
+### Arquivos a remover/aposentar
+- `TaskTypeSelector.tsx` (raiz e `forms/`)
+- `TaskSectionSelector.tsx`
+- `forms/TaskContentForm.tsx`, `forms/TaskDocumentForm.tsx`, `forms/TaskChecklistForm.tsx`, `forms/TaskSimpleForm.tsx`
+- `TaskFormModal.tsx` (substituído pelo novo Quick + Advanced modal)
+
+---
+
+## 3. Novo design dos cards (Kanban)
+
+Densidade alta, informação útil sem precisar abrir:
+
+```text
+┌────────────────────────────────────────┐
+│ ● Separar fotos do ensaio da Maria     │  ← ponto colorido = prioridade
+│                                        │
+│ 🏷 Marketing  +2                       │  ← máx 2 tags, resto agrupado
+│ ─────────────────────────────────────  │
+│ 📅 Atrasada 2d   ☑ 3/5     👤 EC      │
+└────────────────────────────────────────┘
+```
+
+Especificação:
+- **Título**: peso visual principal (font-medium, line-clamp-2).
+- **Prioridade**: ponto colorido pequeno antes do título (🔴 alta, 🟡 média, ⚪ baixa). Remove badge atual que ocupa linha inteira.
+- **Prazo amigável**: `Hoje`, `Amanhã`, `Em 3 dias`, `Atrasada 2d` — cor muda conforme urgência (vermelho/âmbar/neutro).
+- **Checklist**: se existir, mostra `☑ x/y`. Clicável para expandir? Não — apenas indicador.
+- **Responsável**: avatar circular pequeno com iniciais.
+- **Etiquetas**: máximo 2 visíveis + `+N`.
+- Mantém glassmorphism atual e padrão dnd-kit.
+
+Card atual `TaskCard.tsx` será reescrito; `CleanTaskCard.tsx` (lista) recebe os mesmos ajustes de prazo/prioridade.
+
+---
+
+## 4. Vinculação com ecossistema Lunari
+
+Já existem os campos `relatedClienteId`, `relatedBudgetId`, `relatedSessionId`. Atualmente subutilizados.
+
+No modal avançado e no detalhe da tarefa, adicionar seletores opcionais:
+- **Cliente** (combobox buscando clientes Supabase)
+- **Evento/Sessão** (combobox de sessões; se cliente selecionado, filtra)
+- **Orçamento** (combobox)
+- *(Contrato fica fora desta entrega — campo ainda não existe no schema)*
+
+Quando vinculados, o card pode exibir um chip discreto (ex.: `Maria Silva · Newborn`) abaixo do título, opcionalmente.
+
+**Sem mudanças de schema.** Apenas usa as colunas já existentes.
+
+---
+
+## 5. Integrações preservadas (não tocar)
+
+- ✅ **Workflow ↔ Tarefas com prazo**: tarefas com `dueDate` continuam aparecendo no Workflow do mês correspondente — nenhum hook/serviço de workflow é modificado.
+- ✅ **Checklist do Workflow → Tarefas**: `ChecklistPanel` e a criação automática de tarefas tipo `checklist` permanecem intactas. Continuamos persistindo `type='checklist'` para esses itens para não quebrar a query atual.
+- ✅ **Estrutura de dados / banco**: zero migrations. Tudo é UI + comportamento de criação.
+- ✅ Status configuráveis (`useSupabaseTaskStatuses`) continuam funcionando — apenas removemos o seletor da tela de criação.
+
+---
+
+## 6. Detalhes técnicos
+
+### Componentes novos
+- `QuickCaptureBar.tsx` — input global no topo de `Tarefas.tsx`.
+- `ColumnQuickAdd.tsx` — input inline por coluna.
+- `QuickTaskModal.tsx` — substitui `UnifiedTaskModal` no modo create; reutiliza `TaskDetailsModal` para edição.
+- `TaskCard.tsx` — reescrito para o novo layout denso.
+
+### Hook `useSupabaseTasks`
+Sem mudanças de assinatura. `addTask` já aceita `Omit<Task, 'id' | 'createdAt'>`. Quick-capture chama:
+```ts
+addTask({
+  title,
+  status: defaultOpenKey,
+  priority: 'medium',
+  type: 'simple',
+  source: 'manual',
+})
+```
+
+### Comportamento de status na criação
+O usuário não escolhe status — sempre cai no `defaultOpenKey` (ou no status da coluna no caso de quick-add por coluna). Mudança de status só por drag-and-drop ou no detalhe.
+
+### Toasts
+Manter padrão atual (sem toast de sucesso para criações via quick-capture — alinhado à preferência do projeto de não exibir toasts de sucesso). Toast de erro permanece.
+
+---
+
+## 7. Fora de escopo (não será feito agora)
+
+- Comentários em tarefas.
+- Vinculação com Contrato (campo não existe).
+- Recorrência de tarefas.
+- Templates de tarefa (já existe `TemplateManagerModal`, sem mudanças).
+- Mudanças na view de Lista (apenas o card é atualizado por consistência).
+- Migrations no banco.
+
+---
+
+## 8. Plano de validação após implementação
+
+1. Quick-capture: digitar título + Enter cria tarefa em "A Fazer" sem modal.
+2. Quick-add em coluna "Em andamento": tarefa nasce já naquela coluna.
+3. Modal `Nova tarefa`: criar só com título; depois testar `+ Mais opções` com prazo + prioridade + checklist.
+4. Drag-and-drop entre colunas continua funcionando.
+5. Tarefa antiga do tipo `content`/`document` abre o detalhe sem erro e mostra todas as seções.
+6. Tarefa com `dueDate` aparece corretamente no Workflow do mês.
+7. Checklist criado pelo Workflow continua gerando item no `ChecklistPanel`.
+8. Card mostra prioridade como ponto, prazo amigável e progresso de checklist.

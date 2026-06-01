@@ -381,20 +381,18 @@ export default function TaskDetailsModal({
             )}
           </div>
 
-          {/* Checklist */}
-          {(task.activeSections?.includes('checklist') || task.checklistItems?.length) && (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-lunar-textSecondary flex items-center gap-2">
-                <CheckSquare className="w-4 h-4" />
-                Checklist
-              </Label>
-              <ChecklistEditor
-                checklistItems={task.checklistItems || []}
-                onChange={(items) => onUpdate(task.id, { checklistItems: items })}
-                compact
-              />
-            </div>
-          )}
+          {/* Checklist — sempre disponível */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-lunar-textSecondary flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              Checklist
+            </Label>
+            <ChecklistEditor
+              checklistItems={task.checklistItems || []}
+              onChange={(items) => onUpdate(task.id, { checklistItems: items })}
+              compact
+            />
+          </div>
 
           {/* Notes - Collapsible */}
           <Collapsible defaultOpen={false}>
