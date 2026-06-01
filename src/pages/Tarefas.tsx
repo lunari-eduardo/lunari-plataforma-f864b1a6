@@ -222,6 +222,18 @@ export default function Tarefas() {
           </div>
         </header>
 
+        <QuickCaptureBar
+          onCapture={async (title) => {
+            await addTask({
+              title,
+              status: defaultOpenKey,
+              priority: 'medium',
+              type: 'simple',
+              source: 'manual',
+            } as any);
+          }}
+        />
+
         <TaskFiltersBar filters={filters} onFiltersChange={setFilters} statusOptions={statusOptions} assigneeOptions={assigneeOptions} />
         <PriorityLegend />
       </div>
