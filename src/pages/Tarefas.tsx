@@ -142,25 +142,38 @@ export default function Tarefas() {
           style={{ '--col-color': rgb } as React.CSSProperties}
         >
           <div className="flex-1 overflow-y-auto scrollbar-kanban">
+            <div className="px-1 pb-2">
+              <ColumnQuickAdd
+                onAdd={async (title) => {
+                  await addTask({
+                    title,
+                    status: statusKey,
+                    priority: 'medium',
+                    type: 'simple',
+                    source: 'manual',
+                  } as any);
+                }}
+              />
+            </div>
             <ul className="space-y-2 pb-2">
               {(groups[statusKey] || []).map(t => (
                 <DraggableTaskCard
                   key={t.id}
                   task={t}
                   statusColor={color}
-                  onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }}
-                  onReopen={() => { updateTask(t.id, { status: defaultOpenKey as any }); toast({ title: 'Tarefa reaberta' }); }}
+                  onComplete={() => { updateTask(t.id, { status: doneKey as any }); }}
+                  onReopen={() => { updateTask(t.id, { status: defaultOpenKey as any }); }}
                   onEdit={() => setSelectedTask(t)}
-                  onDelete={() => { deleteTask(t.id); toast({ title: 'Tarefa excluída' }); }}
-                  onRequestMove={status => { updateTask(t.id, { status: status as any }); toast({ title: 'Tarefa movida' }); }}
+                  onDelete={() => { deleteTask(t.id); }}
+                  onRequestMove={status => { updateTask(t.id, { status: status as any }); }}
                   isDone={t.status === doneKey as any}
                   statusOptions={statusOptions}
                   activeId={activeId}
                 />
               ))}
               {(groups[statusKey] || []).length === 0 && (
-                <li className="text-center text-sm text-lunar-textSecondary py-8 opacity-60">
-                  Nenhuma tarefa neste status
+                <li className="text-center text-sm text-lunar-textSecondary py-6 opacity-50">
+                  Vazio
                 </li>
               )}
             </ul>
