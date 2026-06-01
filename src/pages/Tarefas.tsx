@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 import type { Task, TaskStatus } from '@/types/tasks';
-import UnifiedTaskModal from '@/components/tarefas/UnifiedTaskModal';
+import QuickTaskModal from '@/components/tarefas/QuickTaskModal';
+import QuickCaptureBar from '@/components/tarefas/QuickCaptureBar';
+import ColumnQuickAdd from '@/components/tarefas/ColumnQuickAdd';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { cn } from '@/lib/utils';
