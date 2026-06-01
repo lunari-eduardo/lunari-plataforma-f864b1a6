@@ -297,10 +297,14 @@ export default function Tarefas() {
         )}
       </div>
 
-      <UnifiedTaskModal open={createOpen} onOpenChange={setCreateOpen} mode="create" onSubmit={async (data: any) => {
-        const t = await addTask({ ...data, source: 'manual' });
-        toast({ title: 'Tarefa criada', description: t?.title || 'Nova tarefa' });
-      }} />
+      <QuickTaskModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        defaultStatus={defaultOpenKey}
+        onSubmit={async (data) => {
+          await addTask(data as any);
+        }}
+      />
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
       <TaskDetailsModal task={selectedTask} open={!!selectedTask} onOpenChange={open => !open && setSelectedTask(null)} onUpdate={updateTask} onDelete={deleteTask} statusOptions={statusOptions} />
     </div>
