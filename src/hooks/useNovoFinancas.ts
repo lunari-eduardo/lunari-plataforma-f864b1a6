@@ -186,7 +186,7 @@ export function useNovoFinancas() {
         item: itemCompativel
       };
     }).filter(Boolean) as TransacaoCompativel[];
-  }, [transacoesSupabase, itensFinanceiros]);
+  }, [transacoesSupabase, itensFinanceiros, itensLookup]);
 
   // Filtrar transações por mês/ano (já feito no hook Supabase, mas mantemos compatibilidade)
   const transacoesFiltradas = useMemo(() => {
