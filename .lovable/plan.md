@@ -1,175 +1,79 @@
-# Reformulação do Módulo de Tarefas
+## Diagnóstico
 
-Transformar o módulo atual (formulário pesado) em uma ferramenta de **captura rápida** com profundidade opcional, mantendo 100% das integrações existentes (Workflow + Checklists).
+Investiguei a base e o código. Há **dois problemas conectados**, ambos causados por itens financeiros que foram **arquivados** (`ativo = false`) em vez de excluídos numa correção anterior.
+
+### Problema 1 — "Item Removido" nas despesas
+
+No usuário afetado (`db0ca3d8…`), 12 itens-padrão estão com `ativo = false` (DAS, Adobe, Água, Aluguel, Canva, Internet, Pró-labore, Combustível, Cursos e treinamentos, Fornecedor 1, Marketing, Acervo/Cenário, Fornecedor 1).
+
+As transações dessas categorias **continuam apontando corretamente** para esses itens (0 órfãs no banco), mas:
+
+- `SupabaseFinancialItemsAdapter.getAllItems()` filtra `ativo = true`.
+- `useNovoFinancas.ts` (linha 135) faz `itensFinanceiros.find(...)` para resolver o nome — como o item arquivado não está na lista, cai no fallback **"Item Removido" / "Despesa Variável"** (linha 141‑147). Isso também explica por que despesas fixas (Canva, DAS, etc.) aparecem agrupadas como variáveis.
+
+### Problema 2 — Erro 409 ao recriar categoria existente
+
+O índice único `fin_items_master_user_nome_grupo_uniq (user_id, lower(nome), grupo_principal)` cobre **registros ativos e arquivados**.
+
+`SupabaseFinancialItemsAdapter.createItem()` faz `INSERT` puro, sem tratar o caso de já existir um item arquivado com o mesmo nome/grupo. Resultado: PostgREST devolve **409 Conflict** e a UI mostra "Erro ao adicionar item financeiro".
 
 ---
 
-## 1. Captura ultrarrápida (3 segundos)
+## Plano de correção
 
-### 1.1. Quick-capture no topo da página
-Adicionar logo acima do Kanban um campo único, sempre visível:
+### 1. Migração de dados — reativar itens arquivados em uso
 
-```text
-💡 [ Capturar tarefa ou ideia...                            ] ⏎
+Para todo item arquivado que ainda tenha transações ou modelos recorrentes vinculados, **reativar** (`ativo = true`). Isso recupera as despesas fixas/variáveis sem mexer em transações, valores ou status.
+
+```sql
+UPDATE public.fin_items_master im
+SET ativo = true, updated_at = now()
+WHERE ativo = false
+  AND (
+    EXISTS (SELECT 1 FROM public.fin_transactions t WHERE t.item_id = im.id)
+    OR EXISTS (SELECT 1 FROM public.fin_recurring_blueprints r WHERE r.item_id = im.id)
+  );
 ```
 
-- `Enter` cria a tarefa imediatamente, **sem modal**.
-- Defaults: `status = A Fazer` (defaultOpenKey), `priority = medium`, `type = simple`, sem prazo/responsável.
-- Foco permanece no campo após criar (permite rajadas de captura).
-- `Esc` limpa o campo.
+Itens arquivados **sem uso** continuam arquivados (não atrapalham nada e preservam histórico de intenção do usuário).
 
-### 1.2. Quick-add por coluna no Kanban
-No rodapé (ou topo) de cada coluna, botão discreto `+ Nova tarefa`. Ao clicar, vira input inline:
+### 2. Corrigir `createItem` — reativar em vez de duplicar
 
-```text
-[ Escreva a tarefa... ] ⏎
-```
+Em `src/adapters/SupabaseFinancialItemsAdapter.ts`, no método `createItem`:
 
-- `Enter` cria já no status daquela coluna.
-- `Esc` ou blur sem texto cancela.
+1. Procurar item existente do usuário com `lower(nome) = lower(novo_nome)` e mesmo `grupo_principal`.
+2. Se existir e estiver **ativo** → erro amigável "Já existe um item com este nome neste grupo" (sem 409 cru).
+3. Se existir e estiver **arquivado** → `UPDATE ativo = true` (reativação) e devolver o registro.
+4. Caso contrário → `INSERT` normal.
 
-### 1.3. Modal "Nova tarefa" simplificado
-Ao clicar no botão principal `Nova tarefa`, abrir modal mínimo:
+Isso elimina o 409 e respeita o índice único.
 
-```text
-Nova Tarefa
-────────────────────────────────
-[ O que precisa ser feito? ]
+### 3. Mensagem de erro mais clara no front
 
-▸ + Mais opções
+Em `src/hooks/useNovoFinancas.ts` (`adicionarItemFinanceiro`), tratar o erro de duplicidade já mapeado pelo adapter e exibir mensagem específica em vez do genérico "Erro ao adicionar item financeiro".
 
-                       [Cancelar]  [Criar]
-```
+### 4. (Defensivo) Resolver nome de transações apontando para itens arquivados
 
-- Único campo obrigatório: **título**.
-- `+ Mais opções` (collapsible) revela: Descrição, Prazo, Responsável, Prioridade, Etiquetas, Checklist, Anexos, Cliente/Evento/Orçamento relacionados.
-- `Enter` no título cria direto (sem precisar abrir avançado).
+Atualmente o fallback "Item Removido" em `useNovoFinancas.ts` aciona sempre que o item não está na lista de ativos. Após a etapa 1 isso some no usuário afetado, mas para evitar regressão futura:
 
----
+- `getAllItems()` continua devolvendo só ativos (usado para o seletor de novos lançamentos).
+- Adicionar um carregamento auxiliar **`getAllItemsIncludingArchived()`** usado **somente para resolver nomes/grupos** das transações já existentes.
+- O `find(...)` na linha 135 passa a usar o mapa completo; só cai em "Item Removido" se a transação realmente apontar para um `item_id` inexistente (não é o caso hoje).
 
-## 2. Eliminar "Tipo de Tarefa"
+### Escopo
 
-Hoje existem 4 tipos (`simple`, `checklist`, `content`, `document`) que forçam decisão prévia.
+- ✅ Migração de reativação de itens em uso (etapa 1).
+- ✅ Ajuste no adapter `createItem` (etapa 2).
+- ✅ Toast/erro amigável (etapa 3).
+- ✅ Fallback robusto para itens arquivados (etapa 4).
+- ❌ Não mexer em transações, valores, status, gateways de pagamento ou outras telas.
+- ❌ Não alterar índices/constraints do banco.
 
-**Mudança:** toda tarefa passa a ser unificada. Os blocos viram **seções opcionais sempre disponíveis dentro do detalhe**:
-- Descrição (texto livre)
-- Checklist (itens ilimitados)
-- Anexos (arquivos)
-- Links (URLs) — pode ser adiado para v2
-- Comentários — adiado para v2
+### Validação após implementação
 
-### Compatibilidade
-- O campo `type` permanece no banco para não quebrar dados existentes (mantemos default `simple`).
-- A UI deixa de expor o seletor. Tarefas antigas (`content`, `document`, `checklist`) continuam abrindo normalmente — todas as seções ficam visíveis igualmente.
-- `activeSections` e `checklistItems` continuam sendo persistidos como hoje (preserva integração com ChecklistPanel/Workflow).
-- A regra atual `filterTasks` que esconde checklists "puros" do Kanban é mantida (para não quebrar `ChecklistPanel` no Workflow).
-
-### Arquivos a remover/aposentar
-- `TaskTypeSelector.tsx` (raiz e `forms/`)
-- `TaskSectionSelector.tsx`
-- `forms/TaskContentForm.tsx`, `forms/TaskDocumentForm.tsx`, `forms/TaskChecklistForm.tsx`, `forms/TaskSimpleForm.tsx`
-- `TaskFormModal.tsx` (substituído pelo novo Quick + Advanced modal)
-
----
-
-## 3. Novo design dos cards (Kanban)
-
-Densidade alta, informação útil sem precisar abrir:
-
-```text
-┌────────────────────────────────────────┐
-│ ● Separar fotos do ensaio da Maria     │  ← ponto colorido = prioridade
-│                                        │
-│ 🏷 Marketing  +2                       │  ← máx 2 tags, resto agrupado
-│ ─────────────────────────────────────  │
-│ 📅 Atrasada 2d   ☑ 3/5     👤 EC      │
-└────────────────────────────────────────┘
-```
-
-Especificação:
-- **Título**: peso visual principal (font-medium, line-clamp-2).
-- **Prioridade**: ponto colorido pequeno antes do título (🔴 alta, 🟡 média, ⚪ baixa). Remove badge atual que ocupa linha inteira.
-- **Prazo amigável**: `Hoje`, `Amanhã`, `Em 3 dias`, `Atrasada 2d` — cor muda conforme urgência (vermelho/âmbar/neutro).
-- **Checklist**: se existir, mostra `☑ x/y`. Clicável para expandir? Não — apenas indicador.
-- **Responsável**: avatar circular pequeno com iniciais.
-- **Etiquetas**: máximo 2 visíveis + `+N`.
-- Mantém glassmorphism atual e padrão dnd-kit.
-
-Card atual `TaskCard.tsx` será reescrito; `CleanTaskCard.tsx` (lista) recebe os mesmos ajustes de prazo/prioridade.
-
----
-
-## 4. Vinculação com ecossistema Lunari
-
-Já existem os campos `relatedClienteId`, `relatedBudgetId`, `relatedSessionId`. Atualmente subutilizados.
-
-No modal avançado e no detalhe da tarefa, adicionar seletores opcionais:
-- **Cliente** (combobox buscando clientes Supabase)
-- **Evento/Sessão** (combobox de sessões; se cliente selecionado, filtra)
-- **Orçamento** (combobox)
-- *(Contrato fica fora desta entrega — campo ainda não existe no schema)*
-
-Quando vinculados, o card pode exibir um chip discreto (ex.: `Maria Silva · Newborn`) abaixo do título, opcionalmente.
-
-**Sem mudanças de schema.** Apenas usa as colunas já existentes.
-
----
-
-## 5. Integrações preservadas (não tocar)
-
-- ✅ **Workflow ↔ Tarefas com prazo**: tarefas com `dueDate` continuam aparecendo no Workflow do mês correspondente — nenhum hook/serviço de workflow é modificado.
-- ✅ **Checklist do Workflow → Tarefas**: `ChecklistPanel` e a criação automática de tarefas tipo `checklist` permanecem intactas. Continuamos persistindo `type='checklist'` para esses itens para não quebrar a query atual.
-- ✅ **Estrutura de dados / banco**: zero migrations. Tudo é UI + comportamento de criação.
-- ✅ Status configuráveis (`useSupabaseTaskStatuses`) continuam funcionando — apenas removemos o seletor da tela de criação.
-
----
-
-## 6. Detalhes técnicos
-
-### Componentes novos
-- `QuickCaptureBar.tsx` — input global no topo de `Tarefas.tsx`.
-- `ColumnQuickAdd.tsx` — input inline por coluna.
-- `QuickTaskModal.tsx` — substitui `UnifiedTaskModal` no modo create; reutiliza `TaskDetailsModal` para edição.
-- `TaskCard.tsx` — reescrito para o novo layout denso.
-
-### Hook `useSupabaseTasks`
-Sem mudanças de assinatura. `addTask` já aceita `Omit<Task, 'id' | 'createdAt'>`. Quick-capture chama:
-```ts
-addTask({
-  title,
-  status: defaultOpenKey,
-  priority: 'medium',
-  type: 'simple',
-  source: 'manual',
-})
-```
-
-### Comportamento de status na criação
-O usuário não escolhe status — sempre cai no `defaultOpenKey` (ou no status da coluna no caso de quick-add por coluna). Mudança de status só por drag-and-drop ou no detalhe.
-
-### Toasts
-Manter padrão atual (sem toast de sucesso para criações via quick-capture — alinhado à preferência do projeto de não exibir toasts de sucesso). Toast de erro permanece.
-
----
-
-## 7. Fora de escopo (não será feito agora)
-
-- Comentários em tarefas.
-- Vinculação com Contrato (campo não existe).
-- Recorrência de tarefas.
-- Templates de tarefa (já existe `TemplateManagerModal`, sem mudanças).
-- Mudanças na view de Lista (apenas o card é atualizado por consistência).
-- Migrations no banco.
-
----
-
-## 8. Plano de validação após implementação
-
-1. Quick-capture: digitar título + Enter cria tarefa em "A Fazer" sem modal.
-2. Quick-add em coluna "Em andamento": tarefa nasce já naquela coluna.
-3. Modal `Nova tarefa`: criar só com título; depois testar `+ Mais opções` com prazo + prioridade + checklist.
-4. Drag-and-drop entre colunas continua funcionando.
-5. Tarefa antiga do tipo `content`/`document` abre o detalhe sem erro e mostra todas as seções.
-6. Tarefa com `dueDate` aparece corretamente no Workflow do mês.
-7. Checklist criado pelo Workflow continua gerando item no `ChecklistPanel`.
-8. Card mostra prioridade como ponto, prazo amigável e progresso de checklist.
+1. Conferir tela de Lançamentos do usuário: despesas fixas voltam a mostrar Canva/DAS/Água/Internet etc. corretamente classificadas.
+2. Em Configurações, tentar adicionar "DAS" como Despesa Fixa novamente:
+   - Se já existir ativo → mensagem clara.
+   - Se existir arquivado → reativação silenciosa, item aparece na lista.
+   - Se não existir → criação normal.
+3. Conferir no banco: `SELECT count(*) FROM fin_items_master WHERE ativo=false` cai apenas para itens sem uso.
