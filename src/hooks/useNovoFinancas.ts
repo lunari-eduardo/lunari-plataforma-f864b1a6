@@ -35,6 +35,8 @@ export function useNovoFinancas() {
   // ============= ESTADOS PRINCIPAIS =============
   
   const [itensFinanceiros, setItensFinanceiros] = useState<ItemFinanceiroCompativel[]>([]);
+  // Mapa completo (inclui arquivados) — usado SOMENTE para resolver nomes em transações
+  const [itensLookup, setItensLookup] = useState<Map<string, ItemFinanceiroCompativel>>(new Map());
 
   const [filtroMesAno, setFiltroMesAno] = useState(() => {
     const hoje = getCurrentDateString();
