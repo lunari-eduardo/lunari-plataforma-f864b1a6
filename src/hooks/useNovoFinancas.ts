@@ -155,13 +155,13 @@ export function useNovoFinancas() {
         return null;
       }
       
-      const item = itensFinanceiros.find(item => item.id === transacao.item_id);
+      const item = itensLookup.get(transacao.item_id) ?? itensFinanceiros.find(i => i.id === transacao.item_id);
       const itemCompativel = item ? {
         ...item,
         grupoPrincipal: item.grupo_principal
-      } : { 
-        id: transacao.item_id, 
-        nome: 'Item Removido', 
+      } : {
+        id: transacao.item_id,
+        nome: 'Item Removido',
         grupo_principal: 'Despesa Variável' as GrupoPrincipal,
         grupoPrincipal: 'Despesa Variável' as GrupoPrincipal,
         userId: transacao.userId,
