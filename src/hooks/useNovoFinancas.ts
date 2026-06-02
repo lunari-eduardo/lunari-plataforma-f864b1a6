@@ -68,6 +68,13 @@ export function useNovoFinancas() {
           grupoPrincipal: item.grupo_principal
         }));
         setItensFinanceiros(itemsCompativeis);
+
+        // Carrega TODOS (inclui arquivados) só para o lookup de nomes
+        const { SupabaseFinancialItemsAdapter } = await import('@/adapters/SupabaseFinancialItemsAdapter');
+        const all = await SupabaseFinancialItemsAdapter.getAllItemsIncludingArchived();
+        const map = new Map<string, ItemFinanceiroCompativel>();
+        all.forEach(i => map.set(i.id, { ...i, grupoPrincipal: i.grupo_principal }));
+        setItensLookup(map);
       } catch (error) {
         console.error('Erro ao carregar itens financeiros:', error);
       }
