@@ -50,8 +50,12 @@ export function useFinancialItemsManagement({
       await adicionarItemFinanceiro(itemState.novoNome.trim(), itemState.novoGrupo);
       setItemState(prev => ({ ...prev, novoNome: '' }));
       showSuccessToast(TOAST_MESSAGES.SUCCESS_ADD);
-    } catch (error) {
-      showErrorToast(TOAST_MESSAGES.ERROR_GENERIC_ADD);
+    } catch (error: any) {
+      if (error?.code === 'DUPLICATE_ACTIVE') {
+        showErrorToast(error.message || 'Já existe um item com este nome neste grupo.');
+      } else {
+        showErrorToast(TOAST_MESSAGES.ERROR_GENERIC_ADD);
+      }
     }
   }, [itemState.novoNome, itemState.novoGrupo, adicionarItemFinanceiro, validateAndShowError, showSuccessToast, showErrorToast]);
 

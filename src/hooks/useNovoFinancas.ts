@@ -35,6 +35,8 @@ export function useNovoFinancas() {
   // ============= ESTADOS PRINCIPAIS =============
   
   const [itensFinanceiros, setItensFinanceiros] = useState<ItemFinanceiroCompativel[]>([]);
+  // Mapa completo (inclui arquivados) — usado SOMENTE para resolver nomes em transações
+  const [itensLookup, setItensLookup] = useState<Map<string, ItemFinanceiroCompativel>>(new Map());
 
   const [filtroMesAno, setFiltroMesAno] = useState(() => {
     const hoje = getCurrentDateString();
@@ -66,6 +68,13 @@ export function useNovoFinancas() {
           grupoPrincipal: item.grupo_principal
         }));
         setItensFinanceiros(itemsCompativeis);
+
+        // Carrega TODOS (inclui arquivados) só para o lookup de nomes
+        const { SupabaseFinancialItemsAdapter } = await import('@/adapters/SupabaseFinancialItemsAdapter');
+        const all = await SupabaseFinancialItemsAdapter.getAllItemsIncludingArchived();
+        const map = new Map<string, ItemFinanceiroCompativel>();
+        all.forEach(i => map.set(i.id, { ...i, grupoPrincipal: i.grupo_principal }));
+        setItensLookup(map);
       } catch (error) {
         console.error('Erro ao carregar itens financeiros:', error);
       }
@@ -83,11 +92,25 @@ export function useNovoFinancas() {
         ...novoItem,
         grupoPrincipal: novoItem.grupo_principal
       };
-      
-      setItensFinanceiros(prev => [...prev, itemCompativel]);
+
+      // Pode ser inserção nova OU reativação de arquivado — usa upsert no estado
+      setItensFinanceiros(prev => {
+        const sem = prev.filter(i => i.id !== itemCompativel.id);
+        return [...sem, itemCompativel];
+      });
+      setItensLookup(prev => {
+        const next = new Map(prev);
+        next.set(itemCompativel.id, itemCompativel);
+        return next;
+      });
       return novoItem;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao adicionar item financeiro:', error);
+      if (error?.code === 'DUPLICATE_ACTIVE' || error?.message === 'DUPLICATE_ACTIVE') {
+        const wrapped: any = new Error('Já existe um item com este nome neste grupo.');
+        wrapped.code = 'DUPLICATE_ACTIVE';
+        throw wrapped;
+      }
       throw error;
     }
   };
@@ -132,13 +155,13 @@ export function useNovoFinancas() {
         return null;
       }
       
-      const item = itensFinanceiros.find(item => item.id === transacao.item_id);
+      const item = itensLookup.get(transacao.item_id) ?? itensFinanceiros.find(i => i.id === transacao.item_id);
       const itemCompativel = item ? {
         ...item,
         grupoPrincipal: item.grupo_principal
-      } : { 
-        id: transacao.item_id, 
-        nome: 'Item Removido', 
+      } : {
+        id: transacao.item_id,
+        nome: 'Item Removido',
         grupo_principal: 'Despesa Variável' as GrupoPrincipal,
         grupoPrincipal: 'Despesa Variável' as GrupoPrincipal,
         userId: transacao.userId,
@@ -163,7 +186,7 @@ export function useNovoFinancas() {
         item: itemCompativel
       };
     }).filter(Boolean) as TransacaoCompativel[];
-  }, [transacoesSupabase, itensFinanceiros]);
+  }, [transacoesSupabase, itensFinanceiros, itensLookup]);
 
   // Filtrar transações por mês/ano (já feito no hook Supabase, mas mantemos compatibilidade)
   const transacoesFiltradas = useMemo(() => {
