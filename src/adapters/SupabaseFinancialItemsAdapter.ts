@@ -136,6 +136,42 @@ export class SupabaseFinancialItemsAdapter {
       throw error;
     }
   }
+
+  /**
+   * Buscar TODOS os itens do usuário (ativos + arquivados).
+   * Usado apenas para resolver nomes/grupos de transações antigas — não usar
+   * em seletores de criação de novos lançamentos.
+   */
+  static async getAllItemsIncludingArchived(): Promise<ItemFinanceiroSupabase[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('fin_items_master')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('nome');
+
+      if (error) throw error;
+
+      return (data || []).map(item => ({
+        id: item.id,
+        nome: item.nome,
+        grupo_principal: item.grupo_principal as GrupoPrincipal,
+        userId: item.user_id,
+        ativo: item.ativo,
+        criadoEm: item.created_at?.split('T')[0] || getCurrentDateString(),
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        user_id: item.user_id,
+        is_default: item.is_default
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar itens (incl. arquivados):', error);
+      throw error;
+    }
+  }
   
   /**
    * Criar novo item financeiro.
