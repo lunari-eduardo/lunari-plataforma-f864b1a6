@@ -138,27 +138,66 @@ export class SupabaseFinancialItemsAdapter {
   }
   
   /**
-   * Criar novo item financeiro
+   * Criar novo item financeiro.
+   * - Se já existir um item ativo com mesmo nome+grupo → lança DUPLICATE_ACTIVE.
+   * - Se existir arquivado (ativo=false) → reativa em vez de inserir (evita 409 no índice único).
+   * - Caso contrário → INSERT normal.
    */
   static async createItem(nome: string, grupo_principal: GrupoPrincipal): Promise<ItemFinanceiroSupabase> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
-      
-      const { data, error } = await supabase
+
+      const nomeTrim = nome.trim();
+      if (!nomeTrim) throw new Error('Nome inválido');
+
+      // Procura existente case-insensitive no mesmo grupo (cobre ativos e arquivados)
+      const { data: existentes, error: findErr } = await supabase
         .from('fin_items_master')
-        .insert({
-          user_id: user.id,
-          nome,
-          grupo_principal,
-          ativo: true,
-          is_default: false
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('grupo_principal', grupo_principal)
+        .ilike('nome', nomeTrim);
+
+      if (findErr) throw findErr;
+
+      const existente = (existentes || []).find(
+        i => (i.nome || '').trim().toLowerCase() === nomeTrim.toLowerCase()
+      );
+
+      let data: any;
+
+      if (existente) {
+        if (existente.ativo) {
+          const err: any = new Error('DUPLICATE_ACTIVE');
+          err.code = 'DUPLICATE_ACTIVE';
+          throw err;
+        }
+        // Reativa item arquivado (mesmo grupo e nome equivalente)
+        const { data: updated, error: upErr } = await supabase
+          .from('fin_items_master')
+          .update({ ativo: true, nome: nomeTrim })
+          .eq('id', existente.id)
+          .select()
+          .single();
+        if (upErr) throw upErr;
+        data = updated;
+      } else {
+        const { data: inserted, error } = await supabase
+          .from('fin_items_master')
+          .insert({
+            user_id: user.id,
+            nome: nomeTrim,
+            grupo_principal,
+            ativo: true,
+            is_default: false
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        data = inserted;
+      }
+
       return {
         id: data.id,
         nome: data.nome,
