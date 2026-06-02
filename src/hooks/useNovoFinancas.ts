@@ -92,11 +92,25 @@ export function useNovoFinancas() {
         ...novoItem,
         grupoPrincipal: novoItem.grupo_principal
       };
-      
-      setItensFinanceiros(prev => [...prev, itemCompativel]);
+
+      // Pode ser inserção nova OU reativação de arquivado — usa upsert no estado
+      setItensFinanceiros(prev => {
+        const sem = prev.filter(i => i.id !== itemCompativel.id);
+        return [...sem, itemCompativel];
+      });
+      setItensLookup(prev => {
+        const next = new Map(prev);
+        next.set(itemCompativel.id, itemCompativel);
+        return next;
+      });
       return novoItem;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao adicionar item financeiro:', error);
+      if (error?.code === 'DUPLICATE_ACTIVE' || error?.message === 'DUPLICATE_ACTIVE') {
+        const wrapped: any = new Error('Já existe um item com este nome neste grupo.');
+        wrapped.code = 'DUPLICATE_ACTIVE';
+        throw wrapped;
+      }
       throw error;
     }
   };
