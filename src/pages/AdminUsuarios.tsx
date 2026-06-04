@@ -438,6 +438,10 @@ export default function AdminUsuarios() {
         <TabsContent value="emails">
           <AllowedEmailsManager />
         </TabsContent>
+
+        <TabsContent value="platform-integrations">
+          <PlatformIntegrationsTab />
+        </TabsContent>
       </Tabs>
 
       {/* VIP Modal */}
