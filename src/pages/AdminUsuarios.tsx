@@ -264,6 +264,9 @@ export default function AdminUsuarios() {
           <TabsTrigger value="emails" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />Emails Autorizados
           </TabsTrigger>
+          <TabsTrigger value="platform-integrations" className="flex items-center gap-2">
+            <Plug className="h-4 w-4" />Integrações Financeiras
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-6">
