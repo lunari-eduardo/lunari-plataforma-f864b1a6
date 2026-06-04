@@ -1,14 +1,13 @@
+// ⚠️ PLATAFORMA LUNARI — usa exclusivamente a chave Asaas do sistema (assinaturas Lunari).
+// NUNCA usar para cobranças de fotógrafos. Chave via `_shared/platform-asaas.ts`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPlatformAsaasConfig } from "../_shared/platform-asaas.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
-  ? "https://api.asaas.com"
-  : "https://api-sandbox.asaas.com";
 
 function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
