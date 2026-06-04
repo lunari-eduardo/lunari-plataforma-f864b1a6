@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { 
   Users, Crown, Search, Star, Clock, CheckCircle, XCircle, Loader2, Mail,
-  TrendingUp, UserCheck, MoreVertical, Coins, HardDrive, CreditCard
+  TrendingUp, UserCheck, MoreVertical, Coins, HardDrive, CreditCard, Plug
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,6 +28,7 @@ import AllowedEmailsManager from '@/components/admin/AllowedEmailsManager';
 import { AdminStrategyTab } from '@/components/admin/AdminStrategyTab';
 import { AdminSubscriptionsTab } from '@/components/admin/AdminSubscriptionsTab';
 import { CreditsModal, StorageModal, SubscriptionsModal } from '@/components/admin/AdminUserActions';
+import { PlatformIntegrationsTab } from '@/components/admin/PlatformIntegrationsTab';
 
 interface UserWithData {
   id: string;
