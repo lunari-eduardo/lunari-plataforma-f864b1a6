@@ -1,4 +1,7 @@
+// ⚠️ PLATAFORMA LUNARI — webhook das assinaturas Lunari.
+// NUNCA usar para cobranças de fotógrafos. Chave via `_shared/platform-asaas.ts`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPlatformAsaasConfig } from "../_shared/platform-asaas.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,9 +34,6 @@ const PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
   combo_completo: { monthly: 6490, yearly: 66198 },
 };
 
-const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
-  ? "https://api.asaas.com"
-  : "https://api-sandbox.asaas.com";
 
 async function applyDowngrade(adminClient: any, subscription: any) {
   const newPlanType = subscription.pending_downgrade_plan;
@@ -43,11 +43,13 @@ async function applyDowngrade(adminClient: any, subscription: any) {
 
   console.log(`Applying scheduled downgrade: ${subscription.plan_type} → ${newPlanType}`);
 
-  const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-  if (!ASAAS_API_KEY) {
-    console.error("ASAAS_API_KEY not configured, cannot apply downgrade");
+  const platformCfg = await getPlatformAsaasConfig(adminClient);
+  if (!platformCfg) {
+    console.error("Platform Asaas integration not configured, cannot apply downgrade");
     return;
   }
+  const ASAAS_API_KEY = platformCfg.apiKey;
+  const ASAAS_BASE_URL = platformCfg.baseUrl;
 
   const userId = subscription.user_id;
 

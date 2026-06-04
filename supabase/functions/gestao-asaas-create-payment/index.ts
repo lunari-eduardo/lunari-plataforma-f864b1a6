@@ -84,6 +84,9 @@ Deno.serve(async (req) => {
       .eq('user_id', userId)
       .eq('provedor', 'asaas')
       .eq('status', 'ativo')
+      .order('is_default', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (integError || !integracao?.access_token) {

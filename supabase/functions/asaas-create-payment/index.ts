@@ -1,14 +1,13 @@
+// ⚠️ PLATAFORMA LUNARI — usa exclusivamente a chave Asaas do sistema (assinaturas Lunari).
+// NUNCA usar para cobranças de fotógrafos. Chave via `_shared/platform-asaas.ts`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPlatformAsaasConfig } from "../_shared/platform-asaas.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const ASAAS_BASE_URL = Deno.env.get("ASAAS_ENV") === "production"
-  ? "https://api.asaas.com"
-  : "https://api-sandbox.asaas.com";
 
 function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -84,18 +83,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-    if (!ASAAS_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "ASAAS_API_KEY not configured", requestId }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    const platformCfg = await getPlatformAsaasConfig(adminClient);
+    if (!platformCfg) {
+      return new Response(
+        JSON.stringify({ error: "Integração Asaas (plataforma) não configurada", requestId }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const ASAAS_API_KEY = platformCfg.apiKey;
+    const ASAAS_BASE_URL = platformCfg.baseUrl;
 
     // Get or validate customer ID
     const { data: account } = await adminClient
