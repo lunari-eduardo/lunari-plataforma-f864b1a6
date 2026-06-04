@@ -135,14 +135,25 @@ async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId }: 
   return null;
 }
 
-/** Get Asaas API config from the photographer's integration (not platform env var) */
+/**
+ * Get Asaas API config from the photographer's integration.
+ *
+ * ISOLAMENTO FINANCEIRO (SEGURANÇA CRÍTICA):
+ * - NUNCA fazemos fallback para ASAAS_API_KEY da plataforma aqui.
+ * - A chave da plataforma é exclusiva para assinaturas Lunari e jamais
+ *   pode ser usada para consultar/alterar cobranças de fotógrafos —
+ *   isso causaria cruzamento financeiro entre contas.
+ */
 async function getPhotographerAsaasConfig(supabase: any, userId: string) {
   const { data: integracao, error } = await supabase
     .from("usuarios_integracoes")
-    .select("access_token, dados_extras")
+    .select("access_token, dados_extras, is_default, updated_at")
     .eq("user_id", userId)
     .eq("provedor", "asaas")
     .eq("status", "ativo")
+    .order("is_default", { ascending: false })
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -151,13 +162,8 @@ async function getPhotographerAsaasConfig(supabase: any, userId: string) {
   }
 
   if (!integracao?.access_token) {
-    // Fallback to platform env var (for backwards compat / platform-owned accounts)
-    const platformKey = Deno.env.get("ASAAS_API_KEY");
-    if (!platformKey) return null;
-    const env = Deno.env.get("ASAAS_ENV") || "sandbox";
-    const baseUrl = env === "production" ? "https://api.asaas.com/v3" : "https://sandbox.asaas.com/api/v3";
-    console.log("[check-payment-status] Using platform ASAAS_API_KEY as fallback");
-    return { apiKey: platformKey, baseUrl };
+    console.warn(`[check-payment-status] No active Asaas integration for user ${userId} — skipping (no platform fallback by design)`);
+    return null;
   }
 
   const env = integracao.dados_extras?.environment || integracao.dados_extras?.gestao_settings?.environment || "sandbox";
