@@ -1,4 +1,7 @@
+// ⚠️ PLATAFORMA LUNARI — webhook das assinaturas Lunari.
+// NUNCA usar para cobranças de fotógrafos. Chave via `_shared/platform-asaas.ts`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getPlatformAsaasConfig } from "../_shared/platform-asaas.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
