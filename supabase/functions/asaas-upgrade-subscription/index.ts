@@ -76,18 +76,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const ASAAS_API_KEY = Deno.env.get("ASAAS_API_KEY");
-    if (!ASAAS_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "ASAAS_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    const platformCfg = await getPlatformAsaasConfig(adminClient);
+    if (!platformCfg) {
+      return new Response(
+        JSON.stringify({ error: "Integração Asaas (plataforma) não configurada" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const ASAAS_API_KEY = platformCfg.apiKey;
+    const ASAAS_BASE_URL = platformCfg.baseUrl;
 
     // Fetch new plan from unified_plans (single source of truth)
     const { data: newPlan, error: planError } = await adminClient
