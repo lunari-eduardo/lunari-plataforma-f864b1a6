@@ -153,9 +153,12 @@ export class InitialDataService {
         nome: etapa.nome,
         cor: etapa.cor,
         ordem: etapa.ordem,
+        is_system_status: etapa.is_system_status ?? false,
+        is_hidden_in_workflow: etapa.is_hidden_in_workflow ?? false,
         created_at: now,
         updated_at: now
       }));
+
 
       // Insert all data (order matters due to foreign keys)
       await Promise.all([
