@@ -73,9 +73,18 @@ export default function FluxoTrabalho({
     await onMove(id, direcao);
   };
 
+  const toggleOcultarEtapa = async (etapa: EtapaTrabalho) => {
+    try {
+      await onUpdate(etapa.id, { is_hidden_in_workflow: !etapa.is_hidden_in_workflow });
+    } catch (error) {
+      console.error('Erro ao alternar visibilidade da etapa:', error);
+    }
+  };
+
   const isSystemStatus = (etapa: EtapaTrabalho) => {
     return etapa.is_system_status === true;
   };
+
 
   return (
     <TooltipProvider>
