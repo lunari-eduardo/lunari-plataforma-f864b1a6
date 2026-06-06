@@ -584,9 +584,12 @@ export class SupabaseConfigurationAdapterAsync {
         nome: item.nome,
         cor: item.cor,
         ordem: Number(item.ordem),
+        is_system_status: item.is_system_status ?? false,
+        is_hidden_in_workflow: item.is_hidden_in_workflow ?? false,
         created_at: item.created_at,
         updated_at: item.updated_at
       }));
+
 
       console.log(`📋 Loaded ${etapas.length} etapas from Supabase`);
       return etapas;
@@ -624,9 +627,12 @@ export class SupabaseConfigurationAdapterAsync {
         nome: etapa.nome,
         cor: etapa.cor,
         ordem: etapa.ordem,
+        is_system_status: etapa.is_system_status ?? false,
+        is_hidden_in_workflow: etapa.is_hidden_in_workflow ?? false,
         created_at: etapa.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
+
 
       const { error } = await (supabase as any)
         .from('etapas_trabalho')

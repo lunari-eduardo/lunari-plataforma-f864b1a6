@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Edit, Trash2, ArrowUp, ArrowDown, Save, X, Zap, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, ArrowUp, ArrowDown, Save, X, Zap, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import type { EtapaTrabalho } from '@/types/configuration';
+
+
 
 interface FluxoTrabalhoProps {
   etapas: EtapaTrabalho[];
@@ -71,9 +73,18 @@ export default function FluxoTrabalho({
     await onMove(id, direcao);
   };
 
+  const toggleOcultarEtapa = async (etapa: EtapaTrabalho) => {
+    try {
+      await onUpdate(etapa.id, { is_hidden_in_workflow: !etapa.is_hidden_in_workflow });
+    } catch (error) {
+      console.error('Erro ao alternar visibilidade da etapa:', error);
+    }
+  };
+
   const isSystemStatus = (etapa: EtapaTrabalho) => {
     return etapa.is_system_status === true;
   };
+
 
   return (
     <TooltipProvider>
@@ -156,6 +167,8 @@ export default function FluxoTrabalho({
               {/* Rows */}
               {etapasOrdenadas.map((etapa, index) => {
                 const isSystem = isSystemStatus(etapa);
+                const isHidden = etapa.is_hidden_in_workflow === true;
+                const hiddenForcedVisible = isHidden && isSystem && hasGalleryAccess;
                 
                 return (
                   <div
@@ -163,7 +176,8 @@ export default function FluxoTrabalho({
                     className={cn(
                       "grid grid-cols-12 px-4 py-3 text-sm transition-colors",
                       index % 2 === 0 ? 'bg-background' : 'bg-muted/30',
-                      "hover:bg-accent/50"
+                      "hover:bg-accent/50",
+                      isHidden && !hiddenForcedVisible && "opacity-60"
                     )}
                   >
                     {editandoEtapa === etapa.id && !isSystem ? (
@@ -212,6 +226,18 @@ export default function FluxoTrabalho({
                               Automático
                             </Badge>
                           )}
+                          {isHidden && !hiddenForcedVisible && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <EyeOff className="h-3 w-3" />
+                              Oculta
+                            </Badge>
+                          )}
+                          {hiddenForcedVisible && (
+                            <Badge variant="outline" className="text-xs gap-1 border-primary/40 text-primary">
+                              <Eye className="h-3 w-3" />
+                              Visível (Gallery ativo)
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex justify-end gap-1 col-span-5 sm:col-span-4">
                           {isSystem ? (
@@ -236,16 +262,30 @@ export default function FluxoTrabalho({
                               </Button>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-muted-foreground"
-                                  >
-                                    <EyeOff className="h-3.5 w-3.5" />
-                                  </Button>
+                                  <span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => toggleOcultarEtapa(etapa)}
+                                      disabled={hiddenForcedVisible}
+                                    >
+                                      {isHidden ? (
+                                        <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                                      ) : (
+                                        <Eye className="h-3.5 w-3.5" />
+                                      )}
+                                    </Button>
+                                  </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Ocultar do dropdown (em breve)</p>
+                                  <p>
+                                    {hiddenForcedVisible
+                                      ? 'Visível automaticamente — Gallery ativo'
+                                      : isHidden
+                                        ? 'Mostrar nos dropdowns do workflow'
+                                        : 'Ocultar dos dropdowns do workflow'}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </>
@@ -295,6 +335,7 @@ export default function FluxoTrabalho({
                   </div>
                 );
               })}
+
             </div>
           )}
         </div>

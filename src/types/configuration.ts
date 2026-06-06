@@ -48,7 +48,8 @@ export interface EtapaTrabalho {
   nome: string;
   cor: string;
   ordem: number;
-  is_system_status?: boolean; // Status de sistema (PRO + Gallery)
+  is_system_status?: boolean; // Status de sistema (Gallery)
+  is_hidden_in_workflow?: boolean; // Oculto dos dropdowns/filtros do workflow
   created_at?: string;
   updated_at?: string;
 }
@@ -56,8 +57,10 @@ export interface EtapaTrabalho {
 // Constantes para status de sistema do Gallery
 export const GALLERY_SYSTEM_STATUSES = {
   SENT: 'Enviado para seleção',
-  FINALIZED: 'Seleção finalizada'
+  FINALIZED: 'Seleção finalizada',
+  EXPIRED: 'Expirada'
 } as const;
+
 
 // ============= TIPOS PARA FORMULÁRIOS =============
 
@@ -203,5 +206,9 @@ export const DEFAULT_PRODUTOS: Produto[] = [
 export const DEFAULT_ETAPAS: EtapaTrabalho[] = [
   { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c97", nome: "Fotografado", cor: "#00B2FF", ordem: 1 },
   { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c98", nome: "Editando", cor: "#FF9500", ordem: 2 },
-  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c99", nome: "Finalizado", cor: "#34C759", ordem: 3 }
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7c99", nome: "Finalizado", cor: "#34C759", ordem: 3 },
+  // Etapas de sistema (Gallery) — sempre presentes, ocultas por padrão até o usuário ativar Gallery
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7ca0", nome: "Enviado para seleção", cor: "#3B82F6", ordem: 4, is_system_status: true, is_hidden_in_workflow: true },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7ca1", nome: "Seleção finalizada", cor: "#10B981", ordem: 5, is_system_status: true, is_hidden_in_workflow: true },
+  { id: "018fded5-6b5c-7a2f-8c3d-9e4f5a6b7ca2", nome: "Expirada", cor: "#EF4444", ordem: 6, is_system_status: true, is_hidden_in_workflow: true }
 ];

@@ -1,37 +1,99 @@
-## Problema
+# Plano: Etapas de sistema do Gallery — proteção, provisionamento e ocultar/mostrar
 
-Ao clicar em **Salvar** em *Integrações Financeiras*, o navegador acusa:
+## Contexto atual (o que já existe)
 
-- `Access to fetch ... has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.`
-- `POST .../admin-platform-integration-upsert net::ERR_FAILED`
-- Toast: *Failed to send a request to the Edge Function*
+- Coluna `etapas_trabalho.is_system_status boolean default false`.
+- Função `provision-gallery-workflow-statuses` cria/marca as 3 etapas (`Enviado para seleção`, `Seleção finalizada`, `Expirada`) **apenas** quando o usuário adquire Studio Pro + Gallery.
+- `FluxoTrabalho.tsx` já esconde os botões Editar/Excluir para `is_system_status`, mas o botão de ocultar é só um placeholder ("em breve").
+- `InitialDataService.populateDefaultData` semeia `DEFAULT_ETAPAS` mas **não** inclui as 3 etapas de sistema.
+- Não existe proteção no banco — qualquer update/delete passa pela RLS normal.
 
-## Causa raiz
+## O que falta
 
-A função `admin-platform-integration-upsert` (e a irmã `admin-platform-integration-test`) **não está respondendo** — não há nenhum log dela no Supabase. O CORS em si está implementado corretamente no código; o preflight falha porque a função nunca foi deployada (ou falhou no boot silenciosamente). Além disso, nenhuma das duas tem entrada em `supabase/config.toml`, o que pode causar comportamento inconsistente entre deploys.
+1. **Provisionar por padrão para todos os usuários novos** (mesmo sem Gallery) — as etapas devem nascer com a conta.
+2. **Backfill** para usuários existentes que ainda não têm as 3 etapas marcadas como sistema.
+3. **Proteção no banco** (defesa em profundidade) contra delete/edit (nome) de etapas de sistema, mesmo via API direta.
+4. **Coluna nova** `is_hidden_in_workflow boolean default false` para o toggle ocultar/mostrar.
+5. **Botão funcional** Ocultar/Mostrar (ícone `Eye` / `EyeOff`) substituindo o placeholder atual.
+6. **Override automático**: quando o usuário tem Gallery ativo, etapas ocultas voltam a aparecer em todos os dropdowns/listas do workflow.
+7. **Filtro em todas as fontes de status do workflow** (`useWorkflowStatus`, `useRealtimeConfiguration` consumers) respeitando o override.
 
-## Plano de correção
+## Mudanças
 
-1. **Registrar as funções em `supabase/config.toml`** mantendo `verify_jwt = true` (são funções administrativas; a validação do `Authorization` + checagem `has_role('admin')` continuam no código):
-   ```toml
-   [functions.admin-platform-integration-upsert]
-   verify_jwt = true
+### 1. Migração de banco
+```sql
+ALTER TABLE public.etapas_trabalho
+  ADD COLUMN is_hidden_in_workflow boolean NOT NULL DEFAULT false;
 
-   [functions.admin-platform-integration-test]
-   verify_jwt = true
-   ```
+-- Trigger de proteção
+CREATE OR REPLACE FUNCTION public.protect_system_etapas()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND OLD.is_system_status THEN
+    RAISE EXCEPTION 'Etapas do sistema não podem ser excluídas';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.is_system_status THEN
+    -- Permitir alterar apenas: ordem, is_hidden_in_workflow, updated_at, cor
+    IF NEW.nome IS DISTINCT FROM OLD.nome
+       OR NEW.is_system_status IS DISTINCT FROM OLD.is_system_status THEN
+      RAISE EXCEPTION 'Etapas do sistema têm nome/flag protegidos';
+    END IF;
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END $$;
 
-2. **Forçar o deploy** das duas funções via `supabase--deploy_edge_functions` para garantir que o binário esteja publicado e responda ao preflight.
+CREATE TRIGGER trg_protect_system_etapas
+BEFORE UPDATE OR DELETE ON public.etapas_trabalho
+FOR EACH ROW EXECUTE FUNCTION public.protect_system_etapas();
+```
 
-3. **Validar pós-deploy**:
-   - `supabase--curl_edge_functions` em `OPTIONS` para confirmar `200` + headers CORS.
-   - `supabase--curl_edge_functions` em `POST` com a sessão do preview para confirmar upsert/teste reais.
-   - Conferir `supabase--edge_function_logs` para confirmar boot sem erros.
+**Backfill** (via insert tool após migração): para cada usuário existente sem as 3 etapas, criar; para os que têm com mesmo nome, marcar `is_system_status = true`.
 
-4. **Não alterar nada na camada de isolamento financeiro** (Layer 1 fotógrafos × Layer 2 plataforma) — o problema é apenas de disponibilidade da função, não de lógica.
+### 2. Provisionamento padrão de novos usuários
+- Atualizar `src/services/InitialDataService.ts`: adicionar as 3 etapas de sistema ao final do array `etapasData`, com `is_system_status: true` e `is_hidden_in_workflow: false` (ou `true` por padrão para quem não tem Gallery — ver decisão abaixo).
+- Atualizar também `DEFAULT_ETAPAS` em `src/types/configuration.ts` para refletir as 3 etapas.
 
-## Fora do escopo
+**Decisão de default**: começar com `is_hidden_in_workflow = true` para novos usuários sem Gallery — assim quem nunca usa não vê as etapas no dropdown, mas elas existem prontas. No momento que o usuário ativa Gallery, o override exibe automaticamente. Mantém UX limpa por padrão.
 
-- Mudanças na UI de `PlatformIntegrationsTab`.
-- Alterações nas funções `asaas-*` ou em `_shared/platform-asaas.ts`.
-- Migrations ou RLS de `platform_integrations`.
+### 3. UI — `FluxoTrabalho.tsx`
+- Substituir o botão placeholder `EyeOff` por um toggle real:
+  - Ícone `Eye` quando visível, `EyeOff` quando oculta.
+  - Chama nova função `toggleHiddenEtapa(id)` que faz `update` em `is_hidden_in_workflow`.
+  - Linha das etapas ocultas recebe `opacity-60` + badge "Oculta" para feedback visual.
+- Quando `hasGaleryAccess === true` e a etapa está oculta, mostrar tooltip: *"Visível automaticamente — Gallery ativo"*, com o toggle desabilitado.
+
+### 4. Hook e adapter
+- Adicionar `atualizarEtapa` já cobre o update (passa `is_hidden_in_workflow`). Conferir tipagem em `EtapaTrabalho` (`src/types/configuration.ts`) e em `src/integrations/supabase/types.ts` (regenera após migração).
+- Em `useWorkflowStatus` filtrar:
+  ```ts
+  const visible = workflowStatuses.filter(s =>
+    !s.is_hidden_in_workflow || hasGaleryAccess || s.is_system_status === false
+  );
+  ```
+  Regra final: oculta uma etapa SE `is_hidden_in_workflow` E (não é system OU usuário não tem Gallery ativo).
+- Expor `hasGaleryAccess` via `useAccessControl` dentro de `useWorkflowStatus`.
+
+### 5. Pontos de consumo a auditar
+Garantir que usam `useWorkflowStatus.getStatusOptions` (já filtrado) e não leem `etapas` cru:
+- `WorkflowTable.tsx` (dropdown de status nas sessões)
+- Filtros em `Workflow.tsx` / `WorkflowFilters`
+- Kanban (se houver coluna por etapa)
+- Configurações de notificação que listem etapas
+
+Mesmo quando ocultas, as etapas continuam válidas se uma sessão já estiver com aquele status — o filtro afeta apenas a lista de seleção, nunca a exibição do valor atual.
+
+## Arquivos afetados
+- `supabase/migrations/<novo>.sql` (coluna + trigger)
+- `src/services/InitialDataService.ts`
+- `src/types/configuration.ts` (+ tipo `EtapaTrabalho`, + `DEFAULT_ETAPAS`)
+- `src/integrations/supabase/types.ts` (regenerado)
+- `src/components/configuracoes/FluxoTrabalho.tsx`
+- `src/hooks/useWorkflowStatus.ts`
+- `src/hooks/useRealtimeConfiguration.ts` (passar nova flag adiante, se necessário)
+- Backfill via insert tool após aprovação da migração
+
+## Resultado esperado
+- Novo usuário já nasce com as 3 etapas do Gallery, ocultas por padrão.
+- Usuário não-Gallery pode mostrar/ocultar livremente; nunca consegue editar nome ou excluir.
+- Usuário com Gallery ativo: etapas sempre visíveis no fluxo, toggle desabilitado.
+- Banco recusa qualquer tentativa direta de excluir/renomear etapa de sistema.
