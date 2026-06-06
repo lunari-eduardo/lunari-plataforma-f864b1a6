@@ -1642,6 +1642,7 @@ export type Database = {
           cor: string
           created_at: string
           id: string
+          is_hidden_in_workflow: boolean
           is_system_status: boolean | null
           nome: string
           ordem: number
@@ -1652,6 +1653,7 @@ export type Database = {
           cor: string
           created_at?: string
           id?: string
+          is_hidden_in_workflow?: boolean
           is_system_status?: boolean | null
           nome: string
           ordem: number
@@ -1662,6 +1664,7 @@ export type Database = {
           cor?: string
           created_at?: string
           id?: string
+          is_hidden_in_workflow?: boolean
           is_system_status?: boolean | null
           nome?: string
           ordem?: number
