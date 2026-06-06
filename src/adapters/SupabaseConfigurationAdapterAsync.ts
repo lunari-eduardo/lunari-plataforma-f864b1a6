@@ -624,9 +624,12 @@ export class SupabaseConfigurationAdapterAsync {
         nome: etapa.nome,
         cor: etapa.cor,
         ordem: etapa.ordem,
+        is_system_status: etapa.is_system_status ?? false,
+        is_hidden_in_workflow: etapa.is_hidden_in_workflow ?? false,
         created_at: etapa.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
+
 
       const { error } = await (supabase as any)
         .from('etapas_trabalho')
