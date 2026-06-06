@@ -584,9 +584,12 @@ export class SupabaseConfigurationAdapterAsync {
         nome: item.nome,
         cor: item.cor,
         ordem: Number(item.ordem),
+        is_system_status: item.is_system_status ?? false,
+        is_hidden_in_workflow: item.is_hidden_in_workflow ?? false,
         created_at: item.created_at,
         updated_at: item.updated_at
       }));
+
 
       console.log(`📋 Loaded ${etapas.length} etapas from Supabase`);
       return etapas;
