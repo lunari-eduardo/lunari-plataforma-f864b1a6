@@ -765,6 +765,36 @@ export default function AppointmentDetails({
           valorSugerido={valorTotal > 0 ? valorTotal : (formData.paidAmount || 0)}
         />
       )}
+
+      <SlotConflictDialog
+        result={conflictResult}
+        date={pendingChange?.date ?? formData.date}
+        time={pendingChange?.time ?? formData.time}
+        onClose={() => {
+          setConflictResult(null);
+          setPendingChange(null);
+          setDateInputValue(formatDateForInput(formData.date));
+        }}
+        onUnblockAndContinue={async () => {
+          if (!pendingChange) return;
+          const slotId = conflictResult?.kind === 'blocked' ? conflictResult.slot.id : undefined;
+          try {
+            await allowBlockedWrite(slotId);
+            applyDateTimeChange(pendingChange.date, pendingChange.time);
+          } catch (err) {
+            console.error('[AppointmentDetails] desbloqueio falhou', err);
+            toast.error('Falha ao desbloquear horário');
+          } finally {
+            setConflictResult(null);
+            setPendingChange(null);
+          }
+        }}
+        onContinueAnyway={() => {
+          if (pendingChange) applyDateTimeChange(pendingChange.date, pendingChange.time);
+          setConflictResult(null);
+          setPendingChange(null);
+        }}
+      />
     </>
   );
 }
