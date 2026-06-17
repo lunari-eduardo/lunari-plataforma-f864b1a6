@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 import { SlotConflictDialog } from './SlotConflictDialog';
 import { allowBlockedWrite, parseAgendaTriggerError, extractAgendaErrorMessage } from '@/utils/agendaSlotGuard';
+import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
