@@ -144,6 +144,7 @@ export default function AppointmentDetails({
   const applyDateTimeChange = (date: Date, time: string) => {
     setFormData(prev => ({ ...prev, date, time }));
     setDateInputValue(formatDateForInput(date));
+    setTimeInputValue(time);
   };
 
   // Validar mudança de slot (data/hora). Retorna true se pode aplicar.
@@ -178,12 +179,20 @@ export default function AppointmentDetails({
     }
   };
 
-  // Validar hora ao sair do campo
-  const handleTimeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const newTime = e.target.value;
-    if (!newTime || newTime === formData.time) return;
+  // Validar hora ao sair do campo (usa buffer timeInputValue)
+  const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTimeInputValue(e.target.value);
+  };
+
+  const handleTimeBlur = () => {
+    const newTime = timeInputValue;
+    if (!newTime) {
+      setTimeInputValue(formData.time);
+      return;
+    }
+    if (newTime === formData.time) return;
     if (!tryChangeSlot(formData.date, newTime)) {
-      setFormData(prev => ({ ...prev, time: prev.time }));
+      setTimeInputValue(formData.time);
     }
   };
 
