@@ -28,7 +28,7 @@ import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package
 import { cn } from '@/lib/utils';
 import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 import { SlotConflictDialog } from './SlotConflictDialog';
-import { allowBlockedWrite } from '@/utils/agendaSlotGuard';
+import { allowBlockedWrite, parseAgendaTriggerError, extractAgendaErrorMessage } from '@/utils/agendaSlotGuard';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
@@ -212,13 +212,42 @@ export default function AppointmentDetails({
   }, [appointment.id, pacotes]);
 
   // Auto-save (apenas para pendentes; pausado enquanto há dialog de conflito aberto)
+  const lastGoodSlotRef = useRef<{ date: Date; time: string }>({ date: appointment.date, time: appointment.time });
+  useEffect(() => {
+    if (!conflictResult) {
+      lastGoodSlotRef.current = { date: formData.date, time: formData.time };
+    }
+  }, [formData.date, formData.time, conflictResult]);
+
   const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
     data: formData,
     enabled: isEditable && !conflictResult,
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
-      await (onAutoSave ?? onSave)(payload);
+      try {
+        await (onAutoSave ?? onSave)(payload);
+      } catch (err) {
+        const kind = parseAgendaTriggerError(err);
+        if (kind === 'busy' || kind === 'blocked') {
+          // Reverter date/time ao último válido e abrir dialog
+          const reverted = lastGoodSlotRef.current;
+          setFormData(prev => ({ ...prev, date: reverted.date, time: reverted.time }));
+          setDateInputValue(formatDateForInput(reverted.date));
+          // Reaproveita pipeline visual de conflito
+          const check = checkSlot({
+            date: formData.date,
+            time: formData.time,
+            ignoreAppointmentId: appointment.id,
+            targetStatus: formData.status,
+          });
+          setPendingChange({ date: formData.date, time: formData.time });
+          setConflictResult(check.kind === 'free' ? null : check);
+        } else {
+          toast.error(extractAgendaErrorMessage(err));
+        }
+        throw err;
+      }
     },
   });
 

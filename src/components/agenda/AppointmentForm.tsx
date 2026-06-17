@@ -22,9 +22,8 @@ import { configurationService } from '@/services/ConfigurationService';
 import { ChevronDown, Plus, FileText, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
+import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 import { SlotConflictDialog } from './SlotConflictDialog';
-import { allowBlockedWrite, parseAgendaTriggerError } from '@/utils/agendaSlotGuard';
 
 // Tipo de agendamento
 type Appointment = {
@@ -111,9 +110,8 @@ export default function AppointmentForm({
   // ✅ FASE 2: Estado para prevenir cliques duplos no submit
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validação de slot (ocupado/bloqueado/pendente)
-  const { checkSlot } = useSlotAvailabilityCheck();
-  const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
+  // Validação de slot (ocupado/bloqueado/pendente) — centralizada
+  const { guard, dialogProps } = useAgendaConflict();
 
   // Estado para os campos do formulário
   const [formData, setFormData] = useState({
@@ -319,89 +317,78 @@ export default function AppointmentForm({
   };
 
   // Executa a gravação propriamente dita (compartilhado entre submit normal e retry após desbloqueio)
-  const performSave = async (opts?: { unblockSlotId?: string; skipBlockedCheck?: boolean }) => {
-    try {
-      let clientInfo;
-      if (activeTab === 'new') {
-        const novoCliente = await adicionarCliente({
-          nome: formData.newClientName,
-          telefone: formData.newClientPhone || '',
-          email: formData.newClientEmail || '',
-          origem: formData.newClientOrigem || ''
-        });
-        clientInfo = {
-          client: formData.newClientName,
-          clientId: novoCliente.id,
-          clientPhone: formData.newClientPhone,
-          clientEmail: formData.newClientEmail
-        };
-      } else {
-        const selectedClient = clientes.find(c => c.id === formData.clientId);
-        clientInfo = {
-          client: selectedClient?.nome || '',
-          clientId: selectedClient?.id || '',
-          clientPhone: selectedClient?.telefone || '',
-          clientEmail: selectedClient?.email || ''
-        };
-      }
+  const buildAppointmentData = () => {
+    let clientInfo: any;
+    if (activeTab === 'new') {
+      // adicionarCliente é async; chamado dentro do exec
+      clientInfo = null;
+    } else {
+      const selectedClient = clientes.find(c => c.id === formData.clientId);
+      clientInfo = {
+        client: selectedClient?.nome || '',
+        clientId: selectedClient?.id || '',
+        clientPhone: selectedClient?.telefone || '',
+        clientEmail: selectedClient?.email || ''
+      };
+    }
+    return clientInfo;
+  };
 
-      const produtosIncluidos = getIncludedProducts();
+  const performSave = async () => {
+    let clientInfo: any = buildAppointmentData();
+    if (!clientInfo) {
+      const novoCliente = await adicionarCliente({
+        nome: formData.newClientName,
+        telefone: formData.newClientPhone || '',
+        email: formData.newClientEmail || '',
+        origem: formData.newClientOrigem || ''
+      });
+      clientInfo = {
+        client: formData.newClientName,
+        clientId: novoCliente.id,
+        clientPhone: formData.newClientPhone,
+        clientEmail: formData.newClientEmail
+      };
+    }
 
-      const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
-      let packageType = 'Sessão';
-      let packageCategory = '';
-      if (selectedPackage) {
-        packageType = selectedPackage.nome;
-        if (selectedPackage.categoria_id) {
-          try {
-            const configCategorias = configurationService.loadCategorias();
-            const categoria = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
-            packageCategory = categoria?.nome || '';
-          } catch (error) {
-            console.error('Erro ao buscar categoria:', error);
-          }
+    const produtosIncluidos = getIncludedProducts();
+    const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
+    let packageType = 'Sessão';
+    let packageCategory = '';
+    if (selectedPackage) {
+      packageType = selectedPackage.nome;
+      if (selectedPackage.categoria_id) {
+        try {
+          const configCategorias = configurationService.loadCategorias();
+          const categoria = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+          packageCategory = categoria?.nome || '';
+        } catch (error) {
+          console.error('Erro ao buscar categoria:', error);
         }
       }
-
-      const appointmentData = {
-        date: formData.date,
-        time: formData.time,
-        title: clientInfo.client,
-        type: packageCategory || 'Sessão',
-        category: packageType,
-        status: formData.status as 'confirmado' | 'a confirmar',
-        description: formData.description,
-        packageId: formData.packageId,
-        produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
-        paidAmount: formData.paidAmount,
-        valorPacote: formData.valorPacote,
-        client: clientInfo.client,
-        clienteId: clientInfo.clientId,
-        whatsapp: clientInfo.clientPhone,
-        email: clientInfo.clientEmail,
-        clientPhone: clientInfo.clientPhone,
-        clientEmail: clientInfo.clientEmail
-      };
-
-      // Liberar trigger do banco para esta gravação se vier de desbloqueio
-      if (opts?.unblockSlotId || opts?.skipBlockedCheck) {
-        await allowBlockedWrite(opts.unblockSlotId);
-      }
-
-      await onSave(appointmentData);
-    } catch (error) {
-      const triggerError = parseAgendaTriggerError(error);
-      if (triggerError === 'busy') {
-        toast.error('Já existe um agendamento confirmado neste horário');
-      } else if (triggerError === 'blocked') {
-        toast.error('Horário bloqueado — desbloqueie antes de salvar');
-      } else {
-        console.error('❌ [AppointmentForm] Erro ao salvar:', error);
-        toast.error('Erro ao salvar agendamento');
-      }
-    } finally {
-      setTimeout(() => setIsSubmitting(false), 1000);
     }
+
+    const appointmentData = {
+      date: formData.date,
+      time: formData.time,
+      title: clientInfo.client,
+      type: packageCategory || 'Sessão',
+      category: packageType,
+      status: formData.status as 'confirmado' | 'a confirmar',
+      description: formData.description,
+      packageId: formData.packageId,
+      produtosIncluidos: produtosIncluidos.length > 0 ? produtosIncluidos : undefined,
+      paidAmount: formData.paidAmount,
+      valorPacote: formData.valorPacote,
+      client: clientInfo.client,
+      clienteId: clientInfo.clientId,
+      whatsapp: clientInfo.clientPhone,
+      email: clientInfo.clientEmail,
+      clientPhone: clientInfo.clientPhone,
+      clientEmail: clientInfo.clientEmail
+    };
+
+    await onSave(appointmentData);
   };
 
   // Manipular envio do formulário
@@ -426,29 +413,24 @@ export default function AppointmentForm({
       return;
     }
 
-    // Validação centralizada de slot
-    const slotCheck = checkSlot({
-      date: formData.date,
-      time: formData.time,
-      ignoreAppointmentId: appointment?.id,
-      targetStatus: formData.status as 'confirmado' | 'a confirmar',
-    });
-
-    if (slotCheck.kind === 'busy' || slotCheck.kind === 'blocked') {
-      setConflictResult(slotCheck);
-      setIsSubmitting(false);
-      return;
+    try {
+      await guard({
+        date: formData.date,
+        time: formData.time,
+        status: formData.status as 'confirmado' | 'a confirmar',
+        ignoreAppointmentId: appointment?.id,
+        // Pendentes só viram dialog quando estamos confirmando
+        silentOnPending: formData.status !== 'confirmado',
+        exec: async () => {
+          await performSave();
+        },
+      });
+    } finally {
+      setTimeout(() => setIsSubmitting(false), 800);
     }
-
-    if (slotCheck.kind === 'pending' && formData.status === 'confirmado') {
-      // Confirmar sobre pendente → pedir confirmação
-      setConflictResult(slotCheck);
-      setIsSubmitting(false);
-      return;
-    }
-
-    await performSave();
   };
+
+
 
 
   return (
@@ -761,23 +743,7 @@ export default function AppointmentForm({
         </div>
       </form>
 
-      <SlotConflictDialog
-        result={conflictResult}
-        date={formData.date}
-        time={formData.time}
-        onClose={() => setConflictResult(null)}
-        onUnblockAndContinue={async () => {
-          const slotId = conflictResult?.kind === 'blocked' ? conflictResult.slot.id : undefined;
-          setConflictResult(null);
-          setIsSubmitting(true);
-          await performSave({ unblockSlotId: slotId });
-        }}
-        onContinueAnyway={async () => {
-          setConflictResult(null);
-          setIsSubmitting(true);
-          await performSave();
-        }}
-      />
+      <SlotConflictDialog {...dialogProps} />
     </div>
   );
 }
