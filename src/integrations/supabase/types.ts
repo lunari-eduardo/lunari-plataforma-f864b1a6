@@ -1020,6 +1020,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clientes_transacoes_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "v_infinitepay_latency"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_transacoes_session_id"
             columns: ["session_id"]
             isOneToOne: false
@@ -1040,6 +1047,7 @@ export type Database = {
           data_pagamento: string | null
           data_vencimento: string | null
           id: string
+          mp_payment_id: string | null
           numero_parcela: number
           status: string
           taxa_antecipacao: number | null
@@ -1059,6 +1067,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string | null
           id?: string
+          mp_payment_id?: string | null
           numero_parcela: number
           status?: string
           taxa_antecipacao?: number | null
@@ -1078,6 +1087,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string | null
           id?: string
+          mp_payment_id?: string | null
           numero_parcela?: number
           status?: string
           taxa_antecipacao?: number | null
@@ -1094,12 +1104,20 @@ export type Database = {
             referencedRelation: "cobrancas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cobranca_parcelas_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "v_infinitepay_latency"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cobrancas: {
         Row: {
           asaas_installment_id: string | null
           cliente_id: string | null
+          correlation_id: string | null
           created_at: string | null
           dados_extras: Json | null
           data_pagamento: string | null
@@ -1124,6 +1142,8 @@ export type Database = {
           provedor: string | null
           qtd_fotos: number | null
           session_id: string | null
+          snapshot_fotos_incluidas: number | null
+          snapshot_regras_congeladas: Json | null
           status: string | null
           tipo_cobranca: string
           total_parcelas: number | null
@@ -1136,6 +1156,7 @@ export type Database = {
         Insert: {
           asaas_installment_id?: string | null
           cliente_id?: string | null
+          correlation_id?: string | null
           created_at?: string | null
           dados_extras?: Json | null
           data_pagamento?: string | null
@@ -1160,6 +1181,8 @@ export type Database = {
           provedor?: string | null
           qtd_fotos?: number | null
           session_id?: string | null
+          snapshot_fotos_incluidas?: number | null
+          snapshot_regras_congeladas?: Json | null
           status?: string | null
           tipo_cobranca: string
           total_parcelas?: number | null
@@ -1172,6 +1195,7 @@ export type Database = {
         Update: {
           asaas_installment_id?: string | null
           cliente_id?: string | null
+          correlation_id?: string | null
           created_at?: string | null
           dados_extras?: Json | null
           data_pagamento?: string | null
@@ -1196,6 +1220,8 @@ export type Database = {
           provedor?: string | null
           qtd_fotos?: number | null
           session_id?: string | null
+          snapshot_fotos_incluidas?: number | null
+          snapshot_regras_congeladas?: Json | null
           status?: string | null
           tipo_cobranca?: string
           total_parcelas?: number | null
@@ -1633,6 +1659,13 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_delivery_logs_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "v_infinitepay_latency"
             referencedColumns: ["id"]
           },
         ]
@@ -2173,6 +2206,7 @@ export type Database = {
           original_filename: string
           original_path: string | null
           pasta_id: string | null
+          peso_visual: number | null
           preview_path: string | null
           preview_wm_path: string | null
           processing_status: string | null
@@ -2201,6 +2235,7 @@ export type Database = {
           original_filename: string
           original_path?: string | null
           pasta_id?: string | null
+          peso_visual?: number | null
           preview_path?: string | null
           preview_wm_path?: string | null
           processing_status?: string | null
@@ -2229,6 +2264,7 @@ export type Database = {
           original_filename?: string
           original_path?: string | null
           pasta_id?: string | null
+          peso_visual?: number | null
           preview_path?: string | null
           preview_wm_path?: string | null
           processing_status?: string | null
@@ -2365,6 +2401,7 @@ export type Database = {
           cliente_telefone: string | null
           configuracoes: Json | null
           created_at: string
+          density: Database["public"]["Enums"]["gallery_density"] | null
           enviado_em: string | null
           finalized_at: string | null
           fotos_incluidas: number
@@ -2387,14 +2424,20 @@ export type Database = {
           status: string
           status_pagamento: string | null
           status_selecao: string | null
+          theme_id: string | null
+          theme_overrides: Json | null
           tipo: string
           total_fotos: number | null
           total_fotos_extras_vendidas: number | null
           updated_at: string
+          use_custom_theme: boolean | null
           user_id: string
           valor_extras: number | null
           valor_foto_extra: number
           valor_total_vendido: number | null
+          venda_modo: string | null
+          venda_pagamento_provedor: string | null
+          venda_tipo_cobranca: string | null
         }
         Insert: {
           cliente_email?: string | null
@@ -2403,6 +2446,7 @@ export type Database = {
           cliente_telefone?: string | null
           configuracoes?: Json | null
           created_at?: string
+          density?: Database["public"]["Enums"]["gallery_density"] | null
           enviado_em?: string | null
           finalized_at?: string | null
           fotos_incluidas?: number
@@ -2425,14 +2469,20 @@ export type Database = {
           status?: string
           status_pagamento?: string | null
           status_selecao?: string | null
+          theme_id?: string | null
+          theme_overrides?: Json | null
           tipo?: string
           total_fotos?: number | null
           total_fotos_extras_vendidas?: number | null
           updated_at?: string
+          use_custom_theme?: boolean | null
           user_id: string
           valor_extras?: number | null
           valor_foto_extra?: number
           valor_total_vendido?: number | null
+          venda_modo?: string | null
+          venda_pagamento_provedor?: string | null
+          venda_tipo_cobranca?: string | null
         }
         Update: {
           cliente_email?: string | null
@@ -2441,6 +2491,7 @@ export type Database = {
           cliente_telefone?: string | null
           configuracoes?: Json | null
           created_at?: string
+          density?: Database["public"]["Enums"]["gallery_density"] | null
           enviado_em?: string | null
           finalized_at?: string | null
           fotos_incluidas?: number
@@ -2463,14 +2514,20 @@ export type Database = {
           status?: string
           status_pagamento?: string | null
           status_selecao?: string | null
+          theme_id?: string | null
+          theme_overrides?: Json | null
           tipo?: string
           total_fotos?: number | null
           total_fotos_extras_vendidas?: number | null
           updated_at?: string
+          use_custom_theme?: boolean | null
           user_id?: string
           valor_extras?: number | null
           valor_foto_extra?: number
           valor_total_vendido?: number | null
+          venda_modo?: string | null
+          venda_pagamento_provedor?: string | null
+          venda_tipo_cobranca?: string | null
         }
         Relationships: [
           {
@@ -2591,8 +2648,10 @@ export type Database = {
           default_gallery_permission: string | null
           default_image_resize: number
           default_payment_method: string | null
+          default_photo_spacing: number | null
           default_pricing_model: string | null
           default_sale_mode: string
+          default_theme_id: string | null
           default_watermark: Json | null
           default_watermark_display: string | null
           default_welcome_message: string | null
@@ -2604,6 +2663,7 @@ export type Database = {
           last_session_font: string | null
           studio_logo_url: string | null
           studio_name: string | null
+          theme_overrides: Json | null
           theme_type: string | null
           updated_at: string | null
           user_id: string
@@ -2621,8 +2681,10 @@ export type Database = {
           default_gallery_permission?: string | null
           default_image_resize?: number
           default_payment_method?: string | null
+          default_photo_spacing?: number | null
           default_pricing_model?: string | null
           default_sale_mode?: string
+          default_theme_id?: string | null
           default_watermark?: Json | null
           default_watermark_display?: string | null
           default_welcome_message?: string | null
@@ -2634,6 +2696,7 @@ export type Database = {
           last_session_font?: string | null
           studio_logo_url?: string | null
           studio_name?: string | null
+          theme_overrides?: Json | null
           theme_type?: string | null
           updated_at?: string | null
           user_id: string
@@ -2651,8 +2714,10 @@ export type Database = {
           default_gallery_permission?: string | null
           default_image_resize?: number
           default_payment_method?: string | null
+          default_photo_spacing?: number | null
           default_pricing_model?: string | null
           default_sale_mode?: string
+          default_theme_id?: string | null
           default_watermark?: Json | null
           default_watermark_display?: string | null
           default_welcome_message?: string | null
@@ -2664,6 +2729,7 @@ export type Database = {
           last_session_font?: string | null
           studio_logo_url?: string | null
           studio_name?: string | null
+          theme_overrides?: Json | null
           theme_type?: string | null
           updated_at?: string | null
           user_id?: string
@@ -2678,6 +2744,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gallery_theme_presets: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          owner_id: string | null
+          scope: string
+          theme_json: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          owner_id?: string | null
+          scope?: string
+          theme_json: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          owner_id?: string | null
+          scope?: string
+          theme_json?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       gallery_themes: {
         Row: {
@@ -3794,6 +3893,66 @@ export type Database = {
           },
         ]
       }
+      system_audit_logs: {
+        Row: {
+          correlation_id: string
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          gallery_id: string | null
+          id: string
+          payload: Json | null
+          session_id: string | null
+          source: string
+          source_name: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          correlation_id: string
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          gallery_id?: string | null
+          id?: string
+          payload?: Json | null
+          session_id?: string | null
+          source: string
+          source_name?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          correlation_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          gallery_id?: string | null
+          id?: string
+          payload?: Json | null
+          session_id?: string | null
+          source?: string
+          source_name?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_audit_logs_gallery_id_fkey"
+            columns: ["gallery_id"]
+            isOneToOne: false
+            referencedRelation: "galerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_audit_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_sessoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_cache: {
         Row: {
           created_at: string
@@ -4363,6 +4522,45 @@ export type Database = {
           },
         ]
       }
+      webhook_events_audit: {
+        Row: {
+          correlation_id: string | null
+          created_at: string | null
+          error_log: string | null
+          event_name: string | null
+          external_id: string | null
+          id: string
+          payload: Json | null
+          processed_at: string | null
+          processed_status: string | null
+          provider: string
+        }
+        Insert: {
+          correlation_id?: string | null
+          created_at?: string | null
+          error_log?: string | null
+          event_name?: string | null
+          external_id?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          processed_status?: string | null
+          provider: string
+        }
+        Update: {
+          correlation_id?: string | null
+          created_at?: string | null
+          error_log?: string | null
+          event_name?: string | null
+          external_id?: string | null
+          id?: string
+          payload?: Json | null
+          processed_at?: string | null
+          processed_status?: string | null
+          provider?: string
+        }
+        Relationships: []
+      }
       webhook_logs: {
         Row: {
           created_at: string | null
@@ -4467,6 +4665,21 @@ export type Database = {
         }
         Relationships: []
       }
+      v_infinitepay_latency: {
+        Row: {
+          cobranca_created: string | null
+          data_pagamento: string | null
+          db_update_seconds: number | null
+          id: string | null
+          ip_order_nsu: string | null
+          status: string | null
+          webhook_proc_seconds: number | null
+          webhook_processed: string | null
+          webhook_received: string | null
+          webhook_status: string | null
+        }
+        Relationships: []
+      }
       vw_transacoes_orfas: {
         Row: {
           cliente_id: string | null
@@ -4493,6 +4706,13 @@ export type Database = {
             columns: ["cobranca_id"]
             isOneToOne: false
             referencedRelation: "cobrancas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_transacoes_cobranca_id_fkey"
+            columns: ["cobranca_id"]
+            isOneToOne: false
+            referencedRelation: "v_infinitepay_latency"
             referencedColumns: ["id"]
           },
         ]
@@ -4590,6 +4810,7 @@ export type Database = {
         Args: { p_galeria_id: string }
         Returns: Json
       }
+      get_current_correlation_id: { Args: never; Returns: string }
       get_formulario_resposta_publica: {
         Args: { p_token: string }
         Returns: Json
@@ -4676,6 +4897,7 @@ export type Database = {
       }
       refund_photo_credit: { Args: { _user_id: string }; Returns: undefined }
       register_referral: { Args: { _referral_code: string }; Returns: boolean }
+      release_advisory_lock: { Args: { lock_key: string }; Returns: boolean }
       renew_subscription_credits: {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
@@ -4695,6 +4917,10 @@ export type Database = {
         Returns: undefined
       }
       start_studio_trial: { Args: never; Returns: Json }
+      try_acquire_advisory_lock: {
+        Args: { lock_key: string }
+        Returns: boolean
+      }
       try_lock_gallery_selection: {
         Args: { p_gallery_id: string }
         Returns: Json
@@ -4713,6 +4939,7 @@ export type Database = {
         | "payment_confirmed"
         | "gallery_reactivated"
       email_delivery_status: "enviado" | "erro" | "ignorado"
+      gallery_density: "compact" | "comfortable" | "airy"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4849,6 +5076,7 @@ export const Constants = {
         "gallery_reactivated",
       ],
       email_delivery_status: ["enviado", "erro", "ignorado"],
+      gallery_density: ["compact", "comfortable", "airy"],
     },
   },
 } as const
