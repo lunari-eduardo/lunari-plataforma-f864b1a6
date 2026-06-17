@@ -111,6 +111,10 @@ export default function AppointmentForm({
   // ✅ FASE 2: Estado para prevenir cliques duplos no submit
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validação de slot (ocupado/bloqueado/pendente)
+  const { checkSlot } = useSlotAvailabilityCheck();
+  const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
+
   // Estado para os campos do formulário
   const [formData, setFormData] = useState({
     date: initialDate,
