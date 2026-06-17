@@ -80,13 +80,18 @@ export default function AppointmentDetails({
   const [dateInputValue, setDateInputValue] = useState(
     formatDateForInput(appointment.date)
   );
+  // Buffer do input de hora — só commita após validação (evita autosave salvar hora inválida)
+  const [timeInputValue, setTimeInputValue] = useState(appointment.time);
 
   // Validação de conflito (ocupado/bloqueado)
   const { checkSlot } = useSlotAvailabilityCheck();
   const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
   const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
 
-  // Determinar se os campos podem ser editados
+  // Controller centralizado para handleSave (confirmados) — dialog é portal-mounted DENTRO do modal
+  const { guard: saveGuard, dialogProps: saveDialogProps, isOpen: isSaveDialogOpen } = useAgendaConflict();
+
+  // Determinar se os campos podem ser editados via autosave
   const isEditable = formData.status === 'a confirmar';
 
   // Enhanced number input for paid amount
