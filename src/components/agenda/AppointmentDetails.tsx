@@ -28,7 +28,7 @@ import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package
 import { cn } from '@/lib/utils';
 import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 import { SlotConflictDialog } from './SlotConflictDialog';
-import { allowBlockedWrite } from '@/utils/agendaSlotGuard';
+import { allowBlockedWrite, parseAgendaTriggerError, extractAgendaErrorMessage } from '@/utils/agendaSlotGuard';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
