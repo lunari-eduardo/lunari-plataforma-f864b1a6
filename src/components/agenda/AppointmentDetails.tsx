@@ -211,10 +211,10 @@ export default function AppointmentDetails({
     };
   }, [appointment.id, pacotes]);
 
-  // Auto-save (apenas para pendentes)
+  // Auto-save (apenas para pendentes; pausado enquanto há dialog de conflito aberto)
   const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
     data: formData,
-    enabled: isEditable,
+    enabled: isEditable && !conflictResult,
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
