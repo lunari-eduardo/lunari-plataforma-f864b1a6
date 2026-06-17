@@ -134,16 +134,53 @@ export default function AppointmentDetails({
     setDateInputValue(e.target.value);
   };
 
+  // Aplicar mudança de data/hora após validação
+  const applyDateTimeChange = (date: Date, time: string) => {
+    setFormData(prev => ({ ...prev, date, time }));
+    setDateInputValue(formatDateForInput(date));
+  };
+
+  // Validar mudança de slot (data/hora). Retorna true se pode aplicar.
+  const tryChangeSlot = (date: Date, time: string): boolean => {
+    if (date.getTime() === formData.date.getTime() && time === formData.time) {
+      return true;
+    }
+    const result = checkSlot({
+      date,
+      time,
+      ignoreAppointmentId: appointment.id,
+      targetStatus: formData.status,
+    });
+    if (result.kind === 'busy' || result.kind === 'blocked') {
+      setPendingChange({ date, time });
+      setConflictResult(result);
+      return false;
+    }
+    applyDateTimeChange(date, time);
+    return true;
+  };
+
   // Validar e converter data quando o usuário sai do campo
   const handleDateInputBlur = () => {
     const parsedDate = safeParseInputDate(dateInputValue);
     if (parsedDate) {
-      setFormData(prev => ({ ...prev, date: parsedDate }));
+      if (!tryChangeSlot(parsedDate, formData.time)) {
+        setDateInputValue(formatDateForInput(formData.date));
+      }
     } else {
-      // Se inválida, volta ao valor anterior
       setDateInputValue(formatDateForInput(formData.date));
     }
   };
+
+  // Validar hora ao sair do campo
+  const handleTimeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const newTime = e.target.value;
+    if (!newTime || newTime === formData.time) return;
+    if (!tryChangeSlot(formData.date, newTime)) {
+      setFormData(prev => ({ ...prev, time: prev.time }));
+    }
+  };
+
 
   // Sincronizar o input quando o campo recebe foco
   const handleDateInputFocus = () => {
