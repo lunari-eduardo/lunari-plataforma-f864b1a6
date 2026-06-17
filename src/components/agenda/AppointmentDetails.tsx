@@ -359,7 +359,8 @@ export default function AppointmentDetails({
               name="time" 
               type="time" 
               value={formData.time} 
-              onChange={handleChange} 
+              onChange={handleChange}
+              onBlur={handleTimeBlur}
               className="mt-1 h-9 text-sm" 
             />
           </div>
