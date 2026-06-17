@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import type { SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 
 interface SlotConflictDialogProps {
@@ -18,9 +19,11 @@ interface SlotConflictDialogProps {
   date: Date;
   time: string;
   onClose: () => void;
-  /** Chamado quando o usuário confirma desbloqueio (apenas kind='blocked'). */
+  /** Desbloqueia o slot pontual e prossegue (kind='blocked'). */
   onUnblockAndContinue?: () => void;
-  /** Chamado quando o usuário decide prosseguir mesmo com pendente (kind='pending'). */
+  /** Desbloqueia o dia inteiro e prossegue (kind='blocked' com isFullDay). */
+  onUnblockFullDay?: () => void;
+  /** Continua mesmo com pendentes (kind='pending'). */
   onContinueAnyway?: () => void;
 }
 
@@ -30,6 +33,7 @@ export function SlotConflictDialog({
   time,
   onClose,
   onUnblockAndContinue,
+  onUnblockFullDay,
   onContinueAnyway,
 }: SlotConflictDialogProps) {
   if (!result || result.kind === 'free') return null;
@@ -90,10 +94,17 @@ export function SlotConflictDialog({
                 Deseja desbloqueá-lo e continuar com o agendamento?
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={onClose}>Cancelar</AlertDialogCancel>
+            <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+              <AlertDialogCancel onClick={onClose} className="sm:mr-auto">
+                Cancelar
+              </AlertDialogCancel>
+              {result.slot.isFullDay && onUnblockFullDay && (
+                <Button variant="outline" onClick={onUnblockFullDay}>
+                  Desbloquear o dia inteiro
+                </Button>
+              )}
               <AlertDialogAction onClick={onUnblockAndContinue}>
-                Desbloquear e continuar
+                {result.slot.isFullDay ? 'Desbloquear só este horário' : 'Desbloquear e continuar'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </>
