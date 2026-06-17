@@ -144,43 +144,39 @@ export default function Agenda() {
     }
   }, [isFromBudget, getBudgetId, orcamentos, openBudgetAppointmentModal, openAppointmentDetails, openBudgetModal]);
 
+  // Controller centralizado de conflitos (busy/blocked/pending)
+  const { guard: conflictGuard, dialogProps: conflictDialogProps } = useAgendaConflict();
+
   // Handle appointment save
-  const handleSaveAppointment = useCallback((appointmentData: any) => {
-    try {
-      if (editingAppointment) {
-        updateAppointment(editingAppointment.id, appointmentData);
-        
-      } else if (viewingAppointment) {
-        updateAppointment(viewingAppointment.id, appointmentData);
-        setIsDetailsOpen(false);
-      } else {
-        addAppointment(appointmentData);
-        
-      }
-      setIsAppointmentDialogOpen(false);
-    } catch (error: any) {
-      if (error.message.includes('agendamento confirmado neste horário')) {
-        toast.error('Não é possível criar agendamento: já existe um agendamento confirmado neste horário.');
-      } else {
-        toast.error('Erro ao salvar agendamento: ' + error.message);
-      }
-      // Não fechar o modal para permitir correção
-    }
-  }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
+  const handleSaveAppointment = useCallback(async (appointmentData: any) => {
+    const targetId = editingAppointment?.id ?? viewingAppointment?.id;
+    await conflictGuard({
+      date: appointmentData.date,
+      time: appointmentData.time,
+      status: appointmentData.status,
+      ignoreAppointmentId: targetId,
+      silentOnPending: appointmentData.status !== 'confirmado',
+      exec: async () => {
+        if (editingAppointment) {
+          await updateAppointment(editingAppointment.id, appointmentData);
+        } else if (viewingAppointment) {
+          await updateAppointment(viewingAppointment.id, appointmentData);
+          setIsDetailsOpen(false);
+        } else {
+          await addAppointment(appointmentData);
+        }
+        setIsAppointmentDialogOpen(false);
+      },
+    });
+  }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen, conflictGuard]);
 
   // Auto-save silencioso (NÃO fecha o modal) — usado pelo autosave do AppointmentDetails
   const handleAutoSaveAppointment = useCallback(async (appointmentData: any) => {
     const id = editingAppointment?.id ?? viewingAppointment?.id;
     if (!id) return;
-    try {
-      await updateAppointment(id, appointmentData);
-    } catch (error: any) {
-      if (error?.message?.includes('agendamento confirmado neste horário')) {
-        toast.error('Não é possível salvar: já existe um agendamento confirmado neste horário.');
-      } else {
-        toast.error('Erro ao salvar agendamento: ' + (error?.message || 'erro desconhecido'));
-      }
-    }
+    // Não usar guard aqui (autosave já foi validado pelo AppointmentDetails);
+    // apenas propagar o erro para o catch do hook reverter + abrir dialog.
+    await updateAppointment(id, appointmentData);
   }, [editingAppointment, viewingAppointment, updateAppointment]);
 
   // Handle appointment deletion
@@ -211,20 +207,29 @@ export default function Agenda() {
   }, [deleteAppointment, setIsDetailsOpen, setIsBudgetAppointmentModalOpen]);
 
   // Handle budget appointment save (reschedule)
-  const handleSaveBudgetAppointment = useCallback((data: {
+  const handleSaveBudgetAppointment = useCallback(async (data: {
     date: Date;
     time: string;
     description?: string;
   }) => {
-    if (selectedBudgetAppointment) {
-      updateAppointment(selectedBudgetAppointment.appointment.id, {
-        date: data.date,
-        time: data.time,
-        description: data.description
-      });
-      setIsBudgetAppointmentModalOpen(false);
-    }
-  }, [selectedBudgetAppointment, updateAppointment, setIsBudgetAppointmentModalOpen]);
+    if (!selectedBudgetAppointment) return;
+    const apt = selectedBudgetAppointment.appointment;
+    await conflictGuard({
+      date: data.date,
+      time: data.time,
+      status: apt.status,
+      ignoreAppointmentId: apt.id,
+      silentOnPending: apt.status !== 'confirmado',
+      exec: async () => {
+        await updateAppointment(apt.id, {
+          date: data.date,
+          time: data.time,
+          description: data.description,
+        });
+        setIsBudgetAppointmentModalOpen(false);
+      },
+    });
+  }, [selectedBudgetAppointment, updateAppointment, setIsBudgetAppointmentModalOpen, conflictGuard]);
 
   // Swipe navigation for mobile and tablet
   const swipeHandlers = useSwipeNavigation({
