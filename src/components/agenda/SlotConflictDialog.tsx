@@ -42,7 +42,7 @@ export function SlotConflictDialog({
 
   return (
     <AlertDialog open onOpenChange={(o) => !o && onClose()}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-md z-[70]" data-testid="slot-conflict-dialog">
         {result.kind === 'busy' && (
           <>
             <AlertDialogHeader>

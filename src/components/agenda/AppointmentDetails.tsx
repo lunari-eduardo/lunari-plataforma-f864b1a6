@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 import { SlotConflictDialog } from './SlotConflictDialog';
 import { allowBlockedWrite, parseAgendaTriggerError, extractAgendaErrorMessage } from '@/utils/agendaSlotGuard';
+import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
@@ -79,13 +80,18 @@ export default function AppointmentDetails({
   const [dateInputValue, setDateInputValue] = useState(
     formatDateForInput(appointment.date)
   );
+  // Buffer do input de hora — só commita após validação (evita autosave salvar hora inválida)
+  const [timeInputValue, setTimeInputValue] = useState(appointment.time);
 
   // Validação de conflito (ocupado/bloqueado)
   const { checkSlot } = useSlotAvailabilityCheck();
   const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
   const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
 
-  // Determinar se os campos podem ser editados
+  // Controller centralizado para handleSave (confirmados) — dialog é portal-mounted DENTRO do modal
+  const { guard: saveGuard, dialogProps: saveDialogProps, isOpen: isSaveDialogOpen } = useAgendaConflict();
+
+  // Determinar se os campos podem ser editados via autosave
   const isEditable = formData.status === 'a confirmar';
 
   // Enhanced number input for paid amount
@@ -138,6 +144,7 @@ export default function AppointmentDetails({
   const applyDateTimeChange = (date: Date, time: string) => {
     setFormData(prev => ({ ...prev, date, time }));
     setDateInputValue(formatDateForInput(date));
+    setTimeInputValue(time);
   };
 
   // Validar mudança de slot (data/hora). Retorna true se pode aplicar.
@@ -172,12 +179,20 @@ export default function AppointmentDetails({
     }
   };
 
-  // Validar hora ao sair do campo
-  const handleTimeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const newTime = e.target.value;
-    if (!newTime || newTime === formData.time) return;
+  // Validar hora ao sair do campo (usa buffer timeInputValue)
+  const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTimeInputValue(e.target.value);
+  };
+
+  const handleTimeBlur = () => {
+    const newTime = timeInputValue;
+    if (!newTime) {
+      setTimeInputValue(formData.time);
+      return;
+    }
+    if (newTime === formData.time) return;
     if (!tryChangeSlot(formData.date, newTime)) {
-      setFormData(prev => ({ ...prev, time: prev.time }));
+      setTimeInputValue(formData.time);
     }
   };
 
@@ -221,7 +236,7 @@ export default function AppointmentDetails({
 
   const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
     data: formData,
-    enabled: isEditable && !conflictResult,
+    enabled: isEditable && !conflictResult && !isSaveDialogOpen,
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
@@ -261,9 +276,40 @@ export default function AppointmentDetails({
     };
   }, []);
 
-  // Salvar alterações (botão manual)
+  // Calcular se há mudanças não salvas (para confirmados que dependem do botão Salvar)
+  const isDirty =
+    formData.date.getTime() !== appointment.date.getTime() ||
+    formData.time !== appointment.time ||
+    timeInputValue !== appointment.time ||
+    dateInputValue !== formatDateForInput(appointment.date) ||
+    formData.title !== appointment.title ||
+    formData.status !== appointment.status ||
+    (formData.description || '') !== (appointment.description || '') ||
+    (formData.packageId || '') !== (appointment.packageId || '') ||
+    (formData.paidAmount || 0) !== (appointment.paidAmount || 0);
+
+  // Salvar alterações (botão manual — usado por confirmados)
   const handleSave = async () => {
-    await onSave(buildPayload(formData));
+    // 1. Comitar inputs intermediários (data/hora podem estar no buffer sem blur)
+    const parsedDate = safeParseInputDate(dateInputValue) ?? formData.date;
+    const finalTime = timeInputValue || formData.time;
+
+    // 2. Validar via guard centralizado (dialog renderizado dentro deste componente -> visível acima do Dialog)
+    await saveGuard({
+      date: parsedDate,
+      time: finalTime,
+      status: formData.status,
+      ignoreAppointmentId: appointment.id,
+      silentOnPending: formData.status !== 'confirmado',
+      exec: async () => {
+        // Atualizar formData ANTES de gravar para refletir o slot validado
+        const nextFormData = { ...formData, date: parsedDate, time: finalTime };
+        setFormData(nextFormData);
+        setDateInputValue(formatDateForInput(parsedDate));
+        setTimeInputValue(finalTime);
+        await onSave(buildPayload(nextFormData));
+      },
+    });
   };
 
   const handleDeleteConfirm = (action: 'preserve' | 'refund' | 'remove') => {
@@ -387,8 +433,8 @@ export default function AppointmentDetails({
               id="time" 
               name="time" 
               type="time" 
-              value={formData.time} 
-              onChange={handleChange}
+              value={timeInputValue} 
+              onChange={handleTimeInputChange}
               onBlur={handleTimeBlur}
               className="mt-1 h-9 text-sm" 
             />
@@ -724,10 +770,15 @@ export default function AppointmentDetails({
             </Button>
           ) : (
             <>
+              {isDirty && (
+                <span className="text-[11px] text-lunar-warning self-center mr-1">
+                  Alterações não salvas
+                </span>
+              )}
               <Button variant="outline" onClick={onCancel} className="text-xs h-9">
                 Cancelar
               </Button>
-              <Button onClick={handleSave} className="text-xs h-9">
+              <Button onClick={handleSave} disabled={!isDirty} className="text-xs h-9">
                 Salvar
               </Button>
             </>
@@ -824,6 +875,10 @@ export default function AppointmentDetails({
           setPendingChange(null);
         }}
       />
+
+      {/* Dialog do guard centralizado (usado pelo handleSave em confirmados) */}
+      <SlotConflictDialog {...saveDialogProps} />
     </>
+
   );
 }
