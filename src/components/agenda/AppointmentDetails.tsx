@@ -770,10 +770,15 @@ export default function AppointmentDetails({
             </Button>
           ) : (
             <>
+              {isDirty && (
+                <span className="text-[11px] text-lunar-warning self-center mr-1">
+                  Alterações não salvas
+                </span>
+              )}
               <Button variant="outline" onClick={onCancel} className="text-xs h-9">
                 Cancelar
               </Button>
-              <Button onClick={handleSave} className="text-xs h-9">
+              <Button onClick={handleSave} disabled={!isDirty} className="text-xs h-9">
                 Salvar
               </Button>
             </>
