@@ -22,6 +22,9 @@ import { configurationService } from '@/services/ConfigurationService';
 import { ChevronDown, Plus, FileText, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
+import { SlotConflictDialog } from './SlotConflictDialog';
+import { allowBlockedWrite, parseAgendaTriggerError } from '@/utils/agendaSlotGuard';
 
 // Tipo de agendamento
 type Appointment = {
