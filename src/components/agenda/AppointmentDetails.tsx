@@ -80,6 +80,11 @@ export default function AppointmentDetails({
     formatDateForInput(appointment.date)
   );
 
+  // Validação de conflito (ocupado/bloqueado)
+  const { checkSlot } = useSlotAvailabilityCheck();
+  const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
+  const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
+
   // Determinar se os campos podem ser editados
   const isEditable = formData.status === 'a confirmar';
 
