@@ -26,6 +26,9 @@ import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard, Check, CloudOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
+import { SlotConflictDialog } from './SlotConflictDialog';
+import { allowBlockedWrite } from '@/utils/agendaSlotGuard';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
