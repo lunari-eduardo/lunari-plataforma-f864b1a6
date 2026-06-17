@@ -4740,10 +4740,12 @@ export type Database = {
         Args: { _amount: number; _reason?: string; _target_user_id: string }
         Returns: string
       }
-      agenda_allow_blocked_write: {
-        Args: { p_slot_id?: string }
-        Returns: undefined
-      }
+      agenda_allow_blocked_write:
+        | { Args: { p_slot_id?: string }; Returns: undefined }
+        | {
+            Args: { p_date?: string; p_full_day?: boolean; p_slot_id?: string }
+            Returns: undefined
+          }
       atomic_update_session_extras: {
         Args: {
           p_extras_increment: number
