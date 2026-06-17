@@ -295,17 +295,8 @@ export default function AppointmentForm({
     }));
   };
 
-  // Função para verificar conflitos de horário
-  const checkForConflicts = () => {
-    if (formData.status === 'confirmado') {
-      const existingConfirmed = appointments.find(app => app.id !== appointment?.id &&
-      app.status === 'confirmado' && app.date.toDateString() === formData.date.toDateString() && app.time === formData.time);
-      if (existingConfirmed) {
-        return `Já existe um agendamento confirmado para ${existingConfirmed.client} às ${formData.time} neste dia.`;
-      }
-    }
-    return null;
-  };
+  // (Validação de conflitos agora é centralizada via useSlotAvailabilityCheck)
+
 
   // Formatar telefone automaticamente
   const formatPhone = (value: string) => {
