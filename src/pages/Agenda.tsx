@@ -361,6 +361,7 @@ export default function Agenda() {
         onSaveBudgetAppointment={handleSaveBudgetAppointment}
         onViewFullBudget={handleViewFullBudget}
       />
+      <SlotConflictDialog {...conflictDialogProps} />
     </div>
   );
 }
