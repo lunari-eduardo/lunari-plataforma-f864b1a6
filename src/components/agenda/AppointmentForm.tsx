@@ -743,23 +743,7 @@ export default function AppointmentForm({
         </div>
       </form>
 
-      <SlotConflictDialog
-        result={conflictResult}
-        date={formData.date}
-        time={formData.time}
-        onClose={() => setConflictResult(null)}
-        onUnblockAndContinue={async () => {
-          const slotId = conflictResult?.kind === 'blocked' ? conflictResult.slot.id : undefined;
-          setConflictResult(null);
-          setIsSubmitting(true);
-          await performSave({ unblockSlotId: slotId });
-        }}
-        onContinueAnyway={async () => {
-          setConflictResult(null);
-          setIsSubmitting(true);
-          await performSave();
-        }}
-      />
+      <SlotConflictDialog {...dialogProps} />
     </div>
   );
 }
