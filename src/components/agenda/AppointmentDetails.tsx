@@ -276,9 +276,40 @@ export default function AppointmentDetails({
     };
   }, []);
 
-  // Salvar alterações (botão manual)
+  // Calcular se há mudanças não salvas (para confirmados que dependem do botão Salvar)
+  const isDirty =
+    formData.date.getTime() !== appointment.date.getTime() ||
+    formData.time !== appointment.time ||
+    timeInputValue !== appointment.time ||
+    dateInputValue !== formatDateForInput(appointment.date) ||
+    formData.title !== appointment.title ||
+    formData.status !== appointment.status ||
+    (formData.description || '') !== (appointment.description || '') ||
+    (formData.packageId || '') !== (appointment.packageId || '') ||
+    (formData.paidAmount || 0) !== (appointment.paidAmount || 0);
+
+  // Salvar alterações (botão manual — usado por confirmados)
   const handleSave = async () => {
-    await onSave(buildPayload(formData));
+    // 1. Comitar inputs intermediários (data/hora podem estar no buffer sem blur)
+    const parsedDate = safeParseInputDate(dateInputValue) ?? formData.date;
+    const finalTime = timeInputValue || formData.time;
+
+    // 2. Validar via guard centralizado (dialog renderizado dentro deste componente -> visível acima do Dialog)
+    await saveGuard({
+      date: parsedDate,
+      time: finalTime,
+      status: formData.status,
+      ignoreAppointmentId: appointment.id,
+      silentOnPending: formData.status !== 'confirmado',
+      exec: async () => {
+        // Atualizar formData ANTES de gravar para refletir o slot validado
+        const nextFormData = { ...formData, date: parsedDate, time: finalTime };
+        setFormData(nextFormData);
+        setDateInputValue(formatDateForInput(parsedDate));
+        setTimeInputValue(finalTime);
+        await onSave(buildPayload(nextFormData));
+      },
+    });
   };
 
   const handleDeleteConfirm = (action: 'preserve' | 'refund' | 'remove') => {
