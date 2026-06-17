@@ -24,7 +24,7 @@ import { DataIntegrityPanel } from "@/components/agenda/DataIntegrityPanel";
 import { Orcamento } from '@/types/orcamento';
 import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 import { SlotConflictDialog } from '@/components/agenda/SlotConflictDialog';
-import { extractAgendaErrorMessage } from '@/utils/agendaSlotGuard';
+
 
 export default function Agenda() {
   const { unifiedEvents } = useUnifiedCalendar();
