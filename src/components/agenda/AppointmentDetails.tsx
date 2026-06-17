@@ -236,7 +236,7 @@ export default function AppointmentDetails({
 
   const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
     data: formData,
-    enabled: isEditable && !conflictResult,
+    enabled: isEditable && !conflictResult && !isSaveDialogOpen,
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
