@@ -147,35 +147,25 @@ export default function Agenda() {
   // Controller centralizado de conflitos (busy/blocked/pending)
   const { guard: conflictGuard, dialogProps: conflictDialogProps } = useAgendaConflict();
 
-  // Handle appointment save
+  // Handle appointment save (sem guard: o AppointmentDetails/AppointmentForm já validam via useAgendaConflict local)
   const handleSaveAppointment = useCallback(async (appointmentData: any) => {
-    const targetId = editingAppointment?.id ?? viewingAppointment?.id;
-    await conflictGuard({
-      date: appointmentData.date,
-      time: appointmentData.time,
-      status: appointmentData.status,
-      ignoreAppointmentId: targetId,
-      silentOnPending: appointmentData.status !== 'confirmado',
-      exec: async () => {
-        if (editingAppointment) {
-          await updateAppointment(editingAppointment.id, appointmentData);
-        } else if (viewingAppointment) {
-          await updateAppointment(viewingAppointment.id, appointmentData);
-          setIsDetailsOpen(false);
-        } else {
-          await addAppointment(appointmentData);
-        }
-        setIsAppointmentDialogOpen(false);
-      },
-    });
-  }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen, conflictGuard]);
+    if (editingAppointment) {
+      await updateAppointment(editingAppointment.id, appointmentData);
+      setIsAppointmentDialogOpen(false);
+    } else if (viewingAppointment) {
+      await updateAppointment(viewingAppointment.id, appointmentData);
+      setIsDetailsOpen(false);
+    } else {
+      await addAppointment(appointmentData);
+      setIsAppointmentDialogOpen(false);
+    }
+  }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
   // Auto-save silencioso (NÃO fecha o modal) — usado pelo autosave do AppointmentDetails
   const handleAutoSaveAppointment = useCallback(async (appointmentData: any) => {
     const id = editingAppointment?.id ?? viewingAppointment?.id;
     if (!id) return;
-    // Não usar guard aqui (autosave já foi validado pelo AppointmentDetails);
-    // apenas propagar o erro para o catch do hook reverter + abrir dialog.
+    // Propaga erro para o hook de autosave/conflict do AppointmentDetails tratar
     await updateAppointment(id, appointmentData);
   }, [editingAppointment, viewingAppointment, updateAppointment]);
 
