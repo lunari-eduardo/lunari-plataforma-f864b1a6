@@ -875,6 +875,10 @@ export default function AppointmentDetails({
           setPendingChange(null);
         }}
       />
+
+      {/* Dialog do guard centralizado (usado pelo handleSave em confirmados) */}
+      <SlotConflictDialog {...saveDialogProps} />
     </>
+
   );
 }
