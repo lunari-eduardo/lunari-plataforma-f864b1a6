@@ -433,8 +433,8 @@ export default function AppointmentDetails({
               id="time" 
               name="time" 
               type="time" 
-              value={formData.time} 
-              onChange={handleChange}
+              value={timeInputValue} 
+              onChange={handleTimeInputChange}
               onBlur={handleTimeBlur}
               className="mt-1 h-9 text-sm" 
             />
