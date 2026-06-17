@@ -26,6 +26,9 @@ import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard, Check, CloudOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
+import { SlotConflictDialog } from './SlotConflictDialog';
+import { allowBlockedWrite } from '@/utils/agendaSlotGuard';
 
 interface AppointmentDetailsProps {
   appointment: Appointment;
@@ -77,6 +80,11 @@ export default function AppointmentDetails({
     formatDateForInput(appointment.date)
   );
 
+  // Validação de conflito (ocupado/bloqueado)
+  const { checkSlot } = useSlotAvailabilityCheck();
+  const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
+  const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
+
   // Determinar se os campos podem ser editados
   const isEditable = formData.status === 'a confirmar';
 
@@ -126,16 +134,53 @@ export default function AppointmentDetails({
     setDateInputValue(e.target.value);
   };
 
+  // Aplicar mudança de data/hora após validação
+  const applyDateTimeChange = (date: Date, time: string) => {
+    setFormData(prev => ({ ...prev, date, time }));
+    setDateInputValue(formatDateForInput(date));
+  };
+
+  // Validar mudança de slot (data/hora). Retorna true se pode aplicar.
+  const tryChangeSlot = (date: Date, time: string): boolean => {
+    if (date.getTime() === formData.date.getTime() && time === formData.time) {
+      return true;
+    }
+    const result = checkSlot({
+      date,
+      time,
+      ignoreAppointmentId: appointment.id,
+      targetStatus: formData.status,
+    });
+    if (result.kind === 'busy' || result.kind === 'blocked') {
+      setPendingChange({ date, time });
+      setConflictResult(result);
+      return false;
+    }
+    applyDateTimeChange(date, time);
+    return true;
+  };
+
   // Validar e converter data quando o usuário sai do campo
   const handleDateInputBlur = () => {
     const parsedDate = safeParseInputDate(dateInputValue);
     if (parsedDate) {
-      setFormData(prev => ({ ...prev, date: parsedDate }));
+      if (!tryChangeSlot(parsedDate, formData.time)) {
+        setDateInputValue(formatDateForInput(formData.date));
+      }
     } else {
-      // Se inválida, volta ao valor anterior
       setDateInputValue(formatDateForInput(formData.date));
     }
   };
+
+  // Validar hora ao sair do campo
+  const handleTimeBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const newTime = e.target.value;
+    if (!newTime || newTime === formData.time) return;
+    if (!tryChangeSlot(formData.date, newTime)) {
+      setFormData(prev => ({ ...prev, time: prev.time }));
+    }
+  };
+
 
   // Sincronizar o input quando o campo recebe foco
   const handleDateInputFocus = () => {
@@ -166,10 +211,10 @@ export default function AppointmentDetails({
     };
   }, [appointment.id, pacotes]);
 
-  // Auto-save (apenas para pendentes)
+  // Auto-save (apenas para pendentes; pausado enquanto há dialog de conflito aberto)
   const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
     data: formData,
-    enabled: isEditable,
+    enabled: isEditable && !conflictResult,
     delay: 800,
     buildPayload,
     onSave: async (payload) => {
@@ -314,7 +359,8 @@ export default function AppointmentDetails({
               name="time" 
               type="time" 
               value={formData.time} 
-              onChange={handleChange} 
+              onChange={handleChange}
+              onBlur={handleTimeBlur}
               className="mt-1 h-9 text-sm" 
             />
           </div>
@@ -719,6 +765,36 @@ export default function AppointmentDetails({
           valorSugerido={valorTotal > 0 ? valorTotal : (formData.paidAmount || 0)}
         />
       )}
+
+      <SlotConflictDialog
+        result={conflictResult}
+        date={pendingChange?.date ?? formData.date}
+        time={pendingChange?.time ?? formData.time}
+        onClose={() => {
+          setConflictResult(null);
+          setPendingChange(null);
+          setDateInputValue(formatDateForInput(formData.date));
+        }}
+        onUnblockAndContinue={async () => {
+          if (!pendingChange) return;
+          const slotId = conflictResult?.kind === 'blocked' ? conflictResult.slot.id : undefined;
+          try {
+            await allowBlockedWrite(slotId);
+            applyDateTimeChange(pendingChange.date, pendingChange.time);
+          } catch (err) {
+            console.error('[AppointmentDetails] desbloqueio falhou', err);
+            toast.error('Falha ao desbloquear horário');
+          } finally {
+            setConflictResult(null);
+            setPendingChange(null);
+          }
+        }}
+        onContinueAnyway={() => {
+          if (pendingChange) applyDateTimeChange(pendingChange.date, pendingChange.time);
+          setConflictResult(null);
+          setPendingChange(null);
+        }}
+      />
     </>
   );
 }

@@ -22,6 +22,9 @@ import { configurationService } from '@/services/ConfigurationService';
 import { ChevronDown, Plus, FileText, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
+import { SlotConflictDialog } from './SlotConflictDialog';
+import { allowBlockedWrite, parseAgendaTriggerError } from '@/utils/agendaSlotGuard';
 
 // Tipo de agendamento
 type Appointment = {
@@ -107,6 +110,10 @@ export default function AppointmentForm({
   
   // ✅ FASE 2: Estado para prevenir cliques duplos no submit
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Validação de slot (ocupado/bloqueado/pendente)
+  const { checkSlot } = useSlotAvailabilityCheck();
+  const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
 
   // Estado para os campos do formulário
   const [formData, setFormData] = useState({
@@ -288,17 +295,8 @@ export default function AppointmentForm({
     }));
   };
 
-  // Função para verificar conflitos de horário
-  const checkForConflicts = () => {
-    if (formData.status === 'confirmado') {
-      const existingConfirmed = appointments.find(app => app.id !== appointment?.id &&
-      app.status === 'confirmado' && app.date.toDateString() === formData.date.toDateString() && app.time === formData.time);
-      if (existingConfirmed) {
-        return `Já existe um agendamento confirmado para ${existingConfirmed.client} às ${formData.time} neste dia.`;
-      }
-    }
-    return null;
-  };
+  // (Validação de conflitos agora é centralizada via useSlotAvailabilityCheck)
+
 
   // Formatar telefone automaticamente
   const formatPhone = (value: string) => {
@@ -320,85 +318,51 @@ export default function AppointmentForm({
     }));
   };
 
-  // Manipular envio do formulário
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // ✅ FASE 2: Prevenir submissões duplicadas
-    if (isSubmitting) {
-      console.log('⚠️ [AppointmentForm] Submissão já em andamento - ignorando');
-      return;
-    }
-    setIsSubmitting(true);
-
+  // Executa a gravação propriamente dita (compartilhado entre submit normal e retry após desbloqueio)
+  const performSave = async (opts?: { unblockSlotId?: string; skipBlockedCheck?: boolean }) => {
     try {
-      // Validar campos obrigatórios
-      if (activeTab === 'new' && !formData.newClientName) {
-        toast.error('Nome do cliente é obrigatório');
-        setIsSubmitting(false);
-        return;
-      }
-      if (activeTab === 'existing' && !formData.clientId) {
-        toast.error('Selecione um cliente');
-        setIsSubmitting(false);
-        return;
+      let clientInfo;
+      if (activeTab === 'new') {
+        const novoCliente = await adicionarCliente({
+          nome: formData.newClientName,
+          telefone: formData.newClientPhone || '',
+          email: formData.newClientEmail || '',
+          origem: formData.newClientOrigem || ''
+        });
+        clientInfo = {
+          client: formData.newClientName,
+          clientId: novoCliente.id,
+          clientPhone: formData.newClientPhone,
+          clientEmail: formData.newClientEmail
+        };
+      } else {
+        const selectedClient = clientes.find(c => c.id === formData.clientId);
+        clientInfo = {
+          client: selectedClient?.nome || '',
+          clientId: selectedClient?.id || '',
+          clientPhone: selectedClient?.telefone || '',
+          clientEmail: selectedClient?.email || ''
+        };
       }
 
-      // Verificar conflitos de horário
-      const conflictError = checkForConflicts();
-      if (conflictError) {
-        toast.error(conflictError);
-        setIsSubmitting(false);
-        return;
-      }
-    let clientInfo;
-    if (activeTab === 'new') {
-      // Criar novo cliente no CRM automaticamente usando Supabase
-      const novoCliente = await adicionarCliente({
-        nome: formData.newClientName,
-        telefone: formData.newClientPhone || '',
-        email: formData.newClientEmail || '',
-        origem: formData.newClientOrigem || ''
-      });
-      clientInfo = {
-        client: formData.newClientName,
-        clientId: novoCliente.id,
-        clientPhone: formData.newClientPhone,
-        clientEmail: formData.newClientEmail
-      };
-      
-    } else {
-      // Usando cliente existente
-      const selectedClient = clientes.find(c => c.id === formData.clientId);
-      clientInfo = {
-        client: selectedClient?.nome || '',
-        clientId: selectedClient?.id || '',
-        clientPhone: selectedClient?.telefone || '',
-        clientEmail: selectedClient?.email || ''
-      };
-    }
+      const produtosIncluidos = getIncludedProducts();
 
-    // Obter produtos incluídos no pacote
-    const produtosIncluidos = getIncludedProducts();
-
-    // Obter dados do pacote selecionado para salvar nome e categoria corretos
-    const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
-    let packageType = 'Sessão';
-    let packageCategory = '';
-    if (selectedPackage) {
-      packageType = selectedPackage.nome;
-      if (selectedPackage.categoria_id) {
-        try {
-          const configCategorias = configurationService.loadCategorias();
-          const categoria = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
-          packageCategory = categoria?.nome || '';
-        } catch (error) {
-          console.error('Erro ao buscar categoria:', error);
+      const selectedPackage = formData.packageId ? pacotes.find(p => p.id === formData.packageId) : null;
+      let packageType = 'Sessão';
+      let packageCategory = '';
+      if (selectedPackage) {
+        packageType = selectedPackage.nome;
+        if (selectedPackage.categoria_id) {
+          try {
+            const configCategorias = configurationService.loadCategorias();
+            const categoria = configCategorias.find((cat) => cat.id === selectedPackage.categoria_id || cat.id === String(selectedPackage.categoria_id));
+            packageCategory = categoria?.nome || '';
+          } catch (error) {
+            console.error('Erro ao buscar categoria:', error);
+          }
         }
       }
-    }
 
-      // Preparar dados do agendamento
       const appointmentData = {
         date: formData.date,
         time: formData.time,
@@ -418,15 +382,74 @@ export default function AppointmentForm({
         clientPhone: clientInfo.clientPhone,
         clientEmail: clientInfo.clientEmail
       };
-      onSave(appointmentData);
+
+      // Liberar trigger do banco para esta gravação se vier de desbloqueio
+      if (opts?.unblockSlotId || opts?.skipBlockedCheck) {
+        await allowBlockedWrite(opts.unblockSlotId);
+      }
+
+      await onSave(appointmentData);
     } catch (error) {
-      console.error('❌ [AppointmentForm] Erro ao salvar:', error);
-      toast.error('Erro ao salvar agendamento');
+      const triggerError = parseAgendaTriggerError(error);
+      if (triggerError === 'busy') {
+        toast.error('Já existe um agendamento confirmado neste horário');
+      } else if (triggerError === 'blocked') {
+        toast.error('Horário bloqueado — desbloqueie antes de salvar');
+      } else {
+        console.error('❌ [AppointmentForm] Erro ao salvar:', error);
+        toast.error('Erro ao salvar agendamento');
+      }
     } finally {
-      // ✅ FASE 2: Reset após um delay para permitir animação de fechamento
       setTimeout(() => setIsSubmitting(false), 1000);
     }
   };
+
+  // Manipular envio do formulário
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isSubmitting) {
+      console.log('⚠️ [AppointmentForm] Submissão já em andamento - ignorando');
+      return;
+    }
+    setIsSubmitting(true);
+
+    // Validar campos obrigatórios
+    if (activeTab === 'new' && !formData.newClientName) {
+      toast.error('Nome do cliente é obrigatório');
+      setIsSubmitting(false);
+      return;
+    }
+    if (activeTab === 'existing' && !formData.clientId) {
+      toast.error('Selecione um cliente');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validação centralizada de slot
+    const slotCheck = checkSlot({
+      date: formData.date,
+      time: formData.time,
+      ignoreAppointmentId: appointment?.id,
+      targetStatus: formData.status as 'confirmado' | 'a confirmar',
+    });
+
+    if (slotCheck.kind === 'busy' || slotCheck.kind === 'blocked') {
+      setConflictResult(slotCheck);
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (slotCheck.kind === 'pending' && formData.status === 'confirmado') {
+      // Confirmar sobre pendente → pedir confirmação
+      setConflictResult(slotCheck);
+      setIsSubmitting(false);
+      return;
+    }
+
+    await performSave();
+  };
+
 
   return (
     <div className="space-y-5">
@@ -737,6 +760,25 @@ export default function AppointmentForm({
           </Button>
         </div>
       </form>
+
+      <SlotConflictDialog
+        result={conflictResult}
+        date={formData.date}
+        time={formData.time}
+        onClose={() => setConflictResult(null)}
+        onUnblockAndContinue={async () => {
+          const slotId = conflictResult?.kind === 'blocked' ? conflictResult.slot.id : undefined;
+          setConflictResult(null);
+          setIsSubmitting(true);
+          await performSave({ unblockSlotId: slotId });
+        }}
+        onContinueAnyway={async () => {
+          setConflictResult(null);
+          setIsSubmitting(true);
+          await performSave();
+        }}
+      />
     </div>
   );
 }
+
