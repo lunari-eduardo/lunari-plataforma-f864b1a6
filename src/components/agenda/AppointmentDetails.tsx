@@ -84,7 +84,7 @@ export default function AppointmentDetails({
   const [timeInputValue, setTimeInputValue] = useState(appointment.time);
 
   // Validação de conflito (ocupado/bloqueado)
-  const { checkSlot } = useSlotAvailabilityCheck();
+  const { checkSlot, buildResultFromError } = useSlotAvailabilityCheck();
   const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
   const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
 
