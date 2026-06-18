@@ -214,22 +214,31 @@ export default function WeeklyView({
           })}
           
           {/* Time slots */}
-          {timeSlots.map(time => (
+          {timeSlots.map((time, rowIndex) => (
             <React.Fragment key={time}>
               {/* Time label */}
               <div className={classes.timeLabel}>
                 {time}
               </div>
-              
+
               {/* Time slots for each day */}
               {weekDays.map((day, dayIndex) => {
                 const event = getEventForSlot(day, time);
+                const isCurrentCell =
+                  currentPosition?.index === rowIndex && dayIndex === todayDayIndex;
                 return (
-                  <div 
-                    key={`${dayIndex}-${time}`} 
-                    onClick={() => !event && onCreateSlot({ date: day, time })} 
+                  <div
+                    key={`${dayIndex}-${time}`}
+                    onClick={() => !event && onCreateSlot({ date: day, time })}
                     className={`relative cursor-pointer bg-card/40 hover:bg-card/60 dark:bg-card/[0.05] dark:hover:bg-white/[0.08] ${classes.weeklyTimeSlot}`}
                   >
+                    {isCurrentCell && currentPosition && (
+                      <CurrentTimeIndicator
+                        now={now}
+                        topPercent={currentPosition.offset * 100}
+                        variant="week"
+                      />
+                    )}
                     {event ? <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
                         </div> : (() => {
