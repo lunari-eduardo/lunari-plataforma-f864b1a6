@@ -66,15 +66,16 @@ export function ProductSearchCombobox({
     return product.valorVenda || product.preco_venda || product.valor || 0;
   };
 
-  // Filtrar produtos com base no termo de busca (normalizado)
+  // Filtrar produtos com base no termo de busca (normalizado) e ordenar com favoritos no topo
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return products;
-    
+    const sorted = [...products].sort(sortProdutos as any);
+    if (!searchTerm.trim()) return sorted;
+
     const normalizedSearch = normalizeText(searchTerm);
-    return products.filter(product => {
+    return sorted.filter(product => {
       const normalizedName = normalizeText(product.nome);
       const normalizedCategory = normalizeText(product.categoria || '');
-      return normalizedName.includes(normalizedSearch) || 
+      return normalizedName.includes(normalizedSearch) ||
              normalizedCategory.includes(normalizedSearch);
     });
   }, [products, searchTerm]);
