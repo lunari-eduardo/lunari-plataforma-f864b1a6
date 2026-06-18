@@ -1,9 +1,11 @@
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
-import { useState } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import ConflictIndicator from './ConflictIndicator';
 import { Plus, Trash2, RotateCcw } from 'lucide-react';
+import CurrentTimeIndicator from './CurrentTimeIndicator';
+import { useCurrentTimeIndicator, getCurrentSlotPosition } from '@/hooks/useCurrentTimeIndicator';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
