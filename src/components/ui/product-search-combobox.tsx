@@ -21,6 +21,8 @@ interface Product {
   preco_venda?: number;
   valor?: number;
   categoria?: string;
+  favorito?: boolean;
+  favorited_at?: string | null;
 }
 
 interface ProductSearchComboboxProps {
