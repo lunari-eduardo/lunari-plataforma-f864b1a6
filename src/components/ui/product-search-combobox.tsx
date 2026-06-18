@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useDialogDropdownContext } from "@/components/ui/dialog";
+import { sortProdutos } from "@/utils/produtoSort";
 
 // Função para normalizar texto (remover acentos e caracteres especiais)
 const normalizeText = (text: string): string => {
