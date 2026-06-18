@@ -242,7 +242,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
           </div>
         ) : (
           <div className="border border-border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-14 px-4 py-2 border-b border-border bg-muted/50 text-sm font-medium" style={{ gridTemplateColumns: '32px 4fr 3fr 1.5fr 1.5fr 2fr 100px' }}>
+            <div className="grid px-4 py-2 border-b border-border bg-muted/50 text-sm font-medium" style={{ gridTemplateColumns: '32px 4fr 3fr 1.5fr 1.5fr 2fr 100px' }}>
               <div></div>
               <div className="text-foreground">Produto</div>
               <div className="text-foreground">Etiquetas</div>
