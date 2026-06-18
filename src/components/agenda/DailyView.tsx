@@ -292,7 +292,15 @@ export default function DailyView({
         </div>
       )}
       
-      <div className="space-y-1">
+      <DailyTimeSlotList
+        timeSlots={timeSlots}
+        date={date}
+        fullDaySlot={fullDaySlot}
+      >
+      <div className="space-y-1">{/* preserved structure */}</div>
+      </DailyTimeSlotList>
+      <div className="space-y-1" data-daily-slots ref={undefined}>
+        {/* The wrapper above is rendered via DailyTimeSlotList; keep the slot mapping below intact */}
         {timeSlots.map((time, index) => {
           const events = getEventsForSlot(time);
           const isEditing = editingTimeSlot === index;
