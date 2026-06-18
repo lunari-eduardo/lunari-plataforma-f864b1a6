@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, Wallet, Clock } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { summarizeRevenue, getWeekRange } from '@/utils/agendaRevenueCalc';
 import { useConfigurationContext } from '@/contexts/ConfigurationContext';
@@ -31,7 +30,7 @@ export default function DayRevenueKPI({ date, unifiedEvents, range }: DayRevenue
       : format(date, "EEEE, d 'de' MMMM", { locale: ptBR });
 
   return (
-    <div className="rounded-lg border border-white/30 dark:border-white/10 bg-card/40 dark:bg-card/[0.05] backdrop-blur-sm p-3 space-y-3">
+    <div className="rounded-lg border border-white/30 dark:border-white/10 bg-card/40 dark:bg-card/[0.05] backdrop-blur-sm p-3 space-y-2">
       <div>
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
           <TrendingUp className="h-3 w-3" />
@@ -50,39 +49,6 @@ export default function DayRevenueKPI({ date, unifiedEvents, range }: DayRevenue
             : `${summary.count} ${summary.count === 1 ? 'sessão' : 'sessões'}`}
         </div>
       </div>
-
-      {summary.count > 0 && (
-        <>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Wallet className="h-3 w-3" /> Recebido
-              </span>
-              <span className="font-medium tabular-nums" style={{ color: 'hsl(var(--success))' }}>
-                {formatCurrency(summary.paid)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Clock className="h-3 w-3" /> A receber
-              </span>
-              <span className="font-medium tabular-nums">{formatCurrency(summary.pending)}</span>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Progress value={summary.paidPct} className="h-1.5" />
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>{summary.paidPct}% pago</span>
-              <span>
-                {summary.confirmedCount > 0 && `${summary.confirmedCount} confirmado${summary.confirmedCount > 1 ? 's' : ''}`}
-                {summary.confirmedCount > 0 && summary.toConfirmCount > 0 && ' · '}
-                {summary.toConfirmCount > 0 && `${summary.toConfirmCount} a confirmar`}
-              </span>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }

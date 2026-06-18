@@ -2,34 +2,14 @@ import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import { getBudgetStatusConfig } from '@/utils/statusConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';
-import { CheckCircle2, CircleDashed, Circle, FileText, Image as ImageIcon } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatCurrency } from '@/utils/currencyUtils';
-import { useConfigurationContext } from '@/contexts/ConfigurationContext';
-import { getAppointmentValue } from '@/utils/agendaRevenueCalc';
 
 interface UnifiedEventCardProps {
   event: UnifiedEvent;
   onClick: (event: UnifiedEvent) => void;
   compact?: boolean;
   variant?: 'daily' | 'weekly' | 'monthly';
-}
-
-type PaymentState = 'unpaid' | 'partial' | 'paid';
-
-function getPaymentState(paid: number, total: number): PaymentState {
-  if (total <= 0) return 'unpaid';
-  if (paid <= 0) return 'unpaid';
-  if (paid >= total) return 'paid';
-  return 'partial';
-}
-
-function PaymentIcon({ state, className = 'h-3 w-3' }: { state: PaymentState; className?: string }) {
-  if (state === 'paid')
-    return <CheckCircle2 className={className} style={{ color: 'hsl(var(--success))' }} />;
-  if (state === 'partial')
-    return <CircleDashed className={className} style={{ color: 'hsl(var(--warning))' }} />;
-  return <Circle className={className} style={{ color: 'hsl(var(--muted-foreground))' }} />;
 }
 
 export default function UnifiedEventCard({
@@ -41,7 +21,6 @@ export default function UnifiedEventCard({
   const isAppointment = event.type === 'appointment';
   const isMobile = useIsMobile();
   const { pacotes: pacotesData, getCategoriaNameById } = useOrcamentoData();
-  const { pacotes: configPacotes } = useConfigurationContext();
 
   const isFromClosedBudget = isAppointment && (event.originalData as any).origem === 'orcamento';
 
@@ -85,12 +64,6 @@ export default function UnifiedEventCard({
 
   const { packageName, category, description } = getPackageInfo();
 
-  // Compute payment state for appointments
-  const appointment = isAppointment ? (event.originalData as any) : null;
-  const totalValue = appointment ? getAppointmentValue(appointment, configPacotes) : 0;
-  const paidValue = appointment ? Number(appointment.paidAmount || 0) : 0;
-  const paymentState = appointment ? getPaymentState(paidValue, totalValue) : 'unpaid';
-
   // Style: use semantic tokens via inline style for flexibility
   const getCardStyle = (): React.CSSProperties => {
     if (isAppointment) {
@@ -115,8 +88,6 @@ export default function UnifiedEventCard({
         borderLeft: '3px solid hsl(var(--event-confirmed))',
       };
     }
-    // Budget (legacy)
-    const config = getBudgetStatusConfig(event.status);
     return {};
   };
 
@@ -124,15 +95,13 @@ export default function UnifiedEventCard({
     ? `${getBudgetStatusConfig(event.status).bgColor} ${getBudgetStatusConfig(event.status).textColor} ${getBudgetStatusConfig(event.status).borderColor} border-2 border-dashed hover:bg-opacity-80`
     : '';
 
-  // Render indicators row
+  // Render indicators row (origem orçamento apenas — sem indicadores de pagamento)
   const renderIndicators = (size: 'sm' | 'xs' = 'sm') => {
+    if (!isFromClosedBudget) return null;
     const iconClass = size === 'sm' ? 'h-3 w-3' : 'h-2.5 w-2.5';
     return (
       <div className="flex items-center gap-1 flex-shrink-0">
-        {isAppointment && totalValue > 0 && <PaymentIcon state={paymentState} className={iconClass} />}
-        {isFromClosedBudget && (
-          <FileText className={iconClass} style={{ color: 'hsl(var(--event-budget))' }} />
-        )}
+        <FileText className={iconClass} style={{ color: 'hsl(var(--event-budget))' }} />
       </div>
     );
   };
@@ -143,18 +112,6 @@ export default function UnifiedEventCard({
       <div className="text-muted-foreground">
         {event.time} · {description || packageName || category}
       </div>
-      {totalValue > 0 && (
-        <div className="pt-1 border-t border-border/40 space-y-0.5">
-          <div className="flex justify-between gap-3">
-            <span>Total</span>
-            <span className="tabular-nums font-medium">{formatCurrency(totalValue)}</span>
-          </div>
-          <div className="flex justify-between gap-3">
-            <span>Pago</span>
-            <span className="tabular-nums">{formatCurrency(paidValue)}</span>
-          </div>
-        </div>
-      )}
     </div>
   ) : (
     <div className="text-xs">
@@ -177,26 +134,6 @@ export default function UnifiedEventCard({
               {category && packageName && category !== packageName
                 ? `${category} · ${packageName}`
                 : packageName || category}
-            </div>
-          )}
-          {isAppointment && totalValue > 0 && (
-            <div className="pt-1 mt-1 border-t border-current/10">
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="opacity-70">{formatCurrency(paidValue)} / {formatCurrency(totalValue)}</span>
-                <span className="opacity-70 tabular-nums">
-                  {totalValue > 0 ? Math.round((paidValue / totalValue) * 100) : 0}%
-                </span>
-              </div>
-              <div className="h-1 mt-0.5 rounded-full overflow-hidden bg-current/10">
-                <div
-                  className="h-full"
-                  style={{
-                    width: `${Math.min(100, totalValue > 0 ? (paidValue / totalValue) * 100 : 0)}%`,
-                    backgroundColor: 'currentColor',
-                    opacity: 0.55,
-                  }}
-                />
-              </div>
             </div>
           )}
         </div>
