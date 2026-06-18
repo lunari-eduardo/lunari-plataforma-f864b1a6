@@ -141,10 +141,6 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
           );
         })}
       </div>
-            </Card>
-          );
-        })}
-      </div>
     </section>
   );
 }
