@@ -285,10 +285,11 @@ export default function Agenda() {
     onViewChange: setView,
   });
 
-  const showSidebar = !isMobile && !isTablet;
+  const showSidebar = !isMobile && !isTablet && view !== 'year';
+  const isYearView = view === 'year';
 
   return (
-    <div className={`w-full max-w-7xl mx-auto ${classes.container} pb-20 md:pb-4`}>
+    <div className={`w-full ${isYearView ? 'max-w-[1600px]' : 'max-w-7xl'} mx-auto ${classes.container} pb-20 md:pb-4`}>
       <Card className={`${classes.card} bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border-white/50 dark:border-white/10 mx-0`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -303,7 +304,7 @@ export default function Agenda() {
               onOpenShare={view === 'day' ? openShareModal : undefined}
             />
           </div>
-          {!showSidebar && (
+          {!showSidebar && !isYearView && (
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Abrir mini calendário">
