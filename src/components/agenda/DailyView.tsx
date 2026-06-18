@@ -308,26 +308,13 @@ export default function DailyView({
           } : blocked ? {
             backgroundColor: 'hsl(var(--destructive) / 0.08)'
           } : {};
-          
-          const isCurrentSlot = currentPosition?.index === index;
 
           return (
             <div
               key={`${time}-${index}`}
-              ref={(el) => {
-                if (el) slotRefs.current.set(index, el);
-                else slotRefs.current.delete(index);
-              }}
               className={`relative flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 backdrop-blur-sm ${blocked ? 'border-destructive/30' : 'border-white/25 dark:border-white/10'}`}
               style={slotBgStyle}
             >
-              {isCurrentSlot && currentPosition && (
-                <CurrentTimeIndicator
-                  now={now}
-                  topPercent={currentPosition.offset * 100}
-                  variant="day"
-                />
-              )}
               <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-card/30 dark:bg-card/[0.04]">
                 {isEditing ? (
                   <div 
