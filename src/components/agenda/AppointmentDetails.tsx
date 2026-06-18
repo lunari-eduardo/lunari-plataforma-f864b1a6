@@ -782,7 +782,9 @@ export default function AppointmentDetails({
           {isEditable ? (
             <Button
               onClick={async () => {
-                try { await flushNow(); } catch (_) {}
+                if (!conflictResult && !isSaveDialogOpen) {
+                  try { await flushNow(); } catch (_) {}
+                }
                 onCancel();
               }}
               className="text-xs h-9"
