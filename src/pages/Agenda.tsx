@@ -24,6 +24,11 @@ import { DataIntegrityPanel } from "@/components/agenda/DataIntegrityPanel";
 import { Orcamento } from '@/types/orcamento';
 import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 import { SlotConflictDialog } from '@/components/agenda/SlotConflictDialog';
+import AgendaSidebar from '@/components/agenda/AgendaSidebar';
+import { useAgendaKeyboardShortcuts } from '@/hooks/useAgendaKeyboardShortcuts';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { CalendarDays } from 'lucide-react';
 
 
 export default function Agenda() {
