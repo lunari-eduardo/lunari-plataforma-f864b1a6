@@ -14,12 +14,22 @@ export interface Categoria {
   updated_at?: string;
 }
 
+export interface ProdutoEtiqueta {
+  id: string;
+  nome: string;
+  cor: string; // chave semântica em etiquetaColorTokens
+  ordem?: number;
+}
+
 export interface Produto {
   id: string;
   user_id?: string; // Para compatibilidade Supabase multi-usuário
   nome: string;
   preco_custo: number;
   preco_venda: number;
+  favorito?: boolean;
+  favorited_at?: string | null;
+  etiquetas?: ProdutoEtiqueta[]; // hidratado no cliente
   created_at?: string;
   updated_at?: string;
 }
