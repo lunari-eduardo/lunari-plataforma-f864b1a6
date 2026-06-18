@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { Check, ChevronDown, ShoppingBag } from 'lucide-react';
+import { ChevronDown, ShoppingBag, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { sortProdutos } from '@/utils/produtoSort';
+import { cn } from '@/lib/utils';
 
 const normalizeText = (text: string): string => {
   return text
@@ -16,6 +18,8 @@ export interface ProductComboboxItem {
   nome: string;
   custo: number;
   valorVenda: number;
+  favorito?: boolean;
+  favorited_at?: string | null;
 }
 
 interface ProductSearchComboboxProps {
