@@ -50,6 +50,11 @@ export default function DailyView({
   const [newTimeInput, setNewTimeInput] = useState('');
   const [unlockConfirmTime, setUnlockConfirmTime] = useState<string | null>(null);
   const dateKey = format(date, 'yyyy-MM-dd');
+  const slotsContainerRef = useRef<HTMLDivElement>(null);
+  const slotRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const didAutoScrollRef = useRef(false);
+  const { now } = useCurrentTimeIndicator();
+  const isToday = isSameDay(date, now);
   
   const {
     availability,
