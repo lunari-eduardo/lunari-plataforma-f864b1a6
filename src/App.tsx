@@ -45,6 +45,7 @@ import { AppProvider } from "./contexts/AppContext";
 import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ConfigurationProvider } from "./contexts/ConfigurationContext";
+import { ProdutoEtiquetasProvider } from "./contexts/ProdutoEtiquetasContext";
 import { WorkflowCacheProvider } from "./contexts/WorkflowCacheContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminRoute } from "./components/auth/AdminRoute";
@@ -114,6 +115,7 @@ function App() {
           <VisualThemeProvider>
           <AuthProvider>
             <ConfigurationProvider>
+              <ProdutoEtiquetasProvider>
               <WorkflowCacheProvider>
                 <AppContent />
                 <AppProvider>
@@ -245,6 +247,7 @@ function App() {
                   </AgendaProvider>
                 </AppProvider>
               </WorkflowCacheProvider>
+              </ProdutoEtiquetasProvider>
             </ConfigurationProvider>
           </AuthProvider>
           </VisualThemeProvider>

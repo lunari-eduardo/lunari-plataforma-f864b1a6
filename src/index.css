@@ -644,3 +644,12 @@
     padding: 0 !important;
   }
 }
+
+/* Flash sutil para feedback ao mover produto (favoritar/desfavoritar) */
+@keyframes produto-row-flash-anim {
+  0%   { background-color: hsl(var(--primary) / 0.18); }
+  100% { background-color: transparent; }
+}
+.produto-row-flash {
+  animation: produto-row-flash-anim 700ms ease-out;
+}
