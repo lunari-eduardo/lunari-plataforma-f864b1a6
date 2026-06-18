@@ -172,7 +172,11 @@ export default function ProdutoSelectorImproved({
                     className="text-xs cursor-pointer"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Package className="h-4 w-4 text-lunar-accent flex-shrink-0" />
+                      {produto.favorito ? (
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-500 flex-shrink-0" />
+                      ) : (
+                        <Package className="h-4 w-4 text-lunar-accent flex-shrink-0" />
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-foreground truncate">
                           {produto.nome}
