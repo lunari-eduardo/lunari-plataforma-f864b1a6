@@ -3598,9 +3598,70 @@ export type Database = {
         }
         Relationships: []
       }
+      produto_etiqueta_links: {
+        Row: {
+          created_at: string
+          etiqueta_id: string
+          produto_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          etiqueta_id: string
+          produto_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          etiqueta_id?: string
+          produto_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_etiqueta_links_etiqueta_id_fkey"
+            columns: ["etiqueta_id"]
+            isOneToOne: false
+            referencedRelation: "produto_etiquetas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produto_etiquetas: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cor: string
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           created_at: string
+          favorited_at: string | null
+          favorito: boolean
           id: string
           nome: string
           preco_custo: number
@@ -3610,6 +3671,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          favorited_at?: string | null
+          favorito?: boolean
           id?: string
           nome: string
           preco_custo?: number
@@ -3619,6 +3682,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          favorited_at?: string | null
+          favorito?: boolean
           id?: string
           nome?: string
           preco_custo?: number
