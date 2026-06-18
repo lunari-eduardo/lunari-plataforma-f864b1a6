@@ -103,6 +103,28 @@ export default function DailyView({
   
   const timeSlots = getCurrentTimeSlots();
   const dayEvents = unifiedEvents.filter(event => isSameDay(event.date, date));
+
+  const currentPosition = useMemo(
+    () => (isToday ? getCurrentSlotPosition(timeSlots, now) : null),
+    [isToday, timeSlots, now]
+  );
+
+  useEffect(() => {
+    if (!isToday || didAutoScrollRef.current) return;
+    if (currentPosition === null) return;
+    const target = slotRefs.current.get(currentPosition.index);
+    if (target && 'scrollIntoView' in target) {
+      try {
+        target.scrollIntoView({ block: 'center', behavior: 'auto' });
+      } catch {}
+      didAutoScrollRef.current = true;
+    }
+  }, [isToday, currentPosition]);
+
+  useEffect(() => {
+    didAutoScrollRef.current = false;
+  }, [dateKey]);
+
   
   const getEventsForSlot = (time: string) => {
     return dayEvents.filter(event => event.time === time);
