@@ -43,16 +43,19 @@ export default function ProductSearchCombobox({
       if (!user) return;
       const { data } = await supabase
         .from('produtos')
-        .select('id, nome, preco_custo, preco_venda')
+        .select('id, nome, preco_custo, preco_venda, favorito, favorited_at')
         .eq('user_id', user.id)
         .order('nome');
       if (data) {
-        setProducts(data.map(p => ({
+        const mapped: ProductComboboxItem[] = data.map((p: any) => ({
           id: p.id,
           nome: p.nome,
           custo: Number(p.preco_custo) || 0,
-          valorVenda: Number(p.preco_venda) || 0
-        })));
+          valorVenda: Number(p.preco_venda) || 0,
+          favorito: Boolean(p.favorito),
+          favorited_at: p.favorited_at ?? null,
+        }));
+        setProducts([...mapped].sort(sortProdutos));
       }
     };
     load();
