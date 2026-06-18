@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { format, isSameDay, startOfWeek, addDays } from 'date-fns';
+import { format, isSameDay, isToday, startOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
@@ -10,6 +10,8 @@ import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatTimeBr, formatDayName } from '@/utils/agendaUtils';
 import { cn } from '@/lib/utils';
+import CurrentTimeIndicator from './CurrentTimeIndicator';
+import { useCurrentTimeIndicator, getCurrentSlotPosition } from '@/hooks/useCurrentTimeIndicator';
 interface WeeklyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
