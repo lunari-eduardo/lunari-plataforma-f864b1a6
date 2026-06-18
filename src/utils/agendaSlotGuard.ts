@@ -35,22 +35,38 @@ export async function allowBlockedWrite(arg?: string | AllowBlockedArgs): Promis
   }
 }
 
-/** Detecta as exceptions lançadas pelo trigger de agenda. */
+/** Detecta as exceptions lançadas pelo trigger de agenda ou pela UNIQUE constraint. */
 export function parseAgendaTriggerError(error: unknown): 'busy' | 'blocked' | null {
+  const err = error as any;
   const message =
-    (error as any)?.message ||
-    (error as any)?.error?.message ||
-    (error as any)?.details ||
+    err?.message ||
+    err?.error?.message ||
+    err?.details ||
+    err?.hint ||
     String(error || '');
+  const code = err?.code || err?.error?.code;
+
   if (message.includes('AGENDA_SLOT_BUSY')) return 'busy';
   if (message.includes('AGENDA_SLOT_BLOCKED')) return 'blocked';
+
+  // UNIQUE constraint da tabela appointments (proteção de última camada contra race)
+  if (
+    code === '23505' &&
+    (message.includes('unique_user_date_time') ||
+      message.includes('appointments') ||
+      message.includes('duplicate key value violates unique constraint'))
+  ) {
+    return 'busy';
+  }
+  if (message.includes('unique_user_date_time')) return 'busy';
+
   return null;
 }
 
 /** Mensagem amigável para um erro do trigger (fallback quando não há dialog). */
 export function extractAgendaErrorMessage(error: unknown): string {
   const kind = parseAgendaTriggerError(error);
-  if (kind === 'busy') return 'Já existe um agendamento confirmado neste horário.';
+  if (kind === 'busy') return 'Já existe um agendamento neste horário.';
   if (kind === 'blocked') return 'Este horário está bloqueado. Desbloqueie antes de salvar.';
   const m = (error as any)?.message;
   return m ? `Erro ao salvar agendamento: ${m}` : 'Erro ao salvar agendamento.';
