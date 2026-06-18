@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
+import { getScrollParent, getScrollTop, setScrollTop } from '@/utils/getScrollParent';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Edit, Trash2, Star } from 'lucide-react';
@@ -132,9 +133,48 @@ export default function Produtos({ pacotes }: ProdutosProps) {
     }
   }, [confirm, removerProduto]);
 
+  // ===== Preservação de scroll ao alternar favorito (técnica FLIP) =====
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const pendingFavToggleRef = useRef<{ id: string; prevTop: number; prevScrollTop: number; scrollParent: HTMLElement | Window } | null>(null);
+
   const handleToggleFavorito = useCallback(async (produto: Produto) => {
+    const container = listContainerRef.current;
+    if (container) {
+      const row = container.querySelector<HTMLElement>(`[data-produto-id="${produto.id}"]`);
+      if (row) {
+        const scrollParent = getScrollParent(row);
+        pendingFavToggleRef.current = {
+          id: produto.id,
+          prevTop: row.getBoundingClientRect().top,
+          prevScrollTop: getScrollTop(scrollParent),
+          scrollParent,
+        };
+      }
+    }
     await atualizarProduto(produto.id, { favorito: !produto.favorito });
   }, [atualizarProduto]);
+
+  useLayoutEffect(() => {
+    const pending = pendingFavToggleRef.current;
+    if (!pending) return;
+    pendingFavToggleRef.current = null;
+
+    const container = listContainerRef.current;
+    if (!container) return;
+    const row = container.querySelector<HTMLElement>(`[data-produto-id="${pending.id}"]`);
+    if (!row) return;
+
+    const newTop = row.getBoundingClientRect().top;
+    const delta = newTop - pending.prevTop;
+    if (delta !== 0) {
+      setScrollTop(pending.scrollParent, pending.prevScrollTop + delta);
+    }
+
+    // Flash visual de 700ms para feedback
+    row.classList.add('produto-row-flash');
+    const t = window.setTimeout(() => row.classList.remove('produto-row-flash'), 700);
+    return () => window.clearTimeout(t);
+  }, [produtosFiltradosOrdenados]);
 
   const handleToggleEtiquetaFiltro = useCallback((id: string) => {
     setSelectedEtiquetaIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
