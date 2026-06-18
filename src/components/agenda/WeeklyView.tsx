@@ -36,6 +36,13 @@ export default function WeeklyView({
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
+  const { now } = useCurrentTimeIndicator();
+  const currentPosition = useMemo(
+    () => getCurrentSlotPosition(timeSlots, now),
+    [timeSlots, now]
+  );
+  const todayDayIndex = weekDays.findIndex(d => isSameDay(d, now));
+
   // Mapa de dias com isFullDay
   const fullDaySlots = useMemo(() => {
     const map = new Map<string, any>();
