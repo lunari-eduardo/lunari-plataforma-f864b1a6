@@ -161,19 +161,24 @@ export default function WeeklyView({
           {weekDays.map((day, index) => {
             const dayKey = format(day, 'yyyy-MM-dd');
             const fullDaySlot = fullDaySlots.get(dayKey);
-            
+            const todayCol = isToday(day);
+
             return (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className={cn(
-                  "text-center cursor-pointer hover:opacity-80 transition-all",
+                  "text-center cursor-pointer hover:opacity-80 transition-all relative",
                   isTablet ? 'p-1' : 'p-1 md:p-2',
-                  fullDaySlot ? "border-b-2" : "bg-card/50 dark:bg-card/[0.06]"
+                  fullDaySlot ? "border-b-2" : "bg-card/50 dark:bg-card/[0.06]",
+                  todayCol && !fullDaySlot && "ring-1 ring-inset"
                 )}
-                style={fullDaySlot ? {
-                  backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
-                  borderBottomColor: fullDaySlot.color || 'hsl(var(--lunar-accent))'
-                } : undefined}
+                style={{
+                  ...(fullDaySlot ? {
+                    backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
+                    borderBottomColor: fullDaySlot.color || 'hsl(var(--lunar-accent))'
+                  } : {}),
+                  ...(todayCol && !fullDaySlot ? { boxShadow: 'inset 0 -2px 0 hsl(var(--time-now))' } : {})
+                }}
                 onClick={() => onDayClick?.(day)}
                 role="button"
                 tabIndex={0}
@@ -186,7 +191,12 @@ export default function WeeklyView({
                 }}
               >
                 <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
-                <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
+                <p
+                  className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'} ${todayCol ? 'inline-flex items-center justify-center h-5 w-5 md:h-6 md:w-6 rounded-full' : ''}`}
+                  style={todayCol ? { backgroundColor: 'hsl(var(--time-now))', color: 'white' } : undefined}
+                >
+                  {format(day, 'd')}
+                </p>
                 {fullDaySlot && (
                   <p className={`truncate ${isTablet ? 'text-[8px]' : 'text-[10px]'}`} style={{ color: fullDaySlot.color }}>
                     {fullDaySlot.label || 'Dia todo'}
