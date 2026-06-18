@@ -1,6 +1,5 @@
 import MiniMonthCalendar from './MiniMonthCalendar';
 import DayRevenueKPI from './DayRevenueKPI';
-import AgendaLegend from './AgendaLegend';
 import { useAvailability } from '@/hooks/useAvailability';
 import type { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import type { ViewType } from '@/utils/dateFormatters';
@@ -42,8 +41,6 @@ export default function AgendaSidebar({
       {showKPI && (
         <DayRevenueKPI date={date} unifiedEvents={unifiedEvents} range={kpiRange} />
       )}
-
-      <AgendaLegend />
     </aside>
   );
 }

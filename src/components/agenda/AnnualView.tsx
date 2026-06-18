@@ -62,7 +62,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
         <h2 className="text-base font-semibold text-lunar-text">{year}</h2>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
         {Array.from({ length: 12 }, (_, monthIndex) => {
           const firstDay = new Date(year, monthIndex, 1);
           const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
@@ -74,7 +74,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
           const totalMonthEvents = eventsPerMonth[monthIndex] || 0;
 
           return (
-            <Card key={monthIndex} className="p-1.5 bg-card/30 backdrop-blur-sm dark:bg-card/[0.04] border border-white/30 dark:border-white/10">
+            <Card key={monthIndex} className="p-3 bg-card/30 backdrop-blur-sm dark:bg-card/[0.04] border border-white/30 dark:border-white/10">
               <div className="flex items-center justify-between mb-2">
                 <button
                   type="button"
@@ -92,16 +92,16 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
               </div>
 
               {/* Weekday labels */}
-              <div className="grid grid-cols-7 gap-1 mb-1 text-[10px] text-lunar-textSecondary">
+              <div className="grid grid-cols-7 gap-1.5 mb-1 text-[10px] text-lunar-textSecondary">
                 {['D','S','T','Q','Q','S','S'].map((d, i) => (
                   <div key={`${d}-${i}`} className="text-center">{d}</div>
                 ))}
               </div>
 
               {/* Days grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1.5">
                 {blanks.map((_, i) => (
-                  <div key={`b-${i}`} className="h-7" />
+                  <div key={`b-${i}`} className="h-9" />
                 ))}
                 {days.map((day) => {
                   const current = new Date(year, monthIndex, day);
@@ -116,7 +116,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
                       aria-label={`Dia ${day} de ${monthNames[monthIndex]} de ${year}${count ? `, ${count} eventos` : ''}${fullDaySlot ? `, ${fullDaySlot.label || 'Dia todo'}` : ''}`}
                       onClick={() => onDayClick(current)}
                       className={cn(
-                        "h-7 w-7 rounded-md flex flex-col items-center justify-center text-2xs leading-none",
+                        "h-9 w-full rounded-md flex flex-col items-center justify-center text-xs leading-none transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.05]",
                         "bg-card/30 dark:bg-card/[0.03] text-lunar-text",
                         fullDaySlot ? "border-2" : "border border-white/20 dark:border-white/10"
                       )}
@@ -129,7 +129,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
                       <span
                         aria-hidden
                         className={cn(
-                           "mt-0.5 h-1.5 w-1.5 rounded-full",
+                           "mt-1 h-1.5 w-1.5 rounded-full",
                            count > 0 ? "bg-lunar-accent" : "bg-transparent border border-transparent"
                          )}
                       />

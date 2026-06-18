@@ -178,7 +178,6 @@
     --availability: 210 60% 70%;
 
     /* ── AGENDA EVENT TOKENS ──────────────────────────────── */
-    --time-now: 25 95% 53%;
     --event-confirmed: 217 91% 60%;
     --event-confirmed-fg: 217 60% 22%;
     --event-confirmed-bg: 217 91% 94%;
@@ -280,7 +279,6 @@
     --chart-10: var(--brand-h) calc(var(--brand-s) * 0.20) calc(var(--brand-l) + 45%);
 
     /* Event tokens — dark variants with elevated lightness */
-    --time-now: 25 95% 60%;
     --event-confirmed: 217 91% 65%;
     --event-confirmed-fg: 217 95% 92%;
     --event-confirmed-bg: 217 70% 22%;
