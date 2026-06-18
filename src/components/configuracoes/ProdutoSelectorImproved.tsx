@@ -35,9 +35,15 @@ export default function ProdutoSelectorImproved({
     }
   }, [open, dialogDropdownContext]);
 
-  const produtosDisponiveis = produtos.filter(
-    produto => !produtosIncluidos.some(p => p.produtoId === produto.id)
-  );
+  const produtosDisponiveis = produtos
+    .filter(produto => !produtosIncluidos.some(p => p.produtoId === produto.id))
+    .slice()
+    .sort((a, b) => {
+      const fa = a.favorito ? 1 : 0;
+      const fb = b.favorito ? 1 : 0;
+      if (fa !== fb) return fb - fa;
+      return (a.nome ?? '').localeCompare(b.nome ?? '', 'pt-BR', { sensitivity: 'base' });
+    });
 
   const getProdutoNome = (produtoId: string) => {
     const produto = produtos.find(p => p.id === produtoId);
