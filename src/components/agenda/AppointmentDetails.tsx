@@ -581,7 +581,9 @@ export default function AppointmentDetails({
                 }
 
                 // Garantir persistência do pacote/valor antes de gerar a cobrança
-                try { await flushNow(); } catch (_) { /* erro já tratado no hook */ }
+                if (!conflictResult && !isSaveDialogOpen) {
+                  try { await flushNow(); } catch (_) { /* erro já tratado no hook */ }
+                }
 
                 setShowChargeModal(true);
               }}
