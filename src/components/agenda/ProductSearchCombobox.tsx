@@ -116,9 +116,13 @@ export default function ProductSearchCombobox({
                 className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0"
               >
                 <div className="flex items-center">
-                  <ShoppingBag className="h-3 w-3 mr-2 text-muted-foreground" />
+                  {product.favorito ? (
+                    <Star className="h-3 w-3 mr-2 fill-amber-400 text-amber-500 shrink-0" />
+                  ) : (
+                    <ShoppingBag className="h-3 w-3 mr-2 text-muted-foreground shrink-0" />
+                  )}
                   <div className="flex-1">
-                    <span className="font-medium">{product.nome}</span>
+                    <span className={cn('font-medium', product.favorito && 'text-foreground')}>{product.nome}</span>
                     <div className="text-[11px] text-muted-foreground">
                       R$ {product.valorVenda.toFixed(2)}
                     </div>
