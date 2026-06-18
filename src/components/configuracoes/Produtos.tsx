@@ -242,7 +242,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
       )}
 
       {/* Lista */}
-      <div className="space-y-3">
+      <div className="space-y-3" ref={listContainerRef}>
         {produtos.length === 0 ? (
           <div className="text-center py-8 border border-dashed border-border rounded-lg">
             <p className="text-sm text-muted-foreground">
@@ -297,6 +297,7 @@ export default function Produtos({ pacotes }: ProdutosProps) {
               return (
                 <div
                   key={produto.id}
+                  data-produto-id={produto.id}
                   className={cn(
                     "grid px-4 py-2.5 text-sm transition-colors items-center relative",
                     index % 2 === 0 ? 'bg-background' : 'bg-muted/30',

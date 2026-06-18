@@ -40,7 +40,7 @@ const ProdutoCard = memo(({
   isDeleting = false
 }: ProdutoCardProps) => {
   return (
-    <Card className={cn('overflow-hidden relative', produto.favorito && 'bg-amber-500/[0.04]')}>
+    <Card data-produto-id={produto.id} className={cn('overflow-hidden relative', produto.favorito && 'bg-amber-500/[0.04]')}>
       {produto.favorito && (
         <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400/60" aria-hidden />
       )}
