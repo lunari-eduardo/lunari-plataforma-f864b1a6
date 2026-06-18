@@ -36,6 +36,7 @@ export function useAppointmentAutosave<T>({
   const buildPayloadRef = useRef(buildPayload);
   const onSaveRef = useRef(onSave);
   const enabledRef = useRef(enabled);
+  const cooldownUntilRef = useRef<number>(0);
 
   // Sempre manter refs atualizadas (evita closures stale)
   useEffect(() => {
@@ -47,6 +48,7 @@ export function useAppointmentAutosave<T>({
 
   const performSave = useCallback(async (snapshotJson: string, snapshotData: T) => {
     if (isSavingRef.current) return;
+    if (Date.now() < cooldownUntilRef.current) return;
     isSavingRef.current = true;
     setStatus('saving');
     try {
@@ -62,6 +64,8 @@ export function useAppointmentAutosave<T>({
     } catch (err) {
       console.error('[useAppointmentAutosave] Erro ao salvar:', err);
       setStatus('error');
+      // Cooldown 400ms para evitar re-disparos em cascata após revert/StrictMode
+      cooldownUntilRef.current = Date.now() + 400;
     } finally {
       isSavingRef.current = false;
     }
