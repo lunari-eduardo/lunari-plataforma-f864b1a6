@@ -114,12 +114,17 @@ export function ProductSearchCombobox({
                 <div
                   key={product.id}
                   onClick={() => handleSelect(product)}
-                  className="px-3 py-2 hover:bg-accent cursor-pointer text-xs"
+                  className="px-3 py-2 hover:bg-accent cursor-pointer text-xs flex items-center gap-2"
                 >
-                  <div className="font-medium">{product.nome}</div>
-                  <div className="text-2xs text-muted-foreground">
-                    R$ {valorProduto.toFixed(2)}
-                    {product.categoria && ` • ${product.categoria}`}
+                  {product.favorito && (
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-500 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{product.nome}</div>
+                    <div className="text-2xs text-muted-foreground">
+                      R$ {valorProduto.toFixed(2)}
+                      {product.categoria && ` • ${product.categoria}`}
+                    </div>
                   </div>
                 </div>
               );
