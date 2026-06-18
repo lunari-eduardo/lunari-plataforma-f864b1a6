@@ -234,7 +234,7 @@ export default function AppointmentDetails({
     }
   }, [formData.date, formData.time, conflictResult]);
 
-  const { status: autosaveStatus, flushNow } = useAppointmentAutosave({
+  const { status: autosaveStatus, flushNow, resetSnapshot } = useAppointmentAutosave({
     data: formData,
     enabled: isEditable && !conflictResult && !isSaveDialogOpen,
     delay: 800,
@@ -245,19 +245,33 @@ export default function AppointmentDetails({
       } catch (err) {
         const kind = parseAgendaTriggerError(err);
         if (kind === 'busy' || kind === 'blocked') {
-          // Reverter date/time ao último válido e abrir dialog
+          // Reverter date/time ao último válido
           const reverted = lastGoodSlotRef.current;
-          setFormData(prev => ({ ...prev, date: reverted.date, time: reverted.time }));
+          const revertedFormData = { ...formData, date: reverted.date, time: reverted.time };
+          setFormData(revertedFormData);
           setDateInputValue(formatDateForInput(reverted.date));
-          // Reaproveita pipeline visual de conflito
-          const check = checkSlot({
-            date: formData.date,
-            time: formData.time,
+          setTimeInputValue(reverted.time);
+          // Sincronizar snapshot do autosave para o estado revertido,
+          // evitando re-disparo de save após o setState
+          resetSnapshot(revertedFormData);
+
+          // Tentar enriquecer com dados locais; se cache não tem, usa fallback sintético
+          const local = checkSlot({
+            date: payload?.date ? new Date(payload.date) : formData.date,
+            time: payload?.time ?? formData.time,
             ignoreAppointmentId: appointment.id,
             targetStatus: formData.status,
           });
-          setPendingChange({ date: formData.date, time: formData.time });
-          setConflictResult(check.kind === 'free' ? null : check);
+          const tentativeDate = payload?.date ? new Date(payload.date) : formData.date;
+          const tentativeTime = payload?.time ?? formData.time;
+          const result =
+            (kind === 'busy' && local.kind === 'busy') ||
+            (kind === 'blocked' && local.kind === 'blocked')
+              ? local
+              : buildResultFromError(kind, tentativeDate, tentativeTime);
+          setPendingChange({ date: tentativeDate, time: tentativeTime });
+          setConflictResult(result);
+          // NÃO mostrar toast — o dialog é a notificação primária
         } else {
           toast.error(extractAgendaErrorMessage(err));
         }
@@ -269,9 +283,14 @@ export default function AppointmentDetails({
   // Manter ref atualizada para flush no unmount
   const flushNowRef = useRef(flushNow);
   useEffect(() => { flushNowRef.current = flushNow; }, [flushNow]);
+  const conflictOpenRef = useRef(false);
+  useEffect(() => {
+    conflictOpenRef.current = !!conflictResult || isSaveDialogOpen;
+  }, [conflictResult, isSaveDialogOpen]);
   useEffect(() => {
     return () => {
-      // Ao desmontar (modal fechado), garantir persistência de qualquer alteração pendente
+      // Ao desmontar (modal fechado), garantir persistência — mas não se há conflito aberto
+      if (conflictOpenRef.current) return;
       flushNowRef.current?.();
     };
   }, []);
