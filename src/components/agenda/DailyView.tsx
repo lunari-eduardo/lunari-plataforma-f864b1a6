@@ -1,9 +1,11 @@
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TimeInput } from "@/components/ui/time-input";
-import { useState } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import ConflictIndicator from './ConflictIndicator';
 import { Plus, Trash2, RotateCcw } from 'lucide-react';
+import CurrentTimeIndicator from './CurrentTimeIndicator';
+import { useCurrentTimeIndicator, getCurrentSlotPosition } from '@/hooks/useCurrentTimeIndicator';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
@@ -48,6 +50,11 @@ export default function DailyView({
   const [newTimeInput, setNewTimeInput] = useState('');
   const [unlockConfirmTime, setUnlockConfirmTime] = useState<string | null>(null);
   const dateKey = format(date, 'yyyy-MM-dd');
+  const slotsContainerRef = useRef<HTMLDivElement>(null);
+  const slotRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const didAutoScrollRef = useRef(false);
+  const { now } = useCurrentTimeIndicator();
+  const isToday = isSameDay(date, now);
   
   const {
     availability,
@@ -96,6 +103,28 @@ export default function DailyView({
   
   const timeSlots = getCurrentTimeSlots();
   const dayEvents = unifiedEvents.filter(event => isSameDay(event.date, date));
+
+  const currentPosition = useMemo(
+    () => (isToday ? getCurrentSlotPosition(timeSlots, now) : null),
+    [isToday, timeSlots, now]
+  );
+
+  useEffect(() => {
+    if (!isToday || didAutoScrollRef.current) return;
+    if (currentPosition === null) return;
+    const target = slotRefs.current.get(currentPosition.index);
+    if (target && 'scrollIntoView' in target) {
+      try {
+        target.scrollIntoView({ block: 'center', behavior: 'auto' });
+      } catch {}
+      didAutoScrollRef.current = true;
+    }
+  }, [isToday, currentPosition]);
+
+  useEffect(() => {
+    didAutoScrollRef.current = false;
+  }, [dateKey]);
+
   
   const getEventsForSlot = (time: string) => {
     return dayEvents.filter(event => event.time === time);
@@ -290,7 +319,8 @@ export default function DailyView({
         </div>
       )}
       
-      <div className="space-y-1">
+      <div className="space-y-1" ref={slotsContainerRef}>
+
         {timeSlots.map((time, index) => {
           const events = getEventsForSlot(time);
           const isEditing = editingTimeSlot === index;
@@ -304,12 +334,25 @@ export default function DailyView({
             backgroundColor: 'hsl(var(--destructive) / 0.08)'
           } : {};
           
+          const isCurrentSlot = currentPosition?.index === index;
+
           return (
-            <div 
-              key={`${time}-${index}`} 
-              className={`flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 backdrop-blur-sm ${blocked ? 'border-destructive/30' : 'border-white/25 dark:border-white/10'}`}
+            <div
+              key={`${time}-${index}`}
+              ref={(el) => {
+                if (el) slotRefs.current.set(index, el);
+                else slotRefs.current.delete(index);
+              }}
+              className={`relative flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 backdrop-blur-sm ${blocked ? 'border-destructive/30' : 'border-white/25 dark:border-white/10'}`}
               style={slotBgStyle}
             >
+              {isCurrentSlot && currentPosition && (
+                <CurrentTimeIndicator
+                  now={now}
+                  topPercent={currentPosition.offset * 100}
+                  variant="day"
+                />
+              )}
               <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-card/30 dark:bg-card/[0.04]">
                 {isEditing ? (
                   <div 

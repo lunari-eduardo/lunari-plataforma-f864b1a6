@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { format, isSameDay, startOfWeek, addDays } from 'date-fns';
+import { format, isSameDay, isToday, startOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
 import UnifiedEventCard from './UnifiedEventCard';
@@ -10,6 +10,8 @@ import { Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatTimeBr, formatDayName } from '@/utils/agendaUtils';
 import { cn } from '@/lib/utils';
+import CurrentTimeIndicator from './CurrentTimeIndicator';
+import { useCurrentTimeIndicator, getCurrentSlotPosition } from '@/hooks/useCurrentTimeIndicator';
 interface WeeklyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -33,6 +35,13 @@ export default function WeeklyView({
   const weekStart = startOfWeek(date);
   const timeSlots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const { now } = useCurrentTimeIndicator();
+  const currentPosition = useMemo(
+    () => getCurrentSlotPosition(timeSlots, now),
+    [timeSlots, now]
+  );
+  const todayDayIndex = weekDays.findIndex(d => isSameDay(d, now));
 
   // Mapa de dias com isFullDay
   const fullDaySlots = useMemo(() => {
@@ -159,19 +168,24 @@ export default function WeeklyView({
           {weekDays.map((day, index) => {
             const dayKey = format(day, 'yyyy-MM-dd');
             const fullDaySlot = fullDaySlots.get(dayKey);
-            
+            const todayCol = isToday(day);
+
             return (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className={cn(
-                  "text-center cursor-pointer hover:opacity-80 transition-all",
+                  "text-center cursor-pointer hover:opacity-80 transition-all relative",
                   isTablet ? 'p-1' : 'p-1 md:p-2',
-                  fullDaySlot ? "border-b-2" : "bg-card/50 dark:bg-card/[0.06]"
+                  fullDaySlot ? "border-b-2" : "bg-card/50 dark:bg-card/[0.06]",
+                  todayCol && !fullDaySlot && "ring-1 ring-inset"
                 )}
-                style={fullDaySlot ? {
-                  backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
-                  borderBottomColor: fullDaySlot.color || 'hsl(var(--lunar-accent))'
-                } : undefined}
+                style={{
+                  ...(fullDaySlot ? {
+                    backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
+                    borderBottomColor: fullDaySlot.color || 'hsl(var(--lunar-accent))'
+                  } : {}),
+                  ...(todayCol && !fullDaySlot ? { boxShadow: 'inset 0 -2px 0 hsl(var(--time-now))' } : {})
+                }}
                 onClick={() => onDayClick?.(day)}
                 role="button"
                 tabIndex={0}
@@ -184,7 +198,12 @@ export default function WeeklyView({
                 }}
               >
                 <p className={`text-muted-foreground font-medium ${isTablet ? 'text-[10px]' : 'text-xs'}`}>{formatDayName(day)}</p>
-                <p className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'}`}>{format(day, 'd')}</p>
+                <p
+                  className={`font-semibold ${isTablet ? 'text-xs' : 'text-xs md:text-sm'} ${todayCol ? 'inline-flex items-center justify-center h-5 w-5 md:h-6 md:w-6 rounded-full' : ''}`}
+                  style={todayCol ? { backgroundColor: 'hsl(var(--time-now))', color: 'white' } : undefined}
+                >
+                  {format(day, 'd')}
+                </p>
                 {fullDaySlot && (
                   <p className={`truncate ${isTablet ? 'text-[8px]' : 'text-[10px]'}`} style={{ color: fullDaySlot.color }}>
                     {fullDaySlot.label || 'Dia todo'}
@@ -195,22 +214,31 @@ export default function WeeklyView({
           })}
           
           {/* Time slots */}
-          {timeSlots.map(time => (
+          {timeSlots.map((time, rowIndex) => (
             <React.Fragment key={time}>
               {/* Time label */}
               <div className={classes.timeLabel}>
                 {time}
               </div>
-              
+
               {/* Time slots for each day */}
               {weekDays.map((day, dayIndex) => {
                 const event = getEventForSlot(day, time);
+                const isCurrentCell =
+                  currentPosition?.index === rowIndex && dayIndex === todayDayIndex;
                 return (
-                  <div 
-                    key={`${dayIndex}-${time}`} 
-                    onClick={() => !event && onCreateSlot({ date: day, time })} 
+                  <div
+                    key={`${dayIndex}-${time}`}
+                    onClick={() => !event && onCreateSlot({ date: day, time })}
                     className={`relative cursor-pointer bg-card/40 hover:bg-card/60 dark:bg-card/[0.05] dark:hover:bg-white/[0.08] ${classes.weeklyTimeSlot}`}
                   >
+                    {isCurrentCell && currentPosition && (
+                      <CurrentTimeIndicator
+                        now={now}
+                        topPercent={currentPosition.offset * 100}
+                        variant="week"
+                      />
+                    )}
                     {event ? <div onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="weekly" />
                         </div> : (() => {

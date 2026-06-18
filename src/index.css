@@ -177,6 +177,22 @@
 
     --availability: 210 60% 70%;
 
+    /* ── AGENDA EVENT TOKENS ──────────────────────────────── */
+    --time-now: 25 95% 53%;
+    --event-confirmed: 217 91% 60%;
+    --event-confirmed-fg: 217 60% 22%;
+    --event-confirmed-bg: 217 91% 94%;
+    --event-pending: 32 95% 50%;
+    --event-pending-fg: 32 70% 25%;
+    --event-pending-bg: 32 95% 94%;
+    --event-budget: 142 60% 40%;
+    --event-budget-fg: 142 60% 18%;
+    --event-budget-bg: 142 60% 92%;
+    --event-blocked: 0 75% 55%;
+    --event-blocked-fg: 0 60% 28%;
+    --event-blocked-bg: 0 75% 95%;
+    --event-available: 152 60% 45%;
+
     --brand-gradient-start: var(--brand-h) var(--brand-s) var(--brand-l);
     --brand-gradient-end:   var(--brand-h) var(--brand-s) var(--brand-hover-l);
 
@@ -262,6 +278,22 @@
     --chart-8:  calc(var(--brand-h) - 20) calc(var(--brand-s) * 0.45) calc(var(--brand-l) + 35%);
     --chart-9:  var(--brand-h) calc(var(--brand-s) * 0.30) calc(var(--brand-l) + 40%);
     --chart-10: var(--brand-h) calc(var(--brand-s) * 0.20) calc(var(--brand-l) + 45%);
+
+    /* Event tokens — dark variants with elevated lightness */
+    --time-now: 25 95% 60%;
+    --event-confirmed: 217 91% 65%;
+    --event-confirmed-fg: 217 95% 92%;
+    --event-confirmed-bg: 217 70% 22%;
+    --event-pending: 32 95% 60%;
+    --event-pending-fg: 32 95% 92%;
+    --event-pending-bg: 32 70% 22%;
+    --event-budget: 142 65% 50%;
+    --event-budget-fg: 142 80% 92%;
+    --event-budget-bg: 142 55% 20%;
+    --event-blocked: 0 80% 65%;
+    --event-blocked-fg: 0 85% 92%;
+    --event-blocked-bg: 0 60% 25%;
+    --event-available: 152 60% 55%;
 
     /* sidebar dark */
     --sidebar-bg: 20 12% 9%;
