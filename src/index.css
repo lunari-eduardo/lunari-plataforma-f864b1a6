@@ -177,6 +177,22 @@
 
     --availability: 210 60% 70%;
 
+    /* ── AGENDA EVENT TOKENS ──────────────────────────────── */
+    --time-now: 25 95% 53%;
+    --event-confirmed: 217 91% 60%;
+    --event-confirmed-fg: 217 60% 22%;
+    --event-confirmed-bg: 217 91% 94%;
+    --event-pending: 32 95% 50%;
+    --event-pending-fg: 32 70% 25%;
+    --event-pending-bg: 32 95% 94%;
+    --event-budget: 142 60% 40%;
+    --event-budget-fg: 142 60% 18%;
+    --event-budget-bg: 142 60% 92%;
+    --event-blocked: 0 75% 55%;
+    --event-blocked-fg: 0 60% 28%;
+    --event-blocked-bg: 0 75% 95%;
+    --event-available: 152 60% 45%;
+
     --brand-gradient-start: var(--brand-h) var(--brand-s) var(--brand-l);
     --brand-gradient-end:   var(--brand-h) var(--brand-s) var(--brand-hover-l);
 
