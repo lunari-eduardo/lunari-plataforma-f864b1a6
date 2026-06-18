@@ -37,6 +37,12 @@ function InlineEditCategoriaRow({ categoria, onUpdate, onDelete, podeRemover, al
   const savingRef = useRef(false);
   const deleteClickedRef = useRef(false);
 
+  // Resync com a prop quando o nome muda externamente (realtime de outra aba/device)
+  // — somente quando NÃO está em edição, para não interromper digitação local.
+  React.useEffect(() => {
+    if (!isEditing) setEditNome(categoria.nome);
+  }, [categoria.nome, isEditing]);
+
   const validate = useCallback((nome: string): string => {
     if (!nome.trim()) return 'Nome obrigatório';
     if (nome.trim().length < 2) return 'Mínimo 2 caracteres';
