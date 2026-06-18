@@ -455,6 +455,7 @@ export class SupabaseConfigurationAdapterAsync {
         nome: produto.nome,
         preco_custo: produto.preco_custo,
         preco_venda: produto.preco_venda,
+        favorito: produto.favorito ?? false,
         created_at: produto.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
