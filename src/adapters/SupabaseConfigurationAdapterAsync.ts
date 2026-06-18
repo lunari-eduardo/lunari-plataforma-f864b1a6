@@ -413,6 +413,8 @@ export class SupabaseConfigurationAdapterAsync {
         nome: item.nome,
         preco_custo: Number(item.preco_custo),
         preco_venda: Number(item.preco_venda),
+        favorito: Boolean(item.favorito),
+        favorited_at: item.favorited_at ?? null,
         created_at: item.created_at,
         updated_at: item.updated_at
       }));
@@ -453,6 +455,7 @@ export class SupabaseConfigurationAdapterAsync {
         nome: produto.nome,
         preco_custo: produto.preco_custo,
         preco_venda: produto.preco_venda,
+        favorito: produto.favorito ?? false,
         created_at: produto.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));

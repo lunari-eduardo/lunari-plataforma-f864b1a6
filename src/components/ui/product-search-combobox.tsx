@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useDialogDropdownContext } from "@/components/ui/dialog";
+import { sortProdutos } from "@/utils/produtoSort";
 
 // Função para normalizar texto (remover acentos e caracteres especiais)
 const normalizeText = (text: string): string => {
@@ -21,6 +22,8 @@ interface Product {
   preco_venda?: number;
   valor?: number;
   categoria?: string;
+  favorito?: boolean;
+  favorited_at?: string | null;
 }
 
 interface ProductSearchComboboxProps {
@@ -63,15 +66,16 @@ export function ProductSearchCombobox({
     return product.valorVenda || product.preco_venda || product.valor || 0;
   };
 
-  // Filtrar produtos com base no termo de busca (normalizado)
+  // Filtrar produtos com base no termo de busca (normalizado) e ordenar com favoritos no topo
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return products;
-    
+    const sorted = [...products].sort(sortProdutos as any);
+    if (!searchTerm.trim()) return sorted;
+
     const normalizedSearch = normalizeText(searchTerm);
-    return products.filter(product => {
+    return sorted.filter(product => {
       const normalizedName = normalizeText(product.nome);
       const normalizedCategory = normalizeText(product.categoria || '');
-      return normalizedName.includes(normalizedSearch) || 
+      return normalizedName.includes(normalizedSearch) ||
              normalizedCategory.includes(normalizedSearch);
     });
   }, [products, searchTerm]);
@@ -110,12 +114,17 @@ export function ProductSearchCombobox({
                 <div
                   key={product.id}
                   onClick={() => handleSelect(product)}
-                  className="px-3 py-2 hover:bg-accent cursor-pointer text-xs"
+                  className="px-3 py-2 hover:bg-accent cursor-pointer text-xs flex items-center gap-2"
                 >
-                  <div className="font-medium">{product.nome}</div>
-                  <div className="text-2xs text-muted-foreground">
-                    R$ {valorProduto.toFixed(2)}
-                    {product.categoria && ` • ${product.categoria}`}
+                  {product.favorito && (
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-500 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{product.nome}</div>
+                    <div className="text-2xs text-muted-foreground">
+                      R$ {valorProduto.toFixed(2)}
+                      {product.categoria && ` • ${product.categoria}`}
+                    </div>
                   </div>
                 </div>
               );

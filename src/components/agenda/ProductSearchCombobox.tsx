@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import { Check, ChevronDown, ShoppingBag } from 'lucide-react';
+import { ChevronDown, ShoppingBag, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { sortProdutos } from '@/utils/produtoSort';
+import { cn } from '@/lib/utils';
 
 const normalizeText = (text: string): string => {
   return text
@@ -16,6 +18,8 @@ export interface ProductComboboxItem {
   nome: string;
   custo: number;
   valorVenda: number;
+  favorito?: boolean;
+  favorited_at?: string | null;
 }
 
 interface ProductSearchComboboxProps {
@@ -39,16 +43,19 @@ export default function ProductSearchCombobox({
       if (!user) return;
       const { data } = await supabase
         .from('produtos')
-        .select('id, nome, preco_custo, preco_venda')
+        .select('id, nome, preco_custo, preco_venda, favorito, favorited_at')
         .eq('user_id', user.id)
         .order('nome');
       if (data) {
-        setProducts(data.map(p => ({
+        const mapped: ProductComboboxItem[] = data.map((p: any) => ({
           id: p.id,
           nome: p.nome,
           custo: Number(p.preco_custo) || 0,
-          valorVenda: Number(p.preco_venda) || 0
-        })));
+          valorVenda: Number(p.preco_venda) || 0,
+          favorito: Boolean(p.favorito),
+          favorited_at: p.favorited_at ?? null,
+        }));
+        setProducts([...mapped].sort(sortProdutos));
       }
     };
     load();
@@ -109,9 +116,13 @@ export default function ProductSearchCombobox({
                 className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0"
               >
                 <div className="flex items-center">
-                  <ShoppingBag className="h-3 w-3 mr-2 text-muted-foreground" />
+                  {product.favorito ? (
+                    <Star className="h-3 w-3 mr-2 fill-amber-400 text-amber-500 shrink-0" />
+                  ) : (
+                    <ShoppingBag className="h-3 w-3 mr-2 text-muted-foreground shrink-0" />
+                  )}
                   <div className="flex-1">
-                    <span className="font-medium">{product.nome}</span>
+                    <span className={cn('font-medium', product.favorito && 'text-foreground')}>{product.nome}</span>
                     <div className="text-[11px] text-muted-foreground">
                       R$ {product.valorVenda.toFixed(2)}
                     </div>

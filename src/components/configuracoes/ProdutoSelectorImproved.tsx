@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Plus, X, Package } from 'lucide-react';
+import { Plus, X, Package, Star } from 'lucide-react';
 import { formatarMoeda } from '@/utils/precificacaoUtils';
 import { useDialogDropdownContext } from '@/components/ui/dialog';
 import type { Produto, ProdutoIncluido } from '@/types/configuration';
@@ -35,9 +35,15 @@ export default function ProdutoSelectorImproved({
     }
   }, [open, dialogDropdownContext]);
 
-  const produtosDisponiveis = produtos.filter(
-    produto => !produtosIncluidos.some(p => p.produtoId === produto.id)
-  );
+  const produtosDisponiveis = produtos
+    .filter(produto => !produtosIncluidos.some(p => p.produtoId === produto.id))
+    .slice()
+    .sort((a, b) => {
+      const fa = a.favorito ? 1 : 0;
+      const fb = b.favorito ? 1 : 0;
+      if (fa !== fb) return fb - fa;
+      return (a.nome ?? '').localeCompare(b.nome ?? '', 'pt-BR', { sensitivity: 'base' });
+    });
 
   const getProdutoNome = (produtoId: string) => {
     const produto = produtos.find(p => p.id === produtoId);
@@ -166,7 +172,11 @@ export default function ProdutoSelectorImproved({
                     className="text-xs cursor-pointer"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Package className="h-4 w-4 text-lunar-accent flex-shrink-0" />
+                      {produto.favorito ? (
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-500 flex-shrink-0" />
+                      ) : (
+                        <Package className="h-4 w-4 text-lunar-accent flex-shrink-0" />
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-foreground truncate">
                           {produto.nome}

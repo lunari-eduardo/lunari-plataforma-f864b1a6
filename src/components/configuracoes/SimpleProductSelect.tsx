@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Star } from 'lucide-react';
 import { Produto } from '@/types/configuration';
+import { sortProdutos } from '@/utils/produtoSort';
 
 interface SimpleProductSelectProps {
   products: Produto[];
@@ -17,17 +19,18 @@ export default function SimpleProductSelect({
 }: SimpleProductSelectProps) {
   const [selectedValue, setSelectedValue] = useState<string>("");
 
+  const ordenados = useMemo(() => [...products].sort(sortProdutos), [products]);
+
   const handleValueChange = (value: string) => {
     if (value === "") {
       onSelect(null);
       setSelectedValue("");
       return;
     }
-
-    const selectedProduct = products.find(p => p.id === value);
+    const selectedProduct = ordenados.find(p => p.id === value);
     if (selectedProduct) {
       onSelect(selectedProduct);
-      setSelectedValue(""); // Reset after selection
+      setSelectedValue("");
     }
   };
 
@@ -37,18 +40,21 @@ export default function SimpleProductSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className="max-h-[200px]">
-        {products.length === 0 ? (
+        {ordenados.length === 0 ? (
           <SelectItem value="no-products" disabled>
             Nenhum produto disponível
           </SelectItem>
         ) : (
-          products.map((product) => (
+          ordenados.map((product) => (
             <SelectItem key={product.id} value={product.id} className="text-sm">
-              <div className="flex flex-col">
-                <span className="font-medium">{product.nome}</span>
-                <span className="text-xs text-muted-foreground">
-                  R$ {product.preco_venda?.toFixed(2) || '0,00'}
-                </span>
+              <div className="flex items-center gap-2">
+                {product.favorito && <Star className="h-3 w-3 fill-amber-400 text-amber-500 shrink-0" />}
+                <div className="flex flex-col">
+                  <span className="font-medium">{product.nome}</span>
+                  <span className="text-xs text-muted-foreground">
+                    R$ {product.preco_venda?.toFixed(2) || '0,00'}
+                  </span>
+                </div>
               </div>
             </SelectItem>
           ))

@@ -208,7 +208,9 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         id: payload.new.id,
         nome: payload.new.nome,
         preco_custo: payload.new.preco_custo,
-        preco_venda: payload.new.preco_venda
+        preco_venda: payload.new.preco_venda,
+        favorito: Boolean(payload.new.favorito),
+        favorited_at: payload.new.favorited_at ?? null,
       };
       produtosOps.set(upsertById(produtosRef.current, produto));
     },
@@ -222,7 +224,9 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         id: payload.new.id,
         nome: payload.new.nome,
         preco_custo: payload.new.preco_custo,
-        preco_venda: payload.new.preco_venda
+        preco_venda: payload.new.preco_venda,
+        favorito: Boolean(payload.new.favorito),
+        favorited_at: payload.new.favorited_at ?? null,
       };
       produtosOps.set(upsertById(produtosRef.current, produto));
     },
