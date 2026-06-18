@@ -278,39 +278,83 @@ export default function Agenda() {
     }
   };
 
+  useAgendaKeyboardShortcuts({
+    onPrev: handleNavigatePrevious,
+    onNext: handleNavigateNext,
+    onToday: handleNavigateToday,
+    onViewChange: setView,
+  });
+
+  const showSidebar = !isMobile && !isTablet;
+
   return (
     <div className={`w-full max-w-7xl mx-auto ${classes.container} pb-20 md:pb-4`}>
       <Card className={`${classes.card} bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border-white/50 dark:border-white/10 mx-0`}>
-        <AgendaHeader
-          view={view}
-          date={date}
-          onViewChange={setView}
-          onNavigatePrevious={handleNavigatePrevious}
-          onNavigateNext={handleNavigateNext}
-          onNavigateToday={handleNavigateToday}
-          onOpenAvailability={openAvailabilityModal}
-          onOpenShare={view === 'day' ? openShareModal : undefined}
-        />
-          
-        {/* Content container with swipe support */}
-        <div className="mt-4" {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
-          {renderView()}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <AgendaHeader
+              view={view}
+              date={date}
+              onViewChange={setView}
+              onNavigatePrevious={handleNavigatePrevious}
+              onNavigateNext={handleNavigateNext}
+              onNavigateToday={handleNavigateToday}
+              onOpenAvailability={openAvailabilityModal}
+              onOpenShare={view === 'day' ? openShareModal : undefined}
+            />
+          </div>
+          {!showSidebar && (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Abrir mini calendário">
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[320px] sm:w-[360px] overflow-y-auto">
+                <div className="pt-6">
+                  <AgendaSidebar
+                    date={date}
+                    view={view}
+                    unifiedEvents={unifiedEvents}
+                    onNavigateToDate={navigateToDate}
+                    onSwitchToDay={() => setView('day')}
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
-        
-        {/* Tasks section */}
-        <AgendaTasksSection
-          selectedDate={date}
-          tasks={tasks}
-          viewMode={view}
-          onCreateTask={() => setIsTaskModalOpen(true)}
-          onDayClick={handleDayClick}
-        />
-        
-        {/* Data integrity panel */}
-        <div className="mt-4">
-          <DataIntegrityPanel />
+
+        <div className={showSidebar ? 'mt-4 grid grid-cols-[260px_1fr] gap-4' : 'mt-4'}>
+          {showSidebar && (
+            <AgendaSidebar
+              date={date}
+              view={view}
+              unifiedEvents={unifiedEvents}
+              onNavigateToDate={navigateToDate}
+              onSwitchToDay={() => setView('day')}
+            />
+          )}
+          <div className="min-w-0">
+            <div {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
+              {renderView()}
+            </div>
+
+            <AgendaTasksSection
+              selectedDate={date}
+              tasks={tasks}
+              viewMode={view}
+              onCreateTask={() => setIsTaskModalOpen(true)}
+              onDayClick={handleDayClick}
+            />
+
+            <div className="mt-4">
+              <DataIntegrityPanel />
+            </div>
+          </div>
         </div>
       </Card>
+
 
       {/* Task creation modal */}
       <UnifiedTaskModal
