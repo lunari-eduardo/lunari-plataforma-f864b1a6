@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Plus, X, Package } from 'lucide-react';
+import { Plus, X, Package, Star } from 'lucide-react';
 import { formatarMoeda } from '@/utils/precificacaoUtils';
 import { useDialogDropdownContext } from '@/components/ui/dialog';
 import type { Produto, ProdutoIncluido } from '@/types/configuration';
