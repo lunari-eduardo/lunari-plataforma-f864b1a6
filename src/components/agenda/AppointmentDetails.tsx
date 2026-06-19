@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { useAppointmentAutosave } from '@/hooks/useAppointmentAutosave';
 import { ptBR } from 'date-fns/locale';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard, Check, CloudOff } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 import { SlotConflictDialog } from './SlotConflictDialog';
@@ -34,7 +33,8 @@ import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 interface AppointmentDetailsProps {
   appointment: Appointment;
   onSave: (appointmentData: any) => void;
-  onAutoSave?: (appointmentData: any) => void | Promise<void>;
+  /** Persistência silenciosa que NÃO fecha o modal (ex.: antes de abrir cobrança). */
+  onPersist?: (appointmentData: any) => void | Promise<void>;
   onCancel: () => void;
   onDelete: (id: string, action?: 'preserve' | 'refund' | 'remove') => void;
 }
@@ -42,7 +42,7 @@ interface AppointmentDetailsProps {
 export default function AppointmentDetails({
   appointment,
   onSave,
-  onAutoSave,
+  onPersist,
   onCancel,
   onDelete
 }: AppointmentDetailsProps) {
@@ -80,18 +80,18 @@ export default function AppointmentDetails({
   const [dateInputValue, setDateInputValue] = useState(
     formatDateForInput(appointment.date)
   );
-  // Buffer do input de hora — só commita após validação (evita autosave salvar hora inválida)
+  // Buffer do input de hora — só commita após validação
   const [timeInputValue, setTimeInputValue] = useState(appointment.time);
 
   // Validação de conflito (ocupado/bloqueado)
-  const { checkSlot, buildResultFromError } = useSlotAvailabilityCheck();
+  const { checkSlot } = useSlotAvailabilityCheck();
   const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
   const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
 
-  // Controller centralizado para handleSave (confirmados) — dialog é portal-mounted DENTRO do modal
-  const { guard: saveGuard, dialogProps: saveDialogProps, isOpen: isSaveDialogOpen } = useAgendaConflict();
+  // Controller centralizado para handleSave — dialog é portal-mounted DENTRO do modal
+  const { guard: saveGuard, dialogProps: saveDialogProps } = useAgendaConflict();
 
-  // Determinar se os campos podem ser editados via autosave
+  // Habilitação visual de campos exclusivos do estado pendente (pacote, valor de entrada)
   const isEditable = formData.status === 'a confirmar';
 
   // Enhanced number input for paid amount
@@ -121,19 +121,9 @@ export default function AppointmentDetails({
     }));
   };
 
-  // Manipular seleção de status
-  const handleStatusSelect = async (status: 'confirmado' | 'a confirmar') => {
-    const next = { ...formData, status };
-    setFormData(next);
-    // Quando confirmar, autosave fica disabled — persistir imediatamente via onAutoSave
-    // (não usar onSave para não fechar o modal)
-    if (status === 'confirmado') {
-      try {
-        await (onAutoSave ?? onSave)(buildPayload(next));
-      } catch (err) {
-        console.error('[AppointmentDetails] Erro ao confirmar:', err);
-      }
-    }
+  // Manipular seleção de status — apenas local, persistência somente via botão Salvar
+  const handleStatusSelect = (status: 'confirmado' | 'a confirmar') => {
+    setFormData(prev => ({ ...prev, status }));
   };
 
   // Manipular input de data (somente atualiza o texto)
