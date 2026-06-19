@@ -467,10 +467,18 @@ export default function AppointmentDetails({
                   return;
                 }
 
-                // Garantir persistência do pacote/valor antes de gerar a cobrança
-                if (!conflictResult && !isSaveDialogOpen) {
-                  try { await flushNow(); } catch (_) { /* erro já tratado no hook */ }
+                // Garantir persistência silenciosa do pacote/valor antes de gerar a cobrança
+                // (não fecha o modal — usa onPersist explícito)
+                if (onPersist && !conflictResult) {
+                  try {
+                    await onPersist(buildPayload(formData));
+                  } catch (err) {
+                    console.error('[AppointmentDetails] Erro ao persistir antes da cobrança:', err);
+                    toast.error(extractAgendaErrorMessage(err));
+                    return;
+                  }
                 }
+
 
                 setShowChargeModal(true);
               }}
