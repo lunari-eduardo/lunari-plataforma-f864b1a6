@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { useAppointmentAutosave } from '@/hooks/useAppointmentAutosave';
 import { ptBR } from 'date-fns/locale';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,7 @@ import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/hooks/useAgenda';
 import PackageSearchCombobox from './PackageSearchCombobox';
-import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard, Check, CloudOff } from 'lucide-react';
+import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSlotAvailabilityCheck, type SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
 import { SlotConflictDialog } from './SlotConflictDialog';
@@ -34,7 +33,8 @@ import { useAgendaConflict } from '@/hooks/useAgendaConflict';
 interface AppointmentDetailsProps {
   appointment: Appointment;
   onSave: (appointmentData: any) => void;
-  onAutoSave?: (appointmentData: any) => void | Promise<void>;
+  /** Persistência silenciosa que NÃO fecha o modal (ex.: antes de abrir cobrança). */
+  onPersist?: (appointmentData: any) => void | Promise<void>;
   onCancel: () => void;
   onDelete: (id: string, action?: 'preserve' | 'refund' | 'remove') => void;
 }
@@ -42,7 +42,7 @@ interface AppointmentDetailsProps {
 export default function AppointmentDetails({
   appointment,
   onSave,
-  onAutoSave,
+  onPersist,
   onCancel,
   onDelete
 }: AppointmentDetailsProps) {
@@ -80,18 +80,18 @@ export default function AppointmentDetails({
   const [dateInputValue, setDateInputValue] = useState(
     formatDateForInput(appointment.date)
   );
-  // Buffer do input de hora — só commita após validação (evita autosave salvar hora inválida)
+  // Buffer do input de hora — só commita após validação
   const [timeInputValue, setTimeInputValue] = useState(appointment.time);
 
   // Validação de conflito (ocupado/bloqueado)
-  const { checkSlot, buildResultFromError } = useSlotAvailabilityCheck();
+  const { checkSlot } = useSlotAvailabilityCheck();
   const [conflictResult, setConflictResult] = useState<SlotCheckResult | null>(null);
   const [pendingChange, setPendingChange] = useState<{ date: Date; time: string } | null>(null);
 
-  // Controller centralizado para handleSave (confirmados) — dialog é portal-mounted DENTRO do modal
-  const { guard: saveGuard, dialogProps: saveDialogProps, isOpen: isSaveDialogOpen } = useAgendaConflict();
+  // Controller centralizado para handleSave — dialog é portal-mounted DENTRO do modal
+  const { guard: saveGuard, dialogProps: saveDialogProps } = useAgendaConflict();
 
-  // Determinar se os campos podem ser editados via autosave
+  // Habilitação visual de campos exclusivos do estado pendente (pacote, valor de entrada)
   const isEditable = formData.status === 'a confirmar';
 
   // Enhanced number input for paid amount
@@ -121,19 +121,9 @@ export default function AppointmentDetails({
     }));
   };
 
-  // Manipular seleção de status
-  const handleStatusSelect = async (status: 'confirmado' | 'a confirmar') => {
-    const next = { ...formData, status };
-    setFormData(next);
-    // Quando confirmar, autosave fica disabled — persistir imediatamente via onAutoSave
-    // (não usar onSave para não fechar o modal)
-    if (status === 'confirmado') {
-      try {
-        await (onAutoSave ?? onSave)(buildPayload(next));
-      } catch (err) {
-        console.error('[AppointmentDetails] Erro ao confirmar:', err);
-      }
-    }
+  // Manipular seleção de status — apenas local, persistência somente via botão Salvar
+  const handleStatusSelect = (status: 'confirmado' | 'a confirmar') => {
+    setFormData(prev => ({ ...prev, status }));
   };
 
   // Manipular input de data (somente atualiza o texto)
@@ -227,74 +217,10 @@ export default function AppointmentDetails({
     };
   }, [appointment.id, pacotes]);
 
-  // Auto-save (apenas para pendentes; pausado enquanto há dialog de conflito aberto)
-  const lastGoodSlotRef = useRef<{ date: Date; time: string }>({ date: appointment.date, time: appointment.time });
-  useEffect(() => {
-    if (!conflictResult) {
-      lastGoodSlotRef.current = { date: formData.date, time: formData.time };
-    }
-  }, [formData.date, formData.time, conflictResult]);
+  // Modal totalmente manual — nenhum autosave. Persistência apenas pelo botão Salvar
+  // (ou pelo onPersist explícito antes de abrir a cobrança).
 
-  const { status: autosaveStatus, flushNow, resetSnapshot } = useAppointmentAutosave({
-    data: formData,
-    enabled: isEditable && !conflictResult && !isSaveDialogOpen,
-    delay: 800,
-    buildPayload,
-    onSave: async (payload) => {
-      try {
-        await (onAutoSave ?? onSave)(payload);
-      } catch (err) {
-        const kind = parseAgendaTriggerError(err);
-        if (kind === 'busy' || kind === 'blocked') {
-          // Reverter date/time ao último válido
-          const reverted = lastGoodSlotRef.current;
-          const revertedFormData = { ...formData, date: reverted.date, time: reverted.time };
-          setFormData(revertedFormData);
-          setDateInputValue(formatDateForInput(reverted.date));
-          setTimeInputValue(reverted.time);
-          // Sincronizar snapshot do autosave para o estado revertido,
-          // evitando re-disparo de save após o setState
-          resetSnapshot(revertedFormData);
 
-          // Tentar enriquecer com dados locais; se cache não tem, usa fallback sintético
-          const local = checkSlot({
-            date: payload?.date ? new Date(payload.date) : formData.date,
-            time: payload?.time ?? formData.time,
-            ignoreAppointmentId: appointment.id,
-            targetStatus: formData.status,
-          });
-          const tentativeDate = payload?.date ? new Date(payload.date) : formData.date;
-          const tentativeTime = payload?.time ?? formData.time;
-          const result =
-            (kind === 'busy' && local.kind === 'busy') ||
-            (kind === 'blocked' && local.kind === 'blocked')
-              ? local
-              : buildResultFromError(kind, tentativeDate, tentativeTime);
-          setPendingChange({ date: tentativeDate, time: tentativeTime });
-          setConflictResult(result);
-          // NÃO mostrar toast — o dialog é a notificação primária
-        } else {
-          toast.error(extractAgendaErrorMessage(err));
-        }
-        throw err;
-      }
-    },
-  });
-
-  // Manter ref atualizada para flush no unmount
-  const flushNowRef = useRef(flushNow);
-  useEffect(() => { flushNowRef.current = flushNow; }, [flushNow]);
-  const conflictOpenRef = useRef(false);
-  useEffect(() => {
-    conflictOpenRef.current = !!conflictResult || isSaveDialogOpen;
-  }, [conflictResult, isSaveDialogOpen]);
-  useEffect(() => {
-    return () => {
-      // Ao desmontar (modal fechado), garantir persistência — mas não se há conflito aberto
-      if (conflictOpenRef.current) return;
-      flushNowRef.current?.();
-    };
-  }, []);
 
   // Calcular se há mudanças não salvas (para confirmados que dependem do botão Salvar)
   const isDirty =
@@ -370,48 +296,8 @@ export default function AppointmentDetails({
           >
             <UserRoundPen className="h-4 w-4" />
           </button>
-          {isEditable && autosaveStatus !== 'idle' && (
-            <span
-              className={cn(
-                "ml-auto flex items-center gap-1 text-[11px] transition-opacity",
-                autosaveStatus === 'saving' && "text-lunar-muted",
-                autosaveStatus === 'saved' && "text-lunar-success",
-                autosaveStatus === 'error' && "text-lunar-error"
-              )}
-              title={
-                autosaveStatus === 'error'
-                  ? 'Falha ao salvar — suas alterações ainda não foram persistidas'
-                  : undefined
-              }
-            >
-              {autosaveStatus === 'saving' && (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Salvando…
-                </>
-              )}
-              {autosaveStatus === 'saved' && (
-                <>
-                  <Check className="h-3 w-3" />
-                  Salvo
-                </>
-              )}
-              {autosaveStatus === 'error' && (
-                <>
-                  <CloudOff className="h-3 w-3" />
-                  Erro ao salvar
-                  <button
-                    type="button"
-                    onClick={() => flushNow()}
-                    className="underline ml-1"
-                  >
-                    tentar novamente
-                  </button>
-                </>
-              )}
-            </span>
-          )}
         </div>
+
         <p className="text-sm text-lunar-muted mt-1">
           {format(formData.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} às {formData.time}
         </p>
@@ -581,10 +467,18 @@ export default function AppointmentDetails({
                   return;
                 }
 
-                // Garantir persistência do pacote/valor antes de gerar a cobrança
-                if (!conflictResult && !isSaveDialogOpen) {
-                  try { await flushNow(); } catch (_) { /* erro já tratado no hook */ }
+                // Garantir persistência silenciosa do pacote/valor antes de gerar a cobrança
+                // (não fecha o modal — usa onPersist explícito)
+                if (onPersist && !conflictResult) {
+                  try {
+                    await onPersist(buildPayload(formData));
+                  } catch (err) {
+                    console.error('[AppointmentDetails] Erro ao persistir antes da cobrança:', err);
+                    toast.error(extractAgendaErrorMessage(err));
+                    return;
+                  }
                 }
+
 
                 setShowChargeModal(true);
               }}
@@ -779,50 +673,18 @@ export default function AppointmentDetails({
         <Button variant="destructive" onClick={() => setDeleteModalOpen(true)} className="text-xs h-9">
           Excluir
         </Button>
-        <div className="space-x-2">
-          {isEditable ? (
-            <>
-              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
-                Cancelar
-              </Button>
-              <Button
-                onClick={async () => {
-                  // Comitar buffers de data/hora (mesmo padrão do handleSave de confirmados)
-                  const parsedDate = safeParseInputDate(dateInputValue) ?? formData.date;
-                  const finalTime = timeInputValue || formData.time;
-                  const nextFormData = { ...formData, date: parsedDate, time: finalTime };
-                  setFormData(nextFormData);
-                  setDateInputValue(formatDateForInput(parsedDate));
-                  setTimeInputValue(finalTime);
-                  try {
-                    await flushNow();
-                  } catch (_) {
-                    // Erro de slot/conflito é tratado pelo hook de autosave — não fechar
-                    return;
-                  }
-                  if (conflictOpenRef.current) return;
-                  onCancel();
-                }}
-                className="text-xs h-9"
-              >
-                Salvar
-              </Button>
-            </>
-          ) : (
-            <>
-              {isDirty && (
-                <span className="text-[11px] text-lunar-warning self-center mr-1">
-                  Alterações não salvas
-                </span>
-              )}
-              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} disabled={!isDirty} className="text-xs h-9">
-                Salvar
-              </Button>
-            </>
+        <div className="flex items-center space-x-2">
+          {isDirty && (
+            <span className="text-[11px] text-lunar-warning self-center mr-1">
+              Alterações não salvas
+            </span>
           )}
+          <Button variant="outline" onClick={onCancel} className="text-xs h-9">
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={!isDirty} className="text-xs h-9">
+            Salvar
+          </Button>
         </div>
       </div>
       </div>

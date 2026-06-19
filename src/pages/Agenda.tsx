@@ -166,11 +166,10 @@ export default function Agenda() {
     }
   }, [editingAppointment, viewingAppointment, updateAppointment, addAppointment, setIsDetailsOpen, setIsAppointmentDialogOpen]);
 
-  // Auto-save silencioso (NÃO fecha o modal) — usado pelo autosave do AppointmentDetails
-  const handleAutoSaveAppointment = useCallback(async (appointmentData: any) => {
+  // Persistência silenciosa (NÃO fecha o modal) — usada antes da cobrança em AppointmentDetails
+  const handlePersistAppointment = useCallback(async (appointmentData: any) => {
     const id = editingAppointment?.id ?? viewingAppointment?.id;
     if (!id) return;
-    // Propaga erro para o hook de autosave/conflict do AppointmentDetails tratar
     await updateAppointment(id, appointmentData);
   }, [editingAppointment, viewingAppointment, updateAppointment]);
 
@@ -396,7 +395,7 @@ export default function Agenda() {
         
         // Event handlers
         onSaveAppointment={handleSaveAppointment}
-        onAutoSaveAppointment={handleAutoSaveAppointment}
+        onPersistAppointment={handlePersistAppointment}
         onDeleteAppointment={handleDeleteAppointment}
         onSaveBudgetAppointment={handleSaveBudgetAppointment}
         onViewFullBudget={handleViewFullBudget}
