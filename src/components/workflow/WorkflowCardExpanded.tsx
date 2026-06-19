@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -151,25 +151,34 @@ export function WorkflowCardExpanded({
     }
   }, [obsValue, session.observacoes, session.id, onFieldUpdate]);
 
-  // Handler pagamento rápido
+  // Handler pagamento rápido (com proteção contra Enter duplo)
+  const paymentSubmittingRef = useRef(false);
   const handlePaymentAdd = useCallback(async () => {
-    if (paymentInput && !isNaN(parseFloat(paymentInput))) {
-      const paymentValue = parseFloat(paymentInput);
-      try {
-        await addPaymentContext(session.id, paymentValue);
-        setPaymentInput('');
-      } catch (error) {
-        console.error('❌ Erro ao adicionar pagamento:', error);
-      }
+    if (paymentSubmittingRef.current) return;
+    const raw = paymentInput.trim();
+    const value = parseFloat(raw.replace(',', '.'));
+    if (!raw || isNaN(value) || value <= 0) return;
+
+    paymentSubmittingRef.current = true;
+    setPaymentInput('');
+    try {
+      await addPaymentContext(session.id, value);
+    } catch (error) {
+      setPaymentInput(raw);
+      console.error('❌ Erro ao adicionar pagamento:', error);
+    } finally {
+      paymentSubmittingRef.current = false;
     }
   }, [paymentInput, addPaymentContext, session.id]);
 
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (paymentSubmittingRef.current) return;
       handlePaymentAdd();
     }
   }, [handlePaymentAdd]);
+
 
   // Dados para exibição
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || '0')));

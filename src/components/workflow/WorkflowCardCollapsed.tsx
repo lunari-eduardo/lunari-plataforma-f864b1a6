@@ -165,24 +165,33 @@ export function WorkflowCardCollapsed({
     return total - valorPago;
   }, [session]);
 
+  const paymentSubmittingRef = useRef(false);
   const handlePaymentAdd = useCallback(async () => {
-    if (paymentInput && !isNaN(parseFloat(paymentInput))) {
-      const paymentValue = parseFloat(paymentInput);
-      try {
-        await addPayment(session.id, paymentValue);
-        setPaymentInput('');
-      } catch (error) {
-        console.error('❌ Erro ao adicionar pagamento:', error);
-      }
+    if (paymentSubmittingRef.current) return;
+    const raw = paymentInput.trim();
+    const value = parseFloat(raw.replace(',', '.'));
+    if (!raw || isNaN(value) || value <= 0) return;
+
+    paymentSubmittingRef.current = true;
+    setPaymentInput('');
+    try {
+      await addPayment(session.id, value);
+    } catch (error) {
+      setPaymentInput(raw);
+      console.error('❌ Erro ao adicionar pagamento:', error);
+    } finally {
+      paymentSubmittingRef.current = false;
     }
   }, [paymentInput, addPayment, session.id]);
 
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (paymentSubmittingRef.current) return;
       handlePaymentAdd();
     }
   }, [handlePaymentAdd]);
+
 
   const handleDescriptionBlur = useCallback(() => {
     if (descriptionValue !== session.descricao) {
