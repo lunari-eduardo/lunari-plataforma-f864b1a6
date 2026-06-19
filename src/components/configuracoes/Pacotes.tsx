@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Package, X } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Package, X, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -17,6 +18,7 @@ interface PacotesProps {
   onDelete: (id: string) => Promise<boolean>;
   categorias: Categoria[];
   produtos: Produto[];
+  onNavigateToCategorias?: () => void;
 }
 
 export default function Pacotes({
@@ -25,13 +27,20 @@ export default function Pacotes({
   onUpdate,
   onDelete,
   categorias,
-  produtos
+  produtos,
+  onNavigateToCategorias,
 }: PacotesProps) {
   const [filtroCategoria, setFiltroCategoria] = useState<string>('all');
   const [filtroNome, setFiltroNome] = useState<string>('');
   const [novoPacoteAberto, setNovoPacoteAberto] = useState(false);
   const [pacoteEdicao, setPacoteEdicao] = useState<Pacote | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const semCategorias = categorias.length === 0;
+
+  useEffect(() => {
+    if (semCategorias && novoPacoteAberto) setNovoPacoteAberto(false);
+  }, [semCategorias, novoPacoteAberto]);
 
   const debouncedFiltroNome = useDebounce(filtroNome, 300);
 
@@ -74,24 +83,72 @@ export default function Pacotes({
     }
   }, [onDelete]);
 
+  const novoPacoteButton = (
+    <Button
+      onClick={() => !semCategorias && setNovoPacoteAberto(v => !v)}
+      size="sm"
+      disabled={semCategorias}
+      aria-disabled={semCategorias}
+    >
+      <Plus className="h-4 w-4 mr-2" />
+      {novoPacoteAberto ? 'Cancelar' : 'Novo Pacote'}
+    </Button>
+  );
+
   return (
     <div className="space-y-6 py-4">
+      {semCategorias && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border border-amber-500/40 bg-amber-500/5 rounded-lg"
+        >
+          <div className="flex items-start gap-3 flex-1">
+            <AlertTriangle aria-hidden="true" className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-foreground">
+                Cadastre uma categoria antes de criar pacotes
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Pacotes precisam estar vinculados a uma categoria (ex: Ensaios, Casamentos, Eventos). Crie pelo menos uma categoria para começar.
+              </p>
+            </div>
+          </div>
+          {onNavigateToCategorias && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onNavigateToCategorias}
+              className="self-start sm:self-center flex-shrink-0"
+            >
+              Ir para Categorias
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      )}
+
       <ConfigSectionHeader
         title="Pacotes Fotográficos"
         subtitle="Configure os pacotes disponíveis para venda."
         action={
-          <Button
-            onClick={() => setNovoPacoteAberto(!novoPacoteAberto)}
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {novoPacoteAberto ? 'Cancelar' : 'Novo Pacote'}
-          </Button>
+          semCategorias ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>{novoPacoteButton}</span>
+                </TooltipTrigger>
+                <TooltipContent side="left">Cadastre uma categoria primeiro</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            novoPacoteButton
+          )
         }
       />
 
       {/* Formulário Novo Pacote */}
-      <Collapsible open={novoPacoteAberto} onOpenChange={setNovoPacoteAberto}>
+      <Collapsible open={novoPacoteAberto && !semCategorias} onOpenChange={setNovoPacoteAberto}>
         <CollapsibleContent>
           <div className="p-4 border border-border rounded-lg bg-card">
             <PacoteForm
@@ -161,15 +218,26 @@ export default function Pacotes({
               {pacotes.length === 0 ? 'Nenhum pacote cadastrado' : 'Nenhum pacote encontrado'}
             </h4>
             <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-              {pacotes.length === 0
-                ? 'Comece criando seu primeiro pacote fotográfico.'
-                : 'Ajuste os filtros para encontrar os pacotes desejados.'}
+              {semCategorias
+                ? 'Você ainda não tem categorias cadastradas. Crie uma categoria para poder adicionar pacotes.'
+                : pacotes.length === 0
+                  ? 'Comece criando seu primeiro pacote fotográfico.'
+                  : 'Ajuste os filtros para encontrar os pacotes desejados.'}
             </p>
             {pacotes.length === 0 && (
-              <Button onClick={() => setNovoPacoteAberto(true)} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Criar primeiro pacote
-              </Button>
+              semCategorias ? (
+                onNavigateToCategorias && (
+                  <Button onClick={onNavigateToCategorias} size="sm" variant="outline">
+                    Ir para Categorias
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                )
+              ) : (
+                <Button onClick={() => setNovoPacoteAberto(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar primeiro pacote
+                </Button>
+              )
             )}
           </div>
         )}
