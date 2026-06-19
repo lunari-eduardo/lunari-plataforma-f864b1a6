@@ -296,48 +296,8 @@ export default function AppointmentDetails({
           >
             <UserRoundPen className="h-4 w-4" />
           </button>
-          {isEditable && autosaveStatus !== 'idle' && (
-            <span
-              className={cn(
-                "ml-auto flex items-center gap-1 text-[11px] transition-opacity",
-                autosaveStatus === 'saving' && "text-lunar-muted",
-                autosaveStatus === 'saved' && "text-lunar-success",
-                autosaveStatus === 'error' && "text-lunar-error"
-              )}
-              title={
-                autosaveStatus === 'error'
-                  ? 'Falha ao salvar — suas alterações ainda não foram persistidas'
-                  : undefined
-              }
-            >
-              {autosaveStatus === 'saving' && (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Salvando…
-                </>
-              )}
-              {autosaveStatus === 'saved' && (
-                <>
-                  <Check className="h-3 w-3" />
-                  Salvo
-                </>
-              )}
-              {autosaveStatus === 'error' && (
-                <>
-                  <CloudOff className="h-3 w-3" />
-                  Erro ao salvar
-                  <button
-                    type="button"
-                    onClick={() => flushNow()}
-                    className="underline ml-1"
-                  >
-                    tentar novamente
-                  </button>
-                </>
-              )}
-            </span>
-          )}
         </div>
+
         <p className="text-sm text-lunar-muted mt-1">
           {format(formData.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} às {formData.time}
         </p>
