@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useInputMode } from '@/hooks/useInputMode';
 import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, FlaskConical, Crown, Plug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,13 +25,15 @@ interface NavItemProps {
   isPro?: boolean;
   showProBadge?: boolean;
   end?: boolean;
+  onNavigate?: () => void;
 }
 
 // Mobile/drawer variant — always shows label
-const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps) => (
+const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate }: NavItemProps) => (
   <NavLink
     to={to}
     end={end}
+    onClick={onNavigate}
     className={({ isActive }) =>
       cn(
         "nav-item-lunar mb-1 flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200",
@@ -102,13 +105,45 @@ const DesktopNavItem = ({
   );
 };
 
+// Tablet variant — tap-to-toggle, no hover. Icon-only when collapsed, label visible when open.
+const TabletNavItem = ({ to, icon, label, isPro, showProBadge, end, expanded, onNavigate }: NavItemProps & { expanded: boolean }) => (
+  <NavLink
+    to={to}
+    end={end}
+    onClick={onNavigate}
+    className={({ isActive }) =>
+      cn(
+        "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden",
+        isActive && "active bg-lunar-surface text-lunar-accent"
+      )
+    }
+  >
+    <span className="flex items-center justify-center w-12 h-10 flex-shrink-0 relative">
+      {icon}
+      {isPro && showProBadge && (
+        <span className="absolute top-1.5 right-1.5">
+          <ProCrown />
+        </span>
+      )}
+    </span>
+    {expanded && (
+      <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+    )}
+  </NavLink>
+);
+
 export default function Sidebar() {
   const isMobile = useIsMobile();
+  const inputMode = useInputMode();
   const { accessState } = useAccessControl();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const enterTimer = useRef<number | null>(null);
   const leaveTimer = useRef<number | null>(null);
+  const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  const mode: 'mobile' | 'tablet' | 'desktop' =
+    isMobile ? 'mobile' : inputMode === 'touch' ? 'tablet' : 'desktop';
 
   const clearTimers = useCallback(() => {
     if (enterTimer.current) { window.clearTimeout(enterTimer.current); enterTimer.current = null; }
@@ -116,6 +151,34 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
+
+  // Reset transient states when mode changes (e.g. tablet docks keyboard → desktop)
+  useEffect(() => {
+    setIsOpen(false);
+    setIsHovered(false);
+    clearTimers();
+  }, [mode, clearTimers]);
+
+  // Body flag + scroll lock + Esc-to-close for tablet drawer
+  useEffect(() => {
+    if (mode !== 'tablet') return;
+    if (isOpen) {
+      document.body.dataset.sidebarOpen = 'true';
+    } else {
+      delete document.body.dataset.sidebarOpen;
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+        toggleBtnRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      delete document.body.dataset.sidebarOpen;
+    };
+  }, [mode, isOpen]);
 
   const handleEnter = useCallback(() => {
     if (leaveTimer.current) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
@@ -141,17 +204,17 @@ export default function Sidebar() {
     { to: "/app/feed-test", icon: <FlaskConical size={14} />, label: "Feed Test", isPro: true },
     { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" },
     { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" },
-    
   ];
 
   const isStarterPlan = accessState.planCode?.startsWith('starter') &&
     !accessState.isAdmin && !accessState.isVip && !accessState.isAuthorized;
   const isDark = useIsDarkMode();
 
-  const toggleSidebar = () => setIsOpen(!isOpen);
+  const toggleSidebar = () => setIsOpen(v => !v);
+  const closeSidebar = useCallback(() => setIsOpen(false), []);
 
-  // Mobile bottom navigation
-  if (isMobile) {
+  // ────────────────────────── MOBILE ──────────────────────────
+  if (mode === 'mobile') {
     return <>
         <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-40 p-2 border-t border-border bg-background/80">
           <div className="grid grid-cols-5 h-12 gap-1">
@@ -191,15 +254,83 @@ export default function Sidebar() {
               </Button>
             </div>
             <div className="p-3 space-y-1">
-              {navItems.map(item => <DrawerNavItem key={item.to} {...item} showProBadge={isStarterPlan} />)}
+              {navItems.map(item => <DrawerNavItem key={item.to} {...item} showProBadge={isStarterPlan} onNavigate={closeSidebar} />)}
             </div>
           </div>
         </div>
       </>;
   }
 
-  // Desktop: fixed spacer (w-16) + absolutely-positioned sidebar that expands on hover.
-  // The spacer reserves layout space so main content never shifts.
+  // ────────────────────────── TABLET (touch) ──────────────────────────
+  if (mode === 'tablet') {
+    return (
+      <>
+        <div className="w-16 shrink-0 h-screen relative z-40">
+          <aside
+            aria-expanded={isOpen}
+            role={isOpen ? 'dialog' : undefined}
+            aria-modal={isOpen ? true : undefined}
+            aria-label="Navegação principal"
+            style={{
+              width: isOpen ? '14rem' : '4rem',
+              transitionDuration: '220ms',
+              transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
+              transitionProperty: 'width, box-shadow',
+            }}
+            className={cn(
+              "absolute inset-y-0 left-0 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden",
+              isOpen && "shadow-lunar-md z-50"
+            )}
+          >
+            {/* Toggle + Logo */}
+            <div className="h-10 flex items-center mb-2 overflow-hidden">
+              <button
+                ref={toggleBtnRef}
+                onClick={toggleSidebar}
+                aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
+                className="h-10 w-12 flex items-center justify-center rounded-lg text-foreground/80 hover:bg-lunar-surface/40 active:bg-lunar-surface/60 transition-colors flex-shrink-0"
+              >
+                {isOpen ? <X size={16} /> : <Menu size={16} />}
+              </button>
+              {isOpen && (
+                <img
+                  src={isDark ? logoFullWhite : logoFullBlack}
+                  alt="Lunari"
+                  className="h-6 object-contain object-left ml-1"
+                />
+              )}
+            </div>
+
+            <div className="flex-1 pt-2 overflow-y-auto scrollbar-elegant">
+              <div className="space-y-1">
+                {navItems.map(item => (
+                  <TabletNavItem
+                    key={item.to}
+                    {...item}
+                    showProBadge={isStarterPlan}
+                    expanded={isOpen}
+                    onNavigate={closeSidebar}
+                  />
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        {/* Overlay */}
+        <div
+          onClick={closeSidebar}
+          aria-hidden="true"
+          className={cn(
+            "fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 transition-opacity duration-200",
+            isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+        />
+      </>
+    );
+  }
+
+  // ────────────────────────── DESKTOP (mouse) ──────────────────────────
   const expandDuration = isHovered ? 200 : 240;
 
   return (
@@ -208,8 +339,6 @@ export default function Sidebar() {
         <aside
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
-          onFocusCapture={handleEnter}
-          onBlurCapture={handleLeave}
           aria-expanded={isHovered}
           style={{
             width: isHovered ? '12rem' : '4rem',
