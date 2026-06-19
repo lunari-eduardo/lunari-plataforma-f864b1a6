@@ -92,6 +92,7 @@ export default function Configuracoes() {
                   onDelete={configuration.removerPacote}
                   categorias={configuration.categorias}
                   produtos={configuration.produtos}
+                  onNavigateToCategorias={() => setTabAtiva('categorias')}
                 />
               </TabsContent>
               
