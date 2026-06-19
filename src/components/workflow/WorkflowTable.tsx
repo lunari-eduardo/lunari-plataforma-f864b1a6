@@ -454,32 +454,34 @@ export function WorkflowTable({
       totalPending: session.pagamentos.filter(p => p.statusPagamento === 'pendente').reduce((acc, p) => acc + (p.valor || 0), 0)
     };
   }, [sessions]);
+  const paymentSubmittingRef = useRef<Record<string, boolean>>({});
   const handlePaymentAdd = useCallback(async (sessionId: string) => {
-    const value = paymentInputs[sessionId];
-    if (value && !isNaN(parseFloat(value))) {
-      const paymentValue = parseFloat(value);
-      try {
-        // Usar a função addPayment do contexto (agora async)
-        await addPayment(sessionId, paymentValue);
+    if (paymentSubmittingRef.current[sessionId]) return; // guarda re-entrância
+    const raw = (paymentInputs[sessionId] || '').trim();
+    const value = parseFloat(raw.replace(',', '.'));
+    if (!raw || isNaN(value) || value <= 0) return;
 
-        // Limpar o campo após adicionar
-        setPaymentInputs(prev => ({
-          ...prev,
-          [sessionId]: ''
-        }));
-
-        // Nota: Não precisamos forçar re-render - o realtime do Supabase cuida disso
-      } catch (error) {
-        console.error('❌ Erro ao adicionar pagamento:', error);
-      }
+    paymentSubmittingRef.current[sessionId] = true;
+    // Limpar input ANTES do await (evita Enter duplo registrar 2x)
+    setPaymentInputs(prev => ({ ...prev, [sessionId]: '' }));
+    try {
+      await addPayment(sessionId, value);
+    } catch (error) {
+      // Restaura valor se falhou
+      setPaymentInputs(prev => ({ ...prev, [sessionId]: raw }));
+      console.error('❌ Erro ao adicionar pagamento:', error);
+    } finally {
+      paymentSubmittingRef.current[sessionId] = false;
     }
   }, [paymentInputs, addPayment]);
   const handlePaymentKeyDown = useCallback((e: React.KeyboardEvent, sessionId: string) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (paymentSubmittingRef.current[sessionId]) return;
       handlePaymentAdd(sessionId);
     }
   }, [handlePaymentAdd]);
+
   const handleScroll = useCallback(() => {
     if (scrollContainerRef.current) {
       const scrollLeft = scrollContainerRef.current.scrollLeft;
