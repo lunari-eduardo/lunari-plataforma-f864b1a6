@@ -504,21 +504,32 @@ export class PaymentSupabaseService {
   }
 
   /**
-   * Verificar se um pagamento já existe no Supabase
+   * Verificar se um pagamento já existe no Supabase (por paymentId OU intentKey)
    */
-  static async paymentExists(sessionKey: string, paymentId: string): Promise<boolean> {
+  static async paymentExists(
+    sessionKey: string,
+    paymentId: string,
+    options?: {
+      binding?: { id: string; session_id: string; cliente_id: string };
+      intentKey?: string;
+    }
+  ): Promise<boolean> {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return false;
-
-      const sessao = await this.getSessionBinding(sessionKey);
+      const sessao = options?.binding ?? await this.getSessionBinding(sessionKey);
       if (!sessao) return false;
+
+      // Constrói filtro: paymentId OU intentKey
+      const filters: string[] = [`descricao.ilike.%[ID:${paymentId}]%`];
+      if (options?.intentKey) {
+        filters.push(`descricao.ilike.%[INTENT:${options.intentKey}]%`);
+      }
 
       const { data, error } = await supabase
         .from('clientes_transacoes')
         .select('id')
         .eq('session_id', sessao.session_id)
-        .ilike('descricao', `%${paymentId}%`)
+        .or(filters.join(','))
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -532,6 +543,7 @@ export class PaymentSupabaseService {
       return false;
     }
   }
+
 
   /**
    * Deletar um pagamento específico do Supabase
@@ -702,37 +714,42 @@ export class PaymentSupabaseService {
       data: string;
       observacoes?: string;
       forma_pagamento?: string;
+    },
+    options?: {
+      binding?: { id: string; session_id: string; cliente_id: string };
+      intentKey?: string;
     }
   ): Promise<boolean> {
     try {
-      // Verificar se já existe
-      const exists = await this.paymentExists(sessionKey, paymentId);
-      if (exists) {
-        console.log('⚠️ Pagamento já existe, ignorando:', paymentId);
-        return true;
-      }
-
-      // 1. Buscar user_id autenticado
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !userData?.user) {
-        console.error('❌ Usuário não autenticado:', userError);
-        return false;
-      }
-
-      const userId = userData.user.id;
-
-      // 2. Buscar sessão
-      const sessao = await this.getSessionBinding(sessionKey);
-      
+      // 1. Resolver binding (reusa o passado por parâmetro se houver)
+      const sessao = options?.binding ?? await this.getSessionBinding(sessionKey);
       if (!sessao) {
         console.error('❌ Sessão não encontrada para chave:', sessionKey);
         return false;
       }
 
-      // 3. Inserir transação com ID de rastreamento na descrição
-      const descricao = `${payment.observacoes || 'Pagamento'} [ID:${paymentId}]`;
-      
+      // 2. Verificar duplicação por paymentId OU intentKey (idempotência)
+      const exists = await this.paymentExists(sessionKey, paymentId, {
+        binding: sessao,
+        intentKey: options?.intentKey,
+      });
+      if (exists) {
+        console.log('⚠️ Pagamento já existe (paymentId/intentKey), ignorando:', paymentId, options?.intentKey);
+        return true;
+      }
+
+      // 3. Buscar user_id da sessão atual (sem round-trip extra)
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (sessionError || !userId) {
+        console.error('❌ Usuário não autenticado:', sessionError);
+        return false;
+      }
+
+      // 4. Inserir transação com tracking + intent
+      const intentTag = options?.intentKey ? ` [INTENT:${options.intentKey}]` : '';
+      const descricao = `${payment.observacoes || 'Pagamento'} [ID:${paymentId}]${intentTag}`;
+
       const { error: insertError } = await supabase
         .from('clientes_transacoes')
         .insert({
@@ -751,20 +768,14 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      console.log('✅ Pagamento salvo no Supabase:', {
-        paymentId,
-        sessionKey,
-        session_id: sessao.session_id,
-        valor: payment.valor,
-        cliente_id: sessao.cliente_id
-      });
-
+      console.log('✅ Pagamento salvo:', { paymentId, session_id: sessao.session_id, valor: payment.valor });
       return true;
     } catch (error) {
       console.error('❌ Erro ao salvar pagamento rastreado:', error);
       return false;
     }
   }
+
 
   /**
    * Salvar múltiplos pagamentos (para modal de gerenciamento)
