@@ -395,7 +395,7 @@ export default function Agenda() {
         
         // Event handlers
         onSaveAppointment={handleSaveAppointment}
-        onAutoSaveAppointment={handleAutoSaveAppointment}
+        onPersistAppointment={handlePersistAppointment}
         onDeleteAppointment={handleDeleteAppointment}
         onSaveBudgetAppointment={handleSaveBudgetAppointment}
         onViewFullBudget={handleViewFullBudget}
