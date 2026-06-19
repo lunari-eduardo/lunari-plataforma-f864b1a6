@@ -125,10 +125,11 @@ export default function AppointmentDetails({
   const handleStatusSelect = async (status: 'confirmado' | 'a confirmar') => {
     const next = { ...formData, status };
     setFormData(next);
-    // Quando confirmar, autosave fica disabled — salvar imediatamente para garantir persistência
+    // Quando confirmar, autosave fica disabled — persistir imediatamente via onAutoSave
+    // (não usar onSave para não fechar o modal)
     if (status === 'confirmado') {
       try {
-        await onSave(buildPayload(next));
+        await (onAutoSave ?? onSave)(buildPayload(next));
       } catch (err) {
         console.error('[AppointmentDetails] Erro ao confirmar:', err);
       }
