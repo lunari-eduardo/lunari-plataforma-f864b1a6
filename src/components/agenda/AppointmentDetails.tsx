@@ -217,74 +217,10 @@ export default function AppointmentDetails({
     };
   }, [appointment.id, pacotes]);
 
-  // Auto-save (apenas para pendentes; pausado enquanto há dialog de conflito aberto)
-  const lastGoodSlotRef = useRef<{ date: Date; time: string }>({ date: appointment.date, time: appointment.time });
-  useEffect(() => {
-    if (!conflictResult) {
-      lastGoodSlotRef.current = { date: formData.date, time: formData.time };
-    }
-  }, [formData.date, formData.time, conflictResult]);
+  // Modal totalmente manual — nenhum autosave. Persistência apenas pelo botão Salvar
+  // (ou pelo onPersist explícito antes de abrir a cobrança).
 
-  const { status: autosaveStatus, flushNow, resetSnapshot } = useAppointmentAutosave({
-    data: formData,
-    enabled: isEditable && !conflictResult && !isSaveDialogOpen,
-    delay: 800,
-    buildPayload,
-    onSave: async (payload) => {
-      try {
-        await (onAutoSave ?? onSave)(payload);
-      } catch (err) {
-        const kind = parseAgendaTriggerError(err);
-        if (kind === 'busy' || kind === 'blocked') {
-          // Reverter date/time ao último válido
-          const reverted = lastGoodSlotRef.current;
-          const revertedFormData = { ...formData, date: reverted.date, time: reverted.time };
-          setFormData(revertedFormData);
-          setDateInputValue(formatDateForInput(reverted.date));
-          setTimeInputValue(reverted.time);
-          // Sincronizar snapshot do autosave para o estado revertido,
-          // evitando re-disparo de save após o setState
-          resetSnapshot(revertedFormData);
 
-          // Tentar enriquecer com dados locais; se cache não tem, usa fallback sintético
-          const local = checkSlot({
-            date: payload?.date ? new Date(payload.date) : formData.date,
-            time: payload?.time ?? formData.time,
-            ignoreAppointmentId: appointment.id,
-            targetStatus: formData.status,
-          });
-          const tentativeDate = payload?.date ? new Date(payload.date) : formData.date;
-          const tentativeTime = payload?.time ?? formData.time;
-          const result =
-            (kind === 'busy' && local.kind === 'busy') ||
-            (kind === 'blocked' && local.kind === 'blocked')
-              ? local
-              : buildResultFromError(kind, tentativeDate, tentativeTime);
-          setPendingChange({ date: tentativeDate, time: tentativeTime });
-          setConflictResult(result);
-          // NÃO mostrar toast — o dialog é a notificação primária
-        } else {
-          toast.error(extractAgendaErrorMessage(err));
-        }
-        throw err;
-      }
-    },
-  });
-
-  // Manter ref atualizada para flush no unmount
-  const flushNowRef = useRef(flushNow);
-  useEffect(() => { flushNowRef.current = flushNow; }, [flushNow]);
-  const conflictOpenRef = useRef(false);
-  useEffect(() => {
-    conflictOpenRef.current = !!conflictResult || isSaveDialogOpen;
-  }, [conflictResult, isSaveDialogOpen]);
-  useEffect(() => {
-    return () => {
-      // Ao desmontar (modal fechado), garantir persistência — mas não se há conflito aberto
-      if (conflictOpenRef.current) return;
-      flushNowRef.current?.();
-    };
-  }, []);
 
   // Calcular se há mudanças não salvas (para confirmados que dependem do botão Salvar)
   const isDirty =
