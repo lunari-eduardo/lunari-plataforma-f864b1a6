@@ -809,14 +809,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addPayment = useCallback(async (id: string, valor: number) => {
     console.log('💰 Adicionando pagamento rápido:', { id, valor });
-    
+
+    // Chave de intenção: deduplica cliques duplos (janela de 2s) no mesmo valor
+    const intentKey = `quick:${id}:${valor.toFixed(2)}:${Math.floor(Date.now() / 2000)}`;
+    let optimisticTarget: string | null = null;
+
     try {
-      // FASE 5: Importar serviço primeiro
       const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-      
-      // FASE 5: Verificar se a sessão existe antes de prosseguir
+
       const binding = await PaymentSupabaseService.getSessionBinding(id);
-      
       if (!binding) {
         console.warn('⚠️ Sessão ainda não encontrada, pode estar sendo criada...');
         toast({
@@ -826,19 +827,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         return;
       }
-      
-      // 1. Gerar ID único para rastreamento
+
+      // ✅ Update otimista IMEDIATO no cache (UI atualiza em <50ms)
+      optimisticTarget = binding.session_id;
+      window.dispatchEvent(new CustomEvent('payment-optimistic', {
+        detail: { sessionId: optimisticTarget, delta: valor }
+      }));
+
       const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // 2. Salvar no Supabase COM tracking ID (usar binding.session_id diretamente)
-      const success = await PaymentSupabaseService.saveSinglePaymentTracked(binding.session_id, paymentId, {
-        valor,
-        data: getCurrentDateString(),
-        observacoes: 'Pagamento rápido',
-        forma_pagamento: 'dinheiro'
-      });
+
+      const success = await PaymentSupabaseService.saveSinglePaymentTracked(
+        binding.session_id,
+        paymentId,
+        {
+          valor,
+          data: getCurrentDateString(),
+          observacoes: 'Pagamento rápido',
+          forma_pagamento: 'dinheiro'
+        },
+        { binding, intentKey }
+      );
 
       if (!success) {
+        // Reverter otimista
+        window.dispatchEvent(new CustomEvent('payment-optimistic', {
+          detail: { sessionId: optimisticTarget, delta: -valor }
+        }));
+        optimisticTarget = null;
         console.error('❌ Falha ao salvar pagamento no Supabase');
         toast({
           title: "Erro ao adicionar pagamento",
@@ -848,28 +863,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
-      console.log('✅ Pagamento salvo no Supabase - trigger irá recalcular valor_pago automaticamente');
-
-      // ✅ Usar session_id TEXT do binding já obtido
-      const textSessionId = binding.session_id;
-
-      // ✅ Disparar evento para forçar atualização em tempo real da tabela workflow
+      // Disparar evento autoritativo (busca valor_pago real do trigger)
       window.dispatchEvent(new CustomEvent('payment-created', {
-        detail: { sessionId: textSessionId, paymentId, valor }
+        detail: { sessionId: binding.session_id, paymentId, valor }
       }));
-      console.log('📢 Evento payment-created disparado para sessão (TEXT):', textSessionId);
 
-      // localStorage sync removed — Supabase triggers are the single source of truth for valor_pago.
-
-      // 3. Exibir toast de sucesso
-      toast({
-        title: "Pagamento adicionado",
-        description: `R$ ${valor.toFixed(2).replace('.', ',')} registrado com sucesso`,
-      });
-
-      // Nota: O realtime do Supabase irá disparar eventos automaticamente
-      console.log('✅ Pagamento adicionado com sucesso:', valor, 'para sessão:', id);
+      console.log('✅ Pagamento adicionado:', valor, 'sessão:', binding.session_id);
     } catch (error) {
+      // Reverter otimista se ainda estava ativo
+      if (optimisticTarget) {
+        window.dispatchEvent(new CustomEvent('payment-optimistic', {
+          detail: { sessionId: optimisticTarget, delta: -valor }
+        }));
+      }
       console.error('❌ Erro ao adicionar pagamento:', error);
       toast({
         title: "Erro ao adicionar pagamento",
@@ -878,6 +884,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
   }, []);
+
 
   const toggleColumnVisibility = useCallback((column: string) => {
     setVisibleColumns(prev => ({
