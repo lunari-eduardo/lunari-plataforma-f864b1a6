@@ -673,50 +673,18 @@ export default function AppointmentDetails({
         <Button variant="destructive" onClick={() => setDeleteModalOpen(true)} className="text-xs h-9">
           Excluir
         </Button>
-        <div className="space-x-2">
-          {isEditable ? (
-            <>
-              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
-                Cancelar
-              </Button>
-              <Button
-                onClick={async () => {
-                  // Comitar buffers de data/hora (mesmo padrão do handleSave de confirmados)
-                  const parsedDate = safeParseInputDate(dateInputValue) ?? formData.date;
-                  const finalTime = timeInputValue || formData.time;
-                  const nextFormData = { ...formData, date: parsedDate, time: finalTime };
-                  setFormData(nextFormData);
-                  setDateInputValue(formatDateForInput(parsedDate));
-                  setTimeInputValue(finalTime);
-                  try {
-                    await flushNow();
-                  } catch (_) {
-                    // Erro de slot/conflito é tratado pelo hook de autosave — não fechar
-                    return;
-                  }
-                  if (conflictOpenRef.current) return;
-                  onCancel();
-                }}
-                className="text-xs h-9"
-              >
-                Salvar
-              </Button>
-            </>
-          ) : (
-            <>
-              {isDirty && (
-                <span className="text-[11px] text-lunar-warning self-center mr-1">
-                  Alterações não salvas
-                </span>
-              )}
-              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} disabled={!isDirty} className="text-xs h-9">
-                Salvar
-              </Button>
-            </>
+        <div className="flex items-center space-x-2">
+          {isDirty && (
+            <span className="text-[11px] text-lunar-warning self-center mr-1">
+              Alterações não salvas
+            </span>
           )}
+          <Button variant="outline" onClick={onCancel} className="text-xs h-9">
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={!isDirty} className="text-xs h-9">
+            Salvar
+          </Button>
         </div>
       </div>
       </div>
