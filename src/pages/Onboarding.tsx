@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { User, Loader2 } from 'lucide-react';
 import { OnboardingStep } from '@/components/onboarding/OnboardingStep';
 import { NichoCombobox } from '@/components/onboarding/NichoCombobox';
 import { CidadeIBGECombobox, CidadeIBGE } from '@/components/onboarding/CidadeIBGECombobox';
@@ -12,8 +10,7 @@ import { toast } from 'sonner';
 import { StepIndicator } from '@/components/auth/StepIndicator';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import authBackground from '@/assets/auth-background.jpg';
-import lunariLogo from '@/assets/lunari-logo.png';
+import loginBackground from '@/assets/auth/login-background.jpg';
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -22,95 +19,73 @@ export default function Onboarding() {
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     nome: '',
     nicho: '',
-    cidade: null as CidadeIBGE | null
+    cidade: null as CidadeIBGE | null,
   });
 
-  const [errors, setErrors] = useState({
-    nome: '',
-    nicho: '',
-    cidade: ''
-  });
+  const [errors, setErrors] = useState({ nome: '', nicho: '', cidade: '' });
 
   const validateStep = () => {
     if (currentStep === 0) {
-      // Validar nome
       const nome = formData.nome.trim();
       if (!nome) {
-        setErrors(prev => ({ ...prev, nome: 'Este campo é obrigatório' }));
+        setErrors((p) => ({ ...p, nome: 'Este campo é obrigatório' }));
         return false;
       }
       if (nome.length < 2) {
-        setErrors(prev => ({ ...prev, nome: 'Precisa ter pelo menos 2 caracteres' }));
+        setErrors((p) => ({ ...p, nome: 'Precisa ter pelo menos 2 caracteres' }));
         return false;
       }
-      setErrors(prev => ({ ...prev, nome: '' }));
+      setErrors((p) => ({ ...p, nome: '' }));
       return true;
     }
-
     if (currentStep === 1) {
-      // Validar nicho
       if (!formData.nicho) {
-        setErrors(prev => ({ ...prev, nicho: 'Selecione um nicho' }));
+        setErrors((p) => ({ ...p, nicho: 'Selecione um nicho' }));
         return false;
       }
-      setErrors(prev => ({ ...prev, nicho: '' }));
+      setErrors((p) => ({ ...p, nicho: '' }));
       return true;
     }
-
     if (currentStep === 2) {
-      // Validar cidade
       if (!formData.cidade) {
-        setErrors(prev => ({ ...prev, cidade: 'Selecione uma cidade' }));
+        setErrors((p) => ({ ...p, cidade: 'Selecione uma cidade' }));
         return false;
       }
-      setErrors(prev => ({ ...prev, cidade: '' }));
+      setErrors((p) => ({ ...p, cidade: '' }));
       return true;
     }
-
     return true;
   };
 
   const handleNext = async () => {
     if (!validateStep()) return;
-
-    if (currentStep < 2) {
-      setCurrentStep(prev => prev + 1);
-    } else {
-      await handleComplete();
-    }
+    if (currentStep < 2) setCurrentStep((p) => p + 1);
+    else await handleComplete();
   };
 
   const handleComplete = async () => {
     if (!user || !formData.cidade) return;
-
     setIsLoading(true);
     try {
-      // Usar mutateAsync para aguardar a conclusão
       await updateProfileAsync({
         nome: formData.nome.trim(),
         nicho: formData.nicho,
         cidade_ibge_id: formData.cidade.id,
         cidade_nome: formData.cidade.nome,
         cidade_uf: formData.cidade.uf,
-        cidade: `${formData.cidade.nome} - ${formData.cidade.uf}`, // Legacy
-        is_onboarding_complete: true
+        cidade: `${formData.cidade.nome} - ${formData.cidade.uf}`,
+        is_onboarding_complete: true,
       });
 
-      // Start 30-day trial - MUST await before navigating
-      const { data: trialResult, error: trialError } = await supabase.rpc('start_studio_trial');
+      const { error: trialError } = await supabase.rpc('start_studio_trial');
       if (trialError) console.error('Trial start error:', trialError);
-      else console.log('Trial result:', trialResult);
 
-      // Aguardar cache ser atualizado antes de navegar
       await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
-
       toast.success('Bem-vindo(a)! 🎉');
-      
-      // Force full page reload to ensure access state is fresh
       window.location.href = '/app';
     } catch (error) {
       console.error('Erro ao completar onboarding:', error);
@@ -121,115 +96,118 @@ export default function Onboarding() {
   };
 
   const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
-    }
+    if (currentStep > 0) setCurrentStep((p) => p - 1);
   };
 
-
-  // Mapear currentStep (0-based) para StepIndicator (1-based, começando em 2)
   const stepIndicatorValue = (currentStep + 2) as 1 | 2 | 3 | 4;
 
   return (
-    <div className="min-h-screen relative">
-      {/* Barra Superior com Logo */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-md border-b border-white/20 p-3 md:p-4">
-        <div className="container mx-auto">
-          <img 
-            src={lunariLogo} 
-            alt="Lunari" 
-            className="h-8 md:h-10 lg:h-12 object-contain" 
-          />
-        </div>
-      </div>
+    <div
+      className="dark min-h-[100dvh] w-full relative bg-[#0a0a0a] flex items-center justify-center px-6 py-10"
+      style={{
+        backgroundImage: `url(${loginBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Overlay para legibilidade */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70 pointer-events-none" />
 
-      {/* Background com Gradiente */}
-      <div 
-        className="min-h-screen flex items-center justify-center pt-20 px-4"
-        style={{
-          backgroundImage: `url(${authBackground})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
+      {/* Modal vidro escuro */}
+      <div
+        className="relative z-10 w-full max-w-[440px] rounded-2xl
+                   bg-[#0a0a0a]/70 backdrop-blur-xl
+                   border border-white/10
+                   shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)]
+                   p-6 md:p-8 space-y-6
+                   animate-in fade-in zoom-in-95 duration-300
+                   motion-reduce:animate-none"
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#CD7F5E]/60 via-[#E89A7A]/50 to-[#CD7F5E]/60" />
-        
-        <Card className="relative z-10 w-full max-w-md bg-black/20 backdrop-blur-md border-white/20 shadow-2xl overflow-hidden">
-          {/* Step Indicator */}
-          <StepIndicator currentStep={stepIndicatorValue} />
+        <StepIndicator currentStep={stepIndicatorValue} />
 
-          <CardContent className="p-6 md:p-8 space-y-6">
-            {/* Step 0: Nome */}
-            {currentStep === 0 && (
-              <OnboardingStep
-                title="Como você quer ser chamado(a)?"
-                subtitle="Digite seu nome ou apelido"
-                icon={User}
-                value={formData.nome}
-                onChange={(value) => {
-                  setFormData(prev => ({ ...prev, nome: value }));
-                  setErrors(prev => ({ ...prev, nome: '' }));
-                }}
-                placeholder="Seu nome"
-                error={errors.nome}
-                autoFocus
-              />
-            )}
+        <div className="space-y-6">
+          {currentStep === 0 && (
+            <OnboardingStep
+              title="Como você quer ser chamado(a)?"
+              subtitle="Digite seu nome ou apelido"
+              icon={User}
+              value={formData.nome}
+              onChange={(value) => {
+                setFormData((p) => ({ ...p, nome: value }));
+                setErrors((p) => ({ ...p, nome: '' }));
+              }}
+              placeholder="Seu nome"
+              error={errors.nome}
+              autoFocus
+            />
+          )}
 
-            {/* Step 1: Nicho */}
-            {currentStep === 1 && (
-              <NichoCombobox
-                value={formData.nicho}
-                onChange={(value) => {
-                  setFormData(prev => ({ ...prev, nicho: value }));
-                  setErrors(prev => ({ ...prev, nicho: '' }));
-                }}
-                error={errors.nicho}
-              />
-            )}
+          {currentStep === 1 && (
+            <NichoCombobox
+              value={formData.nicho}
+              onChange={(value) => {
+                setFormData((p) => ({ ...p, nicho: value }));
+                setErrors((p) => ({ ...p, nicho: '' }));
+              }}
+              error={errors.nicho}
+            />
+          )}
 
-            {/* Step 2: Cidade */}
-            {currentStep === 2 && (
-              <CidadeIBGECombobox
-                value={formData.cidade}
-                onChange={(value) => {
-                  setFormData(prev => ({ ...prev, cidade: value }));
-                  setErrors(prev => ({ ...prev, cidade: '' }));
-                }}
-                error={errors.cidade}
-              />
-            )}
+          {currentStep === 2 && (
+            <CidadeIBGECombobox
+              value={formData.cidade}
+              onChange={(value) => {
+                setFormData((p) => ({ ...p, cidade: value }));
+                setErrors((p) => ({ ...p, cidade: '' }));
+              }}
+              error={errors.cidade}
+            />
+          )}
 
-            {/* Botões de Navegação */}
-            <div className="flex gap-3 pt-4">
-              {currentStep > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={isLoading}
-                  className="flex-1 h-12 bg-white/10 hover:bg-white/20 text-white border border-white/30 font-light"
-                >
-                  Voltar
-                </Button>
-              )}
-              
-              <Button
-                onClick={handleNext}
+          {/* Botões */}
+          <div className="flex gap-3 pt-2">
+            {currentStep > 0 && (
+              <button
+                type="button"
+                onClick={handleBack}
                 disabled={isLoading}
-                className="flex-1 h-12 bg-[#CD7F5E] hover:bg-[#B86F4E] text-white font-light border border-white/30 shadow-sm"
+                className="flex-1 h-12 rounded-xl text-sm font-light text-white/80
+                           bg-white/[0.04] hover:bg-white/[0.08]
+                           border border-white/10 hover:border-white/20
+                           transition-all duration-150
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C97A4A]/60
+                           disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isLoading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : currentStep === 2 ? (
-                  'Começar! 🚀'
-                ) : (
-                  'Continuar'
-                )}
-              </Button>
-            </div>
+                Voltar
+              </button>
+            )}
 
-          </CardContent>
-        </Card>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={isLoading}
+              aria-busy={isLoading}
+              className="flex-1 h-12 rounded-xl text-sm font-medium text-white
+                         bg-gradient-to-b from-[#C97A4A] to-[#A8633A]
+                         hover:from-[#D4845A] hover:to-[#B66E40]
+                         active:scale-[0.99]
+                         shadow-[0_8px_24px_-8px_rgba(201,122,74,0.6)]
+                         transition-all duration-150
+                         flex items-center justify-center gap-2
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C97A4A]/60
+                         disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : currentStep === 2 ? (
+                'Começar 🚀'
+              ) : (
+                'Continuar'
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -683,3 +683,18 @@
 .produto-row-flash {
   animation: produto-row-flash-anim 700ms ease-out;
 }
+
+/* Scrollbar discreta para dropdowns do onboarding */
+.onboarding-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.onboarding-scrollbar::-webkit-scrollbar { width: 6px; }
+.onboarding-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.onboarding-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+.onboarding-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.28);
+}
