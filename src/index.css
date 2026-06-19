@@ -700,5 +700,3 @@
 }
 
 /* Sidebar tablet drawer aberto — bloqueia scroll e interação do conteúdo */
-body[data-sidebar-open="true"] { overflow: hidden; }
-body[data-sidebar-open="true"] main { pointer-events: none; }
