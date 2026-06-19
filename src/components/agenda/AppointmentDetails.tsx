@@ -125,10 +125,11 @@ export default function AppointmentDetails({
   const handleStatusSelect = async (status: 'confirmado' | 'a confirmar') => {
     const next = { ...formData, status };
     setFormData(next);
-    // Quando confirmar, autosave fica disabled — salvar imediatamente para garantir persistência
+    // Quando confirmar, autosave fica disabled — persistir imediatamente via onAutoSave
+    // (não usar onSave para não fechar o modal)
     if (status === 'confirmado') {
       try {
-        await onSave(buildPayload(next));
+        await (onAutoSave ?? onSave)(buildPayload(next));
       } catch (err) {
         console.error('[AppointmentDetails] Erro ao confirmar:', err);
       }
@@ -780,17 +781,33 @@ export default function AppointmentDetails({
         </Button>
         <div className="space-x-2">
           {isEditable ? (
-            <Button
-              onClick={async () => {
-                if (!conflictResult && !isSaveDialogOpen) {
-                  try { await flushNow(); } catch (_) {}
-                }
-                onCancel();
-              }}
-              className="text-xs h-9"
-            >
-              Fechar
-            </Button>
+            <>
+              <Button variant="outline" onClick={onCancel} className="text-xs h-9">
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  // Comitar buffers de data/hora (mesmo padrão do handleSave de confirmados)
+                  const parsedDate = safeParseInputDate(dateInputValue) ?? formData.date;
+                  const finalTime = timeInputValue || formData.time;
+                  const nextFormData = { ...formData, date: parsedDate, time: finalTime };
+                  setFormData(nextFormData);
+                  setDateInputValue(formatDateForInput(parsedDate));
+                  setTimeInputValue(finalTime);
+                  try {
+                    await flushNow();
+                  } catch (_) {
+                    // Erro de slot/conflito é tratado pelo hook de autosave — não fechar
+                    return;
+                  }
+                  if (conflictOpenRef.current) return;
+                  onCancel();
+                }}
+                className="text-xs h-9"
+              >
+                Salvar
+              </Button>
+            </>
           ) : (
             <>
               {isDirty && (
