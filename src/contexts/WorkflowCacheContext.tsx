@@ -527,57 +527,73 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('workflow-cache-silent-refresh', handleSilentRefresh as EventListener);
   }, [silentRefreshMonth]);
 
-  // FASE 6: Listener direto para payment-created (backup ao realtime - garante atualização imediata)
+  // Listener otimista: atualiza valor_pago localmente ANTES do round-trip ao DB (UI instantânea)
+  useEffect(() => {
+    const handleOptimistic = (event: CustomEvent) => {
+      const { sessionId, delta } = event.detail || {};
+      if (!sessionId || typeof delta !== 'number') return;
+
+      // Procurar sessão em todos os meses cacheados (match por id OU session_id)
+      for (const [key, sessions] of memoryCache.current.entries()) {
+        const idx = sessions.findIndex(s => s.id === sessionId || (s as any).session_id === sessionId);
+        if (idx >= 0) {
+          const target = sessions[idx];
+          const newValorPago = Math.max(0, (Number(target.valor_pago) || 0) + delta);
+          const updated = [...sessions];
+          updated[idx] = { ...target, valor_pago: newValorPago };
+          const [yearStr, monthStr] = key.split('-');
+          setMonthData(parseInt(yearStr), parseInt(monthStr), updated);
+          console.log('⚡ [WorkflowCache] Otimista aplicado:', sessionId, 'delta:', delta, '→ valor_pago:', newValorPago);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('payment-optimistic' as any, handleOptimistic);
+    return () => window.removeEventListener('payment-optimistic' as any, handleOptimistic);
+  }, [setMonthData]);
+
+  // Listener autoritativo: busca valor_pago real recalculado pelo trigger SQL
   useEffect(() => {
     if (!userId) return;
 
     const handlePaymentCreated = async (event: CustomEvent) => {
       const { sessionId } = event.detail || {};
-      console.log('💰 [WorkflowCache] payment-created event received:', sessionId);
-      
       if (!sessionId) return;
-      
-      // Aguardar trigger SQL completar (350ms é seguro para o trigger recompute_session_paid)
-      await new Promise(resolve => setTimeout(resolve, 350));
-      
-      // Buscar sessão atualizada com valor_pago recalculado
-      // Tentar busca por session_id TEXT primeiro, depois por UUID (id)
-      let fullSession = null;
-      
-      const { data: bySessionId } = await supabase
-        .from('clientes_sessoes')
-        .select(`*, clientes(nome, email, telefone, whatsapp)`)
-        .eq('session_id', sessionId)
-        .maybeSingle();
-      
-      if (bySessionId) {
-        fullSession = bySessionId;
-      } else {
-        // Fallback: tentar por UUID (id)
-        const { data: byId } = await supabase
+      console.log('💰 [WorkflowCache] payment-created event:', sessionId);
+
+      // Pequena espera inicial para o trigger SQL (reduzida de 350 → 120ms)
+      await new Promise(resolve => setTimeout(resolve, 120));
+
+      const fetchSession = async () => {
+        const { data } = await supabase
           .from('clientes_sessoes')
-          .select(`*, clientes(nome, email, telefone, whatsapp)`)
-          .eq('id', sessionId)
+          .select('id, session_id, valor_pago, valor_total, status_financeiro, updated_at, clientes(nome, email, telefone, whatsapp)')
+          .eq('session_id', sessionId)
           .maybeSingle();
-        
-        if (byId) fullSession = byId;
+        return data;
+      };
+
+      let fullSession = await fetchSession();
+
+      // Retry curto se ainda não veio (trigger lento), no máximo 1×
+      if (!fullSession) {
+        await new Promise(resolve => setTimeout(resolve, 180));
+        fullSession = await fetchSession();
       }
-      
+
       if (fullSession) {
-        console.log('✅ [WorkflowCache] Sessão atualizada após pagamento:', 
-          fullSession.id, 'valor_pago:', fullSession.valor_pago);
+        console.log('✅ [WorkflowCache] Sessão atualizada:', fullSession.id, 'valor_pago:', fullSession.valor_pago);
         mergeUpdate(fullSession as WorkflowSession);
       } else {
         console.warn('⚠️ [WorkflowCache] Sessão não encontrada para sessionId:', sessionId);
       }
     };
-    
+
     window.addEventListener('payment-created' as any, handlePaymentCreated);
-    
-    return () => {
-      window.removeEventListener('payment-created' as any, handlePaymentCreated);
-    };
+    return () => window.removeEventListener('payment-created' as any, handlePaymentCreated);
   }, [userId, mergeUpdate]);
+
 
   const value: WorkflowCacheContextType = {
     getSessionsForMonthSync,
