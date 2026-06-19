@@ -105,30 +105,27 @@ const DesktopNavItem = ({
   );
 };
 
-// Tablet variant — tap-to-toggle, no hover. Icon-only when collapsed, label visible when open.
-const TabletNavItem = ({ to, icon, label, isPro, showProBadge, end, expanded, onNavigate }: NavItemProps & { expanded: boolean }) => (
+// Tablet variant — icon-only rail, no expand/collapse, no tooltip (avoids touch artifacts).
+const RailNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps) => (
   <NavLink
     to={to}
     end={end}
-    onClick={onNavigate}
+    aria-label={label}
     className={({ isActive }) =>
       cn(
-        "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden",
+        "nav-item-lunar mb-1 flex items-center h-11 rounded-lg transition-colors duration-200 overflow-hidden",
         isActive && "active bg-lunar-surface text-lunar-accent"
       )
     }
   >
-    <span className="flex items-center justify-center w-12 h-10 flex-shrink-0 relative">
+    <span className="flex items-center justify-center w-12 h-11 flex-shrink-0 relative">
       {icon}
       {isPro && showProBadge && (
-        <span className="absolute top-1.5 right-1.5">
+        <span className="absolute top-2 right-1.5">
           <ProCrown />
         </span>
       )}
     </span>
-    {expanded && (
-      <span className="text-xs font-medium whitespace-nowrap">{label}</span>
-    )}
   </NavLink>
 );
 
@@ -140,7 +137,6 @@ export default function Sidebar() {
   const [isHovered, setIsHovered] = useState(false);
   const enterTimer = useRef<number | null>(null);
   const leaveTimer = useRef<number | null>(null);
-  const toggleBtnRef = useRef<HTMLButtonElement | null>(null);
 
   const mode: 'mobile' | 'tablet' | 'desktop' =
     isMobile ? 'mobile' : inputMode === 'touch' ? 'tablet' : 'desktop';
@@ -158,27 +154,6 @@ export default function Sidebar() {
     setIsHovered(false);
     clearTimers();
   }, [mode, clearTimers]);
-
-  // Body flag + scroll lock + Esc-to-close for tablet drawer
-  useEffect(() => {
-    if (mode !== 'tablet') return;
-    if (isOpen) {
-      document.body.dataset.sidebarOpen = 'true';
-    } else {
-      delete document.body.dataset.sidebarOpen;
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
-        toggleBtnRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      delete document.body.dataset.sidebarOpen;
-    };
-  }, [mode, isOpen]);
 
   const handleEnter = useCallback(() => {
     if (leaveTimer.current) { window.clearTimeout(leaveTimer.current); leaveTimer.current = null; }
@@ -261,72 +236,36 @@ export default function Sidebar() {
       </>;
   }
 
-  // ────────────────────────── TABLET (touch) ──────────────────────────
+  // ────────────────────────── TABLET (touch) — rail estático ──────────────────────────
   if (mode === 'tablet') {
     return (
-      <>
-        <div className="w-16 shrink-0 h-screen relative z-40">
-          <aside
-            aria-expanded={isOpen}
-            role={isOpen ? 'dialog' : undefined}
-            aria-modal={isOpen ? true : undefined}
-            aria-label="Navegação principal"
-            style={{
-              width: isOpen ? '14rem' : '4rem',
-              transitionDuration: '220ms',
-              transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
-              transitionProperty: 'width, box-shadow',
-            }}
-            className={cn(
-              "absolute inset-y-0 left-0 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden",
-              isOpen && "shadow-lunar-md z-50"
-            )}
-          >
-            {/* Toggle + Logo */}
-            <div className="h-10 flex items-center mb-2 overflow-hidden">
-              <button
-                ref={toggleBtnRef}
-                onClick={toggleSidebar}
-                aria-label={isOpen ? 'Fechar menu' : 'Abrir menu'}
-                className="h-10 w-12 flex items-center justify-center rounded-lg text-foreground/80 hover:bg-lunar-surface/40 active:bg-lunar-surface/60 transition-colors flex-shrink-0"
-              >
-                {isOpen ? <X size={16} /> : <Menu size={16} />}
-              </button>
-              {isOpen && (
-                <img
-                  src={isDark ? logoFullWhite : logoFullBlack}
-                  alt="Lunari"
-                  className="h-6 object-contain object-left ml-1"
+      <div className="w-16 shrink-0 h-screen relative z-40">
+        <aside
+          aria-label="Navegação principal"
+          className="absolute inset-y-0 left-0 w-16 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden"
+        >
+          {/* Logo (apenas ícone) */}
+          <div className="h-10 flex items-center justify-center mb-2">
+            <img
+              src={isDark ? logoIconWhite : logoIconBlack}
+              alt="Lunari"
+              className="h-7 w-7 object-contain"
+            />
+          </div>
+
+          <div className="flex-1 pt-2 overflow-y-auto scrollbar-elegant">
+            <div className="space-y-1">
+              {navItems.map(item => (
+                <RailNavItem
+                  key={item.to}
+                  {...item}
+                  showProBadge={isStarterPlan}
                 />
-              )}
+              ))}
             </div>
-
-            <div className="flex-1 pt-2 overflow-y-auto scrollbar-elegant">
-              <div className="space-y-1">
-                {navItems.map(item => (
-                  <TabletNavItem
-                    key={item.to}
-                    {...item}
-                    showProBadge={isStarterPlan}
-                    expanded={isOpen}
-                    onNavigate={closeSidebar}
-                  />
-                ))}
-              </div>
-            </div>
-          </aside>
-        </div>
-
-        {/* Overlay */}
-        <div
-          onClick={closeSidebar}
-          aria-hidden="true"
-          className={cn(
-            "fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 transition-opacity duration-200",
-            isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-        />
-      </>
+          </div>
+        </aside>
+      </div>
     );
   }
 
