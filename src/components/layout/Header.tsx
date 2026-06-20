@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, User, CreditCard, Shield, FileText, Package, Palette } from 'lucide-react';
+import { Moon, Sun, User, CreditCard, Shield, FileText, Package, Palette, LifeBuoy } from 'lucide-react';
 import { AppearanceModal } from '@/components/preferences/AppearanceModal';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
