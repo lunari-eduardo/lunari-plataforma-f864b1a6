@@ -265,9 +265,9 @@ export default function DashboardPage() {
         />
         <KpiCard
           icon={HardDrive}
-          label="Storage usado"
-          value={formatBytes(metrics.storageBytes)}
-          hint="Total de todos os fotógrafos"
+          label="Galerias publicadas"
+          value={metrics.galleriesTotal}
+          hint="Total acumulado na plataforma"
         />
         <KpiCard
           icon={Sparkles}
