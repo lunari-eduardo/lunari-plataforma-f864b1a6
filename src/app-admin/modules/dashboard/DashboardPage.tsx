@@ -182,7 +182,7 @@ export default function DashboardPage() {
         return sum + (plan.monthly_price_cents || 0);
       }, 0);
 
-      const storageBytes = ((storageRes.data as any[]) || []).reduce(
+      const galleriesTotal = ((storageRes.data as any[]) || []).reduce(
         (sum: number, a: any) => sum + Number((a as any).galleries_published_total || 0),
         0
       );
