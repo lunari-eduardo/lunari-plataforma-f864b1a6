@@ -164,6 +164,13 @@ export default function Header() {
                     <Package className="mr-2 h-3 w-3" />
                     <span>Produtos & Planos</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => navigate('/app/admin/suporte')}
+                  >
+                    <LifeBuoy className="mr-2 h-3 w-3" />
+                    <span>Suporte (Admin)</span>
+                  </DropdownMenuItem>
                 </>
               )}
               <DropdownMenuSeparator className="bg-border/30" />
