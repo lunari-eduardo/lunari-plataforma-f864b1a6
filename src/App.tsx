@@ -60,6 +60,8 @@ import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
 import { useTrialWelcomeToast } from "./components/subscription/TrialWelcomeToast";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useProvisionGalleryStatuses } from "./hooks/useProvisionGalleryStatuses";
+import { LunariSupportHostProvider } from "./integrations/support-host";
+import { SupportUserRoutes, SupportAdminRoutes } from "./modules/support";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
@@ -237,6 +239,24 @@ function App() {
                           } />
                           <Route path="ajuda" element={<CentroAjuda />} />
                           <Route path="ajuda/:slug" element={<ArtigoAjuda />} />
+                          <Route
+                            path="suporte/*"
+                            element={
+                              <LunariSupportHostProvider>
+                                <SupportUserRoutes />
+                              </LunariSupportHostProvider>
+                            }
+                          />
+                          <Route
+                            path="admin/suporte/*"
+                            element={
+                              <AdminRoute>
+                                <LunariSupportHostProvider>
+                                  <SupportAdminRoutes />
+                                </LunariSupportHostProvider>
+                              </AdminRoute>
+                            }
+                          />
                           <Route path="*" element={<NotFound />} />
                         </Route>
 

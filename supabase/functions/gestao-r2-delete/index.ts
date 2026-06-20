@@ -44,7 +44,21 @@ Deno.serve(async (req) => {
       `media/task/${user.id}/`,
       `media/general/${user.id}/`,
     ];
-    if (!ownPrefixes.some((p) => storagePath.startsWith(p))) {
+    let allowed = ownPrefixes.some((p) => storagePath.startsWith(p));
+
+    // Suporte: admin pode deletar qualquer anexo; user só os próprios uploads
+    if (!allowed && storagePath.startsWith("gestao/support/")) {
+      const { data: isAdmin } = await supabase.rpc("support_is_admin", { _uid: user.id });
+      if (isAdmin === true) {
+        allowed = true;
+      } else if (storagePath.startsWith("gestao/support/tickets/")) {
+        // path: gestao/support/tickets/{ticket_id}/{uploader_id}/...
+        const parts = storagePath.split("/");
+        if (parts[4] === user.id) allowed = true;
+      }
+    }
+
+    if (!allowed) {
       return json({ error: "Acesso negado" }, 403);
     }
 

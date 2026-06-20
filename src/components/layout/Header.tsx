@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, User, CreditCard, Shield, FileText, Package, Palette } from 'lucide-react';
+import { Moon, Sun, User, CreditCard, Shield, FileText, Package, Palette, LifeBuoy } from 'lucide-react';
 import { AppearanceModal } from '@/components/preferences/AppearanceModal';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
@@ -134,6 +134,13 @@ export default function Header() {
                 <CreditCard className="mr-2 h-3 w-3" />
                 <span>Minha Assinatura</span>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={() => navigate('/app/suporte')}
+              >
+                <LifeBuoy className="mr-2 h-3 w-3" />
+                <span>Suporte</span>
+              </DropdownMenuItem>
               {accessState.isAdmin && (
                 <>
                   <DropdownMenuItem 
@@ -156,6 +163,13 @@ export default function Header() {
                   >
                     <Package className="mr-2 h-3 w-3" />
                     <span>Produtos & Planos</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => navigate('/app/admin/suporte')}
+                  >
+                    <LifeBuoy className="mr-2 h-3 w-3" />
+                    <span>Suporte (Admin)</span>
                   </DropdownMenuItem>
                 </>
               )}

@@ -62,6 +62,26 @@ async function canAccess(supabase: any, userId: string, storagePath: string): Pr
   ];
   if (ownPrefixes.some((p) => storagePath.startsWith(p))) return true;
 
+  // Suporte: gestao/support/tickets/{ticket_id}/{uploader_id}/...
+  if (storagePath.startsWith("gestao/support/tickets/")) {
+    const parts = storagePath.split("/");
+    const ticketId = parts[3];
+    if (ticketId) {
+      // Admin?
+      const { data: isAdmin } = await supabase.rpc("support_is_admin", { _uid: userId });
+      if (isAdmin === true) return true;
+      // Owner do ticket?
+      const { data: t } = await supabase
+        .from("support_tickets")
+        .select("id")
+        .eq("id", ticketId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (t) return true;
+    }
+    return false;
+  }
+
   // DB fallback
   const { data: doc } = await supabase
     .from("clientes_documentos")
