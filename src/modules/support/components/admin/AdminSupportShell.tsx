@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { LayoutDashboard, MessagesSquare, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SUPPORT_ROUTES } from "../../config";
 
 const TABS = [
-  { to: "/suporte", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/suporte/chamados", label: "Chamados", icon: MessagesSquare },
-  { to: "/suporte/faq", label: "FAQ", icon: BookOpen },
+  { to: SUPPORT_ROUTES.admin.dashboard, label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: SUPPORT_ROUTES.admin.tickets, label: "Chamados", icon: MessagesSquare },
+  { to: SUPPORT_ROUTES.admin.faq, label: "FAQ", icon: BookOpen },
 ];
 
 export default function AdminSupportShell() {
