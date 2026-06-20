@@ -314,19 +314,19 @@ export default function AdminPlanos() {
                         </td>
                         <td className="px-3 py-2 text-muted-foreground font-mono">{plan.code}</td>
                         <td className="px-3 py-2 text-right">
-                          <Input value={centsToReais(getFieldValue(plan, 'monthly_price_cents') as number)} onChange={e => updateField(plan.id, 'monthly_price_cents', reaisToCents(e.target.value))} className="h-7 text-xs w-24 text-right ml-auto" />
+                          <MoneyInputBRL valueCents={getFieldValue(plan, 'monthly_price_cents') as number} onChangeCents={(c) => updateField(plan.id, 'monthly_price_cents', c)} className="h-7 text-xs w-24 text-right ml-auto" />
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <Input value={centsToReais(getFieldValue(plan, 'yearly_price_cents') as number)} onChange={e => updateField(plan.id, 'yearly_price_cents', reaisToCents(e.target.value))} className="h-7 text-xs w-24 text-right ml-auto" />
+                          <MoneyInputBRL valueCents={getFieldValue(plan, 'yearly_price_cents') as number} onChangeCents={(c) => updateField(plan.id, 'yearly_price_cents', c)} className="h-7 text-xs w-24 text-right ml-auto" />
                         </td>
                         {family === 'transfer' && (
                           <td className="px-3 py-2 text-right">
-                            <Input value={bytesToGB(getFieldValue(plan, 'transfer_storage_bytes') as number)} onChange={e => updateField(plan.id, 'transfer_storage_bytes', gbToBytes(e.target.value))} className="h-7 text-xs w-16 text-right ml-auto" />
+                            <IntegerInput value={parseInt(bytesToGB(getFieldValue(plan, 'transfer_storage_bytes') as number)) || 0} onChange={(gb) => updateField(plan.id, 'transfer_storage_bytes', gbToBytes(String(gb)))} className="h-7 text-xs w-16 text-right ml-auto" min={0} />
                           </td>
                         )}
                         {family === 'combo' && (
                           <td className="px-3 py-2 text-right">
-                            <Input type="number" value={getFieldValue(plan, 'select_credits_monthly') as number} onChange={e => updateField(plan.id, 'select_credits_monthly', parseInt(e.target.value) || 0)} className="h-7 text-xs w-20 text-right ml-auto" />
+                            <IntegerInput value={getFieldValue(plan, 'select_credits_monthly') as number} onChange={(n) => updateField(plan.id, 'select_credits_monthly', n)} className="h-7 text-xs w-20 text-right ml-auto" min={0} />
                           </td>
                         )}
                         <td className="px-3 py-2 text-center">
