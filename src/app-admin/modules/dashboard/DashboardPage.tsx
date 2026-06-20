@@ -47,8 +47,8 @@ interface RecentTicket {
 interface OverdueCharge {
   id: string;
   descricao: string | null;
-  valor_total: number;
-  vencimento: string | null;
+  valor: number;
+  created_at: string | null;
 }
 
 function formatCentsBRL(cents: number) {
@@ -161,9 +161,9 @@ export default function DashboardPage() {
           .limit(5),
         supabase
           .from("cobrancas")
-          .select("id, descricao, valor_total, vencimento")
+          .select("id, descricao, valor, created_at")
           .eq("status", "OVERDUE")
-          .order("vencimento", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(5),
         supabase.from("unified_plans").select("code, monthly_price_cents, yearly_price_cents"),
       ]);
@@ -362,11 +362,11 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <p className="font-medium truncate">{c.descricao || "Cobrança"}</p>
                     <p className="text-muted-foreground">
-                      {c.vencimento ? format(new Date(c.vencimento), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                      {c.created_at ? format(new Date(c.created_at), "dd/MM/yyyy", { locale: ptBR }) : "—"}
                     </p>
                   </div>
                   <span className="text-red-400 font-medium whitespace-nowrap">
-                    {formatCentsBRL(Math.round(Number(c.valor_total) * 100))}
+                    {formatCentsBRL(Math.round(Number(c.valor) * 100))}
                   </span>
                 </li>
               ))}
