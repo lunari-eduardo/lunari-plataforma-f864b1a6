@@ -416,7 +416,7 @@ export default function AdminPlanos() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Valor</Label>
-                <Input type="number" value={newCoupon.discount_value} onChange={e => setNewCoupon(p => ({ ...p, discount_value: parseInt(e.target.value) || 0 }))} className="h-8 text-xs" />
+                <IntegerInput value={newCoupon.discount_value} onChange={(n) => setNewCoupon(p => ({ ...p, discount_value: n }))} className="h-8 text-xs" min={0} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Aplica-se a</Label>
