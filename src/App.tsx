@@ -1,69 +1,25 @@
-
 import * as React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Layout from "./components/layout/Layout";
-import Index from "./pages/Index";
-import Agenda from "./pages/Agenda";
-import Clientes from "./pages/Clientes";
-import Leads from "./pages/Leads";
-import NovaFinancas from "./pages/NovaFinancas";
-import Precificacao from "./pages/Precificacao";
-import Configuracoes from "./pages/Configuracoes";
-import ClienteDetalhe from "./pages/ClienteDetalhe";
-import Workflow from "./pages/Workflow";
-import AnaliseVendas from "./pages/AnaliseVendas";
-import MinhaConta from "./pages/MinhaConta";
-import Integracoes from "./pages/Integracoes";
-import Tarefas from "./pages/Tarefas";
-import FeedTest from "./pages/FeedTest";
-import LandingPage from "./pages/LandingPage";
-import PublicCheckout from "./pages/PublicCheckout";
-import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
-import NotFound from "./pages/NotFound";
-import EscolherPlano from "./pages/EscolherPlano";
-import MinhaAssinatura from "./pages/MinhaAssinatura";
-import EscolherPlanoPagamento from "./pages/EscolherPlanoPagamento";
-import ResetPassword from "./pages/ResetPassword";
-import AdminUsuarios from "./pages/AdminUsuarios";
-import AdminPlanos from "./pages/AdminPlanos";
+import { BrowserRouter } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
-import Conteudos from "./pages/Conteudos";
-import ConteudoDetalhe from "./pages/ConteudoDetalhe";
-import SitemapProxy from "./pages/SitemapProxy";
-import AdminConteudos from "./pages/AdminConteudos";
-import AdminConteudoNovo from "./pages/AdminConteudoNovo";
-import AdminConteudoEditar from "./pages/AdminConteudoEditar";
-import CentroAjuda from "./pages/CentroAjuda";
-import ArtigoAjuda from "./pages/ArtigoAjuda";
-import FormularioPublico from "./pages/FormularioPublico";
-import { AppProvider } from "./contexts/AppContext";
-import { AgendaProvider } from "./contexts/AgendaContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ConfigurationProvider } from "./contexts/ConfigurationContext";
-import { ProdutoEtiquetasProvider } from "./contexts/ProdutoEtiquetasContext";
-import { WorkflowCacheProvider } from "./contexts/WorkflowCacheContext";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { AdminRoute } from "./components/auth/AdminRoute";
-import { PlanRestrictionGuard } from "./components/auth/PlanRestrictionGuard";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
-import { BuildMonitor } from "./components/shared/BuildMonitor";
-import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
-import { useWorkflowCacheInit } from "./hooks/useWorkflowCacheInit";
-import { useAppointmentWorkflowSync } from "./hooks/useAppointmentWorkflowSync";
-import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
-import { useTrialWelcomeToast } from "./components/subscription/TrialWelcomeToast";
-import { usePWAUpdate } from "./hooks/usePWAUpdate";
-import { useProvisionGalleryStatuses } from "./hooks/useProvisionGalleryStatuses";
-import { LunariSupportHostProvider } from "./integrations/support-host";
-import { SupportUserRoutes, SupportAdminRoutes } from "./modules/support";
 
-// Create a stable QueryClient instance
+import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
+import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
+import { usePWAUpdate } from "./hooks/usePWAUpdate";
+
+import { detectAppContext } from "./lib/appContext";
+
+// Code-split por contexto
+const PhotographerApp = React.lazy(() => import("./app-photographer/PhotographerApp"));
+const AdminApp = React.lazy(() => import("./app-admin/AdminApp"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -73,203 +29,44 @@ const queryClient = new QueryClient({
   },
 });
 
-// Componente interno que executa hooks DENTRO do WorkflowCacheProvider
-// Isso garante que eventos customizados são disparados APÓS listeners estarem prontos
-function AppContent() {
-  // Initialize workflow cache manager (non-blocking)
-  useWorkflowCacheInit();
-
-  // Global appointment→workflow sync - DEVE estar DENTRO do WorkflowCacheProvider
-  useAppointmentWorkflowSync();
-
-  // Show trial welcome toast on first access
-  useTrialWelcomeToast();
-
-  // Auto-provisionar status de sistema Gallery para usuários PRO + Gallery
-  useProvisionGalleryStatuses();
-
-  return null;
+function ContextFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
 }
 
-// Define App as a proper function component
 function App() {
-  // Bootstrap pricing system early
-  const { isInitialized: pricingInitialized, error: pricingError } = usePricingBootstrap();
-
-  // PWA auto-update via vite-plugin-pwa (detecta novas versões automaticamente)
+  const { error: pricingError } = usePricingBootstrap();
   usePWAUpdate();
-
-  // Enable force update mechanism for all devices (botão manual via Supabase)
   useAppForceUpdate();
 
-  // Log app version for debugging
+  const context = React.useMemo(() => detectAppContext(), []);
+
   React.useEffect(() => {
-    console.log(`🚀 Lunari 2.0 v${import.meta.env.VITE_APP_VERSION || '1.0.0'} - Ready`);
+    console.log(
+      `🚀 Lunari 2.0 v${import.meta.env.VITE_APP_VERSION || "1.0.0"} - context=${context}`
+    );
     if (pricingError) {
-      console.warn('⚠️ Pricing system had initialization issues:', pricingError);
+      console.warn("⚠️ Pricing system had initialization issues:", pricingError);
     }
-  }, [pricingError]);
+  }, [context, pricingError]);
 
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <VisualThemeProvider>
-          <AuthProvider>
-            <ConfigurationProvider>
-              <ProdutoEtiquetasProvider>
-              <WorkflowCacheProvider>
-                <AppContent />
-                <AppProvider>
-                  <AgendaProvider>
-                    <TooltipProvider>
-                      <BuildMonitor />
-                      <Toaster />
-                      <Sonner />
-                      <Routes>
-                        {/* ============ PUBLIC ROUTES (SEO) ============ */}
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/auth" element={<Auth />} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
-                        <Route path="/conteudos" element={<Conteudos />} />
-                        <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
-                        <Route path="/sitemap.xml" element={<SitemapProxy />} />
-                        
-                        {/* Rota pública para formulários de clientes */}
-                        <Route path="/formulario/:token" element={<FormularioPublico />} />
-                        <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
-
-                        {/* Redirect antigo /landing para / */}
-                        <Route path="/landing" element={<Navigate to="/" replace />} />
-
-                        {/* Protected subscription routes (outside main layout) */}
-                        <Route path="/escolher-plano" element={
-                          <ProtectedRoute>
-                            <EscolherPlano />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/minha-assinatura" element={
-                          <ProtectedRoute>
-                            <MinhaAssinatura />
-                          </ProtectedRoute>
-                        } />
-                        <Route path="/escolher-plano/pagamento" element={
-                          <ProtectedRoute>
-                            <EscolherPlanoPagamento />
-                          </ProtectedRoute>
-                        } />
-
-                        {/* Semi-protected: onboarding (requires auth but not complete profile) */}
-                        <Route path="/onboarding" element={
-                          <ProtectedRoute>
-                            <Onboarding />
-                          </ProtectedRoute>
-                        } />
-
-                        {/* ============ PROTECTED ROUTES (/app) ============ */}
-                        <Route path="/app" element={
-                          <ProtectedRoute>
-                            <Layout />
-                          </ProtectedRoute>
-                        }>
-                          <Route index element={<Index />} />
-                          <Route path="agenda" element={<Agenda />} />
-                          <Route path="clientes" element={<Clientes />} />
-                          <Route path="clientes/:id" element={<ClienteDetalhe />} />
-                          <Route path="leads" element={
-                            <PlanRestrictionGuard requiredPlan="pro">
-                              <Leads />
-                            </PlanRestrictionGuard>
-                          } />
-                          <Route path="financas" element={
-                            <PlanRestrictionGuard requiredPlan="pro">
-                              <NovaFinancas />
-                            </PlanRestrictionGuard>
-                          } />
-                          <Route path="precificacao" element={
-                            <PlanRestrictionGuard requiredPlan="pro">
-                              <Precificacao />
-                            </PlanRestrictionGuard>
-                          } />
-                          <Route path="workflow" element={<Workflow />} />
-                          <Route path="analise-vendas" element={
-                            <PlanRestrictionGuard requiredPlan="pro">
-                              <AnaliseVendas />
-                            </PlanRestrictionGuard>
-                          } />
-                          <Route path="configuracoes" element={<Configuracoes />} />
-                          <Route path="minha-conta" element={<MinhaConta />} />
-                          <Route path="integracoes" element={<Integracoes />} />
-                          <Route path="tarefas" element={
-                            <PlanRestrictionGuard requiredPlan="pro">
-                              <Tarefas />
-                            </PlanRestrictionGuard>
-                          } />
-                          <Route path="feed-test" element={
-                            <PlanRestrictionGuard requiredPlan="pro">
-                              <FeedTest />
-                            </PlanRestrictionGuard>
-                          } />
-                          {/* Legacy redirect for old preferencias route */}
-                          <Route path="preferencias" element={<Navigate to="/app/integracoes" replace />} />
-                          <Route path="admin/usuarios" element={
-                            <AdminRoute>
-                              <AdminUsuarios />
-                            </AdminRoute>
-                          } />
-                          <Route path="admin/conteudos" element={
-                            <AdminRoute>
-                              <AdminConteudos />
-                            </AdminRoute>
-                          } />
-                          <Route path="admin/conteudos/novo" element={
-                            <AdminRoute>
-                              <AdminConteudoNovo />
-                            </AdminRoute>
-                          } />
-                          <Route path="admin/conteudos/editar/:id" element={
-                            <AdminRoute>
-                              <AdminConteudoEditar />
-                            </AdminRoute>
-                          } />
-                          <Route path="admin/planos" element={
-                            <AdminRoute>
-                              <AdminPlanos />
-                            </AdminRoute>
-                          } />
-                          <Route path="ajuda" element={<CentroAjuda />} />
-                          <Route path="ajuda/:slug" element={<ArtigoAjuda />} />
-                          <Route
-                            path="suporte/*"
-                            element={
-                              <LunariSupportHostProvider>
-                                <SupportUserRoutes />
-                              </LunariSupportHostProvider>
-                            }
-                          />
-                          <Route
-                            path="admin/suporte/*"
-                            element={
-                              <AdminRoute>
-                                <LunariSupportHostProvider>
-                                  <SupportAdminRoutes />
-                                </LunariSupportHostProvider>
-                              </AdminRoute>
-                            }
-                          />
-                          <Route path="*" element={<NotFound />} />
-                        </Route>
-
-                        {/* Catch-all para rotas não encontradas */}
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </TooltipProvider>
-                  </AgendaProvider>
-                </AppProvider>
-              </WorkflowCacheProvider>
-              </ProdutoEtiquetasProvider>
-            </ConfigurationProvider>
-          </AuthProvider>
+            <AuthProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <React.Suspense fallback={<ContextFallback />}>
+                  {context === "admin" ? <AdminApp /> : <PhotographerApp />}
+                </React.Suspense>
+              </TooltipProvider>
+            </AuthProvider>
           </VisualThemeProvider>
         </ThemeProvider>
       </QueryClientProvider>
