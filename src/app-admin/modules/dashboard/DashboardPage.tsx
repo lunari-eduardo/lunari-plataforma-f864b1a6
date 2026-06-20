@@ -145,7 +145,7 @@ export default function DashboardPage() {
         supabase.from("subscriptions_asaas").select("user_id", { count: "exact", head: true }).eq("status", "OVERDUE"),
         supabase.from("subscriptions_asaas").select("user_id", { count: "exact", head: true }).eq("status", "CANCELED"),
         supabase.from("subscriptions_asaas").select("plan_type, billing_cycle").eq("status", "ACTIVE"),
-        supabase.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["aberto", "em_andamento"]),
+        supabase.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["novo", "recebido", "em_analise", "aguardando_cliente"]),
         supabase.from("photographer_accounts").select("used_storage_bytes"),
         supabase.from("credit_purchases").select("amount_cents").eq("status", "paid").gte("created_at", monthStart),
         supabase
@@ -156,7 +156,7 @@ export default function DashboardPage() {
         supabase
           .from("support_tickets")
           .select("id, subject, status, priority, created_at")
-          .in("status", ["aberto", "em_andamento"])
+          .in("status", ["novo", "recebido", "em_analise", "aguardando_cliente"])
           .order("created_at", { ascending: false })
           .limit(5),
         supabase
