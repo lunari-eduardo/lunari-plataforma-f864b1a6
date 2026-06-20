@@ -179,11 +179,3 @@ export default function Header() {
     </>
   );
 }
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <AppearanceModal open={appearanceOpen} onOpenChange={setAppearanceOpen} />
-        </div>
-      </header>
-    </>
-  );
-}
