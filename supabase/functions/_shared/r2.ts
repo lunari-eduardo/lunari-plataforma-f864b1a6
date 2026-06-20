@@ -269,15 +269,38 @@ export const GESTAO_RULES: Record<GestaoContext, ContextRule> = {
     maxBytes: 20 * 1024 * 1024,
     allowedTypes: ["application/pdf"],
   },
+  "support-ticket": {
+    // entityId = ticket_id; arquivo privado (somente owner/admin via signed URL)
+    prefix: (u, e) => `gestao/support/tickets/${e ?? "unbound"}/${u}`,
+    isPublic: false,
+    bucket: R2_PRIVATE_BUCKET,
+    maxBytes: 50 * 1024 * 1024,
+    allowedTypes: [
+      "image/jpeg", "image/png", "image/webp", "image/gif",
+      "video/mp4", "video/webm", "video/quicktime",
+    ],
+  },
+  "support-faq": {
+    // entityId = article_id; público (FAQ é visível a todos autenticados)
+    prefix: (u, e) => `gestao/support/faq/${e ?? "draft"}/${u}`,
+    isPublic: true,
+    bucket: R2_PUBLIC_BUCKET,
+    maxBytes: 50 * 1024 * 1024,
+    allowedTypes: [
+      "image/jpeg", "image/png", "image/webp", "image/gif",
+      "video/mp4", "video/webm",
+    ],
+  },
 };
 
 /** Decide qual bucket usar a partir do storagePath. */
 export function bucketForPath(storagePath: string): string {
-  // Privados sempre começam com gestao/{client-documents|task-attachments|contratos-assinados}/
+  // Privados sempre começam com gestao/{client-documents|task-attachments|contratos-assinados|support/tickets}/
   if (
     storagePath.startsWith("gestao/client-documents/") ||
     storagePath.startsWith("gestao/task-attachments/") ||
-    storagePath.startsWith("gestao/contratos-assinados/")
+    storagePath.startsWith("gestao/contratos-assinados/") ||
+    storagePath.startsWith("gestao/support/tickets/")
   ) {
     return R2_PRIVATE_BUCKET;
   }
