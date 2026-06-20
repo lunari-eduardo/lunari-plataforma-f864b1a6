@@ -60,6 +60,8 @@ import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
 import { useTrialWelcomeToast } from "./components/subscription/TrialWelcomeToast";
 import { usePWAUpdate } from "./hooks/usePWAUpdate";
 import { useProvisionGalleryStatuses } from "./hooks/useProvisionGalleryStatuses";
+import { LunariSupportHostProvider } from "./integrations/support-host";
+import { SupportUserRoutes, SupportAdminRoutes } from "./modules/support";
 
 // Create a stable QueryClient instance
 const queryClient = new QueryClient({
