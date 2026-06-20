@@ -53,7 +53,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { toggleTheme, currentTheme } = useTheme();
   const { signOut } = useAuth();
-  const { accessState } = useAccessControl();
+  
   const { getProfileOrDefault } = useUserProfile();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
