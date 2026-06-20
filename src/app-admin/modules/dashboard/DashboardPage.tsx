@@ -38,7 +38,7 @@ interface RecentUser {
 
 interface RecentTicket {
   id: string;
-  subject: string;
+  assunto: string;
   status: string;
   priority: string;
   created_at: string;
@@ -155,7 +155,7 @@ export default function DashboardPage() {
           .limit(5),
         supabase
           .from("support_tickets")
-          .select("id, subject, status, priority, created_at")
+          .select("id, assunto, status, priority, created_at")
           .in("status", ["novo", "recebido", "em_analise", "aguardando_cliente"])
           .order("created_at", { ascending: false })
           .limit(5),
@@ -334,7 +334,7 @@ export default function DashboardPage() {
               {recentTickets.map((t) => (
                 <li key={t.id} className="flex items-center justify-between gap-2 text-xs">
                   <Link to={`/suporte/chamados/${t.id}`} className="min-w-0 hover:underline">
-                    <p className="font-medium truncate">{t.subject}</p>
+                    <p className="font-medium truncate">{t.assunto}</p>
                     <p className="text-muted-foreground truncate capitalize">
                       {t.status.replace("_", " ")} · {t.priority}
                     </p>
