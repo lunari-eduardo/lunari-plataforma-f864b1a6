@@ -602,13 +602,24 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       // Pequena espera inicial para o trigger SQL (reduzida de 350 → 120ms)
       await new Promise(resolve => setTimeout(resolve, 120));
 
+      // F2: SELECT * + clientes — privilegia consistência (1 query por pagamento)
+      // F3.2: aceita tanto session_id (TEXT) quanto id (UUID)
       const fetchSession = async () => {
-        const { data } = await supabase
+        // Tentativa 1: por session_id (TEXT) — caminho padrão
+        const byText = await supabase
           .from('clientes_sessoes')
-          .select('id, session_id, valor_pago, valor_total, status_financeiro, updated_at, clientes(nome, email, telefone, whatsapp)')
+          .select('*, clientes(nome, email, telefone, whatsapp)')
           .eq('session_id', sessionId)
           .maybeSingle();
-        return data;
+        if (byText.data) return byText.data;
+
+        // Tentativa 2: por id UUID — fallback se o evento veio com UUID
+        const byUuid = await supabase
+          .from('clientes_sessoes')
+          .select('*, clientes(nome, email, telefone, whatsapp)')
+          .eq('id', sessionId)
+          .maybeSingle();
+        return byUuid.data;
       };
 
       let fullSession = await fetchSession();
