@@ -28,7 +28,12 @@ export default function Auth() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!loading && user) navigate('/app');
+    if (!loading && user) {
+      const isAdminHost = typeof window !== 'undefined' &&
+        (window.location.hostname.startsWith('admin.') ||
+         new URLSearchParams(window.location.search).get('context') === 'admin');
+      navigate(isAdminHost ? '/' : '/app');
+    }
   }, [user, loading, navigate]);
 
   const handleGoogleSignIn = async () => {
