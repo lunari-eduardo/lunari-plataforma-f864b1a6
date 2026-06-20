@@ -25,7 +25,7 @@ interface Metrics {
   canceledSubs: number;
   mrrCents: number;
   openTickets: number;
-  storageBytes: number;
+  galleriesTotal: number;
   creditRevenueMonthCents: number;
 }
 
@@ -146,7 +146,7 @@ export default function DashboardPage() {
         supabase.from("subscriptions_asaas").select("user_id", { count: "exact", head: true }).eq("status", "CANCELED"),
         supabase.from("subscriptions_asaas").select("plan_type, billing_cycle").eq("status", "ACTIVE"),
         supabase.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["novo", "recebido", "em_analise", "aguardando_cliente"]),
-        supabase.from("photographer_accounts").select("used_storage_bytes"),
+        supabase.from("photographer_accounts").select("galleries_published_total"),
         supabase.from("credit_purchases").select("price_cents").not("paid_at", "is", null).gte("paid_at", monthStart),
         supabase
           .from("profiles")
@@ -183,7 +183,7 @@ export default function DashboardPage() {
       }, 0);
 
       const storageBytes = ((storageRes.data as any[]) || []).reduce(
-        (sum: number, a: any) => sum + Number(a.used_storage_bytes || 0),
+        (sum: number, a: any) => sum + Number((a as any).galleries_published_total || 0),
         0
       );
 
@@ -200,7 +200,7 @@ export default function DashboardPage() {
         canceledSubs: subsCanceled.count || 0,
         mrrCents,
         openTickets: openTicketsRes.count || 0,
-        storageBytes,
+        galleriesTotal,
         creditRevenueMonthCents: creditRevenue,
       });
 
