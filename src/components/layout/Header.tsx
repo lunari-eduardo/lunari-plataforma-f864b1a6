@@ -67,13 +67,21 @@ export default function Header() {
 
   const userInitials = getInitials(currentProfile.nome || currentProfile.empresa || 'Usuario');
 
-  const handleSignOut = async () => {
+  const handleSignOut = async (scope: 'local' | 'global' = 'local') => {
     try {
-      await signOut();
+      await signOut(scope);
       navigate('/auth');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
+  };
+
+  const handleSignOutAllDevices = async () => {
+    const confirmed = window.confirm(
+      'Isso vai encerrar sua sessão em todos os navegadores e dispositivos onde você está logado. Deseja continuar?'
+    );
+    if (!confirmed) return;
+    await handleSignOut('global');
   };
 
   return (
