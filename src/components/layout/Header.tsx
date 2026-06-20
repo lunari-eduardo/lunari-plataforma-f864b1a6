@@ -161,10 +161,24 @@ export default function Header() {
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem
                 className="text-xs cursor-pointer"
-                onClick={handleSignOut}
+                onClick={() => handleSignOut('local')}
               >
                 Sair
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer text-muted-foreground"
+                onClick={handleSignOutAllDevices}
+              >
+                Sair de todos os dispositivos
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <AppearanceModal open={appearanceOpen} onOpenChange={setAppearanceOpen} />
+        </div>
+      </header>
+    </>
+  );
+}
             </DropdownMenuContent>
           </DropdownMenu>
           <AppearanceModal open={appearanceOpen} onOpenChange={setAppearanceOpen} />
