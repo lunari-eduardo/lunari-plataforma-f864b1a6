@@ -245,10 +245,7 @@ export default function AdminUsuarios() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Usuários</h1>
-        <p className="text-sm text-muted-foreground">Gestão de usuários, créditos, storage e VIPs</p>
-      </div>
+
 
       <div className="space-y-6">
         <div className="space-y-6">
