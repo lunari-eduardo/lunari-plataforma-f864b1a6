@@ -407,24 +407,8 @@ export default function AdminUsuarios() {
               </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="subscriptions">
-          <AdminSubscriptionsTab />
-        </TabsContent>
-
-        <TabsContent value="strategy">
-          <AdminStrategyTab />
-        </TabsContent>
-
-        <TabsContent value="emails">
-          <AllowedEmailsManager />
-        </TabsContent>
-
-        <TabsContent value="platform-integrations">
-          <PlatformIntegrationsTab />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       {/* VIP Modal */}
       <Dialog open={vipModalOpen} onOpenChange={setVipModalOpen}>
