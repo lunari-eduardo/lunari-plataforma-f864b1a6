@@ -39,9 +39,17 @@ export function AdminHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = async (scope: 'local' | 'global' = 'local') => {
+    await signOut(scope);
     navigate("/auth", { replace: true });
+  };
+
+  const handleSignOutAllDevices = async () => {
+    const confirmed = window.confirm(
+      'Isso vai encerrar sua sessão em todos os navegadores e dispositivos onde você está logado. Deseja continuar?'
+    );
+    if (!confirmed) return;
+    await handleSignOut('global');
   };
 
   const email = user?.email || "";
