@@ -367,10 +367,10 @@ export default function AdminPlanos() {
                       <Input value={getCreditFieldValue(pkg, 'name') as string} onChange={e => updateCreditField(pkg.id, 'name', e.target.value)} className="h-7 text-xs w-44" />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Input type="number" value={getCreditFieldValue(pkg, 'credits') as number} onChange={e => updateCreditField(pkg.id, 'credits', parseInt(e.target.value) || 0)} className="h-7 text-xs w-20 text-right ml-auto" />
+                      <IntegerInput value={getCreditFieldValue(pkg, 'credits') as number} onChange={(n) => updateCreditField(pkg.id, 'credits', n)} className="h-7 text-xs w-20 text-right ml-auto" min={0} />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Input value={centsToReais(getCreditFieldValue(pkg, 'price_cents') as number)} onChange={e => updateCreditField(pkg.id, 'price_cents', reaisToCents(e.target.value))} className="h-7 text-xs w-24 text-right ml-auto" />
+                      <MoneyInputBRL valueCents={getCreditFieldValue(pkg, 'price_cents') as number} onChangeCents={(c) => updateCreditField(pkg.id, 'price_cents', c)} className="h-7 text-xs w-24 text-right ml-auto" />
                     </td>
                     <td className="px-3 py-2 text-center">
                       <Switch checked={getCreditFieldValue(pkg, 'active') as boolean} onCheckedChange={v => updateCreditField(pkg.id, 'active', v)} />
