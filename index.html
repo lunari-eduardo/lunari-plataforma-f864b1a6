@@ -39,6 +39,7 @@
 
     <meta name="color-scheme" content="light dark" />
     <script>
+      // Tema inicial (anti-flash)
       try {
         var raw = localStorage.getItem('lunari_user_preferences');
         var prefs = raw ? JSON.parse(raw) : null;
@@ -47,6 +48,29 @@
         var isDark = tema === 'escuro' || (tema === 'sistema' && mql && mql.matches);
         if (isDark) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
+      } catch (e) {}
+
+      // Manifest PWA por subdomínio: admin.* recebe manifest próprio
+      try {
+        var host = location.hostname.toLowerCase();
+        var isAdmin = host.indexOf('admin.') === 0;
+        if (isAdmin) {
+          var apply = function () {
+            var link = document.querySelector('link[rel="manifest"]');
+            if (!link) {
+              link = document.createElement('link');
+              link.rel = 'manifest';
+              document.head.appendChild(link);
+            }
+            link.href = '/manifest-admin.webmanifest';
+            var title = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (title) title.setAttribute('content', 'Lunari Admin');
+          };
+          apply();
+          // vite-plugin-pwa injeta o link após o boot — reaplicar
+          window.addEventListener('DOMContentLoaded', apply);
+          setTimeout(apply, 500);
+        }
       } catch (e) {}
     </script>
 

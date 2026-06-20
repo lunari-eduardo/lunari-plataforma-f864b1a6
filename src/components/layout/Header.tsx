@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, User, CreditCard, Shield, FileText, Package, Palette, LifeBuoy } from 'lucide-react';
+import { Moon, Sun, User, CreditCard, Palette, LifeBuoy } from 'lucide-react';
 import { AppearanceModal } from '@/components/preferences/AppearanceModal';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAccessControl } from '@/hooks/useAccessControl';
+
 
 const pageTitles: Record<string, string> = {
   "/app": "Dashboard",
@@ -53,7 +53,7 @@ export default function Header() {
   const navigate = useNavigate();
   const { toggleTheme, currentTheme } = useTheme();
   const { signOut } = useAuth();
-  const { accessState } = useAccessControl();
+  
   const { getProfileOrDefault } = useUserProfile();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
@@ -141,38 +141,7 @@ export default function Header() {
                 <LifeBuoy className="mr-2 h-3 w-3" />
                 <span>Suporte</span>
               </DropdownMenuItem>
-              {accessState.isAdmin && (
-                <>
-                  <DropdownMenuItem 
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/usuarios')}
-                  >
-                    <Shield className="mr-2 h-3 w-3" />
-                    <span>Painel Admin</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/conteudos')}
-                  >
-                    <FileText className="mr-2 h-3 w-3" />
-                    <span>Conteúdos</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/planos')}
-                  >
-                    <Package className="mr-2 h-3 w-3" />
-                    <span>Produtos & Planos</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/suporte')}
-                  >
-                    <LifeBuoy className="mr-2 h-3 w-3" />
-                    <span>Suporte (Admin)</span>
-                  </DropdownMenuItem>
-                </>
-              )}
+              {/* Itens admin removidos — painel administrativo migrado para admin.lunarihub.com */}
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem
                 className="text-xs cursor-pointer"
