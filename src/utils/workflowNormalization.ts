@@ -53,3 +53,39 @@ export function normalizeWorkflowSession(session: any): WorkflowSession {
 export function normalizeWorkflowSessions(sessions: any[]): WorkflowSession[] {
   return safeArray(sessions).map(normalizeWorkflowSession);
 }
+
+/**
+ * Normalização PARCIAL: só toca em campos efetivamente presentes no payload.
+ * Use para mesclar fetches incompletos (ex.: payment-created listener) sem
+ * sobrescrever campos populados no cache com defaults (0, null, '', []).
+ */
+export function normalizeWorkflowSessionPartial(session: any): Partial<WorkflowSession> {
+  if (!session || typeof session !== 'object') return session;
+
+  const out: any = { ...session };
+
+  const numericFields = [
+    'valor_total',
+    'valor_pago',
+    'valor_base_pacote',
+    'valor_foto_extra',
+    'valor_total_foto_extra',
+    'valor_adicional',
+    'desconto',
+    'qtd_fotos_extra',
+  ];
+  for (const f of numericFields) {
+    if (session[f] !== undefined && session[f] !== null) {
+      out[f] = toSafeNumber(session[f]);
+    }
+  }
+
+  if (Array.isArray(session.produtos_incluidos)) {
+    out.produtos_incluidos = safeArray(session.produtos_incluidos);
+  }
+
+  // Campos string/object: só normaliza se vieram explicitamente no payload
+  // (não força defaults — preserva o valor existente no cache).
+
+  return out as Partial<WorkflowSession>;
+}
