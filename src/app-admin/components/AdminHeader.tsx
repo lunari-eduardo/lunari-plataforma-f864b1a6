@@ -100,9 +100,13 @@ export function AdminHeader() {
               Ir para app.lunarihub.com
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-xs text-destructive focus:text-destructive" onClick={handleSignOut}>
+            <DropdownMenuItem className="text-xs text-destructive focus:text-destructive" onClick={() => handleSignOut('local')}>
               <LogOut className="h-3.5 w-3.5 mr-2" />
               Sair
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-xs text-muted-foreground" onClick={handleSignOutAllDevices}>
+              <LogOut className="h-3.5 w-3.5 mr-2" />
+              Sair de todos os dispositivos
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
