@@ -19,7 +19,7 @@ import DashboardPage from "./modules/dashboard/DashboardPage";
 import AssinaturasPage from "./modules/assinaturas/AssinaturasPage";
 import StoragePage from "./modules/storage/StoragePage";
 import SistemaPage from "./modules/sistema/SistemaPage";
-import LogsPage from "./modules/logs/LogsPage";
+import LogsPage from "./modules/audit-logs/LogsPage";
 import ConfiguracoesPage from "./modules/configuracoes/ConfiguracoesPage";
 
 /**
