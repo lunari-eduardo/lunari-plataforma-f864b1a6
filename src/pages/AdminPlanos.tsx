@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Save, Package, HardDrive, Layers, Info, Sparkles, Tag, Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MoneyInputBRL } from '@/components/admin/MoneyInputBRL';
+import { IntegerInput } from '@/components/admin/IntegerInput';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
