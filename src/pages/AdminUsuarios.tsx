@@ -246,30 +246,12 @@ export default function AdminUsuarios() {
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
-        <p className="text-sm text-muted-foreground">Gerenciamento de usuários, assinaturas e créditos</p>
+        <h1 className="text-2xl font-bold text-foreground">Usuários</h1>
+        <p className="text-sm text-muted-foreground">Gestão de usuários, créditos, storage e VIPs</p>
       </div>
 
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="bg-card/50 border border-border/50">
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />Usuários
-          </TabsTrigger>
-          <TabsTrigger value="subscriptions" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />Assinaturas
-          </TabsTrigger>
-          <TabsTrigger value="strategy" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />Estratégia
-          </TabsTrigger>
-          <TabsTrigger value="emails" className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />Emails Autorizados
-          </TabsTrigger>
-          <TabsTrigger value="platform-integrations" className="flex items-center gap-2">
-            <Plug className="h-4 w-4" />Integrações Financeiras
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="users" className="space-y-6">
+      <div className="space-y-6">
+        <div className="space-y-6">
           {/* Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <Card className="bg-card/50 border-border/50">
