@@ -13,7 +13,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: any }>;
   updatePassword: (newPassword: string) => Promise<{ error: any }>;
   updateEmail: (newEmail: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
+  signOut: (scope?: 'local' | 'global' | 'others') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -204,8 +204,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = async (scope: 'local' | 'global' | 'others' = 'local') => {
+    // 'local' (padrão): desloga apenas este dispositivo. Outros dispositivos
+    // continuam autenticados. Use 'global' explicitamente para encerrar todas
+    // as sessões (ex.: "Sair de todos os dispositivos").
+    await supabase.auth.signOut({ scope });
   };
 
   const value = {

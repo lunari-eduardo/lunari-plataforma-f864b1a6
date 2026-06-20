@@ -39,9 +39,17 @@ export function AdminHeader() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = async (scope: 'local' | 'global' = 'local') => {
+    await signOut(scope);
     navigate("/auth", { replace: true });
+  };
+
+  const handleSignOutAllDevices = async () => {
+    const confirmed = window.confirm(
+      'Isso vai encerrar sua sessão em todos os navegadores e dispositivos onde você está logado. Deseja continuar?'
+    );
+    if (!confirmed) return;
+    await handleSignOut('global');
   };
 
   const email = user?.email || "";
@@ -92,9 +100,13 @@ export function AdminHeader() {
               Ir para app.lunarihub.com
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-xs text-destructive focus:text-destructive" onClick={handleSignOut}>
+            <DropdownMenuItem className="text-xs text-destructive focus:text-destructive" onClick={() => handleSignOut('local')}>
               <LogOut className="h-3.5 w-3.5 mr-2" />
               Sair
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-xs text-muted-foreground" onClick={handleSignOutAllDevices}>
+              <LogOut className="h-3.5 w-3.5 mr-2" />
+              Sair de todos os dispositivos
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
