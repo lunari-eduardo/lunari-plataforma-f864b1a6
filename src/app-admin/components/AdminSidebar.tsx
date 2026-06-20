@@ -38,7 +38,6 @@ type Item = {
 const operacao: Item[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Usuários", url: "/usuarios", icon: Users },
-  { title: "Assinaturas", url: "/assinaturas", icon: CreditCard },
   { title: "Suporte", url: "/suporte", icon: LifeBuoy },
 ];
 
