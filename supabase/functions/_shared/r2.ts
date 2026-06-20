@@ -205,7 +205,9 @@ export type GestaoContext =
   | "general"
   | "task"
   | "client-document"
-  | "contrato-assinado";
+  | "contrato-assinado"
+  | "support-ticket"
+  | "support-faq";
 
 interface ContextRule {
   prefix: (userId: string, entityId?: string) => string;
