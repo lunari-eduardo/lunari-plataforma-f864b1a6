@@ -147,7 +147,7 @@ export default function DashboardPage() {
         supabase.from("subscriptions_asaas").select("plan_type, billing_cycle").eq("status", "ACTIVE"),
         supabase.from("support_tickets").select("id", { count: "exact", head: true }).in("status", ["novo", "recebido", "em_analise", "aguardando_cliente"]),
         supabase.from("photographer_accounts").select("used_storage_bytes"),
-        supabase.from("credit_purchases").select("amount_cents").eq("status", "paid").gte("created_at", monthStart),
+        supabase.from("credit_purchases").select("price_cents").not("paid_at", "is", null).gte("paid_at", monthStart),
         supabase
           .from("profiles")
           .select("user_id, email, nome, created_at")
@@ -188,7 +188,7 @@ export default function DashboardPage() {
       );
 
       const creditRevenue = ((creditRevenueRes.data as any[]) || []).reduce(
-        (sum: number, c: any) => sum + Number(c.amount_cents || 0),
+        (sum: number, c: any) => sum + Number((c as any).price_cents || 0),
         0
       );
 
