@@ -15,7 +15,7 @@ export default function UsuariosLayout() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-border/40 bg-background/40 backdrop-blur sticky top-12 z-20">
+      <div className="border-b border-border/40 bg-background sticky top-0 z-20">
         <div className="flex items-center gap-1 px-4 md:px-6 overflow-x-auto">
           {TABS.map((t) => {
             const active = t.exact ? pathname === t.to : pathname.startsWith(t.to);

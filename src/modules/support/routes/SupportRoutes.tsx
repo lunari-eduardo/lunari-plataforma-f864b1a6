@@ -1,4 +1,5 @@
 import { Route, Routes, Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import SupportPage from "../components/user/SupportPage";
 import TicketDetailPage from "../components/user/TicketDetailPage";
 import AdminDashboardPage from "../components/admin/AdminDashboardPage";
@@ -9,6 +10,7 @@ import FAQManagerPage from "../components/admin/FAQManagerPage";
 import FAQEditorPage from "../components/admin/FAQEditorPage";
 import { useSupportHost } from "../SupportHostProvider";
 import { isAdminContext } from "@/lib/appContext";
+import { useAccessControl } from "@/hooks/useAccessControl";
 
 export function SupportUserRoutes() {
   return (
@@ -22,6 +24,19 @@ export function SupportUserRoutes() {
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   const host = useSupportHost();
+  const { loading } = useAccessControl();
+
+  // Enquanto o estado de acesso ainda está carregando, NÃO redirecione:
+  // o host.isAdmin começa false até o fetch terminar e isso causa loop
+  // de volta para o Dashboard ao clicar em "Suporte".
+  if (loading) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!host.isAdmin) {
     // No subdomínio admin redireciona para "/"; no app fotógrafo, para /app/suporte
     return <Navigate to={isAdminContext() ? "/" : "/app/suporte"} replace />;

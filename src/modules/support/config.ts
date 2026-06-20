@@ -1,6 +1,8 @@
 // Configurações centralizadas do módulo de Suporte.
 // Mantenha aqui qualquer constante que possa precisar virar tabela/config no futuro.
 
+import { isAdminContext } from "@/lib/appContext";
+
 export const SUPPORT_WHATSAPP_NUMBER = "5551998287948"; // +55 51 99828-7948
 
 export const SUPPORT_LIMITS = {
@@ -11,18 +13,23 @@ export const SUPPORT_LIMITS = {
   acceptedVideoMimes: ["video/mp4", "video/webm", "video/quicktime"],
 };
 
+// Base do admin muda conforme o host:
+// - admin.lunarihub.com  → "/suporte"
+// - app.lunarihub.com    → "/app/admin/suporte" (compat)
+const adminBase = () => (isAdminContext() ? "/suporte" : "/app/admin/suporte");
+
 export const SUPPORT_ROUTES = {
   user: {
     home: "/app/suporte",
     ticket: (id: string) => `/app/suporte/chamado/${id}`,
   },
   admin: {
-    dashboard: "/app/admin/suporte",
-    tickets: "/app/admin/suporte/chamados",
-    ticket: (id: string) => `/app/admin/suporte/chamados/${id}`,
-    faq: "/app/admin/suporte/faq",
-    faqNew: "/app/admin/suporte/faq/novo",
-    faqEdit: (id: string) => `/app/admin/suporte/faq/${id}`,
+    get dashboard() { return adminBase(); },
+    get tickets() { return `${adminBase()}/chamados`; },
+    ticket: (id: string) => `${adminBase()}/chamados/${id}`,
+    get faq() { return `${adminBase()}/faq`; },
+    get faqNew() { return `${adminBase()}/faq/novo`; },
+    faqEdit: (id: string) => `${adminBase()}/faq/${id}`,
   },
 };
 
