@@ -134,6 +134,13 @@ export default function Header() {
                 <CreditCard className="mr-2 h-3 w-3" />
                 <span>Minha Assinatura</span>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs cursor-pointer"
+                onClick={() => navigate('/app/suporte')}
+              >
+                <LifeBuoy className="mr-2 h-3 w-3" />
+                <span>Suporte</span>
+              </DropdownMenuItem>
               {accessState.isAdmin && (
                 <>
                   <DropdownMenuItem 
