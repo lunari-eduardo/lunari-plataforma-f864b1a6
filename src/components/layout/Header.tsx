@@ -141,38 +141,7 @@ export default function Header() {
                 <LifeBuoy className="mr-2 h-3 w-3" />
                 <span>Suporte</span>
               </DropdownMenuItem>
-              {accessState.isAdmin && (
-                <>
-                  <DropdownMenuItem 
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/usuarios')}
-                  >
-                    <Shield className="mr-2 h-3 w-3" />
-                    <span>Painel Admin</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/conteudos')}
-                  >
-                    <FileText className="mr-2 h-3 w-3" />
-                    <span>Conteúdos</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/planos')}
-                  >
-                    <Package className="mr-2 h-3 w-3" />
-                    <span>Produtos & Planos</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-xs cursor-pointer"
-                    onClick={() => navigate('/app/admin/suporte')}
-                  >
-                    <LifeBuoy className="mr-2 h-3 w-3" />
-                    <span>Suporte (Admin)</span>
-                  </DropdownMenuItem>
-                </>
-              )}
+              {/* Itens admin removidos — painel administrativo migrado para admin.lunarihub.com */}
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem
                 className="text-xs cursor-pointer"
