@@ -134,36 +134,13 @@ export function WorkflowCardCollapsed({
     return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
   }, []);
 
-  // Calcular valor pendente (mesma lógica do WorkflowTable)
+  // F5.2: Usar valores já calculados em convertSessionToData (fonte única de verdade).
+  // session.restante e session.valorPago são strings BRL derivadas do DB (valor_total/valor_pago),
+  // que são mantidos consistentes pelo trigger recompute_session_paid.
   const calculateRestante = useCallback(() => {
-    const valorPacoteStr = typeof session.valorPacote === 'string' ? session.valorPacote : String(session.valorPacote || '0');
-    const valorPacote = parseFloat(valorPacoteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    
-    const valorFotoExtraStr = typeof session.valorTotalFotoExtra === 'string' ? session.valorTotalFotoExtra : String(session.valorTotalFotoExtra || '0');
-    const valorFotoExtra = parseFloat(valorFotoExtraStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    
-    const valorAdicionalStr = typeof session.valorAdicional === 'string' ? session.valorAdicional : String(session.valorAdicional || '0');
-    const valorAdicional = parseFloat(valorAdicionalStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    
-    const desconto = parseFloat(String(session.desconto || 0).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-
-    let valorProdutosManuais = 0;
-    if (session.produtosList && session.produtosList.length > 0) {
-      const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
-      valorProdutosManuais = produtosManuais.reduce((total, p) => {
-        const valorUnit = parseFloat(String(p.valorUnitario || 0)) || 0;
-        const quantidade = parseFloat(String(p.quantidade || 0)) || 0;
-        return total + valorUnit * quantidade;
-      }, 0);
-    }
-
-    const total = valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto;
-    
-    const valorPagoStr = typeof session.valorPago === 'string' ? session.valorPago : String(session.valorPago || '0');
-    const valorPago = parseFloat(valorPagoStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    
-    return total - valorPago;
-  }, [session]);
+    const restanteStr = typeof session.restante === 'string' ? session.restante : String(session.restante || '0');
+    return parseFloat(restanteStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+  }, [session.restante]);
 
   const paymentSubmittingRef = useRef(false);
   const handlePaymentAdd = useCallback(async () => {

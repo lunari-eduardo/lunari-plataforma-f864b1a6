@@ -94,27 +94,16 @@ export function WorkflowCardExpanded({
     return parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
   }, []);
 
-  // Cálculos financeiros (mesma lógica do WorkflowTable)
+  // F5.2: Usar valores já calculados em convertSessionToData (fonte única de verdade).
+  // session.total e session.valorPago são derivados de valor_total/valor_pago do DB,
+  // mantidos consistentes pelo trigger recompute_session_paid.
   const calculateTotal = useCallback(() => {
-    const valorPacote = parseCurrency(String(session.valorPacote || '0'));
-    const valorFotoExtra = parseCurrency(String(session.valorTotalFotoExtra || '0'));
-    const valorAdicional = parseCurrency(String(session.valorAdicional || '0'));
-    const desconto = parseCurrency(String(session.desconto || '0'));
-
-    let valorProdutosManuais = 0;
-    if (session.produtosList && session.produtosList.length > 0) {
-      const produtosManuais = session.produtosList.filter(p => p.tipo === 'manual');
-      valorProdutosManuais = produtosManuais.reduce((total, p) => {
-        return total + (parseFloat(String(p.valorUnitario || 0)) || 0) * (parseFloat(String(p.quantidade || 0)) || 0);
-      }, 0);
-    }
-
-    return Math.max(0, valorPacote + valorFotoExtra + valorProdutosManuais + valorAdicional - desconto);
-  }, [session, parseCurrency]);
+    return parseCurrency(String(session.total || '0'));
+  }, [session.total, parseCurrency]);
 
   const valorPago = parseCurrency(String(session.valorPago || '0'));
   const total = calculateTotal();
-  const pendente = Math.max(0, total - valorPago);
+  const pendente = Math.max(0, parseCurrency(String(session.restante || '0')));
 
   // Handlers para campos editáveis
   const handleDescontoBlur = useCallback(() => {
