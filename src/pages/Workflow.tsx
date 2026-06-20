@@ -162,11 +162,17 @@ function WorkflowContent() {
           filtered.some((s) => {
             const prev = prevSessions.find(p => p.id === s.id);
             if (!prev) return true; // Sessão nova
-            // Comparar updated_at E valor_pago para detectar mudanças de pagamento
-            // O trigger recompute_session_paid atualiza ambos, mas valor_pago é crítico
+            // Compara todos os campos que afetam o render dos cards/header
             return s.updated_at !== prev.updated_at || 
                    s.valor_pago !== prev.valor_pago ||
-                   s.valor_total !== prev.valor_total;
+                   s.valor_total !== prev.valor_total ||
+                   s.valor_base_pacote !== prev.valor_base_pacote ||
+                   s.valor_total_foto_extra !== prev.valor_total_foto_extra ||
+                   s.valor_adicional !== prev.valor_adicional ||
+                   s.desconto !== prev.desconto ||
+                   s.qtd_fotos_extra !== prev.qtd_fotos_extra ||
+                   s.status !== prev.status ||
+                   (s.produtos_incluidos?.length || 0) !== (prev.produtos_incluidos?.length || 0);
           });
         
         if (hasChanges) {
