@@ -127,22 +127,59 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const mergeUpdate = useCallback((session: WorkflowSession) => {
     if (!session) return;
-    const normalized = normalizeWorkflowSession(session);
-    console.log('🔀 [WorkflowCache] mergeUpdate called for session:', normalized.id, 'updated_at:', normalized.updated_at);
-    const { year, month } = getYearMonthFromDateString(normalized.data_sessao);
-    const key = getCacheKey(year, month);
-    
-    const currentSessions = memoryCache.current.get(key) || [];
-    const index = currentSessions.findIndex(s => s.id === normalized.id);
-    
+    // Normalização parcial: NÃO força defaults em campos ausentes do payload
+    // (evita que fetches parciais zerem valor_base_pacote, regras_congeladas, etc.)
+    const normalized = normalizeWorkflowSessionPartial(session) as WorkflowSession;
+    console.log('🔀 [WorkflowCache] mergeUpdate called for session:', (normalized as any).id, 'updated_at:', (normalized as any).updated_at);
+
+    // 1) Tentar localizar a sessão em algum bucket cacheado (por id UUID ou session_id text)
+    let foundKey: string | null = null;
+    let foundIdx = -1;
+    for (const [k, list] of memoryCache.current.entries()) {
+      const i = list.findIndex(
+        (s) => s.id === (normalized as any).id || (s as any).session_id === (normalized as any).session_id
+      );
+      if (i >= 0) {
+        foundKey = k;
+        foundIdx = i;
+        break;
+      }
+    }
+
+    let year: number;
+    let month: number;
+    let currentSessions: WorkflowSession[];
+    let index: number;
+
+    if (foundKey) {
+      // Atualizar no bucket onde a sessão já vive (não depende de data_sessao do payload)
+      const [yStr, mStr] = foundKey.split('-');
+      year = parseInt(yStr);
+      month = parseInt(mStr);
+      currentSessions = memoryCache.current.get(foundKey) || [];
+      index = foundIdx;
+    } else if ((normalized as any).data_sessao) {
+      // Sessão nova com data conhecida → inserir no bucket correto
+      const ym = getYearMonthFromDateString((normalized as any).data_sessao);
+      year = ym.year;
+      month = ym.month;
+      currentSessions = memoryCache.current.get(getCacheKey(year, month)) || [];
+      index = -1;
+    } else {
+      // Payload parcial sem bucket conhecido e sem data → ignorar para não criar "registro lixo"
+      console.warn('⚠️ [WorkflowCache] mergeUpdate ignorado: sessão sem bucket e sem data_sessao', (normalized as any).id);
+      return;
+    }
+
     let updatedSessions: WorkflowSession[];
     if (index >= 0) {
       updatedSessions = [...currentSessions];
+      // Shallow merge preservando campos populados (normalized é Partial)
       updatedSessions[index] = { ...updatedSessions[index], ...normalized };
     } else {
       updatedSessions = [...currentSessions, normalized];
     }
-    
+
     setMonthData(year, month, updatedSessions);
   }, [setMonthData]);
 
