@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Save, Package, HardDrive, Layers, Info, Sparkles, Tag, Plus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MoneyInputBRL } from '@/components/admin/MoneyInputBRL';
+import { IntegerInput } from '@/components/admin/IntegerInput';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -312,19 +314,19 @@ export default function AdminPlanos() {
                         </td>
                         <td className="px-3 py-2 text-muted-foreground font-mono">{plan.code}</td>
                         <td className="px-3 py-2 text-right">
-                          <Input value={centsToReais(getFieldValue(plan, 'monthly_price_cents') as number)} onChange={e => updateField(plan.id, 'monthly_price_cents', reaisToCents(e.target.value))} className="h-7 text-xs w-24 text-right ml-auto" />
+                          <MoneyInputBRL valueCents={getFieldValue(plan, 'monthly_price_cents') as number} onChangeCents={(c) => updateField(plan.id, 'monthly_price_cents', c)} className="h-7 text-xs w-24 text-right ml-auto" />
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <Input value={centsToReais(getFieldValue(plan, 'yearly_price_cents') as number)} onChange={e => updateField(plan.id, 'yearly_price_cents', reaisToCents(e.target.value))} className="h-7 text-xs w-24 text-right ml-auto" />
+                          <MoneyInputBRL valueCents={getFieldValue(plan, 'yearly_price_cents') as number} onChangeCents={(c) => updateField(plan.id, 'yearly_price_cents', c)} className="h-7 text-xs w-24 text-right ml-auto" />
                         </td>
                         {family === 'transfer' && (
                           <td className="px-3 py-2 text-right">
-                            <Input value={bytesToGB(getFieldValue(plan, 'transfer_storage_bytes') as number)} onChange={e => updateField(plan.id, 'transfer_storage_bytes', gbToBytes(e.target.value))} className="h-7 text-xs w-16 text-right ml-auto" />
+                            <IntegerInput value={parseInt(bytesToGB(getFieldValue(plan, 'transfer_storage_bytes') as number)) || 0} onChange={(gb) => updateField(plan.id, 'transfer_storage_bytes', gbToBytes(String(gb)))} className="h-7 text-xs w-16 text-right ml-auto" min={0} />
                           </td>
                         )}
                         {family === 'combo' && (
                           <td className="px-3 py-2 text-right">
-                            <Input type="number" value={getFieldValue(plan, 'select_credits_monthly') as number} onChange={e => updateField(plan.id, 'select_credits_monthly', parseInt(e.target.value) || 0)} className="h-7 text-xs w-20 text-right ml-auto" />
+                            <IntegerInput value={getFieldValue(plan, 'select_credits_monthly') as number} onChange={(n) => updateField(plan.id, 'select_credits_monthly', n)} className="h-7 text-xs w-20 text-right ml-auto" min={0} />
                           </td>
                         )}
                         <td className="px-3 py-2 text-center">
@@ -365,10 +367,10 @@ export default function AdminPlanos() {
                       <Input value={getCreditFieldValue(pkg, 'name') as string} onChange={e => updateCreditField(pkg.id, 'name', e.target.value)} className="h-7 text-xs w-44" />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Input type="number" value={getCreditFieldValue(pkg, 'credits') as number} onChange={e => updateCreditField(pkg.id, 'credits', parseInt(e.target.value) || 0)} className="h-7 text-xs w-20 text-right ml-auto" />
+                      <IntegerInput value={getCreditFieldValue(pkg, 'credits') as number} onChange={(n) => updateCreditField(pkg.id, 'credits', n)} className="h-7 text-xs w-20 text-right ml-auto" min={0} />
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Input value={centsToReais(getCreditFieldValue(pkg, 'price_cents') as number)} onChange={e => updateCreditField(pkg.id, 'price_cents', reaisToCents(e.target.value))} className="h-7 text-xs w-24 text-right ml-auto" />
+                      <MoneyInputBRL valueCents={getCreditFieldValue(pkg, 'price_cents') as number} onChangeCents={(c) => updateCreditField(pkg.id, 'price_cents', c)} className="h-7 text-xs w-24 text-right ml-auto" />
                     </td>
                     <td className="px-3 py-2 text-center">
                       <Switch checked={getCreditFieldValue(pkg, 'active') as boolean} onCheckedChange={v => updateCreditField(pkg.id, 'active', v)} />
@@ -414,7 +416,7 @@ export default function AdminPlanos() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Valor</Label>
-                <Input type="number" value={newCoupon.discount_value} onChange={e => setNewCoupon(p => ({ ...p, discount_value: parseInt(e.target.value) || 0 }))} className="h-8 text-xs" />
+                <IntegerInput value={newCoupon.discount_value} onChange={(n) => setNewCoupon(p => ({ ...p, discount_value: n }))} className="h-8 text-xs" min={0} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Aplica-se a</Label>

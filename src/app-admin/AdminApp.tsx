@@ -16,7 +16,11 @@ import { AdminShell } from "./AdminShell";
 import { AdminAuthGate } from "./components/AdminAuthGate";
 
 import DashboardPage from "./modules/dashboard/DashboardPage";
-import AssinaturasPage from "./modules/assinaturas/AssinaturasPage";
+import UsuariosLayout from "./modules/usuarios/UsuariosLayout";
+import AssinaturasPage from "./modules/usuarios/pages/AssinaturasPage";
+import EmailsAutorizadosPage from "./modules/usuarios/pages/EmailsAutorizadosPage";
+import IntegracoesPage from "./modules/usuarios/pages/IntegracoesPage";
+import EstrategiaPage from "./modules/usuarios/pages/EstrategiaPage";
 import StoragePage from "./modules/storage/StoragePage";
 import SistemaPage from "./modules/sistema/SistemaPage";
 import LogsPage from "./modules/audit-logs/LogsPage";
@@ -45,8 +49,19 @@ export default function AdminApp() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="usuarios" element={<AdminUsuarios />} />
-        <Route path="assinaturas" element={<AssinaturasPage />} />
+
+        {/* Usuários — agora com sub-abas como rotas */}
+        <Route path="usuarios" element={<UsuariosLayout />}>
+          <Route index element={<AdminUsuarios />} />
+          <Route path="assinaturas" element={<AssinaturasPage />} />
+          <Route path="emails" element={<EmailsAutorizadosPage />} />
+          <Route path="integracoes" element={<IntegracoesPage />} />
+          <Route path="estrategia" element={<EstrategiaPage />} />
+        </Route>
+
+        {/* Redirect de retrocompatibilidade: /assinaturas → /usuarios/assinaturas */}
+        <Route path="assinaturas" element={<Navigate to="/usuarios/assinaturas" replace />} />
+
         <Route path="planos" element={<AdminPlanos />} />
         <Route path="conteudos" element={<AdminConteudos />} />
         <Route path="conteudos/novo" element={<AdminConteudoNovo />} />
