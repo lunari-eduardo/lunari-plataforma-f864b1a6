@@ -39,21 +39,21 @@ export default function AdminTicketDetailPage() {
     if (lockRef.current) return;
     if (!ticket || !host.currentUser) return;
     const trimmed = body.trim();
-    if (!trimmed) return;
+    if (!trimmed && pending.length === 0) return;
     lockRef.current = true;
     setSending(true);
     const savedBody = trimmed;
     const filesToUpload = pending;
     setBody("");
-    pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     setPending([]);
     try {
       const msg = await postMessage(host.supabase, {
         ticketId: ticket.id,
         authorId: host.currentUser.id,
         authorRole: "admin",
-        body: savedBody,
+        body: savedBody || "[anexo]",
       });
+      const failed: PendingAttachment[] = [];
       for (const p of filesToUpload) {
         try {
           await uploadAndRegisterAttachment(host, {
@@ -61,15 +61,21 @@ export default function AdminTicketDetailPage() {
             messageId: msg.id,
             file: p.file,
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error(err);
-          toast.error(`Falha ao subir anexo: ${p.file.name}`);
+          toast.error(`Falha ao subir ${p.file.name}: ${err?.message ?? "erro desconhecido"}`);
+          failed.push(p);
         }
       }
+      filesToUpload
+        .filter((p) => !failed.includes(p))
+        .forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      if (failed.length > 0) setPending(failed);
       await refreshMsgs();
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao enviar");
       setBody(savedBody);
+      setPending(filesToUpload);
     } finally {
       setSending(false);
       lockRef.current = false;
