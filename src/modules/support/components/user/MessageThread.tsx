@@ -35,7 +35,9 @@ export function MessageBubble({
           <span>·</span>
           <span>{format(new Date(message.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
         </div>
-        <MarkdownRenderer source={message.body} />
+        {message.body && message.body.trim() && message.body.trim() !== "[anexo]" && (
+          <MarkdownRenderer source={message.body} />
+        )}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {attachments.map((a) => (

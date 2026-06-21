@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { gestaoR2Upload } from '@/lib/gestaoR2Upload';
 
 export type R2Context =
   | 'avatar'
@@ -35,43 +35,16 @@ export function useR2Upload({ context, entityId, onSuccess, onError }: UseR2Uplo
     async (file: File, overrideEntityId?: string): Promise<R2UploadResult | null> => {
       setUploading(true);
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('context', context);
         const eid = overrideEntityId ?? entityId;
-        if (eid) formData.append('entityId', eid);
-
-        const { data, error } = await supabase.functions.invoke('gestao-r2-upload', {
-          body: formData,
-        });
-
-        if (error) {
-          // Tentar extrair mensagem real da Edge Function (não fica em error.message).
-          let detail = error.message || 'Erro no upload';
-          try {
-            const ctx: any = (error as any).context;
-            if (ctx?.json) {
-              const body = await ctx.json();
-              if (body?.error) detail = String(body.error);
-            } else if (ctx?.text) {
-              const txt = await ctx.text();
-              try {
-                const parsed = JSON.parse(txt);
-                if (parsed?.error) detail = String(parsed.error);
-              } catch {}
-            }
-          } catch {}
-          throw new Error(detail);
-        }
-        if (!data?.success) throw new Error(data?.error || 'Upload falhou');
+        const data = await gestaoR2Upload({ file, context, entityId: eid });
 
         const result: R2UploadResult = {
           url: data.url || '',
           storagePath: data.storagePath,
           isPublic: !!data.isPublic,
-          filename: data.filename,
-          fileSize: data.fileSize,
-          mimeType: data.mimeType,
+          filename: data.filename ?? file.name,
+          fileSize: data.fileSize ?? file.size,
+          mimeType: data.mimeType ?? file.type,
         };
         onSuccess?.(result);
         return result;

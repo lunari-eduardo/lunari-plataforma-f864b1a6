@@ -12,29 +12,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { SupportHostProvider } from "@/modules/support";
 import type { SupportHost, SupportHostStorage } from "@/modules/support";
+import { gestaoR2Upload } from "@/lib/gestaoR2Upload";
 
 const R2_CDN_BASE = "https://media.lunarihub.com";
 
 const storage: SupportHostStorage = {
   async uploadFile(file, opts) {
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("context", opts.context);
-    fd.append("entityId", opts.entityId);
-    const { data, error } = await supabase.functions.invoke("gestao-r2-upload", { body: fd });
-    if (error) {
-      let detail = error.message || "Erro no upload";
-      try {
-        const ctx: any = (error as any).context;
-        if (ctx?.json) {
-          const body = await ctx.json();
-          if (body?.error) detail = String(body.error);
-        }
-      } catch {}
-      throw new Error(detail);
-    }
-    if (!data?.success) throw new Error(data?.error || "Upload falhou");
-    return { r2Key: data.storagePath as string, url: data.url || undefined };
+    const result = await gestaoR2Upload({
+      file,
+      context: opts.context,
+      entityId: opts.entityId,
+    });
+    return { r2Key: result.storagePath, url: result.url || undefined };
   },
   async getSignedUrl(r2Key, expiresIn = 300) {
     // Anexos de FAQ são públicos
