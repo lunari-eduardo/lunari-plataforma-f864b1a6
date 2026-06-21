@@ -132,14 +132,11 @@ export function useFileUpload() {
       const context = isClient ? 'client-document' : 'task';
       const entityId = metadata.clienteId || metadata.taskId;
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('context', context);
-      if (entityId) formData.append('entityId', entityId);
-
-      const { data: upRes, error: upErr } = await supabase.functions.invoke('gestao-r2-upload', { body: formData });
-      if (upErr) throw upErr;
-      if (!upRes?.success) throw new Error(upRes?.error || 'Falha no upload');
+      const upRes = await (await import('@/lib/gestaoR2Upload')).gestaoR2Upload({
+        file,
+        context,
+        entityId,
+      });
       const storagePath = upRes.storagePath as string;
 
       // Persiste metadados conforme contexto
