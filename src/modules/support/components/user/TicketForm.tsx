@@ -69,8 +69,8 @@ export function TicketForm() {
       toast.error("Selecione uma categoria");
       return;
     }
-    if (bodyTrim.length < 1) {
-      toast.error("Descreva o problema");
+    if (bodyTrim.length < 1 && pending.length === 0) {
+      toast.error("Descreva o problema ou anexe um arquivo");
       return;
     }
     lockRef.current = true;
@@ -88,8 +88,9 @@ export function TicketForm() {
         ticketId: ticket.id,
         authorId: host.currentUser.id,
         authorRole: "user",
-        body: bodyTrim,
+        body: bodyTrim || "[anexo]",
       });
+      const failed: PendingAttachment[] = [];
       for (const p of filesToUpload) {
         try {
           await uploadAndRegisterAttachment(host, {
@@ -97,12 +98,18 @@ export function TicketForm() {
             messageId: msg.id,
             file: p.file,
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error("Falha ao subir anexo", err);
-          toast.error(`Falha ao subir anexo: ${p.file.name}`);
+          toast.error(`Falha ao subir ${p.file.name}: ${err?.message ?? "erro desconhecido"}`);
+          failed.push(p);
         }
       }
-      reset();
+      if (failed.length === 0) {
+        reset();
+      } else {
+        // mantém os que falharam para o usuário retentar no detalhe do ticket
+        setPending(failed);
+      }
       navigate(SUPPORT_ROUTES.user.ticket(ticket.id));
     } catch (err: any) {
       console.error(err);
