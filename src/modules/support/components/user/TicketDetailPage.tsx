@@ -37,8 +37,8 @@ export default function TicketDetailPage() {
     if (lockRef.current) return;
     if (!ticket || !host.currentUser) return;
     const trimmed = body.trim();
-    if (trimmed.length < 1) {
-      toast.error("Mensagem vazia");
+    if (trimmed.length < 1 && pending.length === 0) {
+      toast.error("Escreva uma mensagem ou anexe um arquivo");
       return;
     }
     lockRef.current = true;
@@ -46,15 +46,15 @@ export default function TicketDetailPage() {
     const filesToUpload = pending;
     const savedBody = trimmed;
     setBody("");
-    pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     setPending([]);
     try {
       const msg = await postMessage(host.supabase, {
         ticketId: ticket.id,
         authorId: host.currentUser.id,
         authorRole: host.isAdmin && ticket.user_id !== host.currentUser.id ? "admin" : "user",
-        body: savedBody,
+        body: savedBody || "[anexo]",
       });
+      const failed: PendingAttachment[] = [];
       for (const p of filesToUpload) {
         try {
           await uploadAndRegisterAttachment(host, {
@@ -62,16 +62,23 @@ export default function TicketDetailPage() {
             messageId: msg.id,
             file: p.file,
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error(err);
-          toast.error(`Falha ao subir anexo: ${p.file.name}`);
+          toast.error(`Falha ao subir ${p.file.name}: ${err?.message ?? "erro desconhecido"}`);
+          failed.push(p);
         }
       }
+      // libera preview apenas dos que subiram OK
+      filesToUpload
+        .filter((p) => !failed.includes(p))
+        .forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      if (failed.length > 0) setPending(failed);
       await refresh();
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message ?? "Erro ao enviar mensagem");
       setBody(savedBody);
+      setPending(filesToUpload);
     } finally {
       setSending(false);
       lockRef.current = false;
