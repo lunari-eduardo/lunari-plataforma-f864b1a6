@@ -20,7 +20,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    console.log(`[${requestId}] gestao-r2-upload start`);
+    const reqContentType = req.headers.get("content-type") || "";
+    console.log(`[${requestId}] gestao-r2-upload start ct="${reqContentType}"`);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Não autorizado" }, 401);
@@ -39,12 +40,29 @@ Deno.serve(async (req) => {
       return json({ error: "Token inválido" }, 401);
     }
 
+    if (!reqContentType.toLowerCase().startsWith("multipart/form-data")) {
+      console.error(`[${requestId}] wrong content-type: ${reqContentType}`);
+      return json(
+        {
+          error: `Envie multipart/form-data, não '${reqContentType || "vazio"}'`,
+          receivedContentType: reqContentType,
+        },
+        400
+      );
+    }
+
     let formData: FormData;
     try {
       formData = await req.formData();
     } catch (e) {
       console.error(`[${requestId}] formData parse error`, e);
-      return json({ error: "Body inválido (esperado multipart/form-data)" }, 400);
+      return json(
+        {
+          error: "Body inválido (esperado multipart/form-data)",
+          receivedContentType: reqContentType,
+        },
+        400
+      );
     }
 
     const file = formData.get("file") as File | null;
