@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { gestaoR2Upload } from '@/lib/gestaoR2Upload';
 
 export type R2Context =
   | 'avatar'
