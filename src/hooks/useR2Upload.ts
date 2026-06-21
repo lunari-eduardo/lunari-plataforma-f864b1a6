@@ -42,9 +42,9 @@ export function useR2Upload({ context, entityId, onSuccess, onError }: UseR2Uplo
           url: data.url || '',
           storagePath: data.storagePath,
           isPublic: !!data.isPublic,
-          filename: data.filename,
-          fileSize: data.fileSize,
-          mimeType: data.mimeType,
+          filename: data.filename ?? file.name,
+          fileSize: data.fileSize ?? file.size,
+          mimeType: data.mimeType ?? file.type,
         };
         onSuccess?.(result);
         return result;
