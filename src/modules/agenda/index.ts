@@ -17,6 +17,7 @@ export { checkSlot } from "./application/queries/checkSlot";
 export { createAppointment } from "./application/commands/createAppointment";
 export { confirmAppointment } from "./application/commands/confirmAppointment";
 export { rescheduleAppointment } from "./application/commands/rescheduleAppointment";
+export { updateAppointment } from "./application/commands/updateAppointment";
 export { cancelAppointment } from "./application/commands/cancelAppointment";
 export { addAvailabilitySlots } from "./application/commands/addAvailabilitySlots";
 export { clearAvailabilityForDate } from "./application/commands/clearAvailabilityForDate";
