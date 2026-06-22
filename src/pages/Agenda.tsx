@@ -20,8 +20,13 @@ import AgendaHeader from "@/components/agenda/AgendaHeader";
 import AgendaModals from "@/components/agenda/AgendaModals";
 import AgendaTasksSection from "@/components/agenda/AgendaTasksSection";
 import UnifiedTaskModal from "@/components/tarefas/UnifiedTaskModal";
-import { useUnifiedEventsRangeQuery, type UnifiedEvent } from "@/modules/agenda/presentation";
-import { useAgenda, Appointment } from "@/hooks/useAgenda";
+import {
+  useUnifiedEventsRangeQuery,
+  type UnifiedEvent,
+  type Appointment,
+} from "@/modules/agenda/presentation";
+import { useAgenda } from "@/hooks/useAgenda";
+
 import { useAvailability } from "@/hooks/useAvailability";
 import { useIntegration } from "@/hooks/useIntegration";
 import { useOrcamentos } from "@/hooks/useOrcamentos";
