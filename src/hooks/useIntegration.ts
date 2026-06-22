@@ -11,10 +11,17 @@ import { useOrcamentos } from './useOrcamentos';
 import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage } from '@/utils/dateUtils';
 import {
-  Appointment,
   useAppointmentsRangeQuery,
   useAppointmentMutations,
 } from '@/modules/agenda/presentation';
+
+type AppointmentLike = {
+  id: string;
+  status: 'confirmado' | 'a confirmar';
+  client?: string;
+  orcamentoId?: string;
+  origem?: 'agenda' | 'orcamento';
+};
 
 export const useIntegration = () => {
   const [isReady, setIsReady] = useState(false);
@@ -31,7 +38,7 @@ export const useIntegration = () => {
     };
   }, []);
   const appointmentsQuery = useAppointmentsRangeQuery(range);
-  const appointments: Appointment[] = appointmentsQuery.data ?? [];
+  const appointments = (appointmentsQuery.data ?? []) as AppointmentLike[];
 
   const { addAppointment, updateAppointment, deleteAppointment } = useAppointmentMutations();
 
