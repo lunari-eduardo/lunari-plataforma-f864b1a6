@@ -12,4 +12,6 @@ export const agendaKeys = {
   availabilityRange: (range: { start: string; end: string }) =>
     [...agendaKeys.availability(), "range", range.start, range.end] as const,
   nextFreeSlot: (input: unknown) => [...agendaKeys.all, "nextFreeSlot", input] as const,
+  checkSlot: (input: { date: string; time: string; excludeAppointmentId?: string }) =>
+    [...agendaKeys.all, "checkSlot", input.date, input.time, input.excludeAppointmentId ?? null] as const,
 } as const;
