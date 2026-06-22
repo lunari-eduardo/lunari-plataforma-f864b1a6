@@ -1,5 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import { format } from 'date-fns';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  addDays,
+  subDays,
+} from 'date-fns';
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
@@ -10,7 +20,7 @@ import AgendaHeader from "@/components/agenda/AgendaHeader";
 import AgendaModals from "@/components/agenda/AgendaModals";
 import AgendaTasksSection from "@/components/agenda/AgendaTasksSection";
 import UnifiedTaskModal from "@/components/tarefas/UnifiedTaskModal";
-import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
+import { useUnifiedEventsRangeQuery, type UnifiedEvent } from "@/modules/agenda/presentation";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useIntegration } from "@/hooks/useIntegration";
@@ -32,7 +42,6 @@ import { CalendarDays } from 'lucide-react';
 
 
 export default function Agenda() {
-  const { unifiedEvents } = useUnifiedCalendar();
   const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useAgenda();
   const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
@@ -53,6 +62,32 @@ export default function Agenda() {
     navigateToday,
     navigateToDate
   } = useAgendaNavigation();
+
+  // Compute range (yyyy-MM-dd) based on the active view, with a small buffer
+  // for adjacent weeks/months so views don't flicker on edges.
+  const range = useMemo(() => {
+    let start: Date;
+    let end: Date;
+    if (view === 'year') {
+      start = startOfYear(date);
+      end = endOfYear(date);
+    } else if (view === 'month') {
+      start = subDays(startOfMonth(date), 7);
+      end = addDays(endOfMonth(date), 7);
+    } else if (view === 'week') {
+      start = subDays(startOfWeek(date, { weekStartsOn: 0 }), 1);
+      end = addDays(endOfWeek(date, { weekStartsOn: 0 }), 1);
+    } else {
+      start = subDays(date, 1);
+      end = addDays(date, 1);
+    }
+    return {
+      start: format(start, 'yyyy-MM-dd'),
+      end: format(end, 'yyyy-MM-dd'),
+    };
+  }, [view, date]);
+
+  const { unifiedEvents } = useUnifiedEventsRangeQuery(range);
 
   // Auto-load month data when navigating
   useEffect(() => {
@@ -144,7 +179,7 @@ export default function Agenda() {
         openAppointmentDetails(appointment);
       }
     } else if (event.type === 'budget') {
-      const budget = event.originalData as Orcamento;
+      const budget = event.originalData as unknown as Orcamento;
       openBudgetModal(budget);
     }
   }, [isFromBudget, getBudgetId, orcamentos, openBudgetAppointmentModal, openAppointmentDetails, openBudgetModal]);
