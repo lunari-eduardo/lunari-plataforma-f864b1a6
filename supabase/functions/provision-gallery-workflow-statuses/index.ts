@@ -171,7 +171,8 @@ serve(async (req) => {
             nome: statusDef.nome,
             cor: statusDef.cor,
             ordem: nextOrdem,
-            is_system_status: true
+            is_system_status: true,
+            is_hidden_in_workflow: true
           });
 
         if (error) {
