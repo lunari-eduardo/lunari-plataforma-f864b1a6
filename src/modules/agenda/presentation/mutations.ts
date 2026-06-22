@@ -102,3 +102,15 @@ export function useDeleteAvailabilitySlotMutation(opts: MutOpts<unknown> = {}) {
     },
   });
 }
+
+export function useUpdateAppointmentMutation(opts: MutOpts<unknown> = {}) {
+  const qc = useQueryClient();
+  return useCapabilityMutation(updateAppointment, {
+    ...opts,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
+      qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+      opts.onSuccess?.(data);
+    },
+  });
+}
