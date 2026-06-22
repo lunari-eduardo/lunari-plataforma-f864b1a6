@@ -9,6 +9,8 @@ import { Loader2 } from "lucide-react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
+import { CapabilityRuntimeProvider } from "@/shared/capability";
+import { AgendaInvalidationBridge } from "@/modules/agenda";
 
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
@@ -59,13 +61,16 @@ function App() {
         <ThemeProvider>
           <VisualThemeProvider>
             <AuthProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <React.Suspense fallback={<ContextFallback />}>
-                  {context === "admin" ? <AdminApp /> : <PhotographerApp />}
-                </React.Suspense>
-              </TooltipProvider>
+              <CapabilityRuntimeProvider>
+                <AgendaInvalidationBridge />
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <React.Suspense fallback={<ContextFallback />}>
+                    {context === "admin" ? <AdminApp /> : <PhotographerApp />}
+                  </React.Suspense>
+                </TooltipProvider>
+              </CapabilityRuntimeProvider>
             </AuthProvider>
           </VisualThemeProvider>
         </ThemeProvider>
