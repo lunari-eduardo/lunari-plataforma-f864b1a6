@@ -269,10 +269,26 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
   remover o contexto — não há conflito porque cada canal usa nome
   único por `channelId`.
 
+**Passo 7d1 concluído:**
+- Nova capability `agenda.appointments.update` (genérica, patch parcial)
+  + `useUpdateAppointmentMutation`.
+- Novo hook composto `useAppointmentMutations` em
+  `presentation/appointmentMutations.ts`: expõe `addAppointment` /
+  `updateAppointment` / `deleteAppointment` aceitando `Date` (normaliza
+  para ISO antes de chamar as mutations), substituindo o adaptador
+  transitório `useLegacyAgendaMutations` (arquivo removido).
+- `Agenda.tsx`, `LeadSchedulingModal` e `SchedulingConfirmationModal`
+  migrados para o novo hook. O `useEffect` de `loadMonthData` em
+  `Agenda.tsx` foi removido — o range já inclui buffer e o TanStack
+  cuida do cache por chave.
+- Novo evento `agenda.appointment.updated` cobre invalidações
+  cross-tab via `AgendaInvalidationBridge`.
+
 **Pendente:**
-- 7d: substituir `useLegacyAgendaMutations` por mutations baseadas em
-  capabilities; remover `AgendaContext`, `AgendaProvider`,
-  `useAppointments`, `useAvailability`.
+- 7d2: migrar `useIntegration` para `useAppointmentsRangeQuery` e
+  deletar `src/hooks/useAppointments.ts`.
+- 7d3: extrair `availabilityTypes` + settings, remover `AgendaContext`,
+  `AgendaProvider` e `useAvailability` shim.
 - 7e: inverter dependência do `SupabaseAgendaAdapter` → repos do módulo.
 
 Esses passos têm impacto direto em realtime/cache e devem ser

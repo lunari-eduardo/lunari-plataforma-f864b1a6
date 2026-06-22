@@ -36,6 +36,11 @@ export const AgendaInvalidationBridge: React.FC = () => {
         qc.invalidateQueries({ queryKey: agendaKeys.availability() });
         qc.invalidateQueries({ queryKey: agendaKeys.appointmentById(e.payload.appointmentId) });
       }),
+      eventBus.on("agenda.appointment.updated", (e) => {
+        qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
+        qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+        qc.invalidateQueries({ queryKey: agendaKeys.appointmentById(e.payload.appointmentId) });
+      }),
       eventBus.on("agenda.availability.changed", () => {
         qc.invalidateQueries({ queryKey: agendaKeys.availability() });
       }),
