@@ -63,6 +63,32 @@ export default function Agenda() {
     navigateToDate
   } = useAgendaNavigation();
 
+  // Compute range (yyyy-MM-dd) based on the active view, with a small buffer
+  // for adjacent weeks/months so views don't flicker on edges.
+  const range = useMemo(() => {
+    let start: Date;
+    let end: Date;
+    if (view === 'year') {
+      start = startOfYear(date);
+      end = endOfYear(date);
+    } else if (view === 'month') {
+      start = subDays(startOfMonth(date), 7);
+      end = addDays(endOfMonth(date), 7);
+    } else if (view === 'week') {
+      start = subDays(startOfWeek(date, { weekStartsOn: 0 }), 1);
+      end = addDays(endOfWeek(date, { weekStartsOn: 0 }), 1);
+    } else {
+      start = subDays(date, 1);
+      end = addDays(date, 1);
+    }
+    return {
+      start: format(start, 'yyyy-MM-dd'),
+      end: format(end, 'yyyy-MM-dd'),
+    };
+  }, [view, date]);
+
+  const { unifiedEvents } = useUnifiedEventsRangeQuery(range);
+
   // Auto-load month data when navigating
   useEffect(() => {
     const year = date.getFullYear();
