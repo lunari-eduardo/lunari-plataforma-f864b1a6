@@ -4,7 +4,7 @@ import { TimeInput } from "@/components/ui/time-input";
 import { useState, useRef } from 'react';
 import ConflictIndicator from './ConflictIndicator';
 import { Plus, Trash2, RotateCcw } from 'lucide-react';
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import { UnifiedEvent } from '@/modules/agenda/presentation';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useCustomTimeSlots } from '@/hooks/useCustomTimeSlots';

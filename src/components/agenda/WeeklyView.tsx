@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { format, isSameDay, isToday, startOfWeek, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import { UnifiedEvent } from '@/modules/agenda/presentation';
 import UnifiedEventCard from './UnifiedEventCard';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';

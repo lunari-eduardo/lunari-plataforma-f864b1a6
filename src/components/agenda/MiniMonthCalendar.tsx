@@ -16,7 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import type { UnifiedEvent } from '@/modules/agenda/presentation';
 import type { Appointment } from '@/hooks/useAgenda';
 
 interface MiniMonthCalendarProps {

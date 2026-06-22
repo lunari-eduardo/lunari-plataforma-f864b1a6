@@ -1,5 +1,5 @@
 import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
-import type { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import type { UnifiedEvent } from '@/modules/agenda/presentation';
 import type { Appointment } from '@/hooks/useAgenda';
 
 export interface RevenueSummary {
