@@ -30,6 +30,10 @@ declare module "@/shared/event-bus" {
       appointmentId: string;
       action: "preserve" | "refund" | "remove";
     };
+    "agenda.appointment.updated": {
+      appointmentId: string;
+      patch: Record<string, unknown>;
+    };
     "agenda.availability.changed": {
       date: string;
       operation: "add" | "clear" | "delete";
