@@ -14,6 +14,7 @@ import {
   createAppointment,
   deleteAvailabilitySlot,
   rescheduleAppointment,
+  updateAppointment,
 } from "../index";
 import { agendaKeys } from "./keys";
 
