@@ -14,8 +14,9 @@ export const isErr = <T, E>(r: Result<T, E>): r is Err<E> => !r.ok;
 
 export function unwrap<T, E>(r: Result<T, E>): T {
   if (r.ok) return r.value;
+  const e = (r as Err<E>).error;
   throw new Error(
-    `unwrap on Err: ${typeof r.error === "object" ? JSON.stringify(r.error) : String(r.error)}`,
+    `unwrap on Err: ${typeof e === "object" ? JSON.stringify(e) : String(e)}`,
   );
 }
 

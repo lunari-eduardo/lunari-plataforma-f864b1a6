@@ -23,7 +23,7 @@ export interface CapabilityExample<I, O> {
  *  - "external:<integracao>"  → chama integração externa (asaas, mp, r2, gcal…)
  *  - "email" | "notification" → envia comunicação
  */
-export type SideEffect = `db:${string}` | `event:${EventName}` | `external:${string}` | "email" | "notification";
+export type SideEffect = `db:${string}` | `event:${string}` | `external:${string}` | "email" | "notification";
 
 export interface CapabilityContext {
   user: AuthUser | null;

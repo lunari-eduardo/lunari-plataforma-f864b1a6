@@ -1,10 +1,10 @@
-import { zodToJsonSchema } from "zod-to-json-schema";
 import type { Capability } from "./types";
 
 /**
- * Converte uma capability no formato esperado pelo AI SDK (tool() do `ai`).
- * Aqui retornamos um objeto serializável; o módulo `ai/` de cada feature
- * adapta para o formato concreto da versão do AI SDK em uso.
+ * Converte uma capability num descritor serializável que o módulo `ai/` de cada
+ * feature adapta ao formato concreto do AI SDK em uso. Mantemos um conversor
+ * mínimo de Zod → JSON Schema interno para evitar dependência extra. Para
+ * schemas complexos, cada módulo pode plugar um conversor mais completo.
  */
 export interface AICapabilityTool {
   id: string;
@@ -12,9 +12,15 @@ export interface AICapabilityTool {
   description: string;
   inputSchema: unknown;
   outputSchema: unknown;
-  needsApproval: boolean;
   costHint: string;
   examples: Array<{ nl: string; input: unknown; output?: unknown }>;
+}
+
+function zodToJson(schema: unknown): unknown {
+  // Placeholder — substituir por @valibot/to-json-schema ou zod-to-json-schema
+  // quando o módulo AI for plugado. Por ora retornamos um marcador opaco.
+  const s = schema as { _def?: { typeName?: string } };
+  return { $zod: s?._def?.typeName ?? "unknown" };
 }
 
 export function capabilityToAITool(cap: Capability): AICapabilityTool {
@@ -22,9 +28,8 @@ export function capabilityToAITool(cap: Capability): AICapabilityTool {
     id: cap.id,
     kind: cap.kind,
     description: `${cap.title}. ${cap.description}`,
-    inputSchema: zodToJsonSchema(cap.input, { target: "openApi3" }),
-    outputSchema: zodToJsonSchema(cap.output, { target: "openApi3" }),
-    needsApproval: cap.needsApproval({ input: undefined as never, user: null }),
+    inputSchema: zodToJson(cap.input),
+    outputSchema: zodToJson(cap.output),
     costHint: cap.costHint,
     examples: cap.examples,
   };
