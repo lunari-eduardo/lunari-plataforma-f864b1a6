@@ -21,6 +21,7 @@ export {
   useClearAvailabilityMutation,
 } from "./mutations";
 export { AgendaInvalidationBridge } from "./AgendaInvalidationBridge";
+export { useLegacyAgendaMutations } from "./legacyMutations";
 export {
   type Appointment,
   type AppointmentStatus,
