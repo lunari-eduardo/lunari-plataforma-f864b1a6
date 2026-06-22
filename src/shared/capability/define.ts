@@ -38,8 +38,8 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
   const sideEffects = opts.sideEffects ?? [];
   const allowedEvents = new Set<string>(
     sideEffects
-      .filter((s): s is string => typeof s === "string" && s.startsWith("event:"))
-      .map((s) => s.slice("event:".length)),
+      .filter((s) => typeof s === "string" && s.startsWith("event:"))
+      .map((s) => (s as string).slice("event:".length)),
   );
 
   const needsApprovalFn =
