@@ -1,9 +1,16 @@
 import { useCallback } from 'react';
-import { isSameDay, parseISO } from 'date-fns';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAvailability } from './useAvailability';
 import type { Appointment, AppointmentStatus } from './useAgenda';
 import type { AvailabilitySlot } from '@/types/availability';
+import {
+  classifySlot,
+  isBlockedSlot as domainIsBlockedSlot,
+} from '@/modules/agenda/domain/slotClassification';
+import type {
+  Appointment as DomainAppointment,
+  AvailabilitySlot as DomainAvailabilitySlot,
+} from '@/modules/agenda/domain/types';
 
 export type SlotCheckResult =
   | { kind: 'free' }
@@ -15,7 +22,7 @@ interface CheckSlotArgs {
   date: Date;
   time: string;
   ignoreAppointmentId?: string;
-  /** Status pretendido para o agendamento sendo gravado. */
+  /** Status pretendido para o agendamento sendo gravado (reservado para uso futuro). */
   targetStatus?: AppointmentStatus;
 }
 
@@ -26,75 +33,79 @@ export const normalizeHHmm = (t?: string | null): string => {
   return s.length >= 5 ? s.slice(0, 5) : s;
 };
 
-const toDate = (d: Date | string): Date => {
-  if (d instanceof Date) return d;
-  try {
-    return parseISO(d as string);
-  } catch {
-    return new Date(d as string);
-  }
+const toISODate = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 };
 
-/** Identifica se um slot de disponibilidade representa um bloqueio. */
-export const isBlockedSlot = (s: AvailabilitySlot): boolean => {
-  const label = (s.label || '').toLowerCase();
-  const typeId = (s.typeId || '').toLowerCase();
-  if (typeId.startsWith('bloque')) return true;
-  if (label.startsWith('bloque')) return true;
-  if (s.isFullDay && s.fullDayDescription) return true;
-  return false;
-};
+const toDate = (d: Date | string): Date =>
+  d instanceof Date ? d : new Date(d as string);
+
+/** Reexport — wrapper sobre a função pura do domínio. */
+export const isBlockedSlot = (s: AvailabilitySlot): boolean =>
+  domainIsBlockedSlot(s as unknown as DomainAvailabilitySlot);
 
 /**
  * Hook centralizado de validação de slot da agenda.
- * Ordem de prioridade:
- *  1. confirmado de outro agendamento -> busy
- *  2. slot bloqueado pelo usuário -> blocked
- *  3. pendentes no mesmo horário -> pending
- *  4. livre
+ * Delegado para `classifySlot` (camada de domínio pura) — esta camada apenas
+ * adapta os dados do AppContext para o formato do domínio e remapeia o
+ * resultado para os tipos legados consumidos pela UI.
  */
 export const useSlotAvailabilityCheck = () => {
   const { appointments } = useAppContext();
   const { availability } = useAvailability();
 
   const checkSlot = useCallback(
-    ({ date, time, ignoreAppointmentId, targetStatus }: CheckSlotArgs): SlotCheckResult => {
+    ({ date, time, ignoreAppointmentId }: CheckSlotArgs): SlotCheckResult => {
+      const wantedDate = toISODate(date);
       const wantedTime = normalizeHHmm(time);
-      const sameSlot = appointments.filter(
-        (app) =>
-          app.id !== ignoreAppointmentId &&
-          isSameDay(toDate(app.date), date) &&
-          normalizeHHmm(app.time) === wantedTime,
-      );
 
-      // 1. Confirmado já existente -> busy (sempre bloqueia)
-      const confirmed = sameSlot.find((app) => app.status === 'confirmado');
-      if (confirmed) {
-        return { kind: 'busy', appointment: confirmed };
+      // Index legacy appointments by id para remapear depois.
+      const legacyById = new Map<string, Appointment>();
+      const domainAppointments: DomainAppointment[] = [];
+      for (const app of appointments) {
+        const appDate = toDate(app.date);
+        const dApp = {
+          id: app.id,
+          title: app.title,
+          date: toISODate(appDate),
+          time: normalizeHHmm(app.time),
+          type: app.type ?? '',
+          client: app.client ?? '',
+          status: app.status as DomainAppointment['status'],
+        } as DomainAppointment;
+        domainAppointments.push(dApp);
+        legacyById.set(app.id, app);
       }
 
-      // 2. Bloqueado pelo usuário (slot ou dia inteiro)
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      const blocked = availability.find(
-        (s) =>
-          s.date === dateStr &&
-          isBlockedSlot(s) &&
-          (s.isFullDay || normalizeHHmm(s.time) === wantedTime),
-      );
-      if (blocked) {
-        return { kind: 'blocked', slot: blocked };
-      }
+      const domainAvailability = availability as unknown as DomainAvailabilitySlot[];
 
-      // 3. Pendentes (aviso para o usuário)
-      const pendings = sameSlot.filter((app) => app.status === 'a confirmar');
-      if (pendings.length > 0) {
-        return { kind: 'pending', appointments: pendings };
-      }
+      const result = classifySlot(domainAppointments, domainAvailability, {
+        date: wantedDate,
+        time: wantedTime,
+        excludeAppointmentId: ignoreAppointmentId,
+      });
 
-      return { kind: 'free' };
+      switch (result.kind) {
+        case 'free':
+          return { kind: 'free' };
+        case 'busy':
+          return {
+            kind: 'busy',
+            appointment: legacyById.get(result.appointment.id) ?? (result.appointment as unknown as Appointment),
+          };
+        case 'pending':
+          return {
+            kind: 'pending',
+            appointments: result.appointments.map(
+              (a) => legacyById.get(a.id) ?? (a as unknown as Appointment),
+            ),
+          };
+        case 'blocked':
+          return { kind: 'blocked', slot: result.slot as unknown as AvailabilitySlot };
+      }
     },
     [appointments, availability],
   );
@@ -105,7 +116,6 @@ export const useSlotAvailabilityCheck = () => {
    */
   const buildResultFromError = useCallback(
     (kind: 'busy' | 'blocked', date: Date, time: string): SlotCheckResult => {
-      // Tenta achar o registro real para enriquecer o dialog
       const check = checkSlot({ date, time });
       if (kind === 'busy' && check.kind === 'busy') return check;
       if (kind === 'blocked' && check.kind === 'blocked') return check;
@@ -127,7 +137,7 @@ export const useSlotAvailabilityCheck = () => {
         kind: 'blocked',
         slot: {
           id: '',
-          date: date.toISOString().split('T')[0],
+          date: toISODate(date),
           time,
           duration: 0,
           typeId: 'bloqueado',
