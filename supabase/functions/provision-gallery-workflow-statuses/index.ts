@@ -148,7 +148,7 @@ serve(async (req) => {
         if (!existing.is_system_status) {
           const { error } = await supabase
             .from('etapas_trabalho')
-            .update({ is_system_status: true })
+            .update({ is_system_status: true, is_hidden_in_workflow: true })
             .eq('id', existing.id);
 
           if (error) {
@@ -171,7 +171,8 @@ serve(async (req) => {
             nome: statusDef.nome,
             cor: statusDef.cor,
             ordem: nextOrdem,
-            is_system_status: true
+            is_system_status: true,
+            is_hidden_in_workflow: true
           });
 
         if (error) {
