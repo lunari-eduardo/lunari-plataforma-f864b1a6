@@ -16,6 +16,7 @@ export {
   useCreateAppointmentMutation,
   useConfirmAppointmentMutation,
   useRescheduleAppointmentMutation,
+  useUpdateAppointmentMutation,
   useCancelAppointmentMutation,
   useAddAvailabilityMutation,
   useClearAvailabilityMutation,
@@ -23,7 +24,7 @@ export {
 } from "./mutations";
 export { AgendaInvalidationBridge } from "./AgendaInvalidationBridge";
 export { AgendaRealtimeListener } from "./AgendaRealtimeListener";
-export { useLegacyAgendaMutations } from "./legacyMutations";
+export { useAppointmentMutations } from "./appointmentMutations";
 export {
   type Appointment,
   type AppointmentStatus,
