@@ -1,4 +1,4 @@
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import { UnifiedEvent } from '@/modules/agenda/presentation';
 import { getBudgetStatusConfig } from '@/utils/statusConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';

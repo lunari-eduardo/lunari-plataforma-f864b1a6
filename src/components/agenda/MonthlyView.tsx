@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isToday, isSameDay } from 'date-fns';
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import { UnifiedEvent } from '@/modules/agenda/presentation';
 import UnifiedEventCard from './UnifiedEventCard';
 import DayPreviewPopover from './DayPreviewPopover';
 import { useAvailability } from '@/hooks/useAvailability';

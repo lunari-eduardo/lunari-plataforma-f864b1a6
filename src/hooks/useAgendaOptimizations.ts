@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { format, isSameDay } from 'date-fns';
-import { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import { UnifiedEvent } from '@/modules/agenda/presentation';
 
 /**
  * Hook otimizado para cálculos de agenda

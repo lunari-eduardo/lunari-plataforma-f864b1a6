@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
-import { UnifiedEvent } from "@/hooks/useUnifiedCalendar";
+import { UnifiedEvent } from "@/modules/agenda/presentation";
 import { cn } from "@/lib/utils";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 import type { AvailabilitySlot } from "@/types/availability";

@@ -188,6 +188,12 @@ Mantém o mesmo shape público (`unifiedEvents`, `getEventsForDate`,
 explícito — alinhado ao contrato `yyyy-MM-dd` do domínio e ao cache
 particionado por range do TanStack Query.
 
-Próximo passo: migrar `src/pages/Agenda.tsx` para calcular o range a
-partir da view ativa (`day`/`week`/`month`/`year`) e consumir o novo
-hook, removendo a dependência de `useUnifiedCalendar` legado.
+Concluído na Onda 5 (passo 3): todos os componentes da Agenda
+(`DailyView`, `WeeklyView`, `MonthlyView`, `AnnualView`,
+`MiniMonthCalendar`, `AgendaSidebar`, `UnifiedEventCard`,
+`DayPreviewPopover`, `DayRevenueKPI`) e utilitários
+(`agendaRevenueCalc`, `useAgendaOptimizations`) passaram a importar o
+tipo `UnifiedEvent` de `@/modules/agenda/presentation`. O hook legado
+`useUnifiedCalendar` permanece apenas como fallback `@deprecated` para
+consumidores remanescentes do `AppContext` e será removido quando
+`useTodayOverview` e demais entradas migrarem para `useAppointmentsRangeQuery`.

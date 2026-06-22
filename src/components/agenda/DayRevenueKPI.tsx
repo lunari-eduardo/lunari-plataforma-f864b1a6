@@ -5,7 +5,7 @@ import { TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { summarizeRevenue, getWeekRange } from '@/utils/agendaRevenueCalc';
 import { useConfigurationContext } from '@/contexts/ConfigurationContext';
-import type { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import type { UnifiedEvent } from '@/modules/agenda/presentation';
 
 interface DayRevenueKPIProps {
   date: Date;

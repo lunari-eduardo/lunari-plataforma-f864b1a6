@@ -18,6 +18,11 @@ export interface UnifiedEvent {
   originalData: Appointment | Orcamento;
 }
 
+/**
+ * @deprecated Use `useUnifiedEventsRangeQuery` de `@/modules/agenda/presentation`.
+ * Este hook agrega todos os agendamentos do AppContext e será removido após
+ * a conclusão da migração da Agenda (Onda 5).
+ */
 export const useUnifiedCalendar = () => {
   const { appointments } = useAppointments();
   const { clientes } = useAppContext();

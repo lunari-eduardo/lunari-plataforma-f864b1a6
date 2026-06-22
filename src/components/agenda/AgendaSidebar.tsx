@@ -1,7 +1,7 @@
 import MiniMonthCalendar from './MiniMonthCalendar';
 import DayRevenueKPI from './DayRevenueKPI';
 import { useAvailability } from '@/hooks/useAvailability';
-import type { UnifiedEvent } from '@/hooks/useUnifiedCalendar';
+import type { UnifiedEvent } from '@/modules/agenda/presentation';
 import type { ViewType } from '@/utils/dateFormatters';
 
 interface AgendaSidebarProps {
