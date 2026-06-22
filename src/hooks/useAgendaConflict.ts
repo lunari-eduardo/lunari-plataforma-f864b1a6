@@ -9,7 +9,7 @@ import {
   parseAgendaTriggerError,
   extractAgendaErrorMessage,
 } from '@/utils/agendaSlotGuard';
-import type { AppointmentStatus } from './useAgenda';
+import type { AppointmentStatus } from '@/modules/agenda/presentation';
 
 export interface GuardExecOpts {
   /** true quando a chamada está sendo refeita após o usuário aceitar desbloquear. */
