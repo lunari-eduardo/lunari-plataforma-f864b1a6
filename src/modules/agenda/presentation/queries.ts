@@ -32,7 +32,7 @@ export function useAppointmentByIdQuery(id: string | null | undefined) {
   });
 }
 
-export function useAvailabilityQuery(range: DateRange, options?: { enabled?: boolean }) {
+export function useAvailabilityQuery(range: AgendaRange, options?: { enabled?: boolean }) {
   return useCapabilityQuery(listAvailability, range, {
     queryKey: agendaKeys.availabilityRange(range),
     enabled: options?.enabled,
