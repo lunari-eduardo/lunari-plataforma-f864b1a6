@@ -13,7 +13,7 @@ export class SupabaseAvailabilityRepository implements AvailabilityRepository {
   }
 
   addMany(slots: NewAvailabilitySlot[]): Promise<void> {
-    return this.adapter.addAvailabilitySlots(slots);
+    return this.adapter.addAvailabilitySlots(slots as Array<Omit<AvailabilitySlot, "id">>);
   }
 
   clearForDate(date: string): Promise<void> {
