@@ -4,7 +4,7 @@ import { useOrcamentos } from './useOrcamentos';
 import { useAppointments } from './useAppointments';
 import { toast } from '@/hooks/use-toast';
 import { parseDateFromStorage, formatDateForStorage } from '@/utils/dateUtils';
-import { Appointment } from './useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 
 export const useIntegration = () => {
   // Defensive hook initialization to prevent conditional calls
