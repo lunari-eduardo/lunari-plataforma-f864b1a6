@@ -176,3 +176,18 @@ através dele — nunca strings literais — para manter consistência com o
 Os hooks legados (`useAgenda`, `useAppointments`, `useAvailability`,
 `AgendaContext`) continuam funcionando. A migração será feita componente a
 componente nas próximas ondas. Não há quebra de contrato nesta onda.
+
+### Onda 5 (em andamento) — eventos unificados por range
+
+Novo hook `useUnifiedEventsRangeQuery({ start, end })` em
+`@/modules/agenda` produz o array `UnifiedEvent[]` consumido pelas views
+(`DailyView`, `WeeklyView`, `MonthlyView`, `AnnualView`,
+`MiniMonthCalendar`, `AgendaSidebar`) sem depender de `AgendaContext`.
+Mantém o mesmo shape público (`unifiedEvents`, `getEventsForDate`,
+`getEventForSlot`) do legado `useUnifiedCalendar`, mas exige um intervalo
+explícito — alinhado ao contrato `yyyy-MM-dd` do domínio e ao cache
+particionado por range do TanStack Query.
+
+Próximo passo: migrar `src/pages/Agenda.tsx` para calcular o range a
+partir da view ativa (`day`/`week`/`month`/`year`) e consumir o novo
+hook, removendo a dependência de `useUnifiedCalendar` legado.
