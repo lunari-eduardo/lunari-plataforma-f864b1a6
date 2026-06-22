@@ -242,18 +242,31 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
 `useAgendaConflict`) passaram a importar `Appointment` /
 `AppointmentStatus` de `@/modules/agenda/presentation`.
 
-### Onda 7 (pendente) — descomissionar contexto e realtime legados
+### Onda 7 — descomissionar contexto e realtime legados
 
-Itens identificados para um plano dedicado:
-- Substituir `useLegacyAgendaMutations` pelas mutations baseadas em
-  capabilities (`useCreateAppointmentMutation` etc.) — requer mapear
-  payload UI → input de domínio em cada call site.
-- Remover `AgendaContext` e o `AgendaProvider` em `PhotographerApp.tsx`.
-- Migrar os 8 componentes que ainda consomem `useAvailability` para
-  `useAvailabilityQuery({ start, end })`.
-- Substituir `useAgendaRealtime` pelo `eventBus` interno do módulo
-  (ou um listener próprio que invalide queries via `agendaKeys`).
-- Inverter a dependência do `SupabaseAgendaAdapter` → repos do módulo.
+**Passos 7a + 7b concluídos:**
+- Nova capability `agenda.availability.deleteSlot` + mutation
+  `useDeleteAvailabilitySlotMutation` no módulo.
+- `src/hooks/useAvailability.ts` refatorado para shim:
+  - `availability` agora vem de `useAvailabilityQuery` (cache TanStack).
+  - `addAvailabilitySlots`, `clearAvailabilityForDate` e
+    `deleteAvailabilitySlot` chamam as mutations do módulo
+    (invalidação via `AgendaInvalidationBridge`).
+  - `availabilityTypes` + CRUD de tipos seguem em `AgendaContext`
+    até a modularização dos tipos.
+- API pública do hook preservada: nenhum call site precisou mudar.
+- Nota: realtime de `availability_slots` ainda vive em `AgendaContext`
+  e atualiza `setAvailability` local — consumidores que agora leem do
+  TanStack ficam dependentes de invalidação por evento + refetch on
+  focus até a Onda 7c migrar o realtime para `eventBus`.
+
+**Pendente:**
+- 7c: mover realtime de `appointments` / `availability_slots` para
+  listener interno do módulo que publica no `eventBus`.
+- 7d: substituir `useLegacyAgendaMutations` por mutations baseadas em
+  capabilities; remover `AgendaContext`, `AgendaProvider`,
+  `useAppointments`, `useAvailability`, `useAgendaRealtime`.
+- 7e: inverter dependência do `SupabaseAgendaAdapter` → repos do módulo.
 
 Esses passos têm impacto direto em realtime/cache e devem ser
-validados manualmente; serão tratados em rodada separada.
+validados manualmente; serão tratados em rodadas separadas.
