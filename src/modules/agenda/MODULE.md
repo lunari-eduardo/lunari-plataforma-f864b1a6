@@ -193,7 +193,11 @@ Concluído na Onda 5 (passo 3): todos os componentes da Agenda
 `MiniMonthCalendar`, `AgendaSidebar`, `UnifiedEventCard`,
 `DayPreviewPopover`, `DayRevenueKPI`) e utilitários
 (`agendaRevenueCalc`, `useAgendaOptimizations`) passaram a importar o
-tipo `UnifiedEvent` de `@/modules/agenda/presentation`. O hook legado
-`useUnifiedCalendar` permanece apenas como fallback `@deprecated` para
-consumidores remanescentes do `AppContext` e será removido quando
-`useTodayOverview` e demais entradas migrarem para `useAppointmentsRangeQuery`.
+tipo `UnifiedEvent` de `@/modules/agenda/presentation`.
+
+Concluído na Onda 5 (passo 4): o hook legado `useUnifiedCalendar` foi
+**removido** do projeto. `useTodayOverview` já consome
+`useAppointmentsRangeQuery` diretamente e nenhum outro arquivo
+importava o hook. O tipo `UnifiedEvent` agora vive exclusivamente em
+`@/modules/agenda/presentation/unifiedEvents.ts`.
+
