@@ -21,3 +21,9 @@ export {
   useClearAvailabilityMutation,
 } from "./mutations";
 export { AgendaInvalidationBridge } from "./AgendaInvalidationBridge";
+export {
+  type Appointment,
+  type AppointmentStatus,
+  type ProdutoIncluido,
+} from "./types";
+
