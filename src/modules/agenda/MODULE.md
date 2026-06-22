@@ -334,10 +334,11 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
     histórico, com resolução de sessão em duas etapas para evitar OR perigoso).
 - Repository é puro Supabase: `getAgendaDeps().appointments` não toca mais no adapter legado.
 
-**Pendente:**
-- 7e4: deletar `SupabaseAgendaAdapter`/`AgendaStorageAdapter` e enxugar `AgendaService`.
+**Passo 7e4 concluído:**
+- Deletados `src/adapters/SupabaseAgendaAdapter.ts`, `src/adapters/AgendaStorageAdapter.ts`
+  e `src/services/AgendaService.ts` — sem imports remanescentes no projeto.
+- Toda a agenda agora flui exclusivamente por `src/modules/agenda/*`
+  (capabilities + repositórios Supabase próprios), encerrando a onda 7e.
 
-Esses passos têm impacto direto em realtime/cache e devem ser
-validados manualmente; serão tratados em rodadas separadas.
 
 
