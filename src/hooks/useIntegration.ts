@@ -46,18 +46,18 @@ export const useIntegration = () => {
   const lastSyncTimeRef = useRef<Record<string, number>>({});
   const createdAppointmentsRef = useRef<Set<string>>(new Set());
 
-  const isFromBudget = useCallback((appointment: Appointment) => {
+  const isFromBudget = useCallback((appointment: AppointmentLike) => {
     return appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento';
   }, []);
 
-  const getBudgetId = useCallback((appointment: Appointment) => {
+  const getBudgetId = useCallback((appointment: AppointmentLike) => {
     if (appointment.id?.startsWith('orcamento-')) {
       return appointment.id.replace('orcamento-', '');
     }
     return (appointment as any).orcamentoId;
   }, []);
 
-  const canEditFully = useCallback((appointment: Appointment) => {
+  const canEditFully = useCallback((appointment: AppointmentLike) => {
     return !(appointment.id?.startsWith('orcamento-') || (appointment as any).origem === 'orcamento');
   }, []);
 
