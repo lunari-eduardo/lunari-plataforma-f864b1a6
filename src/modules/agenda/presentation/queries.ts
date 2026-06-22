@@ -9,10 +9,14 @@ import {
   listAppointmentsByRange,
   listAvailability,
 } from "../index";
-import type { DateRange } from "../domain/types";
 import { agendaKeys } from "./keys";
 
-export function useAppointmentsRangeQuery(range: DateRange, options?: { enabled?: boolean }) {
+export interface AgendaRange {
+  start: string;
+  end: string;
+}
+
+export function useAppointmentsRangeQuery(range: AgendaRange, options?: { enabled?: boolean }) {
   return useCapabilityQuery(listAppointmentsByRange, range, {
     queryKey: agendaKeys.appointmentsRange(range),
     enabled: options?.enabled,
