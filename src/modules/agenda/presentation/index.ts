@@ -22,6 +22,7 @@ export {
   useDeleteAvailabilitySlotMutation,
 } from "./mutations";
 export { AgendaInvalidationBridge } from "./AgendaInvalidationBridge";
+export { AgendaRealtimeListener } from "./AgendaRealtimeListener";
 export { useLegacyAgendaMutations } from "./legacyMutations";
 export {
   type Appointment,

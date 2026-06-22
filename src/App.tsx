@@ -10,7 +10,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
 import { CapabilityRuntimeProvider } from "@/shared/capability";
-import { AgendaInvalidationBridge } from "@/modules/agenda";
+import { AgendaInvalidationBridge, AgendaRealtimeListener } from "@/modules/agenda";
 
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
@@ -63,6 +63,7 @@ function App() {
             <AuthProvider>
               <CapabilityRuntimeProvider>
                 <AgendaInvalidationBridge />
+                <AgendaRealtimeListener />
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
