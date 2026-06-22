@@ -1,22 +1,20 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AgendaService } from '@/services/AgendaService';
-import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
+import { getAgendaDeps } from '@/modules/agenda/infrastructure/container';
 import { agendaKeys } from '@/modules/agenda/presentation/keys';
 import type { AvailabilityType } from '@/types/availability';
 
 /**
  * Hook standalone para CRUD de tipos de disponibilidade (cores/labels).
- * Substitui o estado homônimo que vivia em `AgendaContext` (removido na onda 7d3).
+ * Onda 7e1: passa a falar direto com o repo do módulo (sem AgendaService/legacy adapter).
  */
-const service = new AgendaService(new SupabaseAgendaAdapter());
-
 export function useAvailabilityTypes() {
   const queryClient = useQueryClient();
+  const { availabilityTypes: repo } = getAgendaDeps();
 
   const { data } = useQuery({
     queryKey: agendaKeys.availabilityTypes(),
-    queryFn: () => service.loadAvailabilityTypes(),
+    queryFn: () => repo.list(),
     staleTime: 60_000,
   });
 
@@ -27,18 +25,18 @@ export function useAvailabilityTypes() {
   }, [queryClient]);
 
   const addMut = useMutation({
-    mutationFn: (typeData: Omit<AvailabilityType, 'id'>) => service.addAvailabilityType(typeData),
+    mutationFn: (typeData: Omit<AvailabilityType, 'id'>) => repo.add(typeData),
     onSuccess: invalidate,
   });
 
   const updateMut = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<AvailabilityType> }) =>
-      service.updateAvailabilityType(id, updates),
+      repo.update(id, updates),
     onSuccess: invalidate,
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => service.deleteAvailabilityType(id),
+    mutationFn: (id: string) => repo.delete(id),
     onSuccess: invalidate,
   });
 
