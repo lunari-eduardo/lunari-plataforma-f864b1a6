@@ -4,7 +4,14 @@ export {
   useAppointmentByIdQuery,
   useAvailabilityQuery,
   useNextFreeSlotQuery,
+  useCheckSlotQuery,
+  type AgendaRange,
+  type CheckSlotInput,
 } from "./queries";
+export {
+  useUnifiedEventsRangeQuery,
+  type UnifiedEvent,
+} from "./unifiedEvents";
 export {
   useCreateAppointmentMutation,
   useConfirmAppointmentMutation,
