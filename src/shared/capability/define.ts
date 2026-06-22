@@ -38,7 +38,7 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
   const sideEffects = opts.sideEffects ?? [];
   const allowedEvents = new Set<string>(
     sideEffects
-      .filter((s): s is `event:${EventName}` => s.startsWith("event:"))
+      .filter((s): s is string => typeof s === "string" && s.startsWith("event:"))
       .map((s) => s.slice("event:".length)),
   );
 
