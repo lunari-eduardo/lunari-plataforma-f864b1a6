@@ -25,7 +25,7 @@ import {
   type UnifiedEvent,
   type Appointment,
 } from "@/modules/agenda/presentation";
-import { useAgenda } from "@/hooks/useAgenda";
+import { useLegacyAgendaMutations } from "@/modules/agenda/presentation";
 
 import { useAvailability } from "@/hooks/useAvailability";
 import { useIntegration } from "@/hooks/useIntegration";
@@ -47,7 +47,7 @@ import { CalendarDays } from 'lucide-react';
 
 
 export default function Agenda() {
-  const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useAgenda();
+  const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useLegacyAgendaMutations();
   const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();

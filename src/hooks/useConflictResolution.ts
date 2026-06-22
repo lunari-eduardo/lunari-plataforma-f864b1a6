@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { isSameDay } from 'date-fns';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAvailability } from './useAvailability';
-import type { Appointment, AppointmentStatus } from './useAgenda';
+import type { Appointment, AppointmentStatus } from '@/modules/agenda/presentation';
 
 export interface ConflictValidationResult {
   valid: boolean;

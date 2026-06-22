@@ -9,7 +9,7 @@ import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import { useAvailability } from '@/hooks/useAvailability';
-import { useAgenda } from '@/hooks/useAgenda';
+import { useAppointmentsRangeQuery } from '@/modules/agenda/presentation';
 import { useAgendaSettings } from '@/hooks/useAgendaSettings';
 import type { AvailabilitySlot } from '@/types/availability';
 import { toast } from 'sonner';
@@ -43,7 +43,15 @@ export default function AvailabilityConfigModal({
     deleteAvailabilitySlot,
     clearAvailabilityForDate,
   } = useAvailability();
-  const { appointments } = useAgenda();
+  // Janela ampla (60 dias atrás → 180 dias à frente) para preservar slots com sessões.
+  const apptRange = useMemo(() => {
+    const today = new Date();
+    const start = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const end = new Date(today.getTime() + 180 * 24 * 60 * 60 * 1000);
+    return { start: format(start, 'yyyy-MM-dd'), end: format(end, 'yyyy-MM-dd') };
+  }, []);
+  const { data: appointmentsData } = useAppointmentsRangeQuery(apptRange);
+  const appointments = appointmentsData ?? [];
 
   const { defaultTimeSlots, setDefaultTimeSlots } = useAgendaSettings();
 

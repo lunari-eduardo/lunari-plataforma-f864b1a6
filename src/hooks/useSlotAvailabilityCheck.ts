@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAvailability } from './useAvailability';
-import type { Appointment, AppointmentStatus } from './useAgenda';
+import type { Appointment, AppointmentStatus } from '@/modules/agenda/presentation';
 import type { AvailabilitySlot } from '@/types/availability';
 import {
   classifySlot,

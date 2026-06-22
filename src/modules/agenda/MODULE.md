@@ -214,3 +214,45 @@ contexts, utils e componentes passaram a apontar para
 mutations do módulo nos próximos passos.
 
 
+
+Passo 2 concluído (Onda 6): os consumidores de leitura de
+`useAgenda().appointments` foram migrados para
+`useAppointmentsRangeQuery` do módulo:
+- `useAutomationEngine` agora consome uma janela de hoje +120 dias
+  (suficiente para as regras D-2 / D-1 / alerta de 72h).
+- `AvailabilityConfigModal` consome janela ampla (-60 / +180 dias)
+  para preservar slots com sessões ao limpar disponibilidade.
+- `DataLayer.ts` tinha import órfão de `useAgenda`, removido.
+
+Passo 3 concluído (Onda 6): introduzido
+`useLegacyAgendaMutations` em
+`@/modules/agenda/presentation/legacyMutations.ts`. Esse adaptador
+transitório expõe a API legada (`addAppointment`,
+`updateAppointment`, `deleteAppointment`, `loadMonthData`) a partir
+do módulo, isolando consumidores (`Agenda.tsx`,
+`LeadSchedulingModal`, `SchedulingConfirmationModal`) do hook
+`@/hooks/useAgenda`. Internamente ainda delega ao `useAppointments`
+(AgendaContext); a migração para `useCreate/Reschedule/Cancel…Mutation`
+baseadas em capabilities fica para a Onda 7.
+
+Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
+**removido**. Os últimos imports type-only restantes
+(`useConflictResolution`, `useIntegration`, `useSlotAvailabilityCheck`,
+`useAgendaConflict`) passaram a importar `Appointment` /
+`AppointmentStatus` de `@/modules/agenda/presentation`.
+
+### Onda 7 (pendente) — descomissionar contexto e realtime legados
+
+Itens identificados para um plano dedicado:
+- Substituir `useLegacyAgendaMutations` pelas mutations baseadas em
+  capabilities (`useCreateAppointmentMutation` etc.) — requer mapear
+  payload UI → input de domínio em cada call site.
+- Remover `AgendaContext` e o `AgendaProvider` em `PhotographerApp.tsx`.
+- Migrar os 8 componentes que ainda consomem `useAvailability` para
+  `useAvailabilityQuery({ start, end })`.
+- Substituir `useAgendaRealtime` pelo `eventBus` interno do módulo
+  (ou um listener próprio que invalide queries via `agendaKeys`).
+- Inverter a dependência do `SupabaseAgendaAdapter` → repos do módulo.
+
+Esses passos têm impacto direto em realtime/cache e devem ser
+validados manualmente; serão tratados em rodada separada.

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
-import { useAgenda } from "@/hooks/useAgenda";
+import { useLegacyAgendaMutations } from "@/modules/agenda/presentation";
 import { useToast } from "@/hooks/use-toast";
 import AppointmentForm from "@/components/agenda/AppointmentForm";
 import { useAgendaConflict } from "@/hooks/useAgendaConflict";
@@ -25,7 +25,7 @@ export default function SchedulingConfirmationModal({
   onNotScheduled,
 }: SchedulingConfirmationModalProps) {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
-  const { addAppointment } = useAgenda();
+  const { addAppointment } = useLegacyAgendaMutations();
   const { toast } = useToast();
   const { guard, dialogProps } = useAgendaConflict();
 
