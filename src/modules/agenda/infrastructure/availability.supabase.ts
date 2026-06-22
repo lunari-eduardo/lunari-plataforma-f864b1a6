@@ -13,7 +13,8 @@ export class SupabaseAvailabilityRepository implements AvailabilityRepository {
   }
 
   addMany(slots: NewAvailabilitySlot[]): Promise<void> {
-    return this.adapter.addAvailabilitySlots(slots as Array<Omit<AvailabilitySlot, "id">>);
+    // boundary cast: domain schema é estrito; adapter legado é parcial
+    return this.adapter.addAvailabilitySlots(slots as unknown as Parameters<SupabaseAgendaAdapter["addAvailabilitySlots"]>[0]);
   }
 
   clearForDate(date: string): Promise<void> {
