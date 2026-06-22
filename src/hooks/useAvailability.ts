@@ -1,6 +1,11 @@
 import { useAgendaContext } from '@/contexts/AgendaContext';
 import type { AvailabilitySlot } from '@/types/availability';
 
+/**
+ * @deprecated Use `useAvailabilityQuery`, `useAddAvailabilityMutation` and
+ * `useClearAvailabilityMutation` from `@/modules/agenda` instead.
+ */
+
 export const useAvailability = () => {
   const ctx = useAgendaContext();
   return {
