@@ -9,6 +9,7 @@ capabilities:
     - agenda.appointments.get
     - agenda.availability.list
     - agenda.availability.findNext
+    - agenda.slot.check
   commands:
     - agenda.appointments.create
     - agenda.appointments.confirm
