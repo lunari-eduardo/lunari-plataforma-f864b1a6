@@ -1,6 +1,6 @@
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 // Client management is now centralized in AppContext
-import { useAgenda } from '@/hooks/useAgenda';
+
 import { useWorkflow } from '@/hooks/useWorkflow';
 import { parseDateFromStorage } from '@/utils/dateUtils';
 
