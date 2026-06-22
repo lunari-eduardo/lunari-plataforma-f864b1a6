@@ -8,7 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { useConflictResolution, type NextAvailableSlot } from '@/hooks/useConflictResolution';
 import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
-import type { Appointment } from '@/hooks/useAgenda';
+import type { Appointment } from '@/modules/agenda/presentation';
 
 interface ConflictResolutionModalProps {
   open: boolean;

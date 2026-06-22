@@ -1,5 +1,5 @@
 import { useAgendaContext } from '@/contexts/AgendaContext';
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 
 /**
  * @deprecated Use `useAppointmentsRangeQuery` and the appointment mutation hooks

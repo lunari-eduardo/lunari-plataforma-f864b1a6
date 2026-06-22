@@ -1,6 +1,6 @@
 import { isSameDay, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 import type { UnifiedEvent } from '@/modules/agenda/presentation';
-import type { Appointment } from '@/hooks/useAgenda';
+import type { Appointment } from '@/modules/agenda/presentation';
 
 export interface RevenueSummary {
   total: number;

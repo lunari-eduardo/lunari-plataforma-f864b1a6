@@ -20,7 +20,7 @@ import { syncLeadsWithClientUpdate } from '@/utils/leadClientSync';
 // Types
 import { Cliente, OrigemCliente } from '@/types/cliente';
 import { Template } from '@/types/template';
-import { Appointment, AppointmentStatus } from '@/hooks/useAgenda';
+import { Appointment, AppointmentStatus } from '@/modules/agenda/presentation';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 
 export interface ProdutoWorkflow {

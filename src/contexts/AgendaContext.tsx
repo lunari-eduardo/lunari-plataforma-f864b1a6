@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { AgendaService } from '@/services/AgendaService';
 import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
 import { AgendaWorkflowIntegrationService } from '@/services/AgendaWorkflowIntegrationService';
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
 import { useAppContext } from './AppContext';

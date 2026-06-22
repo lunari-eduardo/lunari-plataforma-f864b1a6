@@ -1,4 +1,4 @@
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
 

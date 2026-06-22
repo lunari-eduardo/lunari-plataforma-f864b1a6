@@ -6,8 +6,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { AppointmentStatus } from '@/hooks/useAgenda';
-import type { Appointment } from '@/hooks/useAgenda';
+import { AppointmentStatus } from '@/modules/agenda/presentation';
+import type { Appointment } from '@/modules/agenda/presentation';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 
 interface AgendaRealtimeState {

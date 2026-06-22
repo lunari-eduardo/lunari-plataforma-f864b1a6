@@ -1,5 +1,5 @@
 
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 import { Orcamento } from '@/types/orcamento';
 
 export interface CalendarEvent {
