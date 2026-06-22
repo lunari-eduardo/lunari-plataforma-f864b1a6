@@ -2400,6 +2400,7 @@ export type Database = {
           cliente_nome: string | null
           cliente_telefone: string | null
           configuracoes: Json | null
+          cover_id: string | null
           created_at: string
           density: Database["public"]["Enums"]["gallery_density"] | null
           enviado_em: string | null
@@ -2445,6 +2446,7 @@ export type Database = {
           cliente_nome?: string | null
           cliente_telefone?: string | null
           configuracoes?: Json | null
+          cover_id?: string | null
           created_at?: string
           density?: Database["public"]["Enums"]["gallery_density"] | null
           enviado_em?: string | null
@@ -2490,6 +2492,7 @@ export type Database = {
           cliente_nome?: string | null
           cliente_telefone?: string | null
           configuracoes?: Json | null
+          cover_id?: string | null
           created_at?: string
           density?: Database["public"]["Enums"]["gallery_density"] | null
           enviado_em?: string | null
@@ -2644,6 +2647,7 @@ export type Database = {
           default_allow_download: boolean | null
           default_allow_extra_photos: boolean | null
           default_charge_type: string | null
+          default_cover_id: string
           default_expiration_days: number | null
           default_gallery_permission: string | null
           default_image_resize: number
@@ -2677,6 +2681,7 @@ export type Database = {
           default_allow_download?: boolean | null
           default_allow_extra_photos?: boolean | null
           default_charge_type?: string | null
+          default_cover_id?: string
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
           default_image_resize?: number
@@ -2710,6 +2715,7 @@ export type Database = {
           default_allow_download?: boolean | null
           default_allow_extra_photos?: boolean | null
           default_charge_type?: string | null
+          default_cover_id?: string
           default_expiration_days?: number | null
           default_gallery_permission?: string | null
           default_image_resize?: number
@@ -5216,6 +5222,7 @@ export type Database = {
         Returns: undefined
       }
       reconcile_gallery_extras_counters: { Args: never; Returns: Json }
+      reconcile_orphan_paid_gallery_charges: { Args: never; Returns: Json }
       reconcile_session_extras: {
         Args: {
           p_destino_sobra?: string
