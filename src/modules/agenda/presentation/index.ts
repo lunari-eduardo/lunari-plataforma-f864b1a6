@@ -19,6 +19,7 @@ export {
   useCancelAppointmentMutation,
   useAddAvailabilityMutation,
   useClearAvailabilityMutation,
+  useDeleteAvailabilitySlotMutation,
 } from "./mutations";
 export { AgendaInvalidationBridge } from "./AgendaInvalidationBridge";
 export { useLegacyAgendaMutations } from "./legacyMutations";

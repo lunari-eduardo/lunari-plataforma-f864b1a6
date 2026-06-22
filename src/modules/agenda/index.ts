@@ -20,6 +20,7 @@ export { rescheduleAppointment } from "./application/commands/rescheduleAppointm
 export { cancelAppointment } from "./application/commands/cancelAppointment";
 export { addAvailabilitySlots } from "./application/commands/addAvailabilitySlots";
 export { clearAvailabilityForDate } from "./application/commands/clearAvailabilityForDate";
+export { deleteAvailabilitySlot } from "./application/commands/deleteAvailabilitySlot";
 
 // Tipos públicos
 export type {
@@ -66,10 +67,11 @@ import { rescheduleAppointment as _c3 } from "./application/commands/rescheduleA
 import { cancelAppointment as _c4 } from "./application/commands/cancelAppointment";
 import { addAvailabilitySlots as _c5 } from "./application/commands/addAvailabilitySlots";
 import { clearAvailabilityForDate as _c6 } from "./application/commands/clearAvailabilityForDate";
+import { deleteAvailabilitySlot as _c7 } from "./application/commands/deleteAvailabilitySlot";
 
 export const agendaCapabilities = [
   _l1, _l2, _l3, _l4, _l5,
-  _c1, _c2, _c3, _c4, _c5, _c6,
+  _c1, _c2, _c3, _c4, _c5, _c6, _c7,
 ] as const;
 
 // Camada de apresentação (Onda 3): hooks React + bridge de invalidação

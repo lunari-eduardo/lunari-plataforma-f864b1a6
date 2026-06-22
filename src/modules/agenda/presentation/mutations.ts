@@ -12,6 +12,7 @@ import {
   clearAvailabilityForDate,
   confirmAppointment,
   createAppointment,
+  deleteAvailabilitySlot,
   rescheduleAppointment,
 } from "../index";
 import { agendaKeys } from "./keys";
@@ -82,6 +83,17 @@ export function useAddAvailabilityMutation(opts: MutOpts<unknown> = {}) {
 export function useClearAvailabilityMutation(opts: MutOpts<unknown> = {}) {
   const qc = useQueryClient();
   return useCapabilityMutation(clearAvailabilityForDate, {
+    ...opts,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+      opts.onSuccess?.(data);
+    },
+  });
+}
+
+export function useDeleteAvailabilitySlotMutation(opts: MutOpts<unknown> = {}) {
+  const qc = useQueryClient();
+  return useCapabilityMutation(deleteAvailabilitySlot, {
     ...opts,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: agendaKeys.availability() });
