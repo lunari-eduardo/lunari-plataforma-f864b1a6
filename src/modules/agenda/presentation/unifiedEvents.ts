@@ -9,7 +9,7 @@
  */
 import { useMemo } from "react";
 import { parseDateFromStorage } from "@/utils/dateUtils";
-import type { Appointment as LegacyAppointment } from "@/hooks/useAgenda";
+import type { Appointment as LegacyAppointment } from "./types";
 import {
   useAppointmentsRangeQuery,
   type AgendaRange,

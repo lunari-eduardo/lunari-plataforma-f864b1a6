@@ -4,7 +4,7 @@ import AppointmentDetails from "./AppointmentDetails";
 import BudgetAppointmentDetails from "./BudgetAppointmentDetails";
 import AvailabilityConfigModal from "./AvailabilityConfigModal";
 import ShareAvailabilityModal from "./ShareAvailabilityModal";
-import { Appointment } from "@/hooks/useAgenda";
+import { Appointment } from "@/modules/agenda/presentation";
 import { Orcamento } from "@/types/orcamento";
 
 interface AgendaModalsProps {

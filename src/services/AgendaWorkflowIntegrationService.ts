@@ -1,5 +1,5 @@
 import { WorkflowItem } from '@/contexts/AppContext';
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 
 export interface AgendaWorkflowIntegrationConfig {

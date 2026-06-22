@@ -1,4 +1,4 @@
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 
 // Dados fictícios para criar agendamentos variados
 const clientesNomes = [

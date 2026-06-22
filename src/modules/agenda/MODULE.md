@@ -201,3 +201,16 @@ Concluído na Onda 5 (passo 4): o hook legado `useUnifiedCalendar` foi
 importava o hook. O tipo `UnifiedEvent` agora vive exclusivamente em
 `@/modules/agenda/presentation/unifiedEvents.ts`.
 
+### Onda 6 (em andamento) — descomissionar `useAgenda`
+
+Passo 1 concluído: tipos de UI (`Appointment`, `AppointmentStatus`,
+`ProdutoIncluido`) foram movidos para
+`@/modules/agenda/presentation/types.ts` e re-exportados pelo barrel.
+O shim `@/hooks/useAgenda` agora apenas re-exporta esses tipos por
+compatibilidade. Todos os imports type-only em adapters, services,
+contexts, utils e componentes passaram a apontar para
+`@/modules/agenda/presentation`. Restam ~6 consumidores do hook
+`useAgenda` em si (mutations/escritas), que serão migrados para as
+mutations do módulo nos próximos passos.
+
+

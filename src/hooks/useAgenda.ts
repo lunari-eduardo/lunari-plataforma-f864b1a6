@@ -11,35 +11,14 @@ import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';
 import { configurationService } from '@/services/ConfigurationService';
 import { useRealtimeConfiguration } from './useRealtimeConfiguration';
 
-export type AppointmentStatus = 'confirmado' | 'a confirmar';
+// Tipos de UI agora vivem no módulo. Reexportamos por compatibilidade
+// enquanto consumidores legados ainda apontam para `@/hooks/useAgenda`.
+export type {
+  Appointment,
+  AppointmentStatus,
+  ProdutoIncluido,
+} from '@/modules/agenda/presentation/types';
 
-export interface ProdutoIncluido {
-  id: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  tipo: 'incluso' | 'manual';
-}
-
-export interface Appointment {
-  id: string;
-  sessionId?: string; // ID único universal para rastrear através de orçamento → agendamento → workflow
-  title: string;
-  date: Date;
-  time: string;
-  type: string;
-  client: string;
-  status: AppointmentStatus;
-  description?: string;
-  packageId?: string;
-  produtosIncluidos?: ProdutoIncluido[];
-  paidAmount?: number;
-  email?: string;
-  whatsapp?: string;
-  orcamentoId?: string;
-  origem?: 'agenda' | 'orcamento';
-  clienteId?: string; // NOVO: Campo para relacionar com cliente específico (CRM)
-}
 
 export const useAgenda = () => {
   const { categorias } = useRealtimeConfiguration();

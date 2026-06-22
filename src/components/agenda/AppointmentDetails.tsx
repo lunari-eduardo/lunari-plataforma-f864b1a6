@@ -21,7 +21,7 @@ import { FormularioRespostasView } from '@/components/formularios/FormularioResp
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 import PackageSearchCombobox from './PackageSearchCombobox';
 import { Calendar, DollarSign, FileText, History, ChevronRight, Loader2, Package, AlertCircle, UserRoundPen, ClipboardList, Eye, Send, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';

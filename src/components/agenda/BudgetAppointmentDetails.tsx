@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, User, Package, DollarSign, FileText, ExternalLink } from "lucide-react";
 import { toast } from 'sonner';
-import { Appointment } from "@/hooks/useAgenda";
+import { Appointment } from "@/modules/agenda/presentation";
 import { Orcamento } from '@/types/orcamento';
 interface BudgetAppointmentDetailsProps {
   appointment: Appointment;

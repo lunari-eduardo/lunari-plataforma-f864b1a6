@@ -1,5 +1,5 @@
 import { AgendaStorageAdapter } from '@/adapters/AgendaStorageAdapter';
-import { Appointment } from '@/hooks/useAgenda';
+import { Appointment } from '@/modules/agenda/presentation';
 import { AvailabilitySlot, AvailabilityType } from '@/types/availability';
 import { AgendaSettings } from '@/types/agenda-supabase';
 import { safeParseInputDate } from '@/utils/dateUtils';
