@@ -304,9 +304,22 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
   coberto por `AgendaRealtimeListener` (7c) e invalidações por
   `AgendaInvalidationBridge` + eventos do módulo.
 
+**Passo 7e1 concluído:**
+- Criado `domain/ports.availabilityTypes.ts` + `infrastructure/availabilityTypes.supabase.ts`
+  (mantém storage em `localStorage` enquanto não há tabela dedicada).
+- `infrastructure/availability.supabase.ts` reescrito: fala direto com Supabase
+  (loadSlots/addMany/clearForDate/delete), sem delegar para `SupabaseAgendaAdapter`.
+- `container.ts` expõe `availabilityTypes` como dep injetável e injeta no
+  `SupabaseAvailabilityRepository` para resolução de cores/labels.
+- `src/hooks/useAvailabilityTypes.ts` agora usa `getAgendaDeps().availabilityTypes`
+  diretamente (não passa mais por `AgendaService`/legacy adapter).
+
 **Pendente:**
-- 7e: inverter dependência do `SupabaseAgendaAdapter` → repos do módulo.
+- 7e2: migrar settings da agenda para `SupabaseSettingsRepository` próprio.
+- 7e3: migrar appointments (workflow trigger, gallery sync, google calendar).
+- 7e4: deletar `SupabaseAgendaAdapter`/`AgendaStorageAdapter` e enxugar `AgendaService`.
 
 Esses passos têm impacto direto em realtime/cache e devem ser
 validados manualmente; serão tratados em rodadas separadas.
+
 
