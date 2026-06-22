@@ -321,8 +321,20 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
 - `src/hooks/useAgendaSettings.ts` agora usa `getAgendaDeps().settings`
   diretamente (não passa mais por `AgendaService`/legacy adapter).
 
+**Passo 7e3 concluído:**
+- `infrastructure/appointments.supabase.ts` reescrito sem `SupabaseAgendaAdapter`.
+  Toda a lógica de side-effects foi portada:
+  - Criação de sessão de workflow (`WorkflowSupabaseService.createSessionFromAppointment`)
+    + patch redundante de categoria/pacote/valor_base_pacote em `setTimeout(1s)`
+    + fallback de criação em `setTimeout(2s)` quando a 1ª tentativa retorna `null`.
+  - Sync Google Calendar (`syncAppointmentToGoogleCalendar`) em create/update/delete,
+    sempre tolerante a falhas.
+  - `delete` mantém os 3 caminhos do legado: `remove` (RPC `delete_appointment_cascade`),
+    `refund` (cria estornos + apaga sessão) e `preserve` (zera valores + marca como
+    histórico, com resolução de sessão em duas etapas para evitar OR perigoso).
+- Repository é puro Supabase: `getAgendaDeps().appointments` não toca mais no adapter legado.
+
 **Pendente:**
-- 7e3: migrar appointments (workflow trigger, gallery sync, google calendar).
 - 7e4: deletar `SupabaseAgendaAdapter`/`AgendaStorageAdapter` e enxugar `AgendaService`.
 
 Esses passos têm impacto direto em realtime/cache e devem ser
