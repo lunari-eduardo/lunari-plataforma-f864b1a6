@@ -1,16 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AgendaService } from '@/services/AgendaService';
-import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
+import { getAgendaDeps } from '@/modules/agenda/infrastructure/container';
 import { agendaKeys } from '@/modules/agenda/presentation/keys';
 import type { AgendaSettings } from '@/types/agenda-supabase';
 
 /**
  * Hook standalone para as configurações da Agenda (settings).
- * Substitui o consumo via `AgendaContext` (removido na onda 7d3).
+ * Onda 7e2: passa a falar direto com o repo do módulo (sem AgendaService/legacy adapter).
  */
-const service = new AgendaService(new SupabaseAgendaAdapter());
-
 const DEFAULT_SETTINGS: AgendaSettings = {
   defaultView: 'weekly',
   workingHours: { start: '08:00', end: '18:00' },
@@ -19,17 +16,18 @@ const DEFAULT_SETTINGS: AgendaSettings = {
 
 export const useAgendaSettings = () => {
   const queryClient = useQueryClient();
+  const { settings: repo } = getAgendaDeps();
 
   const { data } = useQuery({
     queryKey: agendaKeys.settings(),
-    queryFn: () => service.loadSettings(),
+    queryFn: () => repo.load(),
     staleTime: 60_000,
   });
 
   const settings = useMemo<AgendaSettings>(() => data ?? DEFAULT_SETTINGS, [data]);
 
   const saveMut = useMutation({
-    mutationFn: (next: AgendaSettings) => service.saveSettings(next),
+    mutationFn: (next: AgendaSettings) => repo.save(next),
     onSuccess: (_v, next) => {
       queryClient.setQueryData(agendaKeys.settings(), next);
     },

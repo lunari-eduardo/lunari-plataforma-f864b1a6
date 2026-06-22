@@ -314,8 +314,14 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
 - `src/hooks/useAvailabilityTypes.ts` agora usa `getAgendaDeps().availabilityTypes`
   diretamente (não passa mais por `AgendaService`/legacy adapter).
 
+**Passo 7e2 concluído:**
+- Criado `domain/ports.settings.ts` + `infrastructure/settings.supabase.ts`
+  (mantém storage em `localStorage` enquanto não há tabela dedicada).
+- `container.ts` expõe `settings` como dep injetável.
+- `src/hooks/useAgendaSettings.ts` agora usa `getAgendaDeps().settings`
+  diretamente (não passa mais por `AgendaService`/legacy adapter).
+
 **Pendente:**
-- 7e2: migrar settings da agenda para `SupabaseSettingsRepository` próprio.
 - 7e3: migrar appointments (workflow trigger, gallery sync, google calendar).
 - 7e4: deletar `SupabaseAgendaAdapter`/`AgendaStorageAdapter` e enxugar `AgendaService`.
 

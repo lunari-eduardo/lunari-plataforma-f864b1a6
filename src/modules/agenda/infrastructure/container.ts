@@ -5,14 +5,17 @@
 import type { AppointmentsRepository } from "../domain/ports";
 import type { AvailabilityRepository } from "../domain/ports.availability";
 import type { AvailabilityTypesRepository } from "../domain/ports.availabilityTypes";
+import type { SettingsRepository } from "../domain/ports.settings";
 import { SupabaseAppointmentsRepository } from "./appointments.supabase";
 import { SupabaseAvailabilityRepository } from "./availability.supabase";
 import { SupabaseAvailabilityTypesRepository } from "./availabilityTypes.supabase";
+import { SupabaseSettingsRepository } from "./settings.supabase";
 
 export interface AgendaDeps {
   appointments: AppointmentsRepository;
   availability: AvailabilityRepository;
   availabilityTypes: AvailabilityTypesRepository;
+  settings: SettingsRepository;
 }
 
 let overrides: Partial<AgendaDeps> = {};
@@ -32,6 +35,7 @@ export function getAgendaDeps(): AgendaDeps {
       availability:
         overrides.availability ?? new SupabaseAvailabilityRepository(availabilityTypes),
       availabilityTypes,
+      settings: overrides.settings ?? new SupabaseSettingsRepository(),
     };
   }
   return singleton;
