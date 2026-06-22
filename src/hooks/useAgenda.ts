@@ -1,4 +1,10 @@
-
+/**
+ * @deprecated Use the hooks from `@/modules/agenda` instead:
+ *   - reads: `useAppointmentsRangeQuery`, `useAvailabilityQuery`, `useCheckSlotQuery`
+ *   - writes: `useCreateAppointmentMutation`, `useRescheduleAppointmentMutation`,
+ *             `useCancelAppointmentMutation`, etc.
+ * This file is a shim kept while legacy consumers are migrated (Wave 4+).
+ */
 import { useMemo } from 'react';
 import { useAppointments } from './useAppointments';
 import { formatDateForStorage, getCurrentDateString } from '@/utils/dateUtils';

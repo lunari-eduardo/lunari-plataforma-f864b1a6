@@ -11,6 +11,7 @@ export { listAppointmentsByRange } from "./application/queries/listAppointmentsB
 export { getAppointmentById } from "./application/queries/getAppointmentById";
 export { listAvailability } from "./application/queries/listAvailability";
 export { findNextAvailableSlot } from "./application/queries/findNextAvailableSlot";
+export { checkSlot } from "./application/queries/checkSlot";
 
 // Capabilities (commands)
 export { createAppointment } from "./application/commands/createAppointment";
@@ -58,6 +59,7 @@ import { listAppointmentsByRange as _l1 } from "./application/queries/listAppoin
 import { getAppointmentById as _l2 } from "./application/queries/getAppointmentById";
 import { listAvailability as _l3 } from "./application/queries/listAvailability";
 import { findNextAvailableSlot as _l4 } from "./application/queries/findNextAvailableSlot";
+import { checkSlot as _l5 } from "./application/queries/checkSlot";
 import { createAppointment as _c1 } from "./application/commands/createAppointment";
 import { confirmAppointment as _c2 } from "./application/commands/confirmAppointment";
 import { rescheduleAppointment as _c3 } from "./application/commands/rescheduleAppointment";
@@ -66,7 +68,7 @@ import { addAvailabilitySlots as _c5 } from "./application/commands/addAvailabil
 import { clearAvailabilityForDate as _c6 } from "./application/commands/clearAvailabilityForDate";
 
 export const agendaCapabilities = [
-  _l1, _l2, _l3, _l4,
+  _l1, _l2, _l3, _l4, _l5,
   _c1, _c2, _c3, _c4, _c5, _c6,
 ] as const;
 

@@ -2,8 +2,8 @@ import { useAgendaContext } from '@/contexts/AgendaContext';
 import { Appointment } from '@/hooks/useAgenda';
 
 /**
- * Hook for appointment management using the new AgendaContext
- * Provides all appointment CRUD operations
+ * @deprecated Use `useAppointmentsRangeQuery` and the appointment mutation hooks
+ * from `@/modules/agenda`. This shim will be removed once all consumers migrate.
  */
 export const useAppointments = () => {
   const context = useAgendaContext();

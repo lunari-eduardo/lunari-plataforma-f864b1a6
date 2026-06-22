@@ -8,7 +8,8 @@ import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoo
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 import DailyHero from "@/components/dashboard/DailyHero";
-import { useAgenda } from "@/hooks/useAgenda";
+import { useAppointmentsRangeQuery } from "@/modules/agenda";
+import { format, addDays } from "date-fns";
 import { useProductionReminders } from "@/hooks/useProductionReminders";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
@@ -33,7 +34,14 @@ export default function Index() {
     }
   }, []);
 
-  const { appointments } = useAgenda();
+  // Próximos 60 dias é suficiente para o card "Próximos Agendamentos"
+  const today = useMemo(() => new Date(), []);
+  const rangeStart = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
+  const rangeEnd = useMemo(() => format(addDays(today, 60), "yyyy-MM-dd"), [today]);
+  const { data: appointments = [] } = useAppointmentsRangeQuery({
+    start: rangeStart,
+    end: rangeEnd,
+  });
   const lembretesProducao = useProductionReminders();
   
   const {
@@ -48,31 +56,31 @@ export default function Index() {
 
   const proximosAgendamentos = useMemo(() => {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
+    const todayKey = format(now, "yyyy-MM-dd");
+
     const items = appointments
       .filter(a => a.status === "confirmado")
       .filter(a => {
-        const appointmentDate = a.date instanceof Date ? a.date : new Date(a.date);
-        const appointmentDay = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
-
-        if (appointmentDay > today) return true;
-
-        if (appointmentDay.getTime() === today.getTime()) {
+        // a.date é ISO yyyy-MM-dd no domínio
+        if (a.date > todayKey) return true;
+        if (a.date === todayKey) {
           const [hh, mm] = a.time.split(":").map(Number);
-          const appointmentDateTime = new Date(appointmentDate);
-          appointmentDateTime.setHours(hh || 0, mm || 0, 0, 0);
+          const [yy, mo, dd] = a.date.split("-").map(Number);
+          const appointmentDateTime = new Date(yy, mo - 1, dd, hh || 0, mm || 0);
           return appointmentDateTime >= now;
         }
         return false;
       })
-      .map(a => ({
-        id: a.id,
-        cliente: a.client,
-        tipo: a.type,
-        data: a.date,
-        hora: a.time
-      }))
+      .map(a => {
+        const [yy, mo, dd] = a.date.split("-").map(Number);
+        return {
+          id: a.id,
+          cliente: a.client,
+          tipo: a.type,
+          data: new Date(yy, mo - 1, dd),
+          hora: a.time,
+        };
+      })
       .sort((a, b) => a.data.getTime() - b.data.getTime())
       .slice(0, 3);
     

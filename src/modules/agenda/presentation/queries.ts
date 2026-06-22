@@ -4,6 +4,7 @@
  */
 import { useCapabilityQuery } from "@/shared/capability";
 import {
+  checkSlot,
   findNextAvailableSlot,
   getAppointmentById,
   listAppointmentsByRange,
@@ -48,5 +49,19 @@ export function useNextFreeSlotQuery(
     queryKey: agendaKeys.nextFreeSlot(input),
     enabled: options?.enabled,
     staleTime: 10_000,
+  });
+}
+
+export interface CheckSlotInput {
+  date: string;
+  time: string;
+  excludeAppointmentId?: string;
+}
+
+export function useCheckSlotQuery(input: CheckSlotInput, options?: { enabled?: boolean }) {
+  return useCapabilityQuery(checkSlot, input as never, {
+    queryKey: agendaKeys.checkSlot(input),
+    enabled: options?.enabled ?? Boolean(input.date && input.time),
+    staleTime: 5_000,
   });
 }
