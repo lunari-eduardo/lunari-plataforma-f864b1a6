@@ -179,7 +179,7 @@ export default function Agenda() {
         openAppointmentDetails(appointment);
       }
     } else if (event.type === 'budget') {
-      const budget = event.originalData as Orcamento;
+      const budget = event.originalData as unknown as Orcamento;
       openBudgetModal(budget);
     }
   }, [isFromBudget, getBudgetId, orcamentos, openBudgetAppointmentModal, openAppointmentDetails, openBudgetModal]);
