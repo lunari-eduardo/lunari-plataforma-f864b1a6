@@ -1,54 +1,61 @@
-import { useAgendaContext } from '@/contexts/AgendaContext';
-import { AgendaSettings } from '@/types/agenda-supabase';
+import { useCallback, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { AgendaService } from '@/services/AgendaService';
+import { SupabaseAgendaAdapter } from '@/adapters/SupabaseAgendaAdapter';
+import { agendaKeys } from '@/modules/agenda/presentation/keys';
+import type { AgendaSettings } from '@/types/agenda-supabase';
 
 /**
- * Hook for agenda settings management
- * Provides settings state and update operations
+ * Hook standalone para as configurações da Agenda (settings).
+ * Substitui o consumo via `AgendaContext` (removido na onda 7d3).
  */
+const service = new AgendaService(new SupabaseAgendaAdapter());
+
+const DEFAULT_SETTINGS: AgendaSettings = {
+  defaultView: 'weekly',
+  workingHours: { start: '08:00', end: '18:00' },
+  autoConfirmAppointments: false,
+};
+
 export const useAgendaSettings = () => {
-  const context = useAgendaContext();
+  const queryClient = useQueryClient();
+
+  const { data } = useQuery({
+    queryKey: agendaKeys.settings(),
+    queryFn: () => service.loadSettings(),
+    staleTime: 60_000,
+  });
+
+  const settings = useMemo<AgendaSettings>(() => data ?? DEFAULT_SETTINGS, [data]);
+
+  const saveMut = useMutation({
+    mutationFn: (next: AgendaSettings) => service.saveSettings(next),
+    onSuccess: (_v, next) => {
+      queryClient.setQueryData(agendaKeys.settings(), next);
+    },
+  });
+
+  const updateSettings = useCallback(
+    (next: AgendaSettings) => saveMut.mutateAsync(next),
+    [saveMut],
+  );
 
   return {
-    // Current settings
-    settings: context.settings,
-    
-    // Update settings
-    updateSettings: context.updateSettings,
-    
-    // Convenience getters
-    defaultView: context.settings.defaultView,
-    workingHours: context.settings.workingHours,
-    autoConfirmAppointments: context.settings.autoConfirmAppointments,
-    
-    // Convenience setters
-    setDefaultView: async (view: AgendaSettings['defaultView']) => {
-      await context.updateSettings({
-        ...context.settings,
-        defaultView: view
-      });
-    },
-    
-    setWorkingHours: async (workingHours: { start: string; end: string }) => {
-      await context.updateSettings({
-        ...context.settings,
-        workingHours
-      });
-    },
-    
-    setAutoConfirmAppointments: async (autoConfirm: boolean) => {
-      await context.updateSettings({
-        ...context.settings,
-        autoConfirmAppointments: autoConfirm
-      });
-    },
-    
-    defaultTimeSlots: context.settings.defaultTimeSlots,
-    
-    setDefaultTimeSlots: async (slots: string[]) => {
-      await context.updateSettings({
-        ...context.settings,
-        defaultTimeSlots: slots.sort()
-      });
-    }
+    settings,
+    updateSettings,
+
+    defaultView: settings.defaultView,
+    workingHours: settings.workingHours,
+    autoConfirmAppointments: settings.autoConfirmAppointments,
+    defaultTimeSlots: settings.defaultTimeSlots,
+
+    setDefaultView: (view: AgendaSettings['defaultView']) =>
+      updateSettings({ ...settings, defaultView: view }),
+    setWorkingHours: (workingHours: { start: string; end: string }) =>
+      updateSettings({ ...settings, workingHours }),
+    setAutoConfirmAppointments: (autoConfirm: boolean) =>
+      updateSettings({ ...settings, autoConfirmAppointments: autoConfirm }),
+    setDefaultTimeSlots: (slots: string[]) =>
+      updateSettings({ ...settings, defaultTimeSlots: [...slots].sort() }),
   };
 };

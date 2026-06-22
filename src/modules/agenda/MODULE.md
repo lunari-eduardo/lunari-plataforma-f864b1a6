@@ -291,10 +291,22 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
 - `src/hooks/useAppointments.ts` **removido**. Não há mais consumidores do
   `AgendaContext.appointments` fora do próprio contexto.
 
+**Passo 7d3 concluído:**
+- Criado `src/hooks/useAvailabilityTypes.ts` standalone (TanStack +
+  `AgendaService`) com cache via `agendaKeys.availabilityTypes()`.
+- `src/hooks/useAgendaSettings.ts` reescrito standalone (TanStack +
+  `AgendaService`), cache via `agendaKeys.settings()`. API
+  (`setDefaultView`, `setWorkingHours`, etc.) preservada.
+- `src/hooks/useAvailability.ts` não depende mais de `AgendaContext`:
+  agrega `useAvailabilityQuery` + `useAvailabilityTypes`.
+- `AgendaProvider` removido de `PhotographerApp.tsx`.
+- `src/contexts/AgendaContext.tsx` **deletado**. Realtime já é
+  coberto por `AgendaRealtimeListener` (7c) e invalidações por
+  `AgendaInvalidationBridge` + eventos do módulo.
+
 **Pendente:**
-- 7d3: extrair `availabilityTypes` + settings, remover `AgendaContext`,
-  `AgendaProvider` e `useAvailability` shim.
 - 7e: inverter dependência do `SupabaseAgendaAdapter` → repos do módulo.
 
 Esses passos têm impacto direto em realtime/cache e devem ser
 validados manualmente; serão tratados em rodadas separadas.
+

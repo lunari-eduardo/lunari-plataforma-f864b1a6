@@ -32,7 +32,7 @@ import ArtigoAjuda from "@/pages/ArtigoAjuda";
 import FormularioPublico from "@/pages/FormularioPublico";
 
 import { AppProvider } from "@/contexts/AppContext";
-import { AgendaProvider } from "@/contexts/AgendaContext";
+
 import { ConfigurationProvider } from "@/contexts/ConfigurationContext";
 import { ProdutoEtiquetasProvider } from "@/contexts/ProdutoEtiquetasContext";
 import { WorkflowCacheProvider } from "@/contexts/WorkflowCacheContext";
@@ -77,93 +77,92 @@ export default function PhotographerApp() {
         <WorkflowCacheProvider>
           <PhotographerInit />
           <AppProvider>
-            <AgendaProvider>
-              <BuildMonitor />
-              <Routes>
-                {/* ============ PUBLIC ROUTES (SEO) ============ */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/conteudos" element={<Conteudos />} />
-                <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
-                <Route path="/sitemap.xml" element={<SitemapProxy />} />
+            <BuildMonitor />
+            <Routes>
+              {/* ============ PUBLIC ROUTES (SEO) ============ */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/conteudos" element={<Conteudos />} />
+              <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
+              <Route path="/sitemap.xml" element={<SitemapProxy />} />
 
-                <Route path="/formulario/:token" element={<FormularioPublico />} />
-                <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
+              <Route path="/formulario/:token" element={<FormularioPublico />} />
+              <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
 
-                <Route path="/landing" element={<Navigate to="/" replace />} />
+              <Route path="/landing" element={<Navigate to="/" replace />} />
 
-                <Route path="/escolher-plano" element={
-                  <ProtectedRoute><EscolherPlano /></ProtectedRoute>
+              <Route path="/escolher-plano" element={
+                <ProtectedRoute><EscolherPlano /></ProtectedRoute>
+              } />
+              <Route path="/minha-assinatura" element={
+                <ProtectedRoute><MinhaAssinatura /></ProtectedRoute>
+              } />
+              <Route path="/escolher-plano/pagamento" element={
+                <ProtectedRoute><EscolherPlanoPagamento /></ProtectedRoute>
+              } />
+
+              <Route path="/onboarding" element={
+                <ProtectedRoute><Onboarding /></ProtectedRoute>
+              } />
+
+              {/* ============ PROTECTED ROUTES (/app) ============ */}
+              <Route path="/app" element={
+                <ProtectedRoute><Layout /></ProtectedRoute>
+              }>
+                <Route index element={<Index />} />
+                <Route path="agenda" element={<Agenda />} />
+                <Route path="clientes" element={<Clientes />} />
+                <Route path="clientes/:id" element={<ClienteDetalhe />} />
+                <Route path="leads" element={
+                  <PlanRestrictionGuard requiredPlan="pro"><Leads /></PlanRestrictionGuard>
                 } />
-                <Route path="/minha-assinatura" element={
-                  <ProtectedRoute><MinhaAssinatura /></ProtectedRoute>
+                <Route path="financas" element={
+                  <PlanRestrictionGuard requiredPlan="pro"><NovaFinancas /></PlanRestrictionGuard>
                 } />
-                <Route path="/escolher-plano/pagamento" element={
-                  <ProtectedRoute><EscolherPlanoPagamento /></ProtectedRoute>
+                <Route path="precificacao" element={
+                  <PlanRestrictionGuard requiredPlan="pro"><Precificacao /></PlanRestrictionGuard>
                 } />
-
-                <Route path="/onboarding" element={
-                  <ProtectedRoute><Onboarding /></ProtectedRoute>
+                <Route path="workflow" element={<Workflow />} />
+                <Route path="analise-vendas" element={
+                  <PlanRestrictionGuard requiredPlan="pro"><AnaliseVendas /></PlanRestrictionGuard>
                 } />
+                <Route path="configuracoes" element={<Configuracoes />} />
+                <Route path="minha-conta" element={<MinhaConta />} />
+                <Route path="integracoes" element={<Integracoes />} />
+                <Route path="tarefas" element={
+                  <PlanRestrictionGuard requiredPlan="pro"><Tarefas /></PlanRestrictionGuard>
+                } />
+                <Route path="feed-test" element={
+                  <PlanRestrictionGuard requiredPlan="pro"><FeedTest /></PlanRestrictionGuard>
+                } />
+                <Route path="preferencias" element={<Navigate to="/app/integracoes" replace />} />
 
-                {/* ============ PROTECTED ROUTES (/app) ============ */}
-                <Route path="/app" element={
-                  <ProtectedRoute><Layout /></ProtectedRoute>
-                }>
-                  <Route index element={<Index />} />
-                  <Route path="agenda" element={<Agenda />} />
-                  <Route path="clientes" element={<Clientes />} />
-                  <Route path="clientes/:id" element={<ClienteDetalhe />} />
-                  <Route path="leads" element={
-                    <PlanRestrictionGuard requiredPlan="pro"><Leads /></PlanRestrictionGuard>
-                  } />
-                  <Route path="financas" element={
-                    <PlanRestrictionGuard requiredPlan="pro"><NovaFinancas /></PlanRestrictionGuard>
-                  } />
-                  <Route path="precificacao" element={
-                    <PlanRestrictionGuard requiredPlan="pro"><Precificacao /></PlanRestrictionGuard>
-                  } />
-                  <Route path="workflow" element={<Workflow />} />
-                  <Route path="analise-vendas" element={
-                    <PlanRestrictionGuard requiredPlan="pro"><AnaliseVendas /></PlanRestrictionGuard>
-                  } />
-                  <Route path="configuracoes" element={<Configuracoes />} />
-                  <Route path="minha-conta" element={<MinhaConta />} />
-                  <Route path="integracoes" element={<Integracoes />} />
-                  <Route path="tarefas" element={
-                    <PlanRestrictionGuard requiredPlan="pro"><Tarefas /></PlanRestrictionGuard>
-                  } />
-                  <Route path="feed-test" element={
-                    <PlanRestrictionGuard requiredPlan="pro"><FeedTest /></PlanRestrictionGuard>
-                  } />
-                  <Route path="preferencias" element={<Navigate to="/app/integracoes" replace />} />
+                {/* Compat: rotas admin antigas redirecionam para admin.lunarihub.com */}
+                <Route path="admin/usuarios" element={<RedirectToAdminHost to="/usuarios" />} />
+                <Route path="admin/planos" element={<RedirectToAdminHost to="/planos" />} />
+                <Route path="admin/conteudos" element={<RedirectToAdminHost to="/conteudos" />} />
+                <Route path="admin/conteudos/novo" element={<RedirectToAdminHost to="/conteudos/novo" />} />
+                <Route path="admin/conteudos/editar/:id" element={<RedirectToAdminHost to="/conteudos" />} />
+                <Route path="admin/suporte/*" element={<RedirectToAdminHost to="/suporte" />} />
 
-                  {/* Compat: rotas admin antigas redirecionam para admin.lunarihub.com */}
-                  <Route path="admin/usuarios" element={<RedirectToAdminHost to="/usuarios" />} />
-                  <Route path="admin/planos" element={<RedirectToAdminHost to="/planos" />} />
-                  <Route path="admin/conteudos" element={<RedirectToAdminHost to="/conteudos" />} />
-                  <Route path="admin/conteudos/novo" element={<RedirectToAdminHost to="/conteudos/novo" />} />
-                  <Route path="admin/conteudos/editar/:id" element={<RedirectToAdminHost to="/conteudos" />} />
-                  <Route path="admin/suporte/*" element={<RedirectToAdminHost to="/suporte" />} />
-
-                  <Route path="ajuda" element={<CentroAjuda />} />
-                  <Route path="ajuda/:slug" element={<ArtigoAjuda />} />
-                  <Route
-                    path="suporte/*"
-                    element={
-                      <LunariSupportHostProvider>
-                        <SupportUserRoutes />
-                      </LunariSupportHostProvider>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-
+                <Route path="ajuda" element={<CentroAjuda />} />
+                <Route path="ajuda/:slug" element={<ArtigoAjuda />} />
+                <Route
+                  path="suporte/*"
+                  element={
+                    <LunariSupportHostProvider>
+                      <SupportUserRoutes />
+                    </LunariSupportHostProvider>
+                  }
+                />
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AgendaProvider>
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </AppProvider>
+
         </WorkflowCacheProvider>
       </ProdutoEtiquetasProvider>
     </ConfigurationProvider>
