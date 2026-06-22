@@ -255,17 +255,24 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
   - `availabilityTypes` + CRUD de tipos seguem em `AgendaContext`
     até a modularização dos tipos.
 - API pública do hook preservada: nenhum call site precisou mudar.
-- Nota: realtime de `availability_slots` ainda vive em `AgendaContext`
-  e atualiza `setAvailability` local — consumidores que agora leem do
-  TanStack ficam dependentes de invalidação por evento + refetch on
-  focus até a Onda 7c migrar o realtime para `eventBus`.
+
+**Passo 7c concluído:**
+- Novo `src/modules/agenda/infrastructure/realtime.ts` assina canais
+  Supabase para `appointments` e `availability_slots` filtrados por
+  `user_id` e publica eventos do domínio (`agenda.appointment.*`,
+  `agenda.availability.changed`) no `eventBus`.
+- `AgendaRealtimeListener` (presentation) monta o subscribe junto ao
+  `AgendaInvalidationBridge` em `App.tsx`, ativando invalidação
+  TanStack automática em todas as abas/sessões do mesmo usuário.
+- `src/hooks/useAgendaRealtime.tsx` (órfão) removido.
+- Canais legados em `AgendaContext` permanecem coexistindo até o 7d
+  remover o contexto — não há conflito porque cada canal usa nome
+  único por `channelId`.
 
 **Pendente:**
-- 7c: mover realtime de `appointments` / `availability_slots` para
-  listener interno do módulo que publica no `eventBus`.
 - 7d: substituir `useLegacyAgendaMutations` por mutations baseadas em
   capabilities; remover `AgendaContext`, `AgendaProvider`,
-  `useAppointments`, `useAvailability`, `useAgendaRealtime`.
+  `useAppointments`, `useAvailability`.
 - 7e: inverter dependência do `SupabaseAgendaAdapter` → repos do módulo.
 
 Esses passos têm impacto direto em realtime/cache e devem ser
