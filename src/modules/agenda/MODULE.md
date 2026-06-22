@@ -284,9 +284,14 @@ Passo 4 concluído (Onda 6): `src/hooks/useAgenda.ts` foi
 - Novo evento `agenda.appointment.updated` cobre invalidações
   cross-tab via `AgendaInvalidationBridge`.
 
+**Passo 7d2 concluído:**
+- `useIntegration` reescrito: lê appointments via
+  `useAppointmentsRangeQuery` (janela -6/+12 meses) e usa
+  `useAppointmentMutations` para criar/atualizar/remover.
+- `src/hooks/useAppointments.ts` **removido**. Não há mais consumidores do
+  `AgendaContext.appointments` fora do próprio contexto.
+
 **Pendente:**
-- 7d2: migrar `useIntegration` para `useAppointmentsRangeQuery` e
-  deletar `src/hooks/useAppointments.ts`.
 - 7d3: extrair `availabilityTypes` + settings, remover `AgendaContext`,
   `AgendaProvider` e `useAvailability` shim.
 - 7e: inverter dependência do `SupabaseAgendaAdapter` → repos do módulo.
