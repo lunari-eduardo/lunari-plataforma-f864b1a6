@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar, Check, X } from "lucide-react";
-import { useAgenda } from "@/hooks/useAgenda";
+import { useLegacyAgendaMutations } from "@/modules/agenda/presentation";
 import { useToast } from "@/hooks/use-toast";
 import { useAgendaConflict } from "@/hooks/useAgendaConflict";
 import { SlotConflictDialog } from "@/components/agenda/SlotConflictDialog";
@@ -28,7 +28,7 @@ export default function LeadSchedulingModal({
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [time, setTime] = useState("14:00");
   const [notes, setNotes] = useState("");
-  const { addAppointment } = useAgenda();
+  const { addAppointment } = useLegacyAgendaMutations();
   const { toast } = useToast();
   const { guard, dialogProps } = useAgendaConflict();
 
