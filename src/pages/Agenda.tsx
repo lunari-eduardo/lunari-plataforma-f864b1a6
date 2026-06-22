@@ -1,5 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import { format } from 'date-fns';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  addDays,
+  subDays,
+} from 'date-fns';
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
@@ -10,7 +20,7 @@ import AgendaHeader from "@/components/agenda/AgendaHeader";
 import AgendaModals from "@/components/agenda/AgendaModals";
 import AgendaTasksSection from "@/components/agenda/AgendaTasksSection";
 import UnifiedTaskModal from "@/components/tarefas/UnifiedTaskModal";
-import { useUnifiedCalendar, UnifiedEvent } from "@/hooks/useUnifiedCalendar";
+import { useUnifiedEventsRangeQuery, type UnifiedEvent } from "@/modules/agenda/presentation";
 import { useAgenda, Appointment } from "@/hooks/useAgenda";
 import { useAvailability } from "@/hooks/useAvailability";
 import { useIntegration } from "@/hooks/useIntegration";
@@ -32,7 +42,6 @@ import { CalendarDays } from 'lucide-react';
 
 
 export default function Agenda() {
-  const { unifiedEvents } = useUnifiedCalendar();
   const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useAgenda();
   const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
