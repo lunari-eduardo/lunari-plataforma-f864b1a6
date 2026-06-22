@@ -1,10 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
 import { useUserPreferences } from '@/hooks/useUserProfile';
 import { useOrcamentos } from '@/hooks/useOrcamentos';
-import { useAgenda } from '@/hooks/useAgenda';
+import { useAppointmentsRangeQuery } from '@/modules/agenda/presentation';
+import { format } from 'date-fns';
 
 function diffInDays(a: Date, b: Date) {
   const ms = a.getTime() - b.getTime();
@@ -15,8 +16,16 @@ export function useAutomationEngine() {
   const { addTask } = useSupabaseTasks();
   const { preferences, getPreferencesOrDefault } = useUserPreferences();
   const { orcamentos } = useOrcamentos();
-  const { appointments } = useAgenda();
+  // Janela: hoje até +120 dias (cobre regras D-2, D-1 e alerta de 72h sobre sessões futuras).
+  const range = useMemo(() => {
+    const now = new Date();
+    const end = new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000);
+    return { start: format(now, 'yyyy-MM-dd'), end: format(end, 'yyyy-MM-dd') };
+  }, []);
+  const { data: appointmentsData } = useAppointmentsRangeQuery(range);
+  const appointments = appointmentsData ?? [];
   const timerRef = useRef<number | null>(null);
+
 
   // Wrapper para addTask que trata a Promise
   const createTask = useCallback(async (taskData: Parameters<typeof addTask>[0]) => {
