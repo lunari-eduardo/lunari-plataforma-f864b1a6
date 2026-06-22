@@ -1,20 +1,17 @@
 import { useMemo } from 'react';
-import { useAgendaContext } from '@/contexts/AgendaContext';
 import {
   useAvailabilityQuery,
   useAddAvailabilityMutation,
   useClearAvailabilityMutation,
   useDeleteAvailabilitySlotMutation,
 } from '@/modules/agenda/presentation';
+import { useAvailabilityTypes } from './useAvailabilityTypes';
 import type { AvailabilitySlot } from '@/types/availability';
 
 /**
- * @deprecated Prefira `useAvailabilityQuery`, `useAddAvailabilityMutation`,
- * `useClearAvailabilityMutation` e `useDeleteAvailabilitySlotMutation` direto
- * de `@/modules/agenda`. Este shim mantém a API antiga para compatibilidade:
- * - `availability` e as 3 mutations de slot agora vêm do módulo (Onda 7a/7b).
- * - `availabilityTypes` + CRUD de tipos seguem no `AgendaContext` até a
- *   modularização dos tipos (onda futura).
+ * @deprecated Prefira hooks especializados de `@/modules/agenda` e
+ * `@/hooks/useAvailabilityTypes`. Este shim agrega as APIs antigas para
+ * compatibilidade. Não depende mais de `AgendaContext` (removido na onda 7d3).
  */
 
 // Range amplo: `listAvailability` ignora o range (input vazio no schema),
@@ -22,9 +19,8 @@ import type { AvailabilitySlot } from '@/types/availability';
 const WIDE_RANGE = { start: '1970-01-01', end: '2999-12-31' } as const;
 
 export const useAvailability = () => {
-  const ctx = useAgendaContext();
-
   const { data } = useAvailabilityQuery(WIDE_RANGE);
+  const types = useAvailabilityTypes();
   const addMut = useAddAvailabilityMutation();
   const clearMut = useClearAvailabilityMutation();
   const deleteMut = useDeleteAvailabilitySlotMutation();
@@ -34,7 +30,7 @@ export const useAvailability = () => {
   return useMemo(
     () => ({
       availability,
-      availabilityTypes: ctx.availabilityTypes,
+      availabilityTypes: types.availabilityTypes,
       addAvailabilitySlots: async (slots: Omit<AvailabilitySlot, 'id'>[]) => {
         await addMut.mutateAsync({ slots });
       },
@@ -44,19 +40,10 @@ export const useAvailability = () => {
       deleteAvailabilitySlot: async (id: string) => {
         await deleteMut.mutateAsync({ id });
       },
-      addAvailabilityType: ctx.addAvailabilityType,
-      updateAvailabilityType: ctx.updateAvailabilityType,
-      deleteAvailabilityType: ctx.deleteAvailabilityType,
+      addAvailabilityType: types.addAvailabilityType,
+      updateAvailabilityType: types.updateAvailabilityType,
+      deleteAvailabilityType: types.deleteAvailabilityType,
     }),
-    [
-      availability,
-      ctx.availabilityTypes,
-      ctx.addAvailabilityType,
-      ctx.updateAvailabilityType,
-      ctx.deleteAvailabilityType,
-      addMut,
-      clearMut,
-      deleteMut,
-    ],
+    [availability, types, addMut, clearMut, deleteMut],
   );
 };
