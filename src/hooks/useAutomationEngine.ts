@@ -73,7 +73,7 @@ export function useAutomationEngine() {
 
         // Automações por status no Workflow (via appointments) - sempre considera apenas futuros
         appointments.forEach(app => {
-          const appDate = app.date instanceof Date ? app.date : new Date(app.date);
+          const appDate = new Date(app.date as unknown as string);
           const daysDiff = diffInDays(appDate, now);
           
           console.log('📅 [AutomationEngine] Analisando appointment:', {
