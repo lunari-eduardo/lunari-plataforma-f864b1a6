@@ -25,7 +25,7 @@ import {
   type UnifiedEvent,
   type Appointment,
 } from "@/modules/agenda/presentation";
-import { useLegacyAgendaMutations } from "@/modules/agenda/presentation";
+import { useAppointmentMutations } from "@/modules/agenda/presentation";
 
 import { useAvailability } from "@/hooks/useAvailability";
 import { useIntegration } from "@/hooks/useIntegration";
@@ -47,7 +47,7 @@ import { CalendarDays } from 'lucide-react';
 
 
 export default function Agenda() {
-  const { addAppointment, updateAppointment, deleteAppointment, loadMonthData } = useLegacyAgendaMutations();
+  const { addAppointment, updateAppointment, deleteAppointment } = useAppointmentMutations();
   const { availability } = useAvailability();
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();
@@ -94,23 +94,9 @@ export default function Agenda() {
 
   const { unifiedEvents } = useUnifiedEventsRangeQuery(range);
 
-  // Auto-load month data when navigating
-  useEffect(() => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    
-    if (view === 'year') {
-      for (let m = 0; m < 12; m++) {
-        loadMonthData(year, m);
-      }
-    } else if (view === 'week') {
-      loadMonthData(year, month);
-      if (date.getDate() > 24) loadMonthData(month === 11 ? year + 1 : year, (month + 1) % 12);
-      if (date.getDate() < 7) loadMonthData(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1);
-    } else {
-      loadMonthData(year, month);
-    }
-  }, [date, view, loadMonthData]);
+  // Nota: o prefetch antigo via `loadMonthData` foi removido — o `range` acima
+  // já inclui um buffer (±7 dias / mês) e `useUnifiedEventsRangeQuery` consulta
+  // o módulo via TanStack, que cuida do cache por chave de range.
   
   // Modal management hook
   const {
