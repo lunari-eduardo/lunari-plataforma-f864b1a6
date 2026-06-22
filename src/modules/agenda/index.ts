@@ -65,6 +65,7 @@ import { checkSlot as _l5 } from "./application/queries/checkSlot";
 import { createAppointment as _c1 } from "./application/commands/createAppointment";
 import { confirmAppointment as _c2 } from "./application/commands/confirmAppointment";
 import { rescheduleAppointment as _c3 } from "./application/commands/rescheduleAppointment";
+import { updateAppointment as _c3b } from "./application/commands/updateAppointment";
 import { cancelAppointment as _c4 } from "./application/commands/cancelAppointment";
 import { addAvailabilitySlots as _c5 } from "./application/commands/addAvailabilitySlots";
 import { clearAvailabilityForDate as _c6 } from "./application/commands/clearAvailabilityForDate";
@@ -72,7 +73,7 @@ import { deleteAvailabilitySlot as _c7 } from "./application/commands/deleteAvai
 
 export const agendaCapabilities = [
   _l1, _l2, _l3, _l4, _l5,
-  _c1, _c2, _c3, _c4, _c5, _c6, _c7,
+  _c1, _c2, _c3, _c3b, _c4, _c5, _c6, _c7,
 ] as const;
 
 // Camada de apresentação (Onda 3): hooks React + bridge de invalidação
