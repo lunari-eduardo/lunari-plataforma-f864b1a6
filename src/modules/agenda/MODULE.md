@@ -106,3 +106,72 @@ automaticamente pelo executor — o LLM nunca precisa "saber" de RLS.
   continuam idênticos.
 - `AgendaContext`, `useAgenda`, `useAppointments` permanecem funcionando até
   a Onda 3 migrar a UI para hooks deste módulo.
+
+---
+
+## Onda 3 — Camada de apresentação (React)
+
+A camada `presentation/` expõe hooks finos que conversam com as capabilities
+via TanStack Query. Toda página/componente novo **deve** consumir esses hooks
+em vez de chamar Supabase direto.
+
+### Setup global (já feito em `src/App.tsx`)
+
+```tsx
+<QueryClientProvider client={queryClient}>
+  <AuthProvider>
+    <CapabilityRuntimeProvider>      {/* mapeia user → AuthUser */}
+      <AgendaInvalidationBridge />   {/* eventBus → invalidate queries */}
+      {/* resto da app */}
+    </CapabilityRuntimeProvider>
+  </AuthProvider>
+</QueryClientProvider>
+```
+
+### Hooks disponíveis
+
+Queries:
+- `useAppointmentsRangeQuery({ start, end })`
+- `useAppointmentByIdQuery(id)`
+- `useAvailabilityQuery({ start, end })`
+- `useNextFreeSlotQuery(input)`
+
+Mutations:
+- `useCreateAppointmentMutation()`
+- `useConfirmAppointmentMutation()`
+- `useRescheduleAppointmentMutation()`
+- `useCancelAppointmentMutation()`
+- `useAddAvailabilityMutation()`
+- `useClearAvailabilityMutation()`
+
+### Exemplo
+
+```tsx
+import {
+  useAppointmentsRangeQuery,
+  useCreateAppointmentMutation,
+} from "@/modules/agenda";
+
+function MinhaAgenda() {
+  const { data: appointments = [], isLoading } =
+    useAppointmentsRangeQuery({ start: "2026-07-01", end: "2026-07-31" });
+
+  const create = useCreateAppointmentMutation({
+    onError: (e) => console.error(e.domain.code, e.domain.message),
+  });
+
+  // ...
+}
+```
+
+### Query keys
+
+`agendaKeys` é o ÚNICO local que define as chaves de cache. Sempre invalide
+através dele — nunca strings literais — para manter consistência com o
+`AgendaInvalidationBridge`.
+
+### Migração incremental
+
+Os hooks legados (`useAgenda`, `useAppointments`, `useAvailability`,
+`AgendaContext`) continuam funcionando. A migração será feita componente a
+componente nas próximas ondas. Não há quebra de contrato nesta onda.
