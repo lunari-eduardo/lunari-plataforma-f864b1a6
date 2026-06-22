@@ -1,31 +1,34 @@
 import { useMemo } from "react";
-import { useAgenda } from "@/hooks/useAgenda";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
 import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
-import { differenceInCalendarDays } from 'date-fns';
-import { parseDateFromStorage } from '@/utils/dateUtils';
+import { differenceInCalendarDays, format } from "date-fns";
+import { parseDateFromStorage } from "@/utils/dateUtils";
+import { useAppointmentsRangeQuery } from "@/modules/agenda/presentation";
 
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
+/**
+ * Wave 4 — primeiro consumidor real migrado para a nova arquitetura.
+ * Lê os appointments do dia via capability `agenda.appointments.listByRange`,
+ * em vez de depender do contexto monolítico `useAgenda`.
+ */
 export default function useTodayOverview() {
-  const { appointments } = useAgenda();
+  const today = useMemo(() => new Date(), []);
+  const todayIso = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
+
+  const { data: appointments = [] } = useAppointmentsRangeQuery({
+    start: todayIso,
+    end: todayIso,
+  });
+
   const { tasks } = useSupabaseTasks();
   const { getDoneKey } = useSupabaseTaskStatuses();
 
-  const today = new Date();
-
-  const sessionsToday = useMemo(() => {
-    return appointments.filter((a) => isSameDay(a.date instanceof Date ? a.date : new Date(a.date), today)).length;
-  }, [appointments]);
+  const sessionsToday = appointments.length;
 
   const nextAppointment = useMemo(() => {
     const now = new Date();
     const todays = appointments
-      .filter((a) => isSameDay(a.date instanceof Date ? a.date : new Date(a.date), today))
       .map((a) => {
-        const d = new Date(a.date);
+        const d = parseDateFromStorage(a.date) ?? new Date(a.date);
         const [hh, mm] = a.time.split(":").map(Number);
         d.setHours(hh || 0, mm || 0, 0, 0);
         return d;
@@ -55,8 +58,7 @@ export default function useTodayOverview() {
         ...x,
         days: differenceInCalendarDays(x.due as Date, todayLocal),
       }))
-      .filter((x) => x.days === 0)
-      .length;
+      .filter((x) => x.days === 0).length;
   }, [tasks, getDoneKey, today]);
 
   return { sessionsToday, tasksToday, nextAppointment } as const;
