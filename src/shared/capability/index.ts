@@ -1,14 +1,14 @@
-export { defineCommand, defineQuery } from "./define";
-export { getCapability, listCapabilities, registerCapability, clearRegistry } from "./registry";
-export { authorize } from "./policies";
-export { capabilityToAITool, type AICapabilityTool } from "./ai-adapter";
-export type {
-  Capability,
-  CapabilityContext,
-  CapabilityKind,
-  CapabilityExample,
-  CostHint,
-  AuditMode,
-  SideEffect,
-  DefineCapabilityOptions,
-} from "./types";
+export * from "./types";
+export * from "./define";
+export * from "./registry";
+export * from "./policies";
+export * from "./ai-adapter";
+export {
+  CapabilityRuntimeProvider,
+  useCapabilityRuntime,
+  useAuthUser,
+  useRunCapability,
+  useCapabilityQuery,
+  useCapabilityMutation,
+  CapabilityError,
+} from "./react";

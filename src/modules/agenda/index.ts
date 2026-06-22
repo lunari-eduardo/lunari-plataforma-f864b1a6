@@ -69,3 +69,6 @@ export const agendaCapabilities = [
   _l1, _l2, _l3, _l4,
   _c1, _c2, _c3, _c4, _c5, _c6,
 ] as const;
+
+// Camada de apresentação (Onda 3): hooks React + bridge de invalidação
+export * from "./presentation";
