@@ -17,6 +17,7 @@ capabilities:
     - agenda.appointments.cancel
     - agenda.availability.add
     - agenda.availability.clearDate
+    - agenda.availability.deleteSlot
 events:
   emitted:
     - agenda.appointment.created
