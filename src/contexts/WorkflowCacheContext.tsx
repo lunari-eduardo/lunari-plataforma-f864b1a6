@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { indexedDBCache } from '@/services/IndexedDBCache';
 import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowSessionPartial } from '@/utils/workflowNormalization';
+import { sessionsRepo } from '@/features/workflow/data';
 
 // Helper para extrair ano/mês de string YYYY-MM-DD sem conversão de timezone
 const getYearMonthFromDateString = (dateString: string): { year: number; month: number } => {
