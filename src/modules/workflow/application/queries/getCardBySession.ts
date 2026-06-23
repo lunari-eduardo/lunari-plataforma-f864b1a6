@@ -43,7 +43,7 @@ export const getCardBySession = defineQuery({
       );
     }
     if (!data) {
-      return err(domainError("NOT_FOUND", "Sessão não encontrada.", { sessionId }));
+      return err(domainError("NOT_FOUND", "Sessão não encontrada.", { details: { sessionId } }));
     }
     if (data.user_id !== userId) {
       return err(domainError("FORBIDDEN", "Sem acesso a esta sessão."));

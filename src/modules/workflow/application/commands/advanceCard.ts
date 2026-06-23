@@ -73,7 +73,7 @@ export const advanceCard = defineCommand({
       );
     }
     if (!current) {
-      return err(domainError("NOT_FOUND", "Sessão não encontrada.", { sessionId }));
+      return err(domainError("NOT_FOUND", "Sessão não encontrada.", { details: { sessionId } }));
     }
     if (current.user_id !== userId) {
       return err(domainError("FORBIDDEN", "Sem acesso a esta sessão."));
