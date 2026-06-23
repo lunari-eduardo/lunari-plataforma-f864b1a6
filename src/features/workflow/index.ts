@@ -30,3 +30,14 @@ export {
   selectSituacaoCounts,
 } from "./store/selectors";
 export type { MonthMetrics } from "./store/selectors";
+
+// Data (Onda 2)
+export { sessionsRepo, transactionsRepo, workflowRpc } from "./data";
+export type {
+  SessionsRepo,
+  TransactionsRepo,
+  WorkflowTransacao,
+  WorkflowRpc,
+  WorkflowDeleteAction,
+  WorkflowDeleteResult,
+} from "./data";
