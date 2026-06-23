@@ -6,46 +6,10 @@ import { toast } from '@/hooks/use-toast';
 import { useWorkflowPackageData } from '@/hooks/useWorkflowPackageData';
 import { calculateSessionTotal, calculateManualProductsTotal } from '@/utils/sessionCalculations';
 
-export interface WorkflowSession {
-  id: string;
-  user_id: string;
-  cliente_id: string;
-  session_id: string;
-  appointment_id?: string;
-  orcamento_id?: string;
-  data_sessao: string;
-  hora_sessao: string;
-  categoria: string;
-  pacote?: string;
-  descricao?: string;
-  status: string;
-  valor_total: number;
-  valor_base_pacote?: number; // FASE 1: Valor base do pacote congelado
-  valor_pago: number;
-  produtos_incluidos: any;
-  qtd_fotos_extra?: number;
-  valor_foto_extra?: number;
-  valor_total_foto_extra?: number;
-  regras_congeladas?: any;
-  desconto?: number;
-  valor_adicional?: number;
-  observacoes?: string | null;
-  detalhes?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  updated_by?: string;
-  // ✅ FASE 4: Campo computado do Supabase (aceita string do banco)
-  status_financeiro?: string;
-  // ✅ FASE 1: Dados do cliente do JOIN Supabase
-  clientes?: {
-    nome: string;
-    email?: string;
-    telefone?: string;
-    whatsapp?: string;
-  };
-  // ✅ Pagamentos anexados via batch query
-  pagamentos?: any[];
-}
+// ✅ Onda 1: tipo canônico movido para src/features/workflow/domain/session.ts
+// Re-export mantém compatibilidade com todos os imports existentes.
+import type { WorkflowSession } from "@/features/workflow";
+export type { WorkflowSession };
 
 export const useWorkflowRealtime = () => {
   const [sessions, setSessions] = useState<WorkflowSession[]>([]);
