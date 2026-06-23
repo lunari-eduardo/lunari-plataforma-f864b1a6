@@ -41,3 +41,6 @@ export type {
   WorkflowDeleteAction,
   WorkflowDeleteResult,
 } from "./data";
+
+// Realtime (Onda 3 — flag VITE_WORKFLOW_REALTIME_V2)
+export { WorkflowRealtimeBridge, useWorkflowRealtimeV2 } from "./realtime";

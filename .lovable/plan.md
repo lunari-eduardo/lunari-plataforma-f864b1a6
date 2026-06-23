@@ -10,7 +10,7 @@ Objetivo: transformar a página atual (1.195 linhas de `Workflow.tsx`, 1.181 lin
 |---|---|---|
 | 1 — Domain + Indexers | ✅ concluída | `features/workflow/{domain,store,index.ts}` criados; `useWorkflowRealtime` virou shim do tipo canônico; `tsgo` limpo |
 | 2 — Data layer + repos | ✅ concluída | `data/{sessionsRepo,transactionsRepo,rpc}.ts`; `Context.fetchAndCacheMonth` migrado (smoke); `tsgo` limpo |
-| 3 — Realtime unificado | ⬜ | |
+| 3 — Realtime unificado | 🟡 scaffold | `realtime/useWorkflowRealtimeV2` + `WorkflowRealtimeBridge` montado em `App.tsx` sob flag `VITE_WORKFLOW_REALTIME_V2`. Canais legados ainda ativos (coexistência segura via `lastSeq`). Remoção dos canais antigos fica para sub-onda após validação. |
 | 4 — Actions + Queries | ⬜ | |
 | 5 — Components + Hooks finos | ⬜ | |
 | 6 — AI surface + remoção de shims | ⬜ | |
