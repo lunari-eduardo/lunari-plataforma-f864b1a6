@@ -11,6 +11,7 @@ import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
 import { CapabilityRuntimeProvider } from "@/shared/capability";
 import { AgendaInvalidationBridge, AgendaRealtimeListener } from "@/modules/agenda";
+import { WorkflowEventBridge } from "@/modules/workflow";
 // Side-effect imports: registram capabilities e eventos nos módulos
 import "@/modules/billing";
 import "@/modules/gallery";
@@ -67,6 +68,7 @@ function App() {
               <CapabilityRuntimeProvider>
                 <AgendaInvalidationBridge />
                 <AgendaRealtimeListener />
+                <WorkflowEventBridge />
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
