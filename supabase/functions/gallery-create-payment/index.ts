@@ -414,10 +414,14 @@ serve(async (req) => {
           tipo_cobranca: "link",
           provedor: "asaas",
           status: "pendente",
-          asaas_payment_id: asaasPayment.id,
-          asaas_customer_id: asaasCustomerId,
-          asaas_invoice_url: checkoutUrl,
+          mp_payment_id: asaasPayment.id, // reuse generic slot p/ reconciliação
           mp_payment_link: checkoutUrl,
+          dados_extras: {
+            asaas_payment_id: asaasPayment.id,
+            asaas_customer_id: asaasCustomerId,
+            asaas_invoice_url: checkoutUrl,
+            asaas_environment: settings.environment || "sandbox",
+          },
         })
         .select()
         .single();
