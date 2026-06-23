@@ -208,31 +208,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchAndCacheMonth = async (year: number, month: number) => {
     if (!userId) return;
-
     try {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-
-      const { data, error } = await supabase
-        .from('clientes_sessoes')
-        .select(`
-          *,
-          clientes (
-            nome,
-            email,
-            telefone,
-            whatsapp
-          )
-        `)
-      .eq('user_id', userId)
-        .gte('data_sessao', startDate.toISOString().split('T')[0])
-        .lte('data_sessao', endDate.toISOString().split('T')[0])
-        .neq('status', 'historico')
-        .order('data_sessao', { ascending: true });
-
-      if (error) throw error;
-
-      const sessions = (data || []) as WorkflowSession[];
+      // ✅ Onda 2: leitura única via repo (paridade total com query anterior).
+      const sessions = await sessionsRepo.listByMonth(userId, year, month);
       setMonthData(year, month, sessions);
     } catch (error) {
       console.error('Error fetching month data:', error);
