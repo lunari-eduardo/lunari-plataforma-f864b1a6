@@ -8,7 +8,7 @@ Objetivo: transformar a página atual (1.195 linhas de `Workflow.tsx`, 1.181 lin
 
 | Onda | Status | Notas |
 |---|---|---|
-| 1 — Domain + Indexers | 🚧 em andamento | |
+| 1 — Domain + Indexers | ✅ concluída | `features/workflow/{domain,store,index.ts}` criados; `useWorkflowRealtime` virou shim do tipo canônico; `tsgo` limpo |
 | 2 — Data layer + repos | ⬜ | |
 | 3 — Realtime unificado | ⬜ | |
 | 4 — Actions + Queries | ⬜ | |
