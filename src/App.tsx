@@ -11,6 +11,9 @@ import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
 import { CapabilityRuntimeProvider } from "@/shared/capability";
 import { AgendaInvalidationBridge, AgendaRealtimeListener } from "@/modules/agenda";
+// Side-effect imports: registram capabilities e eventos nos módulos
+import "@/modules/billing";
+import "@/modules/gallery";
 
 import { usePricingBootstrap } from "./hooks/usePricingBootstrap";
 import { useAppForceUpdate } from "./hooks/useAppForceUpdate";
