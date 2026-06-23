@@ -1,18 +1,23 @@
 # Módulo Workflow
 
-Reage ao fluxo oficial Lead → Pós-venda. Nesta Onda C o módulo expõe:
+Reage e opera o fluxo oficial Lead → Pós-venda.
 
-- **Eventos**
-  - `workflow.payment_attached` — emitido quando uma cobrança recém-criada
-    pertence a uma sessão do funil (derivado de `billing.charge_created`).
+## Eventos
+- `workflow.payment_attached` — derivado de `billing.charge_created` quando há `sessionId`.
+- `workflow.card_advanced` — emitido por `workflow.advanceCard` quando o status do card muda.
 
-- **Bridges (presentation)**
-  - `WorkflowEventBridge` — assina `billing.charge_created`, invalida o
-    cache financeiro do TanStack Query (`financial-transactions`,
-    `extrato-unificado`) e re-emite `workflow.payment_attached` quando há
-    `sessionId`.
+## Capabilities
+- **Command** `workflow.advanceCard` — move um card para uma etapa
+  (`clientes_sessoes.status`). Valida ownership, é idempotente por
+  `(sessionId, toStatus)` e emite `workflow.card_advanced`.
+- **Query** `workflow.getCardBySession` — retorna o estado canônico do
+  card pelo `sessionId`.
 
-Nenhuma capability `defineCommand`/`defineQuery` ainda — Workflow continua
-operando via hooks legados e realtime; o módulo serve como **ponto único
-de assinatura** para reagir aos eventos do barramento sem espalhar
-`eventBus.on(...)` pela UI.
+## Bridges (presentation)
+- `WorkflowEventBridge` — assina `billing.charge_created`, invalida o
+  cache financeiro do TanStack Query e re-emite
+  `workflow.payment_attached` quando há `sessionId`.
+
+Hooks legados (`useWorkflowRealtime`, etc.) continuam funcionando; as
+capabilities oferecem a superfície única consumida por Web/Mobile/IA
+para operações pontuais e auditadas.
