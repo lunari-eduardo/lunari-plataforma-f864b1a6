@@ -29,11 +29,11 @@ export interface WorkflowSession {
   valor_total: number;
   valor_base_pacote?: number;
   valor_pago: number;
-  produtos_incluidos: unknown;
+  produtos_incluidos: any;
   qtd_fotos_extra?: number;
   valor_foto_extra?: number;
   valor_total_foto_extra?: number;
-  regras_congeladas?: unknown;
+  regras_congeladas?: any;
   desconto?: number;
   valor_adicional?: number;
   observacoes?: string | null;
@@ -46,7 +46,7 @@ export interface WorkflowSession {
   /** Embed do JOIN clientes. */
   clientes?: WorkflowSessionClienteEmbed;
   /** Pagamentos anexados via batch query. */
-  pagamentos?: unknown[];
+  pagamentos?: any[];
   /** Integração galeria — campos opcionais usados pela UI. */
   galeria_id?: string;
   galerias?: {
