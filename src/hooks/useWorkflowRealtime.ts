@@ -8,7 +8,8 @@ import { calculateSessionTotal, calculateManualProductsTotal } from '@/utils/ses
 
 // ✅ Onda 1: tipo canônico movido para src/features/workflow/domain/session.ts
 // Re-export mantém compatibilidade com todos os imports existentes.
-export type { WorkflowSession } from "@/features/workflow";
+import type { WorkflowSession } from "@/features/workflow";
+export type { WorkflowSession };
 
 export const useWorkflowRealtime = () => {
   const [sessions, setSessions] = useState<WorkflowSession[]>([]);
