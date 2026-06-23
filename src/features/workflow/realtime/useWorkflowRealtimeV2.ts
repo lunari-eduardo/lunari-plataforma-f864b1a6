@@ -49,19 +49,11 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
 
     async function hydrateAndUpsert(id: string) {
       try {
-        const fresh = await sessionsRepo.getById(id);
+        const fresh = await sessionsRepo.getById(userId!, id);
         if (cancelled || !fresh) return;
-        const changed = (() => {
-          const before = workflowStore.getById(id);
-          workflowStore.upsert(fresh);
-          return workflowStore.getById(id) !== before || true;
-        })();
-        if (changed) {
-          statsRef.current.upserts++;
-          emitLegacyEvent(fresh, "update");
-        } else {
-          statsRef.current.ignored++;
-        }
+        workflowStore.upsert(fresh);
+        statsRef.current.upserts++;
+        emitLegacyEvent(fresh, "update");
       } catch (err) {
         console.warn("[realtime-v2] hydrate failed", id, err);
       }
@@ -69,7 +61,7 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
 
     async function hydrateBySessionText(sessionIdText: string) {
       try {
-        const fresh = await sessionsRepo.getBySessionId(sessionIdText);
+        const fresh = await sessionsRepo.getBySessionId(userId!, sessionIdText);
         if (cancelled || !fresh) return;
         workflowStore.upsert(fresh);
         statsRef.current.upserts++;
