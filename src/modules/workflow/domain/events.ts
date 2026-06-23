@@ -22,6 +22,17 @@ declare module "@/shared/event-bus" {
       valor: number;
       reused: boolean;
     };
+
+    /**
+     * Disparado quando um card do funil avança (ou retrocede) de etapa.
+     * Permite que Notificações, IA e Analytics reajam sem depender da UI.
+     */
+    "workflow.card_advanced": {
+      sessionId: string;
+      fromStatus: string | null;
+      toStatus: string;
+      photographerId: string;
+    };
   }
 }
 
