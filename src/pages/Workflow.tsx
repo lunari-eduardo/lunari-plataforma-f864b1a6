@@ -844,7 +844,7 @@ function WorkflowContent() {
 
       toast({
         title: 'Erro ao excluir',
-        description: userMessage || message || 'Não foi possível excluir a sessão.',
+        description: message || 'Não foi possível excluir a sessão.',
         variant: 'destructive',
       });
       return;
