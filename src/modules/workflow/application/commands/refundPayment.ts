@@ -57,7 +57,7 @@ export const refundPayment = defineCommand({
 
     const { data: original, error: readErr } = await supabase
       .from("clientes_transacoes")
-      .select("id, user_id, cliente_id, session_id, valor, tipo, descricao, forma_pagamento")
+      .select("id, user_id, cliente_id, session_id, valor, tipo, descricao")
       .eq("id", transactionId)
       .maybeSingle();
 
