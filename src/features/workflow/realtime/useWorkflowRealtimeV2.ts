@@ -20,14 +20,25 @@ import type { WorkflowSession } from "../domain/session";
 
 type Stats = { upserts: number; removes: number; ignored: number; lastEventAt: number };
 
-function emitLegacyEvent(session: WorkflowSession | null, kind: "update" | "insert" | "delete") {
+function emitLegacyEvent(
+  session: WorkflowSession | null,
+  kind: "update" | "insert" | "delete",
+  sessionId?: string | null,
+) {
   if (typeof window === "undefined") return;
   try {
     window.dispatchEvent(
       new CustomEvent("workflow-session-updated", {
-        detail: { kind, session, source: "realtime-v2" },
+        detail: { kind, session, sessionId: sessionId ?? session?.id ?? null, source: "realtime-v2" },
       }),
     );
+    if (kind === "delete" && sessionId) {
+      window.dispatchEvent(
+        new CustomEvent("workflow-session-deleted", {
+          detail: { sessionId, source: "realtime-v2" },
+        }),
+      );
+    }
   } catch {
     /* noop */
   }
