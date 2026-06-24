@@ -50,6 +50,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const memoryCache = useRef<Map<string, WorkflowSession[]>>(new Map());
   const subscribers = useRef<Set<(sessions: WorkflowSession[]) => void>>(new Set());
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
+  // Ref usada por mergeUpdate para evitar ciclo de dependência com removeSession.
+  const removeSessionRef = useRef<((sessionId: string) => void) | null>(null);
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
