@@ -9,6 +9,7 @@ import { calculateSessionTotal, calculateManualProductsTotal } from '@/utils/ses
 // ✅ Onda 1: tipo canônico movido para src/features/workflow/domain/session.ts
 // Re-export mantém compatibilidade com todos os imports existentes.
 import type { WorkflowSession } from "@/features/workflow";
+import { isWorkflowRealtimeV2Enabled } from "@/features/workflow/realtime";
 export type { WorkflowSession };
 
 export const useWorkflowRealtime = () => {
@@ -861,6 +862,12 @@ export const useWorkflowRealtime = () => {
     let channel: any = null;
     
     const setupRealtimeChannel = async () => {
+      // Onda 3: canal unificado v2 assume eventos. Legado fica desligado
+      // para evitar duplicação e eco.
+      if (isWorkflowRealtimeV2Enabled()) {
+        console.log('[useWorkflowRealtime] canal legado desativado (v2 ON)');
+        return;
+      }
       const { data: { session: authSession } } = await supabase.auth.getSession();
       const user = authSession?.user;
       if (!user?.id) {

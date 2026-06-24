@@ -33,6 +33,30 @@ declare module "@/shared/event-bus" {
       toStatus: string;
       photographerId: string;
     };
+
+    /** Sessão teve campos atualizados via `workflow.updateFields`. */
+    "workflow.card_updated": {
+      sessionId: string;
+      changedKeys: string[];
+      photographerId: string;
+    };
+
+    /** Sessão foi excluída/arquivada via `workflow.deleteSession`. */
+    "workflow.card_deleted": {
+      sessionId: string;
+      action: "preserve" | "refund" | "remove";
+      photographerId: string;
+      estornosCriados: number;
+    };
+
+    /** Pagamento manual registrado via `workflow.addPayment`. */
+    "workflow.payment_added": {
+      sessionId: string;
+      transactionId: string;
+      valor: number;
+      formaPagamento: string;
+      photographerId: string;
+    };
   }
 }
 
