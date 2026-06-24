@@ -829,7 +829,7 @@ function WorkflowContent() {
     });
 
     if (!isOk(result)) {
-      const { code, userMessage, message } = result.error;
+      const { code, message } = result.error;
       console.error('❌ [WORKFLOW-DELETE] capability failed', result.error);
 
       // CONFLICT == "nada foi excluído" (preserva mensagem original de UX).
