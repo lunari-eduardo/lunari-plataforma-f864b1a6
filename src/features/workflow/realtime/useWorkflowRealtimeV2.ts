@@ -37,7 +37,10 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
   const { user } = useAuth();
   const userId = user?.id;
   const statsRef = useRef<Stats>({ upserts: 0, removes: 0, ignored: 0, lastEventAt: 0 });
-  const enabled = (import.meta.env.VITE_WORKFLOW_REALTIME_V2 ?? "") === "true";
+  // Onda 3 — ligado por padrão no Preview. Para desativar explicitamente,
+  // definir VITE_WORKFLOW_REALTIME_V2="false". Qualquer outro valor (ou ausência) = habilitado.
+  const flag = (import.meta.env.VITE_WORKFLOW_REALTIME_V2 ?? "").toString().toLowerCase();
+  const enabled = flag !== "false" && flag !== "0";
 
   useEffect(() => {
     if (!enabled || !userId) return;
