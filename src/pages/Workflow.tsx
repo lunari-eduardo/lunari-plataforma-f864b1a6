@@ -195,23 +195,45 @@ function WorkflowContent() {
   // ✅ FASE 8: Listener de fallback para garantir updates quando cache-merge falhar
   useEffect(() => {
     const handleSessionUpdated = (event: CustomEvent) => {
-      const { fullSession } = event.detail;
+      const detail = event.detail || {};
+      // Suporta o detail novo (kind/session/sessionId) e o legado (fullSession).
+      const kind: 'update' | 'insert' | 'delete' | undefined = detail.kind;
+      if (kind === 'delete') {
+        const sessionId: string | undefined = detail.sessionId;
+        if (sessionId) {
+          console.log('🗑️ [Workflow] Fallback listener: removing session', sessionId);
+          setWorkflowSessions(prev => prev.filter(s => s.id !== sessionId));
+          removeSessionFromCache(sessionId);
+        }
+        return;
+      }
+      const fullSession = detail.fullSession ?? detail.session;
       if (fullSession) {
         console.log('🔄 [Workflow] Fallback listener: updating session', fullSession.id);
-        // Verificar se sessão pertence ao mês atual
         const sessionDate = new Date(fullSession.data_sessao);
-        if (sessionDate.getFullYear() === currentMonth.year && 
+        if (sessionDate.getFullYear() === currentMonth.year &&
             sessionDate.getMonth() + 1 === currentMonth.month) {
           mergeUpdate(fullSession);
         }
       }
     };
-    
+
+    const handleSessionDeleted = (event: CustomEvent) => {
+      const sessionId: string | undefined = event.detail?.sessionId;
+      if (!sessionId) return;
+      console.log('🗑️ [Workflow] workflow-session-deleted →', sessionId);
+      setWorkflowSessions(prev => prev.filter(s => s.id !== sessionId));
+      removeSessionFromCache(sessionId);
+    };
+
     window.addEventListener('workflow-session-updated', handleSessionUpdated as EventListener);
+    window.addEventListener('workflow-session-deleted', handleSessionDeleted as EventListener);
     return () => {
       window.removeEventListener('workflow-session-updated', handleSessionUpdated as EventListener);
+      window.removeEventListener('workflow-session-deleted', handleSessionDeleted as EventListener);
     };
-  }, [currentMonth, mergeUpdate]);
+  }, [currentMonth, mergeUpdate, removeSessionFromCache]);
+
   
   // Verificar se o mês está sendo carregado
   const isLoadingCurrentMonth = isLoadingMonth(currentMonth.year, currentMonth.month);
