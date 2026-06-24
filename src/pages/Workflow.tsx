@@ -27,6 +27,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 // garante que o registry global esteja populado para o Assistente Lunari.
 import { deleteSession as deleteSessionCapability } from '@/modules/workflow';
 import { isOk } from '@/shared/result';
+import { useRunCapability } from '@/shared/capability';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
