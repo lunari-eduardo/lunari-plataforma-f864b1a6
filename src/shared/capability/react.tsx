@@ -34,14 +34,19 @@ import type { z, ZodTypeAny } from "zod";
 const DEFAULT_USER_PERMISSIONS: string[] = [
   "agenda:read",
   "agenda:write",
+  "agenda:delete",
   "crm:read",
   "crm:write",
+  "crm:delete",
   "workflow:read",
   "workflow:write",
+  "workflow:delete",
   "financeiro:read",
   "financeiro:write",
+  "financeiro:delete",
   "tarefas:read",
   "tarefas:write",
+  "tarefas:delete",
 ];
 
 interface CapabilityRuntimeValue {
