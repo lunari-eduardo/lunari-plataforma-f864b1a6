@@ -104,7 +104,6 @@ export const refundPayment = defineCommand({
         descricao: motivo
           ? `Estorno: ${motivo}`
           : `Estorno do pagamento ${transactionId.slice(0, 8)}`,
-        forma_pagamento: original.forma_pagamento ?? null,
         updated_by: userId,
       })
       .select("id")
