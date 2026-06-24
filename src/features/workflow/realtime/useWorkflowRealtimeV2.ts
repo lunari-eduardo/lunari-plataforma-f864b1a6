@@ -64,7 +64,21 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
     async function hydrateAndUpsert(id: string) {
       try {
         const fresh = await sessionsRepo.getById(userId!, id);
-        if (cancelled || !fresh) return;
+        if (cancelled) return;
+        // Sessão sumiu do filtro (deletada de fato): remover do store.
+        if (!fresh) {
+          workflowStore.remove(id);
+          statsRef.current.removes++;
+          emitLegacyEvent(null, "delete", id);
+          return;
+        }
+        // Soft-delete (status='historico') também sai do funil.
+        if ((fresh as any).status === "historico") {
+          workflowStore.remove(id);
+          statsRef.current.removes++;
+          emitLegacyEvent(null, "delete", id);
+          return;
+        }
         workflowStore.upsert(fresh);
         statsRef.current.upserts++;
         emitLegacyEvent(fresh, "update");
@@ -77,6 +91,12 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
       try {
         const fresh = await sessionsRepo.getBySessionId(userId!, sessionIdText);
         if (cancelled || !fresh) return;
+        if ((fresh as any).status === "historico") {
+          workflowStore.remove(fresh.id);
+          statsRef.current.removes++;
+          emitLegacyEvent(null, "delete", fresh.id);
+          return;
+        }
         workflowStore.upsert(fresh);
         statsRef.current.upserts++;
         emitLegacyEvent(fresh, "update");
