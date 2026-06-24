@@ -221,6 +221,7 @@ function WorkflowContent() {
   }, [workflowSessions, convertSessionToData]);
   
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
+  const runCapability = useRunCapability();
   
   // Funções de edição (integradas com Context) - FASE 1, 2 e 4
   const updateSession = useCallback(async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
