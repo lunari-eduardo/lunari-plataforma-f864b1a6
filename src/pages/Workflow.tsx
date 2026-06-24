@@ -899,7 +899,7 @@ function WorkflowContent() {
     });
 
     // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
-  }, []);
+  }, [runCapability]);
 
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
     return updateSession(sessionId, { [field]: value }, silent);
