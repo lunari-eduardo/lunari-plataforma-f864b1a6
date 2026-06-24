@@ -239,9 +239,23 @@ export const useWorkflowRealtime = () => {
       const user = { user: authSession.user };
 
       // Find current session to perform diff check
-      const currentSession = sessions.find(s => s.id === id);
+      let currentSession = sessions.find(s => s.id === id) as any;
+      // ✅ FIX (F1): com realtime V2 ativo, `sessions` deste hook está vazio
+      // (loadSessions retorna []). Sem fallback, `currentSession?.valor_foto_extra`
+      // ficaria undefined e os cases de fotos extras gravariam `qtd * 0 = 0`.
+      // Fetch direto com JOIN galerias para suportar recálculo com galeriaInfo.
       if (!currentSession) {
-        console.warn('⚠️ Session not found for diff check:', id);
+        const { data: fresh } = await supabase
+          .from('clientes_sessoes')
+          .select('*, galerias(valor_total_vendido, total_fotos_extras_vendidas)')
+          .eq('id', id)
+          .eq('user_id', user.user.id)
+          .maybeSingle();
+        if (fresh) {
+          currentSession = fresh as any;
+        } else {
+          console.warn('⚠️ Session not found for diff check:', id);
+        }
       }
 
       // FASE 3: PROTEÇÃO - NUNCA permitir que regras_congeladas seja sobrescrito com NULL
