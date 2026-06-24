@@ -25,9 +25,9 @@ export const useWorkflowRealtime = () => {
     try {
       setLoading(true);
       console.log('🔄 Loading workflow sessions from Supabase...');
-      
+
       const { data: { session: authSession } } = await supabase.auth.getSession();
-      
+
       if (!authSession?.user) {
         console.error('❌ User not authenticated');
         setError('User not authenticated');
@@ -35,6 +35,19 @@ export const useWorkflowRealtime = () => {
       }
 
       const userId = authSession.user.id;
+
+      // ✅ V2 gate: quando o realtime V2 está ativo, o WorkflowCacheContext já
+      // hidrata por mês via repositórios (sessionsRepo + transactionsRepo) e
+      // este hook fica responsável apenas pelas mutações (`updateSession`,
+      // `createSession`, etc.). Pular a carga inicial de 12 meses evita o
+      // batch IN gigante em `clientes_transacoes` que estourava a URL do
+      // PostgREST (HTTP 400).
+      if (isWorkflowRealtimeV2Enabled()) {
+        console.log('⏭️  [useWorkflowRealtime] V2 ativo → loadSessions skip (cache assume hidratação)');
+        setSessions([]);
+        setError(null);
+        return;
+      }
 
       // ✅ OPTIMIZED: Filtrar por data (últimos 12 meses) para evitar carregar todo histórico
       const twelveMonthsAgo = new Date();
@@ -65,18 +78,10 @@ export const useWorkflowRealtime = () => {
 
       console.log('✅ Loaded sessions:', data?.length || 0);
 
-      // ✅ BATCH QUERY para transações
+      // ✅ BATCH QUERY chunked (evita URL >8KB no PostgREST)
       const sessionIds = (data || []).map(s => s.session_id);
-      
-      const { data: allTransacoes } = sessionIds.length > 0 
-        ? await supabase
-            .from('clientes_transacoes')
-            .select('*')
-            .in('session_id', sessionIds)
-            .eq('user_id', userId)
-            .in('tipo', ['pagamento', 'ajuste'])
-            .order('data_transacao', { ascending: false })
-        : { data: [] };
+      const { transactionsRepo } = await import('@/features/workflow/data');
+      const allTransacoes = await transactionsRepo.listBySessionIds(userId, sessionIds);
 
       // Agrupar transações por session_id em memória
       const transacoesPorSessao = (allTransacoes || []).reduce((acc, t) => {
