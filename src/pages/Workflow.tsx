@@ -845,6 +845,11 @@ function WorkflowContent() {
 
     console.log('🗑️ [WORKFLOW-DELETE] start (capability)', { sessionId, deleteAction });
 
+    // Remoção otimista — UX instantânea. Rollback em caso de erro.
+    const previousSessions = workflowSessions;
+    setWorkflowSessions(prev => prev.filter(s => s.id !== sessionId));
+    removeSessionFromCache(sessionId);
+
     // Onda 4b: substitui chamada inline `supabase.rpc('delete_workflow_session_cascade')`
     // pela Capability `workflow.deleteSession`. Mesma RPC, mesmos efeitos, agora auditável
     // e disponível para o Assistente Lunari.
@@ -856,6 +861,10 @@ function WorkflowContent() {
     if (!isOk(result)) {
       const { code, message } = result.error;
       console.error('❌ [WORKFLOW-DELETE] capability failed', result.error);
+
+      // Reverter remoção otimista.
+      setWorkflowSessions(previousSessions);
+      void ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
 
       // CONFLICT == "nada foi excluído" (preserva mensagem original de UX).
       if (code === 'CONFLICT') {
