@@ -5,6 +5,8 @@ import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowSessionPartial } from '@/utils/workflowNormalization';
 import { sessionsRepo } from '@/features/workflow/data';
 import { isWorkflowRealtimeV2Enabled } from '@/features/workflow/realtime';
+import { eventBus } from '@/shared/event-bus';
+import '@/modules/workflow/domain/events';
 
 // Helper para extrair ano/mês de string YYYY-MM-DD sem conversão de timezone
 const getYearMonthFromDateString = (dateString: string): { year: number; month: number } => {
