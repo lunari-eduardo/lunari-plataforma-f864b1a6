@@ -209,6 +209,33 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [setMonthData]);
 
+  // Mantém ref atualizada para uso interno de mergeUpdate (sem ciclo de deps).
+  useEffect(() => {
+    removeSessionRef.current = removeSession;
+  }, [removeSession]);
+
+  // Onda 4b — Bridge EventBus: a Capability `workflow.deleteSession` emite
+  // `workflow.card_deleted` ANTES da Promise resolver. Reagimos aqui para
+  // remover instantaneamente do cache (e propagar via subscribers), sem
+  // depender do realtime do Postgres chegar.
+  useEffect(() => {
+    const off = eventBus.on('workflow.card_deleted', (event) => {
+      const sessionId = event.payload?.sessionId;
+      if (!sessionId) return;
+      console.log('🛰️ [WorkflowCache] event workflow.card_deleted →', sessionId, event.payload.action);
+      removeSession(sessionId);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('workflow-session-deleted', {
+            detail: { sessionId, action: event.payload.action, source: 'event-bus' },
+          }),
+        );
+      }
+    });
+    return off;
+  }, [removeSession]);
+
+
   const invalidateMonth = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);
     memoryCache.current.delete(key);
