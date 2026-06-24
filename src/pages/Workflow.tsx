@@ -825,7 +825,7 @@ function WorkflowContent() {
     // Onda 4b: substitui chamada inline `supabase.rpc('delete_workflow_session_cascade')`
     // pela Capability `workflow.deleteSession`. Mesma RPC, mesmos efeitos, agora auditável
     // e disponível para o Assistente Lunari.
-    const result = await deleteSessionCapability.execute({
+    const result = await runCapability(deleteSessionCapability, {
       sessionId,
       action: deleteAction,
     });
