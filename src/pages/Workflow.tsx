@@ -836,10 +836,30 @@ function WorkflowContent() {
     console.log('Edit session:', sessionId);
   }, []);
 
+  // Estado do modal manual de pagamento (Onda 4b — `workflow.addPayment`).
+  // Mantém UX atual: botão "+ Pagamento" da WorkflowTable agora abre este modal
+  // em vez de logar no console. Cards expansíveis seguem usando o
+  // SessionPaymentsManager (modal completo com parcelas/agendado/estorno).
+  const [manualPaymentSessionId, setManualPaymentSessionId] = useState<string | null>(null);
+
   const handleAddPayment = useCallback((sessionId: string) => {
-    // Implementation for adding payment
-    console.log('Add payment to session:', sessionId);
+    setManualPaymentSessionId(sessionId);
   }, []);
+
+  const handleManualPaymentClose = useCallback(() => {
+    setManualPaymentSessionId(null);
+  }, []);
+
+  const handleManualPaymentSuccess = useCallback((sessionId: string) => {
+    // O trigger DB recalcula valor_pago/status_financeiro; realtime v2 e o
+    // listener `payment-created` do AppContext propagam a atualização. Aqui
+    // apenas reforçamos um refetch do mês corrente para garantir consistência
+    // se o realtime estiver desabilitado por flag.
+    void ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+    window.dispatchEvent(new CustomEvent('payment-created', {
+      detail: { sessionId, valor: 0, paymentId: null }
+    }));
+  }, [ensureMonthLoaded, currentMonth]);
 
   const handleDeleteSession = useCallback(async (sessionId: string, sessionTitle: string, paymentCount: number, action?: string) => {
     const deleteAction = (action || 'remove') as 'preserve' | 'refund' | 'remove';
