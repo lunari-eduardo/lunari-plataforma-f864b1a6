@@ -28,6 +28,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { deleteSession as deleteSessionCapability } from '@/modules/workflow';
 import { isOk } from '@/shared/result';
 import { useRunCapability } from '@/shared/capability';
+import { ManualPaymentModal } from '@/components/workflow/ManualPaymentModal';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
