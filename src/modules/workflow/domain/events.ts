@@ -57,6 +57,15 @@ declare module "@/shared/event-bus" {
       formaPagamento: string;
       photographerId: string;
     };
+
+    /** Pagamento manual estornado via `workflow.refundPayment`. */
+    "workflow.payment_refunded": {
+      transactionId: string;
+      estornoId: string;
+      sessionId: string | null;
+      valorEstornado: number;
+      photographerId: string;
+    };
   }
 }
 
