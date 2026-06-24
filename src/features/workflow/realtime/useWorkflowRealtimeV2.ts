@@ -117,7 +117,7 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
             if (oldRow?.id) {
               workflowStore.remove(oldRow.id);
               statsRef.current.removes++;
-              emitLegacyEvent(null, "delete");
+              emitLegacyEvent(null, "delete", oldRow.id);
             }
             return;
           }
