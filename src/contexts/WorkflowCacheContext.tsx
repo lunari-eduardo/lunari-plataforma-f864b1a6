@@ -134,6 +134,13 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     // Normalização parcial: NÃO força defaults em campos ausentes do payload
     // (evita que fetches parciais zerem valor_base_pacote, regras_congeladas, etc.)
     const normalized = normalizeWorkflowSessionPartial(session) as WorkflowSession;
+
+    // Soft-delete (status='historico') deve REMOVER do cache do funil — não dá merge.
+    if ((normalized as any).status === 'historico' && (normalized as any).id) {
+      console.log('🗑️ [WorkflowCache] mergeUpdate detectou status=historico → removendo', (normalized as any).id);
+      removeSessionRef.current?.((normalized as any).id);
+      return;
+    }
     console.log('🔀 [WorkflowCache] mergeUpdate called for session:', (normalized as any).id, 'updated_at:', (normalized as any).updated_at);
 
     // 1) Tentar localizar a sessão em algum bucket cacheado (por id UUID ou session_id text)
