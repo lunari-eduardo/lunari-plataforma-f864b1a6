@@ -262,6 +262,14 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const setupRealtimeSubscription = () => {
     if (!userId) return;
 
+    // Onda 3: quando o canal unificado (`workflow:user:{userId}`) está ativo,
+    // este canal legado fica desligado para evitar dupla-hidratação/eco.
+    if (isWorkflowRealtimeV2Enabled()) {
+      console.log('[WorkflowCacheContext] realtime legado desativado (v2 ON)');
+      return;
+    }
+
+
     // FASE 3: Debounce para reduzir updates excessivos e flickering
     let realtimeDebounce: NodeJS.Timeout | null = null;
 
