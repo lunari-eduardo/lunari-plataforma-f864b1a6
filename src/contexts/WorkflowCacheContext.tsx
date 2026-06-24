@@ -5,6 +5,8 @@ import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowSessionPartial } from '@/utils/workflowNormalization';
 import { sessionsRepo } from '@/features/workflow/data';
 import { isWorkflowRealtimeV2Enabled } from '@/features/workflow/realtime';
+import { eventBus } from '@/shared/event-bus';
+import '@/modules/workflow/domain/events';
 
 // Helper para extrair ano/mês de string YYYY-MM-DD sem conversão de timezone
 const getYearMonthFromDateString = (dateString: string): { year: number; month: number } => {
@@ -48,6 +50,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const memoryCache = useRef<Map<string, WorkflowSession[]>>(new Map());
   const subscribers = useRef<Set<(sessions: WorkflowSession[]) => void>>(new Set());
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
+  // Ref usada por mergeUpdate para evitar ciclo de dependência com removeSession.
+  const removeSessionRef = useRef<((sessionId: string) => void) | null>(null);
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
@@ -132,6 +136,13 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     // Normalização parcial: NÃO força defaults em campos ausentes do payload
     // (evita que fetches parciais zerem valor_base_pacote, regras_congeladas, etc.)
     const normalized = normalizeWorkflowSessionPartial(session) as WorkflowSession;
+
+    // Soft-delete (status='historico') deve REMOVER do cache do funil — não dá merge.
+    if ((normalized as any).status === 'historico' && (normalized as any).id) {
+      console.log('🗑️ [WorkflowCache] mergeUpdate detectou status=historico → removendo', (normalized as any).id);
+      removeSessionRef.current?.((normalized as any).id);
+      return;
+    }
     console.log('🔀 [WorkflowCache] mergeUpdate called for session:', (normalized as any).id, 'updated_at:', (normalized as any).updated_at);
 
     // 1) Tentar localizar a sessão em algum bucket cacheado (por id UUID ou session_id text)
@@ -197,6 +208,33 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
   }, [setMonthData]);
+
+  // Mantém ref atualizada para uso interno de mergeUpdate (sem ciclo de deps).
+  useEffect(() => {
+    removeSessionRef.current = removeSession;
+  }, [removeSession]);
+
+  // Onda 4b — Bridge EventBus: a Capability `workflow.deleteSession` emite
+  // `workflow.card_deleted` ANTES da Promise resolver. Reagimos aqui para
+  // remover instantaneamente do cache (e propagar via subscribers), sem
+  // depender do realtime do Postgres chegar.
+  useEffect(() => {
+    const off = eventBus.on('workflow.card_deleted', (event) => {
+      const sessionId = event.payload?.sessionId;
+      if (!sessionId) return;
+      console.log('🛰️ [WorkflowCache] event workflow.card_deleted →', sessionId, event.payload.action);
+      removeSession(sessionId);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('workflow-session-deleted', {
+            detail: { sessionId, action: event.payload.action, source: 'event-bus' },
+          }),
+        );
+      }
+    });
+    return off;
+  }, [removeSession]);
+
 
   const invalidateMonth = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);

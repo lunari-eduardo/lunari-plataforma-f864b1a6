@@ -20,14 +20,25 @@ import type { WorkflowSession } from "../domain/session";
 
 type Stats = { upserts: number; removes: number; ignored: number; lastEventAt: number };
 
-function emitLegacyEvent(session: WorkflowSession | null, kind: "update" | "insert" | "delete") {
+function emitLegacyEvent(
+  session: WorkflowSession | null,
+  kind: "update" | "insert" | "delete",
+  sessionId?: string | null,
+) {
   if (typeof window === "undefined") return;
   try {
     window.dispatchEvent(
       new CustomEvent("workflow-session-updated", {
-        detail: { kind, session, source: "realtime-v2" },
+        detail: { kind, session, sessionId: sessionId ?? session?.id ?? null, source: "realtime-v2" },
       }),
     );
+    if (kind === "delete" && sessionId) {
+      window.dispatchEvent(
+        new CustomEvent("workflow-session-deleted", {
+          detail: { sessionId, source: "realtime-v2" },
+        }),
+      );
+    }
   } catch {
     /* noop */
   }
@@ -53,7 +64,21 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
     async function hydrateAndUpsert(id: string) {
       try {
         const fresh = await sessionsRepo.getById(userId!, id);
-        if (cancelled || !fresh) return;
+        if (cancelled) return;
+        // Sessão sumiu do filtro (deletada de fato): remover do store.
+        if (!fresh) {
+          workflowStore.remove(id);
+          statsRef.current.removes++;
+          emitLegacyEvent(null, "delete", id);
+          return;
+        }
+        // Soft-delete (status='historico') também sai do funil.
+        if ((fresh as any).status === "historico") {
+          workflowStore.remove(id);
+          statsRef.current.removes++;
+          emitLegacyEvent(null, "delete", id);
+          return;
+        }
         workflowStore.upsert(fresh);
         statsRef.current.upserts++;
         emitLegacyEvent(fresh, "update");
@@ -66,6 +91,12 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
       try {
         const fresh = await sessionsRepo.getBySessionId(userId!, sessionIdText);
         if (cancelled || !fresh) return;
+        if ((fresh as any).status === "historico") {
+          workflowStore.remove(fresh.id);
+          statsRef.current.removes++;
+          emitLegacyEvent(null, "delete", fresh.id);
+          return;
+        }
         workflowStore.upsert(fresh);
         statsRef.current.upserts++;
         emitLegacyEvent(fresh, "update");
@@ -86,7 +117,7 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
             if (oldRow?.id) {
               workflowStore.remove(oldRow.id);
               statsRef.current.removes++;
-              emitLegacyEvent(null, "delete");
+              emitLegacyEvent(null, "delete", oldRow.id);
             }
             return;
           }
