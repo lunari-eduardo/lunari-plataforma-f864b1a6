@@ -477,23 +477,47 @@ export const useWorkflowRealtime = () => {
             const novoUnit = typeof value === 'string'
               ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
               : Number(value) || 0;
-            sanitizedUpdates.valor_foto_extra = novoUnit;
-            (sanitizedUpdates as any).extras_overridden = true;
-            (sanitizedUpdates as any).extras_overridden_at = new Date().toISOString();
             const qtdAtual = Number(currentSession?.qtd_fotos_extra) || 0;
-            sanitizedUpdates.valor_total_foto_extra = Math.round(qtdAtual * novoUnit * 100) / 100;
-            console.log('📸 [Override] valorFotoExtra manual:', novoUnit, 'qtd=', qtdAtual);
+            const { recalcFotosExtras } = await import('@/utils/fotosExtrasCalculator');
+            const r = recalcFotosExtras({
+              qtd: qtdAtual,
+              valorFotoExtra: novoUnit,
+              regrasCongeladas: currentSession?.regras_congeladas,
+              galeriaInfo: {
+                galeriaId: currentSession?.galeria_id,
+                valorTotalVendido: (currentSession as any)?.galerias?.valor_total_vendido,
+                totalFotosExtrasVendidas: (currentSession as any)?.galerias?.total_fotos_extras_vendidas,
+              },
+            });
+            sanitizedUpdates.valor_foto_extra = r.valorUnitarioEfetivo || novoUnit;
+            sanitizedUpdates.valor_total_foto_extra = r.valorTotalFotoExtra;
+            (sanitizedUpdates as any).extras_overridden = !r.respeitarBanco;
+            (sanitizedUpdates as any).extras_overridden_at = r.respeitarBanco ? null : new Date().toISOString();
+            console.log('📸 [Override] valorFotoExtra:', novoUnit, '→', r.valorTotalFotoExtra, 'qtd=', qtdAtual, 'respBanco=', r.respeitarBanco);
             break;
           }
           case 'qtdFotosExtra': {
             const qtd = Number(value) || 0;
-            sanitizedUpdates.qtd_fotos_extra = qtd;
-            (sanitizedUpdates as any).extras_overridden = true;
-            (sanitizedUpdates as any).extras_overridden_at = new Date().toISOString();
             const unitAtual = Number(currentSession?.valor_foto_extra) || 0;
-            sanitizedUpdates.valor_foto_extra = unitAtual;
-            sanitizedUpdates.valor_total_foto_extra = Math.round(qtd * unitAtual * 100) / 100;
-            console.log('📸 [Override] qtdFotosExtra manual:', qtd, 'unit=', unitAtual);
+            const { recalcFotosExtras } = await import('@/utils/fotosExtrasCalculator');
+            const r = recalcFotosExtras({
+              qtd,
+              valorFotoExtra: unitAtual,
+              regrasCongeladas: currentSession?.regras_congeladas,
+              galeriaInfo: {
+                galeriaId: currentSession?.galeria_id,
+                valorTotalVendido: (currentSession as any)?.galerias?.valor_total_vendido,
+                totalFotosExtrasVendidas: (currentSession as any)?.galerias?.total_fotos_extras_vendidas,
+              },
+            });
+            sanitizedUpdates.qtd_fotos_extra = qtd;
+            sanitizedUpdates.valor_foto_extra = r.valorUnitarioEfetivo || unitAtual;
+            sanitizedUpdates.valor_total_foto_extra = r.valorTotalFotoExtra;
+            // Quando a qtd nova bate com o total vendido da galeria, voltamos a
+            // respeitar o banco (override=false). Caso contrário marca override.
+            (sanitizedUpdates as any).extras_overridden = !r.respeitarBanco;
+            (sanitizedUpdates as any).extras_overridden_at = r.respeitarBanco ? null : new Date().toISOString();
+            console.log('📸 [Override] qtdFotosExtra:', qtd, 'unit=', r.valorUnitarioEfetivo, 'total=', r.valorTotalFotoExtra, 'respBanco=', r.respeitarBanco);
             break;
           }
           case 'resyncExtrasWithGallery': {
