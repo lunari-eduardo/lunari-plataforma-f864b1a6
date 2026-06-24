@@ -23,6 +23,10 @@ import type { SessionData, CategoryOption, PackageOption, ProductOption } from '
 import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+// Capabilities — superfície oficial (Onda 4b). Importar do entry-point do módulo
+// garante que o registry global esteja populado para o Assistente Lunari.
+import { deleteSession as deleteSessionCapability } from '@/modules/workflow';
+import { isOk } from '@/shared/result';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -814,34 +818,22 @@ function WorkflowContent() {
   const handleDeleteSession = useCallback(async (sessionId: string, sessionTitle: string, paymentCount: number, action?: string) => {
     const deleteAction = (action || 'remove') as 'preserve' | 'refund' | 'remove';
 
-    console.log('🗑️ [WORKFLOW-DELETE] start', { sessionId, deleteAction });
+    console.log('🗑️ [WORKFLOW-DELETE] start (capability)', { sessionId, deleteAction });
 
-    try {
-      // Chamada única à RPC atômica que cuida de transações, cobranças, sessão e appointment
-      const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
-        p_session_pk: sessionId,
-        p_action: deleteAction,
-      });
+    // Onda 4b: substitui chamada inline `supabase.rpc('delete_workflow_session_cascade')`
+    // pela Capability `workflow.deleteSession`. Mesma RPC, mesmos efeitos, agora auditável
+    // e disponível para o Assistente Lunari.
+    const result = await deleteSessionCapability.execute({
+      sessionId,
+      action: deleteAction,
+    });
 
-      if (error) {
-        console.error('❌ [WORKFLOW-DELETE] rpc error', error);
-        throw error;
-      }
+    if (!isOk(result)) {
+      const { code, message } = result.error;
+      console.error('❌ [WORKFLOW-DELETE] capability failed', result.error);
 
-      const result = (data ?? {}) as {
-        deleted_transactions?: number;
-        deleted_cobrancas?: number;
-        unlinked_cobrancas?: number;
-        deleted_session?: number;
-        deleted_appointment?: number;
-        estornos_criados?: number;
-        soft_deleted?: boolean;
-      };
-
-      console.log('✅ [WORKFLOW-DELETE] rpc result', result);
-
-      // Defesa contra "sucesso silencioso": se nenhuma sessão foi tocada, alertar
-      if (deleteAction !== 'preserve' && (result.deleted_session ?? 0) === 0) {
+      // CONFLICT == "nada foi excluído" (preserva mensagem original de UX).
+      if (code === 'CONFLICT') {
         toast({
           title: 'Nada foi excluído',
           description: 'A sessão pode já ter sido removida ou você não tem permissão.',
@@ -850,52 +842,61 @@ function WorkflowContent() {
         return;
       }
 
-      // Mensagens contextualizadas por ação
-      let title: string;
-      let description: string;
-      let durationMs = 5000;
-
-      if (deleteAction === 'preserve') {
-        title = 'Sessão arquivada';
-        description = 'Sessão movida para o histórico do cliente.';
-      } else if (deleteAction === 'refund') {
-        title = 'Sessão excluída com estorno';
-        const partes: string[] = ['Sessão e agendamento removidos'];
-        if (result.estornos_criados) partes.push(`${result.estornos_criados} estorno(s) registrado(s)`);
-        description = partes.join(' • ') + '.';
-      } else {
-        title = 'Sessão excluída';
-        const pagamentos = result.deleted_transactions ?? 0;
-        const cobrancasPreservadas = result.unlinked_cobrancas ?? 0;
-        const agendamentoRemovido = !!result.deleted_appointment;
-
-        const acoes: string[] = ['Sessão'];
-        if (pagamentos > 0) acoes.push(`${pagamentos} pagamento(s)`);
-        if (agendamentoRemovido) acoes.push('agendamento');
-
-        description = `${acoes.join(', ').replace(/, ([^,]*)$/, ' e $1')} excluídos permanentemente.`;
-
-        if (cobrancasPreservadas > 0) {
-          description += ` ${cobrancasPreservadas} pagamento(s) recebido(s) via gateway (Asaas/Mercado Pago/InfinitePay) foram mantidos no extrato fiscal para auditoria contábil.`;
-          durationMs = 8000;
-        }
-      }
-
-      toast({
-        title,
-        description,
-        duration: durationMs,
-      });
-
-      // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
-    } catch (error: any) {
-      console.error('❌ [WORKFLOW-DELETE] failed', error);
       toast({
         title: 'Erro ao excluir',
-        description: error?.message || 'Não foi possível excluir a sessão.',
+        description: message || 'Não foi possível excluir a sessão.',
         variant: 'destructive',
       });
+      return;
     }
+
+    const {
+      deletedTransactions,
+      unlinkedCobrancas,
+      deletedAppointment,
+      estornosCriados,
+    } = result.value;
+
+    console.log('✅ [WORKFLOW-DELETE] capability result', result.value);
+
+    // Mensagens contextualizadas por ação (mantidas idênticas ao fluxo anterior).
+    let title: string;
+    let description: string;
+    let durationMs = 5000;
+
+    if (deleteAction === 'preserve') {
+      title = 'Sessão arquivada';
+      description = 'Sessão movida para o histórico do cliente.';
+    } else if (deleteAction === 'refund') {
+      title = 'Sessão excluída com estorno';
+      const partes: string[] = ['Sessão e agendamento removidos'];
+      if (estornosCriados) partes.push(`${estornosCriados} estorno(s) registrado(s)`);
+      description = partes.join(' • ') + '.';
+    } else {
+      title = 'Sessão excluída';
+      const pagamentos = deletedTransactions ?? 0;
+      const cobrancasPreservadas = unlinkedCobrancas ?? 0;
+      const agendamentoRemovido = !!deletedAppointment;
+
+      const acoes: string[] = ['Sessão'];
+      if (pagamentos > 0) acoes.push(`${pagamentos} pagamento(s)`);
+      if (agendamentoRemovido) acoes.push('agendamento');
+
+      description = `${acoes.join(', ').replace(/, ([^,]*)$/, ' e $1')} excluídos permanentemente.`;
+
+      if (cobrancasPreservadas > 0) {
+        description += ` ${cobrancasPreservadas} pagamento(s) recebido(s) via gateway (Asaas/Mercado Pago/InfinitePay) foram mantidos no extrato fiscal para auditoria contábil.`;
+        durationMs = 8000;
+      }
+    }
+
+    toast({
+      title,
+      description,
+      duration: durationMs,
+    });
+
+    // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
   }, []);
 
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
