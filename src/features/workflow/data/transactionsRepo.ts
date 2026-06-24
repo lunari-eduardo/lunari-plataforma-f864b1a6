@@ -7,6 +7,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { chunkedIn, DEFAULT_IN_CHUNK_SIZE } from "./_chunked";
 
 export interface WorkflowTransacao {
   id: string;
@@ -24,18 +25,30 @@ export interface WorkflowTransacao {
 }
 
 export const transactionsRepo = {
-  /** Batch — retorna transações de várias sessões em uma chamada. */
+  /** Batch — retorna transações de várias sessões em uma chamada (chunked). */
   async listBySessionIds(userId: string, sessionIds: string[]): Promise<WorkflowTransacao[]> {
     if (!userId || sessionIds.length === 0) return [];
-    const { data, error } = await supabase
-      .from("clientes_transacoes")
-      .select("*")
-      .eq("user_id", userId)
-      .in("session_id", sessionIds)
-      .in("tipo", ["pagamento", "ajuste"])
-      .order("data_transacao", { ascending: false });
-    if (error) throw error;
-    return (data || []) as unknown as WorkflowTransacao[];
+    const rows = await chunkedIn<WorkflowTransacao>(
+      sessionIds,
+      DEFAULT_IN_CHUNK_SIZE,
+      async (chunk) => {
+        const { data, error } = await supabase
+          .from("clientes_transacoes")
+          .select("*")
+          .eq("user_id", userId)
+          .in("session_id", chunk)
+          .in("tipo", ["pagamento", "ajuste"]);
+        if (error) throw error;
+        return (data || []) as unknown as WorkflowTransacao[];
+      },
+    );
+    // Reordenar globalmente após concatenar os chunks.
+    rows.sort((a, b) => {
+      const ad = a.data_transacao ?? "";
+      const bd = b.data_transacao ?? "";
+      return bd.localeCompare(ad);
+    });
+    return rows;
   },
 
   async listBySession(userId: string, sessionId: string): Promise<WorkflowTransacao[]> {

@@ -27,6 +27,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 // garante que o registry global esteja populado para o Assistente Lunari.
 import { deleteSession as deleteSessionCapability } from '@/modules/workflow';
 import { isOk } from '@/shared/result';
+import { useRunCapability } from '@/shared/capability';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -220,6 +221,7 @@ function WorkflowContent() {
   }, [workflowSessions, convertSessionToData]);
   
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
+  const runCapability = useRunCapability();
   
   // Funções de edição (integradas com Context) - FASE 1, 2 e 4
   const updateSession = useCallback(async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
@@ -823,7 +825,7 @@ function WorkflowContent() {
     // Onda 4b: substitui chamada inline `supabase.rpc('delete_workflow_session_cascade')`
     // pela Capability `workflow.deleteSession`. Mesma RPC, mesmos efeitos, agora auditável
     // e disponível para o Assistente Lunari.
-    const result = await deleteSessionCapability.execute({
+    const result = await runCapability(deleteSessionCapability, {
       sessionId,
       action: deleteAction,
     });
@@ -897,7 +899,7 @@ function WorkflowContent() {
     });
 
     // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
-  }, []);
+  }, [runCapability]);
 
   const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
     return updateSession(sessionId, { [field]: value }, silent);

@@ -292,18 +292,10 @@ class WorkflowCacheManager {
 
     console.log(`✅ WorkflowCacheManager: Fetched ${data?.length || 0} sessions for ${year}-${month}`);
     
-    // ✅ FASE 1: BATCH QUERY - Buscar todas as transações de uma vez
+    // ✅ FASE 1: BATCH QUERY chunked (paridade com transactionsRepo).
     const sessionIds = (data || []).map(s => s.session_id);
-    
-    const { data: allTransacoes } = sessionIds.length > 0 
-      ? await supabase
-          .from('clientes_transacoes')
-          .select('*')
-          .in('session_id', sessionIds)
-          .eq('user_id', user.user.id)
-          .in('tipo', ['pagamento', 'ajuste'])
-          .order('data_transacao', { ascending: false })
-      : { data: [] };
+    const { transactionsRepo } = await import('@/features/workflow/data');
+    const allTransacoes = await transactionsRepo.listBySessionIds(user.user.id, sessionIds);
 
     console.log(`✅ BATCH: Loaded ${allTransacoes?.length || 0} transactions for ${sessionIds.length} sessions`);
 
