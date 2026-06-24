@@ -23,6 +23,10 @@ import type { SessionData, CategoryOption, PackageOption, ProductOption } from '
 import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+// Capabilities — superfície oficial (Onda 4b). Importar do entry-point do módulo
+// garante que o registry global esteja populado para o Assistente Lunari.
+import { deleteSession as deleteSessionCapability } from '@/modules/workflow';
+import { isOk } from '@/shared/result';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
