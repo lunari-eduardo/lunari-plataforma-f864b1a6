@@ -68,6 +68,7 @@ function WorkflowContent() {
     isPreloading,
     subscribe,
     mergeUpdate,
+    removeSession: removeSessionFromCache,
     forceRefresh,
     ensureMonthLoaded,
     isLoadingMonth
