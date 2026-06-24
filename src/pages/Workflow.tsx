@@ -1247,6 +1247,13 @@ function WorkflowContent() {
           </Button>
         )}
       </div>
+
+      <ManualPaymentModal
+        isOpen={manualPaymentSessionId !== null}
+        onClose={handleManualPaymentClose}
+        sessionId={manualPaymentSessionId}
+        onSuccess={handleManualPaymentSuccess}
+      />
     </div>
   );
 }
