@@ -23,12 +23,20 @@ import type { SessionData, CategoryOption, PackageOption, ProductOption } from '
 import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
 import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-// Capabilities — superfície oficial (Onda 4b). Importar do entry-point do módulo
+// Capabilities — superfície oficial (Onda 4a/4b). Importar do entry-point do módulo
 // garante que o registry global esteja populado para o Assistente Lunari.
-import { deleteSession as deleteSessionCapability } from '@/modules/workflow';
+import {
+  deleteSession as deleteSessionCapability,
+  updateSessionFields as updateSessionFieldsCapability,
+  advanceCard as advanceCardCapability,
+} from '@/modules/workflow';
 import { isOk } from '@/shared/result';
 import { useRunCapability } from '@/shared/capability';
 import { ManualPaymentModal } from '@/components/workflow/ManualPaymentModal';
+import {
+  USE_CAPABILITY_UPDATE_FIELDS,
+  updatesRequireRefreeze,
+} from '@/features/workflow/config';
 
 const removeAccents = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -383,8 +391,28 @@ function WorkflowContent() {
         });
       }
       
-      // 2. FASE 2: Usar função robusta do hook (já sanitiza e recongela)
-      await updateSessionRealtime(sessionId, validUpdates, silent);
+      // 2. Roteamento Onda 4a:
+      //    - Campos que disparam recongelamento (pacote, produtos, fotos extras)
+      //      continuam no hook legado `useWorkflowRealtime` — orquestração
+      //      pesada (refreeze de regras, sync categoria, override flags) ainda
+      //      não foi portada para a Capability.
+      //    - Demais campos (desconto, valor_adicional, descrição, observações,
+      //      categoria, status como parte de edição inline) vão pela Capability
+      //      `workflow.updateFields`, ganhando auth, idempotência e evento
+      //      `workflow.card_updated` para a IA/Assistente.
+      //    Flag VITE_WORKFLOW_USE_CAPABILITY_UPDATE=false força tudo no legado.
+      const needsLegacyPath = updatesRequireRefreeze(validUpdates);
+      if (USE_CAPABILITY_UPDATE_FIELDS && !needsLegacyPath && Object.keys(cacheSafeUpdates).length > 0) {
+        const result = await runCapability(updateSessionFieldsCapability, {
+          sessionId,
+          fields: cacheSafeUpdates as Record<string, unknown>,
+        });
+        if (!isOk(result)) {
+          throw new Error(result.error.message || 'Falha ao atualizar sessão.');
+        }
+      } else {
+        await updateSessionRealtime(sessionId, validUpdates, silent);
+      }
       
     } catch (error) {
       console.error('Error updating session:', error);
@@ -399,7 +427,7 @@ function WorkflowContent() {
       });
       throw error;
     }
-  }, [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime]);
+  }, [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability]);
   
   const deleteWorkflowSession = useCallback(async (sessionId: string, deletePayments: boolean) => {
     try {
@@ -827,9 +855,41 @@ function WorkflowContent() {
     window.localStorage.setItem('workflow_column_widths', JSON.stringify(widths));
   }, []);
 
-  const handleStatusChange = useCallback((sessionId: string, newStatus: string) => {
-    updateSession(sessionId, { status: newStatus });
-  }, [updateSession]);
+  const handleStatusChange = useCallback(async (sessionId: string, newStatus: string) => {
+    // Onda 4a — drag-and-drop entre colunas usa Capability `workflow.advanceCard`.
+    // No-op (mesma coluna) é tratado dentro da Capability; aqui mantemos patch
+    // otimista para feedback instantâneo no Kanban.
+    const currentSession = workflowSessions.find(s => s.id === sessionId);
+    if (currentSession && currentSession.status === newStatus) return;
+
+    if (currentSession) {
+      mergeUpdate({
+        ...currentSession,
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    if (USE_CAPABILITY_UPDATE_FIELDS) {
+      const result = await runCapability(advanceCardCapability, {
+        sessionId,
+        toStatus: newStatus,
+      });
+      if (!isOk(result)) {
+        console.error('[handleStatusChange] capability failed:', result.error);
+        await forceRefresh();
+        toast({
+          title: 'Erro ao mover card',
+          description: result.error.message || 'Não foi possível atualizar a etapa.',
+          variant: 'destructive',
+        });
+      }
+      return;
+    }
+
+    // Fallback legado quando a flag está desligada.
+    await updateSession(sessionId, { status: newStatus });
+  }, [updateSession, workflowSessions, mergeUpdate, forceRefresh, runCapability]);
 
   const handleEditSession = useCallback((sessionId: string) => {
     // Implementation for editing session
