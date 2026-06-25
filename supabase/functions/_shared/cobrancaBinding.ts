@@ -31,8 +31,13 @@ export interface BindingError {
     | "INVALID_QTD_FOTOS"
     | "GALLERY_FORBIDDEN"
     | "GALLERY_NOT_FOUND"
-    | "INVALID_FINALIDADE";
+    | "INVALID_FINALIDADE"
+    | "EXTRA_PAYMENT_RPC_FAILED"
+    | "EXTRA_PAYMENT_EXCEEDS_IDEAL"
+    | "AMBIGUOUS_PURPOSE_USE_FOTOS_EXTRAS";
   message: string;
+  // deno-lint-ignore no-explicit-any
+  details?: Record<string, any>;
 }
 
 /**
