@@ -119,8 +119,20 @@ export function ChargeModal({
       setOverrideRepassarTaxas(false);
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
+      setFinalidade('sessao');
+      setGaleriaId(null);
+      setGaleriaInfo(null);
+      setQtdFotos(0);
     }
   }, [isOpen, valorSugerido]);
+
+  // Quando o usuário escolhe uma galeria, sugerir valor (qtd × valor_foto_extra)
+  useEffect(() => {
+    if (finalidade !== 'fotos_extras' || !galeriaInfo || !qtdFotos) return;
+    const unit = Number(galeriaInfo.valor_foto_extra || 0);
+    if (!unit) return;
+    setValor(Math.round(unit * qtdFotos * 100) / 100);
+    setValorType('parcial');
 
   // Fetch Asaas settings when provider is selected
   useEffect(() => {
