@@ -584,6 +584,42 @@ export function ChargeModal({
 
                 <Separator />
 
+                {/* Banner proativo: sessão tem saldo pendente de fotos extras */}
+                {ambiguity && finalidade === 'sessao' && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div>
+                          <strong>Fotos extras pendentes nesta sessão.</strong>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Galeria "{ambiguity.nomeGaleria ?? '—'}" · {ambiguity.qtdSugerida} fotos ·{' '}
+                            {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            })}{' '}
+                            a cobrar. Cobrar como "sessão" pode duplicar receita.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setFinalidade('fotos_extras');
+                            setGaleriaId(ambiguity.galeriaId);
+                            setQtdFotos(ambiguity.qtdSugerida);
+                            setValor(ambiguity.valorSaldoExtras);
+                            setValorType('parcial');
+                          }}
+                        >
+                          Cobrar como fotos extras
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Finalidade da cobrança (sessao vs fotos extras) */}
                 <CobrancaFinalidadeSelector
                   clienteId={clienteId}
