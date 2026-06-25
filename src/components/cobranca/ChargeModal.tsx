@@ -21,6 +21,13 @@ import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
 import { CobrancaFinalidadeSelector, type GalleryOption, type CobrancaFinalidadeUI } from './CobrancaFinalidadeSelector';
+import {
+  assertExtraPaymentWithinIdealClient,
+  assertNotAmbiguousSessionChargeClient,
+  type ExtraPaymentSnapshot,
+  type ChargeGuardError,
+} from './_chargeGuards';
+import { AlertTriangle } from 'lucide-react';
 
 interface ChargeModalProps {
   isOpen: boolean;
