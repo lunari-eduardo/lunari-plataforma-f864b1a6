@@ -285,15 +285,28 @@ export function ChargeModal({
       }
     | null
   > => {
-    if (finalidade === 'sessao') return { finalidade: 'sessao' };
+    const { toast } = await import('sonner');
+    if (finalidade === 'sessao') {
+      if (sessionId) {
+        const guard = await assertNotAmbiguousSessionChargeClient(sessionId, valor);
+        if (guard.error) {
+          toast.error(guard.error.message);
+          return null;
+        }
+      }
+      return { finalidade: 'sessao' };
+    }
     if (!galeriaId) {
-      const { toast } = await import('sonner');
       toast.error('Selecione a galeria vinculada às fotos extras');
       return null;
     }
     if (!qtdFotos || qtdFotos <= 0) {
-      const { toast } = await import('sonner');
       toast.error('Informe a quantidade de fotos extras');
+      return null;
+    }
+    const guard = await assertExtraPaymentWithinIdealClient(galeriaId, valor);
+    if (guard.error) {
+      toast.error(guard.error.message);
       return null;
     }
     return { finalidade: 'fotos_extras', galeriaId, qtdFotos };
