@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
+import { resolveCobrancaBinding } from '../_shared/cobrancaBinding.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,6 +34,12 @@ interface RequestBody {
     anteciparParcelas?: boolean;
     repassarTaxaAntecipacao?: boolean;
   };
+  // Contrato Gestão↔Gallery (opcional; default = 'sessao')
+  finalidade?: 'sessao' | 'fotos_extras';
+  galeriaId?: string;
+  qtdFotos?: number;
+  snapshotFotosIncluidas?: number | null;
+  correlationId?: string;
 }
 
 Deno.serve(async (req) => {
@@ -73,6 +80,25 @@ Deno.serve(async (req) => {
     if (!clienteId || !valor || valor <= 0) {
       return new Response(
         JSON.stringify({ success: false, error: 'clienteId e valor são obrigatórios' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Resolve contrato finalidade/galeria_id/qtd_fotos (default sessao)
+    const { binding, error: bindingError } = await resolveCobrancaBinding(
+      supabase,
+      userId,
+      {
+        finalidade: body.finalidade,
+        galeriaId: body.galeriaId,
+        qtdFotos: body.qtdFotos,
+        snapshotFotosIncluidas: body.snapshotFotosIncluidas,
+        correlationId: body.correlationId,
+      },
+    );
+    if (bindingError || !binding) {
+      return new Response(
+        JSON.stringify({ success: false, error: bindingError?.message, code: bindingError?.code }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
