@@ -253,9 +253,17 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         if (!request.galeriaId || !request.qtdFotos || request.qtdFotos <= 0) {
           throw new Error('Cobrança de fotos extras exige galeria e quantidade.');
         }
+        // Guard anti-overcharge via RPC canônica
+        const { assertExtraPaymentWithinIdealClient } = await import('@/components/cobranca/_chargeGuards');
+        const guard = await assertExtraPaymentWithinIdealClient(request.galeriaId, request.valor);
+        if (guard.error) throw new Error(guard.error.message);
         insertPayload.galeria_id = request.galeriaId;
         insertPayload.qtd_fotos = request.qtdFotos;
         insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
+      } else if (request.sessionId) {
+        const { assertNotAmbiguousSessionChargeClient } = await import('@/components/cobranca/_chargeGuards');
+        const guard = await assertNotAmbiguousSessionChargeClient(request.sessionId, request.valor);
+        if (guard.error) throw new Error(guard.error.message);
       }
 
       const { data: cobranca, error } = await supabase

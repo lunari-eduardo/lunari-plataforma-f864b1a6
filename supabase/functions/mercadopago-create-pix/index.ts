@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveCobrancaBinding } from "../_shared/cobrancaBinding.ts";
+import {
+  assertExtraPaymentWithinIdeal,
+  assertNotAmbiguousSessionCharge,
+  resolveCobrancaBinding,
+} from "../_shared/cobrancaBinding.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,6 +105,28 @@ serve(async (req) => {
         JSON.stringify({ success: false, error: bindingError?.message, code: bindingError?.code }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Guardas de contrato
+    if (binding.finalidade === 'fotos_extras' && binding.galeria_id) {
+      const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor);
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    } else if (binding.finalidade === 'sessao' && sessionId) {
+      const guard = await assertNotAmbiguousSessionCharge(
+        supabase, sessionId, valor,
+        (body as { allowAmbiguous?: boolean }).allowAmbiguous === true,
+      );
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
     }
 
     // Buscar cliente e session_id texto
