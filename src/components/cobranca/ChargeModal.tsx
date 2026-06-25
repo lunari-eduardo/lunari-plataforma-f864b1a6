@@ -138,16 +138,80 @@ export function ChargeModal({
       setGaleriaId(null);
       setGaleriaInfo(null);
       setQtdFotos(0);
+      setRpcSnapshot(null);
+      setAmbiguity(null);
     }
   }, [isOpen, valorSugerido]);
 
-  // Quando o usuário escolhe uma galeria, sugerir valor (qtd × valor_foto_extra)
+  // Snapshot canônico via RPC quando galeria selecionada (substitui cálculo local)
   useEffect(() => {
-    if (finalidade !== 'fotos_extras' || !galeriaInfo || !qtdFotos) return;
-    const unit = Number(galeriaInfo.valor_foto_extra || 0);
-    if (!unit) return;
-    setValor(Math.round(unit * qtdFotos * 100) / 100);
-    setValorType('parcial');
+    if (finalidade !== 'fotos_extras' || !galeriaId) {
+      setRpcSnapshot(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const guard = await assertExtraPaymentWithinIdealClient(galeriaId, 0);
+      if (cancelled) return;
+      const snap = guard.snapshot || (guard.error && 'snapshot' in guard.error ? guard.error.snapshot : null);
+      if (!snap) return;
+      setRpcSnapshot(snap);
+      // Sugere o saldo a cobrar quando ainda não houver valor digitado manualmente
+      const saldo = Number(snap.valor_a_cobrar ?? 0);
+      if (saldo > 0) {
+        setValor(saldo);
+        setValorType('parcial');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [finalidade, galeriaId]);
+
+  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner proativo
+  useEffect(() => {
+    if (!isOpen || !sessionId || finalidade !== 'sessao') {
+      setAmbiguity(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const guard = await assertNotAmbiguousSessionChargeClient(sessionId, -1);
+      // Truque: passar valor inválido (-1) só pega o caminho se houver galeria com saldo;
+      // como não vai bater no ±1%, usamos uma busca direta abaixo.
+      void guard;
+      // Busca real do saldo da 1ª galeria com extras pendentes para exibir banner
+      const { data: galerias } = await supabase
+        .from('galerias')
+        .select('id, nome_sessao, fotos_selecionadas, fotos_incluidas, status_pagamento')
+        .eq('session_id', sessionId);
+      if (cancelled || !galerias) return;
+      for (const g of galerias) {
+        if ((g.fotos_selecionadas ?? 0) <= (g.fotos_incluidas ?? 0)) continue;
+        if (g.status_pagamento === 'pago') continue;
+        const { data: rpc } = await supabase.rpc('calculate_gallery_extra_payment', {
+          p_gallery_id: g.id,
+        });
+        const snap = (rpc ?? {}) as ExtraPaymentSnapshot;
+        const saldo = Number(snap.valor_a_cobrar ?? 0);
+        if (saldo > 0) {
+          if (cancelled) return;
+          setAmbiguity({
+            galeriaId: g.id,
+            valorSaldoExtras: saldo,
+            qtdSugerida:
+              Number(snap.extras_necessarias ?? 0) - Number(snap.extras_pagas ?? 0),
+            nomeGaleria: g.nome_sessao ?? undefined,
+          });
+          return;
+        }
+      }
+      if (!cancelled) setAmbiguity(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, sessionId, finalidade]);
   }, [finalidade, galeriaInfo, qtdFotos]);
 
 
