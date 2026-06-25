@@ -144,6 +144,11 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
             sessionId: request.sessionId,
             valor: request.valor,
             descricao: request.descricao,
+            finalidade: request.finalidade,
+            galeriaId: request.galeriaId,
+            qtdFotos: request.qtdFotos,
+            snapshotFotosIncluidas: request.snapshotFotosIncluidas,
+            correlationId: request.correlationId,
           },
         });
       } else {
@@ -155,6 +160,11 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
             valor: request.valor,
             descricao: request.descricao,
             installments,
+            finalidade: request.finalidade,
+            galeriaId: request.galeriaId,
+            qtdFotos: request.qtdFotos,
+            snapshotFotosIncluidas: request.snapshotFotosIncluidas,
+            correlationId: request.correlationId,
           },
         });
       }
@@ -225,19 +235,32 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       });
 
       // Save charge to database
+      const insertPayload: Record<string, unknown> = {
+        user_id: user.id,
+        cliente_id: request.clienteId,
+        session_id: request.sessionId || null,
+        valor: request.valor,
+        descricao: request.descricao || null,
+        tipo_cobranca: 'pix',
+        provedor: 'pix_manual',
+        status: 'pendente',
+        mp_pix_copia_cola: pixPayload, // Reuse existing field
+        finalidade: request.finalidade || 'sessao',
+        correlation_id: request.correlationId || crypto.randomUUID(),
+      };
+
+      if (request.finalidade === 'fotos_extras') {
+        if (!request.galeriaId || !request.qtdFotos || request.qtdFotos <= 0) {
+          throw new Error('Cobrança de fotos extras exige galeria e quantidade.');
+        }
+        insertPayload.galeria_id = request.galeriaId;
+        insertPayload.qtd_fotos = request.qtdFotos;
+        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
+      }
+
       const { data: cobranca, error } = await supabase
         .from('cobrancas')
-        .insert({
-          user_id: user.id,
-          cliente_id: request.clienteId,
-          session_id: request.sessionId || null,
-          valor: request.valor,
-          descricao: request.descricao || null,
-          tipo_cobranca: 'pix',
-          provedor: 'pix_manual',
-          status: 'pendente',
-          mp_pix_copia_cola: pixPayload, // Reuse existing field
-        })
+        .insert(insertPayload as any)
         .select()
         .single();
 

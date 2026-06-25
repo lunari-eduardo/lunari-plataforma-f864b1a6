@@ -4,6 +4,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveCobrancaBinding } from "../_shared/cobrancaBinding.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,12 @@ interface CreateLinkRequest {
   sessionId?: string;
   valor: number;
   descricao?: string;
+  // Contrato Gestão↔Gallery (opcional; default = 'sessao')
+  finalidade?: "sessao" | "fotos_extras";
+  galeriaId?: string;
+  qtdFotos?: number;
+  snapshotFotosIncluidas?: number | null;
+  correlationId?: string;
 }
 
 serve(async (req) => {
@@ -47,10 +54,30 @@ serve(async (req) => {
     const userId = user.id;
 
     // Parse request body
-    const { clienteId, sessionId, valor, descricao }: CreateLinkRequest = await req.json();
+    const body: CreateLinkRequest = await req.json();
+    const { clienteId, sessionId, valor, descricao } = body;
 
     if (!clienteId || !valor) {
       throw new Error("clienteId e valor são obrigatórios");
+    }
+
+    // Resolve contrato finalidade/galeria_id/qtd_fotos (default sessao)
+    const { binding, error: bindingError } = await resolveCobrancaBinding(
+      supabase,
+      userId,
+      {
+        finalidade: body.finalidade,
+        galeriaId: body.galeriaId,
+        qtdFotos: body.qtdFotos,
+        snapshotFotosIncluidas: body.snapshotFotosIncluidas,
+        correlationId: body.correlationId,
+      },
+    );
+    if (bindingError || !binding) {
+      return new Response(
+        JSON.stringify({ success: false, error: bindingError?.message, code: bindingError?.code }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     console.log(`[gestao-infinitepay-create-link] Creating link for user ${userId}, cliente ${clienteId}, valor ${valor}`);
@@ -117,6 +144,11 @@ serve(async (req) => {
         tipo_cobranca: "link",
         provedor: "infinitepay",
         status: "pendente",
+        finalidade: binding.finalidade,
+        galeria_id: binding.galeria_id,
+        qtd_fotos: binding.qtd_fotos,
+        snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
+        correlation_id: binding.correlation_id,
       })
       .select()
       .single();

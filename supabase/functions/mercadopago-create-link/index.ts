@@ -12,6 +12,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveCobrancaBinding } from "../_shared/cobrancaBinding.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,6 +69,25 @@ serve(async (req) => {
 
     if (!userId) {
       throw new Error('userId é obrigatório no body');
+    }
+
+    // Resolve contrato finalidade/galeria_id/qtd_fotos (default sessao)
+    const { binding, error: bindingError } = await resolveCobrancaBinding(
+      supabase,
+      userId,
+      {
+        finalidade: body.finalidade,
+        galeriaId: body.galeriaId,
+        qtdFotos: body.qtdFotos,
+        snapshotFotosIncluidas: body.snapshotFotosIncluidas,
+        correlationId: body.correlationId,
+      },
+    );
+    if (bindingError || !binding) {
+      return new Response(
+        JSON.stringify({ success: false, error: bindingError?.message, code: bindingError?.code }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
 
     console.log('[mercadopago-create-link] User from body:', userId);
@@ -192,6 +212,11 @@ serve(async (req) => {
         mp_preference_id: mpResult.id,
         mp_payment_link: mpResult.init_point,
         mp_expiration_date: preferenceData.expiration_date_to,
+        finalidade: binding.finalidade,
+        galeria_id: binding.galeria_id,
+        qtd_fotos: binding.qtd_fotos,
+        snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
+        correlation_id: binding.correlation_id,
       })
       .select()
       .single();

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveCobrancaBinding } from "../_shared/cobrancaBinding.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -82,6 +83,25 @@ serve(async (req) => {
     console.log('[mercadopago-create-pix] Parsed body:', JSON.stringify(body));
 
     const { clienteId, sessionId, valor, descricao } = body;
+
+    // Resolve contrato finalidade/galeria_id/qtd_fotos (default sessao)
+    const { binding, error: bindingError } = await resolveCobrancaBinding(
+      supabase,
+      user.id,
+      {
+        finalidade: body.finalidade,
+        galeriaId: body.galeriaId,
+        qtdFotos: body.qtdFotos,
+        snapshotFotosIncluidas: body.snapshotFotosIncluidas,
+        correlationId: body.correlationId,
+      },
+    );
+    if (bindingError || !binding) {
+      return new Response(
+        JSON.stringify({ success: false, error: bindingError?.message, code: bindingError?.code }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     // Buscar cliente e session_id texto
     let clienteIdFinal = clienteId;
@@ -198,6 +218,11 @@ serve(async (req) => {
         mp_qr_code_base64: qrCodeBase64,
         mp_pix_copia_cola: pixCopiaCola,
         mp_expiration_date: expirationDate,
+        finalidade: binding.finalidade,
+        galeria_id: binding.galeria_id,
+        qtd_fotos: binding.qtd_fotos,
+        snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
+        correlation_id: binding.correlation_id,
       })
       .select()
       .single();

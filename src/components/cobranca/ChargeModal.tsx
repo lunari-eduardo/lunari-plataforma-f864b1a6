@@ -20,6 +20,7 @@ import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
+import { CobrancaFinalidadeSelector, type GalleryOption, type CobrancaFinalidadeUI } from './CobrancaFinalidadeSelector';
 
 interface ChargeModalProps {
   isOpen: boolean;
@@ -63,6 +64,12 @@ export function ChargeModal({
   const [overrideRepassarTaxas, setOverrideRepassarTaxas] = useState(false);
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
+
+  // Contrato Gestão↔Gallery — finalidade da cobrança
+  const [finalidade, setFinalidade] = useState<CobrancaFinalidadeUI>('sessao');
+  const [galeriaId, setGaleriaId] = useState<string | null>(null);
+  const [galeriaInfo, setGaleriaInfo] = useState<GalleryOption | null>(null);
+  const [qtdFotos, setQtdFotos] = useState<number>(0);
 
   // Asaas sub-flow state
   const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
@@ -112,8 +119,23 @@ export function ChargeModal({
       setOverrideRepassarTaxas(false);
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
+      setFinalidade('sessao');
+      setGaleriaId(null);
+      setGaleriaInfo(null);
+      setQtdFotos(0);
     }
   }, [isOpen, valorSugerido]);
+
+  // Quando o usuário escolhe uma galeria, sugerir valor (qtd × valor_foto_extra)
+  useEffect(() => {
+    if (finalidade !== 'fotos_extras' || !galeriaInfo || !qtdFotos) return;
+    const unit = Number(galeriaInfo.valor_foto_extra || 0);
+    if (!unit) return;
+    setValor(Math.round(unit * qtdFotos * 100) / 100);
+    setValorType('parcial');
+  }, [finalidade, galeriaInfo, qtdFotos]);
+
+
 
   // Fetch Asaas settings when provider is selected
   useEffect(() => {
@@ -170,8 +192,37 @@ export function ChargeModal({
     setCurrentChargeId(null);
   };
 
+  /**
+   * Valida o contrato Gestão↔Gallery antes de submeter qualquer cobrança.
+   * Retorna o bloco a ser repassado às edge functions / inserts ou `null`
+   * se a validação falhar (toast já mostrado).
+   */
+  const buildBindingPayload = async (): Promise<
+    | {
+        finalidade: 'sessao' | 'fotos_extras';
+        galeriaId?: string;
+        qtdFotos?: number;
+      }
+    | null
+  > => {
+    if (finalidade === 'sessao') return { finalidade: 'sessao' };
+    if (!galeriaId) {
+      const { toast } = await import('sonner');
+      toast.error('Selecione a galeria vinculada às fotos extras');
+      return null;
+    }
+    if (!qtdFotos || qtdFotos <= 0) {
+      const { toast } = await import('sonner');
+      toast.error('Informe a quantidade de fotos extras');
+      return null;
+    }
+    return { finalidade: 'fotos_extras', galeriaId, qtdFotos };
+  };
+
   const handleGenerateCharge = async () => {
     if (!selectedProvider) return;
+    const binding = await buildBindingPayload();
+    if (!binding) return;
 
     if (selectedProvider === 'pix_manual') {
       const result = await createPixManualCharge({
@@ -181,6 +232,9 @@ export function ChargeModal({
         descricao: descricao || undefined,
         tipoCobranca: 'pix',
         provedor: 'pix_manual',
+        finalidade: binding.finalidade,
+        galeriaId: binding.galeriaId,
+        qtdFotos: binding.qtdFotos,
       });
 
       if (result.success) {
@@ -205,6 +259,9 @@ export function ChargeModal({
       descricao: descricao || undefined,
       tipoCobranca: 'link',
       provedor,
+      finalidade: binding.finalidade,
+      galeriaId: binding.galeriaId,
+      qtdFotos: binding.qtdFotos,
     });
 
     if (result.success) {
@@ -223,6 +280,8 @@ export function ChargeModal({
   };
 
   const handleAsaasGeneratePix = async () => {
+    const binding = await buildBindingPayload();
+    if (!binding) return;
     setAsaasPixLoading(true);
     try {
       const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
@@ -232,6 +291,9 @@ export function ChargeModal({
           valor,
           descricao: descricao || undefined,
           billingType: 'PIX',
+          finalidade: binding.finalidade,
+          galeriaId: binding.galeriaId,
+          qtdFotos: binding.qtdFotos,
         },
       });
 
@@ -252,6 +314,8 @@ export function ChargeModal({
   };
 
   const handleAsaasGenerateLink = async () => {
+    const binding = await buildBindingPayload();
+    if (!binding) return;
     setAsaasLinkLoading(true);
     try {
       // Get current user
@@ -266,19 +330,26 @@ export function ChargeModal({
       };
 
       // Create cobrança record locally with per-charge overrides stored in dados_extras
+      const insertPayload: Record<string, unknown> = {
+        user_id: session.user.id,
+        cliente_id: clienteId,
+        session_id: sessionId || null,
+        valor,
+        descricao: descricao || 'Cobrança Asaas',
+        tipo_cobranca: 'link',
+        provedor: 'asaas',
+        status: 'pendente',
+        dados_extras: chargeOverrides,
+        finalidade: binding.finalidade,
+        correlation_id: crypto.randomUUID(),
+      };
+      if (binding.finalidade === 'fotos_extras') {
+        insertPayload.galeria_id = binding.galeriaId;
+        insertPayload.qtd_fotos = binding.qtdFotos;
+      }
       const { data: cobranca, error: insertError } = await supabase
         .from('cobrancas')
-        .insert({
-          user_id: session.user.id,
-          cliente_id: clienteId,
-          session_id: sessionId || null,
-          valor,
-          descricao: descricao || 'Cobrança Asaas',
-          tipo_cobranca: 'link',
-          provedor: 'asaas',
-          status: 'pendente',
-          dados_extras: chargeOverrides,
-        } as any)
+        .insert(insertPayload as any)
         .select('id')
         .single();
 
@@ -420,6 +491,31 @@ export function ChargeModal({
                 </div>
 
                 <Separator />
+
+                {/* Finalidade da cobrança (sessao vs fotos extras) */}
+                <CobrancaFinalidadeSelector
+                  clienteId={clienteId}
+                  sessionId={sessionId}
+                  finalidade={finalidade}
+                  onFinalidadeChange={(v) => {
+                    setFinalidade(v);
+                    if (v === 'sessao') {
+                      setGaleriaId(null);
+                      setGaleriaInfo(null);
+                      setQtdFotos(0);
+                    }
+                  }}
+                  galeriaId={galeriaId}
+                  onGaleriaChange={(id, gal) => {
+                    setGaleriaId(id);
+                    setGaleriaInfo(gal);
+                  }}
+                  qtdFotos={qtdFotos}
+                  onQtdFotosChange={setQtdFotos}
+                />
+
+                <Separator />
+
 
                 {/* Provider Selection */}
                 <div className="space-y-3">

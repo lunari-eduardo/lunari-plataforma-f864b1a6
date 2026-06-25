@@ -76,13 +76,15 @@ export function useClientSessionsRealtime(clienteId: string) {
             console.warn('Erro ao buscar transações:', transacoesError);
           }
 
-          // Buscar cobranças MP pagas para esta sessão
+          // Buscar cobranças MP pagas para esta sessão (apenas finalidade='sessao';
+          // cobranças de fotos extras são contabilizadas na galeria, não na sessão).
           const { data: cobrancasPagas } = await supabase
             .from('cobrancas')
             .select('*')
             .or(`session_id.eq.${session.session_id},session_id.eq.${session.id}`)
             .eq('user_id', user.id)
             .eq('status', 'pago')
+            .eq('finalidade', 'sessao')
             .order('data_pagamento', { ascending: false });
 
           const pagamentos: any[] = [];
