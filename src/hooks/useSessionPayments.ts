@@ -179,9 +179,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             .or(`session_id.eq.${sessionId},session_id.eq.${textSessionId}`)
             .eq('user_id', user.id)
             .eq('status', 'pago')
-            // Cobranças de fotos extras pertencem à galeria, NÃO à receita da sessão.
-            // O filtro abaixo impede que extras inflem o valor pago da sessão.
-            .eq('finalidade', 'sessao')
+            // Extras de galeria vinculada à sessão também são receita da sessão.
+            // (Filtro `finalidade='sessao'` removido — vide migration 20260625181941.)
             .order('data_pagamento', { ascending: false })
         ]);
 
