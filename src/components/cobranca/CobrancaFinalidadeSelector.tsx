@@ -172,8 +172,8 @@ export function CobrancaFinalidadeSelector({
                   {selectedGallery ? (
                     <span className="truncate">
                       {selectedGallery.titulo}
-                      {selectedGallery.data_sessao
-                        ? ` · ${new Date(selectedGallery.data_sessao).toLocaleDateString('pt-BR')}`
+                      {selectedGallery.data_ref
+                        ? ` · ${new Date(selectedGallery.data_ref).toLocaleDateString('pt-BR')}`
                         : ''}
                     </span>
                   ) : loading ? (
@@ -197,7 +197,7 @@ export function CobrancaFinalidadeSelector({
                       {galerias.map((g) => (
                         <CommandItem
                           key={g.id}
-                          value={`${g.titulo} ${g.data_sessao || ''}`}
+                          value={`${g.titulo} ${g.data_ref || ''}`}
                           onSelect={() => {
                             onGaleriaChange(g.id, g);
                             setOpen(false);
@@ -212,8 +212,8 @@ export function CobrancaFinalidadeSelector({
                           <div className="flex flex-col">
                             <span className="text-sm">{g.titulo}</span>
                             <span className="text-xs text-muted-foreground">
-                              {g.data_sessao
-                                ? new Date(g.data_sessao).toLocaleDateString('pt-BR')
+                              {g.data_ref
+                                ? new Date(g.data_ref).toLocaleDateString('pt-BR')
                                 : 'Sem data'}
                               {g.valor_foto_extra
                                 ? ` · ${Number(g.valor_foto_extra).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/foto`
