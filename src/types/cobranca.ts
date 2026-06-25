@@ -43,6 +43,12 @@ export interface CreateCobrancaRequest {
   descricao?: string;
   tipoCobranca: TipoCobranca;
   provedor?: ProvedorPagamento;
+  // Contrato Gestão↔Gallery — quando 'fotos_extras', galeriaId e qtdFotos são obrigatórios
+  finalidade?: 'sessao' | 'fotos_extras';
+  galeriaId?: string;
+  qtdFotos?: number;
+  snapshotFotosIncluidas?: number | null;
+  correlationId?: string;
 }
 
 export interface CobrancaResponse {
