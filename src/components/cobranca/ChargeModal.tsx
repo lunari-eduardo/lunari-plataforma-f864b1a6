@@ -280,6 +280,8 @@ export function ChargeModal({
   };
 
   const handleAsaasGeneratePix = async () => {
+    const binding = await buildBindingPayload();
+    if (!binding) return;
     setAsaasPixLoading(true);
     try {
       const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
@@ -289,6 +291,9 @@ export function ChargeModal({
           valor,
           descricao: descricao || undefined,
           billingType: 'PIX',
+          finalidade: binding.finalidade,
+          galeriaId: binding.galeriaId,
+          qtdFotos: binding.qtdFotos,
         },
       });
 
@@ -309,6 +314,8 @@ export function ChargeModal({
   };
 
   const handleAsaasGenerateLink = async () => {
+    const binding = await buildBindingPayload();
+    if (!binding) return;
     setAsaasLinkLoading(true);
     try {
       // Get current user
@@ -323,19 +330,26 @@ export function ChargeModal({
       };
 
       // Create cobrança record locally with per-charge overrides stored in dados_extras
+      const insertPayload: Record<string, unknown> = {
+        user_id: session.user.id,
+        cliente_id: clienteId,
+        session_id: sessionId || null,
+        valor,
+        descricao: descricao || 'Cobrança Asaas',
+        tipo_cobranca: 'link',
+        provedor: 'asaas',
+        status: 'pendente',
+        dados_extras: chargeOverrides,
+        finalidade: binding.finalidade,
+        correlation_id: crypto.randomUUID(),
+      };
+      if (binding.finalidade === 'fotos_extras') {
+        insertPayload.galeria_id = binding.galeriaId;
+        insertPayload.qtd_fotos = binding.qtdFotos;
+      }
       const { data: cobranca, error: insertError } = await supabase
         .from('cobrancas')
-        .insert({
-          user_id: session.user.id,
-          cliente_id: clienteId,
-          session_id: sessionId || null,
-          valor,
-          descricao: descricao || 'Cobrança Asaas',
-          tipo_cobranca: 'link',
-          provedor: 'asaas',
-          status: 'pendente',
-          dados_extras: chargeOverrides,
-        } as any)
+        .insert(insertPayload as any)
         .select('id')
         .single();
 
