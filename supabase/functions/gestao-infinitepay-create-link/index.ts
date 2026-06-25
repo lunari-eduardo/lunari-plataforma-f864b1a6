@@ -144,6 +144,11 @@ serve(async (req) => {
         tipo_cobranca: "link",
         provedor: "infinitepay",
         status: "pendente",
+        finalidade: binding.finalidade,
+        galeria_id: binding.galeria_id,
+        qtd_fotos: binding.qtd_fotos,
+        snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
+        correlation_id: binding.correlation_id,
       })
       .select()
       .single();
