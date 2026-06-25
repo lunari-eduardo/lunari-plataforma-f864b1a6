@@ -192,8 +192,37 @@ export function ChargeModal({
     setCurrentChargeId(null);
   };
 
+  /**
+   * Valida o contrato Gestão↔Gallery antes de submeter qualquer cobrança.
+   * Retorna o bloco a ser repassado às edge functions / inserts ou `null`
+   * se a validação falhar (toast já mostrado).
+   */
+  const buildBindingPayload = async (): Promise<
+    | {
+        finalidade: 'sessao' | 'fotos_extras';
+        galeriaId?: string;
+        qtdFotos?: number;
+      }
+    | null
+  > => {
+    if (finalidade === 'sessao') return { finalidade: 'sessao' };
+    if (!galeriaId) {
+      const { toast } = await import('sonner');
+      toast.error('Selecione a galeria vinculada às fotos extras');
+      return null;
+    }
+    if (!qtdFotos || qtdFotos <= 0) {
+      const { toast } = await import('sonner');
+      toast.error('Informe a quantidade de fotos extras');
+      return null;
+    }
+    return { finalidade: 'fotos_extras', galeriaId, qtdFotos };
+  };
+
   const handleGenerateCharge = async () => {
     if (!selectedProvider) return;
+    const binding = await buildBindingPayload();
+    if (!binding) return;
 
     if (selectedProvider === 'pix_manual') {
       const result = await createPixManualCharge({
@@ -203,6 +232,9 @@ export function ChargeModal({
         descricao: descricao || undefined,
         tipoCobranca: 'pix',
         provedor: 'pix_manual',
+        finalidade: binding.finalidade,
+        galeriaId: binding.galeriaId,
+        qtdFotos: binding.qtdFotos,
       });
 
       if (result.success) {
@@ -227,6 +259,9 @@ export function ChargeModal({
       descricao: descricao || undefined,
       tipoCobranca: 'link',
       provedor,
+      finalidade: binding.finalidade,
+      galeriaId: binding.galeriaId,
+      qtdFotos: binding.qtdFotos,
     });
 
     if (result.success) {
