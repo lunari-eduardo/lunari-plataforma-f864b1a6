@@ -492,6 +492,31 @@ export function ChargeModal({
 
                 <Separator />
 
+                {/* Finalidade da cobrança (sessao vs fotos extras) */}
+                <CobrancaFinalidadeSelector
+                  clienteId={clienteId}
+                  sessionId={sessionId}
+                  finalidade={finalidade}
+                  onFinalidadeChange={(v) => {
+                    setFinalidade(v);
+                    if (v === 'sessao') {
+                      setGaleriaId(null);
+                      setGaleriaInfo(null);
+                      setQtdFotos(0);
+                    }
+                  }}
+                  galeriaId={galeriaId}
+                  onGaleriaChange={(id, gal) => {
+                    setGaleriaId(id);
+                    setGaleriaInfo(gal);
+                  }}
+                  qtdFotos={qtdFotos}
+                  onQtdFotosChange={setQtdFotos}
+                />
+
+                <Separator />
+
+
                 {/* Provider Selection */}
                 <div className="space-y-3">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">
