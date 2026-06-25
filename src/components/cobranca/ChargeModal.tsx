@@ -77,6 +77,14 @@ export function ChargeModal({
   const [galeriaId, setGaleriaId] = useState<string | null>(null);
   const [galeriaInfo, setGaleriaInfo] = useState<GalleryOption | null>(null);
   const [qtdFotos, setQtdFotos] = useState<number>(0);
+  const [rpcSnapshot, setRpcSnapshot] = useState<ExtraPaymentSnapshot | null>(null);
+  const [ambiguity, setAmbiguity] = useState<{
+    galeriaId: string;
+    valorSaldoExtras: number;
+    qtdSugerida: number;
+    nomeGaleria?: string;
+  } | null>(null);
+
 
   // Asaas sub-flow state
   const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
