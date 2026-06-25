@@ -25,7 +25,6 @@ import {
   assertExtraPaymentWithinIdealClient,
   assertNotAmbiguousSessionChargeClient,
   type ExtraPaymentSnapshot,
-  type ChargeGuardError,
 } from './_chargeGuards';
 import { AlertTriangle } from 'lucide-react';
 
