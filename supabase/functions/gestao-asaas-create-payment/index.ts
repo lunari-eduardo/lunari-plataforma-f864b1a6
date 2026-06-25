@@ -107,6 +107,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Guardas de contrato
+    if (binding.finalidade === 'fotos_extras' && binding.galeria_id) {
+      const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor);
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (binding.finalidade === 'sessao' && sessionId) {
+      const guard = await assertNotAmbiguousSessionCharge(
+        supabase, sessionId, valor,
+        (body as { allowAmbiguous?: boolean }).allowAmbiguous === true,
+      );
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // 1. Fetch user's Asaas integration
     const { data: integracao, error: integError } = await supabase
       .from('usuarios_integracoes')
