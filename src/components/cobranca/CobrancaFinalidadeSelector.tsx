@@ -23,10 +23,10 @@ import { cn } from '@/lib/utils';
 export interface GalleryOption {
   id: string;
   titulo: string;
-  data_sessao: string | null;
+  data_ref: string | null;
   valor_foto_extra: number | null;
   total_fotos_extras_vendidas: number | null;
-  receita_fotos_extras: number | null;
+  valor_total_vendido: number | null;
 }
 
 export type CobrancaFinalidadeUI = 'sessao' | 'fotos_extras';
@@ -78,18 +78,18 @@ export function CobrancaFinalidadeSelector({
       const { data } = await supabase
         .from('galerias')
         .select(
-          'id, titulo, data_sessao, valor_foto_extra, total_fotos_extras_vendidas, receita_fotos_extras, session_id, cliente_id',
+          'id, nome_sessao, nome_pacote, created_at, valor_foto_extra, total_fotos_extras_vendidas, valor_total_vendido, session_id, cliente_id',
         )
         .eq('cliente_id', clienteId)
-        .order('data_sessao', { ascending: false, nullsFirst: false });
+        .order('created_at', { ascending: false });
       if (cancelled) return;
       const list: GalleryOption[] = (data || []).map((g: any) => ({
         id: g.id,
-        titulo: g.titulo || 'Galeria sem título',
-        data_sessao: g.data_sessao,
+        titulo: g.nome_sessao || g.nome_pacote || 'Galeria sem nome',
+        data_ref: g.created_at,
         valor_foto_extra: g.valor_foto_extra,
         total_fotos_extras_vendidas: g.total_fotos_extras_vendidas,
-        receita_fotos_extras: g.receita_fotos_extras,
+        valor_total_vendido: g.valor_total_vendido,
       }));
       setGalerias(list);
       // Pré-seleciona galeria da sessão atual, se houver
