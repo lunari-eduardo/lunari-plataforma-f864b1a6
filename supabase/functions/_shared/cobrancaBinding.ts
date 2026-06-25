@@ -137,3 +137,110 @@ export async function resolveCobrancaBinding(
     },
   };
 }
+
+/**
+ * Garante que `valor` solicitado não excede o saldo ideal calculado pela RPC
+ * canônica `calculate_gallery_extra_payment` (regra congelada + descontos +
+ * abatimento do que já foi pago). Tolerância de R$0,01 para float.
+ */
+export async function assertExtraPaymentWithinIdeal(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  galeriaId: string,
+  valor: number,
+): Promise<{ error?: BindingError; snapshot?: Record<string, unknown> }> {
+  const { data, error } = await supabase.rpc(
+    "calculate_gallery_extra_payment",
+    { p_gallery_id: galeriaId },
+  );
+
+  if (error || !data || data.success === false) {
+    return {
+      error: {
+        code: "EXTRA_PAYMENT_RPC_FAILED",
+        message:
+          (data && data.error) || error?.message ||
+          "Não foi possível calcular o saldo de fotos extras desta galeria.",
+      },
+    };
+  }
+
+  const idealRemaining = Number(data.valor_a_cobrar ?? 0);
+  if (valor > idealRemaining + 0.01) {
+    return {
+      error: {
+        code: "EXTRA_PAYMENT_EXCEEDS_IDEAL",
+        message:
+          `Valor R$ ${valor.toFixed(2)} excede o saldo ideal de R$ ${idealRemaining.toFixed(2)}` +
+          ` (já pago R$ ${Number(data.valor_pago ?? 0).toFixed(2)}). Fonte: ${data.rules_source ?? "regra atual"}.`,
+        details: data,
+      },
+      snapshot: data,
+    };
+  }
+
+  return { snapshot: data };
+}
+
+/**
+ * Detecta cobranças `finalidade='sessao'` cujo valor coincide com o saldo de
+ * fotos extras de alguma galeria da mesma sessão (±1%). Caso positivo,
+ * bloqueia para forçar o uso de `finalidade='fotos_extras'` e evitar a
+ * cobrança "fantasma" que travava a galeria em aguardando_pagamento.
+ *
+ * Bypass: callers podem passar `allowAmbiguous=true` para confirmar explicitamente.
+ */
+export async function assertNotAmbiguousSessionCharge(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  sessionId: string,
+  valor: number,
+  allowAmbiguous = false,
+): Promise<{ error?: BindingError }> {
+  if (allowAmbiguous) return {};
+
+  const { data: galerias } = await supabase
+    .from("galerias")
+    .select(
+      "id, nome_sessao, fotos_selecionadas, fotos_incluidas, status_pagamento",
+    )
+    .eq("session_id", sessionId);
+
+  if (!galerias || galerias.length === 0) return {};
+
+  for (const g of galerias as Array<Record<string, unknown>>) {
+    const selecionadas = Number(g.fotos_selecionadas ?? 0);
+    const incluidas = Number(g.fotos_incluidas ?? 0);
+    if (selecionadas <= incluidas) continue;
+    if (g.status_pagamento === "pago") continue;
+
+    const { data: rpc } = await supabase.rpc(
+      "calculate_gallery_extra_payment",
+      { p_gallery_id: g.id },
+    );
+    if (!rpc || rpc.success === false) continue;
+    const saldo = Number(rpc.valor_a_cobrar ?? 0);
+    if (saldo <= 0) continue;
+
+    // Considera ambíguo se valor estiver dentro de ±1% do saldo de extras
+    const tolerancia = Math.max(saldo * 0.01, 0.01);
+    if (Math.abs(valor - saldo) <= tolerancia) {
+      return {
+        error: {
+          code: "AMBIGUOUS_PURPOSE_USE_FOTOS_EXTRAS",
+          message:
+            `Esta sessão tem R$ ${saldo.toFixed(2)} pendentes em fotos extras da galeria "${g.nome_sessao ?? "—"}". ` +
+            `Cobrar como "sessão" duplicaria a receita. Use finalidade='fotos_extras' ou confirme explicitamente.`,
+          details: {
+            galeriaId: g.id,
+            valorSaldoExtras: saldo,
+            qtdSugerida: Number(rpc.extras_necessarias ?? 0) -
+              Number(rpc.extras_pagas ?? 0),
+          },
+        },
+      };
+    }
+  }
+
+  return {};
+}
