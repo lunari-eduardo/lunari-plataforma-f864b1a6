@@ -133,6 +133,9 @@ export function ChargeModal({
     if (!unit) return;
     setValor(Math.round(unit * qtdFotos * 100) / 100);
     setValorType('parcial');
+  }, [finalidade, galeriaInfo, qtdFotos]);
+
+
 
   // Fetch Asaas settings when provider is selected
   useEffect(() => {
