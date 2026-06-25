@@ -20,6 +20,7 @@ import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
+import { CobrancaFinalidadeSelector, type GalleryOption, type CobrancaFinalidadeUI } from './CobrancaFinalidadeSelector';
 
 interface ChargeModalProps {
   isOpen: boolean;
@@ -63,6 +64,12 @@ export function ChargeModal({
   const [overrideRepassarTaxas, setOverrideRepassarTaxas] = useState(false);
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
+
+  // Contrato Gestão↔Gallery — finalidade da cobrança
+  const [finalidade, setFinalidade] = useState<CobrancaFinalidadeUI>('sessao');
+  const [galeriaId, setGaleriaId] = useState<string | null>(null);
+  const [galeriaInfo, setGaleriaInfo] = useState<GalleryOption | null>(null);
+  const [qtdFotos, setQtdFotos] = useState<number>(0);
 
   // Asaas sub-flow state
   const [asaasMode, setAsaasMode] = useState<'options' | 'pix' | 'link' | null>(null);
