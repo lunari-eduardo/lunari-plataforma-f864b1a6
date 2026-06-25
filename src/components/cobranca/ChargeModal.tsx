@@ -212,7 +212,8 @@ export function ChargeModal({
       cancelled = true;
     };
   }, [isOpen, sessionId, finalidade]);
-  }, [finalidade, galeriaInfo, qtdFotos]);
+
+
 
 
 
