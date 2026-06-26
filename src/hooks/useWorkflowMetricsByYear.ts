@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { USE_METRICS_EVENT_BUS } from '@/features/workflow/config';
+import { eventBus } from '@/shared/event-bus';
 
 interface MonthlyWorkflowMetrics {
   mes: number;
