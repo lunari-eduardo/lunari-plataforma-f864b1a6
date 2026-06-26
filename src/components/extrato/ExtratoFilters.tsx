@@ -64,7 +64,8 @@ export default function ExtratoFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todas</SelectItem>
-            <SelectItem value="workflow">Workflow</SelectItem>
+            <SelectItem value="workflow">Studio</SelectItem>
+            <SelectItem value="gallery">Gallery</SelectItem>
             <SelectItem value="financeiro">Financeiro</SelectItem>
             <SelectItem value="cartao">Cartão</SelectItem>
           </SelectContent>
