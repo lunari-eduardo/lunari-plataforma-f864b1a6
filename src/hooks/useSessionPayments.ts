@@ -124,6 +124,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Onda 4d hotfix — sem user a Capability retorna UNAUTHENTICATED.
+  const capabilityUser = useAuthUser();
+  const capabilityUserRef = useRef(capabilityUser);
+  useEffect(() => { capabilityUserRef.current = capabilityUser; }, [capabilityUser]);
   
   // GUARD: Prevenir fetch múltiplo e loop infinito
   const fetchInitiatedRef = useRef(false);
