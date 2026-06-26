@@ -606,15 +606,18 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           // Onda 4d — caminho oficial via Capability `workflow.addPayment`
           const { addPayment: addPaymentCapability } = await import('@/modules/workflow');
           const { isOk } = await import('@/shared/result');
-          const result = await addPaymentCapability.execute({
-            sessionId,
-            valor: Math.round((newPayment.valor || 0) * 100),
-            dataTransacao: newPayment.data,
-            formaPagamento: newPayment.forma_pagamento || 'manual',
-            descricao: newPayment.observacoes || undefined,
-            paymentId: newPayment.id,
-            intentKey: `manual:${sessionId}:${newPayment.id}`,
-          });
+          const result = await addPaymentCapability.execute(
+            {
+              sessionId,
+              valor: Math.round((newPayment.valor || 0) * 100),
+              dataTransacao: newPayment.data,
+              formaPagamento: newPayment.forma_pagamento || 'manual',
+              descricao: newPayment.observacoes || undefined,
+              paymentId: newPayment.id,
+              intentKey: `manual:${sessionId}:${newPayment.id}`,
+            },
+            { user: capabilityUserRef.current, runtime: 'client' }
+          );
           if (!isOk(result)) {
             throw new Error(result.error.message);
           }
