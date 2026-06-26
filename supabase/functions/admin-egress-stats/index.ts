@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
     // Top 20 tabelas por proxy de egress (rows lidas desde último reset do pg_stat)
     const { data: tableStats, error: statsErr } = await admin.rpc(
       "admin_egress_table_stats",
+      { _user_id: userData.user.id },
     );
     if (statsErr) {
       return json(

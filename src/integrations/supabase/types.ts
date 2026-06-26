@@ -5285,7 +5285,7 @@ export type Database = {
         Returns: Json
       }
       admin_egress_table_stats: {
-        Args: never
+        Args: { _user_id: string }
         Returns: {
           live_rows: number
           rows_deleted: number
