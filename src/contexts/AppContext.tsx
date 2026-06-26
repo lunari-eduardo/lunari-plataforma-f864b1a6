@@ -221,6 +221,12 @@ const deserializeAppointments = (serializedAppointments: any[]): Appointment[] =
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Get real-time configuration data from context (single instance)
   const realtimeConfig = useConfigurationContext();
+  // Usuário autoritativo para Capabilities (Onda 4d hotfix — sem isto o
+  // workflow.addPayment retorna UNAUTHENTICATED e o toast "verifique sua conexão" dispara).
+  const capabilityUser = useAuthUser();
+  const capabilityUserRef = useRef(capabilityUser);
+  useEffect(() => { capabilityUserRef.current = capabilityUser; }, [capabilityUser]);
+  
   
   const [templates, setTemplates] = useState<Template[]>(() => {
     return storage.load(STORAGE_KEYS.TEMPLATES, []);
