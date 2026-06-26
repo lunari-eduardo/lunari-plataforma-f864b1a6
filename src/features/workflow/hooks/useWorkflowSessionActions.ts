@@ -84,9 +84,14 @@ export function useWorkflowSessionActions({
             case "descricao":
             case "observacoes":
             case "detalhes":
-            case "status":
               (cacheSafeUpdates as any)[field] = value;
               break;
+            case "status": {
+              const raw = typeof value === "string" ? value.trim() : value;
+              (cacheSafeUpdates as any).status =
+                raw === "" || raw === "__CLEAR__" ? null : raw;
+              break;
+            }
             case "produtosList":
               cacheSafeUpdates.produtos_incluidos = value as any;
               break;
@@ -190,17 +195,28 @@ export function useWorkflowSessionActions({
 
   const handleStatusChange = useCallback(
     async (sessionId: string, newStatus: string) => {
+      const normalized =
+        typeof newStatus === "string" && (newStatus.trim() === "" || newStatus === "__CLEAR__")
+          ? null
+          : newStatus;
       const currentSession = workflowSessions.find((s) => s.id === sessionId);
-      if (currentSession && currentSession.status === newStatus) return;
+      const currentNormalized =
+        currentSession && (currentSession.status ?? "") !== ""
+          ? currentSession.status
+          : null;
+      if (currentSession && currentNormalized === normalized) return;
       if (currentSession) {
         mergeUpdate({
           ...currentSession,
-          status: newStatus,
+          status: normalized ?? "",
           updated_at: new Date().toISOString(),
         });
       }
       if (USE_CAPABILITY_UPDATE_FIELDS) {
-        const result = await runCapability(advanceCardCapability, { sessionId, toStatus: newStatus });
+        const result = await runCapability(advanceCardCapability, {
+          sessionId,
+          toStatus: normalized,
+        });
         if (!isOk(result)) {
           console.error("[handleStatusChange] capability failed:", result.error);
           await forceRefresh();
@@ -212,7 +228,7 @@ export function useWorkflowSessionActions({
         }
         return;
       }
-      await updateSession(sessionId, { status: newStatus });
+      await updateSession(sessionId, { status: normalized ?? "" });
     },
     [updateSession, workflowSessions, mergeUpdate, forceRefresh, runCapability],
   );

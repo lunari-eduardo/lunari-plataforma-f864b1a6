@@ -2,17 +2,17 @@ import { z } from "zod";
 import { defineCommand } from "@/shared/capability";
 import { domainError, err, ok } from "@/shared/result";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkflowSessionStatusSchema } from "../../domain/types";
+import { WorkflowSessionStatusInputSchema } from "../../domain/types";
 
 const Input = z.object({
   sessionId: z.string().min(1),
-  toStatus: WorkflowSessionStatusSchema,
+  toStatus: WorkflowSessionStatusInputSchema,
 });
 
 const Output = z.object({
   sessionId: z.string(),
   fromStatus: z.string().nullable(),
-  toStatus: z.string(),
+  toStatus: z.string().nullable(),
 });
 
 /**
@@ -40,13 +40,21 @@ export const advanceCard = defineCommand({
   permissions: ["workflow:write"],
   sideEffects: ["db:clientes_sessoes", "event:workflow.card_advanced"],
   audit: "on-success",
-  idempotencyKey: (i) => `workflow.advanceCard:${i.sessionId}:${i.toStatus}`,
+  idempotencyKey: (i) =>
+    `workflow.advanceCard:${i.sessionId}:${i.toStatus ?? "__cleared__"}`,
   examples: [
     {
       nl: "Mover a sessão para a etapa 'Enviado para seleção'",
       input: {
         sessionId: "00000000-0000-0000-0000-000000000000",
         toStatus: "Enviado para seleção",
+      },
+    },
+    {
+      nl: "Remover o status (etapa) da sessão",
+      input: {
+        sessionId: "00000000-0000-0000-0000-000000000000",
+        toStatus: null,
       },
     },
   ],
