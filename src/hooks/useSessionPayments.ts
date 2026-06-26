@@ -3,6 +3,7 @@ import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { SessionPayment } from '@/types/workflow';
 import { formatDateForStorage } from '@/utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthUser } from '@/shared/capability';
 
 // Converter SessionPaymentExtended para SessionPayment (formato legado)
 const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): SessionPayment[] => {
