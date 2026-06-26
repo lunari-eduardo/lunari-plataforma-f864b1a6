@@ -815,6 +815,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let optimisticTarget: string | null = null;
 
     try {
+      const { USE_CAPABILITY_ADD_PAYMENT } = await import('@/features/workflow/config');
       const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
 
       const binding = await PaymentSupabaseService.getSessionBinding(id);
@@ -836,17 +837,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      const success = await PaymentSupabaseService.saveSinglePaymentTracked(
-        binding.session_id,
-        paymentId,
-        {
-          valor,
-          data: getCurrentDateString(),
-          observacoes: 'Pagamento rápido',
-          forma_pagamento: 'dinheiro'
-        },
-        { binding, intentKey }
-      );
+      let success = false;
+      if (USE_CAPABILITY_ADD_PAYMENT) {
+        // Onda 4d — caminho oficial via Capability
+        const { addPayment: addPaymentCapability } = await import('@/modules/workflow');
+        const { isOk } = await import('@/shared/result');
+        const today = getCurrentDateString();
+        const result = await addPaymentCapability.execute({
+          sessionId: binding.id,
+          valor: Math.round(valor * 100),
+          dataTransacao: today,
+          formaPagamento: 'dinheiro',
+          descricao: 'Pagamento rápido',
+          intentKey,
+          paymentId,
+        });
+        success = isOk(result);
+        if (!success) {
+          console.error('❌ Capability workflow.addPayment falhou:', (result as any).error);
+        }
+      } else {
+        success = await PaymentSupabaseService.saveSinglePaymentTracked(
+          binding.session_id,
+          paymentId,
+          {
+            valor,
+            data: getCurrentDateString(),
+            observacoes: 'Pagamento rápido',
+            forma_pagamento: 'dinheiro'
+          },
+          { binding, intentKey }
+        );
+      }
 
       if (!success) {
         // Reverter otimista
