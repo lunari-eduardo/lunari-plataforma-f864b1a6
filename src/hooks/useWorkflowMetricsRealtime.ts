@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { USE_METRICS_EVENT_BUS } from '@/features/workflow/config';
+import { eventBus } from '@/shared/event-bus';
 
 interface WorkflowMetrics {
   previsto: number;
@@ -73,6 +75,25 @@ export function useWorkflowMetricsRealtime(
     };
 
     loadMetrics();
+
+    // Onda 4b — quando ativa a flag, reagimos ao eventBus + CustomEvent do
+    // realtime unificado (v2) em vez de subir um canal Supabase dedicado.
+    if (USE_METRICS_EVENT_BUS) {
+      const reload = () => { void loadMetrics(); };
+      const offCard = eventBus.on('workflow.card_updated', reload);
+      const offAdv = eventBus.on('workflow.card_advanced', reload);
+      const offDel = eventBus.on('workflow.card_deleted', reload);
+      const offPay = eventBus.on('workflow.payment_added', reload);
+      const offRef = eventBus.on('workflow.payment_refunded', reload);
+      const offAtt = eventBus.on('workflow.payment_attached', reload);
+      window.addEventListener('workflow-session-updated', reload);
+      window.addEventListener('workflow-session-deleted', reload);
+      return () => {
+        offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt();
+        window.removeEventListener('workflow-session-updated', reload);
+        window.removeEventListener('workflow-session-deleted', reload);
+      };
+    }
 
     const channel = supabase
       .channel(`workflow-metrics-${year}-${month || 'all'}-${startDateOverride || ''}`)

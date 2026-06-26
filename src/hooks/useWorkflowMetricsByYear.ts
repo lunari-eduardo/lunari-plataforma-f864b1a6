@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { USE_METRICS_EVENT_BUS } from '@/features/workflow/config';
+import { eventBus } from '@/shared/event-bus';
 
 interface MonthlyWorkflowMetrics {
   mes: number;
@@ -95,6 +97,25 @@ export function useWorkflowMetricsByYear(year: number): WorkflowMetricsByYear {
     loadMetrics();
 
     // Realtime subscription
+    // Onda 4b — reagir ao eventBus do Workflow em vez de canal Supabase
+    // próprio quando a flag está ativa.
+    if (USE_METRICS_EVENT_BUS) {
+      const reload = () => { void loadMetrics(); };
+      const offCard = eventBus.on('workflow.card_updated', reload);
+      const offAdv = eventBus.on('workflow.card_advanced', reload);
+      const offDel = eventBus.on('workflow.card_deleted', reload);
+      const offPay = eventBus.on('workflow.payment_added', reload);
+      const offRef = eventBus.on('workflow.payment_refunded', reload);
+      const offAtt = eventBus.on('workflow.payment_attached', reload);
+      window.addEventListener('workflow-session-updated', reload);
+      window.addEventListener('workflow-session-deleted', reload);
+      return () => {
+        offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt();
+        window.removeEventListener('workflow-session-updated', reload);
+        window.removeEventListener('workflow-session-deleted', reload);
+      };
+    }
+
     const channel = supabase
       .channel(`workflow-metrics-year-${year}`)
       .on('postgres_changes', {
