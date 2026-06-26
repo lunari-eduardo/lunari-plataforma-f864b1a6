@@ -3,6 +3,7 @@ import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { SessionPayment } from '@/types/workflow';
 import { formatDateForStorage } from '@/utils/dateUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthUser } from '@/shared/capability';
 
 // Converter SessionPaymentExtended para SessionPayment (formato legado)
 const convertToLegacyFormat = (extendedPayments: SessionPaymentExtended[]): SessionPayment[] => {
@@ -123,6 +124,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Onda 4d hotfix — sem user a Capability retorna UNAUTHENTICATED.
+  const capabilityUser = useAuthUser();
+  const capabilityUserRef = useRef(capabilityUser);
+  useEffect(() => { capabilityUserRef.current = capabilityUser; }, [capabilityUser]);
   
   // GUARD: Prevenir fetch múltiplo e loop infinito
   const fetchInitiatedRef = useRef(false);
@@ -601,15 +606,18 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           // Onda 4d — caminho oficial via Capability `workflow.addPayment`
           const { addPayment: addPaymentCapability } = await import('@/modules/workflow');
           const { isOk } = await import('@/shared/result');
-          const result = await addPaymentCapability.execute({
-            sessionId,
-            valor: Math.round((newPayment.valor || 0) * 100),
-            dataTransacao: newPayment.data,
-            formaPagamento: newPayment.forma_pagamento || 'manual',
-            descricao: newPayment.observacoes || undefined,
-            paymentId: newPayment.id,
-            intentKey: `manual:${sessionId}:${newPayment.id}`,
-          });
+          const result = await addPaymentCapability.execute(
+            {
+              sessionId,
+              valor: Math.round((newPayment.valor || 0) * 100),
+              dataTransacao: newPayment.data,
+              formaPagamento: newPayment.forma_pagamento || 'manual',
+              descricao: newPayment.observacoes || undefined,
+              paymentId: newPayment.id,
+              intentKey: `manual:${sessionId}:${newPayment.id}`,
+            },
+            { user: capabilityUserRef.current, runtime: 'client' }
+          );
           if (!isOk(result)) {
             throw new Error(result.error.message);
           }
