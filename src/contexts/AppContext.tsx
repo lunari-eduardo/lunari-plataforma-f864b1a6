@@ -16,6 +16,7 @@ import { ProjetoService } from '@/services/ProjetoService';
 import { corrigirClienteIdSessoes, corrigirClienteIdAgendamentos } from '@/utils/corrigirClienteIdSessoes';
 import { generateSessionId } from '@/utils/workflowSessionsAdapter';
 import { syncLeadsWithClientUpdate } from '@/utils/leadClientSync';
+import { useAuthUser } from '@/shared/capability';
 
 // Types
 import { Cliente, OrigemCliente } from '@/types/cliente';
