@@ -213,3 +213,18 @@ Regras: `domain/` sem React/Supabase; `data/` só Supabase; `store/` sem fetch; 
 | 6 | Remoção de shim quebra import distante | Grep CI bloqueia | Reintroduzir shim 1 release |
 
 Restrições respeitadas: pt-BR; sem toast de sucesso; glassmorphism; z-index; R2; RLS; capabilities tipadas; eventos via `src/modules/workflow/`.
+
+---
+
+## Onda Egress Fase 1 (concluída)
+
+- **DB**: `REPLICA IDENTITY DEFAULT` em `clientes_sessoes`, `clientes`, `fin_transactions` (payload realtime ~60-80% menor). `appointments` e `clientes_transacoes` mantidos em `FULL` porque listeners consomem colunas do row antigo.
+- **Extrato**: `count: 'exact'` → `count: 'estimated'` em `useExtratoSupabase`.
+- **Cleanup**: removida duplicata `useClientesRealtime.tsx` (a versão `.ts` já era a ativa).
+- **Workflow realtime legado**: já desligado em runtime quando V2 ativo (default). Não removido por ainda exportar `updateSession`/tipos consumidos por outros caminhos.
+
+## Dashboard admin de egress (concluída)
+
+- Edge function `admin-egress-stats` (gate: role `admin` via `user_roles`).
+- RPC `admin_egress_table_stats` (`SECURITY DEFINER` + `has_role`).
+- Página `/admin/sistema` com top tabelas por `seq_tup_read + idx_tup_fetch`, tamanho e contadores DML.
