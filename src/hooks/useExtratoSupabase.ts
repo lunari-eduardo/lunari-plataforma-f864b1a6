@@ -83,7 +83,7 @@ export function useExtratoSupabase({
 
       let query = supabase
         .from('extrato_unificado')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'estimated' })
         .eq('user_id', user.id)
         .order(dataColumn, { ascending: false })
         .order('created_at', { ascending: false });
