@@ -2,17 +2,17 @@ import { z } from "zod";
 import { defineCommand } from "@/shared/capability";
 import { domainError, err, ok } from "@/shared/result";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkflowSessionStatusSchema } from "../../domain/types";
+import { WorkflowSessionStatusInputSchema } from "../../domain/types";
 
 const Input = z.object({
   sessionId: z.string().min(1),
-  toStatus: WorkflowSessionStatusSchema,
+  toStatus: WorkflowSessionStatusInputSchema,
 });
 
 const Output = z.object({
   sessionId: z.string(),
   fromStatus: z.string().nullable(),
-  toStatus: z.string(),
+  toStatus: z.string().nullable(),
 });
 
 /**

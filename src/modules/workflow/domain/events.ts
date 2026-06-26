@@ -30,7 +30,7 @@ declare module "@/shared/event-bus" {
     "workflow.card_advanced": {
       sessionId: string;
       fromStatus: string | null;
-      toStatus: string;
+      toStatus: string | null;
       photographerId: string;
     };
 

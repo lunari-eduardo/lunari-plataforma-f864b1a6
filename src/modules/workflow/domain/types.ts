@@ -10,6 +10,20 @@ import { z } from "zod";
 
 export const WorkflowSessionStatusSchema = z.string().min(1).max(80);
 
+/**
+ * Schema de entrada para mutações que aceitam "limpar" o status.
+ * Coage strings vazias / "__CLEAR__" para `null` antes da validação.
+ */
+export const WorkflowSessionStatusInputSchema = z
+  .union([z.string(), z.null()])
+  .transform((v) => {
+    if (v === null) return null;
+    const trimmed = v.trim();
+    if (trimmed === "" || trimmed === "__CLEAR__") return null;
+    return trimmed;
+  })
+  .pipe(z.union([WorkflowSessionStatusSchema, z.null()]));
+
 export const WorkflowCardSchema = z.object({
   id: z.string().min(1),
   clienteId: z.string().min(1).nullable(),
