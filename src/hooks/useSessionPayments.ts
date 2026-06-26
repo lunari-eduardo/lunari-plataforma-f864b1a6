@@ -586,7 +586,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       ...payment,
       id: `pay-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     };
-    
+
     setPayments(prev => {
       const updated = [...prev, newPayment];
       savePaymentsToStorage(sessionId, updated);
@@ -596,14 +596,33 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     // Save to Supabase with error feedback
     if (newPayment.statusPagamento === 'pago' && newPayment.data) {
       try {
-        await saveSinglePaymentToSupabase(sessionId, newPayment.id, newPayment);
+        const { USE_CAPABILITY_ADD_PAYMENT } = await import('@/features/workflow/config');
+        if (USE_CAPABILITY_ADD_PAYMENT) {
+          // Onda 4d — caminho oficial via Capability `workflow.addPayment`
+          const { addPayment: addPaymentCapability } = await import('@/modules/workflow');
+          const { isOk } = await import('@/shared/result');
+          const result = await addPaymentCapability.execute({
+            sessionId,
+            valor: Math.round((newPayment.valor || 0) * 100),
+            dataTransacao: newPayment.data,
+            formaPagamento: newPayment.forma_pagamento || 'manual',
+            descricao: newPayment.observacoes || undefined,
+            paymentId: newPayment.id,
+            intentKey: `manual:${sessionId}:${newPayment.id}`,
+          });
+          if (!isOk(result)) {
+            throw new Error(result.error.message);
+          }
+        } else {
+          await saveSinglePaymentToSupabase(sessionId, newPayment.id, newPayment);
+        }
       } catch (error) {
         console.error('❌ Erro ao salvar pagamento no Supabase:', error);
         const { toast } = await import('sonner');
         toast.error('Erro ao salvar pagamento. Tente novamente.');
       }
     }
-    
+
     return newPayment;
   }, [sessionId]);
 

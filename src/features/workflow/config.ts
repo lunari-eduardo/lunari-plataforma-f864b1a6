@@ -25,6 +25,22 @@ export const USE_METRICS_EVENT_BUS =
   import.meta.env.VITE_WORKFLOW_METRICS_V2 !== "false";
 
 /**
+ * Onda 4d — `AppContext.addPayment` (pagamento rápido) e
+ * `useSessionPayments.addPayment` (modal) passam pela Capability
+ * `workflow.addPayment` em vez de chamar `PaymentSupabaseService` direto.
+ *
+ * Mantém a mesma lógica de binding + idempotência (a Capability delega para o
+ * próprio Service), mas ganha auditoria, validação Zod, schema único e o
+ * evento `workflow.payment_added` no eventBus — pré-requisito da superfície
+ * de IA da Onda 6.
+ *
+ * Setar `VITE_WORKFLOW_PAYMENT_CAPABILITY=false` reverte para o caminho
+ * legado em ambos os pontos.
+ */
+export const USE_CAPABILITY_ADD_PAYMENT =
+  import.meta.env.VITE_WORKFLOW_PAYMENT_CAPABILITY !== "false";
+
+/**
  * Campos cuja edição dispara recongelamento de regras / sincronização com
  * pacote/produtos. Continuam roteados pelo `useWorkflowRealtime` legado
  * porque a Capability `workflow.updateFields` ainda não cobre essa orquestração.

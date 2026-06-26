@@ -2,34 +2,40 @@ import { z } from "zod";
 import { defineCommand } from "@/shared/capability";
 import { domainError, err, ok } from "@/shared/result";
 import { supabase } from "@/integrations/supabase/client";
+import { PaymentSupabaseService } from "@/services/PaymentSupabaseService";
 
 /**
  * Capability `workflow.addPayment`
  *
- * Registra pagamento manual de uma sessão em `clientes_transacoes`
- * (tipo='pagamento'). Hoje a página tem apenas `console.log` neste handler,
- * então esta capability é a primeira implementação real do fluxo.
+ * Onda 4d — superfície única para registrar pagamento manual de uma sessão.
+ * Aceita tanto UUID (`clientes_sessoes.id`) quanto session_id em texto
+ * (`workflow-*`) e delega a escrita ao `PaymentSupabaseService.saveSinglePaymentTracked`,
+ * que já implementa:
+ *  - resolução de `cliente_id`/`session_id` via `getSessionBinding`
+ *  - idempotência por `paymentId` + `intentKey`
+ *  - tag `[ID:...]` / `[INTENT:...]` na descrição (rastreio)
  *
- * Idempotência por (sessionId, valor, data, formaPagamento) durante 10min
- * evita duplicidade quando a IA repete o comando.
- *
- * Trigger DB recalcula `valor_pago`/`status_financeiro` da sessão; o cliente
- * NÃO deve enviar esses campos (constraint de schema-constraints).
+ * Trigger DB recalcula `valor_pago`/`status_financeiro`; este caminho NÃO envia
+ * esses campos. Use `intentKey` para deduplicar cliques duplos do mesmo valor.
  */
 
 const Input = z.object({
-  sessionId: z.string().uuid(),
+  sessionId: z.string().min(1),
   valor: z.number().int().positive(), // centavos
   dataTransacao: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
   formaPagamento: z.string().min(1).max(40),
   descricao: z.string().max(200).optional(),
+  /** Opcional. Quando ausente, é derivado de (sessionId,valor,data,forma). */
+  intentKey: z.string().min(1).max(120).optional(),
+  /** Opcional. Quando ausente, é gerado (`cap-<ts>-<rand>`). */
+  paymentId: z.string().min(1).max(80).optional(),
 });
 
 const Output = z.object({
-  transactionId: z.string(),
   sessionId: z.string(),
+  paymentId: z.string(),
   valor: z.number(),
 });
 
@@ -37,7 +43,7 @@ export const addPayment = defineCommand({
   id: "workflow.addPayment",
   title: "Registrar pagamento manual",
   description:
-    "Cria transação manual de pagamento vinculada a uma sessão do Workflow.",
+    "Cria transação manual de pagamento vinculada a uma sessão do Workflow. Aceita UUID ou session_id em texto.",
   input: Input,
   output: Output,
   permissions: ["workflow:write", "financeiro:write"],
@@ -48,6 +54,7 @@ export const addPayment = defineCommand({
   ],
   audit: "always",
   idempotencyKey: (i) =>
+    i.intentKey ??
     `workflow.addPayment:${i.sessionId}:${i.valor}:${i.dataTransacao}:${i.formaPagamento}`,
   examples: [
     {
@@ -60,75 +67,68 @@ export const addPayment = defineCommand({
       },
     },
   ],
-  async handler({ sessionId, valor, dataTransacao, formaPagamento, descricao }, ctx) {
+  async handler(
+    { sessionId, valor, dataTransacao, formaPagamento, descricao, intentKey, paymentId },
+    ctx,
+  ) {
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id ?? ctx.user?.id;
     if (!userId) {
       return err(domainError("UNAUTHENTICATED", "Sessão expirada."));
     }
 
-    const { data: sessionRow, error: readErr } = await supabase
-      .from("clientes_sessoes")
-      .select("id, session_id, cliente_id, user_id")
-      .eq("id", sessionId)
-      .maybeSingle();
-
-    if (readErr) {
-      ctx.log.error("falha ao ler sessão p/ pagamento", { readErr });
+    const binding = await PaymentSupabaseService.getSessionBinding(sessionId);
+    if (!binding) {
       return err(
-        domainError("EXTERNAL", "Não foi possível ler a sessão.", {
-          retriable: true,
-          cause: readErr,
-        }),
-      );
-    }
-    if (!sessionRow) {
-      return err(domainError("NOT_FOUND", "Sessão não encontrada.", { details: { sessionId } }));
-    }
-    if (sessionRow.user_id !== userId) {
-      return err(domainError("FORBIDDEN", "Sem acesso a esta sessão."));
-    }
-    if (!sessionRow.cliente_id) {
-      return err(
-        domainError("VALIDATION", "Sessão sem cliente vinculado — não é possível registrar pagamento."),
+        domainError("NOT_FOUND", "Sessão não encontrada.", { details: { sessionId } }),
       );
     }
 
     const valorReais = valor / 100;
+    const resolvedPaymentId =
+      paymentId ??
+      `cap-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    const resolvedIntent =
+      intentKey ??
+      `cap:${binding.session_id}:${valor}:${dataTransacao}:${formaPagamento}`;
+    const obs = descricao?.trim() || `Pagamento ${formaPagamento}`;
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("clientes_transacoes")
-      .insert({
-        cliente_id: sessionRow.cliente_id,
-        session_id: sessionRow.session_id ?? null,
-        user_id: userId,
+    const success = await PaymentSupabaseService.saveSinglePaymentTracked(
+      binding.id,
+      resolvedPaymentId,
+      {
         valor: valorReais,
-        data_transacao: dataTransacao,
-        tipo: "pagamento",
-        descricao: descricao ?? `Pagamento ${formaPagamento}`,
-        updated_by: userId,
-      })
-      .select("id")
-      .single();
+        data: dataTransacao,
+        observacoes: obs,
+        forma_pagamento: formaPagamento,
+      },
+      { binding, intentKey: resolvedIntent },
+    );
 
-    if (insErr || !inserted) {
-      ctx.log.error("falha ao inserir pagamento", { insErr });
+    if (!success) {
+      ctx.log.error("saveSinglePaymentTracked retornou false", {
+        sessionId: binding.session_id,
+        paymentId: resolvedPaymentId,
+      });
       return err(
         domainError("EXTERNAL", "Não foi possível registrar o pagamento.", {
           retriable: true,
-          cause: insErr,
         }),
       );
     }
 
     await ctx.emit("workflow.payment_added", {
-      sessionId,
-      transactionId: inserted.id,
+      sessionId: binding.id,
+      transactionId: resolvedPaymentId,
       valor: valorReais,
       formaPagamento,
       photographerId: userId,
     });
 
-    return ok({ transactionId: inserted.id, sessionId, valor: valorReais });
+    return ok({
+      sessionId: binding.id,
+      paymentId: resolvedPaymentId,
+      valor: valorReais,
+    });
   },
 });
