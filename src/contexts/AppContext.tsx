@@ -845,23 +845,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
       let success = false;
+      let errorCode: string | null = null;
+      let errorMessage: string | null = null;
       if (USE_CAPABILITY_ADD_PAYMENT) {
         // Onda 4d — caminho oficial via Capability
         const { addPayment: addPaymentCapability } = await import('@/modules/workflow');
         const { isOk } = await import('@/shared/result');
         const today = getCurrentDateString();
-        const result = await addPaymentCapability.execute({
-          sessionId: binding.id,
-          valor: Math.round(valor * 100),
-          dataTransacao: today,
-          formaPagamento: 'dinheiro',
-          descricao: 'Pagamento rápido',
-          intentKey,
-          paymentId,
-        });
+        const result = await addPaymentCapability.execute(
+          {
+            sessionId: binding.id,
+            valor: Math.round(valor * 100),
+            dataTransacao: today,
+            formaPagamento: 'dinheiro',
+            descricao: 'Pagamento rápido',
+            intentKey,
+            paymentId,
+          },
+          { user: capabilityUserRef.current, runtime: 'client' }
+        );
         success = isOk(result);
         if (!success) {
-          console.error('❌ Capability workflow.addPayment falhou:', (result as any).error);
+          const e = (result as any).error;
+          errorCode = e?.code ?? null;
+          errorMessage = e?.message ?? null;
+          console.error('❌ Capability workflow.addPayment falhou:', e);
         }
       } else {
         success = await PaymentSupabaseService.saveSinglePaymentTracked(
@@ -884,11 +892,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
         optimisticTarget = null;
         console.error('❌ Falha ao salvar pagamento no Supabase');
-        toast({
-          title: "Erro ao adicionar pagamento",
-          description: "Não foi possível salvar o pagamento. Verifique sua conexão.",
-          variant: "destructive"
-        });
+        const friendly =
+          errorCode === 'UNAUTHENTICATED'
+            ? { title: 'Sessão expirada', description: 'Faça login novamente para registrar pagamentos.' }
+            : errorCode === 'FORBIDDEN'
+              ? { title: 'Sem permissão', description: 'Seu usuário não pode registrar pagamentos.' }
+              : errorCode === 'VALIDATION'
+                ? { title: 'Dados inválidos', description: errorMessage ?? 'Verifique o valor informado.' }
+                : errorCode === 'NOT_FOUND'
+                  ? { title: 'Sessão não encontrada', description: 'Recarregue a página e tente novamente.' }
+                  : { title: 'Erro ao adicionar pagamento', description: errorMessage ?? 'Não foi possível salvar o pagamento. Verifique sua conexão.' };
+        toast({ ...friendly, variant: 'destructive' });
         return;
       }
 
