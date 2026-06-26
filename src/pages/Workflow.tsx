@@ -1,46 +1,32 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { WorkflowFilters } from "@/components/workflow/WorkflowFilters";
-import { ChevronLeft, ChevronRight, Eye, EyeOff, Search, PanelRightOpen } from "lucide-react";
-import { WorkflowTasksPanel } from "@/components/workflow/WorkflowTasksPanel";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { ManualPaymentModal } from "@/components/workflow/ManualPaymentModal";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
 import { useOrcamentoData } from "@/hooks/useOrcamentoData";
-import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
+import { usePricingMigration } from "@/hooks/usePricingMigration";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
-import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
-import { parseDateFromStorage, parseHoraToMinutes } from "@/utils/dateUtils";
-import { useWorkflowMetrics } from '@/hooks/useWorkflowMetrics';
-import { usePricingMigration } from '@/hooks/usePricingMigration';
-import { usePersistedState } from '@/hooks/usePersistedState';
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import type { SessionData, CategoryOption, PackageOption, ProductOption } from '@/types/workflow';
-import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
-import { recalcFotosExtras, recalcSessionValorTotal } from '@/utils/fotosExtrasCalculator';
-import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-// Capabilities — superfície oficial (Onda 4a/4b). Importar do entry-point do módulo
-// garante que o registry global esteja populado para o Assistente Lunari.
+import { useWorkflowMonthSessions } from "@/features/workflow/hooks/useWorkflowMonthSessions";
+import { useWorkflowFilters } from "@/features/workflow/hooks/useWorkflowFilters";
+import { useWorkflowColumns } from "@/features/workflow/hooks/useWorkflowColumns";
+import { useWorkflowSessionActions } from "@/features/workflow/hooks/useWorkflowSessionActions";
+import { WorkflowMetricsBar } from "@/features/workflow/components/WorkflowMetricsBar";
 import {
-  deleteSession as deleteSessionCapability,
-  updateSessionFields as updateSessionFieldsCapability,
-  advanceCard as advanceCardCapability,
-} from '@/modules/workflow';
-import { isOk } from '@/shared/result';
-import { useRunCapability } from '@/shared/capability';
-import { ManualPaymentModal } from '@/components/workflow/ManualPaymentModal';
-import {
-  USE_CAPABILITY_UPDATE_FIELDS,
-  updatesRequireRefreeze,
-} from '@/features/workflow/config';
+  WorkflowMonthSwitcher,
+  getMonthName,
+} from "@/features/workflow/components/WorkflowMonthSwitcher";
+import { WorkflowTasksDock } from "@/features/workflow/components/WorkflowTasksDock";
 
-const removeAccents = (str: string) => {
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-};
+import type { CategoryOption, PackageOption, ProductOption } from "@/types/workflow";
 
 export default function Workflow() {
   return (
@@ -51,1042 +37,99 @@ export default function Workflow() {
 }
 
 function WorkflowContent() {
-  const {
-    getStatusOptions
-  } = useWorkflowStatus();
-  const {
-    pacotes,
-    produtos,
-    categorias
-  } = useOrcamentoData();
-  
-  // Estado local para UI - Persistir em sessionStorage para manter ao minimizar/reabrir PWA
-  const [currentMonth, setCurrentMonth] = usePersistedState(
-    'workflow_current_month',
-    {
-      month: new Date().getMonth() + 1,
-      year: new Date().getFullYear()
-    }
-  );
-  
-  const [isTasksPanelOpen, setIsTasksPanelOpen] = usePersistedState('workflow_tasks_panel_open', true);
-
-  // ⚡ NOVO: Usar Context Provider com cache IndexedDB
-  const {
-    getSessionsForMonthSync,
-    isPreloading,
-    subscribe,
-    mergeUpdate,
-    removeSession: removeSessionFromCache,
-    forceRefresh,
-    ensureMonthLoaded,
-    isLoadingMonth
-  } = useWorkflowCache();
-  
-  // Use package data resolution hook para conversão
+  // ── Dados de referência ─────────────────────────────────────────────
+  const { getStatusOptions } = useWorkflowStatus();
+  const { pacotes, produtos, categorias } = useOrcamentoData();
   const { convertSessionToData } = useWorkflowPackageData();
-  
-  // Estado para sessões do cache
-  const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>(() => {
-    // Tentativa INSTANTÂNEA de carregar do cache
-    return getSessionsForMonthSync(currentMonth.year, currentMonth.month) || [];
-  });
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  
-  // FASE 1: Garantir que o mês está carregado quando mudar (CACHE-FIRST STRATEGY)
-  useEffect(() => {
-    const loadMonth = async () => {
-      const key = `${currentMonth.year}-${currentMonth.month}`;
-      
-      // 1. Verificar cache primeiro (instantâneo, < 1ms)
-      const cachedSessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-      if (cachedSessions !== null) {
-        console.log(`⚡ [Workflow] Cache hit for ${key} (${cachedSessions.length} sessions)`);
-        setWorkflowSessions(cachedSessions);
-        // NÃO mostrar loading - dados já estão visíveis
-        
-        // Refresh silencioso em background (sem forceRefresh)
-        ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
-        return;
-      }
-      
-      // 2. Sem cache: mostrar loading e buscar do Supabase
-      setLoading(true);
-      console.log(`🔄 [Workflow] No cache for ${key}, fetching from Supabase...`);
-      
-      try {
-        await ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
-        console.log(`✅ [Workflow] Month ${currentMonth.month}/${currentMonth.year} loaded`);
-      } catch (error) {
-        console.error(`❌ [Workflow] Error loading month:`, error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadMonth();
-  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
-  
-  // FASE 2: Ao retomar do background, NÃO forçar refresh - manter estado
-  // O estado do mês já está persistido em sessionStorage
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('👁️ [Workflow] Tab became visible');
-        // Verificar se o cache do mês atual está carregado
-        const cachedSessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-        if (!cachedSessions) {
-          console.log('🔄 [Workflow] Cache missing, reloading...');
-          ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
-        }
-        // Se cache existe, não fazer nada - manter estado como está
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
-  
-  // FASE 1: Leitura direta do cache ao navegar entre meses
-  useEffect(() => {
-    const sessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-    if (sessions) {
-      console.log(`📊 [Workflow] Loaded ${sessions.length} sessions for ${currentMonth.month}/${currentMonth.year} from cache`);
-      setWorkflowSessions(sessions);
-    }
-  }, [currentMonth, getSessionsForMonthSync]);
-  
-  // Subscribe para updates do cache (realtime apenas)
-  useEffect(() => {
-    const unsubscribe = subscribe((allSessions) => {
-      // Filtrar apenas sessões do mês atual
-      // CORREÇÃO: Parse direto da string para evitar bug de timezone
-      const filtered = allSessions.filter(s => {
-        if (!s.data_sessao) return false;
-        const [year, month] = s.data_sessao.split('-').map(Number);
-        return year === currentMonth.year && month === currentMonth.month;
-      });
-      
-      // FASE 1: Detectar mudanças por quantidade, IDs OU conteúdo (updated_at e campos críticos)
-      setWorkflowSessions(prevSessions => {
-        const hasChanges = 
-          filtered.length !== prevSessions.length ||
-          filtered.some((s) => {
-            const prev = prevSessions.find(p => p.id === s.id);
-            if (!prev) return true; // Sessão nova
-            // Compara todos os campos que afetam o render dos cards/header
-            return s.updated_at !== prev.updated_at || 
-                   s.valor_pago !== prev.valor_pago ||
-                   s.valor_total !== prev.valor_total ||
-                   s.valor_base_pacote !== prev.valor_base_pacote ||
-                   s.valor_total_foto_extra !== prev.valor_total_foto_extra ||
-                   s.valor_adicional !== prev.valor_adicional ||
-                   s.desconto !== prev.desconto ||
-                   s.qtd_fotos_extra !== prev.qtd_fotos_extra ||
-                   s.status !== prev.status ||
-                   (s.produtos_incluidos?.length || 0) !== (prev.produtos_incluidos?.length || 0);
-          });
-        
-        if (hasChanges) {
-          console.log('🔄 [Workflow] Subscriber detected changes, updating UI');
-          return filtered;
-        }
-        return prevSessions;
-      });
-    });
-    
-    return unsubscribe;
-  }, [currentMonth, subscribe]);
-  
-  // ✅ FASE 8: Listener de fallback para garantir updates quando cache-merge falhar
-  useEffect(() => {
-    const handleSessionUpdated = (event: CustomEvent) => {
-      const detail = event.detail || {};
-      // Suporta o detail novo (kind/session/sessionId) e o legado (fullSession).
-      const kind: 'update' | 'insert' | 'delete' | undefined = detail.kind;
-      if (kind === 'delete') {
-        const sessionId: string | undefined = detail.sessionId;
-        if (sessionId) {
-          console.log('🗑️ [Workflow] Fallback listener: removing session', sessionId);
-          setWorkflowSessions(prev => prev.filter(s => s.id !== sessionId));
-          removeSessionFromCache(sessionId);
-        }
-        return;
-      }
-      const fullSession = detail.fullSession ?? detail.session;
-      if (fullSession) {
-        console.log('🔄 [Workflow] Fallback listener: updating session', fullSession.id);
-        const sessionDate = new Date(fullSession.data_sessao);
-        if (sessionDate.getFullYear() === currentMonth.year &&
-            sessionDate.getMonth() + 1 === currentMonth.month) {
-          mergeUpdate(fullSession);
-        }
-      }
-    };
-
-    const handleSessionDeleted = (event: CustomEvent) => {
-      const sessionId: string | undefined = event.detail?.sessionId;
-      if (!sessionId) return;
-      console.log('🗑️ [Workflow] workflow-session-deleted →', sessionId);
-      setWorkflowSessions(prev => prev.filter(s => s.id !== sessionId));
-      removeSessionFromCache(sessionId);
-    };
-
-    window.addEventListener('workflow-session-updated', handleSessionUpdated as EventListener);
-    window.addEventListener('workflow-session-deleted', handleSessionDeleted as EventListener);
-    return () => {
-      window.removeEventListener('workflow-session-updated', handleSessionUpdated as EventListener);
-      window.removeEventListener('workflow-session-deleted', handleSessionDeleted as EventListener);
-    };
-  }, [currentMonth, mergeUpdate, removeSessionFromCache]);
-
-  
-  // Verificar se o mês está sendo carregado
-  const isLoadingCurrentMonth = isLoadingMonth(currentMonth.year, currentMonth.month);
-  
-  // Converter sessões para SessionData usando o hook de conversão
-  const sessionsData = useMemo(() => {
-    return workflowSessions.map(session => convertSessionToData(session));
-  }, [workflowSessions, convertSessionToData]);
-  
-  const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
-  const runCapability = useRunCapability();
-  
-  // Funções de edição (integradas com Context) - FASE 1, 2 e 4
-  const updateSession = useCallback(async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
-    try {
-      const currentSession = workflowSessions.find(s => s.id === sessionId);
-      if (!currentSession) {
-        throw new Error('Sessão não encontrada');
-      }
-      
-      // FASE 4: Validação - Remover campos read-only antes do update
-      const validUpdates = { ...updates };
-      if ((validUpdates as any).clientes) {
-        console.warn('⚠️ Campo "clientes" removido (read-only)');
-        delete (validUpdates as any).clientes;
-      }
-      if ((validUpdates as any).pagamentos) {
-        console.warn('⚠️ Campo "pagamentos" removido (read-only)');
-        delete (validUpdates as any).pagamentos;
-      }
-      if (validUpdates.created_at) {
-        console.warn('⚠️ Campo "created_at" removido (read-only)');
-        delete validUpdates.created_at;
-      }
-      
-      // ✅ FASE 8: Não bloquear mais merge otimista - updates são propagados imediatamente
-      // via evento workflow-cache-merge após o update no Supabase
-      const fieldsNeedingRefreeze: string[] = []; // Vazio - todos campos podem usar merge otimista
-      const needsRefreeze = false;
-      
-      // BLOCO C: Criar cacheSafeUpdates - normalizar valores numéricos
-      const cacheSafeUpdates: Partial<WorkflowSession> = {};
-      
-      for (const [field, value] of Object.entries(validUpdates)) {
-        switch (field) {
-          case 'desconto':
-          case 'valorAdicional':
-          case 'valorFotoExtra':
-          case 'valorTotalFotoExtra':
-            // Converter strings formatadas em números
-            const snakeField = field === 'valorAdicional' ? 'valor_adicional' :
-                               field === 'valorFotoExtra' ? 'valor_foto_extra' :
-                               field === 'valorTotalFotoExtra' ? 'valor_total_foto_extra' : field;
-            (cacheSafeUpdates as any)[snakeField] = 
-              typeof value === 'string'
-                ? parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0
-                : Number(value) || 0;
-            break;
-          case 'qtdFotosExtra':
-            cacheSafeUpdates.qtd_fotos_extra = Number(value) || 0;
-            break;
-          case 'descricao':
-          case 'observacoes':
-          case 'detalhes':
-          case 'status':
-            (cacheSafeUpdates as any)[field] = value;
-            break;
-          case 'produtosList':
-            // Persistir produtosList (contém produzido/entregue checkboxes)
-            cacheSafeUpdates.produtos_incluidos = value;
-            break;
-          case 'pacote':
-            // ✅ FASE 7: Agora é seguro fazer merge otimista pois o cache será atualizado
-            // diretamente após o update no Supabase (não depende mais do realtime)
-            cacheSafeUpdates.pacote = value;
-            break;
-          case 'categoria':
-            cacheSafeUpdates.categoria = value;
-            break;
-          default:
-            break;
-        }
-      }
-      
-      // RECÁLCULO OTIMISTA: fotos extras + valor_total
-      // Espelha as triggers recalc_fotos_extras e recalculate_session_valor_total
-      // para que a UI reflita instantaneamente (sem depender de round-trip realtime).
-      const touchedFotoExtra =
-        'qtd_fotos_extra' in cacheSafeUpdates ||
-        'valor_foto_extra' in cacheSafeUpdates;
-      const touchedTotalAffectingField =
-        touchedFotoExtra ||
-        'valor_adicional' in cacheSafeUpdates ||
-        'desconto' in cacheSafeUpdates ||
-        'produtos_incluidos' in cacheSafeUpdates;
-
-      if (touchedTotalAffectingField) {
-        const currentAny = currentSession as any;
-        const qtd = (cacheSafeUpdates as any).qtd_fotos_extra ?? Number(currentAny.qtd_fotos_extra) ?? 0;
-        const valorUnit = (cacheSafeUpdates as any).valor_foto_extra ?? Number(currentAny.valor_foto_extra) ?? 0;
-
-        if (touchedFotoExtra) {
-          const result = recalcFotosExtras({
-            qtd,
-            valorFotoExtra: valorUnit,
-            regrasCongeladas: currentAny.regras_congeladas,
-            galeriaInfo: {
-              galeriaId: currentAny.galeria_id,
-              valorTotalVendido: currentAny.galerias?.valor_total_vendido,
-              totalFotosExtrasVendidas: currentAny.galerias?.total_fotos_extras_vendidas,
-            },
-          });
-
-          if (!result.respeitarBanco) {
-            (cacheSafeUpdates as any).valor_total_foto_extra = result.valorTotalFotoExtra;
-            // Refletir o valor unitário efetivo (útil quando há desconto progressivo).
-            if (Math.abs(result.valorUnitarioEfetivo - valorUnit) > 0.001) {
-              (cacheSafeUpdates as any).valor_foto_extra = result.valorUnitarioEfetivo;
-            }
-          }
-        }
-
-        // Recompor valor_total (igual ao trigger).
-        const novoValorTotal = recalcSessionValorTotal({
-          valorBasePacote:
-            (cacheSafeUpdates as any).valor_base_pacote ?? Number(currentAny.valor_base_pacote) ?? 0,
-          valorTotalFotoExtra:
-            (cacheSafeUpdates as any).valor_total_foto_extra ?? Number(currentAny.valor_total_foto_extra) ?? 0,
-          produtosIncluidos:
-            (cacheSafeUpdates as any).produtos_incluidos ?? currentAny.produtos_incluidos ?? [],
-          valorAdicional:
-            (cacheSafeUpdates as any).valor_adicional ?? Number(currentAny.valor_adicional) ?? 0,
-          desconto:
-            (cacheSafeUpdates as any).desconto ?? Number(currentAny.desconto) ?? 0,
-        });
-        (cacheSafeUpdates as any).valor_total = novoValorTotal;
-      }
-      
-      // 1. Optimistic update no cache com dados normalizados (apenas se houver algo E não precisar recongelar)
-      // FASE 2: Para campos que precisam recongelamento, deixar o realtime fazer o update completo
-      if (Object.keys(cacheSafeUpdates).length > 0 && !needsRefreeze) {
-        mergeUpdate({ 
-          ...currentSession, 
-          ...cacheSafeUpdates,
-          updated_at: new Date().toISOString() // Garantir timestamp para comparação
-        });
-      }
-      
-      // 2. Roteamento Onda 4a:
-      //    - Campos que disparam recongelamento (pacote, produtos, fotos extras)
-      //      continuam no hook legado `useWorkflowRealtime` — orquestração
-      //      pesada (refreeze de regras, sync categoria, override flags) ainda
-      //      não foi portada para a Capability.
-      //    - Demais campos (desconto, valor_adicional, descrição, observações,
-      //      categoria, status como parte de edição inline) vão pela Capability
-      //      `workflow.updateFields`, ganhando auth, idempotência e evento
-      //      `workflow.card_updated` para a IA/Assistente.
-      //    Flag VITE_WORKFLOW_USE_CAPABILITY_UPDATE=false força tudo no legado.
-      const needsLegacyPath = updatesRequireRefreeze(validUpdates);
-      if (USE_CAPABILITY_UPDATE_FIELDS && !needsLegacyPath && Object.keys(cacheSafeUpdates).length > 0) {
-        const result = await runCapability(updateSessionFieldsCapability, {
-          sessionId,
-          fields: cacheSafeUpdates as Record<string, unknown>,
-        });
-        if (!isOk(result)) {
-          throw new Error(result.error.message || 'Falha ao atualizar sessão.');
-        }
-      } else {
-        await updateSessionRealtime(sessionId, validUpdates, silent);
-      }
-      
-    } catch (error) {
-      console.error('Error updating session:', error);
-      // Reverter update otimista em caso de erro
-      await forceRefresh();
-      // BLOCO E: Melhorar mensagem de erro
-      const errorMsg = error instanceof Error ? error.message : 'Não foi possível salvar as alterações.';
-      toast({
-        title: "Erro ao atualizar",
-        description: errorMsg,
-        variant: "destructive",
-      });
-      throw error;
-    }
-  }, [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability]);
-  
-  const deleteWorkflowSession = useCallback(async (sessionId: string, deletePayments: boolean) => {
-    try {
-      // Delete session do Supabase
-      const { error: deleteError } = await supabase
-        .from('clientes_sessoes')
-        .delete()
-        .eq('id', sessionId);
-      
-      if (deleteError) throw deleteError;
-      
-      toast({
-        title: "Sessão excluída",
-        description: "A sessão foi removida com sucesso.",
-      });
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir a sessão.",
-        variant: "destructive",
-      });
-    }
-  }, []);
-  
-  const { clientes } = useClientesRealtime();
-
-  // Initialize pricing migration for existing sessions
+  useClientesRealtime();
   usePricingMigration();
 
-  const getClienteByName = (nome: string) => {
-    return clientes.find(cliente => cliente.nome === nome);
-  };
+  // ── Sessões do mês + navegação ──────────────────────────────────────
+  const month = useWorkflowMonthSessions();
+  const sessionsData = useMemo(
+    () => month.workflowSessions.map((s) => convertSessionToData(s)),
+    [month.workflowSessions, convertSessionToData],
+  );
 
-  // Estado local para UI
-  const [sessionDataList, setSessionDataList] = useState<SessionData[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<SessionData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  // ── Ações (mutações) ────────────────────────────────────────────────
+  const actions = useWorkflowSessionActions({
+    workflowSessions: month.workflowSessions,
+    setWorkflowSessions: month.setWorkflowSessions,
+    mergeUpdate: month.mergeUpdate,
+    removeSessionFromCache: month.removeSessionFromCache,
+    forceRefresh: month.forceRefresh,
+    ensureMonthLoaded: month.ensureMonthLoaded,
+    currentMonth: month.currentMonth,
+  });
+
+  // ── Filtros, busca, ordenação ───────────────────────────────────────
+  const filters = useWorkflowFilters(sessionsData, month.workflowSessions);
+
+  // ── Colunas ─────────────────────────────────────────────────────────
+  const columns = useWorkflowColumns();
+  const [, setScrollLeft] = useState(0);
+
+  // ── UI state ────────────────────────────────────────────────────────
   const [showMetrics, setShowMetrics] = useState(true);
-  // Filtros persistidos no localStorage para manter entre sessões
-  const [categoryFilter, setCategoryFilter] = usePersistedState<string>(
-    'lunari_workflow_filter_category',
-    '',
-    localStorage
-  );
-  const [sortField, setSortField] = usePersistedState<string>(
-    'lunari_workflow_filter_sort_field',
-    '',
-    localStorage
-  );
-  const [sortDirection, setSortDirection] = usePersistedState<'asc' | 'desc'>(
-    'lunari_workflow_filter_sort_direction',
-    'asc',
-    localStorage
-  );
-  const [situacaoFilter, setSituacaoFilter] = usePersistedState<'todos' | 'pago' | 'pendente'>(
-    'lunari_workflow_filter_situacao',
-    'todos',
-    localStorage
+  const [isTasksPanelOpen, setIsTasksPanelOpen] = usePersistedState(
+    "workflow_tasks_panel_open",
+    true,
   );
 
-  // Sanear estado persistido legado: 'parcial' -> 'pendente'; sortField 'situacao' -> ''
-  useEffect(() => {
-    if ((situacaoFilter as string) === 'parcial') {
-      setSituacaoFilter('pendente');
-    }
-    if (sortField === 'situacao') {
-      setSortField('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    try {
-      const saved = window.localStorage.getItem('workflow_column_widths');
-      return saved ? JSON.parse(saved) : {};
-    } catch (error) {
-      console.error("Erro ao carregar larguras das colunas", error);
-      return {};
-    }
-  });
-  const [visibleColumns, setVisibleColumns] = useState(() => {
-    try {
-      const saved = window.localStorage.getItem('workflow_visible_columns');
-      return saved ? JSON.parse(saved) : {
-        date: true,
-        client: true,
-        galeria: true,
-        description: true,
-        email: true,
-        status: true,
-        category: true,
-        package: true,
-        packageValue: true,
-        discount: true,
-        extraPhotoValue: true,
-        extraPhotoQty: true,
-        extraPhotoTotal: true,
-        product: true,
-        productTotal: true,
-        additionalValue: true,
-        details: true,
-        total: true,
-        paid: true,
-        remaining: true,
-        payment: true
-      };
-    } catch (error) {
-      console.error("Erro ao carregar colunas visíveis", error);
-      return {
-        date: true,
-        client: true,
-        galeria: true,
-        description: true,
-        email: true,
-        status: true,
-        category: true,
-        package: true,
-        packageValue: true,
-        discount: true,
-        extraPhotoValue: true,
-        extraPhotoQty: true,
-        extraPhotoTotal: true,
-        product: true,
-        productTotal: true,
-        additionalValue: true,
-        details: true,
-        total: true,
-        paid: true,
-        remaining: true,
-        payment: true
-      };
-    }
-  });
-
-  // Update sessions from cache data
-  useEffect(() => {
-    if (sessionsData) {
-      setSessionDataList(sessionsData);
-    }
-  }, [sessionsData]);
-
-  // Mapear dados reais das configurações para formato da tabela
-  const categoryOptions: CategoryOption[] = categorias.map((categoria, index) => ({
-    id: String(index + 1),
-    nome: categoria
+  // ── Mapeamento de opções ────────────────────────────────────────────
+  const categoryOptions: CategoryOption[] = categorias.map((cat, i) => ({
+    id: String(i + 1),
+    nome: cat,
   }));
-  
-  const packageOptions: PackageOption[] = pacotes.map(pacote => ({
-    id: pacote.id,
-    nome: pacote.nome,
-    valor: `R$ ${(Number(pacote.valor_base) || 0).toFixed(2).replace('.', ',')}`,
-    valorFotoExtra: `R$ ${(Number(pacote.valor_foto_extra) || 35).toFixed(2).replace('.', ',')}`,
-    categoria: pacote.categoria_id
+  const packageOptions: PackageOption[] = pacotes.map((p) => ({
+    id: p.id,
+    nome: p.nome,
+    valor: `R$ ${(Number(p.valor_base) || 0).toFixed(2).replace(".", ",")}`,
+    valorFotoExtra: `R$ ${(Number(p.valor_foto_extra) || 35).toFixed(2).replace(".", ",")}`,
+    categoria: p.categoria_id,
   }));
-  
-  const productOptions: ProductOption[] = produtos.map(produto => ({
-    id: produto.id,
-    nome: produto.nome,
-    valor: `R$ ${(Number(produto.preco_venda) || 0).toFixed(2).replace('.', ',')}`
+  const productOptions: ProductOption[] = produtos.map((p) => ({
+    id: p.id,
+    nome: p.nome,
+    valor: `R$ ${(Number(p.preco_venda) || 0).toFixed(2).replace(".", ",")}`,
   }));
 
-  // Mapa para lookup rápido dos dados crus do banco (fonte de verdade do status financeiro)
-  const rawSessionMap = useMemo(() => {
-    const map = new Map<string, WorkflowSession>();
-    for (const s of workflowSessions) map.set(s.id, s);
-    return map;
-  }, [workflowSessions]);
-
-  // Helper: status financeiro a partir do dado cru do banco (status_financeiro é GENERATED)
-  // Regra binária: pago (saldo <= 0 ou status_financeiro='pago') vs pendente (qualquer saldo > 0)
-  const getPaymentFilterStatus = useCallback(
-    (raw: WorkflowSession | undefined): 'pago' | 'pendente' => {
-      if (!raw) return 'pendente';
-      if (raw.status_financeiro === 'pago') return 'pago';
-      const total = Number(raw.valor_total) || 0;
-      const pago = Number(raw.valor_pago) || 0;
-      if (total > 0 && pago >= total) return 'pago';
-      return 'pendente';
-    },
-    []
-  );
-
-  // Contagens por situação (para mostrar no menu) — calculadas após filtros de categoria/busca
-  const situacaoCounts = useMemo(() => {
-    let pago = 0;
-    let pendente = 0;
-    for (const session of sessionDataList) {
-      if (categoryFilter && session.categoria !== categoryFilter) continue;
-      if (searchTerm.trim()) {
-        const q = removeAccents(searchTerm.toLowerCase());
-        const nome = removeAccents((session.nome || '').toLowerCase());
-        const email = removeAccents((session.email || '').toLowerCase());
-        if (!nome.includes(q) && !email.includes(q)) continue;
-      }
-      const status = getPaymentFilterStatus(rawSessionMap.get(session.id));
-      if (status === 'pago') pago++;
-      else pendente++;
-    }
-    return { pago, pendente, total: pago + pendente };
-  }, [sessionDataList, categoryFilter, searchTerm, rawSessionMap, getPaymentFilterStatus]);
-
-  // Filter sessions by category, situacao and search term
-  useEffect(() => {
-    let result = sessionDataList;
-
-    // 1. Filtro por categoria
-    if (categoryFilter) {
-      result = result.filter(session => session.categoria === categoryFilter);
-    }
-
-    // 2. Filtro por situação financeira (usando dados crus do banco)
-    if (situacaoFilter !== 'todos') {
-      result = result.filter(
-        session => getPaymentFilterStatus(rawSessionMap.get(session.id)) === situacaoFilter
-      );
-    }
-
-    // 3. Filtro por busca textual
-    if (searchTerm.trim()) {
-      const searchTermNormalized = removeAccents(searchTerm.toLowerCase());
-      result = result.filter(session => {
-        const nomeNormalized = removeAccents((session.nome || '').toLowerCase());
-        const emailNormalized = removeAccents((session.email || '').toLowerCase());
-        return nomeNormalized.includes(searchTermNormalized) ||
-               emailNormalized.includes(searchTermNormalized);
-      });
-    }
-
-    setFilteredSessions(result);
-  }, [searchTerm, categoryFilter, situacaoFilter, sessionDataList, rawSessionMap, getPaymentFilterStatus]);
-
-  // FASE 3: Removido filtro duplicado - filteredSessions já está filtrado pelo mês correto
-  // O useEffect acima já filtra pelo mês ao buscar do cache
-
-  // Navigation functions for months
-  const handlePreviousMonth = useCallback(() => {
-    setCurrentMonth(prev => {
-      if (prev.month === 1) {
-        return { month: 12, year: prev.year - 1 };
-      }
-      return { month: prev.month - 1, year: prev.year };
-    });
-  }, []);
-
-  const handleNextMonth = useCallback(() => {
-    setCurrentMonth(prev => {
-      if (prev.month === 12) {
-        return { month: 1, year: prev.year + 1 };
-      }
-      return { month: prev.month + 1, year: prev.year };
-    });
-  }, []);
-
-  // Calculate totals for metrics
-  const calculateTotal = useCallback((session: SessionData) => {
-    const valorPacote = Number(session.valorPacote) || 0;
-    const valorFotoExtra = Number(session.valorTotalFotoExtra) || 0;
-    const valorProduto = Number(session.valorTotalProduto) || 0;
-    const valorAdicional = Number(session.valorAdicional) || 0;
-    const desconto = Number(session.desconto) || 0;
-    
-    return valorPacote + valorFotoExtra + valorProduto + valorAdicional - desconto;
-  }, []);
-
-  const calculateRestante = useCallback((session: SessionData) => {
-    const total = calculateTotal(session);
-    const valorPago = Number(session.valorPago) || 0;
-    return total - valorPago;
-  }, [calculateTotal]);
-
-  // ✅ Métricas calculadas do cache local (instantâneo, sem queries extras)
+  // ── Métricas financeiras (dados crus do banco) ──────────────────────
   const financials = useMemo(() => {
-    // Usar workflowSessions (dados brutos do Supabase) para cálculo preciso
-    const previsto = workflowSessions.reduce((sum, s) => sum + (Number(s.valor_total) || 0), 0);
-    const receita = workflowSessions.reduce((sum, s) => sum + (Number(s.valor_pago) || 0), 0);
+    const previsto = month.workflowSessions.reduce(
+      (sum, s) => sum + (Number(s.valor_total) || 0),
+      0,
+    );
+    const receita = month.workflowSessions.reduce(
+      (sum, s) => sum + (Number(s.valor_pago) || 0),
+      0,
+    );
     return {
       totalMonth: previsto,
       paidMonth: receita,
-      remainingMonth: previsto - receita
+      remainingMonth: previsto - receita,
     };
-  }, [workflowSessions]);
+  }, [month.workflowSessions]);
 
-  // Previous month metrics for comparison
-  const prevMonthFinancials = useMemo(() => {
-    const prevMonth = currentMonth.month === 1 ? 12 : currentMonth.month - 1;
-    const prevYear = currentMonth.month === 1 ? currentMonth.year - 1 : currentMonth.year;
-    
-    const prevMonthSessions = filteredSessions.filter(session => {
-      const sessionDate = parseDateFromStorage(session.data);
-      if (!sessionDate) return false;
-      return sessionDate.getMonth() + 1 === prevMonth && 
-             sessionDate.getFullYear() === prevYear;
-    });
-
-    const prevMonthTotal = prevMonthSessions.reduce((acc, session) => acc + calculateTotal(session), 0);
-    const prevMonthPaid = prevMonthSessions.reduce((acc, session) => acc + (Number(session.valorPago) || 0), 0);
-
-    return {
-      totalMonth: prevMonthTotal,
-      paidMonth: prevMonthPaid
-    };
-  }, [filteredSessions, currentMonth, calculateTotal]);
-
-  // Helper: Map header keys to SessionData properties
-  const getFieldMapping = useCallback((headerKey: string): keyof SessionData => {
-    const mapping: Record<string, keyof SessionData> = {
-      'client': 'nome',
-      'date': 'data',
-      'status': 'status',
-      'category': 'categoria',
-      'package': 'pacote',
-      'extraPhotoQty': 'qtdFotosExtra',
-      'productTotal': 'valorTotalProduto',
-      'total': 'total', // Calculated field
-      'remaining': 'restante', // Calculated field
-      'paid': 'valorPago'
-    };
-    return (mapping[headerKey] || headerKey) as keyof SessionData;
-  }, []);
-
-  // Helper: Get sortable value (handles dates, currency, calculated fields)
-  const getSortValue = useCallback((session: SessionData, headerKey: string): string | number => {
-    const field = getFieldMapping(headerKey);
-    
-    // Handle calculated fields
-    if (headerKey === 'total') {
-      return calculateTotal(session);
-    }
-    if (headerKey === 'remaining') {
-      return calculateRestante(session);
-    }
-    
-    // Ordenação por situação financeira foi removida (UX simplificada para apenas filtro)
-    
-    // Handle name field
-    if (headerKey === 'nome' || field === 'nome') {
-      return removeAccents((session.nome || '').toLowerCase());
-    }
-    
-    // Handle dates - convert to timestamp + minutos do horário (para empatar mesma data pela hora)
-    if (headerKey === 'date' || field === 'data') {
-      const dateObj = parseDateFromStorage(session.data);
-      const baseTs = dateObj ? dateObj.getTime() : 0;
-      return baseTs + parseHoraToMinutes(session.hora) * 60_000;
-    }
-    
-    // Handle currency fields - convert to number
-    const currencyFields = ['valorPago', 'valorTotalProduto', 'valorPacote', 'desconto', 'valorAdicional'];
-    if (currencyFields.includes(field as string)) {
-      const value = session[field];
-      if (typeof value === 'string') {
-        return parseFloat(value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-      }
-      return Number(value) || 0;
-    }
-    
-    // Handle quantity fields
-    if (headerKey === 'extraPhotoQty' || field === 'qtdFotosExtra') {
-      return Number(session.qtdFotosExtra) || 0;
-    }
-    
-    // Handle text fields
-    const value = session[field];
-    if (typeof value === 'string') {
-      return value.toLowerCase();
-    }
-    
-    return value || '';
-  }, [getFieldMapping, calculateTotal, calculateRestante]);
-
-  // Sort sessions
-  const sortedSessions = useMemo(() => {
-    if (!sortField) {
-      // Ordenação padrão: dias mais recentes primeiro; dentro do mesmo dia, ordem cronológica do horário (igual à Agenda)
-      return [...filteredSessions].sort((a, b) => {
-        const dateA = parseDateFromStorage(a.data);
-        const dateB = parseDateFromStorage(b.data);
-        const tsA = dateA ? dateA.getTime() : 0;
-        const tsB = dateB ? dateB.getTime() : 0;
-        if (tsA !== tsB) return tsB - tsA; // dia desc
-        // Mesmo dia: hora asc (08:00 antes de 14:00)
-        return parseHoraToMinutes(a.hora) - parseHoraToMinutes(b.hora);
-      });
-    }
-
-    return [...filteredSessions].sort((a, b) => {
-      const aVal = getSortValue(a, sortField);
-      const bVal = getSortValue(b, sortField);
-
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filteredSessions, sortField, sortDirection, getSortValue]);
-
-  // Format currency
-  const formatCurrency = (value: any) => {
-    return `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
-  };
-
-  const renderPercentageChange = (current: number, previous: number) => {
-    if (!previous) return null;
-    const change = ((current - previous) / previous) * 100;
-    const safeChange = Number.isFinite(change) ? change : 0;
-    const isPositive = safeChange > 0;
-    return (
-      <span className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-        {isPositive ? '+' : ''}{safeChange.toFixed(1)}%
-      </span>
-    );
-  };
-
-  // Event handlers
-  const handleColumnVisibilityChange = useCallback((columnKey: string, visible: boolean) => {
-    setVisibleColumns(prev => {
-      const updated = { ...prev, [columnKey]: visible };
-      window.localStorage.setItem('workflow_visible_columns', JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
-
-  const handleColumnWidthChange = useCallback((widths: Record<string, number>) => {
-    setColumnWidths(widths);
-    window.localStorage.setItem('workflow_column_widths', JSON.stringify(widths));
-  }, []);
-
-  const handleStatusChange = useCallback(async (sessionId: string, newStatus: string) => {
-    // Onda 4a — drag-and-drop entre colunas usa Capability `workflow.advanceCard`.
-    // No-op (mesma coluna) é tratado dentro da Capability; aqui mantemos patch
-    // otimista para feedback instantâneo no Kanban.
-    const currentSession = workflowSessions.find(s => s.id === sessionId);
-    if (currentSession && currentSession.status === newStatus) return;
-
-    if (currentSession) {
-      mergeUpdate({
-        ...currentSession,
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      });
-    }
-
-    if (USE_CAPABILITY_UPDATE_FIELDS) {
-      const result = await runCapability(advanceCardCapability, {
-        sessionId,
-        toStatus: newStatus,
-      });
-      if (!isOk(result)) {
-        console.error('[handleStatusChange] capability failed:', result.error);
-        await forceRefresh();
-        toast({
-          title: 'Erro ao mover card',
-          description: result.error.message || 'Não foi possível atualizar a etapa.',
-          variant: 'destructive',
-        });
-      }
-      return;
-    }
-
-    // Fallback legado quando a flag está desligada.
-    await updateSession(sessionId, { status: newStatus });
-  }, [updateSession, workflowSessions, mergeUpdate, forceRefresh, runCapability]);
-
-  const handleEditSession = useCallback((sessionId: string) => {
-    // Implementation for editing session
-    console.log('Edit session:', sessionId);
-  }, []);
-
-  // Estado do modal manual de pagamento (Onda 4b — `workflow.addPayment`).
-  // Mantém UX atual: botão "+ Pagamento" da WorkflowTable agora abre este modal
-  // em vez de logar no console. Cards expansíveis seguem usando o
-  // SessionPaymentsManager (modal completo com parcelas/agendado/estorno).
-  const [manualPaymentSessionId, setManualPaymentSessionId] = useState<string | null>(null);
-
-  const handleAddPayment = useCallback((sessionId: string) => {
-    setManualPaymentSessionId(sessionId);
-  }, []);
-
-  const handleManualPaymentClose = useCallback(() => {
-    setManualPaymentSessionId(null);
-  }, []);
-
-  const handleManualPaymentSuccess = useCallback((sessionId: string) => {
-    // O trigger DB recalcula valor_pago/status_financeiro; realtime v2 e o
-    // listener `payment-created` do AppContext propagam a atualização. Aqui
-    // apenas reforçamos um refetch do mês corrente para garantir consistência
-    // se o realtime estiver desabilitado por flag.
-    void ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
-    window.dispatchEvent(new CustomEvent('payment-created', {
-      detail: { sessionId, valor: 0, paymentId: null }
-    }));
-  }, [ensureMonthLoaded, currentMonth]);
-
-  const handleDeleteSession = useCallback(async (sessionId: string, sessionTitle: string, paymentCount: number, action?: string) => {
-    const deleteAction = (action || 'remove') as 'preserve' | 'refund' | 'remove';
-
-    console.log('🗑️ [WORKFLOW-DELETE] start (capability)', { sessionId, deleteAction });
-
-    // Remoção otimista — UX instantânea. Rollback em caso de erro.
-    const previousSessions = workflowSessions;
-    setWorkflowSessions(prev => prev.filter(s => s.id !== sessionId));
-    removeSessionFromCache(sessionId);
-
-    // Onda 4b: substitui chamada inline `supabase.rpc('delete_workflow_session_cascade')`
-    // pela Capability `workflow.deleteSession`. Mesma RPC, mesmos efeitos, agora auditável
-    // e disponível para o Assistente Lunari.
-    const result = await runCapability(deleteSessionCapability, {
-      sessionId,
-      action: deleteAction,
-    });
-
-    if (!isOk(result)) {
-      const { code, message } = result.error;
-      console.error('❌ [WORKFLOW-DELETE] capability failed', result.error);
-
-      // Reverter remoção otimista.
-      setWorkflowSessions(previousSessions);
-      void ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
-
-      // CONFLICT == "nada foi excluído" (preserva mensagem original de UX).
-      if (code === 'CONFLICT') {
-        toast({
-          title: 'Nada foi excluído',
-          description: 'A sessão pode já ter sido removida ou você não tem permissão.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'Erro ao excluir',
-        description: message || 'Não foi possível excluir a sessão.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const {
-      deletedTransactions,
-      unlinkedCobrancas,
-      deletedAppointment,
-      estornosCriados,
-    } = result.value;
-
-    console.log('✅ [WORKFLOW-DELETE] capability result', result.value);
-
-    // Mensagens contextualizadas por ação (mantidas idênticas ao fluxo anterior).
-    let title: string;
-    let description: string;
-    let durationMs = 5000;
-
-    if (deleteAction === 'preserve') {
-      title = 'Sessão arquivada';
-      description = 'Sessão movida para o histórico do cliente.';
-    } else if (deleteAction === 'refund') {
-      title = 'Sessão excluída com estorno';
-      const partes: string[] = ['Sessão e agendamento removidos'];
-      if (estornosCriados) partes.push(`${estornosCriados} estorno(s) registrado(s)`);
-      description = partes.join(' • ') + '.';
-    } else {
-      title = 'Sessão excluída';
-      const pagamentos = deletedTransactions ?? 0;
-      const cobrancasPreservadas = unlinkedCobrancas ?? 0;
-      const agendamentoRemovido = !!deletedAppointment;
-
-      const acoes: string[] = ['Sessão'];
-      if (pagamentos > 0) acoes.push(`${pagamentos} pagamento(s)`);
-      if (agendamentoRemovido) acoes.push('agendamento');
-
-      description = `${acoes.join(', ').replace(/, ([^,]*)$/, ' e $1')} excluídos permanentemente.`;
-
-      if (cobrancasPreservadas > 0) {
-        description += ` ${cobrancasPreservadas} pagamento(s) recebido(s) via gateway (Asaas/Mercado Pago/InfinitePay) foram mantidos no extrato fiscal para auditoria contábil.`;
-        durationMs = 8000;
-      }
-    }
-
-    toast({
-      title,
-      description,
-      duration: durationMs,
-    });
-
-    // Appointment será removido da Agenda via subscription realtime do Supabase (postgres_changes em `appointments`).
-  }, [runCapability, workflowSessions, removeSessionFromCache, ensureMonthLoaded, currentMonth]);
-
-  const handleFieldUpdate = useCallback((sessionId: string, field: string, value: any, silent: boolean = false) => {
-    return updateSession(sessionId, { [field]: value }, silent);
-  }, [updateSession]);
-
-  const handleSort = useCallback((field: string) => {
-    setSortField(prevField => {
-      // Se mudou de coluna, começar com 'asc'
-      if (prevField !== field) {
-        setSortDirection('asc');
-        return field;
-      }
-      // Mesma coluna: alternar direção
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-      return field;
-    });
-  }, []);
-
-  // FASE 4: Recongelar todas as sessões manualmente
-  const recongelarTodasSessoes = useCallback(async () => {
-    try {
-      toast({
-        title: "Recongelando dados...",
-        description: "Processando todas as sessões. Isso pode levar alguns segundos.",
-      });
-
-      const { pricingFreezingService } = await import('@/services/PricingFreezingService');
-      const result = await pricingFreezingService.migrarSessoesExistentes();
-      
-      toast({
-        title: "✅ Recongelamento concluído",
-        description: `${result.migrated} sessões recongeladas com sucesso!`,
-      });
-      
-      // Recarregar sessões
-      window.location.reload();
-    } catch (error) {
-      console.error('❌ Erro ao recongelar sessões:', error);
-      toast({
-        title: "Erro ao recongelar",
-        description: "Ocorreu um erro ao recongelar os dados. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  }, []);
-
-  // Get month name
-  const getMonthName = (month: number) => {
-    const monthNames = [
-      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    return monthNames[month - 1];
-  };
-
-  // FASE 4: Melhorar indicador de carregamento
-  if ((loading || isLoadingCurrentMonth) && workflowSessions.length === 0) {
+  // ── Estados de loading/erro globais ────────────────────────────────
+  if ((month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="mt-4 text-muted-foreground">
-            Carregando sessões de {getMonthName(currentMonth.month)} {currentMonth.year}...
+            Carregando sessões de {getMonthName(month.currentMonth.month)} {month.currentMonth.year}...
           </p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (month.error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <div className="text-destructive">Erro ao carregar workflow: {String(error)}</div>
-        <Button onClick={() => forceRefresh()} variant="outline">
+        <div className="text-destructive">Erro ao carregar workflow: {String(month.error)}</div>
+        <Button onClick={() => month.forceRefresh()} variant="outline">
           Recarregar dados
         </Button>
       </div>
@@ -1095,224 +138,113 @@ function WorkflowContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Main content - full width */}
-      <div className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${isTasksPanelOpen ? 'lg:pr-[340px]' : 'lg:pr-12'}`}>
-      {/* Métricas compactas + Toggle */}
-      {showMetrics ? (
-        <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-card/30 backdrop-blur-lg dark:bg-card/[0.04] border border-white/50 dark:border-white/10 rounded-lg px-4 py-2.5">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-            <span className="text-[11px] text-muted-foreground">Receita</span>
-            <span className="text-sm font-bold text-green-500">{formatCurrency(financials.paidMonth)}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-            <span className="text-[11px] text-muted-foreground">Previsto</span>
-            <span className="text-sm font-bold text-blue-500">{formatCurrency(financials.totalMonth)}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full shrink-0 ${financials.remainingMonth < 0 ? 'bg-yellow-500' : 'bg-orange-500'}`} />
-            <span className="text-[11px] text-muted-foreground">{financials.remainingMonth < 0 ? 'Crédito' : 'A Receber'}</span>
-            <span className={`text-sm font-bold ${financials.remainingMonth < 0 ? 'text-yellow-500' : 'text-orange-500'}`}>
-              {financials.remainingMonth < 0 ? `+${formatCurrency(Math.abs(financials.remainingMonth))}` : formatCurrency(financials.remainingMonth)}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
-            <span className="text-[11px] text-muted-foreground">Sessões</span>
-            <span className="text-sm font-bold">{filteredSessions.length}</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowMetrics(false)}
-            className="h-7 w-7 shrink-0 ml-auto"
-            title="Ocultar métricas"
-          >
-            <EyeOff className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowMetrics(true)}
-            className="h-7 px-2 text-xs text-muted-foreground gap-1.5"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Mostrar métricas
-          </Button>
-        </div>
-      )}
+      <div
+        className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${
+          isTasksPanelOpen ? "lg:pr-[340px]" : "lg:pr-12"
+        }`}
+      >
+        <WorkflowMetricsBar
+          showMetrics={showMetrics}
+          onToggle={setShowMetrics}
+          financials={financials}
+          sessionCount={filters.filteredSessions.length}
+        />
 
-      {/* Seletor de mês centralizado */}
-      <div className="flex items-center justify-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePreviousMonth}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <span className="font-medium text-lg min-w-[160px] text-center">
-          {getMonthName(currentMonth.month)} {currentMonth.year}
-        </span>
-        {isPreloading && (
-          <Badge variant="outline" className="absolute">
-            ⏳
-          </Badge>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleNextMonth}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCurrentMonth({
-            month: new Date().getMonth() + 1,
-            year: new Date().getFullYear()
-          })}
-        >
-          Hoje
-        </Button>
-      </div>
+        <WorkflowMonthSwitcher
+          month={month.currentMonth.month}
+          year={month.currentMonth.year}
+          isPreloading={month.isPreloading}
+          onPrev={month.goPrev}
+          onNext={month.goNext}
+          onToday={month.goToday}
+        />
 
+        <div className="rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10">
+          <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
+            <div className="relative flex-1 max-w-sm min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Buscar por cliente ou e-mail..."
+                value={filters.searchTerm}
+                onChange={(e) => filters.setSearchTerm(e.target.value)}
+                className="pl-10 h-9"
+              />
+            </div>
 
-      {/* Workflow Table */}
-      <div className="rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10">
-        {/* Busca */}
-        <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
-          <div className="relative flex-1 max-w-sm min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Buscar por cliente ou e-mail..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-9"
+            <WorkflowFilters
+              sortField={filters.sortField}
+              sortDirection={filters.sortDirection}
+              onSortChange={(field, dir) => {
+                filters.setSortField(field);
+                filters.setSortDirection(dir);
+              }}
+              categoryFilter={filters.categoryFilter}
+              onCategoryFilterChange={filters.setCategoryFilter}
+              categoryOptions={categoryOptions}
+              situacaoFilter={filters.situacaoFilter}
+              onSituacaoFilterChange={filters.setSituacaoFilter}
+              situacaoCounts={filters.situacaoCounts}
             />
           </div>
-          
-          {/* Filtros de ordenação e categoria */}
-          <WorkflowFilters
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSortChange={(field, dir) => {
-              setSortField(field);
-              setSortDirection(dir);
-            }}
-            categoryFilter={categoryFilter}
-            onCategoryFilterChange={setCategoryFilter}
-            categoryOptions={categoryOptions}
-            situacaoFilter={situacaoFilter}
-            onSituacaoFilterChange={setSituacaoFilter}
-            situacaoCounts={situacaoCounts}
-          />
-          
-        </div>
 
-        {sortedSessions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-4">
-            <div className="text-muted-foreground text-center">
-              <div className="text-lg font-medium">Nenhuma sessão encontrada</div>
-              <div className="text-sm">
-                {searchTerm
-                  ? 'Tente ajustar o termo de busca'
-                  : situacaoFilter !== 'todos'
-                    ? `Nenhuma sessão ${situacaoFilter === 'pago' ? 'paga' : 'pendente'} em ${getMonthName(currentMonth.month)} ${currentMonth.year}`
-                    : `Não há sessões para ${getMonthName(currentMonth.month)} ${currentMonth.year}`}
+          {filters.sortedSessions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+              <div className="text-muted-foreground text-center">
+                <div className="text-lg font-medium">Nenhuma sessão encontrada</div>
+                <div className="text-sm">
+                  {filters.searchTerm
+                    ? "Tente ajustar o termo de busca"
+                    : filters.situacaoFilter !== "todos"
+                      ? `Nenhuma sessão ${filters.situacaoFilter === "pago" ? "paga" : "pendente"} em ${getMonthName(month.currentMonth.month)} ${month.currentMonth.year}`
+                      : `Não há sessões para ${getMonthName(month.currentMonth.month)} ${month.currentMonth.year}`}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={month.goToday} variant="outline" size="sm">
+                  Ir para mês atual
+                </Button>
+                <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                  Recarregar dados
+                </Button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setCurrentMonth({
-                  month: new Date().getMonth() + 1,
-                  year: new Date().getFullYear()
-                })}
-                variant="outline"
-                size="sm"
-              >
-                Ir para mês atual
-              </Button>
-              <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-                Recarregar dados
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <WorkflowTable
-            sessions={sortedSessions}
-            statusOptions={getStatusOptions}
-            categoryOptions={categoryOptions}
-            packageOptions={packageOptions}
-            productOptions={productOptions}
-            onStatusChange={handleStatusChange}
-            onEditSession={handleEditSession}
-            onAddPayment={handleAddPayment}
-            onDeleteSession={handleDeleteSession}
-            onFieldUpdate={handleFieldUpdate}
-            visibleColumns={visibleColumns}
-            columnWidths={columnWidths}
-            onColumnWidthChange={handleColumnWidthChange}
-            onScrollChange={setScrollLeft}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-          />
-        )}
-      </div>
+          ) : (
+            <WorkflowTable
+              sessions={filters.sortedSessions}
+              statusOptions={getStatusOptions}
+              categoryOptions={categoryOptions}
+              packageOptions={packageOptions}
+              productOptions={productOptions}
+              onStatusChange={actions.handleStatusChange}
+              onEditSession={actions.handleEditSession}
+              onAddPayment={actions.handleAddPayment}
+              onDeleteSession={actions.handleDeleteSession}
+              onFieldUpdate={actions.handleFieldUpdate}
+              visibleColumns={columns.visibleColumns}
+              columnWidths={columns.columnWidths}
+              onColumnWidthChange={columns.handleColumnWidthChange}
+              onScrollChange={setScrollLeft}
+              sortField={filters.sortField}
+              sortDirection={filters.sortDirection}
+              onSort={filters.handleSort}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Fixed Tasks Panel - right edge */}
-      <div className="hidden lg:block fixed right-0 top-[60px] bottom-0 z-30">
-        {isTasksPanelOpen ? (
-          <div className="h-full w-[320px] transition-transform duration-200 ease-out animate-in slide-in-from-right">
-            <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={() => setIsTasksPanelOpen(false)} />
-          </div>
-        ) : (
-          <button
-            onClick={() => setIsTasksPanelOpen(true)}
-            className="h-full w-10 flex flex-col items-center justify-center gap-3 border-l border-border/60 bg-card/60 backdrop-blur-xl backdrop-saturate-[1.8] hover:bg-card/80 transition-colors cursor-pointer"
-            title="Abrir painel de tarefas"
-          >
-            <PanelRightOpen className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground [writing-mode:vertical-lr] rotate-180 tracking-wider">
-              TAREFAS
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* Mobile Tasks Panel - stacked below */}
-      <div className="lg:hidden">
-        {isTasksPanelOpen && (
-          <div className="w-full">
-            <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={() => setIsTasksPanelOpen(false)} />
-          </div>
-        )}
-        {!isTasksPanelOpen && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-center text-xs text-muted-foreground gap-1.5"
-            onClick={() => setIsTasksPanelOpen(true)}
-          >
-            <PanelRightOpen className="h-3.5 w-3.5" />
-            Abrir tarefas
-          </Button>
-        )}
-      </div>
+      <WorkflowTasksDock
+        isOpen={isTasksPanelOpen}
+        onOpen={() => setIsTasksPanelOpen(true)}
+        onClose={() => setIsTasksPanelOpen(false)}
+        currentMonth={month.currentMonth}
+      />
 
       <ManualPaymentModal
-        isOpen={manualPaymentSessionId !== null}
-        onClose={handleManualPaymentClose}
-        sessionId={manualPaymentSessionId}
-        onSuccess={handleManualPaymentSuccess}
+        isOpen={actions.manualPaymentSessionId !== null}
+        onClose={actions.handleManualPaymentClose}
+        sessionId={actions.manualPaymentSessionId}
+        onSuccess={actions.handleManualPaymentSuccess}
       />
     </div>
   );
