@@ -11,6 +11,20 @@ export const USE_CAPABILITY_UPDATE_FIELDS =
   import.meta.env.VITE_WORKFLOW_USE_CAPABILITY_UPDATE !== "false";
 
 /**
+ * Onda 4b — métricas reagem ao eventBus do Workflow em vez de canais
+ * Realtime próprios (`workflow-metrics-*`, `workflow-metrics-year-*`).
+ *
+ * Quando `true` (default), os hooks `useWorkflowMetricsRealtime` e
+ * `useWorkflowMetricsByYear` NÃO sobem canais Supabase e passam a recarregar
+ * via `eventBus.on("workflow.card_*"|"workflow.payment_*")` — o canal único
+ * do `useWorkflowRealtimeV2` já emite esses eventos.
+ *
+ * Setar `VITE_WORKFLOW_METRICS_V2=false` reativa os canais legados.
+ */
+export const USE_METRICS_EVENT_BUS =
+  import.meta.env.VITE_WORKFLOW_METRICS_V2 !== "false";
+
+/**
  * Campos cuja edição dispara recongelamento de regras / sincronização com
  * pacote/produtos. Continuam roteados pelo `useWorkflowRealtime` legado
  * porque a Capability `workflow.updateFields` ainda não cobre essa orquestração.
