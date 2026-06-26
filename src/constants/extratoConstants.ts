@@ -33,7 +33,7 @@ export const TIPO_BADGE_COLORS = {
 
 // ============= MAPEAMENTOS =============
 export const ORIGEM_LABELS = {
-  workflow: 'Gestão',
+  workflow: 'Studio',
   financeiro: 'Financeiro',
   cartao: 'Cartão',
   gallery: 'Gallery'
