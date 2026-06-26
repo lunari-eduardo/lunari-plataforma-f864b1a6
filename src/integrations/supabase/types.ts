@@ -5284,6 +5284,19 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_egress_table_stats: {
+        Args: never
+        Returns: {
+          live_rows: number
+          rows_deleted: number
+          rows_inserted: number
+          rows_read: number
+          rows_updated: number
+          table_name: string
+          total_size_bytes: number
+          total_size_pretty: string
+        }[]
+      }
       admin_grant_credits: {
         Args: { _amount: number; _reason?: string; _target_user_id: string }
         Returns: string
