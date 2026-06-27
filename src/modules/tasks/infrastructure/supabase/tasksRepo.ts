@@ -32,6 +32,7 @@ export function dbRowToTask(row: TaskRow): Task {
     type: ((row.type as string) || "simple") as TaskType,
     source: ((row.source as string) || "manual") as TaskSource,
     createdAt: row.created_at as string,
+    updatedAt: (row.updated_at as string | null) ?? undefined,
     completedAt: (row.completed_at as string | null) ?? undefined,
     dueDate: (row.due_date as string | null) ?? undefined,
     snoozeUntil: (row.snooze_until as string | null) ?? undefined,

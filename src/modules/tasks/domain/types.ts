@@ -56,6 +56,8 @@ export interface Task {
   type: TaskType;
   source: TaskSource;
   createdAt: string;
+  /** ISO da última atualização (col. `updated_at`). Usado como seq anti-eco no store. */
+  updatedAt?: string;
   completedAt?: string;
   dueDate?: string;
   snoozeUntil?: string;

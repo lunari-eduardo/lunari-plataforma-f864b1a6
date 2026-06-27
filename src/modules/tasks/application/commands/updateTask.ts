@@ -33,7 +33,11 @@ const Input = z.object({
   patch: Patch.refine((p) => Object.keys(p).length > 0, "patch vazio"),
 });
 
-const Output = z.object({ id: z.string(), changedKeys: z.array(z.string()) });
+const Output = z.object({
+  id: z.string(),
+  changedKeys: z.array(z.string()),
+  task: z.any().optional(),
+});
 
 export const updateTask = defineCommand({
   id: "tasks.update",
@@ -53,10 +57,10 @@ export const updateTask = defineCommand({
       const normalized = Object.fromEntries(
         Object.entries(patch).map(([k, v]) => [k, v === null ? undefined : v]),
       );
-      await supabaseTasksRepo.update(id, normalized, userId);
+      const task = await supabaseTasksRepo.update(id, normalized, userId);
       const changedKeys = Object.keys(patch);
       await ctx.emit("tasks.updated", { id, changedKeys, photographerId: userId });
-      return ok({ id, changedKeys });
+      return ok({ id, changedKeys, task });
     } catch (e) {
       ctx.log.error("falha ao atualizar tarefa", { e });
       return err(domainError("EXTERNAL", "Não foi possível atualizar a tarefa.", { cause: e, retriable: true }));

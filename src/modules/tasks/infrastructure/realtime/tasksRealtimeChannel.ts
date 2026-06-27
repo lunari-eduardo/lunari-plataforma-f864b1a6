@@ -25,12 +25,22 @@ interface ChannelHandle {
   userId: string;
   channel: RealtimeChannel;
   listeners: Set<RealtimeListener>;
+  statusListeners: Set<StatusListener>;
   refCount: number;
 }
+
+type StatusListener = (status: string) => void;
 
 let active: ChannelHandle | null = null;
 
 function attachChannel(userId: string): ChannelHandle {
+  const handle: ChannelHandle = {
+    userId,
+    channel: null as unknown as RealtimeChannel,
+    listeners: new Set(),
+    statusListeners: new Set(),
+    refCount: 0,
+  };
   const channel = supabase
     .channel(`tasks_v2:${userId}`)
     .on(
@@ -57,14 +67,10 @@ function attachChannel(userId: string): ChannelHandle {
         }
       },
     )
-    .subscribe();
-
-  const handle: ChannelHandle = {
-    userId,
-    channel,
-    listeners: new Set(),
-    refCount: 0,
-  };
+    .subscribe((status) => {
+      handle.statusListeners.forEach((l) => l(status));
+    });
+  handle.channel = channel;
   return handle;
 }
 
@@ -73,7 +79,11 @@ export const tasksRealtime = {
    * Assina o canal único. Retorna cleanup que decrementa refCount e
    * remove o canal quando o último consumidor sair.
    */
-  subscribe(userId: string, listener?: RealtimeListener): () => void {
+  subscribe(
+    userId: string,
+    listener?: RealtimeListener,
+    statusListener?: StatusListener,
+  ): () => void {
     if (!active || active.userId !== userId) {
       if (active) {
         supabase.removeChannel(active.channel);
@@ -84,9 +94,11 @@ export const tasksRealtime = {
     const handle = active;
     handle.refCount += 1;
     if (listener) handle.listeners.add(listener);
+    if (statusListener) handle.statusListeners.add(statusListener);
 
     return () => {
       if (listener) handle.listeners.delete(listener);
+      if (statusListener) handle.statusListeners.delete(statusListener);
       handle.refCount -= 1;
       if (handle.refCount <= 0) {
         supabase.removeChannel(handle.channel);

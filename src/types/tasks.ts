@@ -21,6 +21,7 @@ export interface Task {
   assigneeId?: string;
   assigneeName?: string;
   createdAt: string; // ISO
+  updatedAt?: string; // ISO — usado como seq anti-eco no realtime
   dueDate?: string;  // ISO
   tags?: string[];
   relatedClienteId?: string;
