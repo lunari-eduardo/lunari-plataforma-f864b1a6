@@ -117,9 +117,6 @@ export function debugSnapshot(snapshot: WorkflowPageSnapshot): Record<string, un
 /** Helper que pega o store atual e o usuário e devolve o snapshot pronto. */
 export function snapshotForActiveMonth(user: AuthUser | null): WorkflowPageSnapshot {
   const now = new Date();
-  const current = workflowStore.getCurrentMonth?.() ?? {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
-  };
+  const current = { year: now.getFullYear(), month: now.getMonth() + 1 };
   return buildWorkflowPageSnapshot({ user, currentMonth: current });
 }
