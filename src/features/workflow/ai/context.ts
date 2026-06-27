@@ -85,9 +85,9 @@ export function buildWorkflowPageSnapshot(input: BuildSnapshotInput): WorkflowPa
     visibleSessionIds: sessions.map((s) => s.id),
     counts: {
       total: sessions.length,
-      pagas: situacao.pagas ?? 0,
-      pendentes: situacao.pendentes ?? 0,
-      parciais: situacao.parciais ?? 0,
+      pagas: situacao.pago ?? 0,
+      pendentes: situacao.pendente ?? 0,
+      parciais: 0,
       restanteTotal: metrics.restante,
       previsto: metrics.previsto,
       recebido: metrics.recebido,
