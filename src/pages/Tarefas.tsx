@@ -366,7 +366,7 @@ export default function Tarefas() {
         }}
       />
 
-      {/* Modal único — edição */}
+      {/* Modal único — edição (com botão Excluir) */}
       <TaskFormModal
         open={!!editTask}
         onOpenChange={(o) => { if (!o) setEditTask(null); }}
@@ -377,7 +377,12 @@ export default function Tarefas() {
           await updateTask(editTask.id, data as any);
           setEditTask(null);
         }}
+        onDelete={editTask ? async () => {
+          await deleteTask(editTask.id);
+          setEditTask(null);
+        } : undefined}
       />
+
 
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
     </div>
