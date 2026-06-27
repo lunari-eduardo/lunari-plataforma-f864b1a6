@@ -112,6 +112,13 @@ export default function Tarefas() {
     [toast],
   );
 
+  // ───────────── Undo (até 3 ações) ─────────────
+  const statusNameOf = useCallback(
+    (key: string) => statuses.find(s => s.key === key)?.name ?? key,
+    [statuses],
+  );
+  const undo = useTasksUndo({ applyOptimisticPatch, refetch, statusNameOf });
+
   const createTask = useCallback(
     async (input: Partial<Task> & { title: string }) => {
       const res = await run(createTaskCap, {
