@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
-import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { WorkflowSession } from '@/features/workflow';
 import { SessionData } from '@/types/workflow';
 import { toSafeNumber, formatBRL, safeArray } from '@/utils/workflowNormalization';
 

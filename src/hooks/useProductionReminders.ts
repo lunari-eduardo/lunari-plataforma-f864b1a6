@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkflowCache } from '@/contexts/WorkflowCacheContext';
-import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { WorkflowSession } from '@/features/workflow';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

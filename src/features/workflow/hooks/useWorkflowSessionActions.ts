@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
-import type { WorkflowSession } from "@/hooks/useWorkflowRealtime";
+import { useWorkflowRealtime } from "@/features/workflow";
+import type { WorkflowSession } from "@/features/workflow";
 import { isOk } from "@/shared/result";
 import { useRunCapability } from "@/shared/capability";
 import {

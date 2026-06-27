@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { detectClienteIdCorruptions } from '@/utils/fixClienteIdCorruption';
 import { forceReinitialize } from '@/utils/initializeApp';
 import { useAppContext } from '@/contexts/AppContext';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
+import { workflowStore } from '@/features/workflow';
 import { RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 /**
@@ -14,7 +14,7 @@ import { RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
  */
 export function SystemStatus() {
   const { workflowItems, clientes } = useAppContext();
-  const { unifiedWorkflowData } = useUnifiedWorkflowData();
+  const unifiedWorkflowCount = workflowItems.length; // store-based unified view via AppContext
   const [corruptions, setCorruptions] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -107,7 +107,7 @@ export function SystemStatus() {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Dados Unificados</p>
-            <p className="text-xl font-semibold">{unifiedWorkflowData.length}</p>
+            <p className="text-xl font-semibold">{unifiedWorkflowCount}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Performance Config</p>

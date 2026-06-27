@@ -39,8 +39,6 @@ import { WorkflowCacheProvider } from "@/contexts/WorkflowCacheContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PlanRestrictionGuard } from "@/components/auth/PlanRestrictionGuard";
 import { BuildMonitor } from "@/components/shared/BuildMonitor";
-import { useWorkflowCacheInit } from "@/hooks/useWorkflowCacheInit";
-import { useAppointmentWorkflowSync } from "@/hooks/useAppointmentWorkflowSync";
 import { useTrialWelcomeToast } from "@/components/subscription/TrialWelcomeToast";
 import { useProvisionGalleryStatuses } from "@/hooks/useProvisionGalleryStatuses";
 import { LunariSupportHostProvider } from "@/integrations/support-host";
@@ -63,8 +61,8 @@ function RedirectToAdminHost({ to }: { to: string }) {
 }
 
 function PhotographerInit() {
-  useWorkflowCacheInit();
-  useAppointmentWorkflowSync();
+  // Workflow cache/realtime agora é gerido por <WorkflowRealtimeBridge> + workflowStore.
+  // Sync de appointments→sessões é feito pelo trigger DB; capability `workflow.syncFromAgenda` cobre re-sync manual.
   useTrialWelcomeToast();
   useProvisionGalleryStatuses();
   return null;

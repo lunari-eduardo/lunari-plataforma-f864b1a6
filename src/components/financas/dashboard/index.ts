@@ -3,6 +3,5 @@ export { DashboardKpiCards } from './DashboardKpiCards';
 export { DashboardGoalsDonuts } from './DashboardGoalsDonuts';
 export { DashboardChartsBlock } from './DashboardChartsBlock';
 export { EquipmentModalGateway } from './EquipmentModalGateway';
-export { WorkflowCacheManager } from './WorkflowCacheManager';
 export * from './types';
 export * from './constants';

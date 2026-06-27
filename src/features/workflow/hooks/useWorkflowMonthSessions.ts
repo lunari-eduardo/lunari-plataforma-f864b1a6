@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { usePersistedState } from "@/hooks/usePersistedState";
-import type { WorkflowSession } from "@/hooks/useWorkflowRealtime";
+import type { WorkflowSession } from "@/features/workflow";
 
 export type WorkflowCurrentMonth = { month: number; year: number };
 
