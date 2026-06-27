@@ -273,6 +273,7 @@ export default function Tarefas() {
               <span className="hidden md:inline">Gerenciar</span>
               <span className="md:hidden">Config</span>
             </Button>
+            <UndoButton entries={undo.entries} onUndo={undo.performUndo} />
             <Button size="sm" onClick={() => openCreate()} className="glass-btn-primary text-xs md:text-sm">
               Nova tarefa
             </Button>
