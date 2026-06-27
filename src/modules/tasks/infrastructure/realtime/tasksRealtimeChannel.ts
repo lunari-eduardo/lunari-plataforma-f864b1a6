@@ -25,12 +25,22 @@ interface ChannelHandle {
   userId: string;
   channel: RealtimeChannel;
   listeners: Set<RealtimeListener>;
+  statusListeners: Set<StatusListener>;
   refCount: number;
 }
+
+type StatusListener = (status: string) => void;
 
 let active: ChannelHandle | null = null;
 
 function attachChannel(userId: string): ChannelHandle {
+  const handle: ChannelHandle = {
+    userId,
+    channel: null as unknown as RealtimeChannel,
+    listeners: new Set(),
+    statusListeners: new Set(),
+    refCount: 0,
+  };
   const channel = supabase
     .channel(`tasks_v2:${userId}`)
     .on(
@@ -57,14 +67,10 @@ function attachChannel(userId: string): ChannelHandle {
         }
       },
     )
-    .subscribe();
-
-  const handle: ChannelHandle = {
-    userId,
-    channel,
-    listeners: new Set(),
-    refCount: 0,
-  };
+    .subscribe((status) => {
+      handle.statusListeners.forEach((l) => l(status));
+    });
+  handle.channel = channel;
   return handle;
 }
 
