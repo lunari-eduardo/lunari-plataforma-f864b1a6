@@ -768,11 +768,9 @@ export const useWorkflowRealtime = () => {
           session.id === id ? fullUpdatedSession : session
         ));
         
-        // ✅ CRÍTICO: Atualizar cache central diretamente (não depender do realtime)
-        const { workflowCacheManager } = await import('@/services/WorkflowCacheManager');
-        workflowCacheManager.updateSession(id, fullUpdatedSession);
-        
-        console.log('✅ [FASE 8] Sessão atualizada no cache central:', id);
+        // Cache central agora é o workflowStore (atualizado via WorkflowRealtimeBridge).
+        const { workflowStore } = await import('@/features/workflow');
+        workflowStore.upsertSession(fullUpdatedSession);
         
         // ✅ FASE 8: CRÍTICO - Notificar WorkflowCacheContext via evento customizado
         // O WorkflowCacheContext já tem listener para 'workflow-cache-merge'
