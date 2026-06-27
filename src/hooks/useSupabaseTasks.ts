@@ -34,6 +34,7 @@ function dbRowToTask(row: Record<string, unknown>): Task {
     notes: row.notes as string | undefined,
     estimatedHours: row.estimated_hours as number | undefined,
     captions: row.captions as TaskCaption[] | undefined,
+    textBlocks: row.text_blocks as Task['textBlocks'] | undefined,
   };
 }
 
