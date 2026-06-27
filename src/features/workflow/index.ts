@@ -59,3 +59,7 @@ export {
   REQUIRES_APPROVAL,
 } from "./ai";
 export type { WorkflowAITool, WorkflowPageSnapshot, WorkflowPermission } from "./ai";
+
+// Legacy hook shim — temporário até 6.2/6.3 migrarem para capabilities + repos.
+// NÃO use em código novo. Importe capabilities de `@/features/workflow` (queries/commands).
+export { useWorkflowRealtime } from "@/hooks/useWorkflowRealtime";
