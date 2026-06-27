@@ -350,7 +350,7 @@ export default function Tarefas() {
             updateTask={updateTask}
             deleteTask={deleteTask}
             onView={setEditTask}
-            onComplete={(id) => { handleComplete(id); toast({ title: 'Tarefa concluída' }); }}
+            onComplete={(id) => { handleComplete(id); }}
           />
         )}
       </div>
