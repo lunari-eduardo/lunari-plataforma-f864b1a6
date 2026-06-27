@@ -388,7 +388,7 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         // para que sessões reflitam o novo nome (trigger SQL propaga no banco)
         if (dados.nome && dados.nome !== currentItem.nome) {
           console.log('🔄 [atualizarCategoria] Nome alterado, invalidando store do workflow');
-          workflowStore.getState().reset();
+          workflowStore.clear();
         }
       }
     );
