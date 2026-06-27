@@ -85,6 +85,7 @@ function taskToDbRow(task: Partial<Task>, userId: string): TaskRow {
   set("notes", "notes");
   set("estimated_hours", "estimatedHours");
   set("captions", "captions", (v) => v as unknown as Json);
+  set("text_blocks", "textBlocks", (v) => v as unknown as Json);
   return row;
 }
 
