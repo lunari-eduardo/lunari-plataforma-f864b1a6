@@ -28,7 +28,12 @@ export const reopenTask = defineCommand({
       if (!current) return err(domainError("NOT_FOUND", "Tarefa não encontrada."));
 
       const statuses = await supabaseStatusesRepo.list(userId);
+      const checkedPatch = current.type === "checklist" ? { checked: false } : {};
+
       if (!isTerminalStatus(current.status, statuses)) {
+        if (current.type === "checklist" && current.checked === true) {
+          await supabaseTasksRepo.update(id, checkedPatch, userId);
+        }
         return ok({ id, status: current.status });
       }
 
@@ -37,7 +42,7 @@ export const reopenTask = defineCommand({
 
       await supabaseTasksRepo.update(
         id,
-        { status: target, completedAt: undefined },
+        { status: target, completedAt: undefined, ...checkedPatch },
         userId,
       );
 

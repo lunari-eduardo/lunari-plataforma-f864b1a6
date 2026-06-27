@@ -33,11 +33,21 @@ export const completeTask = defineCommand({
       const targetKey = terminal?.key ?? "done";
       const completedAt = current.completedAt ?? new Date().toISOString();
 
+      // Para tarefas do tipo `checklist`, manter `checked` consistente.
+      const checkedPatch = current.type === "checklist" ? { checked: true } : {};
+
       if (isTerminalStatus(current.status, statuses)) {
+        if (current.type === "checklist" && current.checked !== true) {
+          await supabaseTasksRepo.update(id, checkedPatch, userId);
+        }
         return ok({ id, completedAt });
       }
 
-      await supabaseTasksRepo.update(id, { status: targetKey, completedAt }, userId);
+      await supabaseTasksRepo.update(
+        id,
+        { status: targetKey, completedAt, ...checkedPatch },
+        userId,
+      );
       await ctx.emit("tasks.moved", { id, from: current.status, to: targetKey, photographerId: userId });
       await ctx.emit("tasks.completed", { id, completedAt, photographerId: userId });
       return ok({ id, completedAt });
