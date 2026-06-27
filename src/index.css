@@ -567,19 +567,43 @@
 
   .scrollbar-kanban {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.20) transparent;
+    scrollbar-color: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.12) transparent;
   }
-  .scrollbar-kanban::-webkit-scrollbar { width: 6px; height: 6px; }
-  .scrollbar-kanban::-webkit-scrollbar-track { background: transparent; border-radius: 3px; margin: 2px; }
+  .scrollbar-kanban::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-kanban::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-kanban::-webkit-scrollbar-thumb {
-    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.20);
-    border-radius: 3px;
-    transition: all 0.2s ease;
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.12);
+    border-radius: 999px;
+    transition: background 0.2s ease;
   }
   .scrollbar-kanban::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.40);
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.28);
   }
   .scrollbar-kanban::-webkit-scrollbar-corner { background: transparent; }
+
+  /* Variante horizontal do board do kanban — sobrescreve a regra global .overflow-x-auto */
+  .scrollbar-kanban-h {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.12) transparent;
+  }
+  .scrollbar-kanban-h::-webkit-scrollbar { width: 4px; height: 4px; }
+  .scrollbar-kanban-h::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-kanban-h::-webkit-scrollbar-thumb {
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.12);
+    border-radius: 999px;
+    transition: background 0.2s ease;
+  }
+  .scrollbar-kanban-h::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.28);
+  }
+  .scrollbar-kanban-h::-webkit-scrollbar-corner { background: transparent; }
+
+  /* Em touch: esconder scrollbars do kanban — gesto é o feedback */
+  @media (hover: none) and (pointer: coarse) {
+    .scrollbar-kanban, .scrollbar-kanban-h { scrollbar-width: none; }
+    .scrollbar-kanban::-webkit-scrollbar,
+    .scrollbar-kanban-h::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  }
 
   .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
   .scrollbar-none::-webkit-scrollbar { display: none; }
