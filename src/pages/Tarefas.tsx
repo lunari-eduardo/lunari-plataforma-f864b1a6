@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import './Tarefas.css';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -6,19 +6,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 import type { Task } from '@/types/tasks';
-import QuickTaskModal from '@/components/tarefas/QuickTaskModal';
+import TaskFormModal from '@/modules/tasks/presentation/components/TaskFormModal';
 import QuickCaptureBar from '@/components/tarefas/QuickCaptureBar';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
 import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
-import TaskDetailsModal from '@/components/tarefas/TaskDetailsModal';
 import TaskFiltersBar, { type TaskFilters } from '@/components/tarefas/TaskFiltersBar';
 import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
 import KanbanColumn from '@/modules/tasks/presentation/components/KanbanColumn';
 import TasksListView from '@/modules/tasks/presentation/components/TasksListView';
 import { hexToRgb } from '@/modules/tasks/presentation/components/utils';
+import { useRunCapability } from '@/shared/capability/react';
+import {
+  createTask as createTaskCap,
+  updateTask as updateTaskCap,
+  deleteTask as deleteTaskCap,
+  moveTask as moveTaskCap,
+  completeTask as completeTaskCap,
+  reopenTask as reopenTaskCap,
+} from '@/modules/tasks';
+import { isOk } from '@/shared/result';
 
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
@@ -54,9 +63,11 @@ function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
 }
 
 export default function Tarefas() {
-  const { tasks, addTask, updateTask, deleteTask } = useSupabaseTasks();
+  // Leitura via hook legado (realtime + state). Mutações vão por Capabilities.
+  const { tasks, refetch } = useSupabaseTasks();
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
+  const run = useRunCapability();
 
   const [view, setView] = useState<'kanban' | 'list'>(() => (localStorage.getItem('lunari_tasks_view') as any) || 'kanban');
   const [filters, setFilters] = useState<TaskFilters>({ search: '', status: 'all', priority: 'all', assignee: 'all', dateRange: 'all' });
@@ -67,20 +78,12 @@ export default function Tarefas() {
   const assigneeOptions = useMemo(() => [...people.map(p => ({ value: p.id, label: p.name }))], [people]);
   const [manageStatusesOpen, setManageStatusesOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [createStatus, setCreateStatus] = useState<string | undefined>(undefined);
+  const [editTask, setEditTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
   const sensors = useSensors(pointerSensor);
-
-  useEffect(() => {
-    if (selectedTask) {
-      const updatedTask = tasks.find(t => t.id === selectedTask.id);
-      if (updatedTask && JSON.stringify(updatedTask) !== JSON.stringify(selectedTask)) {
-        setSelectedTask(updatedTask);
-      }
-    }
-  }, [tasks, selectedTask]);
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => filterTasks(tasks, filters), [tasks, filters]);
@@ -97,10 +100,112 @@ export default function Tarefas() {
     [activeTask, statuses],
   );
 
-  const handleComplete = (id: string) => { updateTask(id, { status: doneKey as any }); };
-  const handleReopen = (id: string) => { updateTask(id, { status: defaultOpenKey as any }); };
+  // ───────────── Capabilities helpers ─────────────
+  const handleCapError = useCallback(
+    (action: string, message: string) => {
+      toast({ title: `Erro ao ${action}`, description: message, variant: 'destructive' });
+    },
+    [toast],
+  );
+
+  const createTask = useCallback(
+    async (input: Partial<Task> & { title: string }) => {
+      const res = await run(createTaskCap, {
+        title: input.title,
+        description: input.description,
+        status: input.status ?? defaultOpenKey,
+        priority: (input.priority ?? 'medium') as any,
+        type: (input.type ?? 'simple') as any,
+        dueDate: input.dueDate,
+        assigneeName: input.assigneeName,
+        tags: input.tags,
+        source: 'user',
+        activeSections: input.activeSections as any,
+        checklistItems: input.checklistItems as any,
+        callToAction: input.callToAction,
+        socialPlatforms: input.socialPlatforms,
+        attachments: input.attachments as any,
+        captions: input.captions as any,
+        notes: input.notes,
+        estimatedHours: input.estimatedHours,
+      });
+      if (!isOk(res)) handleCapError('criar tarefa', res.error.message);
+      else refetch();
+    },
+    [run, defaultOpenKey, handleCapError, refetch],
+  );
+
+  const updateTask = useCallback(
+    async (id: string, patch: Partial<Task>) => {
+      // Status changes => roteia para capabilities específicas
+      if (patch.status && Object.keys(patch).length === 1) {
+        if (patch.status === doneKey) {
+          const res = await run(completeTaskCap, { id });
+          if (!isOk(res)) handleCapError('concluir tarefa', res.error.message);
+          else refetch();
+          return;
+        }
+        const current = tasks.find(t => t.id === id);
+        if (current?.status === doneKey) {
+          const res = await run(reopenTaskCap, { id, toStatus: patch.status });
+          if (!isOk(res)) handleCapError('reabrir tarefa', res.error.message);
+          else refetch();
+          return;
+        }
+        const res = await run(moveTaskCap, { id, toStatus: patch.status });
+        if (!isOk(res)) handleCapError('mover tarefa', res.error.message);
+        else refetch();
+        return;
+      }
+
+      // Patch genérico — vai por updateTask
+      const cleanPatch: Record<string, unknown> = { ...patch };
+      // remover chaves sem suporte direto na capability
+      delete cleanPatch.id;
+      delete cleanPatch.createdAt;
+      delete cleanPatch.source;
+      delete cleanPatch.completedAt;
+      delete cleanPatch.snoozeUntil;
+      delete cleanPatch.lastNotifiedAt;
+      delete cleanPatch.assigneeId;
+      delete cleanPatch.relatedBudgetId;
+      delete cleanPatch.checked;
+      if (Object.keys(cleanPatch).length === 0) return;
+      const res = await run(updateTaskCap, { id, patch: cleanPatch as any });
+      if (!isOk(res)) handleCapError('atualizar tarefa', res.error.message);
+      else refetch();
+    },
+    [run, tasks, doneKey, handleCapError, refetch],
+  );
+
+  const deleteTask = useCallback(
+    async (id: string) => {
+      const res = await run(deleteTaskCap, { id });
+      if (!isOk(res)) handleCapError('excluir tarefa', res.error.message);
+      else refetch();
+    },
+    [run, handleCapError, refetch],
+  );
+
+  // Adaptador para componentes que esperam um `addTask` (ChecklistPanel etc.)
+  const addTask = useCallback(
+    async (input: Partial<Task> & { title: string }) => {
+      await createTask(input);
+      return null as unknown as Task; // retorno não é usado pelos consumidores atuais
+    },
+    [createTask],
+  );
+
+  // ───────────── Handlers UI ─────────────
+  const handleComplete = (id: string) => { updateTask(id, { status: doneKey } as any); };
+  const handleReopen = (id: string) => { updateTask(id, { status: defaultOpenKey } as any); };
   const handleDelete = (id: string) => { deleteTask(id); };
-  const handleMove = (id: string, status: string) => { updateTask(id, { status: status as any }); };
+  const handleMove = (id: string, status: string) => { updateTask(id, { status } as any); };
+
+  const openCreate = (status?: string) => {
+    setCreateStatus(status);
+    setCreateOpen(true);
+  };
 
   return (
     <div className="page-tarefas-modern h-[calc(100vh-4rem)] flex flex-col transition-colors duration-300">
@@ -120,7 +225,7 @@ export default function Tarefas() {
               <span className="hidden md:inline">Gerenciar</span>
               <span className="md:hidden">Config</span>
             </Button>
-            <Button size="sm" onClick={() => setCreateOpen(true)} className="glass-btn-primary text-xs md:text-sm">
+            <Button size="sm" onClick={() => openCreate()} className="glass-btn-primary text-xs md:text-sm">
               Nova tarefa
             </Button>
           </div>
@@ -128,7 +233,7 @@ export default function Tarefas() {
 
         <QuickCaptureBar
           onCapture={async (title) => {
-            await addTask({ title, status: defaultOpenKey, priority: 'medium', type: 'simple', source: 'manual' } as any);
+            await createTask({ title, status: defaultOpenKey, priority: 'medium', type: 'simple' });
           }}
         />
 
@@ -148,7 +253,7 @@ export default function Tarefas() {
                 if (activeId && overId) {
                   const current = tasks.find(tt => tt.id === activeId);
                   if (current && current.status !== overId) {
-                    updateTask(activeId, { status: overId as any });
+                    updateTask(activeId, { status: overId } as any);
                     toast({ title: 'Tarefa movida' });
                   }
                 }
@@ -180,17 +285,11 @@ export default function Tarefas() {
                         statusOptions={statusOptions}
                         activeId={activeId}
                         onAdd={async (title) => {
-                          await addTask({
-                            title,
-                            status: col.key,
-                            priority: 'medium',
-                            type: 'simple',
-                            source: 'manual',
-                          } as any);
+                          await createTask({ title, status: col.key, priority: 'medium', type: 'simple' });
                         }}
                         onComplete={handleComplete}
                         onReopen={handleReopen}
-                        onEdit={setSelectedTask}
+                        onEdit={setEditTask}
                         onDelete={handleDelete}
                         onRequestMove={handleMove}
                       />
@@ -230,27 +329,37 @@ export default function Tarefas() {
             addTask={addTask}
             updateTask={updateTask}
             deleteTask={deleteTask}
-            onView={setSelectedTask}
+            onView={setEditTask}
             onComplete={(id) => { handleComplete(id); toast({ title: 'Tarefa concluída' }); }}
           />
         )}
       </div>
 
-      <QuickTaskModal
+      {/* Modal único — criação */}
+      <TaskFormModal
         open={createOpen}
-        onOpenChange={setCreateOpen}
-        defaultStatus={defaultOpenKey}
-        onSubmit={async (data) => { await addTask(data as any); }}
+        onOpenChange={(o) => { setCreateOpen(o); if (!o) setCreateStatus(undefined); }}
+        mode="create"
+        initial={{ status: createStatus ?? defaultOpenKey, priority: 'medium', type: 'simple' }}
+        onSubmit={async (data) => {
+          await createTask(data as any);
+        }}
       />
+
+      {/* Modal único — edição */}
+      <TaskFormModal
+        open={!!editTask}
+        onOpenChange={(o) => { if (!o) setEditTask(null); }}
+        mode="edit"
+        initial={editTask ?? undefined}
+        onSubmit={async (data) => {
+          if (!editTask) return;
+          await updateTask(editTask.id, data as any);
+          setEditTask(null);
+        }}
+      />
+
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
-      <TaskDetailsModal
-        task={selectedTask}
-        open={!!selectedTask}
-        onOpenChange={open => !open && setSelectedTask(null)}
-        onUpdate={updateTask}
-        onDelete={deleteTask}
-        statusOptions={statusOptions}
-      />
     </div>
   );
 }
