@@ -19,7 +19,7 @@ export interface Task {
   relatedSessionId?: string;
   lastNotifiedAt?: string; // ISO
   snoozeUntil?: string;    // ISO
-  source: 'automation' | 'manual';
+  source: 'automation' | 'manual' | 'ai';
   completedAt?: string; // ISO
   // Task type and specialized fields
   type: TaskType;
