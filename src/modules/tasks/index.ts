@@ -1,6 +1,7 @@
 /**
  * Public barrel do módulo Tasks.
- * Onda 2: expõe domínio, store, ports, repos Supabase e bridge realtime único.
+ * Onda 3: expõe domínio, store, ports, repos Supabase, bridge realtime e
+ * capabilities (commands + queries) registrados no registry global.
  */
 
 export * from "./domain/types";
@@ -19,3 +20,36 @@ export { supabaseTasksRepo } from "./infrastructure/supabase/tasksRepo";
 export { supabaseStatusesRepo } from "./infrastructure/supabase/statusesRepo";
 export { tasksRealtime } from "./infrastructure/realtime/tasksRealtimeChannel";
 export { TasksRealtimeBridge } from "./infrastructure/realtime/TasksRealtimeBridge";
+
+// Registra eventos do módulo no LunariEvents (declaration merging)
+import "./application/events";
+
+// Capabilities — efeito colateral: registram-se no registry global
+import "./application/commands/createTask";
+import "./application/commands/updateTask";
+import "./application/commands/moveTask";
+import "./application/commands/completeTask";
+import "./application/commands/reopenTask";
+import "./application/commands/deleteTask";
+import "./application/commands/snoozeTask";
+import "./application/commands/assignTask";
+import "./application/queries/listTasks";
+import "./application/queries/getTaskById";
+import "./application/queries/dueOverview";
+import "./application/queries/countsByStatus";
+import "./application/queries/searchTasks";
+
+// Re-export para uso direto via TanStack hooks ou execute()
+export { createTask } from "./application/commands/createTask";
+export { updateTask } from "./application/commands/updateTask";
+export { moveTask } from "./application/commands/moveTask";
+export { completeTask } from "./application/commands/completeTask";
+export { reopenTask } from "./application/commands/reopenTask";
+export { deleteTask } from "./application/commands/deleteTask";
+export { snoozeTask } from "./application/commands/snoozeTask";
+export { assignTask } from "./application/commands/assignTask";
+export { listTasks } from "./application/queries/listTasks";
+export { getTaskById } from "./application/queries/getTaskById";
+export { dueOverview } from "./application/queries/dueOverview";
+export { countsByStatusQuery } from "./application/queries/countsByStatus";
+export { searchTasks } from "./application/queries/searchTasks";
