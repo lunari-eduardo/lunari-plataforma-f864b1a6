@@ -43,6 +43,8 @@ export interface Task {
   estimatedHours?: number;
   // Phase 2 extensions
   captions?: TaskCaption[];
+  /** Novo padrão: lista ordenada de blocos de texto livres. */
+  textBlocks?: TaskTextBlock[];
 }
 
 export interface TaskAttachment {
