@@ -17,6 +17,8 @@ import TaskFiltersBar, { type TaskFilters } from '@/components/tarefas/TaskFilte
 import { DndContext, rectIntersection, useSensor, useSensors, MouseSensor, TouchSensor, DragOverlay } from '@dnd-kit/core';
 import KanbanColumn from '@/modules/tasks/presentation/components/KanbanColumn';
 import TasksListView from '@/modules/tasks/presentation/components/TasksListView';
+import UndoButton from '@/modules/tasks/presentation/components/UndoButton';
+import { useTasksUndo } from '@/modules/tasks/presentation/hooks/useTasksUndo';
 import { hexToRgb } from '@/modules/tasks/presentation/components/utils';
 import { useRunCapability } from '@/shared/capability/react';
 import {
