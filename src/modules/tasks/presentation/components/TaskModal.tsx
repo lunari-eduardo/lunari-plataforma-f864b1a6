@@ -150,6 +150,14 @@ export default function TaskModal({
   const { tags: tagDefs } = useSupabaseTaskTags();
   const { statuses, getDefaultOpenKey } = useSupabaseTaskStatuses();
 
+  // Em modo `view`, lê a task ao vivo do store — assim, qualquer update
+  // (patch otimista, capability canonical, evento realtime, edição em outro
+  // dispositivo) reflete enquanto o modal está aberto. Em `edit` mantemos
+  // o estado local intocado para não atropelar o usuário.
+  useSyncExternalStore(tasksStore.subscribe, tasksStore.getSnapshot, tasksStore.getSnapshot);
+  const liveTask = initial?.id ? tasksStore.getById(initial.id) : undefined;
+  const source: Partial<Task> | undefined = viewMode === "view" && liveTask ? liveTask : initial;
+
   // Estado de edição
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState<string>("");
@@ -163,21 +171,24 @@ export default function TaskModal({
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // (Re)carrega ao abrir / quando initial muda
+  // (Re)carrega ao abrir, ao trocar de tarefa, ou ao entrar/sair do modo view.
+  // Em modo `edit` o `source` é o `initial` original (não muda), preservando o
+  // estado do usuário até ele salvar/cancelar.
   useEffect(() => {
     if (!open) return;
     setViewMode(initialMode);
-    setTitle(initial?.title ?? "");
-    setDueDate(initial?.dueDate ? formatDateForInput(initial.dueDate) : "");
-    setPriority(initial?.priority ?? "medium");
-    setStatus(initial?.status ?? getDefaultOpenKey() ?? "todo");
-    setAssigneeName(initial?.assigneeName ?? "");
-    setSelectedTags(initial?.tags ?? []);
-    setChecklistItems(initial?.checklistItems ?? []);
-    setShowChecklist(!!initial?.checklistItems?.length);
-    setTextBlocks(deriveTextBlocks(initial));
+    setTitle(source?.title ?? "");
+    setDueDate(source?.dueDate ? formatDateForInput(source.dueDate) : "");
+    setPriority(source?.priority ?? "medium");
+    setStatus(source?.status ?? getDefaultOpenKey() ?? "todo");
+    setAssigneeName(source?.assigneeName ?? "");
+    setSelectedTags(source?.tags ?? []);
+    setChecklistItems(source?.checklistItems ?? []);
+    setShowChecklist(!!source?.checklistItems?.length);
+    setTextBlocks(deriveTextBlocks(source));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initial]);
+  }, [open, initial?.id, viewMode === "view" ? source : initial]);
+
 
   const statusOptions = useMemo(
     () => statuses.map((s) => ({ value: s.key, label: s.name, color: s.color })),
