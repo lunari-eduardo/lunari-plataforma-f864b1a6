@@ -13,6 +13,7 @@ import { CapabilityRuntimeProvider } from "@/shared/capability";
 import { AgendaInvalidationBridge, AgendaRealtimeListener } from "@/modules/agenda";
 import { WorkflowEventBridge } from "@/modules/workflow";
 import { WorkflowRealtimeBridge } from "@/features/workflow/realtime";
+import { TasksRealtimeBridge } from "@/modules/tasks";
 // Side-effect imports: registram capabilities e eventos nos módulos
 import "@/modules/billing";
 import "@/modules/gallery";
@@ -71,6 +72,7 @@ function App() {
                 <AgendaRealtimeListener />
                 <WorkflowEventBridge />
                 <WorkflowRealtimeBridge />
+                <TasksRealtimeBridge />
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
