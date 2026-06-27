@@ -17,6 +17,8 @@ import TaskFiltersBar, { type TaskFilters } from '@/components/tarefas/TaskFilte
 import { DndContext, rectIntersection, useSensor, useSensors, MouseSensor, TouchSensor, DragOverlay } from '@dnd-kit/core';
 import KanbanColumn from '@/modules/tasks/presentation/components/KanbanColumn';
 import TasksListView from '@/modules/tasks/presentation/components/TasksListView';
+import UndoButton from '@/modules/tasks/presentation/components/UndoButton';
+import { useTasksUndo } from '@/modules/tasks/presentation/hooks/useTasksUndo';
 import { hexToRgb } from '@/modules/tasks/presentation/components/utils';
 import { useRunCapability } from '@/shared/capability/react';
 import {
@@ -110,6 +112,13 @@ export default function Tarefas() {
     [toast],
   );
 
+  // ───────────── Undo (até 3 ações) ─────────────
+  const statusNameOf = useCallback(
+    (key: string) => statuses.find(s => s.key === key)?.name ?? key,
+    [statuses],
+  );
+  const undo = useTasksUndo({ applyOptimisticPatch, refetch, statusNameOf });
+
   const createTask = useCallback(
     async (input: Partial<Task> & { title: string }) => {
       const res = await run(createTaskCap, {
@@ -144,14 +153,16 @@ export default function Tarefas() {
       // Toggle de checkbox do painel checklist: vem {checked} ou {checked,status}.
       // Routeia para complete/reopen (que escrevem checked + status + completed_at).
       if ('checked' in patch && patch.checked !== undefined) {
+        const current = tasks.find(t => t.id === id);
         if (patch.checked === true) {
+          if (current && current.status !== doneKey) undo.pushComplete(id, current.status);
           const res = await run(completeTaskCap, { id });
           if (!isOk(res)) handleCapError('concluir tarefa', res.error.message);
           else refetch();
           return;
         }
-        const current = tasks.find(t => t.id === id);
         const target = patch.status && patch.status !== doneKey ? patch.status : defaultOpenKey;
+        if (current?.status === doneKey) undo.pushReopen(id, doneKey);
         const res = await run(reopenTaskCap, { id, toStatus: target });
         if (!isOk(res)) handleCapError('reabrir tarefa', res.error.message);
         else refetch();
@@ -194,7 +205,7 @@ export default function Tarefas() {
       if (!isOk(res)) handleCapError('atualizar tarefa', res.error.message);
       else refetch();
     },
-    [run, tasks, doneKey, defaultOpenKey, handleCapError, refetch],
+    [run, tasks, doneKey, defaultOpenKey, handleCapError, refetch, undo],
   );
 
   const deleteTask = useCallback(
@@ -215,11 +226,29 @@ export default function Tarefas() {
     [createTask],
   );
 
+
+
+
   // ───────────── Handlers UI ─────────────
-  const handleComplete = (id: string) => { updateTask(id, { status: doneKey } as any); };
-  const handleReopen = (id: string) => { updateTask(id, { status: defaultOpenKey } as any); };
-  const handleDelete = (id: string) => { deleteTask(id); };
-  const handleMove = (id: string, status: string) => { updateTask(id, { status } as any); };
+  const handleComplete = (id: string) => {
+    const t = tasks.find(x => x.id === id);
+    if (t && t.status !== doneKey) undo.pushComplete(id, t.status);
+    updateTask(id, { status: doneKey } as any);
+  };
+  const handleReopen = (id: string) => {
+    undo.pushReopen(id, doneKey);
+    updateTask(id, { status: defaultOpenKey } as any);
+  };
+  const handleDelete = (id: string) => {
+    const snap = tasks.find(x => x.id === id);
+    if (snap) undo.pushDelete(snap);
+    deleteTask(id);
+  };
+  const handleMove = (id: string, status: string) => {
+    const t = tasks.find(x => x.id === id);
+    if (t && t.status !== status) undo.pushMove(id, t.status, status);
+    updateTask(id, { status } as any);
+  };
 
   const openCreate = (status?: string) => {
     setCreateStatus(status);
@@ -244,6 +273,7 @@ export default function Tarefas() {
               <span className="hidden md:inline">Gerenciar</span>
               <span className="md:hidden">Config</span>
             </Button>
+            <UndoButton entries={undo.entries} onUndo={undo.performUndo} />
             <Button size="sm" onClick={() => openCreate()} className="glass-btn-primary text-xs md:text-sm">
               Nova tarefa
             </Button>
@@ -275,6 +305,7 @@ export default function Tarefas() {
                 if (draggedId && overId) {
                   const current = tasks.find(tt => tt.id === draggedId);
                   if (current && current.status !== overId) {
+                    undo.pushMove(draggedId, current.status, overId);
                     // Update otimista: card aparece na coluna destino imediatamente.
                     applyOptimisticPatch(draggedId, { status: overId } as any);
                     updateTask(draggedId, { status: overId } as any);
