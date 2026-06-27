@@ -770,7 +770,7 @@ export const useWorkflowRealtime = () => {
         
         // Cache central agora é o workflowStore (atualizado via WorkflowRealtimeBridge).
         const { workflowStore } = await import('@/features/workflow');
-        workflowStore.upsertSession(fullUpdatedSession);
+        workflowStore.upsert(fullUpdatedSession);
         
         // ✅ FASE 8: CRÍTICO - Notificar WorkflowCacheContext via evento customizado
         // O WorkflowCacheContext já tem listener para 'workflow-cache-merge'
