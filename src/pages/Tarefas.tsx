@@ -305,6 +305,7 @@ export default function Tarefas() {
                 if (draggedId && overId) {
                   const current = tasks.find(tt => tt.id === draggedId);
                   if (current && current.status !== overId) {
+                    undo.pushMove(draggedId, current.status, overId);
                     // Update otimista: card aparece na coluna destino imediatamente.
                     applyOptimisticPatch(draggedId, { status: overId } as any);
                     updateTask(draggedId, { status: overId } as any);
