@@ -19,7 +19,7 @@ import AnnualView from "@/components/agenda/AnnualView";
 import AgendaHeader from "@/components/agenda/AgendaHeader";
 import AgendaModals from "@/components/agenda/AgendaModals";
 import AgendaTasksSection from "@/components/agenda/AgendaTasksSection";
-import UnifiedTaskModal from "@/components/tarefas/UnifiedTaskModal";
+import TaskFormModal from "@/modules/tasks/presentation/components/TaskFormModal";
 import {
   useUnifiedEventsRangeQuery,
   type UnifiedEvent,
