@@ -44,3 +44,18 @@ export type {
 
 // Realtime (Onda 3 — flag VITE_WORKFLOW_REALTIME_V2)
 export { WorkflowRealtimeBridge, useWorkflowRealtimeV2 } from "./realtime";
+
+// AI surface (Onda 6)
+export {
+  listWorkflowAITools,
+  workflowAIToolMap,
+  buildWorkflowPageSnapshot,
+  snapshotForActiveMonth,
+  debugSnapshot,
+  canUserRun,
+  needsHumanApproval,
+  listWorkflowCapabilityIds,
+  WORKFLOW_PERMISSIONS,
+  REQUIRES_APPROVAL,
+} from "./ai";
+export type { WorkflowAITool, WorkflowPageSnapshot, WorkflowPermission } from "./ai";
