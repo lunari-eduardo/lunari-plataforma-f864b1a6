@@ -13,7 +13,7 @@ import "./application/commands/deleteSession";
 import "./application/commands/addPayment";
 import "./application/commands/refundPayment";
 import "./application/commands/reconcileFotosExtras";
-import "./application/commands/createQuickSession";
+
 import "./application/commands/syncFromAgenda";
 import "./application/queries/getCardBySession";
 import "./application/queries/listSessionsByMonth";
@@ -29,7 +29,7 @@ export { deleteSession } from "./application/commands/deleteSession";
 export { addPayment } from "./application/commands/addPayment";
 export { refundPayment } from "./application/commands/refundPayment";
 export { reconcileFotosExtras } from "./application/commands/reconcileFotosExtras";
-export { createQuickSession } from "./application/commands/createQuickSession";
+
 export { syncFromAgenda } from "./application/commands/syncFromAgenda";
 export { getCardBySession } from "./application/queries/getCardBySession";
 export { listSessionsByMonth } from "./application/queries/listSessionsByMonth";
