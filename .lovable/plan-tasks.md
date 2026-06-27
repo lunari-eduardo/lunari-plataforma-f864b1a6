@@ -107,4 +107,5 @@ Snapshot `buildTasksPageSnapshot(v1)`: view, filtros, total/status, taskSelecion
 - [x] Onda 0 — plano salvo, inventário consolidado.
 - [x] Onda 1 — domain + store + selectors.
 - [x] Onda 2 — ports, repos Supabase e canal realtime único (bridge montada em App.tsx).
-- [ ] Ondas 3–7.
+- [x] Onda 3 — capabilities (commands + queries) registradas; eventos no LunariEvents.
+- [ ] Ondas 4–7.
