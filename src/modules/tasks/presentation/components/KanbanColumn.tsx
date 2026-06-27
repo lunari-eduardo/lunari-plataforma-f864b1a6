@@ -30,8 +30,8 @@ export default function KanbanColumn({
   const rgb = hexToRgb(color || '#6b7280');
 
   return (
-    <section className="flex-1 min-w-[280px] h-full flex flex-col">
-      <header className="flex items-center justify-between mb-3 px-1">
+    <section className="flex-1 min-w-[280px] h-full flex flex-col" style={{ touchAction: 'pan-x pan-y' }}>
+      <header className="flex items-center justify-between mb-3 px-1" style={{ touchAction: 'pan-x pan-y' }}>
         <div className="flex items-center gap-2">
           <div className="w-3.5 h-3.5 rounded-full shadow-sm" style={{ backgroundColor: color || '#6b7280' }} />
           <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
@@ -47,16 +47,18 @@ export default function KanbanColumn({
       <div
         ref={setNodeRef}
         className={cn('glass-column flex-1 p-2 flex flex-col min-h-0', isOver && 'glass-column-over')}
-        style={{ '--col-color': rgb } as React.CSSProperties}
+        style={{ '--col-color': rgb, touchAction: 'pan-x pan-y' } as React.CSSProperties}
       >
         <div
           className="flex-1 min-h-0 overflow-y-auto scrollbar-kanban"
           style={{
-            overscrollBehavior: 'contain',
+            overscrollBehaviorY: 'contain',
+            overscrollBehaviorX: 'auto',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-x pan-y',
           }}
         >
+
           <div className="px-1 pb-2">
             <ColumnQuickAdd onAdd={(t) => onAdd(t)} />
           </div>
