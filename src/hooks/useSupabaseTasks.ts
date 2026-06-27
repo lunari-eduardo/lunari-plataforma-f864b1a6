@@ -69,6 +69,7 @@ function taskToDbRow(task: Partial<Task>, userId: string): Record<string, unknow
   if (task.notes !== undefined) row.notes = task.notes;
   if (task.estimatedHours !== undefined) row.estimated_hours = task.estimatedHours;
   if (task.captions !== undefined) row.captions = task.captions as unknown as Json;
+  if (task.textBlocks !== undefined) row.text_blocks = task.textBlocks as unknown as Json;
 
   return row;
 }
