@@ -15,6 +15,7 @@ import type {
   TaskPriority,
   TaskSection,
   TaskSource,
+  TaskTextBlock,
   TaskType,
 } from "../../domain/types";
 import type { ListTasksFilter, TasksRepo } from "../../ports/tasksRepo";
