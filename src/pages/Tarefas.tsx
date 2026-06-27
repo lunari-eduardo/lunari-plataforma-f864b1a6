@@ -153,14 +153,16 @@ export default function Tarefas() {
       // Toggle de checkbox do painel checklist: vem {checked} ou {checked,status}.
       // Routeia para complete/reopen (que escrevem checked + status + completed_at).
       if ('checked' in patch && patch.checked !== undefined) {
+        const current = tasks.find(t => t.id === id);
         if (patch.checked === true) {
+          if (current && current.status !== doneKey) undo.pushComplete(id, current.status);
           const res = await run(completeTaskCap, { id });
           if (!isOk(res)) handleCapError('concluir tarefa', res.error.message);
           else refetch();
           return;
         }
-        const current = tasks.find(t => t.id === id);
         const target = patch.status && patch.status !== doneKey ? patch.status : defaultOpenKey;
+        if (current?.status === doneKey) undo.pushReopen(id, doneKey);
         const res = await run(reopenTaskCap, { id, toStatus: target });
         if (!isOk(res)) handleCapError('reabrir tarefa', res.error.message);
         else refetch();
