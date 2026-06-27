@@ -107,7 +107,7 @@ export function SystemStatus() {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Dados Unificados</p>
-            <p className="text-xl font-semibold">{unifiedWorkflowData.length}</p>
+            <p className="text-xl font-semibold">{unifiedWorkflowCount}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Performance Config</p>
