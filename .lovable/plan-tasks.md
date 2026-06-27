@@ -105,5 +105,6 @@ Snapshot `buildTasksPageSnapshot(v1)`: view, filtros, total/status, taskSelecion
 ## Estado de execução
 
 - [x] Onda 0 — plano salvo, inventário consolidado.
-- [ ] Onda 1 — domain + store + selectors (em andamento).
+- [x] Onda 1 — domain + store + selectors.
+- [x] Onda 2 — ports, repos Supabase e canal realtime único (bridge montada em App.tsx).
 - [ ] Ondas 3–7.
