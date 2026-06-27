@@ -68,35 +68,42 @@ export const tasksStore = {
     for (const t of tasks) {
       state.byId.set(t.id, t);
       indexTask(t);
-      state.lastSeq.set(t.id, t.createdAt);
+      state.lastSeq.set(t.id, t.updatedAt ?? t.createdAt);
     }
     notify();
   },
 
   upsert(task: Task) {
+    const incomingSeq = task.updatedAt ?? task.createdAt;
     const prevSeq = state.lastSeq.get(task.id);
-    // Anti-eco simples — descarta updates "antigos".
-    if (prevSeq && task.createdAt && prevSeq > task.createdAt) return;
+    // Anti-eco: descarta payloads estritamente mais antigos. Iguais passam
+    // (idempotência com a versão canônica devolvida por capabilities).
+    if (prevSeq && incomingSeq && prevSeq > incomingSeq) return;
     state.byId.set(task.id, task);
     indexTask(task);
-    state.lastSeq.set(task.id, task.createdAt);
+    state.lastSeq.set(task.id, incomingSeq);
     notify();
   },
 
   /**
    * Update otimista local — aplica patch sem passar pelo realtime.
-   * Não altera `lastSeq` para que o realtime subsequente sobrescreva normalmente.
+   * Não altera `lastSeq` para que o próximo evento Realtime sobrescreva.
+   * Retorna o snapshot anterior para permitir revert.
    */
-  applyOptimisticPatch(id: string, patch: Partial<Task>) {
+  applyOptimisticPatch(id: string, patch: Partial<Task>): Task | undefined {
     const current = state.byId.get(id);
-    if (!current) return;
+    if (!current) return undefined;
     const next: Task = { ...current, ...patch } as Task;
-    if (patch.status && patch.status !== current.status) {
-      // Mantém completedAt consistente com a transição visual.
-      // Não temos `isTerminal` aqui — caller decide via patch.completedAt se necessário.
-    }
     state.byId.set(id, next);
     indexTask(next);
+    notify();
+    return current;
+  },
+
+  /** Restaura uma task ao snapshot fornecido (uso: revert otimista). */
+  revertTo(snapshot: Task) {
+    state.byId.set(snapshot.id, snapshot);
+    indexTask(snapshot);
     notify();
   },
 
