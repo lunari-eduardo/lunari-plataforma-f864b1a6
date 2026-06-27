@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { detectClienteIdCorruptions } from '@/utils/fixClienteIdCorruption';
 import { forceReinitialize } from '@/utils/initializeApp';
 import { useAppContext } from '@/contexts/AppContext';
-import { useUnifiedWorkflowData } from '@/hooks/useUnifiedWorkflowData';
+import { workflowStore } from '@/features/workflow';
 import { RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 /**
