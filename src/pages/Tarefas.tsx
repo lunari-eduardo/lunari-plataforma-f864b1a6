@@ -201,7 +201,7 @@ export default function Tarefas() {
         return;
       }
 
-      // Patch genérico — vai por updateTask
+      // Patch genérico — vai por updateTask, com aplicação otimista local.
       const cleanPatch: Record<string, unknown> = { ...patch };
       delete cleanPatch.id;
       delete cleanPatch.createdAt;
@@ -212,9 +212,21 @@ export default function Tarefas() {
       delete cleanPatch.assigneeId;
       delete cleanPatch.relatedBudgetId;
       if (Object.keys(cleanPatch).length === 0) return;
+
+      // 1) Aplica patch otimista → UI reflete no mesmo frame.
+      const snapshot = tasksStore.applyOptimisticPatch(id, cleanPatch as Partial<Task>);
+
       const res = await run(updateTaskCap, { id, patch: cleanPatch as any });
-      if (!isOk(res)) handleCapError('atualizar tarefa', res.error.message);
-      else refetch();
+      if (!isOk(res)) {
+        // Revert na falha.
+        if (snapshot) tasksStore.revertTo(snapshot);
+        handleCapError('atualizar tarefa', res.error.message);
+        return;
+      }
+      // 2) Sobrescreve com versão canônica devolvida pelo banco (idempotente
+      //    com o evento Realtime que chegará depois).
+      const canonical = (res.value as { task?: Task }).task;
+      if (canonical) tasksStore.upsert(canonical);
     },
     [run, tasks, doneKey, defaultOpenKey, handleCapError, refetch, undo],
   );
