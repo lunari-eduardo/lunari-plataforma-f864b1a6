@@ -72,6 +72,7 @@ export const createTask = defineCommand({
           socialPlatforms: input.socialPlatforms,
           attachments: input.attachments,
           captions: input.captions,
+          textBlocks: input.textBlocks,
           notes: input.notes,
           estimatedHours: input.estimatedHours,
         },
