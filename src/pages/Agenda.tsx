@@ -383,7 +383,7 @@ export default function Agenda() {
 
 
       {/* Task creation modal */}
-      <UnifiedTaskModal
+      <TaskFormModal
         open={isTaskModalOpen}
         onOpenChange={setIsTaskModalOpen}
         mode="create"
