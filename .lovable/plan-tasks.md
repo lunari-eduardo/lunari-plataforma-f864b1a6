@@ -108,4 +108,6 @@ Snapshot `buildTasksPageSnapshot(v1)`: view, filtros, total/status, taskSelecion
 - [x] Onda 1 — domain + store + selectors.
 - [x] Onda 2 — ports, repos Supabase e canal realtime único (bridge montada em App.tsx).
 - [x] Onda 3 — capabilities (commands + queries) registradas; eventos no LunariEvents.
-- [ ] Ondas 4–7.
+- [x] Onda 4a — Tarefas.tsx quebrada: `KanbanColumn` e `TasksListView` extraídos para `modules/tasks/presentation/components/`. Página agora <220 linhas e sem subcomponentes no render.
+- [ ] Onda 4b — Unificar modais (`QuickTaskModal` + `UnifiedTaskModal` + `TaskFormModal` → único `TaskFormModal` + `TaskDetailsDrawer`).
+- [ ] Ondas 5–7.

@@ -1,39 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import './Tarefas.css';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
-import type { Task, TaskStatus } from '@/types/tasks';
+import type { Task } from '@/types/tasks';
 import QuickTaskModal from '@/components/tarefas/QuickTaskModal';
 import QuickCaptureBar from '@/components/tarefas/QuickCaptureBar';
-import ColumnQuickAdd from '@/components/tarefas/ColumnQuickAdd';
 import TaskCard from '@/components/tarefas/TaskCard';
 import PriorityLegend from '@/components/tarefas/PriorityLegend';
-import { cn } from '@/lib/utils';
 import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import TaskDetailsModal from '@/components/tarefas/TaskDetailsModal';
 import TaskFiltersBar, { type TaskFilters } from '@/components/tarefas/TaskFiltersBar';
-import CleanTaskCard from '@/components/tarefas/CleanTaskCard';
-import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay, useDroppable } from '@dnd-kit/core';
-import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
+import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
+import KanbanColumn from '@/modules/tasks/presentation/components/KanbanColumn';
+import TasksListView from '@/modules/tasks/presentation/components/TasksListView';
+import { hexToRgb } from '@/modules/tasks/presentation/components/utils';
 
-/** Convert hex color to "r, g, b" string for CSS rgba() */
-function hexToRgb(hex: string): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.substring(0, 2), 16);
-  const g = parseInt(h.substring(2, 4), 16);
-  const b = parseInt(h.substring(4, 6), 16);
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return '107, 114, 128';
-  return `${r}, ${g}, ${b}`;
-}
-
-// Filter tasks based on filters
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
     if (task.type === 'checklist' && (!task.activeSections || task.activeSections.length === 1)) return false;
@@ -68,15 +54,13 @@ function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
 }
 
 export default function Tarefas() {
-  const { tasks, loading: tasksLoading, addTask, updateTask, deleteTask } = useSupabaseTasks();
+  const { tasks, addTask, updateTask, deleteTask } = useSupabaseTasks();
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
 
-  
-
-  const [view, setView] = useState<'kanban' | 'list'>(() => localStorage.getItem('lunari_tasks_view') as any || 'kanban');
+  const [view, setView] = useState<'kanban' | 'list'>(() => (localStorage.getItem('lunari_tasks_view') as any) || 'kanban');
   const [filters, setFilters] = useState<TaskFilters>({ search: '', status: 'all', priority: 'all', assignee: 'all', dateRange: 'all' });
-  const { statuses, loading: statusesLoading, getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
+  const { statuses, getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
   const doneKey = getDoneKey();
   const defaultOpenKey = getDefaultOpenKey();
   const statusOptions = useMemo(() => statuses.map(s => ({ value: s.key, label: s.name })), [statuses]);
@@ -107,99 +91,19 @@ export default function Tarefas() {
     return map;
   }, [filtered, statuses]);
 
-  // Get the active dragged task + its status color for the overlay
-  const activeTask = useMemo(() => activeId ? tasks.find(t => t.id === activeId) : null, [activeId, tasks]);
-  const activeTaskColor = useMemo(() => {
-    if (!activeTask) return undefined;
-    return statuses.find(s => s.key === activeTask.status)?.color;
-  }, [activeTask, statuses]);
-
-  const StatusColumn = ({ title, statusKey, color }: { title: string; statusKey: string; color?: string }) => {
-    const { isOver, setNodeRef } = useDroppable({ id: statusKey });
-    const rgb = hexToRgb(color || '#6b7280');
-
-    return (
-      <section className="flex-1 min-w-[280px] h-full flex flex-col">
-        <header className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2">
-            <div className="w-3.5 h-3.5 rounded-full shadow-sm" style={{ backgroundColor: color || '#6b7280' }} />
-            <h2 className="text-sm font-semibold text-lunar-text">{title}</h2>
-          </div>
-          <span
-            className="glass-column-badge text-2xs px-2 py-0.5 rounded-full"
-            style={{ '--col-color': rgb } as React.CSSProperties}
-          >
-            {groups[statusKey]?.length || 0}
-          </span>
-        </header>
-
-        <div
-          ref={setNodeRef}
-          className={cn(
-            'glass-column flex-1 p-2 overflow-hidden flex flex-col',
-            isOver && 'glass-column-over'
-          )}
-          style={{ '--col-color': rgb } as React.CSSProperties}
-        >
-          <div className="flex-1 overflow-y-auto scrollbar-kanban">
-            <div className="px-1 pb-2">
-              <ColumnQuickAdd
-                onAdd={async (title) => {
-                  await addTask({
-                    title,
-                    status: statusKey,
-                    priority: 'medium',
-                    type: 'simple',
-                    source: 'manual',
-                  } as any);
-                }}
-              />
-            </div>
-            <ul className="space-y-2 pb-2">
-              {(groups[statusKey] || []).map(t => (
-                <DraggableTaskCard
-                  key={t.id}
-                  task={t}
-                  statusColor={color}
-                  onComplete={() => { updateTask(t.id, { status: doneKey as any }); }}
-                  onReopen={() => { updateTask(t.id, { status: defaultOpenKey as any }); }}
-                  onEdit={() => setSelectedTask(t)}
-                  onDelete={() => { deleteTask(t.id); }}
-                  onRequestMove={status => { updateTask(t.id, { status: status as any }); }}
-                  isDone={t.status === doneKey as any}
-                  statusOptions={statusOptions}
-                  activeId={activeId}
-                />
-              ))}
-              {(groups[statusKey] || []).length === 0 && (
-                <li className="text-center text-sm text-lunar-textSecondary py-6 opacity-50">
-                  Vazio
-                </li>
-              )}
-            </ul>
-          </div>
-        </div>
-      </section>
-    );
-  };
-
-  const ListView = () => (
-    <div className="space-y-2">
-      <ChecklistPanel items={checklistItems} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} doneKey={doneKey} defaultOpenKey={defaultOpenKey} variant="section" />
-      <Card className="p-2 bg-card/30 dark:bg-card/[0.04] backdrop-blur-xl border-white/35 dark:border-white/[0.08]">
-        <div className="grid gap-2">
-          {filtered.map(t => (
-            <CleanTaskCard key={t.id} task={t} onComplete={() => { updateTask(t.id, { status: doneKey as any }); toast({ title: 'Tarefa concluída' }); }} onView={() => setSelectedTask(t)} isDone={t.status === doneKey as any} />
-          ))}
-          {filtered.length === 0 && <div className="py-8 text-center text-sm text-lunar-textSecondary">Nenhuma tarefa encontrada.</div>}
-        </div>
-      </Card>
-    </div>
+  const activeTask = useMemo(() => (activeId ? tasks.find(t => t.id === activeId) : null), [activeId, tasks]);
+  const activeTaskColor = useMemo(
+    () => (activeTask ? statuses.find(s => s.key === activeTask.status)?.color : undefined),
+    [activeTask, statuses],
   );
+
+  const handleComplete = (id: string) => { updateTask(id, { status: doneKey as any }); };
+  const handleReopen = (id: string) => { updateTask(id, { status: defaultOpenKey as any }); };
+  const handleDelete = (id: string) => { deleteTask(id); };
+  const handleMove = (id: string, status: string) => { updateTask(id, { status: status as any }); };
 
   return (
     <div className="page-tarefas-modern h-[calc(100vh-4rem)] flex flex-col transition-colors duration-300">
-      {/* Header + Filters */}
       <div className="flex-shrink-0 px-2 pt-3 space-y-3">
         <header className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-1 md:gap-2 flex-wrap">
@@ -224,13 +128,7 @@ export default function Tarefas() {
 
         <QuickCaptureBar
           onCapture={async (title) => {
-            await addTask({
-              title,
-              status: defaultOpenKey,
-              priority: 'medium',
-              type: 'simple',
-              source: 'manual',
-            } as any);
+            await addTask({ title, status: defaultOpenKey, priority: 'medium', type: 'simple', source: 'manual' } as any);
           }}
         />
 
@@ -238,7 +136,6 @@ export default function Tarefas() {
         <PriorityLegend />
       </div>
 
-      {/* Kanban */}
       <div className="flex-1 overflow-hidden">
         {view === 'kanban' ? (
           <div className="flex flex-col h-full">
@@ -262,9 +159,41 @@ export default function Tarefas() {
               <div className="flex-1 relative">
                 <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">
                   <div className="flex h-full gap-3 min-w-max px-2 py-1">
-                    <ChecklistPanel items={checklistItems} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} doneKey={doneKey} defaultOpenKey={defaultOpenKey} variant="column" />
+                    <ChecklistPanel
+                      items={checklistItems}
+                      addTask={addTask}
+                      updateTask={updateTask}
+                      deleteTask={deleteTask}
+                      doneKey={doneKey}
+                      defaultOpenKey={defaultOpenKey}
+                      variant="column"
+                    />
                     {statuses.map(col => (
-                      <StatusColumn key={col.id} title={col.name} statusKey={col.key as any} color={col.color} />
+                      <KanbanColumn
+                        key={col.id}
+                        title={col.name}
+                        statusKey={col.key as any}
+                        color={col.color}
+                        tasks={groups[col.key] || []}
+                        doneKey={doneKey}
+                        defaultOpenKey={defaultOpenKey}
+                        statusOptions={statusOptions}
+                        activeId={activeId}
+                        onAdd={async (title) => {
+                          await addTask({
+                            title,
+                            status: col.key,
+                            priority: 'medium',
+                            type: 'simple',
+                            source: 'manual',
+                          } as any);
+                        }}
+                        onComplete={handleComplete}
+                        onReopen={handleReopen}
+                        onEdit={setSelectedTask}
+                        onDelete={handleDelete}
+                        onRequestMove={handleMove}
+                      />
                     ))}
                   </div>
                 </div>
@@ -293,7 +222,17 @@ export default function Tarefas() {
             </DndContext>
           </div>
         ) : (
-          <ListView />
+          <TasksListView
+            filtered={filtered}
+            checklistItems={checklistItems}
+            doneKey={doneKey}
+            defaultOpenKey={defaultOpenKey}
+            addTask={addTask}
+            updateTask={updateTask}
+            deleteTask={deleteTask}
+            onView={setSelectedTask}
+            onComplete={(id) => { handleComplete(id); toast({ title: 'Tarefa concluída' }); }}
+          />
         )}
       </div>
 
@@ -301,12 +240,17 @@ export default function Tarefas() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         defaultStatus={defaultOpenKey}
-        onSubmit={async (data) => {
-          await addTask(data as any);
-        }}
+        onSubmit={async (data) => { await addTask(data as any); }}
       />
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
-      <TaskDetailsModal task={selectedTask} open={!!selectedTask} onOpenChange={open => !open && setSelectedTask(null)} onUpdate={updateTask} onDelete={deleteTask} statusOptions={statusOptions} />
+      <TaskDetailsModal
+        task={selectedTask}
+        open={!!selectedTask}
+        onOpenChange={open => !open && setSelectedTask(null)}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+        statusOptions={statusOptions}
+      />
     </div>
   );
 }
