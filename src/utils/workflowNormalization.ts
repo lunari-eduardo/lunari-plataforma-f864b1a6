@@ -5,7 +5,7 @@
  * quando o cache local ou um realtime parcial traz campos undefined/null.
  */
 
-import type { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import type { WorkflowSession } from '@/features/workflow';
 
 export const toSafeNumber = (value: any, fallback = 0): number => {
   if (value === null || value === undefined || value === '') return fallback;

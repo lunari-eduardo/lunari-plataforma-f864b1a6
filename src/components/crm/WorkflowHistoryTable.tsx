@@ -7,7 +7,7 @@ import { formatDateForDisplay } from '@/utils/dateUtils';
 import { ClienteCompleto } from '@/types/cliente-supabase';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
 import { useClientSessionsRealtime } from '@/hooks/useClientSessionsRealtime';
-import { useWorkflowRealtime } from '@/hooks/useWorkflowRealtime';
+import { useWorkflowRealtime } from '@/features/workflow';
 import { migrateValorBasePacoteForClient } from '@/utils/migrateValorBasePacote';
 import { useState } from 'react';
 import { toast } from 'sonner';

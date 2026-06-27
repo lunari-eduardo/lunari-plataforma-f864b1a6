@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SessionData } from "@/types/workflow";
-import type { WorkflowSession } from "@/hooks/useWorkflowRealtime";
+import type { WorkflowSession } from "@/features/workflow";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { parseDateFromStorage, parseHoraToMinutes } from "@/utils/dateUtils";
 

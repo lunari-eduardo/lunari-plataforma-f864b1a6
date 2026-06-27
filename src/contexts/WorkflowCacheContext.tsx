@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { indexedDBCache } from '@/services/IndexedDBCache';
-import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { WorkflowSession } from '@/features/workflow';
 import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowSessionPartial } from '@/utils/workflowNormalization';
 import { sessionsRepo } from '@/features/workflow/data';
 import { isWorkflowRealtimeV2Enabled } from '@/features/workflow/realtime';

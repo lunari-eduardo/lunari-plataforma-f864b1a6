@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { WorkflowSession } from '@/features/workflow';
 import { workflowCacheManager } from '@/services/WorkflowCacheManager';
 import { realtimeSubscriptionManager } from '@/services/RealtimeSubscriptionManager';
 

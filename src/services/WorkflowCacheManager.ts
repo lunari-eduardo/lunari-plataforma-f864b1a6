@@ -10,7 +10,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { WorkflowSession } from '@/hooks/useWorkflowRealtime';
+import { WorkflowSession } from '@/features/workflow';
 
 interface CacheEntry {
   sessions: WorkflowSession[];
