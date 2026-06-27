@@ -76,6 +76,8 @@ export interface Task {
   socialPlatforms?: string[];
   attachments?: TaskAttachment[];
   captions?: TaskCaption[];
+  /** Novo padrão multi-blocos. Persistido em coluna JSONB (ver mapper). */
+  textBlocks?: TaskTextBlock[];
   notes?: string;
   estimatedHours?: number;
 }
