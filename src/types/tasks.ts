@@ -1,7 +1,16 @@
 export type TaskStatus = string;
 export type TaskPriority = 'low' | 'medium' | 'high';
+/** `content` é legado — novas tarefas usam blocos de texto múltiplos. */
 export type TaskType = 'simple' | 'content' | 'checklist' | 'document';
 export type TaskSection = 'basic' | 'checklist' | 'content' | 'document';
+
+/** Bloco de texto livre anexado à tarefa (novo padrão multi-blocos). */
+export interface TaskTextBlock {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+}
 
 export interface Task {
   id: string;
