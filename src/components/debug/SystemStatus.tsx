@@ -14,7 +14,7 @@ import { RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
  */
 export function SystemStatus() {
   const { workflowItems, clientes } = useAppContext();
-  const { unifiedWorkflowData } = useUnifiedWorkflowData();
+  const unifiedWorkflowCount = workflowItems.length; // store-based unified view via AppContext
   const [corruptions, setCorruptions] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
