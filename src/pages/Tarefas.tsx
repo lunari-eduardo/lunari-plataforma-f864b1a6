@@ -224,12 +224,8 @@ export default function Tarefas() {
     [createTask],
   );
 
-  // ───────────── Undo (até 3 ações) ─────────────
-  const statusNameOf = useCallback(
-    (key: string) => statuses.find(s => s.key === key)?.name ?? key,
-    [statuses],
-  );
-  const undo = useTasksUndo({ applyOptimisticPatch, refetch, statusNameOf });
+
+
 
   // ───────────── Handlers UI ─────────────
   const handleComplete = (id: string) => {
