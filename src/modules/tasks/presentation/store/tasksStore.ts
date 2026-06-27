@@ -83,6 +83,24 @@ export const tasksStore = {
     notify();
   },
 
+  /**
+   * Update otimista local — aplica patch sem passar pelo realtime.
+   * Não altera `lastSeq` para que o realtime subsequente sobrescreva normalmente.
+   */
+  applyOptimisticPatch(id: string, patch: Partial<Task>) {
+    const current = state.byId.get(id);
+    if (!current) return;
+    const next: Task = { ...current, ...patch } as Task;
+    if (patch.status && patch.status !== current.status) {
+      // Mantém completedAt consistente com a transição visual.
+      // Não temos `isTerminal` aqui — caller decide via patch.completedAt se necessário.
+    }
+    state.byId.set(id, next);
+    indexTask(next);
+    notify();
+  },
+
+
   remove(id: string) {
     if (!state.byId.has(id)) return;
     state.byId.delete(id);
