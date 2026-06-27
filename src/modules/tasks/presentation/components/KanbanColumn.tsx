@@ -54,7 +54,7 @@ export default function KanbanColumn({
           style={{
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
-            touchAction: 'pan-y',
+            touchAction: 'pan-x pan-y',
           }}
         >
           <div className="px-1 pb-2">

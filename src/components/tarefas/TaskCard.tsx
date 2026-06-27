@@ -107,7 +107,7 @@ export default function TaskCard({
 
   return (
     <li
-      className={`group glass-task-card relative overflow-hidden p-3 cursor-grab active:cursor-grabbing select-none touch-pan-y transform-gpu ${
+      className={`group glass-task-card relative overflow-hidden p-3 cursor-grab active:cursor-grabbing select-none touch-auto transform-gpu ${
         isDragging ? 'glass-task-card-placeholder' : ''
       } ${isDone ? 'opacity-70' : ''}`}
       ref={dndRef as any}
