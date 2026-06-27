@@ -1,12 +1,11 @@
 /**
  * TaskFormModal — ponto único canônico do módulo Tasks.
  *
- * Onda 4b (passo 1): unifica criação/edição da página Tarefas, Agenda e
- * Workflow num único componente. Por ora, encapsula o UnifiedTaskModal
- * legado para evitar regressão visual. Próximos passos da onda:
- *   - roteamento via capabilities (`createTask`/`updateTask`).
- *   - substituição do QuickTaskModal e do TaskDetailsModal por drawer.
+ * Onda 4b passo 2: aponta para `TaskQuickModal` (modal enxuto com seções
+ * avançadas opcionais e botão de exclusão em modo edit). O antigo
+ * `UnifiedTaskModal` segue no repositório como referência mas não é mais
+ * o ponto de entrada padrão.
  */
 
-export { default } from "@/components/tarefas/UnifiedTaskModal";
-export type { default as TaskFormModalDefault } from "@/components/tarefas/UnifiedTaskModal";
+export { default } from "./TaskQuickModal";
+export type { TaskQuickModalProps as TaskFormModalProps } from "./TaskQuickModal";
