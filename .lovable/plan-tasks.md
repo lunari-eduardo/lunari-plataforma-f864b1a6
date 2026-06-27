@@ -106,4 +106,4 @@ Snapshot `buildTasksPageSnapshot(v1)`: view, filtros, total/status, taskSelecion
 
 - [x] Onda 0 — plano salvo, inventário consolidado.
 - [ ] Onda 1 — domain + store + selectors (em andamento).
-- [ ] Ondas 2–7.
+- [ ] Ondas 3–7.
