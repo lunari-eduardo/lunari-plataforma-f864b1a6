@@ -267,14 +267,17 @@ export default function Tarefas() {
               onDragStart={e => { setActiveId(String(e.active.id)); }}
               onDragEnd={e => {
                 const overId = e.over?.id as string | undefined;
-                if (activeId && overId) {
-                  const current = tasks.find(tt => tt.id === activeId);
+                const draggedId = activeId;
+                // Limpa o overlay ANTES de qualquer await para não piscar.
+                requestAnimationFrame(() => setActiveId(null));
+                if (draggedId && overId) {
+                  const current = tasks.find(tt => tt.id === draggedId);
                   if (current && current.status !== overId) {
-                    updateTask(activeId, { status: overId } as any);
-                    toast({ title: 'Tarefa movida' });
+                    // Update otimista: card aparece na coluna destino imediatamente.
+                    applyOptimisticPatch(draggedId, { status: overId } as any);
+                    updateTask(draggedId, { status: overId } as any);
                   }
                 }
-                requestAnimationFrame(() => setActiveId(null));
               }}
               onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
