@@ -51,6 +51,7 @@ export function dbRowToTask(row: TaskRow): Task {
     captions: (row.captions as TaskCaption[] | null) ?? undefined,
     notes: (row.notes as string | null) ?? undefined,
     estimatedHours: (row.estimated_hours as number | null) ?? undefined,
+    textBlocks: (row.text_blocks as TaskTextBlock[] | null) ?? undefined,
   };
 }
 
