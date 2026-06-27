@@ -222,10 +222,13 @@ export default function TaskModal({
     };
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!title.trim()) return;
-    await onSubmit(buildPayload());
+    const payload = buildPayload();
+    // Fecha imediatamente; mutação roda em background. UI já reflete via
+    // patch otimista aplicado no handler do caller.
     onOpenChange(false);
+    void Promise.resolve(onSubmit(payload));
   };
 
   // ─── checklist helpers ─────────────────────────────────────────────────────
