@@ -205,7 +205,7 @@ export default function Tarefas() {
       if (!isOk(res)) handleCapError('atualizar tarefa', res.error.message);
       else refetch();
     },
-    [run, tasks, doneKey, defaultOpenKey, handleCapError, refetch],
+    [run, tasks, doneKey, defaultOpenKey, handleCapError, refetch, undo],
   );
 
   const deleteTask = useCallback(
