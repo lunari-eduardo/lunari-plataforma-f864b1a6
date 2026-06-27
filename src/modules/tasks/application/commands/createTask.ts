@@ -24,6 +24,7 @@ const Input = z.object({
   socialPlatforms: z.array(z.string()).optional(),
   attachments: z.array(z.any()).optional(),
   captions: z.array(z.any()).optional(),
+  textBlocks: z.array(z.any()).optional(),
   notes: z.string().optional(),
   estimatedHours: z.number().nonnegative().optional(),
 });
