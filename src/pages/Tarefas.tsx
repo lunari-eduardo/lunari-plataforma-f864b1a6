@@ -217,11 +217,33 @@ export default function Tarefas() {
     [createTask],
   );
 
+  // ───────────── Undo (até 3 ações) ─────────────
+  const statusNameOf = useCallback(
+    (key: string) => statuses.find(s => s.key === key)?.name ?? key,
+    [statuses],
+  );
+  const undo = useTasksUndo({ applyOptimisticPatch, refetch, statusNameOf });
+
   // ───────────── Handlers UI ─────────────
-  const handleComplete = (id: string) => { updateTask(id, { status: doneKey } as any); };
-  const handleReopen = (id: string) => { updateTask(id, { status: defaultOpenKey } as any); };
-  const handleDelete = (id: string) => { deleteTask(id); };
-  const handleMove = (id: string, status: string) => { updateTask(id, { status } as any); };
+  const handleComplete = (id: string) => {
+    const t = tasks.find(x => x.id === id);
+    if (t && t.status !== doneKey) undo.pushComplete(id, t.status);
+    updateTask(id, { status: doneKey } as any);
+  };
+  const handleReopen = (id: string) => {
+    undo.pushReopen(id, doneKey);
+    updateTask(id, { status: defaultOpenKey } as any);
+  };
+  const handleDelete = (id: string) => {
+    const snap = tasks.find(x => x.id === id);
+    if (snap) undo.pushDelete(snap);
+    deleteTask(id);
+  };
+  const handleMove = (id: string, status: string) => {
+    const t = tasks.find(x => x.id === id);
+    if (t && t.status !== status) undo.pushMove(id, t.status, status);
+    updateTask(id, { status } as any);
+  };
 
   const openCreate = (status?: string) => {
     setCreateStatus(status);
