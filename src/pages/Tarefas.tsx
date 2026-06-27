@@ -426,11 +426,12 @@ export default function Tarefas() {
         }}
       />
 
-      {/* Modal único — edição (com botão Excluir) */}
+      {/* Modal único — edição/visualização (abre em view por padrão) */}
       <TaskFormModal
         open={!!editTask}
         onOpenChange={(o) => { if (!o) setEditTask(null); }}
         mode="edit"
+        defaultView="view"
         initial={editTask ?? undefined}
         onSubmit={async (data) => {
           if (!editTask) return;
