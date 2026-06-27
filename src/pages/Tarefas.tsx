@@ -83,8 +83,9 @@ export default function Tarefas() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 6 } });
-  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } });
   const sensors = useSensors(mouseSensor, touchSensor);
+
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => filterTasks(tasks, filters), [tasks, filters]);
