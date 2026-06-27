@@ -23,6 +23,7 @@ const Patch = z.object({
   checklistItems: z.array(z.any()).optional(),
   attachments: z.array(z.any()).optional(),
   captions: z.array(z.any()).optional(),
+  textBlocks: z.array(z.any()).optional(),
   // Estado do checkbox para tarefas do tipo `checklist` (painel fixo).
   checked: z.boolean().optional(),
 });

@@ -4698,6 +4698,7 @@ export type Database = {
           source: string | null
           status: string | null
           tags: string[] | null
+          text_blocks: Json | null
           title: string
           type: string | null
           updated_at: string
@@ -4730,6 +4731,7 @@ export type Database = {
           source?: string | null
           status?: string | null
           tags?: string[] | null
+          text_blocks?: Json | null
           title: string
           type?: string | null
           updated_at?: string
@@ -4762,6 +4764,7 @@ export type Database = {
           source?: string | null
           status?: string | null
           tags?: string[] | null
+          text_blocks?: Json | null
           title?: string
           type?: string | null
           updated_at?: string

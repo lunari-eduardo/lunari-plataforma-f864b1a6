@@ -39,6 +39,13 @@ export interface TaskCaption {
   platform?: "instagram" | "facebook" | "general";
   characterCount?: number;
 }
+export interface TaskTextBlock {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+}
+
 
 export interface Task {
   id: string;
@@ -69,6 +76,8 @@ export interface Task {
   socialPlatforms?: string[];
   attachments?: TaskAttachment[];
   captions?: TaskCaption[];
+  /** Novo padrão multi-blocos. Persistido em coluna JSONB (ver mapper). */
+  textBlocks?: TaskTextBlock[];
   notes?: string;
   estimatedHours?: number;
 }

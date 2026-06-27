@@ -15,6 +15,7 @@ import type {
   TaskPriority,
   TaskSection,
   TaskSource,
+  TaskTextBlock,
   TaskType,
 } from "../../domain/types";
 import type { ListTasksFilter, TasksRepo } from "../../ports/tasksRepo";
@@ -50,6 +51,7 @@ export function dbRowToTask(row: TaskRow): Task {
     captions: (row.captions as TaskCaption[] | null) ?? undefined,
     notes: (row.notes as string | null) ?? undefined,
     estimatedHours: (row.estimated_hours as number | null) ?? undefined,
+    textBlocks: (row.text_blocks as TaskTextBlock[] | null) ?? undefined,
   };
 }
 
@@ -83,6 +85,7 @@ function taskToDbRow(task: Partial<Task>, userId: string): TaskRow {
   set("notes", "notes");
   set("estimated_hours", "estimatedHours");
   set("captions", "captions", (v) => v as unknown as Json);
+  set("text_blocks", "textBlocks", (v) => v as unknown as Json);
   return row;
 }
 
