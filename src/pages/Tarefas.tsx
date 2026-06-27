@@ -14,7 +14,7 @@ import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import ManageTaskStatusesModal from '@/components/tarefas/ManageTaskStatusesModal';
 import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
 import TaskFiltersBar, { type TaskFilters } from '@/components/tarefas/TaskFiltersBar';
-import { DndContext, rectIntersection, useSensor, useSensors, PointerSensor, DragOverlay } from '@dnd-kit/core';
+import { DndContext, rectIntersection, useSensor, useSensors, MouseSensor, TouchSensor, DragOverlay } from '@dnd-kit/core';
 import KanbanColumn from '@/modules/tasks/presentation/components/KanbanColumn';
 import TasksListView from '@/modules/tasks/presentation/components/TasksListView';
 import { hexToRgb } from '@/modules/tasks/presentation/components/utils';
@@ -82,8 +82,9 @@ export default function Tarefas() {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
-  const sensors = useSensors(pointerSensor);
+  const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 6 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } });
+  const sensors = useSensors(mouseSensor, touchSensor);
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => filterTasks(tasks, filters), [tasks, filters]);
@@ -282,7 +283,7 @@ export default function Tarefas() {
               onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
               <div className="flex-1 relative">
-                <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">
+                <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban-h" style={{ overscrollBehaviorX: 'contain', touchAction: 'pan-x pan-y' }}>
                   <div className="flex h-full gap-3 min-w-max px-2 py-1">
                     <ChecklistPanel
                       items={checklistItems}

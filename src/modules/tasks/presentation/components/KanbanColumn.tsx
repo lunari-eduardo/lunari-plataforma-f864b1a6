@@ -46,10 +46,17 @@ export default function KanbanColumn({
 
       <div
         ref={setNodeRef}
-        className={cn('glass-column flex-1 p-2 overflow-hidden flex flex-col', isOver && 'glass-column-over')}
+        className={cn('glass-column flex-1 p-2 flex flex-col min-h-0', isOver && 'glass-column-over')}
         style={{ '--col-color': rgb } as React.CSSProperties}
       >
-        <div className="flex-1 overflow-y-auto scrollbar-kanban">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto scrollbar-kanban"
+          style={{
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+          }}
+        >
           <div className="px-1 pb-2">
             <ColumnQuickAdd onAdd={(t) => onAdd(t)} />
           </div>
