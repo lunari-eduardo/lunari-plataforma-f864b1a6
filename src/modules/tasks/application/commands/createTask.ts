@@ -10,13 +10,22 @@ const Input = z.object({
   status: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
   type: z.enum(["simple", "content", "checklist", "document"]).default("simple"),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().optional(),
   assigneeId: z.string().uuid().optional(),
   assigneeName: z.string().optional(),
   tags: z.array(z.string()).optional(),
   relatedClienteId: z.string().uuid().optional(),
   relatedSessionId: z.string().uuid().optional(),
   source: z.enum(["user", "automation", "ai"]).default("user"),
+  // seções e payloads específicos
+  activeSections: z.array(z.enum(["basic", "checklist", "content", "document"])).optional(),
+  checklistItems: z.array(z.any()).optional(),
+  callToAction: z.string().optional(),
+  socialPlatforms: z.array(z.string()).optional(),
+  attachments: z.array(z.any()).optional(),
+  captions: z.array(z.any()).optional(),
+  notes: z.string().optional(),
+  estimatedHours: z.number().nonnegative().optional(),
 });
 
 const Output = z.object({ id: z.string(), status: z.string() });
@@ -56,6 +65,14 @@ export const createTask = defineCommand({
           tags: input.tags,
           relatedClienteId: input.relatedClienteId,
           relatedSessionId: input.relatedSessionId,
+          activeSections: input.activeSections,
+          checklistItems: input.checklistItems,
+          callToAction: input.callToAction,
+          socialPlatforms: input.socialPlatforms,
+          attachments: input.attachments,
+          captions: input.captions,
+          notes: input.notes,
+          estimatedHours: input.estimatedHours,
         },
         userId,
       );

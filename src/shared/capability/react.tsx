@@ -47,6 +47,10 @@ const DEFAULT_USER_PERMISSIONS: string[] = [
   "tarefas:read",
   "tarefas:write",
   "tarefas:delete",
+  // Onda 4b — IDs canônicos do módulo `tasks` (alinhados ao registry).
+  "tasks:read",
+  "tasks:write",
+  "tasks:delete",
 ];
 
 interface CapabilityRuntimeValue {

@@ -9,14 +9,20 @@ const Patch = z.object({
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).optional(),
   type: z.enum(["simple", "content", "checklist", "document"]).optional(),
-  dueDate: z.string().datetime().nullable().optional(),
+  status: z.string().optional(),
+  dueDate: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
+  assigneeName: z.string().nullable().optional(),
   notes: z.string().optional(),
   estimatedHours: z.number().nonnegative().optional(),
   callToAction: z.string().optional(),
   socialPlatforms: z.array(z.string()).optional(),
   relatedClienteId: z.string().uuid().nullable().optional(),
   relatedSessionId: z.string().uuid().nullable().optional(),
+  activeSections: z.array(z.enum(["basic", "checklist", "content", "document"])).optional(),
+  checklistItems: z.array(z.any()).optional(),
+  attachments: z.array(z.any()).optional(),
+  captions: z.array(z.any()).optional(),
 });
 
 const Input = z.object({
