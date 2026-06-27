@@ -39,6 +39,13 @@ export interface TaskCaption {
   platform?: "instagram" | "facebook" | "general";
   characterCount?: number;
 }
+export interface TaskTextBlock {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+}
+
 
 export interface Task {
   id: string;
