@@ -64,7 +64,7 @@ function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
 
 export default function Tarefas() {
   // Leitura via hook legado (realtime + state). Mutações vão por Capabilities.
-  const { tasks, refetch } = useSupabaseTasks();
+  const { tasks, refetch, applyOptimisticPatch } = useSupabaseTasks();
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
   const run = useRunCapability();
@@ -137,8 +137,27 @@ export default function Tarefas() {
 
   const updateTask = useCallback(
     async (id: string, patch: Partial<Task>) => {
+      const keys = Object.keys(patch);
+
+      // Toggle de checkbox do painel checklist: vem {checked} ou {checked,status}.
+      // Routeia para complete/reopen (que escrevem checked + status + completed_at).
+      if ('checked' in patch && patch.checked !== undefined) {
+        if (patch.checked === true) {
+          const res = await run(completeTaskCap, { id });
+          if (!isOk(res)) handleCapError('concluir tarefa', res.error.message);
+          else refetch();
+          return;
+        }
+        const current = tasks.find(t => t.id === id);
+        const target = patch.status && patch.status !== doneKey ? patch.status : defaultOpenKey;
+        const res = await run(reopenTaskCap, { id, toStatus: target });
+        if (!isOk(res)) handleCapError('reabrir tarefa', res.error.message);
+        else refetch();
+        return;
+      }
+
       // Status changes => roteia para capabilities específicas
-      if (patch.status && Object.keys(patch).length === 1) {
+      if (patch.status && keys.length === 1) {
         if (patch.status === doneKey) {
           const res = await run(completeTaskCap, { id });
           if (!isOk(res)) handleCapError('concluir tarefa', res.error.message);
@@ -160,7 +179,6 @@ export default function Tarefas() {
 
       // Patch genérico — vai por updateTask
       const cleanPatch: Record<string, unknown> = { ...patch };
-      // remover chaves sem suporte direto na capability
       delete cleanPatch.id;
       delete cleanPatch.createdAt;
       delete cleanPatch.source;
@@ -169,13 +187,12 @@ export default function Tarefas() {
       delete cleanPatch.lastNotifiedAt;
       delete cleanPatch.assigneeId;
       delete cleanPatch.relatedBudgetId;
-      delete cleanPatch.checked;
       if (Object.keys(cleanPatch).length === 0) return;
       const res = await run(updateTaskCap, { id, patch: cleanPatch as any });
       if (!isOk(res)) handleCapError('atualizar tarefa', res.error.message);
       else refetch();
     },
-    [run, tasks, doneKey, handleCapError, refetch],
+    [run, tasks, doneKey, defaultOpenKey, handleCapError, refetch],
   );
 
   const deleteTask = useCallback(
@@ -191,7 +208,7 @@ export default function Tarefas() {
   const addTask = useCallback(
     async (input: Partial<Task> & { title: string }) => {
       await createTask(input);
-      return null as unknown as Task; // retorno não é usado pelos consumidores atuais
+      return null as unknown as Task;
     },
     [createTask],
   );
@@ -250,14 +267,17 @@ export default function Tarefas() {
               onDragStart={e => { setActiveId(String(e.active.id)); }}
               onDragEnd={e => {
                 const overId = e.over?.id as string | undefined;
-                if (activeId && overId) {
-                  const current = tasks.find(tt => tt.id === activeId);
+                const draggedId = activeId;
+                // Limpa o overlay ANTES de qualquer await para não piscar.
+                requestAnimationFrame(() => setActiveId(null));
+                if (draggedId && overId) {
+                  const current = tasks.find(tt => tt.id === draggedId);
                   if (current && current.status !== overId) {
-                    updateTask(activeId, { status: overId } as any);
-                    toast({ title: 'Tarefa movida' });
+                    // Update otimista: card aparece na coluna destino imediatamente.
+                    applyOptimisticPatch(draggedId, { status: overId } as any);
+                    updateTask(draggedId, { status: overId } as any);
                   }
                 }
-                requestAnimationFrame(() => setActiveId(null));
               }}
               onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
@@ -330,7 +350,7 @@ export default function Tarefas() {
             updateTask={updateTask}
             deleteTask={deleteTask}
             onView={setEditTask}
-            onComplete={(id) => { handleComplete(id); toast({ title: 'Tarefa concluída' }); }}
+            onComplete={(id) => { handleComplete(id); }}
           />
         )}
       </div>
@@ -346,7 +366,7 @@ export default function Tarefas() {
         }}
       />
 
-      {/* Modal único — edição */}
+      {/* Modal único — edição (com botão Excluir) */}
       <TaskFormModal
         open={!!editTask}
         onOpenChange={(o) => { if (!o) setEditTask(null); }}
@@ -357,7 +377,12 @@ export default function Tarefas() {
           await updateTask(editTask.id, data as any);
           setEditTask(null);
         }}
+        onDelete={editTask ? async () => {
+          await deleteTask(editTask.id);
+          setEditTask(null);
+        } : undefined}
       />
+
 
       <ManageTaskStatusesModal open={manageStatusesOpen} onOpenChange={setManageStatusesOpen} />
     </div>

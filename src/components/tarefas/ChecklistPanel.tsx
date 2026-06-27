@@ -62,8 +62,9 @@ export default function ChecklistPanel({
       const ids = new Set(unchecked.map(t => t.id));
       const kept = prev.filter(id => ids.has(id));
       const keptSet = new Set(kept);
+      // Novos itens vão para o TOPO (UX: ver o item recém-criado primeiro).
       const newIds = unchecked.filter(t => !keptSet.has(t.id)).map(t => t.id);
-      return [...kept, ...newIds];
+      return [...newIds, ...kept];
     });
   }, [unchecked]);
 

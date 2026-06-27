@@ -389,7 +389,13 @@ export default function Agenda() {
         mode="create"
         initial={{ dueDate: format(date, 'yyyy-MM-dd') }}
         onSubmit={async (data) => {
-          await addTask({ ...data, source: 'manual' });
+          await addTask({
+            ...data,
+            status: data.status ?? 'todo',
+            priority: data.priority ?? 'medium',
+            type: data.type ?? 'simple',
+            source: 'manual',
+          } as any);
           setIsTaskModalOpen(false);
           toast.success('Tarefa criada com sucesso');
         }}

@@ -221,6 +221,23 @@ export function useSupabaseTasks() {
     }
   }, [user?.id]);
 
+  // Update otimista pontual usado pelo DnD do kanban e por callers que
+  // disparam mutações via capabilities (sem passar por `updateTask` daqui).
+  const applyOptimisticPatch = useCallback((id: string, patch: Partial<Task>) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const next: Task = { ...t, ...patch };
+      if (patch.status && patch.status !== t.status) {
+        if (patch.status === 'done') {
+          next.completedAt = new Date().toISOString();
+        } else if (t.status === 'done') {
+          next.completedAt = undefined;
+        }
+      }
+      return next;
+    }));
+  }, []);
+
   return {
     tasks,
     loading,
@@ -228,5 +245,6 @@ export function useSupabaseTasks() {
     updateTask,
     deleteTask,
     refetch: fetchTasks,
+    applyOptimisticPatch,
   };
 }
