@@ -283,7 +283,7 @@ export default function Tarefas() {
               onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
               <div className="flex-1 relative">
-                <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban">
+                <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban-h" style={{ overscrollBehaviorX: 'contain', touchAction: 'pan-x pan-y' }}>
                   <div className="flex h-full gap-3 min-w-max px-2 py-1">
                     <ChecklistPanel
                       items={checklistItems}
