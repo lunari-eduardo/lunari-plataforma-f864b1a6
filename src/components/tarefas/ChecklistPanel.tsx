@@ -110,7 +110,11 @@ export default function ChecklistPanel({
   };
 
   return (
-    <section className={cn(variant === 'column' ? 'min-w-[260px] w-[260px]' : '')}>
+    <section
+      className={cn(variant === 'column' ? 'min-w-[260px] w-[260px]' : '')}
+      style={variant === 'column' ? { touchAction: 'pan-x pan-y' } : undefined}
+    >
+
       <header className="flex items-center justify-between mb-2">
         <h2 className="text-sm font-semibold text-lunar-text">Checklist</h2>
         <div className="flex items-center gap-2">

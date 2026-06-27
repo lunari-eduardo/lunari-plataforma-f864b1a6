@@ -107,7 +107,7 @@ export default function TaskCard({
 
   return (
     <li
-      className={`group glass-task-card relative overflow-hidden p-3 cursor-grab active:cursor-grabbing select-none touch-auto transform-gpu ${
+      className={`group glass-task-card relative overflow-hidden p-3 cursor-grab active:cursor-grabbing select-none touch-pan-x touch-pan-y transform-gpu ${
         isDragging ? 'glass-task-card-placeholder' : ''
       } ${isDone ? 'opacity-70' : ''}`}
       ref={dndRef as any}
@@ -117,12 +117,20 @@ export default function TaskCard({
       } as React.CSSProperties}
       {...(dndAttributes || {})}
       {...(dndListeners || {})}
+      onPointerDown={(e) => {
+        // Em touch, libera o pointer capture imediatamente para que o pan-x/y
+        // chegue ao scroller ancestral até o TouchSensor decidir ativar (delay 250ms).
+        if (e.pointerType === 'touch') {
+          try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+        }
+      }}
       onPointerDownCapture={(e) => {
         const target = e.target as HTMLElement;
         if (target?.closest('[data-no-drag="true"]')) {
           e.stopPropagation();
         }
       }}
+
       onClick={(e) => {
         // open details when clicking on card body (not on interactive zone)
         const target = e.target as HTMLElement;

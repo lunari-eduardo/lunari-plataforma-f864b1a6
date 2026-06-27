@@ -83,8 +83,9 @@ export default function Tarefas() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const mouseSensor = useSensor(MouseSensor, { activationConstraint: { distance: 6 } });
-  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } });
   const sensors = useSensors(mouseSensor, touchSensor);
+
 
   const checklistItems = useMemo(() => tasks.filter(t => t.type === 'checklist'), [tasks]);
   const filtered = useMemo(() => filterTasks(tasks, filters), [tasks, filters]);
@@ -283,7 +284,23 @@ export default function Tarefas() {
               onDragCancel={() => { requestAnimationFrame(() => setActiveId(null)); }}
             >
               <div className="flex-1 relative">
-                <div className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban-h" style={{ overscrollBehaviorX: 'contain', touchAction: 'pan-x pan-y' }}>
+                <div
+                  className="absolute inset-0 overflow-x-auto overflow-y-hidden scrollbar-kanban-h"
+                  style={{ overscrollBehaviorX: 'contain', touchAction: 'pan-x pan-y' }}
+                  onWheel={(e) => {
+                    // Trackpad horizontal já entrega deltaX — não interferir.
+                    if (e.deltaX !== 0) return;
+                    // Se o cursor está sobre uma coluna com scroll vertical pendente, deixa rolar a coluna.
+                    const path = e.nativeEvent.composedPath() as HTMLElement[];
+                    const verticalScroller = path.find(
+                      el => el?.classList?.contains?.('scrollbar-kanban') &&
+                            el.scrollHeight > el.clientHeight
+                    );
+                    if (verticalScroller) return;
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }}
+                >
+
                   <div className="flex h-full gap-3 min-w-max px-2 py-1">
                     <ChecklistPanel
                       items={checklistItems}
