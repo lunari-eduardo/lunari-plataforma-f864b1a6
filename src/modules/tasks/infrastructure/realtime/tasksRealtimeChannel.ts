@@ -79,7 +79,11 @@ export const tasksRealtime = {
    * Assina o canal único. Retorna cleanup que decrementa refCount e
    * remove o canal quando o último consumidor sair.
    */
-  subscribe(userId: string, listener?: RealtimeListener): () => void {
+  subscribe(
+    userId: string,
+    listener?: RealtimeListener,
+    statusListener?: StatusListener,
+  ): () => void {
     if (!active || active.userId !== userId) {
       if (active) {
         supabase.removeChannel(active.channel);
@@ -90,9 +94,11 @@ export const tasksRealtime = {
     const handle = active;
     handle.refCount += 1;
     if (listener) handle.listeners.add(listener);
+    if (statusListener) handle.statusListeners.add(statusListener);
 
     return () => {
       if (listener) handle.listeners.delete(listener);
+      if (statusListener) handle.statusListeners.delete(statusListener);
       handle.refCount -= 1;
       if (handle.refCount <= 0) {
         supabase.removeChannel(handle.channel);
