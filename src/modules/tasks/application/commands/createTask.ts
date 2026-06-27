@@ -50,7 +50,6 @@ export const createTask = defineCommand({
           priority: input.priority,
           type: input.type,
           source: input.source === "user" ? "manual" : input.source,
-          createdAt: new Date().toISOString(),
           dueDate: input.dueDate,
           assigneeId: input.assigneeId,
           assigneeName: input.assigneeName,
