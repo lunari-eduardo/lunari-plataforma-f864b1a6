@@ -3,8 +3,10 @@ import './Tarefas.css';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
+import { useTasks } from '@/modules/tasks/presentation/hooks/useTasks';
+import { tasksStore } from '@/modules/tasks/presentation/store/tasksStore';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
+
 import type { Task } from '@/types/tasks';
 import TaskFormModal from '@/modules/tasks/presentation/components/TaskFormModal';
 import QuickCaptureBar from '@/components/tarefas/QuickCaptureBar';
@@ -65,11 +67,20 @@ function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
 }
 
 export default function Tarefas() {
-  // Leitura via hook legado (realtime + state). Mutações vão por Capabilities.
-  const { tasks, refetch, applyOptimisticPatch } = useSupabaseTasks();
+  // Onda 4c: leitura via tasksStore (alimentado pelo canal realtime único em App.tsx).
+  // Mutações vão por Capabilities; updates otimistas via `tasksStore.applyOptimisticPatch`.
+  const tasks = useTasks();
+  const applyOptimisticPatch = useCallback(
+    (id: string, patch: Partial<Task>) => tasksStore.applyOptimisticPatch(id, patch),
+    [],
+  );
+  // O canal realtime já reflete mudanças no store — `refetch` vira no-op (mantido
+  // por compatibilidade com `useTasksUndo` e error paths das capabilities).
+  const refetch = useCallback(() => {}, []);
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
   const run = useRunCapability();
+
 
   const [view, setView] = useState<'kanban' | 'list'>(() => (localStorage.getItem('lunari_tasks_view') as any) || 'kanban');
   const [filters, setFilters] = useState<TaskFilters>({ search: '', status: 'all', priority: 'all', assignee: 'all', dateRange: 'all' });
