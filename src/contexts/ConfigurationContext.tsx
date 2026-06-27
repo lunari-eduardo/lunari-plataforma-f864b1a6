@@ -387,8 +387,8 @@ export const ConfigurationProvider: React.FC<{ children: React.ReactNode }> = ({
         // Se o nome da categoria mudou, invalidar cache do workflow
         // para que sessões reflitam o novo nome (trigger SQL propaga no banco)
         if (dados.nome && dados.nome !== currentItem.nome) {
-          console.log('🔄 [atualizarCategoria] Nome alterado, invalidando cache do workflow');
-          workflowCacheManager.clearAllCache();
+          console.log('🔄 [atualizarCategoria] Nome alterado, invalidando store do workflow');
+          workflowStore.getState().reset();
         }
       }
     );
