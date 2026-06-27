@@ -11,7 +11,8 @@
  * Substitui `TaskQuickModal` e `UnifiedTaskModal`.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { tasksStore } from "../store/tasksStore";
 import {
   Dialog,
   DialogContent,
