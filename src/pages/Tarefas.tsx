@@ -32,6 +32,8 @@ import {
   reopenTask as reopenTaskCap,
 } from '@/modules/tasks';
 import { isOk } from '@/shared/result';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabaseTasksRepo } from '@/modules/tasks/infrastructure/supabase/tasksRepo';
 
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
