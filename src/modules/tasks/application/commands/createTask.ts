@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineCommand } from "@/shared/capability";
 import { domainError, err, isOk, ok } from "@/shared/result";
 import { supabaseTasksRepo } from "../../infrastructure/supabase/tasksRepo";
+import { tasksStore } from "../../presentation/store/tasksStore";
 import { resolveUserId } from "../_auth";
 
 const Input = z.object({
