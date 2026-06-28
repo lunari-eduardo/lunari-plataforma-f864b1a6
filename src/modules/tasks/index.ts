@@ -20,6 +20,9 @@ export { supabaseTasksRepo } from "./infrastructure/supabase/tasksRepo";
 export { supabaseStatusesRepo } from "./infrastructure/supabase/statusesRepo";
 export { tasksRealtime } from "./infrastructure/realtime/tasksRealtimeChannel";
 export { TasksRealtimeBridge } from "./infrastructure/realtime/TasksRealtimeBridge";
+export { AttachmentsRealtimeBridge } from "./infrastructure/realtime/AttachmentsRealtimeBridge";
+export { attachmentsStore, useAttachmentsVersion } from "./presentation/store/attachmentsStore";
+export { useTaskAttachmentsV2 } from "./presentation/hooks/useTaskAttachmentsV2";
 
 // Registra eventos do módulo no LunariEvents (declaration merging)
 import "./application/events";
