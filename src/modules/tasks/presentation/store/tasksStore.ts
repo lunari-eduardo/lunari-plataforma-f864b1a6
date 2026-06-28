@@ -29,11 +29,9 @@ function createEmptyState(): TasksStoreState {
 const state: TasksStoreState = createEmptyState();
 const listeners = new Set<Listener>();
 let version = 0;
-const snapshotRef = { v: version };
 
 function notify() {
   version++;
-  snapshotRef.v = version;
   for (const fn of listeners) fn();
 }
 
@@ -160,8 +158,8 @@ export const tasksStore = {
       listeners.delete(listener);
     };
   },
-  getSnapshot(): { v: number } {
-    return snapshotRef;
+  getSnapshot(): number {
+    return version;
   },
   /** Versão monotônica — útil para debugging. */
   getVersion(): number {

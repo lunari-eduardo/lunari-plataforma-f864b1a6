@@ -32,6 +32,8 @@ import {
   reopenTask as reopenTaskCap,
 } from '@/modules/tasks';
 import { isOk } from '@/shared/result';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabaseTasksRepo } from '@/modules/tasks/infrastructure/supabase/tasksRepo';
 
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
@@ -74,9 +76,18 @@ export default function Tarefas() {
     (id: string, patch: Partial<Task>) => tasksStore.applyOptimisticPatch(id, patch),
     [],
   );
-  // O canal realtime já reflete mudanças no store — `refetch` vira no-op (mantido
-  // por compatibilidade com `useTasksUndo` e error paths das capabilities).
-  const refetch = useCallback(() => {}, []);
+  // O canal realtime já reflete mudanças no store. `refetch` re-hidrata como
+  // fallback quando uma capability falha e o store fica inconsistente.
+  const { user } = useAuth();
+  const refetch = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const list = await supabaseTasksRepo.list({ userId: user.id });
+      tasksStore.hydrate(list);
+    } catch (e) {
+      console.error('[Tarefas] refetch falhou', e);
+    }
+  }, [user?.id]);
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
   const run = useRunCapability();
@@ -152,9 +163,9 @@ export default function Tarefas() {
         estimatedHours: input.estimatedHours,
       });
       if (!isOk(res)) handleCapError('criar tarefa', res.error.message);
-      else refetch();
+      // sucesso: upsert local já feito pela capability + canal realtime confirma.
     },
-    [run, defaultOpenKey, handleCapError, refetch],
+    [run, defaultOpenKey, handleCapError],
   );
 
   const updateTask = useCallback(
