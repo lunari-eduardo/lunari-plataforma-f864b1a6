@@ -23,7 +23,7 @@ export const createTag = defineCommand({
     if (!isOk(auth)) return auth;
     try {
       const order = tagsStore.getSnapshot().tags.length;
-      const created = await supabaseTagsRepo.create({ ...input, order }, auth.value);
+      const created = await supabaseTagsRepo.create({ name: input.name, color: input.color, order }, auth.value);
       return ok({ id: created.id, name: created.name, color: created.color });
     } catch (e) {
       ctx.log.error("falha ao criar tag", { e });
