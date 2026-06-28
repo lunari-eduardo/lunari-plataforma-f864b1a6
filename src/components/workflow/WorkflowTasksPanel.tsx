@@ -33,6 +33,7 @@ interface WorkflowTasksPanelProps {
 
 export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPanelProps) {
   const { tasks, updateTask, addTask, deleteTask, loading } = useSupabaseTasks();
+  const { isTerminalKey, getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
   const [showCompleted, setShowCompleted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
