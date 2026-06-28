@@ -115,7 +115,7 @@ Snapshot `buildTasksPageSnapshot(v1)`: view, filtros, total/status, taskSelecion
 
 ### Próximos passos
 
-- [ ] **Onda 4b.3** — Mover para `modules/tasks/presentation/components/`: `cards/CleanTaskCard`, `cards/TaskCard`, `cards/DraggableTaskCard`, `filters/TaskFiltersBar`, `filters/PriorityLegend`, `kanban/ColumnQuickAdd`, `QuickCaptureBar`, `ManageTaskStatusesModal`, `forms/TaskContentForm`, `forms/TaskDocumentForm`, `forms/TaskSectionSelector`, `ChecklistEditor`, `HighPriorityDueSoonCard`. Shim de reexport em `src/components/tarefas/index.ts` por 1 onda.
+- [x] **Onda 4b.3** — Componentes ativos movidos para `modules/tasks/presentation/components/{cards,filters,kanban,forms}/`. Pasta `src/components/tarefas/` eliminada. Typecheck OK.
 - [ ] **Onda 4c** — Capabilities para tags, pessoas, captions, templates (commands + queries + repos sob `infrastructure/supabase/`). Substituir `useSupabaseTaskTags`, `useSupabaseTaskPeople`, `useTaskCaptions`, `useTaskTemplates`. Critério: `rg "supabase\.from\('task_(tags|people|captions|templates)" src` só em `modules/tasks/infrastructure/`.
 - [ ] **Onda 4d** — Substituir `status === 'done'` por `isTerminalStatus` em todos os consumidores (`Tarefas`, `WorkflowTasksPanel`, `HighPriorityDueSoonCard`, `useTodayOverview`, `useAutomationEngine`). UI: checkbox "Concluinte" em `ManageTaskStatusesModal`.
 - [ ] **Onda 5** — Anexos no R2: novo `attachmentsR2.ts` + capabilities `tasks.attachment.add/remove` via edge functions `r2-upload/r2-signed-url/r2-delete`. Backfill dry-run de `task_attachments` → JSONB. `DROP TABLE task_attachments` em migração separada após validação.
