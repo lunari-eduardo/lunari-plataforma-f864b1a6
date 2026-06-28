@@ -117,7 +117,9 @@ export default function TaskQuickModal({
   const [callToAction, setCallToAction] = useState("");
   const [socialPlatforms, setSocialPlatforms] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<any[]>([]);
+  // anexos agora vivem no store/R2 — apenas verificamos contagem para decidir abrir a seção
+  const taskId = (initial?.id as string | undefined) ?? undefined;
+  const { items: attachmentItems } = useTaskAttachmentsV2(taskId);
 
   // Confirmação de exclusão
   const [confirmDelete, setConfirmDelete] = useState(false);
