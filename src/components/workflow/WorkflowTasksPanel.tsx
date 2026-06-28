@@ -62,8 +62,8 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
     });
   }, [tasks, monthStart, monthEnd]);
 
-  const pendingTasks = useMemo(() => monthTasks.filter((t) => t.status !== "done"), [monthTasks]);
-  const completedTasks = useMemo(() => monthTasks.filter((t) => t.status === "done"), [monthTasks]);
+  const pendingTasks = useMemo(() => monthTasks.filter((t) => !isTerminalKey(t.status)), [monthTasks, isTerminalKey]);
+  const completedTasks = useMemo(() => monthTasks.filter((t) => isTerminalKey(t.status)), [monthTasks, isTerminalKey]);
 
   // Sync orderedIds with pendingTasks
   useEffect(() => {
