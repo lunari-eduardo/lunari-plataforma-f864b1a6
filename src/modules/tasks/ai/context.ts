@@ -61,7 +61,7 @@ export function buildTasksPageSnapshot(input: BuildTasksSnapshotInput): TasksPag
   const mergedFilters: TaskFiltersState = { ...DEFAULT_FILTERS, ...(filters ?? {}) };
 
   const all = tasksStore.getAll();
-  const statuses = taskStatusesStore.getAll();
+  const statuses = taskStatusesStore.getStatuses();
   const visible = filterTasks(all, mergedFilters, statuses);
 
   const byStatus: Record<string, number> = {};
