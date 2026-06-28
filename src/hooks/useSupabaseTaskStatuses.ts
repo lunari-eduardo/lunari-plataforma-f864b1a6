@@ -38,6 +38,18 @@ export function useSupabaseTaskStatuses() {
     return open?.key || "todo";
   }, [statuses]);
 
+  const isTerminalKey = useCallback(
+    (key: string | undefined | null): boolean => {
+      if (!key) return false;
+      const def = statuses.find((s) => s.key === key);
+      if (def?.isDone) return true;
+      if (def) return false;
+      const k = key.toLowerCase();
+      return k === "done" || k === "concluido" || k === "concluida" || k === "finalizada" || k === "finalizado";
+    },
+    [statuses],
+  );
+
   return {
     statuses,
     loading,
@@ -48,5 +60,6 @@ export function useSupabaseTaskStatuses() {
     refetch: taskStatusesStore.refetch,
     getDoneKey,
     getDefaultOpenKey,
+    isTerminalKey,
   };
 }
