@@ -84,7 +84,7 @@ export function buildTasksPageSnapshot(input: BuildTasksSnapshotInput): TasksPag
     },
     statuses: statuses.map((s) => ({
       key: s.key,
-      label: s.label,
+      label: s.name,
       isDone: !!s.isDone,
     })),
     permissions: {
