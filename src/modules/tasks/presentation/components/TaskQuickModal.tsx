@@ -243,7 +243,11 @@ export default function TaskQuickModal({
             {taskId ? (
               <>
                 <AttachmentDropzone taskId={taskId} />
-                <AttachmentList taskId={taskId} />
+                <AttachmentList
+                  items={attachmentItems}
+                  onOpen={(p) => attachmentsHelpers.openSigned(p)}
+                  onRemove={(id) => attachmentsHelpers.remove(id)}
+                />
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
