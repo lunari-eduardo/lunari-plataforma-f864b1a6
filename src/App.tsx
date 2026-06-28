@@ -73,6 +73,7 @@ function App() {
                 <WorkflowEventBridge />
                 <WorkflowRealtimeBridge />
                 <TasksRealtimeBridge />
+                <AttachmentsRealtimeBridge />
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
