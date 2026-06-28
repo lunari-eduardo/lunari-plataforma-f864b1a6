@@ -136,9 +136,11 @@ export function useSupabaseTasks() {
         });
         if (updates.status) {
           const current = snapshot;
-          if (updates.status === 'done' && current?.status !== 'done') {
+          const wasTerminal = taskStatusesStore.isTerminalKey(current?.status);
+          const willBeTerminal = taskStatusesStore.isTerminalKey(updates.status);
+          if (willBeTerminal && !wasTerminal) {
             dbRow.completed_at = new Date().toISOString();
-          } else if (updates.status !== 'done' && current?.status === 'done') {
+          } else if (!willBeTerminal && wasTerminal) {
             dbRow.completed_at = null;
           }
         }
