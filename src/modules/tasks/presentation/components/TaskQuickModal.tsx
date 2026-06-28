@@ -63,7 +63,9 @@ import type {
 import TaskSectionSelector from "@/modules/tasks/presentation/components/forms/TaskSectionSelector";
 import ChecklistEditor from "@/modules/tasks/presentation/components/ChecklistEditor";
 import TaskContentForm from "@/modules/tasks/presentation/components/forms/TaskContentForm";
-import TaskDocumentForm from "@/modules/tasks/presentation/components/forms/TaskDocumentForm";
+import { AttachmentDropzone } from "@/modules/tasks/presentation/components/attachments/AttachmentDropzone";
+import { AttachmentList } from "@/modules/tasks/presentation/components/attachments/AttachmentList";
+import { useTaskAttachmentsV2 } from "@/modules/tasks/presentation/hooks/useTaskAttachmentsV2";
 
 export interface TaskQuickModalProps {
   open: boolean;
