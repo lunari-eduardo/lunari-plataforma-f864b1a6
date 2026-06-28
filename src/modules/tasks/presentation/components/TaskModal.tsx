@@ -717,8 +717,8 @@ function ViewLayout({
           </Button>
         )}
         <Button variant="outline" size="sm" className="ml-auto" onClick={onClose}>Fechar</Button>
-        <Button size="sm" onClick={onEdit}>
-          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={onEdit}>
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
