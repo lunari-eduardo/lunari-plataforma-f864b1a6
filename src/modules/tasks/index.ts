@@ -38,6 +38,8 @@ import "./application/commands/snoozeTask";
 import "./application/commands/assignTask";
 import "./application/commands/tags";
 import "./application/commands/people";
+import "./application/commands/attachments";
+import "./application/queries/listAttachments";
 import "./application/queries/listTasks";
 import "./application/queries/getTaskById";
 import "./application/queries/dueOverview";
