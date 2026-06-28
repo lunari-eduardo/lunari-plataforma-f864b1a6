@@ -137,7 +137,7 @@ export default function TaskQuickModal({
     setChecklistItems(initial?.checklistItems ?? []);
     setCallToAction(initial?.callToAction ?? "");
     setSocialPlatforms(initial?.socialPlatforms ?? []);
-    setAttachments((initial?.attachments as any[]) ?? []);
+    // attachments agora vêm via store/R2 — sem reset local
     // Decidir seções avançadas iniciais
     const sections: TaskSection[] = ["basic"];
     if (initial?.activeSections && initial.activeSections.length > 1) {
