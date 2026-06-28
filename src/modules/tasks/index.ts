@@ -57,3 +57,7 @@ export { getTaskById } from "./application/queries/getTaskById";
 export { dueOverview } from "./application/queries/dueOverview";
 export { countsByStatusQuery } from "./application/queries/countsByStatus";
 export { searchTasks } from "./application/queries/searchTasks";
+export { createTag, updateTag, deleteTag, reorderTags } from "./application/commands/tags";
+export { createPerson, updatePerson, deletePerson, reorderPeople } from "./application/commands/people";
+export { listTags } from "./application/queries/listTags";
+export { listPeople } from "./application/queries/listPeople";
