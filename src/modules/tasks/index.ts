@@ -66,3 +66,6 @@ export { createTag, updateTag, deleteTag, reorderTags } from "./application/comm
 export { createPerson, updatePerson, deletePerson, reorderPeople } from "./application/commands/people";
 export { listTags } from "./application/queries/listTags";
 export { listPeople } from "./application/queries/listPeople";
+export { addTaskAttachment, removeTaskAttachment } from "./application/commands/attachments";
+export { listTaskAttachments } from "./application/queries/listAttachments";
+
