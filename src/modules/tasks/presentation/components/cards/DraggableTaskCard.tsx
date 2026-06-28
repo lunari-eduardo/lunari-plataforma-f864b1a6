@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import TaskCard from '@/components/tarefas/TaskCard';
+import TaskCard from '@/modules/tasks/presentation/components/cards/TaskCard';
 import type { Task } from '@/types/tasks';
 
 export default function DraggableTaskCard(props: {

@@ -4,7 +4,7 @@ import { Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
-import { HighPriorityDueSoonCard } from "@/components/tarefas/HighPriorityDueSoonCard";
+import { HighPriorityDueSoonCard } from "@/modules/tasks/presentation/components/HighPriorityDueSoonCard";
 import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 import DailyHero from "@/components/dashboard/DailyHero";
