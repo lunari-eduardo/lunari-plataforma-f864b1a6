@@ -8,9 +8,19 @@ import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 import { useSupabaseTaskTags } from '@/hooks/useSupabaseTaskTags';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronUp, ChevronDown, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 /* ── Compact row for People / Tags ── */
 function CompactRow({
@@ -32,11 +42,45 @@ function CompactRow({
   disableDown: boolean;
   disableRemove?: boolean;
 }) {
+  // Estado local — commit em blur/Enter; evita 1 INSERT por tecla e cursor jumpy.
+  const [localName, setLocalName] = useState(name);
+  const lastCommitted = useRef(name);
+
+  useEffect(() => {
+    // Atualiza o local apenas quando a fonte externa mudou de fato (realtime).
+    if (name !== lastCommitted.current) {
+      setLocalName(name);
+      lastCommitted.current = name;
+    }
+  }, [name]);
+
+  const commit = () => {
+    const trimmed = localName.trim();
+    if (!trimmed) {
+      // reverte
+      setLocalName(lastCommitted.current);
+      return;
+    }
+    if (trimmed === lastCommitted.current) return;
+    lastCommitted.current = trimmed;
+    onNameChange(trimmed);
+  };
+
   return (
     <div className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors group">
       <Input
-        value={name}
-        onChange={(e) => onNameChange(e.target.value)}
+        value={localName}
+        onChange={(e) => setLocalName(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
+          } else if (e.key === 'Escape') {
+            setLocalName(lastCommitted.current);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         className="flex-1 h-8 text-sm"
       />
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -73,6 +117,7 @@ function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: str
 
 function ManagePeopleSection() {
   const { people, addPerson, updatePerson, removePerson, movePerson } = useSupabaseTaskPeople();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="space-y-1">
@@ -84,7 +129,7 @@ function ManagePeopleSection() {
             onNameChange={(v) => updatePerson(p.id, { name: v })}
             onMoveUp={() => movePerson(p.id, 'up')}
             onMoveDown={() => movePerson(p.id, 'down')}
-            onRemove={() => removePerson(p.id)}
+            onRemove={() => setPendingDelete({ id: p.id, name: p.name })}
             disableUp={idx === 0}
             disableDown={idx === people.length - 1}
           />
@@ -94,12 +139,35 @@ function ManagePeopleSection() {
         )}
       </div>
       <AddRow placeholder="Novo responsável" onAdd={addPerson} />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir "{pendingDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As tarefas que tinham esse responsável continuarão existindo, mas perderão a associação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) removePerson(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function ManageTagsSection() {
   const { tags, addTag, updateTag, removeTag, moveTag } = useSupabaseTaskTags();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="space-y-1">
@@ -111,7 +179,7 @@ function ManageTagsSection() {
             onNameChange={(v) => updateTag(t.id, { name: v })}
             onMoveUp={() => moveTag(t.id, 'up')}
             onMoveDown={() => moveTag(t.id, 'down')}
-            onRemove={() => removeTag(t.id)}
+            onRemove={() => setPendingDelete({ id: t.id, name: t.name })}
             disableUp={idx === 0}
             disableDown={idx === tags.length - 1}
           />
@@ -121,6 +189,28 @@ function ManageTagsSection() {
         )}
       </div>
       <AddRow placeholder="Nova etiqueta" onAdd={addTag} />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir "{pendingDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As tarefas com essa etiqueta continuarão existindo, mas perderão a associação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) removeTag(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
