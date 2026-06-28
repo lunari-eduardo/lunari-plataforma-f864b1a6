@@ -146,7 +146,7 @@ export default function TaskQuickModal({
     } else {
       if (initial?.checklistItems?.length) sections.push("checklist");
       if (initial?.callToAction || initial?.socialPlatforms?.length) sections.push("content");
-      if (initial?.attachments?.length) sections.push("document");
+      if (attachmentItems.length || (initial?.attachments?.length ?? 0) > 0) sections.push("document");
       setActiveSections(sections);
       setShowAdvanced(sections.length > 1);
     }
