@@ -239,15 +239,17 @@ export default function TaskQuickModal({
             key="document"
             className="space-y-3 p-3 border border-lunar-border rounded-lg bg-lunar-background/30"
           >
-            <h4 className="text-sm font-medium text-lunar-text">Documentos</h4>
-            <TaskDocumentForm
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              attachments={attachments}
-              setAttachments={setAttachments}
-            />
+            <h4 className="text-sm font-medium text-lunar-text">Anexos</h4>
+            {taskId ? (
+              <>
+                <AttachmentDropzone taskId={taskId} />
+                <AttachmentList taskId={taskId} />
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Salve a tarefa primeiro para anexar arquivos.
+              </p>
+            )}
           </div>
         );
       default:
