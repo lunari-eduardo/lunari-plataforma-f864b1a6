@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppNotification } from '@/types/notifications';
+import { eventBus } from '@/shared/event-bus';
+import '@/modules/tasks/application/events';
 
 /** Tarefas vencidas e tarefas com vencimento hoje (status != concluído) */
 export function useTaskNotifications(): AppNotification[] {
