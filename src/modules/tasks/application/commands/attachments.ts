@@ -32,7 +32,7 @@ export const addTaskAttachment = defineCommand({
   }),
   output: AttachmentOutput,
   permissions: ["tasks:write"],
-  sideEffects: ["db:task_attachments", "storage:r2"],
+  sideEffects: ["db:task_attachments", "external:r2"],
   async handler(input, ctx) {
     const auth = await resolveUserId(ctx);
     if (!isOk(auth)) return auth;
@@ -102,7 +102,7 @@ export const removeTaskAttachment = defineCommand({
   input: z.object({ attachmentId: z.string().uuid() }),
   output: z.object({ id: z.string() }),
   permissions: ["tasks:write"],
-  sideEffects: ["db:task_attachments", "storage:r2"],
+  sideEffects: ["db:task_attachments", "external:r2"],
   needsApproval: true,
   audit: "always",
   async handler({ attachmentId }, ctx) {
