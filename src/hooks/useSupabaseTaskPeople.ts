@@ -1,9 +1,16 @@
 /**
  * Facade fina sobre `peopleStore` (singleton) + capabilities `tasks.people.*`.
+ *
+ * As capabilities exigem `permissions: ["tasks:write"]`, então `user` precisa
+ * ser injetado via `useRunCapability()`; chamar `cmd.execute(input)` direto
+ * resultaria em UNAUTHENTICATED.
  */
 
 import { useCallback, useEffect } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRunCapability } from "@/shared/capability/react";
+import { isOk } from "@/shared/result";
 import {
   createPerson as createPersonCmd,
   updatePerson as updatePersonCmd,
@@ -29,24 +36,59 @@ function toUi(p: TaskPersonDef): TaskPerson {
 export function useSupabaseTaskPeople() {
   const { user } = useAuth();
   const { people, loading } = useTaskPeopleStore();
+  const run = useRunCapability();
 
   useEffect(() => {
     if (user?.id) peopleStore.init(user.id);
   }, [user?.id]);
 
-  const addPerson = useCallback(async (name: string): Promise<TaskPerson | null> => {
-    const res = await createPersonCmd.execute({ name });
-    if (!res.ok) return null;
-    return { id: res.value.id, name: res.value.name, color: res.value.color };
-  }, []);
+  const addPerson = useCallback(
+    async (name: string): Promise<TaskPerson | null> => {
+      const clean = name.trim();
+      if (!clean) return null;
+      const exists = peopleStore
+        .getSnapshot()
+        .people.some((p) => p.name.trim().toLowerCase() === clean.toLowerCase());
+      if (exists) {
+        toast.error("Já existe um responsável com esse nome");
+        return null;
+      }
+      const res = await run(createPersonCmd, { name: clean });
+      if (!isOk(res)) {
+        toast.error("Não foi possível adicionar o responsável", {
+          description: res.error.message,
+        });
+        return null;
+      }
+      return { id: res.value.id, name: res.value.name, color: res.value.color };
+    },
+    [run],
+  );
 
-  const updatePerson = useCallback(async (id: string, patch: Partial<TaskPerson>) => {
-    await updatePersonCmd.execute({ id, ...patch });
-  }, []);
+  const updatePerson = useCallback(
+    async (id: string, patch: Partial<TaskPerson>) => {
+      if (patch.name !== undefined && !patch.name.trim()) return;
+      const res = await run(updatePersonCmd, { id, ...patch });
+      if (!isOk(res) && res.error.code !== "VALIDATION") {
+        toast.error("Não foi possível atualizar o responsável", {
+          description: res.error.message,
+        });
+      }
+    },
+    [run],
+  );
 
-  const removePerson = useCallback(async (id: string) => {
-    await deletePersonCmd.execute({ id });
-  }, []);
+  const removePerson = useCallback(
+    async (id: string) => {
+      const res = await run(deletePersonCmd, { id });
+      if (!isOk(res)) {
+        toast.error("Não foi possível excluir o responsável", {
+          description: res.error.message,
+        });
+      }
+    },
+    [run],
+  );
 
   const movePerson = useCallback(
     async (id: string, direction: "up" | "down") => {
@@ -57,12 +99,17 @@ export function useSupabaseTaskPeople() {
       if (swap < 0 || swap >= list.length) return;
       const next = [...list];
       [next[idx], next[swap]] = [next[swap], next[idx]];
+      const items = next.map((p, i) => ({ id: p.id, order: i }));
       peopleStore.applyOptimistic(next.map((p, i) => ({ ...p, order: i })));
-      await reorderPeopleCmd.execute({
-        items: next.map((p, i) => ({ id: p.id, order: i })),
-      });
+      const res = await run(reorderPeopleCmd, { items });
+      if (!isOk(res)) {
+        toast.error("Não foi possível reordenar", {
+          description: res.error.message,
+        });
+        await peopleStore.refetch();
+      }
     },
-    [],
+    [run],
   );
 
   return {
