@@ -158,8 +158,8 @@ export const tasksStore = {
       listeners.delete(listener);
     };
   },
-  getSnapshot(): { v: number } {
-    return snapshotRef;
+  getSnapshot(): number {
+    return version;
   },
   /** Versão monotônica — útil para debugging. */
   getVersion(): number {
