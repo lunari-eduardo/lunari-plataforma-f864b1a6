@@ -106,8 +106,28 @@ Snapshot `buildTasksPageSnapshot(v1)`: view, filtros, total/status, taskSelecion
 
 - [x] Onda 0 — plano salvo, inventário consolidado.
 - [x] Onda 1 — domain + store + selectors.
-- [x] Onda 2 — ports, repos Supabase e canal realtime único (bridge montada em App.tsx).
+- [x] Onda 2 — ports, repos Supabase e canal realtime único (bridge montada em App.tsx, backoff + visibilidade).
 - [x] Onda 3 — capabilities (commands + queries) registradas; eventos no LunariEvents.
-- [x] Onda 4a — Tarefas.tsx quebrada: `KanbanColumn` e `TasksListView` extraídos para `modules/tasks/presentation/components/`. Página agora <220 linhas e sem subcomponentes no render.
-- [ ] Onda 4b — Unificar modais (`QuickTaskModal` + `UnifiedTaskModal` + `TaskFormModal` → único `TaskFormModal` + `TaskDetailsDrawer`).
-- [ ] Ondas 5–7.
+- [x] Onda 4a — Tarefas.tsx quebrada: `KanbanColumn`, `TasksListView`, `ChecklistPanel` lendo do `tasksStore`.
+- [x] Onda 4b.1 — `TaskModal` (view+edit, multi `text_blocks`) e `TaskQuickModal` canônicos em `modules/tasks/presentation/components/`. `TaskFormModal` reexporta `TaskModal`.
+- [x] Onda 4b.2 — Removidos órfãos: `UnifiedTaskModal`, `TemplateManagerModal`, `TemplateSelector`, `TaskTypeSelector` (root+forms), `TaskAttachmentsSection`, `TaskCaptionsSection`, `forms/TaskSimpleForm`, `forms/TaskChecklistForm`.
+- [x] Extras — Undo stack (3), `useSupabaseTasks` virou facade, `REPLICA IDENTITY FULL`, anti-eco por `updated_at`, save otimista com fechamento antes do round-trip.
+
+### Próximos passos
+
+- [ ] **Onda 4b.3** — Mover para `modules/tasks/presentation/components/`: `cards/CleanTaskCard`, `cards/TaskCard`, `cards/DraggableTaskCard`, `filters/TaskFiltersBar`, `filters/PriorityLegend`, `kanban/ColumnQuickAdd`, `QuickCaptureBar`, `ManageTaskStatusesModal`, `forms/TaskContentForm`, `forms/TaskDocumentForm`, `forms/TaskSectionSelector`, `ChecklistEditor`, `HighPriorityDueSoonCard`. Shim de reexport em `src/components/tarefas/index.ts` por 1 onda.
+- [ ] **Onda 4c** — Capabilities para tags, pessoas, captions, templates (commands + queries + repos sob `infrastructure/supabase/`). Substituir `useSupabaseTaskTags`, `useSupabaseTaskPeople`, `useTaskCaptions`, `useTaskTemplates`. Critério: `rg "supabase\.from\('task_(tags|people|captions|templates)" src` só em `modules/tasks/infrastructure/`.
+- [ ] **Onda 4d** — Substituir `status === 'done'` por `isTerminalStatus` em todos os consumidores (`Tarefas`, `WorkflowTasksPanel`, `HighPriorityDueSoonCard`, `useTodayOverview`, `useAutomationEngine`). UI: checkbox "Concluinte" em `ManageTaskStatusesModal`.
+- [ ] **Onda 5** — Anexos no R2: novo `attachmentsR2.ts` + capabilities `tasks.attachment.add/remove` via edge functions `r2-upload/r2-signed-url/r2-delete`. Backfill dry-run de `task_attachments` → JSONB. `DROP TABLE task_attachments` em migração separada após validação.
+- [ ] **Onda 6** — IA da Lu: `src/modules/tasks/ai/` (permissions, `buildTasksPageSnapshot(v1)`, tools registry com 16 capabilities Zod-safe + costHint/approval, prompts, auditoria em `lu_invocations`).
+- [ ] **Onda 7** — Cleanup: remover hook legado `useSupabaseTasks` ou virar re-export puro; remover `@deprecated` em `src/components/tarefas/`; virtualização (`@tanstack/react-virtual`) em Kanban (>50) e Lista (>100); `useTaskNotifications` migra para handler via eventBus; linter Supabase final.
+
+### Pausas para teste manual
+
+| Após | O que testar |
+|---|---|
+| 4b.3 | Criar/editar/excluir via Tarefas, Agenda, Workflow; DnD; Undo; filtros |
+| 4c | CRUD de tags/pessoas/legendas/templates; aplicar template |
+| 4d | Renomear status terminal; concluir/reabrir; métricas |
+| 5 | Upload, preview, delete, backfill conferido |
+| 6 | Lu executa cada tool; aprovações disparam; auditoria gravada |
