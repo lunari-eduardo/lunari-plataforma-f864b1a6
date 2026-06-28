@@ -22,6 +22,7 @@ export default function AgendaTasksSection({
   onDayClick
 }: AgendaTasksSectionProps) {
   const navigate = useNavigate();
+  const { isTerminalKey } = useSupabaseTaskStatuses();
   
   // Filter tasks for the selected date that are not completed (for day/week views)
   const dayTasks = useMemo(() => {
@@ -29,10 +30,10 @@ export default function AgendaTasksSection({
       if (!task.dueDate) return false;
       const taskDate = parseISO(task.dueDate);
       if (!isSameDay(taskDate, selectedDate)) return false;
-      if (task.status === 'done' || task.completedAt) return false;
+      if (isTerminalKey(task.status) || task.completedAt) return false;
       return true;
     });
-  }, [tasks, selectedDate]);
+  }, [tasks, selectedDate, isTerminalKey]);
   
   // Group tasks by day for monthly view
   const monthlyTasksSummary = useMemo(() => {
@@ -44,7 +45,7 @@ export default function AgendaTasksSection({
     // Filter tasks for this month that are not completed
     const monthTasks = tasks.filter(task => {
       if (!task.dueDate) return false;
-      if (task.status === 'done' || task.completedAt) return false;
+      if (isTerminalKey(task.status) || task.completedAt) return false;
       
       const taskDate = parseISO(task.dueDate);
       return getYear(taskDate) === year && getMonth(taskDate) === month;
