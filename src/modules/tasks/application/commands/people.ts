@@ -23,7 +23,7 @@ export const createPerson = defineCommand({
     if (!isOk(auth)) return auth;
     try {
       const order = peopleStore.getSnapshot().people.length;
-      const created = await supabasePeopleRepo.create({ ...input, order }, auth.value);
+      const created = await supabasePeopleRepo.create({ name: input.name, color: input.color, order }, auth.value);
       return ok({ id: created.id, name: created.name, color: created.color });
     } catch (e) {
       ctx.log.error("falha ao criar pessoa", { e });
@@ -94,7 +94,7 @@ export const reorderPeople = defineCommand({
     const auth = await resolveUserId(ctx);
     if (!isOk(auth)) return auth;
     try {
-      await supabasePeopleRepo.reorder(items, auth.value);
+      await supabasePeopleRepo.reorder(items as Array<{ id: string; order: number }>, auth.value);
       return ok({ ok: true as const });
     } catch (e) {
       ctx.log.error("falha ao reordenar pessoas", { e });

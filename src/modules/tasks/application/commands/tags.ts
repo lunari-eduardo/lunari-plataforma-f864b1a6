@@ -94,7 +94,7 @@ export const reorderTags = defineCommand({
     const auth = await resolveUserId(ctx);
     if (!isOk(auth)) return auth;
     try {
-      await supabaseTagsRepo.reorder(items, auth.value);
+      await supabaseTagsRepo.reorder(items as Array<{ id: string; order: number }>, auth.value);
       return ok({ ok: true as const });
     } catch (e) {
       ctx.log.error("falha ao reordenar tags", { e });
