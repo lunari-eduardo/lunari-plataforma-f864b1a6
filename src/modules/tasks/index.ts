@@ -33,11 +33,15 @@ import "./application/commands/reopenTask";
 import "./application/commands/deleteTask";
 import "./application/commands/snoozeTask";
 import "./application/commands/assignTask";
+import "./application/commands/tags";
+import "./application/commands/people";
 import "./application/queries/listTasks";
 import "./application/queries/getTaskById";
 import "./application/queries/dueOverview";
 import "./application/queries/countsByStatus";
 import "./application/queries/searchTasks";
+import "./application/queries/listTags";
+import "./application/queries/listPeople";
 
 // Re-export para uso direto via TanStack hooks ou execute()
 export { createTask } from "./application/commands/createTask";
@@ -53,3 +57,7 @@ export { getTaskById } from "./application/queries/getTaskById";
 export { dueOverview } from "./application/queries/dueOverview";
 export { countsByStatusQuery } from "./application/queries/countsByStatus";
 export { searchTasks } from "./application/queries/searchTasks";
+export { createTag, updateTag, deleteTag, reorderTags } from "./application/commands/tags";
+export { createPerson, updatePerson, deletePerson, reorderPeople } from "./application/commands/people";
+export { listTags } from "./application/queries/listTags";
+export { listPeople } from "./application/queries/listPeople";
