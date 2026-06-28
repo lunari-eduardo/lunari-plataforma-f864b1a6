@@ -637,8 +637,8 @@ function ViewLayout({
       <div className="px-6 pt-6 pb-4 border-b border-lunar-border/30">
         <div className="flex items-start gap-3">
           <h2 className="flex-1 text-2xl font-semibold leading-tight text-lunar-text">{title}</h2>
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" /> Editar
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onEdit}>
+            <Pencil className="h-3.5 w-3.5" />
           </Button>
         </div>
 
@@ -717,8 +717,8 @@ function ViewLayout({
           </Button>
         )}
         <Button variant="outline" size="sm" className="ml-auto" onClick={onClose}>Fechar</Button>
-        <Button size="sm" onClick={onEdit}>
-          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={onEdit}>
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
