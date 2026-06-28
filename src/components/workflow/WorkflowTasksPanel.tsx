@@ -4,6 +4,7 @@ import { Plus, CalendarDays, ChevronDown, ChevronUp, PanelRightClose, Trash2, Gr
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
+import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { cn } from "@/lib/utils";
 import { endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
