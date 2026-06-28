@@ -260,6 +260,19 @@ export const taskStatusesStore = {
     if (!userId) return;
     await fetchStatuses(userId);
   },
+  /** Snapshot atual dos statuses — para checagens fora do React. */
+  getStatuses(): TaskStatusDef[] {
+    return state.statuses;
+  },
+  /** Checa se uma `key` representa um status terminal (concluído). */
+  isTerminalKey(key: string | undefined | null): boolean {
+    if (!key) return false;
+    const def = state.statuses.find((s) => s.key === key);
+    if (def?.isDone) return true;
+    if (def) return false;
+    const k = key.toLowerCase();
+    return k === "done" || k === "concluido" || k === "concluida" || k === "finalizada" || k === "finalizado";
+  },
 };
 
 export function useTaskStatusesStore() {
