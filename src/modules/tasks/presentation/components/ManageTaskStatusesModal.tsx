@@ -42,11 +42,45 @@ function CompactRow({
   disableDown: boolean;
   disableRemove?: boolean;
 }) {
+  // Estado local — commit em blur/Enter; evita 1 INSERT por tecla e cursor jumpy.
+  const [localName, setLocalName] = useState(name);
+  const lastCommitted = useRef(name);
+
+  useEffect(() => {
+    // Atualiza o local apenas quando a fonte externa mudou de fato (realtime).
+    if (name !== lastCommitted.current) {
+      setLocalName(name);
+      lastCommitted.current = name;
+    }
+  }, [name]);
+
+  const commit = () => {
+    const trimmed = localName.trim();
+    if (!trimmed) {
+      // reverte
+      setLocalName(lastCommitted.current);
+      return;
+    }
+    if (trimmed === lastCommitted.current) return;
+    lastCommitted.current = trimmed;
+    onNameChange(trimmed);
+  };
+
   return (
     <div className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/40 transition-colors group">
       <Input
-        value={name}
-        onChange={(e) => onNameChange(e.target.value)}
+        value={localName}
+        onChange={(e) => setLocalName(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
+          } else if (e.key === 'Escape') {
+            setLocalName(lastCommitted.current);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         className="flex-1 h-8 text-sm"
       />
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
