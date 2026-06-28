@@ -60,10 +60,10 @@ import type {
   TaskType,
 } from "@/types/tasks";
 
-import TaskSectionSelector from "@/components/tarefas/forms/TaskSectionSelector";
-import ChecklistEditor from "@/components/tarefas/ChecklistEditor";
-import TaskContentForm from "@/components/tarefas/forms/TaskContentForm";
-import TaskDocumentForm from "@/components/tarefas/forms/TaskDocumentForm";
+import TaskSectionSelector from "@/modules/tasks/presentation/components/forms/TaskSectionSelector";
+import ChecklistEditor from "@/modules/tasks/presentation/components/ChecklistEditor";
+import TaskContentForm from "@/modules/tasks/presentation/components/forms/TaskContentForm";
+import TaskDocumentForm from "@/modules/tasks/presentation/components/forms/TaskDocumentForm";
 
 export interface TaskQuickModalProps {
   open: boolean;

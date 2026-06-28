@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
-import ColumnQuickAdd from '@/components/tarefas/ColumnQuickAdd';
-import DraggableTaskCard from '@/components/tarefas/dnd/DraggableTaskCard';
+import ColumnQuickAdd from '@/modules/tasks/presentation/components/kanban/ColumnQuickAdd';
+import DraggableTaskCard from '@/modules/tasks/presentation/components/cards/DraggableTaskCard';
 import type { Task } from '@/types/tasks';
 import { hexToRgb } from './utils';
 

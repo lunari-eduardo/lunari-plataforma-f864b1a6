@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
-import CleanTaskCard from '@/components/tarefas/CleanTaskCard';
-import ChecklistPanel from '@/components/tarefas/ChecklistPanel';
+import CleanTaskCard from '@/modules/tasks/presentation/components/cards/CleanTaskCard';
+import ChecklistPanel from '@/modules/tasks/presentation/components/ChecklistPanel';
 import type { Task } from '@/types/tasks';
 
 interface TasksListViewProps {
