@@ -192,9 +192,8 @@ export default function TaskQuickModal({
         data.callToAction = callToAction.trim() || undefined;
         data.socialPlatforms = socialPlatforms.length ? socialPlatforms : undefined;
       }
-      if (finalSections.includes("document")) {
-        data.attachments = attachments.length ? attachments : undefined;
-      }
+      // anexos não vão mais no payload — são gerenciados via R2/store em capabilities próprias
+
     }
 
     await onSubmit(data);
