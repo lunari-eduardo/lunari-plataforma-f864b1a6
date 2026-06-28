@@ -36,17 +36,17 @@ export function useSupabaseTaskTags() {
   }, [user?.id]);
 
   const addTag = useCallback(async (name: string): Promise<TaskTagDef | null> => {
-    const res = await runCapability("tasks.tags.create", { name });
+    const res = await createTagCmd.execute({ name });
     if (!res.ok) return null;
     return { id: res.value.id, name: res.value.name, color: res.value.color };
   }, []);
 
   const updateTag = useCallback(async (id: string, patch: Partial<TaskTagDef>) => {
-    await runCapability("tasks.tags.update", { id, ...patch });
+    await updateTagCmd.execute({ id, ...patch });
   }, []);
 
   const removeTag = useCallback(async (id: string) => {
-    await runCapability("tasks.tags.delete", { id });
+    await deleteTagCmd.execute({ id });
   }, []);
 
   const moveTag = useCallback(

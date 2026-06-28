@@ -35,17 +35,17 @@ export function useSupabaseTaskPeople() {
   }, [user?.id]);
 
   const addPerson = useCallback(async (name: string): Promise<TaskPerson | null> => {
-    const res = await runCapability("tasks.people.create", { name });
+    const res = await createPersonCmd.execute({ name });
     if (!res.ok) return null;
     return { id: res.value.id, name: res.value.name, color: res.value.color };
   }, []);
 
   const updatePerson = useCallback(async (id: string, patch: Partial<TaskPerson>) => {
-    await runCapability("tasks.people.update", { id, ...patch });
+    await updatePersonCmd.execute({ id, ...patch });
   }, []);
 
   const removePerson = useCallback(async (id: string) => {
-    await runCapability("tasks.people.delete", { id });
+    await deletePersonCmd.execute({ id });
   }, []);
 
   const movePerson = useCallback(
