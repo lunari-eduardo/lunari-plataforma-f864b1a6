@@ -29,11 +29,9 @@ function createEmptyState(): TasksStoreState {
 const state: TasksStoreState = createEmptyState();
 const listeners = new Set<Listener>();
 let version = 0;
-const snapshotRef = { v: version };
 
 function notify() {
   version++;
-  snapshotRef.v = version;
   for (const fn of listeners) fn();
 }
 
