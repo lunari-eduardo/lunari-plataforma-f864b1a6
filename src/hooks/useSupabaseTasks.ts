@@ -1,15 +1,13 @@
 /**
- * useSupabaseTasks — facade legada.
+ * @deprecated Onda 7 — facade legada de tarefas.
  *
- * Após a Onda de unificação de realtime, este hook NÃO abre mais canal próprio
- * nem mantém estado local de lista. Ele:
- *  - Lê `tasks` ao vivo do `tasksStore` (alimentado pelo único canal Realtime
- *    em `TasksRealtimeBridge`).
- *  - Mantém as mutações antigas (Supabase direto) por compatibilidade com
- *    callsites que ainda não migraram para capabilities. As mutações também
- *    aplicam patch otimista no store para refletir antes do round-trip.
+ * Não abre canal Realtime próprio (a `TasksRealtimeBridge` é fonte única) e lê
+ * `tasks` ao vivo do `tasksStore`. As mutações Supabase diretas ainda existem
+ * por compatibilidade com callsites antigos (Agenda, Workflow, Today/Automation).
  *
- * Callsites migrarão para `useTasks()` + capabilities em uma onda futura.
+ * NOVOS callsites: use `@/modules/tasks` — `useTasks()` para leitura e as
+ * capabilities (`tasks.create`, `tasks.update`, `tasks.delete`, etc.) para
+ * mutação. Este arquivo será removido quando todos os callsites migrarem.
  */
 
 import { useCallback, useState } from 'react';

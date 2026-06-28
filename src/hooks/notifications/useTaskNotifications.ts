@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppNotification } from '@/types/notifications';
+import { eventBus } from '@/shared/event-bus';
+import '@/modules/tasks/application/events';
 
 /** Tarefas vencidas e tarefas com vencimento hoje (status != concluído) */
 export function useTaskNotifications(): AppNotification[] {
@@ -58,7 +60,19 @@ export function useTaskNotifications(): AppNotification[] {
   useEffect(() => {
     fetchAll();
     const id = setInterval(fetchAll, 5 * 60 * 1000);
-    return () => clearInterval(id);
+    // Refresh imediato quando tarefas mudam — evita esperar polling.
+    const offs = [
+      eventBus.on('tasks.created', () => fetchAll()),
+      eventBus.on('tasks.updated', () => fetchAll()),
+      eventBus.on('tasks.completed', () => fetchAll()),
+      eventBus.on('tasks.reopened', () => fetchAll()),
+      eventBus.on('tasks.deleted', () => fetchAll()),
+      eventBus.on('tasks.snoozed', () => fetchAll()),
+    ];
+    return () => {
+      clearInterval(id);
+      offs.forEach((off) => off());
+    };
   }, [fetchAll]);
 
   return items;
