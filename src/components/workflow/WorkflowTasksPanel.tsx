@@ -95,12 +95,13 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
   };
 
   const handleToggleStatus = async (task: Task) => {
-    await updateTask(task.id, { status: task.status === "done" ? "todo" : "done" });
+    const nextStatus = isTerminalKey(task.status) ? getDefaultOpenKey() : getDoneKey();
+    await updateTask(task.id, { status: nextStatus });
   };
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
-    await addTask({ title: newTaskTitle.trim(), status: "todo", priority: "medium", source: "manual", type: "simple" });
+    await addTask({ title: newTaskTitle.trim(), status: getDefaultOpenKey(), priority: "medium", source: "manual", type: "simple" });
     setNewTaskTitle("");
     setIsAdding(false);
   };
