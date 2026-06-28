@@ -3,6 +3,7 @@ import { isSameDay, parseISO, getMonth, getYear, getDate } from 'date-fns';
 import { Plus, User, Calendar, Circle, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import type { Task } from '@/types/tasks';
 
 interface AgendaTasksSectionProps {
