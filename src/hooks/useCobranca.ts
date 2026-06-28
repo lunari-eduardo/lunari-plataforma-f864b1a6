@@ -381,30 +381,39 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   }, [fetchCobrancas]);
 
-  // Real-time subscription
+  // Real-time subscription (filtrado por user_id — evita leak multi-tenant)
   useEffect(() => {
     if (!options.clienteId && !options.sessionId) return;
 
     fetchCobrancas();
 
-    const channel = supabase
-      .channel('cobrancas-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cobrancas',
-        },
-        (payload) => {
-          console.log('Cobranca change:', payload);
-          fetchCobrancas();
-        }
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      channel = supabase
+        .channel(`cobrancas-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'cobrancas',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchCobrancas();
+          }
+        )
+        .subscribe();
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [options.clienteId, options.sessionId, fetchCobrancas]);
 
