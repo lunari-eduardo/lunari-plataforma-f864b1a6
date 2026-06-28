@@ -33,11 +33,15 @@ import "./application/commands/reopenTask";
 import "./application/commands/deleteTask";
 import "./application/commands/snoozeTask";
 import "./application/commands/assignTask";
+import "./application/commands/tags";
+import "./application/commands/people";
 import "./application/queries/listTasks";
 import "./application/queries/getTaskById";
 import "./application/queries/dueOverview";
 import "./application/queries/countsByStatus";
 import "./application/queries/searchTasks";
+import "./application/queries/listTags";
+import "./application/queries/listPeople";
 
 // Re-export para uso direto via TanStack hooks ou execute()
 export { createTask } from "./application/commands/createTask";
