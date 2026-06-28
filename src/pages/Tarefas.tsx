@@ -163,9 +163,9 @@ export default function Tarefas() {
         estimatedHours: input.estimatedHours,
       });
       if (!isOk(res)) handleCapError('criar tarefa', res.error.message);
-      else refetch();
+      // sucesso: upsert local já feito pela capability + canal realtime confirma.
     },
-    [run, defaultOpenKey, handleCapError, refetch],
+    [run, defaultOpenKey, handleCapError],
   );
 
   const updateTask = useCallback(
