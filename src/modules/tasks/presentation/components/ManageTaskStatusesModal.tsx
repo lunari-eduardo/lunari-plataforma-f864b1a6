@@ -117,6 +117,7 @@ function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: str
 
 function ManagePeopleSection() {
   const { people, addPerson, updatePerson, removePerson, movePerson } = useSupabaseTaskPeople();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="space-y-1">
@@ -128,7 +129,7 @@ function ManagePeopleSection() {
             onNameChange={(v) => updatePerson(p.id, { name: v })}
             onMoveUp={() => movePerson(p.id, 'up')}
             onMoveDown={() => movePerson(p.id, 'down')}
-            onRemove={() => removePerson(p.id)}
+            onRemove={() => setPendingDelete({ id: p.id, name: p.name })}
             disableUp={idx === 0}
             disableDown={idx === people.length - 1}
           />
@@ -138,12 +139,35 @@ function ManagePeopleSection() {
         )}
       </div>
       <AddRow placeholder="Novo responsável" onAdd={addPerson} />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir "{pendingDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As tarefas que tinham esse responsável continuarão existindo, mas perderão a associação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) removePerson(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 function ManageTagsSection() {
   const { tags, addTag, updateTag, removeTag, moveTag } = useSupabaseTaskTags();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="space-y-1">
@@ -155,7 +179,7 @@ function ManageTagsSection() {
             onNameChange={(v) => updateTag(t.id, { name: v })}
             onMoveUp={() => moveTag(t.id, 'up')}
             onMoveDown={() => moveTag(t.id, 'down')}
-            onRemove={() => removeTag(t.id)}
+            onRemove={() => setPendingDelete({ id: t.id, name: t.name })}
             disableUp={idx === 0}
             disableDown={idx === tags.length - 1}
           />
@@ -165,6 +189,28 @@ function ManageTagsSection() {
         )}
       </div>
       <AddRow placeholder="Nova etiqueta" onAdd={addTag} />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir "{pendingDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As tarefas com essa etiqueta continuarão existindo, mas perderão a associação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) removeTag(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
