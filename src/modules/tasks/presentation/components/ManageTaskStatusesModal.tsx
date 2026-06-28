@@ -8,9 +8,19 @@ import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 import { useSupabaseTaskTags } from '@/hooks/useSupabaseTaskTags';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronUp, ChevronDown, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 /* ── Compact row for People / Tags ── */
 function CompactRow({
