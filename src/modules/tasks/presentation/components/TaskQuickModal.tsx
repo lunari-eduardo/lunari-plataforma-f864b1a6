@@ -63,7 +63,9 @@ import type {
 import TaskSectionSelector from "@/modules/tasks/presentation/components/forms/TaskSectionSelector";
 import ChecklistEditor from "@/modules/tasks/presentation/components/ChecklistEditor";
 import TaskContentForm from "@/modules/tasks/presentation/components/forms/TaskContentForm";
-import TaskDocumentForm from "@/modules/tasks/presentation/components/forms/TaskDocumentForm";
+import { AttachmentDropzone } from "@/modules/tasks/presentation/components/attachments/AttachmentDropzone";
+import { AttachmentList } from "@/modules/tasks/presentation/components/attachments/AttachmentList";
+import { useTaskAttachmentsV2 } from "@/modules/tasks/presentation/hooks/useTaskAttachmentsV2";
 
 export interface TaskQuickModalProps {
   open: boolean;
@@ -115,7 +117,10 @@ export default function TaskQuickModal({
   const [callToAction, setCallToAction] = useState("");
   const [socialPlatforms, setSocialPlatforms] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState<string[]>([]);
-  const [attachments, setAttachments] = useState<any[]>([]);
+  // anexos agora vivem no store/R2 — apenas verificamos contagem para decidir abrir a seção
+  const taskId = (initial?.id as string | undefined) ?? undefined;
+  const attachmentsHelpers = useTaskAttachmentsV2(taskId);
+  const attachmentItems = attachmentsHelpers.items;
 
   // Confirmação de exclusão
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -133,7 +138,7 @@ export default function TaskQuickModal({
     setChecklistItems(initial?.checklistItems ?? []);
     setCallToAction(initial?.callToAction ?? "");
     setSocialPlatforms(initial?.socialPlatforms ?? []);
-    setAttachments((initial?.attachments as any[]) ?? []);
+    // attachments agora vêm via store/R2 — sem reset local
     // Decidir seções avançadas iniciais
     const sections: TaskSection[] = ["basic"];
     if (initial?.activeSections && initial.activeSections.length > 1) {
@@ -142,7 +147,7 @@ export default function TaskQuickModal({
     } else {
       if (initial?.checklistItems?.length) sections.push("checklist");
       if (initial?.callToAction || initial?.socialPlatforms?.length) sections.push("content");
-      if (initial?.attachments?.length) sections.push("document");
+      if (attachmentItems.length || (initial?.attachments?.length ?? 0) > 0) sections.push("document");
       setActiveSections(sections);
       setShowAdvanced(sections.length > 1);
     }
@@ -188,9 +193,8 @@ export default function TaskQuickModal({
         data.callToAction = callToAction.trim() || undefined;
         data.socialPlatforms = socialPlatforms.length ? socialPlatforms : undefined;
       }
-      if (finalSections.includes("document")) {
-        data.attachments = attachments.length ? attachments : undefined;
-      }
+      // anexos não vão mais no payload — são gerenciados via R2/store em capabilities próprias
+
     }
 
     await onSubmit(data);
@@ -236,15 +240,21 @@ export default function TaskQuickModal({
             key="document"
             className="space-y-3 p-3 border border-lunar-border rounded-lg bg-lunar-background/30"
           >
-            <h4 className="text-sm font-medium text-lunar-text">Documentos</h4>
-            <TaskDocumentForm
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              attachments={attachments}
-              setAttachments={setAttachments}
-            />
+            <h4 className="text-sm font-medium text-lunar-text">Anexos</h4>
+            {taskId ? (
+              <>
+                <AttachmentDropzone taskId={taskId} />
+                <AttachmentList
+                  items={attachmentItems}
+                  onOpen={(p) => attachmentsHelpers.openSigned(p)}
+                  onRemove={(id) => attachmentsHelpers.remove(id)}
+                />
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Salve a tarefa primeiro para anexar arquivos.
+              </p>
+            )}
           </div>
         );
       default:

@@ -20,6 +20,9 @@ export { supabaseTasksRepo } from "./infrastructure/supabase/tasksRepo";
 export { supabaseStatusesRepo } from "./infrastructure/supabase/statusesRepo";
 export { tasksRealtime } from "./infrastructure/realtime/tasksRealtimeChannel";
 export { TasksRealtimeBridge } from "./infrastructure/realtime/TasksRealtimeBridge";
+export { AttachmentsRealtimeBridge } from "./infrastructure/realtime/AttachmentsRealtimeBridge";
+export { attachmentsStore, useAttachmentsVersion } from "./presentation/store/attachmentsStore";
+export { useTaskAttachmentsV2 } from "./presentation/hooks/useTaskAttachmentsV2";
 
 // Registra eventos do módulo no LunariEvents (declaration merging)
 import "./application/events";
@@ -35,6 +38,8 @@ import "./application/commands/snoozeTask";
 import "./application/commands/assignTask";
 import "./application/commands/tags";
 import "./application/commands/people";
+import "./application/commands/attachments";
+import "./application/queries/listAttachments";
 import "./application/queries/listTasks";
 import "./application/queries/getTaskById";
 import "./application/queries/dueOverview";
@@ -61,3 +66,6 @@ export { createTag, updateTag, deleteTag, reorderTags } from "./application/comm
 export { createPerson, updatePerson, deletePerson, reorderPeople } from "./application/commands/people";
 export { listTags } from "./application/queries/listTags";
 export { listPeople } from "./application/queries/listPeople";
+export { addTaskAttachment, removeTaskAttachment } from "./application/commands/attachments";
+export { listTaskAttachments } from "./application/queries/listAttachments";
+
