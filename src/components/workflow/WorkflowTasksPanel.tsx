@@ -156,6 +156,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
                   onToggle={() => handleToggleStatus(task)}
                   onDelete={() => deleteTask(task.id)}
                   isDragging={activeId === task.id}
+                  isDone={isTerminalKey(task.status)}
                 />
               ))}
             </SortableContext>
@@ -163,7 +164,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
           {createPortal(
             <DragOverlay dropAnimation={null}>
               {activeTask ? (
-                <TaskRowContent task={activeTask} onToggle={() => {}} onDelete={() => {}} isOverlay />
+                <TaskRowContent task={activeTask} onToggle={() => {}} onDelete={() => {}} isOverlay isDone={isTerminalKey(activeTask.status)} />
               ) : null}
             </DragOverlay>,
             document.body
