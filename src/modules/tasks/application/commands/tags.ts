@@ -65,7 +65,7 @@ export const deleteTag = defineCommand({
   output: z.object({ id: z.string() }),
   permissions: ["tasks:write"],
   sideEffects: ["db:task_tags"],
-  needsApproval: true,
+  // needsApproval reservado para runtime AI; UI manual confirma localmente.
   audit: "always",
   async handler({ id }, ctx) {
     const auth = await resolveUserId(ctx);
