@@ -5,7 +5,12 @@
 
 import { useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { runCapability } from "@/shared/capability";
+import {
+  createTag as createTagCmd,
+  updateTag as updateTagCmd,
+  deleteTag as deleteTagCmd,
+  reorderTags as reorderTagsCmd,
+} from "@/modules/tasks/application/commands/tags";
 import {
   tagsStore,
   useTaskTagsStore,

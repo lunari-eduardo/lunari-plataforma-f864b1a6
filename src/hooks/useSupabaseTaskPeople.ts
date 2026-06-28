@@ -4,7 +4,12 @@
 
 import { useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { runCapability } from "@/shared/capability";
+import {
+  createPerson as createPersonCmd,
+  updatePerson as updatePersonCmd,
+  deletePerson as deletePersonCmd,
+  reorderPeople as reorderPeopleCmd,
+} from "@/modules/tasks/application/commands/people";
 import {
   peopleStore,
   useTaskPeopleStore,
