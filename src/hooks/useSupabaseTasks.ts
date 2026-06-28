@@ -19,6 +19,7 @@ import type { Task, TaskAttachment, ChecklistItem, TaskCaption } from '@/types/t
 import type { Json } from '@/integrations/supabase/types';
 import { useTasks } from '@/modules/tasks/presentation/hooks/useTasks';
 import { tasksStore } from '@/modules/tasks/presentation/store/tasksStore';
+import { taskStatusesStore } from '@/modules/tasks/presentation/store/taskStatusesStore';
 
 // Helper to convert DB row to Task type
 function dbRowToTask(row: Record<string, unknown>): Task {
