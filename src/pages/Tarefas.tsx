@@ -74,9 +74,18 @@ export default function Tarefas() {
     (id: string, patch: Partial<Task>) => tasksStore.applyOptimisticPatch(id, patch),
     [],
   );
-  // O canal realtime já reflete mudanças no store — `refetch` vira no-op (mantido
-  // por compatibilidade com `useTasksUndo` e error paths das capabilities).
-  const refetch = useCallback(() => {}, []);
+  // O canal realtime já reflete mudanças no store. `refetch` re-hidrata como
+  // fallback quando uma capability falha e o store fica inconsistente.
+  const { user } = useAuth();
+  const refetch = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const list = await supabaseTasksRepo.list({ userId: user.id });
+      tasksStore.hydrate(list);
+    } catch (e) {
+      console.error('[Tarefas] refetch falhou', e);
+    }
+  }, [user?.id]);
   const { people } = useSupabaseTaskPeople();
   const { toast } = useToast();
   const run = useRunCapability();
