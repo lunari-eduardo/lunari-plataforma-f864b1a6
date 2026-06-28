@@ -4,6 +4,7 @@ import { Plus, CalendarDays, ChevronDown, ChevronUp, PanelRightClose, Trash2, Gr
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
+import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { cn } from "@/lib/utils";
 import { endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +33,7 @@ interface WorkflowTasksPanelProps {
 
 export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPanelProps) {
   const { tasks, updateTask, addTask, deleteTask, loading } = useSupabaseTasks();
+  const { isTerminalKey, getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
   const [showCompleted, setShowCompleted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -60,8 +62,8 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
     });
   }, [tasks, monthStart, monthEnd]);
 
-  const pendingTasks = useMemo(() => monthTasks.filter((t) => t.status !== "done"), [monthTasks]);
-  const completedTasks = useMemo(() => monthTasks.filter((t) => t.status === "done"), [monthTasks]);
+  const pendingTasks = useMemo(() => monthTasks.filter((t) => !isTerminalKey(t.status)), [monthTasks, isTerminalKey]);
+  const completedTasks = useMemo(() => monthTasks.filter((t) => isTerminalKey(t.status)), [monthTasks, isTerminalKey]);
 
   // Sync orderedIds with pendingTasks
   useEffect(() => {
@@ -93,12 +95,13 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
   };
 
   const handleToggleStatus = async (task: Task) => {
-    await updateTask(task.id, { status: task.status === "done" ? "todo" : "done" });
+    const nextStatus = isTerminalKey(task.status) ? getDefaultOpenKey() : getDoneKey();
+    await updateTask(task.id, { status: nextStatus });
   };
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
-    await addTask({ title: newTaskTitle.trim(), status: "todo", priority: "medium", source: "manual", type: "simple" });
+    await addTask({ title: newTaskTitle.trim(), status: getDefaultOpenKey(), priority: "medium", source: "manual", type: "simple" });
     setNewTaskTitle("");
     setIsAdding(false);
   };
@@ -153,6 +156,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
                   onToggle={() => handleToggleStatus(task)}
                   onDelete={() => deleteTask(task.id)}
                   isDragging={activeId === task.id}
+                  isDone={isTerminalKey(task.status)}
                 />
               ))}
             </SortableContext>
@@ -160,7 +164,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
           {createPortal(
             <DragOverlay dropAnimation={null}>
               {activeTask ? (
-                <TaskRowContent task={activeTask} onToggle={() => {}} onDelete={() => {}} isOverlay />
+                <TaskRowContent task={activeTask} onToggle={() => {}} onDelete={() => {}} isOverlay isDone={isTerminalKey(activeTask.status)} />
               ) : null}
             </DragOverlay>,
             document.body
@@ -213,7 +217,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
 }
 
 /* ── Sortable wrapper ── */
-function SortableTaskRow({ task, onToggle, onDelete, isDragging }: { task: Task; onToggle: () => void; onDelete: () => void; isDragging: boolean }) {
+function SortableTaskRow({ task, onToggle, onDelete, isDragging, isDone }: { task: Task; onToggle: () => void; onDelete: () => void; isDragging: boolean; isDone: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
   const style = {
@@ -224,7 +228,7 @@ function SortableTaskRow({ task, onToggle, onDelete, isDragging }: { task: Task;
 
   return (
     <div ref={setNodeRef} style={style}>
-      <TaskRowContent task={task} onToggle={onToggle} onDelete={onDelete} dragHandleProps={{ ...attributes, ...listeners }} />
+      <TaskRowContent task={task} onToggle={onToggle} onDelete={onDelete} dragHandleProps={{ ...attributes, ...listeners }} isDone={isDone} />
     </div>
   );
 }
@@ -236,14 +240,15 @@ function TaskRowContent({
   onDelete,
   dragHandleProps,
   isOverlay,
+  isDone = false,
 }: {
   task: Task;
   onToggle: () => void;
   onDelete: () => void;
   dragHandleProps?: Record<string, any>;
   isOverlay?: boolean;
+  isDone?: boolean;
 }) {
-  const isDone = task.status === "done";
   const priorityColor: Record<string, string> = { high: "bg-destructive", medium: "bg-amber-500", low: "bg-blue-400" };
 
   return (

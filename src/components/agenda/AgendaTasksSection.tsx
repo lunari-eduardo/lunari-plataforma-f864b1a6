@@ -3,6 +3,7 @@ import { isSameDay, parseISO, getMonth, getYear, getDate } from 'date-fns';
 import { Plus, User, Calendar, Circle, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useSupabaseTaskStatuses } from '@/hooks/useSupabaseTaskStatuses';
 import type { Task } from '@/types/tasks';
 
 interface AgendaTasksSectionProps {
@@ -21,6 +22,7 @@ export default function AgendaTasksSection({
   onDayClick
 }: AgendaTasksSectionProps) {
   const navigate = useNavigate();
+  const { isTerminalKey } = useSupabaseTaskStatuses();
   
   // Filter tasks for the selected date that are not completed (for day/week views)
   const dayTasks = useMemo(() => {
@@ -28,10 +30,10 @@ export default function AgendaTasksSection({
       if (!task.dueDate) return false;
       const taskDate = parseISO(task.dueDate);
       if (!isSameDay(taskDate, selectedDate)) return false;
-      if (task.status === 'done' || task.completedAt) return false;
+      if (isTerminalKey(task.status) || task.completedAt) return false;
       return true;
     });
-  }, [tasks, selectedDate]);
+  }, [tasks, selectedDate, isTerminalKey]);
   
   // Group tasks by day for monthly view
   const monthlyTasksSummary = useMemo(() => {
@@ -43,7 +45,7 @@ export default function AgendaTasksSection({
     // Filter tasks for this month that are not completed
     const monthTasks = tasks.filter(task => {
       if (!task.dueDate) return false;
-      if (task.status === 'done' || task.completedAt) return false;
+      if (isTerminalKey(task.status) || task.completedAt) return false;
       
       const taskDate = parseISO(task.dueDate);
       return getYear(taskDate) === year && getMonth(taskDate) === month;
@@ -60,7 +62,7 @@ export default function AgendaTasksSection({
     return Array.from(tasksByDay.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([day, count]) => ({ day, count }));
-  }, [tasks, selectedDate, viewMode]);
+  }, [tasks, selectedDate, viewMode, isTerminalKey]);
   
   // Limit to 5 tasks for daily view
   const visibleTasks = dayTasks.slice(0, 5);

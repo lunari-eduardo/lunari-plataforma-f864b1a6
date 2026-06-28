@@ -15,15 +15,26 @@ export function useTaskNotifications(): AppNotification[] {
     const in1DayISO = new Date(today.getTime() + 24 * 60 * 60 * 1000)
       .toISOString().split('T')[0];
 
+    // Carrega keys de status terminais do próprio usuário (configuráveis).
+    const { data: statusRows } = await supabase
+      .from('task_statuses')
+      .select('key,is_done')
+      .eq('user_id', user.id);
+    const terminalKeys = (statusRows ?? [])
+      .filter((r: any) => r.is_done)
+      .map((r: any) => r.key as string);
+    // Fallback legado quando o usuário ainda não tem statuses configurados.
+    const excludeKeys = terminalKeys.length > 0
+      ? terminalKeys
+      : ['done', 'concluido', 'concluida', 'finalizada', 'finalizado'];
+
     const { data } = await supabase
       .from('tasks')
       .select('id, title, due_date, status, priority')
       .eq('user_id', user.id)
       .not('due_date', 'is', null)
       .lte('due_date', in1DayISO)
-      .neq('status', 'done')
-      .neq('status', 'concluido')
-      .neq('status', 'concluida')
+      .not('status', 'in', `(${excludeKeys.map((k) => `"${k}"`).join(',')})`)
       .order('due_date', { ascending: true })
       .limit(50);
 

@@ -19,6 +19,7 @@ import type { Task, TaskAttachment, ChecklistItem, TaskCaption } from '@/types/t
 import type { Json } from '@/integrations/supabase/types';
 import { useTasks } from '@/modules/tasks/presentation/hooks/useTasks';
 import { tasksStore } from '@/modules/tasks/presentation/store/tasksStore';
+import { taskStatusesStore } from '@/modules/tasks/presentation/store/taskStatusesStore';
 
 // Helper to convert DB row to Task type
 function dbRowToTask(row: Record<string, unknown>): Task {
@@ -135,9 +136,11 @@ export function useSupabaseTasks() {
         });
         if (updates.status) {
           const current = snapshot;
-          if (updates.status === 'done' && current?.status !== 'done') {
+          const wasTerminal = taskStatusesStore.isTerminalKey(current?.status);
+          const willBeTerminal = taskStatusesStore.isTerminalKey(updates.status);
+          if (willBeTerminal && !wasTerminal) {
             dbRow.completed_at = new Date().toISOString();
-          } else if (updates.status !== 'done' && current?.status === 'done') {
+          } else if (!willBeTerminal && wasTerminal) {
             dbRow.completed_at = null;
           }
         }
