@@ -217,7 +217,7 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
 }
 
 /* ── Sortable wrapper ── */
-function SortableTaskRow({ task, onToggle, onDelete, isDragging }: { task: Task; onToggle: () => void; onDelete: () => void; isDragging: boolean }) {
+function SortableTaskRow({ task, onToggle, onDelete, isDragging, isDone }: { task: Task; onToggle: () => void; onDelete: () => void; isDragging: boolean; isDone: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
 
   const style = {
@@ -228,7 +228,7 @@ function SortableTaskRow({ task, onToggle, onDelete, isDragging }: { task: Task;
 
   return (
     <div ref={setNodeRef} style={style}>
-      <TaskRowContent task={task} onToggle={onToggle} onDelete={onDelete} dragHandleProps={{ ...attributes, ...listeners }} />
+      <TaskRowContent task={task} onToggle={onToggle} onDelete={onDelete} dragHandleProps={{ ...attributes, ...listeners }} isDone={isDone} />
     </div>
   );
 }
@@ -240,14 +240,15 @@ function TaskRowContent({
   onDelete,
   dragHandleProps,
   isOverlay,
+  isDone = false,
 }: {
   task: Task;
   onToggle: () => void;
   onDelete: () => void;
   dragHandleProps?: Record<string, any>;
   isOverlay?: boolean;
+  isDone?: boolean;
 }) {
-  const isDone = task.status === "done";
   const priorityColor: Record<string, string> = { high: "bg-destructive", medium: "bg-amber-500", low: "bg-blue-400" };
 
   return (
