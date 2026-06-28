@@ -62,7 +62,7 @@ export default function AgendaTasksSection({
     return Array.from(tasksByDay.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([day, count]) => ({ day, count }));
-  }, [tasks, selectedDate, viewMode]);
+  }, [tasks, selectedDate, viewMode, isTerminalKey]);
   
   // Limit to 5 tasks for daily view
   const visibleTasks = dayTasks.slice(0, 5);
