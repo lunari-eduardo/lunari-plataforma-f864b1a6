@@ -80,6 +80,13 @@ export const createTask = defineCommand({
         userId,
       );
 
+      // Upsert local imediato no runtime client — UI reflete sem esperar o
+      // round-trip do canal Realtime. O evento postgres_changes que chegar depois
+      // é idempotente (anti-eco via `lastSeq` no store).
+      if (ctx.runtime === "client") {
+        try { tasksStore.upsert(created); } catch { /* noop */ }
+      }
+
       await ctx.emit("tasks.created", {
         id: created.id,
         title: created.title,
