@@ -60,7 +60,7 @@ export function useSupabaseTaskTags() {
       [next[idx], next[swap]] = [next[swap], next[idx]];
       // otimista
       tagsStore.applyOptimistic(next.map((t, i) => ({ ...t, order: i })));
-      await runCapability("tasks.tags.reorder", {
+      await reorderTagsCmd.execute({
         items: next.map((t, i) => ({ id: t.id, order: i })),
       });
     },

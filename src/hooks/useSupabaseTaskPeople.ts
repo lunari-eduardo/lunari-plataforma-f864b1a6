@@ -58,7 +58,7 @@ export function useSupabaseTaskPeople() {
       const next = [...list];
       [next[idx], next[swap]] = [next[swap], next[idx]];
       peopleStore.applyOptimistic(next.map((p, i) => ({ ...p, order: i })));
-      await runCapability("tasks.people.reorder", {
+      await reorderPeopleCmd.execute({
         items: next.map((p, i) => ({ id: p.id, order: i })),
       });
     },
