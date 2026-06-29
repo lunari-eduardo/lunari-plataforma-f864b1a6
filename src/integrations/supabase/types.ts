@@ -5380,6 +5380,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      fin_promote_overdue_to_faturado: { Args: never; Returns: number }
       finalize_gallery_payment: {
         Args: {
           p_cobranca_id: string

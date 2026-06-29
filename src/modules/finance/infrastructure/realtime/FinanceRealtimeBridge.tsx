@@ -22,6 +22,8 @@ import { financeRealtime } from "./financeRealtimeChannel";
 const VISIBILITY_REHYDRATE_AFTER_MS = 30_000;
 const BACKOFF_MS = [1_000, 3_000, 10_000];
 const EXTRATO_DEBOUNCE_MS = 400;
+const TX_DEBOUNCE_MS = 200;
+const ITEMS_DEBOUNCE_MS = 200;
 
 const FLAG_ENABLED =
   (import.meta.env.VITE_FINANCE_REALTIME_V2 ?? "true").toString().toLowerCase() !== "false";
@@ -32,6 +34,8 @@ export function FinanceRealtimeBridge() {
   const hiddenSinceRef = useRef<number | null>(null);
   const backoffIdxRef = useRef(0);
   const extratoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const txTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!FLAG_ENABLED) return;
@@ -74,6 +78,20 @@ export function FinanceRealtimeBridge() {
       }, EXTRATO_DEBOUNCE_MS);
     };
 
+    const invalidateTxDebounced = () => {
+      if (txTimerRef.current) clearTimeout(txTimerRef.current);
+      txTimerRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
+      }, TX_DEBOUNCE_MS);
+    };
+
+    const invalidateItemsDebounced = () => {
+      if (itemsTimerRef.current) clearTimeout(itemsTimerRef.current);
+      itemsTimerRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["fin-items-master"] });
+      }, ITEMS_DEBOUNCE_MS);
+    };
+
     void hydrate();
 
     const cleanup = financeRealtime.subscribe(
@@ -81,6 +99,9 @@ export function FinanceRealtimeBridge() {
       (evt) => {
         if (evt.entity === "transaction") {
           invalidateExtratoDebounced();
+          invalidateTxDebounced();
+        } else if (evt.entity === "item") {
+          invalidateItemsDebounced();
         }
       },
       (status) => {
@@ -109,6 +130,8 @@ export function FinanceRealtimeBridge() {
       cancelled = true;
       if (backoffTimer) clearTimeout(backoffTimer);
       if (extratoTimerRef.current) clearTimeout(extratoTimerRef.current);
+      if (txTimerRef.current) clearTimeout(txTimerRef.current);
+      if (itemsTimerRef.current) clearTimeout(itemsTimerRef.current);
       document.removeEventListener("visibilitychange", onVisibility);
       cleanup();
     };
