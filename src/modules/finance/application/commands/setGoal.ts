@@ -24,11 +24,11 @@ export const setGoal = defineCommand({
   permissions: ["finance:write"],
   sideEffects: ["db:metas_personalizadas", "event:finance.goal.upserted"],
   audit: "on-success",
-  async handler({ source, ...input }, ctx) {
+  async handler({ source, ano, mes, categoria, metaFaturamento, metaLucro }, ctx) {
     const auth = await resolveUserId(ctx);
     if (!isOk(auth)) return auth;
     try {
-      const meta = await supabaseGoalsRepo.set(input);
+      const meta = await supabaseGoalsRepo.set({ ano, mes, categoria, metaFaturamento, metaLucro });
       await ctx.emit("finance.goal.upserted", {
         id: meta.id,
         ano: meta.ano,
