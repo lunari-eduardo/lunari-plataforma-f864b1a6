@@ -122,8 +122,7 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
   async markPending(id) {
     const row = await SupabaseFinancialTransactionsAdapter.updateTransaction(id, {
       status: "Faturado" as any,
-      data_pagamento: null as any,
-    });
+    } as any);
     return rowToTransacao(row);
   },
 
