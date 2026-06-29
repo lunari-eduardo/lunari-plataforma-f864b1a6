@@ -26,3 +26,7 @@ export {
   supabaseExtratoRepo,
   supabaseGoalsRepo,
 } from "./infrastructure/supabase";
+
+// Realtime (Onda 3)
+export { financeRealtime } from "./infrastructure/realtime/financeRealtimeChannel";
+export { FinanceRealtimeBridge } from "./infrastructure/realtime/FinanceRealtimeBridge";

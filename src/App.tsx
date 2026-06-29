@@ -14,6 +14,7 @@ import { AgendaInvalidationBridge, AgendaRealtimeListener } from "@/modules/agen
 import { WorkflowEventBridge } from "@/modules/workflow";
 import { WorkflowRealtimeBridge } from "@/features/workflow/realtime";
 import { TasksRealtimeBridge, AttachmentsRealtimeBridge } from "@/modules/tasks";
+import { FinanceRealtimeBridge } from "@/modules/finance";
 // Side-effect imports: registram capabilities e eventos nos módulos
 import "@/modules/billing";
 import "@/modules/gallery";
@@ -74,6 +75,7 @@ function App() {
                 <WorkflowRealtimeBridge />
                 <TasksRealtimeBridge />
                 <AttachmentsRealtimeBridge />
+                <FinanceRealtimeBridge />
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
