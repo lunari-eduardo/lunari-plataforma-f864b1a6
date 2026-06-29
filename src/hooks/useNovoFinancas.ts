@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ItemFinanceiro, GrupoPrincipal, StatusTransacao } from '@/types/financas';
 import { getCurrentDateString } from '@/utils/dateUtils';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabaseFinancialItemsService } from '@/services/FinancialItemsService';
+import { SupabaseFinancialItemsAdapter } from '@/adapters/SupabaseFinancialItemsAdapter';
 import { useFinancialTransactionsSupabase, CreateTransactionParams } from '@/hooks/useFinancialTransactionsSupabase';
+import { itemsStore } from '@/modules/finance/presentation/store/itemsStore';
 
 // Interface compatível com tipos existentes
 interface ItemFinanceiroCompativel extends ItemFinanceiro {
@@ -31,12 +34,7 @@ interface TransacaoCompativel {
 export function useNovoFinancas() {
   // ============= INTEGRAÇÃO COM CARTÕES =============
   const { cartoes, adicionarCartao, atualizarCartao, removerCartao } = useAppContext();
-  
-  // ============= ESTADOS PRINCIPAIS =============
-  
-  const [itensFinanceiros, setItensFinanceiros] = useState<ItemFinanceiroCompativel[]>([]);
-  // Mapa completo (inclui arquivados) — usado SOMENTE para resolver nomes em transações
-  const [itensLookup, setItensLookup] = useState<Map<string, ItemFinanceiroCompativel>>(new Map());
+  const queryClient = useQueryClient();
 
   const [filtroMesAno, setFiltroMesAno] = useState(() => {
     const hoje = getCurrentDateString();
@@ -45,7 +43,39 @@ export function useNovoFinancas() {
   });
 
   // ============= INTEGRAÇÃO SUPABASE =============
-  
+
+  // Itens ativos — query compartilhada e cacheada (também usada pelo
+  // hook de transações). Stale infinito; invalida via FinanceRealtimeBridge.
+  const { data: itensRaw = [] } = useQuery({
+    queryKey: ['fin-items-master'],
+    queryFn: async () => supabaseFinancialItemsService.getAllItems(),
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+    initialData: () => {
+      const fromStore = itemsStore.getAll();
+      if (fromStore.length === 0) return undefined;
+      return fromStore.map((i) => ({
+        ...i,
+        grupo_principal: i.grupo,
+        userId: i.userId,
+        ativo: i.ativo,
+        criadoEm: i.criadoEm,
+      })) as any;
+    },
+  });
+
+  const itensFinanceiros: ItemFinanceiroCompativel[] = useMemo(
+    () =>
+      (itensRaw as any[]).map((item) => ({
+        ...item,
+        grupoPrincipal: item.grupo_principal,
+      })),
+    [itensRaw],
+  );
+
+  // Lookup com arquivados — carregado lazy só se houver transação apontando para id ausente.
+  const [itensLookup, setItensLookup] = useState<Map<string, ItemFinanceiroCompativel>>(() => new Map());
+
   // Hook Supabase para transações
   const {
     transacoes: transacoesSupabase,
@@ -55,33 +85,34 @@ export function useNovoFinancas() {
     atualizarTransacao: atualizarTransacaoSupabase,
     removerTransacao: removerTransacaoSupabase,
     marcarComoPago: marcarComoPagoSupabase,
-    calcularMetricasPorGrupo
+    calcularMetricasPorGrupo,
   } = useFinancialTransactionsSupabase(filtroMesAno);
 
-  // Carregar itens financeiros do Supabase
+  // Carrega arquivados sob demanda quando alguma transação referencia id que não está nos ativos.
   useEffect(() => {
-    const loadItems = async () => {
+    if (!transacoesSupabase.length) return;
+    const activeIds = new Set(itensFinanceiros.map((i) => i.id));
+    const missing = transacoesSupabase.some(
+      (t) => t.item_id && !activeIds.has(t.item_id) && !itensLookup.has(t.item_id),
+    );
+    if (!missing) return;
+    let cancelled = false;
+    (async () => {
       try {
-        const items = await supabaseFinancialItemsService.getAllItems();
-        const itemsCompativeis: ItemFinanceiroCompativel[] = items.map(item => ({
-          ...item,
-          grupoPrincipal: item.grupo_principal
-        }));
-        setItensFinanceiros(itemsCompativeis);
-
-        // Carrega TODOS (inclui arquivados) só para o lookup de nomes
-        const { SupabaseFinancialItemsAdapter } = await import('@/adapters/SupabaseFinancialItemsAdapter');
         const all = await SupabaseFinancialItemsAdapter.getAllItemsIncludingArchived();
+        if (cancelled) return;
         const map = new Map<string, ItemFinanceiroCompativel>();
-        all.forEach(i => map.set(i.id, { ...i, grupoPrincipal: i.grupo_principal }));
+        all.forEach((i) => map.set(i.id, { ...i, grupoPrincipal: i.grupo_principal }));
         setItensLookup(map);
-      } catch (error) {
-        console.error('Erro ao carregar itens financeiros:', error);
+      } catch (err) {
+        console.error('Erro ao carregar itens arquivados:', err);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
+  }, [transacoesSupabase, itensFinanceiros, itensLookup]);
 
-    loadItems();
-  }, []);
 
   // ============= GERENCIAMENTO DE ITENS FINANCEIROS =============
   
