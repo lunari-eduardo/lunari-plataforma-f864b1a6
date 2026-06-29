@@ -15,3 +15,14 @@ export * as financeSelectors from "./domain/selectors";
 
 export { transactionsStore } from "./presentation/store/transactionsStore";
 export { itemsStore } from "./presentation/store/itemsStore";
+
+// Ports (tipos abstratos)
+export type * from "./ports";
+
+// Infra Supabase (impl default)
+export {
+  supabaseTransactionsRepo,
+  supabaseItemsRepo,
+  supabaseExtratoRepo,
+  supabaseGoalsRepo,
+} from "./infrastructure/supabase";
