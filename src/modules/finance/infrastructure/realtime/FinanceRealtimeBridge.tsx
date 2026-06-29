@@ -78,6 +78,20 @@ export function FinanceRealtimeBridge() {
       }, EXTRATO_DEBOUNCE_MS);
     };
 
+    const invalidateTxDebounced = () => {
+      if (txTimerRef.current) clearTimeout(txTimerRef.current);
+      txTimerRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
+      }, TX_DEBOUNCE_MS);
+    };
+
+    const invalidateItemsDebounced = () => {
+      if (itemsTimerRef.current) clearTimeout(itemsTimerRef.current);
+      itemsTimerRef.current = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["fin-items-master"] });
+      }, ITEMS_DEBOUNCE_MS);
+    };
+
     void hydrate();
 
     const cleanup = financeRealtime.subscribe(
@@ -85,6 +99,9 @@ export function FinanceRealtimeBridge() {
       (evt) => {
         if (evt.entity === "transaction") {
           invalidateExtratoDebounced();
+          invalidateTxDebounced();
+        } else if (evt.entity === "item") {
+          invalidateItemsDebounced();
         }
       },
       (status) => {
