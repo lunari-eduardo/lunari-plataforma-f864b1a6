@@ -78,19 +78,17 @@ let __promoteFired = false;
 function fireAndForgetPromoteOverdue(queryClient: ReturnType<typeof useQueryClient>) {
   if (__promoteFired) return;
   __promoteFired = true;
-  const run = () =>
-    supabase
-      .rpc('fin_promote_overdue_to_faturado')
-      .then(({ data, error }) => {
-        if (error) {
-          // silencioso — cron diário cobre
-          return;
-        }
-        if (typeof data === 'number' && data > 0) {
-          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-        }
-      })
-      .catch(() => void 0);
+  const run = async () => {
+    try {
+      const { data, error } = await supabase.rpc('fin_promote_overdue_to_faturado');
+      if (error) return; // silencioso — cron diário cobre
+      if (typeof data === 'number' && data > 0) {
+        queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      }
+    } catch {
+      // ignore
+    }
+  };
   const idle = (window as any).requestIdleCallback as undefined | ((cb: () => void) => number);
   if (idle) idle(run);
   else setTimeout(run, 0);
