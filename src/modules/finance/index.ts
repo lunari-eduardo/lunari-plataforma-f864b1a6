@@ -1,5 +1,17 @@
 /**
  * Entry-point público do módulo Finance.
- * Esqueleto criado na Onda 0 — exports reais começam na Onda 1.
+ *
+ * Onda 1 entregue:
+ *  - domain/{types,events,rules,selectors}
+ *  - presentation/store/{transactionsStore,itemsStore}
+ *
+ * Próxima: Onda 2 (ports + infra Supabase).
  */
-export {};
+
+export * from "./domain/types";
+export * from "./domain/events";
+export * as financeRules from "./domain/rules";
+export * as financeSelectors from "./domain/selectors";
+
+export { transactionsStore } from "./presentation/store/transactionsStore";
+export { itemsStore } from "./presentation/store/itemsStore";
