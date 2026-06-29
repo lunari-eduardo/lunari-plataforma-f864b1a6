@@ -34,6 +34,8 @@ export function FinanceRealtimeBridge() {
   const hiddenSinceRef = useRef<number | null>(null);
   const backoffIdxRef = useRef(0);
   const extratoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const txTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!FLAG_ENABLED) return;
