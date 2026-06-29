@@ -130,6 +130,8 @@ export function FinanceRealtimeBridge() {
       cancelled = true;
       if (backoffTimer) clearTimeout(backoffTimer);
       if (extratoTimerRef.current) clearTimeout(extratoTimerRef.current);
+      if (txTimerRef.current) clearTimeout(txTimerRef.current);
+      if (itemsTimerRef.current) clearTimeout(itemsTimerRef.current);
       document.removeEventListener("visibilitychange", onVisibility);
       cleanup();
     };
