@@ -22,6 +22,8 @@ import { financeRealtime } from "./financeRealtimeChannel";
 const VISIBILITY_REHYDRATE_AFTER_MS = 30_000;
 const BACKOFF_MS = [1_000, 3_000, 10_000];
 const EXTRATO_DEBOUNCE_MS = 400;
+const TX_DEBOUNCE_MS = 200;
+const ITEMS_DEBOUNCE_MS = 200;
 
 const FLAG_ENABLED =
   (import.meta.env.VITE_FINANCE_REALTIME_V2 ?? "true").toString().toLowerCase() !== "false";
