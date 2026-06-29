@@ -75,6 +75,7 @@ function App() {
                 <WorkflowRealtimeBridge />
                 <TasksRealtimeBridge />
                 <AttachmentsRealtimeBridge />
+                <FinanceRealtimeBridge />
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
