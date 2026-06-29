@@ -121,15 +121,14 @@ export function useNovoFinancas() {
       const novoItem = await supabaseFinancialItemsService.createItem(nome, grupo);
       const itemCompativel: ItemFinanceiroCompativel = {
         ...novoItem,
-        grupoPrincipal: novoItem.grupo_principal
+        grupoPrincipal: novoItem.grupo_principal,
       };
-
-      // Pode ser inserção nova OU reativação de arquivado — usa upsert no estado
-      setItensFinanceiros(prev => {
-        const sem = prev.filter(i => i.id !== itemCompativel.id);
-        return [...sem, itemCompativel];
+      // Atualização otimista no cache compartilhado + lookup
+      queryClient.setQueryData(['fin-items-master'], (prev: any[] = []) => {
+        const sem = prev.filter((i: any) => i.id !== itemCompativel.id);
+        return [...sem, novoItem];
       });
-      setItensLookup(prev => {
+      setItensLookup((prev) => {
         const next = new Map(prev);
         next.set(itemCompativel.id, itemCompativel);
         return next;
@@ -150,14 +149,15 @@ export function useNovoFinancas() {
     try {
       const itemAtualizado = await supabaseFinancialItemsService.updateItem(id, {
         nome: updates.nome,
-        ativo: updates.ativo
+        ativo: updates.ativo,
       });
       const itemCompativel: ItemFinanceiroCompativel = {
         ...itemAtualizado,
-        grupoPrincipal: itemAtualizado.grupo_principal
+        grupoPrincipal: itemAtualizado.grupo_principal,
       };
-      
-      setItensFinanceiros(prev => prev.map(item => item.id === id ? itemCompativel : item));
+      queryClient.setQueryData(['fin-items-master'], (prev: any[] = []) =>
+        prev.map((item: any) => (item.id === id ? itemAtualizado : item)),
+      );
       return itemCompativel;
     } catch (error) {
       console.error('Erro ao atualizar item financeiro:', error);
@@ -168,12 +168,15 @@ export function useNovoFinancas() {
   const removerItemFinanceiro = async (id: string) => {
     try {
       await supabaseFinancialItemsService.deleteItem(id);
-      setItensFinanceiros(prev => prev.filter(item => item.id !== id));
+      queryClient.setQueryData(['fin-items-master'], (prev: any[] = []) =>
+        prev.filter((item: any) => item.id !== id),
+      );
     } catch (error) {
       console.error('Erro ao remover item financeiro:', error);
       throw error;
     }
   };
+
 
   // ============= PROCESSAMENTO DE DADOS PARA EXIBIÇÃO =============
   
