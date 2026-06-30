@@ -260,10 +260,8 @@ const LancamentosTab = memo(function LancamentosTab({
         aberto={modalAberto}
         onFechar={() => setModalAberto(false)}
         createTransactionEngine={createTransactionEngine}
-        obterItensPorGrupo={obterItensPorGrupo}
-        grupoAtivo={modalGrupo}
         tipoLancamento={modalTipo}
-        filtrarApenasGrupo={modalFiltrarApenas}
+        scope={modalScope}
       />
 
       <ModalVendaAvulsa
