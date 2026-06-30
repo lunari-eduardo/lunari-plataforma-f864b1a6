@@ -99,9 +99,10 @@ export function computeKpisByNature(
     const valor = t.valorTotal ?? t.valor;
     const pago = t.valorPago ?? (t.status === "Pago" ? valor : 0);
 
-    // Receitas: usar valor pago (regime caixa coerente com KPI atual)
-    // Gastos: usar valor total (previsto/competência) — alinhado ao Dashboard antigo
-    const amount = isReceitaNature(nature) ? pago : valor;
+    // Regime caixa para TUDO (receitas e gastos) — única fonte de verdade
+    // compatível com KPIs do topo do dashboard.
+    const amount = pago;
+    if (amount === 0) continue;
 
     const cur = totalsByNature.get(nature) ?? { total: 0, count: 0 };
     cur.total += amount;
