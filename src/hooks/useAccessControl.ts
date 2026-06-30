@@ -92,7 +92,7 @@ export const useAccessControl = () => {
             // Tentar renovar sessão
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             
-            if (refreshError || !refreshData.session) {
+            if (refreshError || !refreshedSession) {
               console.log('❌ Refresh falhou, sessão expirada');
               return { status: 'session_expired', reason: 'Session refresh failed' };
             }
@@ -148,7 +148,7 @@ export const useAccessControl = () => {
           try {
             const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
             
-            if (refreshError || !refreshData.session) {
+            if (refreshError || !refreshedSession) {
               console.log('❌ Refresh falhou após exceção');
               return { status: 'session_expired', reason: 'Session refresh failed after exception' };
             }
