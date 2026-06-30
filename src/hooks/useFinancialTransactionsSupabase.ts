@@ -23,6 +23,17 @@ import { emitEquipmentCandidate, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useE
 import { roundToTwoDecimals } from '@/utils/financialPrecision';
 import { transactionsStore } from '@/modules/finance/presentation/store/transactionsStore';
 import { itemsStore } from '@/modules/finance/presentation/store/itemsStore';
+// Onda 5b.2 — Facade: este hook agora é uma fachada que delega para as
+// capabilities canônicas do módulo `finance` (`finance.transaction.*`).
+// Mantém a superfície pública intacta para os consumidores legados.
+import { useRunCapability, CapabilityError } from '@/shared/capability/react';
+import {
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+  markTransactionPaid,
+  markTransactionPending,
+} from '@/modules/finance';
 
 export interface CreateTransactionParams {
   item_id: string;
