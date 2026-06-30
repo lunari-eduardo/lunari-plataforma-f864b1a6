@@ -7,11 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { Info, Plus, Loader2 } from 'lucide-react';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 import { parseFinancialInput } from '@/utils/financialPrecision';
+import { useCapabilityMutation } from '@/shared/capability';
+import { createFinancialItem } from '@/modules/finance';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 type TipoLancamento = 'despesa' | 'receita';
 
