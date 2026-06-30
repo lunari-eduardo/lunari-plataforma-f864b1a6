@@ -109,7 +109,7 @@ function fireAndForgetPromoteOverdue(queryClient: ReturnType<typeof useQueryClie
 
 async function checkIfEquipmentAndNotify(
   itemId: string,
-  result: any,
+  allIds: string[],
   variables: CreateTransactionParams | CreateTransactionInput
 ) {
   try {
@@ -120,9 +120,6 @@ async function checkIfEquipmentAndNotify(
       .maybeSingle();
 
     if (item?.nome === 'Equipamentos' && item?.grupo_principal === 'Investimento') {
-      const allIds: string[] = Array.isArray(result)
-        ? result.map((r: any) => r.id).filter(Boolean)
-        : [result?.id].filter(Boolean);
       const transactionId = allIds[0];
       const valorTotal = 'valor' in variables ? variables.valor : (variables as any).valorTotal;
       const observacoes = variables.observacoes;
@@ -149,6 +146,50 @@ async function checkIfEquipmentAndNotify(
   } catch (error) {
     console.error('🔧 [FinancialTransactions] Erro ao verificar equipamento:', error);
   }
+}
+
+/**
+ * Normaliza payload legado para o input da capability `finance.transaction.create`.
+ * Resolve `modo` a partir das flags (`credit_card_id`, `isParcelado`, `isRecorrente`).
+ */
+function toCreateCapabilityInput(
+  params: CreateTransactionParams | CreateTransactionInput,
+): Parameters<typeof createTransaction.execute>[0] {
+  const normalized: CreateTransactionParams =
+    'item_id' in params
+      ? params
+      : {
+          item_id: params.itemId,
+          valor: params.valorTotal,
+          data_vencimento: params.dataPrimeiraOcorrencia,
+          data_competencia: params.dataCompetencia,
+          observacoes: params.observacoes,
+          isRecorrente: params.isRecorrente,
+          isValorFixo: params.isValorFixo,
+          isParcelado: params.isParcelado,
+          parcela_total: params.numeroDeParcelas,
+          credit_card_id: params.cartaoCreditoId,
+          data_compra: params.dataCompra || params.dataPrimeiraOcorrencia,
+        };
+
+  let modo: 'unico' | 'parcelado' | 'recorrente' | 'cartao' = 'unico';
+  if (normalized.credit_card_id) modo = 'cartao';
+  else if (normalized.isParcelado && (normalized.parcela_total ?? 0) > 1) modo = 'parcelado';
+  else if (normalized.isRecorrente) modo = 'recorrente';
+
+  return {
+    itemId: normalized.item_id,
+    valor: normalized.valor,
+    dataVencimento: normalized.data_vencimento,
+    dataCompetencia: modo === 'unico' ? normalized.data_competencia : undefined,
+    observacoes: normalized.observacoes,
+    modo,
+    parcelaTotal: modo === 'parcelado' || modo === 'cartao' ? normalized.parcela_total : undefined,
+    cartaoId: modo === 'cartao' ? normalized.credit_card_id : undefined,
+    dataCompra: modo === 'cartao' ? normalized.data_compra ?? normalized.data_vencimento : undefined,
+    isValorFixo: modo === 'recorrente' ? (normalized.isValorFixo ?? true) : undefined,
+    source: 'user',
+  } as any;
 }
 
 // --------- hook ---------
