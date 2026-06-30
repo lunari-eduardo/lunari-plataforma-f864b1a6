@@ -7,11 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { Info, Plus, Loader2 } from 'lucide-react';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 import { parseFinancialInput } from '@/utils/financialPrecision';
+import { useCapabilityMutation } from '@/shared/capability';
+import { createFinancialItem } from '@/modules/finance';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 type TipoLancamento = 'despesa' | 'receita';
 
@@ -49,6 +53,33 @@ export default function ModalNovoLancamentoRefatorado({
     cartaoCreditoId: '',
     numeroParcelas: 1
   });
+
+  // Inline creator de subcategoria
+  const [criandoSubcategoria, setCriandoSubcategoria] = useState(false);
+  const [novaSubcategoriaNome, setNovaSubcategoriaNome] = useState('');
+  const queryClient = useQueryClient();
+  const createItemMutation = useCapabilityMutation(createFinancialItem, {
+    onSuccess: (res) => {
+      // Atualiza seleção e refaz lista
+      setFormData((prev) => ({ ...prev, item_id: res.id }));
+      setNovaSubcategoriaNome('');
+      setCriandoSubcategoria(false);
+      queryClient.invalidateQueries({ queryKey: ['financial-items'] });
+      queryClient.invalidateQueries({ queryKey: ['novo-financas'] });
+    },
+    onError: (e) => {
+      toast.error(e.message || 'Não foi possível criar a subcategoria.');
+    },
+  });
+
+  const handleCriarSubcategoria = () => {
+    const nome = novaSubcategoriaNome.trim();
+    if (nome.length < 2) {
+      toast.error('Digite ao menos 2 caracteres.');
+      return;
+    }
+    createItemMutation.mutate({ nome, grupo: grupoAtivo, source: 'user' });
+  };
 
   const limparFormulario = () => {
     setFormData({
@@ -173,7 +204,53 @@ export default function ModalNovoLancamentoRefatorado({
                 )}
               </SelectContent>
             </Select>
+
+            {/* Inline creator de subcategoria */}
+            {!criandoSubcategoria ? (
+              <button
+                type="button"
+                onClick={() => setCriandoSubcategoria(true)}
+                className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <Plus className="h-3 w-3" />
+                Nova subcategoria em {grupoAtivo}
+              </button>
+            ) : (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  autoFocus
+                  placeholder={`Nome da subcategoria (${grupoAtivo})`}
+                  value={novaSubcategoriaNome}
+                  onChange={(e) => setNovaSubcategoriaNome(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleCriarSubcategoria(); }
+                    if (e.key === 'Escape') { setCriandoSubcategoria(false); setNovaSubcategoriaNome(''); }
+                  }}
+                  className="h-8 text-sm"
+                  disabled={createItemMutation.isPending}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCriarSubcategoria}
+                  disabled={createItemMutation.isPending || novaSubcategoriaNome.trim().length < 2}
+                  className="h-8"
+                >
+                  {createItemMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Criar'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setCriandoSubcategoria(false); setNovaSubcategoriaNome(''); }}
+                  className="h-8"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </div>
+
 
           <div>
             <Label htmlFor="valor">Valor</Label>
