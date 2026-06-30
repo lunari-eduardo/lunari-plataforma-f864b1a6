@@ -181,13 +181,33 @@ export const aplicarFiltrosBusca = (
   busca: string
 ): LinhaExtrato[] => {
   if (!busca) return linhas;
-  
-  const buscaLower = busca.toLowerCase();
-  return linhas.filter(linha => 
-    linha.descricao.toLowerCase().includes(buscaLower) ||
-    linha.categoria?.toLowerCase().includes(buscaLower) ||
-    linha.cliente?.toLowerCase().includes(buscaLower) ||
-    linha.projeto?.toLowerCase().includes(buscaLower) ||
-    linha.observacoes?.toLowerCase().includes(buscaLower)
-  );
+
+  const buscaLower = busca.toLowerCase().trim();
+
+  // Tenta interpretar como valor numérico (aceita "10", "10,50", "10.50", "1.000,50", "R$ 10")
+  const numericRaw = buscaLower
+    .replace(/r\$\s*/g, '')
+    .replace(/\s+/g, '')
+    .replace(/\.(?=\d{3}(\D|$))/g, '') // remove separador de milhar
+    .replace(',', '.');
+  const buscaNumero = /^\d+(\.\d+)?$/.test(numericRaw) ? parseFloat(numericRaw) : null;
+
+  return linhas.filter(linha => {
+    if (
+      linha.descricao.toLowerCase().includes(buscaLower) ||
+      linha.categoria?.toLowerCase().includes(buscaLower) ||
+      linha.cliente?.toLowerCase().includes(buscaLower) ||
+      linha.projeto?.toLowerCase().includes(buscaLower) ||
+      linha.observacoes?.toLowerCase().includes(buscaLower)
+    ) {
+      return true;
+    }
+    if (buscaNumero !== null) {
+      // Match exato ou valor formatado em string contém o termo digitado
+      if (Math.abs(linha.valor - buscaNumero) < 0.005) return true;
+      const valorStr = linha.valor.toFixed(2);
+      if (valorStr.includes(numericRaw)) return true;
+    }
+    return false;
+  });
 };

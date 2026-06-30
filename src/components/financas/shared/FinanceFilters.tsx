@@ -176,10 +176,10 @@ export default function FinanceFilters({
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Buscar..." 
+              placeholder="Buscar por nome, cliente ou valor (ex: 150,00)" 
               value={busca || ''} 
               onChange={(e) => onBuscaChange?.(e.target.value)} 
-              className="w-36 pl-8" 
+              className="w-64 pl-8" 
               disabled={isDashboard}
             />
           </div>

@@ -10,6 +10,12 @@ import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   TrendingUp,
   Building2,
   Briefcase,
@@ -17,6 +23,7 @@ import {
   UserRound,
   Coins,
   Banknote,
+  Info,
 } from "lucide-react";
 import { formatCurrency } from "@/utils/financialUtils";
 import { useCapabilityQuery } from "@/shared/capability/react";
@@ -49,35 +56,32 @@ export const DashboardGastosBreakdown = memo(function DashboardGastosBreakdown({
     },
   );
 
+  const total = data?.gastos.total ?? 0;
+
   return (
     <section aria-label="Composição de gastos por natureza" className="animate-fade-in">
       <Card className="glass rounded-2xl shadow-card-subtle">
-        <CardHeader className="pb-4 flex flex-row items-start justify-between gap-4">
-          <div>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
             <CardTitle className="text-lg font-semibold">Composição de Gastos</CardTitle>
-            <p className="text-xs text-lunar-textSecondary mt-1">
-              Saídas do período por natureza contábil — independente do nome da categoria.
-            </p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" aria-label="Sobre o cálculo" className="text-muted-foreground hover:text-foreground">
+                    <Info className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+                  Soma apenas <strong>despesas pagas</strong> do período (regime caixa),
+                  agrupadas por natureza contábil. Mesmo critério das métricas do topo —
+                  o total daqui é igual ao card <em>"Total Despesas"</em>.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <div className="text-right">
-            <div className="text-xs text-lunar-textSecondary">Lucro líquido</div>
-            {isLoading ? (
-              <Skeleton className="h-7 w-32 mt-1" />
-            ) : (
-              <div
-                className={`text-xl font-bold mt-1 ${
-                  (data?.lucroLiquido ?? 0) >= 0 ? "text-lunar-success" : "text-destructive"
-                }`}
-              >
-                {formatCurrency(data?.lucroLiquido ?? 0)}
-              </div>
-            )}
-            {!isLoading && data && (
-              <div className="text-[11px] text-lunar-textSecondary">
-                Margem {data.margemLiquida.toFixed(1)}%
-              </div>
-            )}
-          </div>
+          <p className="text-xs text-lunar-textSecondary mt-1">
+            Total pago: <strong>{formatCurrency(total)}</strong> no período selecionado.
+          </p>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -97,7 +101,6 @@ export const DashboardGastosBreakdown = memo(function DashboardGastosBreakdown({
                 { key: "financiamento", label: "Financiamentos", value: data?.gastos.financiamentos ?? 0 },
               ].map(({ key, label, value }) => {
                 const Icon = ICON_BY_NATURE[key] ?? TrendingUp;
-                const total = data?.gastos.total ?? 0;
                 const pct = total > 0 ? (value / total) * 100 : 0;
                 return (
                   <div key={key} className="interactive-surface relative p-4">
@@ -119,9 +122,9 @@ export const DashboardGastosBreakdown = memo(function DashboardGastosBreakdown({
             </div>
           )}
 
-          {!isLoading && data && data.gastos.total === 0 && (
+          {!isLoading && total === 0 && (
             <p className="text-sm text-lunar-textSecondary text-center mt-4">
-              Nenhum gasto registrado no período selecionado.
+              Nenhum gasto pago no período selecionado.
             </p>
           )}
         </CardContent>

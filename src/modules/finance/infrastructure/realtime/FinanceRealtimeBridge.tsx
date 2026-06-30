@@ -82,6 +82,11 @@ export function FinanceRealtimeBridge() {
       if (txTimerRef.current) clearTimeout(txTimerRef.current);
       txTimerRef.current = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
+        // Dashboard direto (query dedicada do useDashboardFinanceiro)
+        queryClient.invalidateQueries({ queryKey: ["dashboard-transactions-period"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-available-years"] });
+        // Breakdown por natureza (capability finance.kpi.byNatureRange)
+        queryClient.invalidateQueries({ queryKey: ["finance", "kpisByNatureRange"] });
       }, TX_DEBOUNCE_MS);
     };
 

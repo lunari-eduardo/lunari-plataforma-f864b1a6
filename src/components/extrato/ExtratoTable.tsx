@@ -60,29 +60,32 @@ export default function ExtratoTable({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <CardTitle className="text-lg">Extrato de Movimentações</CardTitle>
-            <CardDescription>
-              {paginacao 
-                ? `${paginacao.totalCount} movimentações no período`
-                : `${linhas.length} registros encontrados`
+          <div className="min-w-0">
+            <CardTitle className="text-base">Extrato de Movimentações</CardTitle>
+            <CardDescription className="text-[11px] mt-0.5">
+              {paginacao
+                ? `${paginacao.totalCount} movimentações`
+                : `${linhas.length} registros`
               }
               {temMaisPaginas && dataMaisAntiga && dataMaisRecente && (
                 <>
                   <span className="mx-1">·</span>
-                  <span className="font-medium">Página {paginacao!.page} de {paginacao!.totalPages}</span>
+                  <span>pág. {paginacao!.page}/{paginacao!.totalPages}</span>
                   <span className="mx-1">·</span>
-                  <span>exibindo {formatDateForDisplay(dataMaisAntiga)} a {formatDateForDisplay(dataMaisRecente)}</span>
+                  <span>{formatDateForDisplay(dataMaisAntiga)} → {formatDateForDisplay(dataMaisRecente)}</span>
                 </>
               )}
-              <span className="ml-2 text-xs text-muted-foreground">
-                · Visão por {regime === 'competencia' ? 'Competência' : 'Caixa'}
-              </span>
             </CardDescription>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20 text-xs">
+              <span className="text-muted-foreground">Visão:</span>
+              <span className="font-semibold text-primary">
+                {regime === 'competencia' ? 'Competência' : 'Caixa'}
+              </span>
+            </div>
             <ExportDetalhado dados={dadosExportacao} regime={regime} />
           </div>
         </div>
@@ -94,15 +97,6 @@ export default function ExtratoTable({
           </div>
         ) : (
           <>
-            {temMaisPaginas && paginacao!.page === 1 && (
-              <div className="mb-3 flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
-                <Info className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                <div className="text-foreground">
-                  Existem <strong>{paginacao!.totalCount - linhas.length}</strong> movimentações adicionais fora desta página.
-                  Use os controles de paginação abaixo para navegar pelos demais registros do período.
-                </div>
-              </div>
-            )}
             <ScrollArea className="h-[500px] w-full">
               <Table>
                 <TableHeader>
