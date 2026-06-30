@@ -25,13 +25,16 @@ const SUBSCRIPTION_EXEMPT_ROUTES = [
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useUserProfile();
+  const { profile, loading: profileLoading, isProfileError } = useUserProfile();
   const { accessState, loading: accessLoading, refetchAccess } = useAccessControl();
   const { isOnline, lastOnlineAt, isInitializing } = useOnlineStatus();
   const location = useLocation();
 
-  // 1. Verificar autenticação
-  if (authLoading || profileLoading || accessLoading) {
+  // 1. Verificar autenticação. Também aguardamos enquanto há erro recuperável
+  // de profile (ex.: 401 transitório durante refresh de JWT no boot). Sem
+  // isso, o `profile=undefined` cairia em needsOnboarding e geraria
+  // redirect indevido para /onboarding.
+  if (authLoading || profileLoading || accessLoading || (user && isProfileError && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
