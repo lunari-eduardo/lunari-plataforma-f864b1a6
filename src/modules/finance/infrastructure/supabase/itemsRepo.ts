@@ -16,6 +16,9 @@ function adapterItemToDomain(it: any): ItemFinanceiro {
     user_id: it.user_id ?? it.userId,
     ativo: it.ativo,
     created_at: it.created_at ?? it.criadoEm,
+    group_code: it.group_code ?? null,
+    is_system: it.is_system ?? false,
+    archived_at: it.archived_at ?? null,
   });
 }
 

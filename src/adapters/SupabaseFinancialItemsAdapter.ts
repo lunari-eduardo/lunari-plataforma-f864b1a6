@@ -12,6 +12,9 @@ export interface ItemFinanceiroSupabase extends ItemFinanceiro {
   updated_at?: string;
   user_id?: string;
   is_default?: boolean;
+  group_code?: string | null;
+  is_system?: boolean;
+  archived_at?: string | null;
 }
 
 // Itens padrão que são inseridos automaticamente para novos usuários
@@ -129,7 +132,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: item.created_at,
         updated_at: item.updated_at,
         user_id: item.user_id,
-        is_default: item.is_default
+        is_default: item.is_default,
+        group_code: (item as any).group_code ?? null,
+        is_system: (item as any).is_system ?? false,
+        archived_at: (item as any).archived_at ?? null,
       }));
     } catch (error) {
       console.error('Erro ao buscar itens financeiros:', error);
@@ -165,7 +171,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: item.created_at,
         updated_at: item.updated_at,
         user_id: item.user_id,
-        is_default: item.is_default
+        is_default: item.is_default,
+        group_code: (item as any).group_code ?? null,
+        is_system: (item as any).is_system ?? false,
+        archived_at: (item as any).archived_at ?? null,
       }));
     } catch (error) {
       console.error('Erro ao buscar itens (incl. arquivados):', error);
@@ -244,7 +253,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: data.created_at,
         updated_at: data.updated_at,
         user_id: data.user_id,
-        is_default: data.is_default
+        is_default: data.is_default,
+        group_code: (data as any).group_code ?? null,
+        is_system: (data as any).is_system ?? false,
+        archived_at: (data as any).archived_at ?? null,
       };
     } catch (error) {
       console.error('Erro ao criar item financeiro:', error);
@@ -276,7 +288,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: data.created_at,
         updated_at: data.updated_at,
         user_id: data.user_id,
-        is_default: data.is_default
+        is_default: data.is_default,
+        group_code: (data as any).group_code ?? null,
+        is_system: (data as any).is_system ?? false,
+        archived_at: (data as any).archived_at ?? null,
       };
     } catch (error) {
       console.error('Erro ao atualizar item financeiro:', error);
@@ -349,7 +364,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: item.created_at,
         updated_at: item.updated_at,
         user_id: item.user_id,
-        is_default: item.is_default || false
+        is_default: item.is_default || false,
+        group_code: (item as any).group_code ?? null,
+        is_system: (item as any).is_system ?? false,
+        archived_at: (item as any).archived_at ?? null
       }));
     } catch (error) {
       console.error('Erro ao buscar itens por grupo:', error);

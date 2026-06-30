@@ -58,6 +58,9 @@ export function rowToItem(r: any): ItemFinanceiro {
     userId: r.user_id,
     ativo: !!r.ativo,
     criadoEm: r.created_at ?? new Date().toISOString(),
+    groupCode: r.group_code ?? null,
+    isSystem: !!r.is_system,
+    archivedAt: r.archived_at ?? null,
   };
 }
 

@@ -44,6 +44,7 @@ import "./application/commands/deleteTransaction";
 import "./application/commands/markTransactionPaid";
 import "./application/commands/markTransactionPending";
 import "./application/commands/createFinancialItem";
+import "./application/commands/createCategory";
 import "./application/commands/setGoal";
 import "./application/queries/listFinancialItems";
 import "./application/queries/listGoals";
@@ -51,6 +52,10 @@ import "./application/queries/goalsProgress";
 import "./application/queries/listExtrato";
 import "./application/queries/extratoSummary";
 import "./application/queries/dashboardKpis";
+import "./application/queries/listNatures";
+import "./application/queries/listGroups";
+import "./application/queries/listCategories";
+import "./application/queries/kpisByNature";
 
 // Re-export para uso direto
 export { createTransaction } from "./application/commands/createTransaction";
@@ -59,6 +64,7 @@ export { deleteTransaction } from "./application/commands/deleteTransaction";
 export { markTransactionPaid } from "./application/commands/markTransactionPaid";
 export { markTransactionPending } from "./application/commands/markTransactionPending";
 export { createFinancialItem } from "./application/commands/createFinancialItem";
+export { createCategory } from "./application/commands/createCategory";
 export { setGoal } from "./application/commands/setGoal";
 export { listFinancialItems } from "./application/queries/listFinancialItems";
 export { listGoals } from "./application/queries/listGoals";
@@ -66,4 +72,8 @@ export { goalsProgress } from "./application/queries/goalsProgress";
 export { listExtrato } from "./application/queries/listExtrato";
 export { extratoSummary } from "./application/queries/extratoSummary";
 export { dashboardKpis } from "./application/queries/dashboardKpis";
+export { listNatures } from "./application/queries/listNatures";
+export { listGroups } from "./application/queries/listGroups";
+export { listCategories } from "./application/queries/listCategories";
+export { kpisByNature } from "./application/queries/kpisByNature";
 

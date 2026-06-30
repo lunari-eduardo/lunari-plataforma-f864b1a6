@@ -13,8 +13,8 @@ import { GROUPS } from "./group";
 import { isGastoNature, isReceitaNature, type NatureCode } from "./nature";
 
 /** ItemFinanceiro estendido com group_code/is_system/archived_at (campos novos da Onda A). */
-export interface ItemFinanceiroExt extends ItemFinanceiro {
-  groupCode?: GroupCode | null;
+export interface ItemFinanceiroExt extends Omit<ItemFinanceiro, "groupCode"> {
+  groupCode?: GroupCode | string | null;
   isSystem?: boolean;
   archivedAt?: string | null;
 }

@@ -35,6 +35,11 @@ export interface ItemFinanceiro {
   userId: string;
   ativo: boolean;
   criadoEm: string;
+  /** Onda A — vínculo opcional com o catálogo `fin_groups`. */
+  groupCode?: string | null;
+  /** Onda A — flag de item criado pelo sistema (não editável pelo usuário). */
+  isSystem?: boolean;
+  archivedAt?: string | null;
 }
 
 export interface Transacao {
