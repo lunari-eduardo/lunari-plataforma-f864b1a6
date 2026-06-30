@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 import type { MetaPersonalizada, MetaResolvidaParaPeriodo } from '@/types/metas';
 
 export function useMetasPersonalizadas(ano: number) {
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id ?? null;
   const [metas, setMetas] = useState<MetaPersonalizada[]>([]);
   const [metasPorCategoria, setMetasPorCategoria] = useState<MetaPersonalizada[]>([]);
   const [usarPersonalizadas, setUsarPersonalizadasState] = useState(false);
@@ -13,8 +16,8 @@ export function useMetasPersonalizadas(ano: number) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!userId) { setLoading(false); return; }
+        const user = { id: userId };
 
         const { data: config, error: configError } = await supabase
           .from('pricing_configuracoes')
