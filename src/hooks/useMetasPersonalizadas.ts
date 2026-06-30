@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 import type { MetaPersonalizada, MetaResolvidaParaPeriodo } from '@/types/metas';
 
 export function useMetasPersonalizadas(ano: number) {
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id ?? null;
   const [metas, setMetas] = useState<MetaPersonalizada[]>([]);
   const [metasPorCategoria, setMetasPorCategoria] = useState<MetaPersonalizada[]>([]);
   const [usarPersonalizadas, setUsarPersonalizadasState] = useState(false);
@@ -13,8 +16,8 @@ export function useMetasPersonalizadas(ano: number) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!userId) { setLoading(false); return; }
+        const user = { id: userId };
 
         const { data: config, error: configError } = await supabase
           .from('pricing_configuracoes')
@@ -51,11 +54,11 @@ export function useMetasPersonalizadas(ano: number) {
       }
     };
     load();
-  }, [ano]);
+  }, [ano, userId]);
 
   const toggleUsarPersonalizadas = useCallback(async (valor: boolean) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
+    const user = { id: userId };
     const { error } = await supabase
       .from('pricing_configuracoes')
       .update({ usar_metas_personalizadas: valor })
@@ -68,8 +71,8 @@ export function useMetasPersonalizadas(ano: number) {
   }, []);
 
   const setModoMetas = useCallback(async (modo: 'mensal' | 'categoria') => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
+    const user = { id: userId };
     const { error } = await supabase
       .from('pricing_configuracoes')
       .update({ modo_metas: modo } as any)
@@ -82,8 +85,8 @@ export function useMetasPersonalizadas(ano: number) {
   }, []);
 
   const salvarMeta = useCallback(async (mes: number, metaFaturamento: number, metaLucro: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
+    const user = { id: userId };
 
     const { data, error } = await supabase
       .from('metas_personalizadas')
@@ -115,11 +118,11 @@ export function useMetasPersonalizadas(ano: number) {
       });
     }
     return { data, error };
-  }, [ano]);
+  }, [ano, userId]);
 
   const salvarTodasMetas = useCallback(async (metasArray: { mes: number; meta_faturamento: number; meta_lucro: number }[]) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { data: null, error: { message: 'Usuário não autenticado' } };
+    if (!userId) return { data: null, error: { message: 'Usuário não autenticado' } };
+    const user = { id: userId };
 
     const rows = metasArray.map(m => ({
       user_id: user.id,
@@ -144,11 +147,11 @@ export function useMetasPersonalizadas(ano: number) {
       setMetas((data || []).filter(m => m.categoria === '__geral__').sort((a, b) => a.mes - b.mes));
     }
     return { data, error };
-  }, [ano]);
+  }, [ano, userId]);
 
   const salvarMetaCategoria = useCallback(async (mes: number, categoriaId: string, metaFaturamento: number, metaLucro: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { data: null, error: { message: 'Usuário não autenticado' } };
+    if (!userId) return { data: null, error: { message: 'Usuário não autenticado' } };
+    const user = { id: userId };
 
     console.log('[Metas] Salvando meta por categoria:', { mes, categoriaId, metaFaturamento });
 
@@ -182,11 +185,11 @@ export function useMetasPersonalizadas(ano: number) {
       });
     }
     return { data, error };
-  }, [ano]);
+  }, [ano, userId]);
 
   const removerMetaCategoria = useCallback(async (mes: number, categoriaId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!userId) return;
+    const user = { id: userId };
 
     const { error } = await supabase
       .from('metas_personalizadas')
@@ -202,7 +205,7 @@ export function useMetasPersonalizadas(ano: number) {
     }
 
     setMetasPorCategoria(prev => prev.filter(m => !(m.mes === mes && m.categoria === categoriaId)));
-  }, [ano]);
+  }, [ano, userId]);
 
   const getMetaParaMes = useCallback((mes: number): MetaResolvidaParaPeriodo => {
     if (usarPersonalizadas) {

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { getAppBaseUrl } from '@/utils/domainUtils';
+import { ensureFreshSession, forceRefreshSession } from '@/lib/auth/ensureFreshSession';
 
 interface AuthContextType {
   user: User | null;
@@ -31,49 +32,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Marca que o boot inicial já decidiu sobre a sessão. Evita que
+  // `onAuthStateChange` e `ensureFreshSession()` corram para zerar `loading`
+  // em momentos distintos (race que liberava queries antes do refresh
+  // terminar e gerava cascata de 401 + redirect indevido para /onboarding).
+  const bootDoneRef = useRef(false);
+
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // 1) Listener — NÃO toca em `loading` enquanto o boot inicial não decidir.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('🔐 Auth event:', event, 'User:', session?.user?.id || 'none');
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // Tratar eventos específicos
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('✅ Token renovado automaticamente');
-        }
-        
-        if (event === 'SIGNED_OUT') {
-          console.log('👋 Usuário deslogado');
+      (event, nextSession) => {
+        console.log('🔐 Auth event:', event, 'User:', nextSession?.user?.id || 'none');
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+        if (bootDoneRef.current) {
+          // Mantém `loading=false` após boot. Não voltamos a `true` em
+          // TOKEN_REFRESHED para não esconder a UI durante refreshes normais.
+          if (event === 'SIGNED_OUT') {
+            console.log('👋 Usuário deslogado');
+          }
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // 2) Boot: garante UMA única chamada de refresh (singleton) caso o token
+    //    esteja próximo de expirar. Só então libera a árvore.
+    (async () => {
+      try {
+        const { session: fresh } = await ensureFreshSession();
+        setSession(fresh);
+        setUser(fresh?.user ?? null);
+      } finally {
+        bootDoneRef.current = true;
+        setLoading(false);
+      }
+    })();
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Refresh proativo - verificar token a cada minuto
+  // Refresh proativo - verificar token a cada minuto (usa o mesmo singleton,
+  // não dispara refresh paralelo se outro já está em andamento).
   useEffect(() => {
     const checkTokenExpiry = async () => {
       if (!session?.expires_at) return;
-      
-      const expiresAt = session.expires_at * 1000; // converter para ms
+
+      const expiresAt = session.expires_at * 1000;
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;
-      
-      // Se falta menos de 5 minutos para expirar, forçar refresh
+
       if (expiresAt - now < fiveMinutes && expiresAt > now) {
         console.log('⏰ Token expirando em breve, forçando refresh...');
-        const { error } = await supabase.auth.refreshSession();
+        const { error } = await forceRefreshSession();
         if (error) {
           console.error('❌ Erro ao renovar sessão proativamente:', error);
         } else {
@@ -81,11 +91,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     };
-    
-    // Verificar imediatamente e depois a cada minuto
+
     checkTokenExpiry();
     const interval = setInterval(checkTokenExpiry, 60000);
-    
+
     return () => clearInterval(interval);
   }, [session?.expires_at]);
 

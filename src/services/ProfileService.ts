@@ -72,10 +72,27 @@ export class ProfileService {
     userId: string,
     updates: Partial<Omit<UserProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
   ): Promise<UserProfile> {
+    // Guarda defensiva: nunca rebaixar `is_onboarding_complete` de `true`
+    // para `false` em um perfil existente. Esse downgrade só pode acontecer
+    // por caminho explícito (admin), nunca por reset acidental causado por
+    // auto-criação de perfil vazio em meio a falha de fetch.
+    const sanitized: typeof updates = { ...updates };
+    if (sanitized.is_onboarding_complete === false) {
+      try {
+        const existing = await this.getProfile(userId);
+        if (existing?.is_onboarding_complete === true) {
+          delete sanitized.is_onboarding_complete;
+        }
+      } catch {
+        // se a leitura falhar, melhor não tocar no campo — remover do payload.
+        delete sanitized.is_onboarding_complete;
+      }
+    }
+
     // Primeiro, tentar fazer UPDATE normal
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(sanitized)
       .eq('user_id', userId)
       .select()
       .single();
@@ -86,8 +103,8 @@ export class ProfileService {
         .from('profiles')
         .insert({
           user_id: userId,
-          email: updates.email || '',
-          ...updates
+          email: sanitized.email || '',
+          ...sanitized
         })
         .select()
         .single();

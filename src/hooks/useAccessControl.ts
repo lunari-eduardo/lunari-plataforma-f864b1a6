@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnlineStatus } from './useOnlineStatus';
+import { forceRefreshSession } from '@/lib/auth/ensureFreshSession';
 
 export interface AccessState {
   status: 'ok' | 'suspended' | 'no_subscription' | 'not_authenticated' | 'loading' | 'trial_expired' | 'network_error' | 'session_expired';
@@ -89,9 +90,9 @@ export const useAccessControl = () => {
             console.log('🔐 Erro de autenticação detectado, tentando refresh...');
             
             // Tentar renovar sessão
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            
-            if (refreshError || !refreshData.session) {
+            const { session: refreshedSession, error: refreshError } = await forceRefreshSession();
+
+            if (refreshError || !refreshedSession) {
               console.log('❌ Refresh falhou, sessão expirada');
               return { status: 'session_expired', reason: 'Session refresh failed' };
             }
@@ -145,9 +146,9 @@ export const useAccessControl = () => {
           console.log('🔐 Exceção de autenticação detectada, tentando refresh...');
           
           try {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            
-            if (refreshError || !refreshData.session) {
+            const { session: refreshedSession, error: refreshError } = await forceRefreshSession();
+
+            if (refreshError || !refreshedSession) {
               console.log('❌ Refresh falhou após exceção');
               return { status: 'session_expired', reason: 'Session refresh failed after exception' };
             }

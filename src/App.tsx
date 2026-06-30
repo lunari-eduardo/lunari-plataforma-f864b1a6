@@ -29,10 +29,15 @@ import { detectAppContext } from "./lib/appContext";
 const PhotographerApp = React.lazy(() => import("./app-photographer/PhotographerApp"));
 const AdminApp = React.lazy(() => import("./app-admin/AdminApp"));
 
+import { isAuthError } from "@/lib/auth/isAuthError";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
+      // Retry SOMENTE em erros de auth (JWT expirado durante boot). Outros
+      // erros não devem reexecutar automaticamente para evitar cascata.
+      retry: (count, error) => isAuthError(error) && count < 2,
+      retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 4000),
       refetchOnWindowFocus: false,
     },
   },

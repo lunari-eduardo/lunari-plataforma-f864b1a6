@@ -6,33 +6,30 @@ import { ProfileService, UserProfile as SupabaseProfile } from '@/services/Profi
 import { UserBranding, UserPreferences, DEFAULT_USER_BRANDING, DEFAULT_USER_PREFERENCES } from '@/types/userProfile';
 import { UserDataService } from '@/services/UserDataService';
 import { supabase } from '@/integrations/supabase/client';
+import { isAuthError } from '@/lib/auth/isAuthError';
 
 export function useUserProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Query para buscar perfil (com criação automática se não existir)
-  const { data: profile, isLoading: loading } = useQuery({
+  // Query para buscar perfil.
+  // IMPORTANTE: NÃO criamos mais perfil vazio aqui. A criação inicial é
+  // responsabilidade exclusiva do fluxo `/onboarding` (com dados reais).
+  // Auto-criar vazio aqui causava regressão do `is_onboarding_complete`
+  // sempre que a query rodava durante uma transient 401 (ex.: race de
+  // refresh de JWT no boot do app), jogando o usuário no /onboarding.
+  const { data: profile, isLoading: loading, isError: isProfileError } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
-      let userProfile = await ProfileService.getProfile(user.id);
-      
-      // Se perfil não existe, criar um básico
-      if (!userProfile) {
-        userProfile = await ProfileService.updateProfile(user.id, {
-          email: user.email || '',
-          nome: '',
-          cidade: '',
-          is_onboarding_complete: false
-        });
-      }
-      
-      return userProfile;
+      return ProfileService.getProfile(user.id);
     },
     enabled: !!user,
-    staleTime: 1000 * 60 * 5 // 5 minutos
+    staleTime: 1000 * 60 * 5,
+    // Retry quando o erro for de auth (JWT expirado durante boot) — o
+    // singleton ensureFreshSession garante 1 refresh por vez.
+    retry: (count, err) => isAuthError(err) && count < 3,
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 4000),
   });
 
   // Mutation para atualizar perfil
@@ -159,6 +156,7 @@ export function useUserProfile() {
   return {
     profile,
     loading,
+    isProfileError,
     updateProfile: updateProfileMutation.mutate,
     updateProfileAsync: updateProfileMutation.mutateAsync,
     saveProfile: updateProfileMutation.mutate, // Alias for compatibility
