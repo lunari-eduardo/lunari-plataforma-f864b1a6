@@ -7,6 +7,7 @@ import {
   DashboardChartsBlock,
   EquipmentModalGateway
 } from './dashboard';
+import { DashboardGastosBreakdown } from './dashboard/DashboardGastosBreakdown';
 
 const DashboardFinanceiro = memo(function DashboardFinanceiro() {
   const {
@@ -25,6 +26,8 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
     composicaoDespesas,
     roiData,
     comparisonData,
+    startDate,
+    endDate,
     getNomeMes,
     equipmentModalOpen,
     equipmentData,
@@ -52,6 +55,12 @@ const DashboardFinanceiro = memo(function DashboardFinanceiro() {
         <DashboardKpiCards
           kpisData={kpisData}
           comparisonData={comparisonData}
+        />
+
+        {/* Onda D — Composição de Gastos por Natureza */}
+        <DashboardGastosBreakdown
+          startDate={startDate}
+          endDate={endDate}
         />
 
         {/* Gráficos Circulares de Metas */}

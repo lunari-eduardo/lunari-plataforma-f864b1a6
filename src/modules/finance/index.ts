@@ -56,6 +56,7 @@ import "./application/queries/listNatures";
 import "./application/queries/listGroups";
 import "./application/queries/listCategories";
 import "./application/queries/kpisByNature";
+import "./application/queries/kpisByNatureRange";
 
 // Re-export para uso direto
 export { createTransaction } from "./application/commands/createTransaction";
@@ -76,4 +77,5 @@ export { listNatures } from "./application/queries/listNatures";
 export { listGroups } from "./application/queries/listGroups";
 export { listCategories } from "./application/queries/listCategories";
 export { kpisByNature } from "./application/queries/kpisByNature";
+export { kpisByNatureRange } from "./application/queries/kpisByNatureRange";
 

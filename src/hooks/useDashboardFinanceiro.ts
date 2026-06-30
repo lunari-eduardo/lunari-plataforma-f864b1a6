@@ -684,6 +684,9 @@ export function useDashboardFinanceiro() {
     setDataInicio,
     dataFim,
     setDataFim,
+    // Datas computadas do período ativo (Onda D — usado por kpisByNatureRange)
+    startDate,
+    endDate,
     categoriaSelecionada,
     setCategoriaSelecionada,
     categoriasDisponiveis,
