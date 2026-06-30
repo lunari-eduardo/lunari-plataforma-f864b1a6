@@ -128,22 +128,24 @@ Ordem dos commits sugerida (todos pequenos, sem mudança de UI):
 2. **`createTransaction.ts`** — `superRefine` rejeitando `dataCompetencia` quando `modo !== 'unico'`. 5 linhas.
 3. **`updateTransaction.ts`** — `dataCompetencia` `.nullable().optional()`. 1 linha.
 4. **`transactionsRepo.ts` + `SupabaseFinancialTransactionsAdapter.ts`** — propagar `forma_pagamento` em parcelado/recorrente/cartão. ~15 linhas no adapter (campo opcional no INSERT) + 3 linhas em cada wrapper do repo.
-5. **`policies.ts`** — confirmar/implementar `requiresApprovalWhen: source==='ai'` para `finance.transaction.delete`. A inspeccionar antes de tocar.
+## 7. Ajustes aplicados nesta entrega (5b.1)
 
-### Não-mudanças confirmadas
+1. ✅ `transactionsRepo.mapCreatePayload`: calcula status inicial (`Faturado` se vencimento ≤ hoje, senão `Agendado`).
+2. ✅ `transactionsRepo.mapCreatePayload`: propaga `forma_pagamento` quando enviada.
+3. ✅ `createTransaction` (capability): `superRefine` rejeita `dataCompetencia` quando `modo !== 'unico'`.
+4. ✅ `updateTransaction` (capability): `dataCompetencia` agora `.nullable().optional()`.
+5. ✅ `transactionsRepo` (port + impl) + `SupabaseFinancialTransactionsAdapter`: propagam `formaPagamento` em parcelado, recorrente e cartão. Cartão grava `cartao_credito` como default.
+6. ✅ `CapabilityRuntimeProvider` (`react.tsx`): concede `finance:read|write|delete` ao usuário autenticado.
 
-- `createParcelado`/`createRecorrente`/`createCartao`: assinatura e comportamento mantidos.
-- Equipment scan: permanece no facade até Onda 7.2 migrar para evento.
-- Realtime: nada muda.
+## 8. Checklist de prontidão para 5b.2 (facade `useNovoFinancas`)
 
----
+- [x] Ajustes 1–6 aplicados.
+- [ ] **Teste manual usuário** (precisa autorização):
+  - Criar 1 lançamento único vencido hoje → deve nascer "Faturado" no paint imediato.
+  - Criar 1 parcelado em 3x com forma de pagamento → ver `forma_pagamento` no banco em todas as parcelas.
+  - Criar 1 recorrente "valor fixo" → 12 meses gerados; forma de pagamento (se houver) propagada.
+  - Criar 1 compra no cartão em 2x → `forma_pagamento='cartao_credito'` nas 2 parcelas.
+  - Deletar pela UI → executa direto sem aprovação.
 
-## 7. Checklist de prontidão para 5b.2 (facade `useNovoFinancas`)
+Quando todos confirmados, segue para a **Onda 5b.2** (migrar `useNovoFinancas` para a capability).
 
-- [ ] Itens 1–4 acima aplicados na capability.
-- [ ] Item 5 (policy) validado em `src/shared/capability/policies.ts`.
-- [ ] Teste manual: criar 1 lançamento vencido hoje → aparece "Faturado" imediatamente.
-- [ ] Teste manual: criar 1 parcelado em 3x com `formaPagamento='pix'` → cada parcela tem `forma_pagamento='pix'` no DB.
-- [ ] Teste manual: Lu tenta `finance.transaction.delete` → exige aprovação. Usuário deleta pela UI → não exige.
-
-Quando todos checados, segue para a Onda 5b.2.
