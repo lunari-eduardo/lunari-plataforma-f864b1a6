@@ -157,7 +157,7 @@ const LancamentosTab = memo(function LancamentosTab({
 
       {/* Seções unificadas */}
       <div className="space-y-3">
-        {SECOES_ORDEM.map(({ grupo, label }) => {
+        {SECOES_ORDEM.map(({ grupo, label, scope }) => {
           const transacoes = transacoesPorGrupo[grupo] || [];
           const info = getInfoPorGrupo(grupo);
           const metricas = calcularMetricasPorGrupo(grupo);
