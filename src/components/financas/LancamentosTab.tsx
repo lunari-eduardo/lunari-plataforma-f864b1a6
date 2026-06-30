@@ -55,8 +55,7 @@ const LancamentosTab = memo(function LancamentosTab({
   const [modalAberto, setModalAberto] = useState(false);
   const [modalVendaAvulsa, setModalVendaAvulsa] = useState(false);
   const [modalTipo, setModalTipo] = useState<'despesa' | 'receita'>('despesa');
-  const [modalGrupo, setModalGrupo] = useState<GrupoPrincipal>('Despesa Variável');
-  const [modalFiltrarApenas, setModalFiltrarApenas] = useState(false);
+  const [modalScope, setModalScope] = useState<GroupScope>('despesa');
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     SECOES_ORDEM.forEach(s => { initial[s.grupo] = true; });
@@ -71,20 +70,22 @@ const LancamentosTab = memo(function LancamentosTab({
 
     SECOES_ORDEM.forEach(({ grupo }) => {
       const metricas = calcularMetricasPorGrupo(grupo);
-      if (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') {
+      if (grupo === 'Receita Não Operacional') {
         totalReceitas += metricas.total || 0;
       } else {
         totalDespesas += metricas.total || 0;
       }
     });
+    // Receitas operacionais ainda entram no saldo (vêm de Venda/Workflow).
+    const opMetricas = calcularMetricasPorGrupo('Receita Operacional');
+    totalReceitas += opMetricas.total || 0;
 
     return { totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
   }, [calcularMetricasPorGrupo, transacoesPorGrupo]);
 
-  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal, filtrarApenas = false) => {
+  const abrirModal = (tipo: 'despesa' | 'receita', scope?: GroupScope) => {
     setModalTipo(tipo);
-    setModalGrupo(grupo || (tipo === 'receita' ? 'Receita Não Operacional' : 'Despesa Variável'));
-    setModalFiltrarApenas(filtrarApenas);
+    setModalScope(scope ?? (tipo === 'receita' ? 'receita_extra' : 'despesa'));
     setModalAberto(true);
   };
 
