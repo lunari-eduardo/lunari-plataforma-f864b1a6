@@ -1,6 +1,6 @@
 # Paridade de capabilities `finance.transaction.*` vs. hooks/modais legados
 
-**Status: Onda 5b.1 concluída** — ajustes 1–6 abaixo aplicados. Pronto para iniciar 5b.2 (facade `useNovoFinancas`).
+**Status: Onda 5b.2 concluída** — `useFinancialTransactionsSupabase` (e por consequência `useNovoFinancas`, que apenas o consome) agora delega 100% das mutações para as capabilities `finance.transaction.{create,update,delete,markPaid,markPending}`. A superfície pública dos hooks foi preservada — nenhum modal/caller precisou mudar.
 
 
 Auditoria realizada na Onda 5b.1 antes de migrar `useNovoFinancas`, `useFinancialTransactionsSupabase`, `useExtratoSupabase` para usarem as capabilities.
@@ -149,3 +149,32 @@ Ordem dos commits sugerida (todos pequenos, sem mudança de UI):
 
 Quando todos confirmados, segue para a **Onda 5b.2** (migrar `useNovoFinancas` para a capability).
 
+
+---
+
+## 9. Onda 5b.2 — Migração para facade (concluída)
+
+`useFinancialTransactionsSupabase` foi reescrito para usar capabilities internamente:
+
+- `criarTransacao` → `finance.transaction.create` (helper `toCreateCapabilityInput` resolve `modo` a partir das flags legadas `credit_card_id` / `isParcelado` / `isRecorrente`).
+- `atualizarTransacao` → roteia `status` para `markPaid`/`markPending` e demais campos para `finance.transaction.update`. Status `Agendado` é ignorado com warn (sem capability dedicada).
+- `removerTransacao` → `finance.transaction.delete`.
+- `marcarComoPago` → `finance.transaction.markPaid`.
+
+Side-effects preservados:
+- `checkIfEquipmentAndNotify` continua disparando no `onSuccess` do create — agora recebe `ids: string[]` diretamente do output da capability.
+- `invalidateQueries(['financial-transactions'])` + `['extrato-unificado']` mantém o paint imediato.
+- Toasts de erro mantidos (sucesso continua silencioso — política do projeto).
+
+`useNovoFinancas` **não precisou de mudanças**: ele consome `useFinancialTransactionsSupabase` e herdou a migração automaticamente.
+
+### Checklist de homologação (5b.2)
+
+- [ ] Criar lançamento único vencido hoje → "Faturado" no paint.
+- [ ] Criar parcelado 3× → status correto por parcela.
+- [ ] Criar recorrente "valor fixo" → 12 meses.
+- [ ] Compra no cartão 2× → `forma_pagamento='cartao_credito'`.
+- [ ] Editar valor/data/observação inline → persiste.
+- [ ] Marcar como pago / reabrir → status muda.
+- [ ] Excluir lançamento → some da lista.
+- [ ] Auditar evento "finance.transaction.created" no LunariEvents log.
