@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnlineStatus } from './useOnlineStatus';
+import { forceRefreshSession } from '@/lib/auth/ensureFreshSession';
 
 export interface AccessState {
   status: 'ok' | 'suspended' | 'no_subscription' | 'not_authenticated' | 'loading' | 'trial_expired' | 'network_error' | 'session_expired';
