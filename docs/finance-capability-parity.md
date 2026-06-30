@@ -1,6 +1,6 @@
 # Paridade de capabilities `finance.transaction.*` vs. hooks/modais legados
 
-**Status: Onda 5b.1 concluída** — ajustes 1–6 abaixo aplicados. Pronto para iniciar 5b.2 (facade `useNovoFinancas`).
+**Status: Onda 5b.2 concluída** — `useFinancialTransactionsSupabase` (e por consequência `useNovoFinancas`, que apenas o consome) agora delega 100% das mutações para as capabilities `finance.transaction.{create,update,delete,markPaid,markPending}`. A superfície pública dos hooks foi preservada — nenhum modal/caller precisou mudar.
 
 
 Auditoria realizada na Onda 5b.1 antes de migrar `useNovoFinancas`, `useFinancialTransactionsSupabase`, `useExtratoSupabase` para usarem as capabilities.
