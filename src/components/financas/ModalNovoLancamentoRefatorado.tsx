@@ -204,7 +204,53 @@ export default function ModalNovoLancamentoRefatorado({
                 )}
               </SelectContent>
             </Select>
+
+            {/* Inline creator de subcategoria */}
+            {!criandoSubcategoria ? (
+              <button
+                type="button"
+                onClick={() => setCriandoSubcategoria(true)}
+                className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary opacity-70 hover:opacity-100 transition-opacity"
+              >
+                <Plus className="h-3 w-3" />
+                Nova subcategoria em {grupoAtivo}
+              </button>
+            ) : (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  autoFocus
+                  placeholder={`Nome da subcategoria (${grupoAtivo})`}
+                  value={novaSubcategoriaNome}
+                  onChange={(e) => setNovaSubcategoriaNome(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleCriarSubcategoria(); }
+                    if (e.key === 'Escape') { setCriandoSubcategoria(false); setNovaSubcategoriaNome(''); }
+                  }}
+                  className="h-8 text-sm"
+                  disabled={createItemMutation.isPending}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCriarSubcategoria}
+                  disabled={createItemMutation.isPending || novaSubcategoriaNome.trim().length < 2}
+                  className="h-8"
+                >
+                  {createItemMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Criar'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setCriandoSubcategoria(false); setNovaSubcategoriaNome(''); }}
+                  className="h-8"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </div>
+
 
           <div>
             <Label htmlFor="valor">Valor</Label>
