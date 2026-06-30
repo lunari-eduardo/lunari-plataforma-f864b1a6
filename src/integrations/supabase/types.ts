@@ -1837,36 +1837,115 @@ export type Database = {
         }
         Relationships: []
       }
+      fin_groups: {
+        Row: {
+          code: string
+          created_at: string
+          icon: string | null
+          label: string
+          nature_code: string
+          ordering: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          icon?: string | null
+          label: string
+          nature_code: string
+          ordering?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          icon?: string | null
+          label?: string
+          nature_code?: string
+          ordering?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_groups_nature_code_fkey"
+            columns: ["nature_code"]
+            isOneToOne: false
+            referencedRelation: "fin_natures"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       fin_items_master: {
         Row: {
+          archived_at: string | null
           ativo: boolean | null
           created_at: string | null
+          group_code: string | null
           grupo_principal: string
           id: string
           is_default: boolean | null
+          is_system: boolean
           nome: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           ativo?: boolean | null
           created_at?: string | null
+          group_code?: string | null
           grupo_principal: string
           id?: string
           is_default?: boolean | null
+          is_system?: boolean
           nome: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           ativo?: boolean | null
           created_at?: string | null
+          group_code?: string | null
           grupo_principal?: string
           id?: string
           is_default?: boolean | null
+          is_system?: boolean
           nome?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fin_items_master_group_code_fkey"
+            columns: ["group_code"]
+            isOneToOne: false
+            referencedRelation: "fin_groups"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      fin_natures: {
+        Row: {
+          affects_pnl: boolean
+          code: string
+          created_at: string
+          label: string
+          ordering: number
+          sign: string
+        }
+        Insert: {
+          affects_pnl?: boolean
+          code: string
+          created_at?: string
+          label: string
+          ordering?: number
+          sign: string
+        }
+        Update: {
+          affects_pnl?: boolean
+          code?: string
+          created_at?: string
+          label?: string
+          ordering?: number
+          sign?: string
         }
         Relationships: []
       }
