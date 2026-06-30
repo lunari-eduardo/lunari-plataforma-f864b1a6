@@ -156,6 +156,7 @@ export function useUserProfile() {
   return {
     profile,
     loading,
+    isProfileError,
     updateProfile: updateProfileMutation.mutate,
     updateProfileAsync: updateProfileMutation.mutateAsync,
     saveProfile: updateProfileMutation.mutate, // Alias for compatibility
