@@ -277,13 +277,14 @@ export class SupabaseFinancialTransactionsAdapter {
     dataInicio: string;
     isValorFixo: boolean;
     observacoes?: string;
+    formaPagamento?: string;
   }): Promise<FinancialTransactionDB[]> {
-    const { itemId, valor, diaVencimento, dataInicio, isValorFixo, observacoes } = params;
+    const { itemId, valor, diaVencimento, dataInicio, isValorFixo, observacoes, formaPagamento } = params;
     const valorArredondado = roundToTwoDecimals(valor); // Garantir precisão
     const [ano, mes] = dataInicio.split('-').map(Number);
     
     // Gerar 12 transações (uma para cada mês restante do ano)
-    const transactions: Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
     
     for (let m = mes; m <= 12; m++) {
       const ultimoDiaMes = new Date(ano, m, 0).getDate();
@@ -303,11 +304,12 @@ export class SupabaseFinancialTransactionsAdapter {
         recurring_blueprint_id: undefined,
         credit_card_id: undefined,
         data_compra: undefined,
-        parent_id: `recurring_${Date.now()}`
+        parent_id: `recurring_${Date.now()}`,
+        ...(formaPagamento ? { forma_pagamento: formaPagamento } : {}),
       });
     }
 
-    return this.createMultipleTransactions(transactions);
+    return this.createMultipleTransactions(transactions as any);
   }
 
   /**
@@ -319,12 +321,13 @@ export class SupabaseFinancialTransactionsAdapter {
     dataPrimeiraOcorrencia: string;
     numeroDeParcelas: number;
     observacoes?: string;
+    formaPagamento?: string;
   }): Promise<FinancialTransactionDB[]> {
-    const { itemId, valorTotal, dataPrimeiraOcorrencia, numeroDeParcelas, observacoes } = params;
+    const { itemId, valorTotal, dataPrimeiraOcorrencia, numeroDeParcelas, observacoes, formaPagamento } = params;
     const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
     const parentId = `parcela_${Date.now()}`;
 
-    const transactions: Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
     
     for (let i = 0; i < numeroDeParcelas; i++) {
       const dataVencimento = this.calculateParcelDate(dataPrimeiraOcorrencia, i);
@@ -340,11 +343,12 @@ export class SupabaseFinancialTransactionsAdapter {
         recurring_blueprint_id: undefined,
         credit_card_id: undefined,
         data_compra: undefined,
-        parent_id: parentId
+        parent_id: parentId,
+        ...(formaPagamento ? { forma_pagamento: formaPagamento } : {}),
       });
     }
 
-    return this.createMultipleTransactions(transactions);
+    return this.createMultipleTransactions(transactions as any);
   }
 
   /**
@@ -357,11 +361,12 @@ export class SupabaseFinancialTransactionsAdapter {
     cartaoCreditoId: string;
     numeroDeParcelas?: number;
     observacoes?: string;
+    formaPagamento?: string;
   }): Promise<FinancialTransactionDB[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    const { itemId, valorTotal, dataCompra, cartaoCreditoId, numeroDeParcelas = 1, observacoes } = params;
+    const { itemId, valorTotal, dataCompra, cartaoCreditoId, numeroDeParcelas = 1, observacoes, formaPagamento } = params;
 
     // Buscar dados do cartão
     const { data: cartaoData, error: cartaoError } = await supabase
@@ -375,8 +380,10 @@ export class SupabaseFinancialTransactionsAdapter {
 
     const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
     const parentId = `cartao_${Date.now()}`;
+    // Default: cartão grava forma_pagamento='cartao_credito' a menos que cliente sobrescreva.
+    const formaPagamentoEfetiva = formaPagamento || 'cartao_credito';
 
-    const transactions: Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
 
     for (let i = 0; i < numeroDeParcelas; i++) {
       const dataVencimento = this.calculateCreditCardDueDate(
@@ -397,11 +404,12 @@ export class SupabaseFinancialTransactionsAdapter {
         parcela_total: numeroDeParcelas > 1 ? numeroDeParcelas : undefined,
         observacoes: observacoes ? `${observacoes} (Cartão: ${cartaoData.nome})` : `Cartão: ${cartaoData.nome}`,
         recurring_blueprint_id: undefined,
-        parent_id: parentId
+        parent_id: parentId,
+        forma_pagamento: formaPagamentoEfetiva,
       });
     }
 
-    return this.createMultipleTransactions(transactions);
+    return this.createMultipleTransactions(transactions as any);
   }
 
   /**

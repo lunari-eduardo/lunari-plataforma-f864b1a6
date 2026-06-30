@@ -51,6 +51,10 @@ const DEFAULT_USER_PERMISSIONS: string[] = [
   "tasks:read",
   "tasks:write",
   "tasks:delete",
+  // Onda 5b — IDs canônicos do módulo `finance` (alinhados às capabilities `finance.*`).
+  "finance:read",
+  "finance:write",
+  "finance:delete",
 ];
 
 interface CapabilityRuntimeValue {

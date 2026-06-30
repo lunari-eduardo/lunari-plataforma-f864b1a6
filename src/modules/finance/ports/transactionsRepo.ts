@@ -35,6 +35,7 @@ export interface CreateRecorrenteInput {
   dataInicio: string;
   isValorFixo: boolean;
   observacoes?: string;
+  formaPagamento?: FormaPagamento | null;
 }
 
 export interface CreateCartaoInput {
@@ -44,6 +45,7 @@ export interface CreateCartaoInput {
   cartaoId: string;
   numeroDeParcelas?: number;
   observacoes?: string;
+  formaPagamento?: FormaPagamento | null;
 }
 
 export interface UpdateTransactionInput {

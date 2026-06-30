@@ -10,7 +10,7 @@ const Input = z
     id: z.string().uuid(),
     valor: z.number().positive().optional(),
     dataVencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    dataCompetencia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    dataCompetencia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
     observacoes: z.string().max(500).nullable().optional(),
     formaPagamento: z
       .enum(["dinheiro", "pix", "transferencia", "boleto", "cartao_debito", "cartao_credito"])
