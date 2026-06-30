@@ -12,6 +12,9 @@ export interface ItemFinanceiroSupabase extends ItemFinanceiro {
   updated_at?: string;
   user_id?: string;
   is_default?: boolean;
+  group_code?: string | null;
+  is_system?: boolean;
+  archived_at?: string | null;
 }
 
 // Itens padrão que são inseridos automaticamente para novos usuários
