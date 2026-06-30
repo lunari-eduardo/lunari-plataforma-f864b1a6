@@ -90,8 +90,8 @@ export const useAccessControl = () => {
             console.log('🔐 Erro de autenticação detectado, tentando refresh...');
             
             // Tentar renovar sessão
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            
+            const { session: refreshedSession, error: refreshError } = await forceRefreshSession();
+
             if (refreshError || !refreshedSession) {
               console.log('❌ Refresh falhou, sessão expirada');
               return { status: 'session_expired', reason: 'Session refresh failed' };
@@ -146,8 +146,8 @@ export const useAccessControl = () => {
           console.log('🔐 Exceção de autenticação detectada, tentando refresh...');
           
           try {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            
+            const { session: refreshedSession, error: refreshError } = await forceRefreshSession();
+
             if (refreshError || !refreshedSession) {
               console.log('❌ Refresh falhou após exceção');
               return { status: 'session_expired', reason: 'Session refresh failed after exception' };
