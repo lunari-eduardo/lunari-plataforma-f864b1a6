@@ -229,8 +229,8 @@ const LancamentosTab = memo(function LancamentosTab({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const tipo = (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') ? 'receita' : 'despesa';
-                        abrirModal(tipo, grupo, true);
+                        const tipo = grupo === 'Receita Não Operacional' ? 'receita' : 'despesa';
+                        abrirModal(tipo, scope);
                       }}
                       className={`flex items-center gap-1 text-xs ${info.corTema} opacity-60 hover:opacity-100 transition-opacity pl-7 py-1.5`}
                     >
