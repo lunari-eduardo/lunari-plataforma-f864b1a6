@@ -10,8 +10,11 @@
 
 export * from "./domain/types";
 export * from "./domain/events";
+export * from "./domain/nature";
+export * from "./domain/group";
 export * as financeRules from "./domain/rules";
 export * as financeSelectors from "./domain/selectors";
+export * as financeKpis from "./domain/selectorsByNature";
 
 export { transactionsStore } from "./presentation/store/transactionsStore";
 export { itemsStore } from "./presentation/store/itemsStore";
