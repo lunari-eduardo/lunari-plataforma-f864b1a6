@@ -303,7 +303,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     result: Awaited<ReturnType<typeof runCapability>>,
   ): T {
     if (result.ok) return result.value as T;
-    throw new CapabilityError(result.error);
+    throw new CapabilityError((result as { ok: false; error: any }).error);
   }
 
   const criarTransacaoMutation = useMutation({
