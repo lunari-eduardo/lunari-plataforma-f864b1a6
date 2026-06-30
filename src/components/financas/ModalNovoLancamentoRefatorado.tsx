@@ -125,6 +125,8 @@ export default function ModalNovoLancamentoRefatorado({
         <div className="space-y-4">
           <GroupCategorySelector
             tipoLancamento={tipoLancamento}
+            scope={scope}
+            initialGroupCode={initialGroupCode}
             itemId={formData.item_id}
             onItemIdChange={(id) => setFormData((prev) => ({ ...prev, item_id: id }))}
           />
