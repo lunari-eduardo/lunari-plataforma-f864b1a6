@@ -54,6 +54,33 @@ export default function ModalNovoLancamentoRefatorado({
     numeroParcelas: 1
   });
 
+  // Inline creator de subcategoria
+  const [criandoSubcategoria, setCriandoSubcategoria] = useState(false);
+  const [novaSubcategoriaNome, setNovaSubcategoriaNome] = useState('');
+  const queryClient = useQueryClient();
+  const createItemMutation = useCapabilityMutation(createFinancialItem, {
+    onSuccess: (res) => {
+      // Atualiza seleção e refaz lista
+      setFormData((prev) => ({ ...prev, item_id: res.id }));
+      setNovaSubcategoriaNome('');
+      setCriandoSubcategoria(false);
+      queryClient.invalidateQueries({ queryKey: ['financial-items'] });
+      queryClient.invalidateQueries({ queryKey: ['novo-financas'] });
+    },
+    onError: (e) => {
+      toast.error(e.message || 'Não foi possível criar a subcategoria.');
+    },
+  });
+
+  const handleCriarSubcategoria = () => {
+    const nome = novaSubcategoriaNome.trim();
+    if (nome.length < 2) {
+      toast.error('Digite ao menos 2 caracteres.');
+      return;
+    }
+    createItemMutation.mutate({ nome, grupo: grupoAtivo, source: 'user' });
+  };
+
   const limparFormulario = () => {
     setFormData({
       item_id: '',
