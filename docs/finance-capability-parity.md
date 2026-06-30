@@ -1,5 +1,8 @@
 # Paridade de capabilities `finance.transaction.*` vs. hooks/modais legados
 
+**Status: Onda 5b.1 concluída** — ajustes 1–6 abaixo aplicados. Pronto para iniciar 5b.2 (facade `useNovoFinancas`).
+
+
 Auditoria realizada na Onda 5b.1 antes de migrar `useNovoFinancas`, `useFinancialTransactionsSupabase`, `useExtratoSupabase` para usarem as capabilities.
 
 Fontes auditadas:
@@ -79,16 +82,24 @@ Fontes auditadas:
 
 ## 3. `finance.transaction.delete`
 
-### Risco crítico: aprovação humana
+### Aprovação humana — investigado e resolvido
 
-- Capability declarada como `REQUIRES_APPROVAL` (`finance.transaction.delete` na Onda 6).
-- Legacy hook deleta direto após clique do usuário (já confirmou na UI com modal próprio).
-- **Decisão**: a regra `REQUIRES_APPROVAL` aplica-se apenas a `source='ai'`. Para `source='user'` ou `source='automation'` a capability executa direto. Confirmar via leitura de `src/shared/capability/policies.ts` antes da migração da facade; se a policy atual não distinguir source, ajustar para distinguir (mantendo aprovação obrigatória só para Lu).
-- **Bloqueador para 5b**: validar a policy antes de migrar `removerTransacao` no facade. Se não houver suporte hoje, criar `requiresApprovalWhen: (ctx) => ctx.source === 'ai'`.
+- Capability declarada como `needsApproval: true` (boolean).
+- Auditoria de `src/shared/capability/define.ts` confirma: `cap.execute()` **não bloqueia** por `needsApproval`. A flag é metadata consumida apenas pelo runner da IA (`ai-adapter`). Chamadas via `useRunCapability()` (UI do usuário) executam direto.
+- **Conclusão**: nenhuma mudança necessária. Delete pela UI já passa; Lu vai ler `needsApproval=true` e pedir confirmação.
 
 ---
 
-## 4. `finance.transaction.markPaid` / `.markPending`
+## 4. Permissões — **bloqueador crítico descoberto e corrigido**
+
+`CapabilityRuntimeProvider` (`src/shared/capability/react.tsx`) concedia ao usuário autenticado apenas `financeiro:read|write|delete`. Todas as capabilities `finance.*` exigem `finance:read|write|delete`. Resultado: chamadas não-admin retornariam `FORBIDDEN`.
+
+**Aplicado**: `DEFAULT_USER_PERMISSIONS` agora inclui `finance:read`, `finance:write`, `finance:delete`. Permissões `financeiro:*` mantidas para não quebrar hooks legados que possam usá-las.
+
+---
+
+## 5. `finance.transaction.markPaid` / `.markPending`
+
 
 - Capabilities OK; aceitam `id` + `source`.
 - Legacy `marcarComoPagoMutation` não persiste `dataPagamento`. Capability aceita opcional → manter compat enviando `undefined`.
