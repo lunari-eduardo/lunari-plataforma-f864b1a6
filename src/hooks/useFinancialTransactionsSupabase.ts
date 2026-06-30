@@ -290,87 +290,32 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     fireAndForgetPromoteOverdue(queryClient);
   }, [isLoading, queryClient]);
 
-  // ============= MUTATIONS =============
+  // ============= MUTATIONS (Onda 5b.2 — via capabilities) =============
+
+  const runCapability = useRunCapability();
+
+  function invalidateAll() {
+    queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+  }
+
+  function unwrapOrThrow<T>(
+    result: Awaited<ReturnType<typeof runCapability>>,
+  ): T {
+    if (result.ok) return result.value as T;
+    throw new CapabilityError(result.error);
+  }
 
   const criarTransacaoMutation = useMutation({
     mutationFn: async (params: CreateTransactionParams | CreateTransactionInput) => {
-      const normalizedParams: CreateTransactionParams =
-        'item_id' in params
-          ? (params as CreateTransactionParams)
-          : {
-              item_id: (params as CreateTransactionInput).itemId,
-              valor: (params as CreateTransactionInput).valorTotal,
-              data_vencimento: (params as CreateTransactionInput).dataPrimeiraOcorrencia,
-              data_competencia: (params as CreateTransactionInput).dataCompetencia,
-              observacoes: params.observacoes,
-              isRecorrente: (params as CreateTransactionInput).isRecorrente,
-              isValorFixo: params.isValorFixo,
-              isParcelado: (params as CreateTransactionInput).isParcelado,
-              parcela_total: (params as CreateTransactionInput).numeroDeParcelas,
-              credit_card_id: (params as CreateTransactionInput).cartaoCreditoId,
-              data_compra:
-                (params as CreateTransactionInput).dataCompra ||
-                (params as CreateTransactionInput).dataPrimeiraOcorrencia,
-            };
-
-      const {
-        item_id,
-        valor,
-        data_vencimento,
-        data_competencia,
-        observacoes,
-        isRecorrente,
-        isValorFixo,
-        isParcelado,
-        parcela_total,
-        credit_card_id,
-        data_compra,
-      } = normalizedParams;
-
-      if (credit_card_id) {
-        return await SupabaseFinancialTransactionsAdapter.createCreditCardTransactions({
-          itemId: item_id,
-          valorTotal: valor,
-          dataCompra: data_compra || data_vencimento,
-          cartaoCreditoId: credit_card_id,
-          numeroDeParcelas: parcela_total || 1,
-          observacoes,
-        });
-      }
-      if (isParcelado && parcela_total && parcela_total > 1) {
-        return await SupabaseFinancialTransactionsAdapter.createParceledTransactions({
-          itemId: item_id,
-          valorTotal: valor,
-          dataPrimeiraOcorrencia: data_vencimento,
-          numeroDeParcelas: parcela_total,
-          observacoes,
-        });
-      }
-      if (isRecorrente) {
-        const [, , dia] = data_vencimento.split('-').map(Number);
-        return await SupabaseFinancialTransactionsAdapter.createRecurringYearlyTransactions({
-          itemId: item_id,
-          valor,
-          diaVencimento: dia,
-          dataInicio: data_vencimento,
-          isValorFixo: isValorFixo ?? true,
-          observacoes,
-        });
-      }
-      return await SupabaseFinancialTransactionsAdapter.createTransaction({
-        item_id,
-        valor,
-        data_vencimento,
-        data_competencia: data_competencia || null,
-        status: data_vencimento <= new Date().toISOString().split('T')[0] ? 'Faturado' : 'Agendado',
-        observacoes: observacoes || null,
-      } as any);
+      const input = toCreateCapabilityInput(params);
+      const res = await runCapability(createTransaction, input);
+      return unwrapOrThrow<{ ids: string[]; count: number }>(res);
     },
     onSuccess: async (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+      invalidateAll();
       const itemId = 'item_id' in variables ? variables.item_id : (variables as any).itemId;
-      await checkIfEquipmentAndNotify(itemId, result, variables);
+      await checkIfEquipmentAndNotify(itemId, result.ids, variables);
     },
     onError: (error) => {
       console.error('Erro ao criar transação:', error);
@@ -380,17 +325,37 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
 
   const atualizarTransacaoMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<NovaTransacaoFinanceira> }) => {
-      return await SupabaseFinancialTransactionsAdapter.updateTransaction(id, {
-        valor: updates.valor,
-        data_vencimento: updates.data_vencimento,
-        status: updates.status,
-        observacoes: updates.observacoes || null,
-      });
+      // Rotear mudanças de status para capabilities dedicadas.
+      if (updates.status) {
+        if (updates.status === 'Pago') {
+          const res = await runCapability(markTransactionPaid, { id, source: 'user' } as any);
+          unwrapOrThrow(res);
+        } else if (updates.status === 'Faturado') {
+          const res = await runCapability(markTransactionPending, { id, source: 'user' } as any);
+          unwrapOrThrow(res);
+        } else {
+          // 'Agendado' não tem capability dedicada — limitação documentada.
+          console.warn('[finance] update.status="Agendado" não suportado via capability; ignorado.');
+        }
+      }
+      const { status: _ignored, ...rest } = updates;
+      const hasFieldUpdates =
+        rest.valor !== undefined ||
+        rest.data_vencimento !== undefined ||
+        rest.observacoes !== undefined;
+      if (hasFieldUpdates) {
+        const res = await runCapability(updateTransaction, {
+          id,
+          valor: rest.valor,
+          dataVencimento: rest.data_vencimento,
+          observacoes: rest.observacoes ?? null,
+          source: 'user',
+        } as any);
+        unwrapOrThrow(res);
+      }
+      return { id };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
-    },
+    onSuccess: () => invalidateAll(),
     onError: (error) => {
       console.error('Erro ao atualizar transação:', error);
       toast({ title: 'Erro', description: 'Erro ao atualizar transação', variant: 'destructive' });
@@ -398,11 +363,12 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   });
 
   const removerTransacaoMutation = useMutation({
-    mutationFn: async (id: string) => SupabaseFinancialTransactionsAdapter.deleteTransaction(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+    mutationFn: async (id: string) => {
+      const res = await runCapability(deleteTransaction, { id, source: 'user' } as any);
+      unwrapOrThrow(res);
+      return { id };
     },
+    onSuccess: () => invalidateAll(),
     onError: (error) => {
       console.error('Erro ao remover transação:', error);
       toast({ title: 'Erro', description: 'Erro ao remover transação', variant: 'destructive' });
@@ -410,11 +376,12 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   });
 
   const marcarComoPagoMutation = useMutation({
-    mutationFn: async (id: string) => SupabaseFinancialTransactionsAdapter.markAsPaid(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+    mutationFn: async (id: string) => {
+      const res = await runCapability(markTransactionPaid, { id, source: 'user' } as any);
+      unwrapOrThrow(res);
+      return { id };
     },
+    onSuccess: () => invalidateAll(),
     onError: (error) => {
       console.error('Erro ao marcar como pago:', error);
       toast({ title: 'Erro', description: 'Erro ao marcar como pago', variant: 'destructive' });
