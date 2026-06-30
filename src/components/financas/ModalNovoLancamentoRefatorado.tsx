@@ -3,19 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info, Plus, Loader2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 import { parseFinancialInput } from '@/utils/financialPrecision';
-import { useCapabilityMutation } from '@/shared/capability';
-import { createFinancialItem } from '@/modules/finance';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import GroupCategorySelector from '@/modules/finance/presentation/components/GroupCategorySelector';
 
 type TipoLancamento = 'despesa' | 'receita';
 
@@ -23,9 +19,12 @@ interface ModalNovoLancamentoRefatoradoProps {
   aberto: boolean;
   onFechar: () => void;
   createTransactionEngine: (input: CreateTransactionInput) => void;
-  obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
-  grupoAtivo: GrupoPrincipal;
+  /** @deprecated mantido por compatibilidade — não é mais usado pelo novo seletor. */
+  obterItensPorGrupo?: (grupo: GrupoPrincipal) => ItemFinanceiro[];
+  /** @deprecated mantido por compatibilidade — não é mais usado pelo novo seletor. */
+  grupoAtivo?: GrupoPrincipal;
   tipoLancamento?: TipoLancamento;
+  /** @deprecated mantido por compatibilidade — sem efeito no novo seletor. */
   filtrarApenasGrupo?: boolean;
 }
 
@@ -33,10 +32,7 @@ export default function ModalNovoLancamentoRefatorado({
   aberto,
   onFechar,
   createTransactionEngine,
-  obterItensPorGrupo,
-  grupoAtivo,
   tipoLancamento = 'despesa',
-  filtrarApenasGrupo = false
 }: ModalNovoLancamentoRefatoradoProps) {
   const [formData, setFormData] = useState({
     item_id: '',
@@ -53,33 +49,6 @@ export default function ModalNovoLancamentoRefatorado({
     cartaoCreditoId: '',
     numeroParcelas: 1
   });
-
-  // Inline creator de subcategoria
-  const [criandoSubcategoria, setCriandoSubcategoria] = useState(false);
-  const [novaSubcategoriaNome, setNovaSubcategoriaNome] = useState('');
-  const queryClient = useQueryClient();
-  const createItemMutation = useCapabilityMutation(createFinancialItem, {
-    onSuccess: (res) => {
-      // Atualiza seleção e refaz lista
-      setFormData((prev) => ({ ...prev, item_id: res.id }));
-      setNovaSubcategoriaNome('');
-      setCriandoSubcategoria(false);
-      queryClient.invalidateQueries({ queryKey: ['financial-items'] });
-      queryClient.invalidateQueries({ queryKey: ['novo-financas'] });
-    },
-    onError: (e) => {
-      toast.error(e.message || 'Não foi possível criar a subcategoria.');
-    },
-  });
-
-  const handleCriarSubcategoria = () => {
-    const nome = novaSubcategoriaNome.trim();
-    if (nome.length < 2) {
-      toast.error('Digite ao menos 2 caracteres.');
-      return;
-    }
-    createItemMutation.mutate({ nome, grupo: grupoAtivo, source: 'user' });
-  };
 
   const limparFormulario = () => {
     setFormData({
