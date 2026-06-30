@@ -103,8 +103,8 @@ export class ProfileService {
         .from('profiles')
         .insert({
           user_id: userId,
-          email: updates.email || '',
-          ...updates
+          email: sanitized.email || '',
+          ...sanitized
         })
         .select()
         .single();
