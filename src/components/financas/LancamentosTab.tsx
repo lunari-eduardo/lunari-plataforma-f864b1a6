@@ -16,13 +16,13 @@ import { Badge } from '@/components/ui/badge';
 
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-// Ordem das seções na vista unificada
-const SECOES_ORDEM: { grupo: GrupoPrincipal; label: string }[] = [
-  { grupo: 'Despesa Fixa', label: 'Despesas Fixas' },
-  { grupo: 'Despesa Variável', label: 'Despesas Variáveis' },
-  { grupo: 'Investimento', label: 'Investimentos' },
-  { grupo: 'Receita Operacional', label: 'Receitas Operacionais' },
-  { grupo: 'Receita Não Operacional', label: 'Receitas Extras' },
+// Ordem das seções na vista unificada — Receita Operacional NÃO entra aqui
+// (vendas operacionais são lançadas via botão "Venda" ou pelo Workflow).
+const SECOES_ORDEM: { grupo: GrupoPrincipal; label: string; scope: GroupScope }[] = [
+  { grupo: 'Despesa Fixa',             label: 'Despesas Fixas',      scope: 'despesa_fixa' },
+  { grupo: 'Despesa Variável',         label: 'Despesas Variáveis',  scope: 'despesa_variavel' },
+  { grupo: 'Investimento',             label: 'Investimentos',       scope: 'investimento' },
+  { grupo: 'Receita Não Operacional',  label: 'Receitas Extras',     scope: 'receita_extra' },
 ];
 
 interface LancamentosTabProps {
