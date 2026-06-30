@@ -361,11 +361,12 @@ export class SupabaseFinancialTransactionsAdapter {
     cartaoCreditoId: string;
     numeroDeParcelas?: number;
     observacoes?: string;
+    formaPagamento?: string;
   }): Promise<FinancialTransactionDB[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    const { itemId, valorTotal, dataCompra, cartaoCreditoId, numeroDeParcelas = 1, observacoes } = params;
+    const { itemId, valorTotal, dataCompra, cartaoCreditoId, numeroDeParcelas = 1, observacoes, formaPagamento } = params;
 
     // Buscar dados do cartão
     const { data: cartaoData, error: cartaoError } = await supabase
@@ -379,8 +380,10 @@ export class SupabaseFinancialTransactionsAdapter {
 
     const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
     const parentId = `cartao_${Date.now()}`;
+    // Default: cartão grava forma_pagamento='cartao_credito' a menos que cliente sobrescreva.
+    const formaPagamentoEfetiva = formaPagamento || 'cartao_credito';
 
-    const transactions: Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
 
     for (let i = 0; i < numeroDeParcelas; i++) {
       const dataVencimento = this.calculateCreditCardDueDate(
@@ -401,11 +404,12 @@ export class SupabaseFinancialTransactionsAdapter {
         parcela_total: numeroDeParcelas > 1 ? numeroDeParcelas : undefined,
         observacoes: observacoes ? `${observacoes} (Cartão: ${cartaoData.nome})` : `Cartão: ${cartaoData.nome}`,
         recurring_blueprint_id: undefined,
-        parent_id: parentId
+        parent_id: parentId,
+        forma_pagamento: formaPagamentoEfetiva,
       });
     }
 
-    return this.createMultipleTransactions(transactions);
+    return this.createMultipleTransactions(transactions as any);
   }
 
   /**
