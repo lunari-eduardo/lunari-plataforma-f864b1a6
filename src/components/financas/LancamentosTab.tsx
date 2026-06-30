@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import type { GroupScope } from '@/modules/finance';
 
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
