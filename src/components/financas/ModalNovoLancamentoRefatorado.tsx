@@ -3,19 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info, Plus, Loader2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { GrupoPrincipal, ItemFinanceiro } from '@/types/financas';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 import { parseFinancialInput } from '@/utils/financialPrecision';
-import { useCapabilityMutation } from '@/shared/capability';
-import { createFinancialItem } from '@/modules/finance';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import GroupCategorySelector from '@/modules/finance/presentation/components/GroupCategorySelector';
 
 type TipoLancamento = 'despesa' | 'receita';
 
@@ -23,9 +19,12 @@ interface ModalNovoLancamentoRefatoradoProps {
   aberto: boolean;
   onFechar: () => void;
   createTransactionEngine: (input: CreateTransactionInput) => void;
-  obterItensPorGrupo: (grupo: GrupoPrincipal) => ItemFinanceiro[];
-  grupoAtivo: GrupoPrincipal;
+  /** @deprecated mantido por compatibilidade — não é mais usado pelo novo seletor. */
+  obterItensPorGrupo?: (grupo: GrupoPrincipal) => ItemFinanceiro[];
+  /** @deprecated mantido por compatibilidade — não é mais usado pelo novo seletor. */
+  grupoAtivo?: GrupoPrincipal;
   tipoLancamento?: TipoLancamento;
+  /** @deprecated mantido por compatibilidade — sem efeito no novo seletor. */
   filtrarApenasGrupo?: boolean;
 }
 
@@ -33,10 +32,7 @@ export default function ModalNovoLancamentoRefatorado({
   aberto,
   onFechar,
   createTransactionEngine,
-  obterItensPorGrupo,
-  grupoAtivo,
   tipoLancamento = 'despesa',
-  filtrarApenasGrupo = false
 }: ModalNovoLancamentoRefatoradoProps) {
   const [formData, setFormData] = useState({
     item_id: '',
@@ -53,33 +49,6 @@ export default function ModalNovoLancamentoRefatorado({
     cartaoCreditoId: '',
     numeroParcelas: 1
   });
-
-  // Inline creator de subcategoria
-  const [criandoSubcategoria, setCriandoSubcategoria] = useState(false);
-  const [novaSubcategoriaNome, setNovaSubcategoriaNome] = useState('');
-  const queryClient = useQueryClient();
-  const createItemMutation = useCapabilityMutation(createFinancialItem, {
-    onSuccess: (res) => {
-      // Atualiza seleção e refaz lista
-      setFormData((prev) => ({ ...prev, item_id: res.id }));
-      setNovaSubcategoriaNome('');
-      setCriandoSubcategoria(false);
-      queryClient.invalidateQueries({ queryKey: ['financial-items'] });
-      queryClient.invalidateQueries({ queryKey: ['novo-financas'] });
-    },
-    onError: (e) => {
-      toast.error(e.message || 'Não foi possível criar a subcategoria.');
-    },
-  });
-
-  const handleCriarSubcategoria = () => {
-    const nome = novaSubcategoriaNome.trim();
-    if (nome.length < 2) {
-      toast.error('Digite ao menos 2 caracteres.');
-      return;
-    }
-    createItemMutation.mutate({ nome, grupo: grupoAtivo, source: 'user' });
-  };
 
   const limparFormulario = () => {
     setFormData({
@@ -127,15 +96,9 @@ export default function ModalNovoLancamentoRefatorado({
     onFechar();
   };
 
-  // Usar preferencialmente itens do grupo ativo, mas permitir todos
-  const itensGrupoAtivo = obterItensPorGrupo(grupoAtivo);
-  const todosItens = ['Despesa Fixa', 'Despesa Variável', 'Investimento', 'Receita Não Operacional']
-    .flatMap(grupo => obterItensPorGrupo(grupo as GrupoPrincipal));
-
   // Textos adaptativos baseados no tipo de lançamento
   const textos = {
     titulo: tipoLancamento === 'receita' ? 'Nova Receita' : 'Nova Despesa',
-    item: tipoLancamento === 'receita' ? 'Item da Receita' : 'Item da Despesa',
     recorrente: tipoLancamento === 'receita' ? 'Receita Recorrente' : 'Despesa Recorrente'
   };
 
@@ -153,103 +116,12 @@ export default function ModalNovoLancamentoRefatorado({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="item">{textos.item}</Label>
-            <Select 
-              value={formData.item_id} 
-              onValueChange={(value) => setFormData({ ...formData, item_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um item..." />
-              </SelectTrigger>
-              <SelectContent>
-                {filtrarApenasGrupo ? (
-                  <>
-                    {itensGrupoAtivo.length > 0 ? (
-                      itensGrupoAtivo.map(item => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item?.nome || 'Item sem nome'}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-3 text-xs text-muted-foreground text-center">
-                        Nenhum item cadastrado para {grupoAtivo}.
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {itensGrupoAtivo.length > 0 && (
-                      <>
-                        <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
-                          {grupoAtivo} (Recomendado)
-                        </div>
-                        {itensGrupoAtivo.map(item => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item?.nome || 'Item sem nome'}
-                          </SelectItem>
-                        ))}
-                        <div className="border-t my-1"></div>
-                      </>
-                    )}
-                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase">
-                      Todos os Itens
-                    </div>
-                    {todosItens.map(item => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item?.nome || 'Item sem nome'} <span className="text-xs text-muted-foreground">({item?.grupo_principal || 'N/A'})</span>
-                      </SelectItem>
-                    ))}
-                  </>
-                )}
-              </SelectContent>
-            </Select>
+          <GroupCategorySelector
+            tipoLancamento={tipoLancamento}
+            itemId={formData.item_id}
+            onItemIdChange={(id) => setFormData((prev) => ({ ...prev, item_id: id }))}
+          />
 
-            {/* Inline creator de subcategoria */}
-            {!criandoSubcategoria ? (
-              <button
-                type="button"
-                onClick={() => setCriandoSubcategoria(true)}
-                className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary opacity-70 hover:opacity-100 transition-opacity"
-              >
-                <Plus className="h-3 w-3" />
-                Nova subcategoria em {grupoAtivo}
-              </button>
-            ) : (
-              <div className="mt-2 flex items-center gap-2">
-                <Input
-                  autoFocus
-                  placeholder={`Nome da subcategoria (${grupoAtivo})`}
-                  value={novaSubcategoriaNome}
-                  onChange={(e) => setNovaSubcategoriaNome(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleCriarSubcategoria(); }
-                    if (e.key === 'Escape') { setCriandoSubcategoria(false); setNovaSubcategoriaNome(''); }
-                  }}
-                  className="h-8 text-sm"
-                  disabled={createItemMutation.isPending}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleCriarSubcategoria}
-                  disabled={createItemMutation.isPending || novaSubcategoriaNome.trim().length < 2}
-                  className="h-8"
-                >
-                  {createItemMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Criar'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => { setCriandoSubcategoria(false); setNovaSubcategoriaNome(''); }}
-                  className="h-8"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            )}
-          </div>
 
 
           <div>
