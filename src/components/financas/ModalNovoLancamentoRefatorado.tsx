@@ -12,6 +12,7 @@ import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase
 import OpcoesLancamento, { OpcoesLancamentoState } from './OpcoesLancamento';
 import { parseFinancialInput } from '@/utils/financialPrecision';
 import GroupCategorySelector from '@/modules/finance/presentation/components/GroupCategorySelector';
+import type { GroupScope } from '@/modules/finance';
 
 type TipoLancamento = 'despesa' | 'receita';
 
@@ -24,6 +25,10 @@ interface ModalNovoLancamentoRefatoradoProps {
   /** @deprecated mantido por compatibilidade — não é mais usado pelo novo seletor. */
   grupoAtivo?: GrupoPrincipal;
   tipoLancamento?: TipoLancamento;
+  /** Escopo de naturezas/grupos exibidos no seletor (default: derivado do tipo). */
+  scope?: GroupScope;
+  /** Grupo inicial sugerido (ex.: ao abrir via "Adicionar Equipamento"). */
+  initialGroupCode?: string;
   /** @deprecated mantido por compatibilidade — sem efeito no novo seletor. */
   filtrarApenasGrupo?: boolean;
 }
@@ -33,6 +38,8 @@ export default function ModalNovoLancamentoRefatorado({
   onFechar,
   createTransactionEngine,
   tipoLancamento = 'despesa',
+  scope,
+  initialGroupCode,
 }: ModalNovoLancamentoRefatoradoProps) {
   const [formData, setFormData] = useState({
     item_id: '',
@@ -118,6 +125,8 @@ export default function ModalNovoLancamentoRefatorado({
         <div className="space-y-4">
           <GroupCategorySelector
             tipoLancamento={tipoLancamento}
+            scope={scope}
+            initialGroupCode={initialGroupCode}
             itemId={formData.item_id}
             onItemIdChange={(id) => setFormData((prev) => ({ ...prev, item_id: id }))}
           />

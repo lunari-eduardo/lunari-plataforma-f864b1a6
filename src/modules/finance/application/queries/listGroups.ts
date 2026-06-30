@@ -14,6 +14,7 @@ const GroupOut = z.object({
   label: z.string(),
   icon: z.string(),
   ordering: z.number(),
+  requiresCategory: z.boolean(),
 });
 const Output = z.object({ groups: z.array(GroupOut), total: z.number() });
 

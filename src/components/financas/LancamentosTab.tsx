@@ -13,16 +13,17 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import type { GroupScope } from '@/modules/finance';
 
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-// Ordem das seções na vista unificada
-const SECOES_ORDEM: { grupo: GrupoPrincipal; label: string }[] = [
-  { grupo: 'Despesa Fixa', label: 'Despesas Fixas' },
-  { grupo: 'Despesa Variável', label: 'Despesas Variáveis' },
-  { grupo: 'Investimento', label: 'Investimentos' },
-  { grupo: 'Receita Operacional', label: 'Receitas Operacionais' },
-  { grupo: 'Receita Não Operacional', label: 'Receitas Extras' },
+// Ordem das seções na vista unificada — Receita Operacional NÃO entra aqui
+// (vendas operacionais são lançadas via botão "Venda" ou pelo Workflow).
+const SECOES_ORDEM: { grupo: GrupoPrincipal; label: string; scope: GroupScope }[] = [
+  { grupo: 'Despesa Fixa',             label: 'Despesas Fixas',      scope: 'despesa_fixa' },
+  { grupo: 'Despesa Variável',         label: 'Despesas Variáveis',  scope: 'despesa_variavel' },
+  { grupo: 'Investimento',             label: 'Investimentos',       scope: 'investimento' },
+  { grupo: 'Receita Não Operacional',  label: 'Receitas Extras',     scope: 'receita_extra' },
 ];
 
 interface LancamentosTabProps {
@@ -54,8 +55,7 @@ const LancamentosTab = memo(function LancamentosTab({
   const [modalAberto, setModalAberto] = useState(false);
   const [modalVendaAvulsa, setModalVendaAvulsa] = useState(false);
   const [modalTipo, setModalTipo] = useState<'despesa' | 'receita'>('despesa');
-  const [modalGrupo, setModalGrupo] = useState<GrupoPrincipal>('Despesa Variável');
-  const [modalFiltrarApenas, setModalFiltrarApenas] = useState(false);
+  const [modalScope, setModalScope] = useState<GroupScope>('despesa');
   const [secoesAbertas, setSecoesAbertas] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     SECOES_ORDEM.forEach(s => { initial[s.grupo] = true; });
@@ -70,20 +70,22 @@ const LancamentosTab = memo(function LancamentosTab({
 
     SECOES_ORDEM.forEach(({ grupo }) => {
       const metricas = calcularMetricasPorGrupo(grupo);
-      if (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') {
+      if (grupo === 'Receita Não Operacional') {
         totalReceitas += metricas.total || 0;
       } else {
         totalDespesas += metricas.total || 0;
       }
     });
+    // Receitas operacionais ainda entram no saldo (vêm de Venda/Workflow).
+    const opMetricas = calcularMetricasPorGrupo('Receita Operacional');
+    totalReceitas += opMetricas.total || 0;
 
     return { totalReceitas, totalDespesas, saldo: totalReceitas - totalDespesas };
   }, [calcularMetricasPorGrupo, transacoesPorGrupo]);
 
-  const abrirModal = (tipo: 'despesa' | 'receita', grupo?: GrupoPrincipal, filtrarApenas = false) => {
+  const abrirModal = (tipo: 'despesa' | 'receita', scope?: GroupScope) => {
     setModalTipo(tipo);
-    setModalGrupo(grupo || (tipo === 'receita' ? 'Receita Não Operacional' : 'Despesa Variável'));
-    setModalFiltrarApenas(filtrarApenas);
+    setModalScope(scope ?? (tipo === 'receita' ? 'receita_extra' : 'despesa'));
     setModalAberto(true);
   };
 
@@ -155,7 +157,7 @@ const LancamentosTab = memo(function LancamentosTab({
 
       {/* Seções unificadas */}
       <div className="space-y-3">
-        {SECOES_ORDEM.map(({ grupo, label }) => {
+        {SECOES_ORDEM.map(({ grupo, label, scope }) => {
           const transacoes = transacoesPorGrupo[grupo] || [];
           const info = getInfoPorGrupo(grupo);
           const metricas = calcularMetricasPorGrupo(grupo);
@@ -227,8 +229,8 @@ const LancamentosTab = memo(function LancamentosTab({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const tipo = (grupo === 'Receita Operacional' || grupo === 'Receita Não Operacional') ? 'receita' : 'despesa';
-                        abrirModal(tipo, grupo, true);
+                        const tipo = grupo === 'Receita Não Operacional' ? 'receita' : 'despesa';
+                        abrirModal(tipo, scope);
                       }}
                       className={`flex items-center gap-1 text-xs ${info.corTema} opacity-60 hover:opacity-100 transition-opacity pl-7 py-1.5`}
                     >
@@ -258,10 +260,8 @@ const LancamentosTab = memo(function LancamentosTab({
         aberto={modalAberto}
         onFechar={() => setModalAberto(false)}
         createTransactionEngine={createTransactionEngine}
-        obterItensPorGrupo={obterItensPorGrupo}
-        grupoAtivo={modalGrupo}
         tipoLancamento={modalTipo}
-        filtrarApenasGrupo={modalFiltrarApenas}
+        scope={modalScope}
       />
 
       <ModalVendaAvulsa

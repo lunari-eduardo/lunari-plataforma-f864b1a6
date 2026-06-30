@@ -1845,6 +1845,7 @@ export type Database = {
           label: string
           nature_code: string
           ordering: number
+          requires_category: boolean
         }
         Insert: {
           code: string
@@ -1853,6 +1854,7 @@ export type Database = {
           label: string
           nature_code: string
           ordering?: number
+          requires_category?: boolean
         }
         Update: {
           code?: string
@@ -1861,6 +1863,7 @@ export type Database = {
           label?: string
           nature_code?: string
           ordering?: number
+          requires_category?: boolean
         }
         Relationships: [
           {
