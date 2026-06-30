@@ -19,6 +19,10 @@ const Input = z
     itemId: z.string().uuid(),
     valor: z.number().positive(),
     dataVencimento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /**
+     * Só aplicado em `modo='unico'` — demais modos derivam competência por parcela.
+     * Rejeitado via `superRefine` quando enviado em outro modo.
+     */
     dataCompetencia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     observacoes: z.string().max(500).optional(),
     modo: z.enum(["unico", "parcelado", "recorrente", "cartao"]).default("unico"),
@@ -33,7 +37,16 @@ const Input = z
     isValorFixo: z.boolean().optional(),
     source: z.enum(["user", "automation", "ai"]).default("user"),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.dataCompetencia && data.modo !== "unico") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dataCompetencia"],
+        message: "dataCompetencia só é suportada no modo 'unico'.",
+      });
+    }
+  });
 
 const Output = z.object({ ids: z.array(z.string()), count: z.number() });
 

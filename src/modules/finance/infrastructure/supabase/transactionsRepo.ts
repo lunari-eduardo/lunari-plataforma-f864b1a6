@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { SupabaseFinancialTransactionsAdapter } from "@/adapters/SupabaseFinancialTransactionsAdapter";
+import { getCurrentDateString } from "@/utils/dateUtils";
 import type {
   TransactionsRepo,
   CreateTransactionInput,
@@ -17,6 +18,11 @@ import type { Transacao } from "../../domain/types";
 import { rowToTransacao } from "./mappers";
 
 function mapCreatePayload(input: CreateTransactionInput) {
+  // Paridade com hook legado: lançamento único vencido hoje/atrás nasce "Faturado".
+  // Cron diário (`fin_promote_overdue_to_faturado`) cobre o caso geral, mas o
+  // paint imediato pós-criação precisa refletir o status correto.
+  const status: "Agendado" | "Faturado" =
+    input.dataVencimento <= getCurrentDateString() ? "Faturado" : "Agendado";
   return {
     item_id: input.itemId,
     valor: input.valor,
@@ -28,7 +34,8 @@ function mapCreatePayload(input: CreateTransactionInput) {
     credit_card_id: input.cartaoId ?? undefined,
     data_compra: input.dataCompra ?? undefined,
     parent_id: input.parentId ?? undefined,
-    status: "Agendado" as const,
+    forma_pagamento: input.formaPagamento ?? undefined,
+    status,
   };
 }
 
@@ -72,6 +79,7 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
       dataPrimeiraOcorrencia: input.dataPrimeiraOcorrencia,
       numeroDeParcelas: input.numeroDeParcelas,
       observacoes: input.observacoes,
+      formaPagamento: input.formaPagamento ?? undefined,
     });
     return rows.map(rowToTransacao);
   },
@@ -84,6 +92,7 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
       dataInicio: input.dataInicio,
       isValorFixo: input.isValorFixo,
       observacoes: input.observacoes,
+      formaPagamento: input.formaPagamento ?? undefined,
     });
     return rows.map(rowToTransacao);
   },
@@ -96,6 +105,7 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
       cartaoCreditoId: input.cartaoId,
       numeroDeParcelas: input.numeroDeParcelas,
       observacoes: input.observacoes,
+      formaPagamento: input.formaPagamento ?? undefined,
     });
     return rows.map(rowToTransacao);
   },
