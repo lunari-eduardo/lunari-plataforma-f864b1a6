@@ -33,42 +33,77 @@ export function useWorkflowMetricsRealtime(
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        let query = supabase
-          .from('clientes_sessoes')
-          .select('valor_total, valor_pago')
-          .eq('user_id', user.id)
-          .neq('status', 'historico');
-
-        // Se override de datas, usar diretamente
+        // Resolver janela de datas
+        let startDate: string;
+        let endDate: string;
         if (startDateOverride && endDateOverride) {
-          query = query.gte('data_sessao', startDateOverride).lte('data_sessao', endDateOverride);
+          startDate = startDateOverride;
+          endDate = endDateOverride;
         } else if (month) {
-          const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+          startDate = `${year}-${String(month).padStart(2, '0')}-01`;
           const lastDay = new Date(year, month, 0).getDate();
-          const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-          query = query.gte('data_sessao', startDate).lte('data_sessao', endDate);
+          endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
         } else {
-          query = query.gte('data_sessao', `${year}-01-01`).lte('data_sessao', `${year}-12-31`);
+          startDate = `${year}-01-01`;
+          endDate = `${year}-12-31`;
         }
 
-        const { data, error } = await query;
+        // 1) Sessões — previsto, a receber e contagem (fonte: clientes_sessoes)
+        //    Onda 2.2: aReceber via GREATEST(saldo, 0), excluindo historico e status NULL.
+        const { data: sessoes, error: errSess } = await supabase
+          .from('clientes_sessoes')
+          .select('valor_total, valor_pago, status, tipo_registro')
+          .eq('user_id', user.id)
+          .gte('data_sessao', startDate)
+          .lte('data_sessao', endDate);
 
-        if (error) {
-          console.error('❌ [WorkflowMetricsRealtime] Error:', error);
+        if (errSess) {
+          console.error('❌ [WorkflowMetricsRealtime] Sessões:', errSess);
           return;
         }
 
-        if (data) {
-          const previsto = data.reduce((sum, s) => sum + (Number(s.valor_total) || 0), 0);
-          const receita = data.reduce((sum, s) => sum + (Number(s.valor_pago) || 0), 0);
-          
-          setMetrics({
-            previsto,
-            receita,
-            aReceber: previsto - receita,
-            sessoes: data.length
-          });
+        const sessoesValidas = (sessoes || []).filter(
+          (s: any) => s.status && s.status !== 'historico'
+        );
+        const previsto = sessoesValidas.reduce(
+          (sum, s: any) => sum + (Number(s.valor_total) || 0), 0
+        );
+        const aReceber = sessoesValidas
+          .filter((s: any) => s.tipo_registro === 'workflow' || s.tipo_registro == null)
+          .reduce((sum, s: any) => {
+            const saldo = (Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0);
+            return sum + Math.max(saldo, 0);
+          }, 0);
+
+        // 2) Receita — via view extrato_unificado (regime competência via data_competencia)
+        //    Onda 2.1: usa transações reais (inclui órfãs/gallery), deduz estornos.
+        const { data: linhas, error: errExt } = await supabase
+          .from('extrato_unificado')
+          .select('tipo, valor, natureza, origem, status')
+          .eq('user_id', user.id)
+          .eq('status', 'Pago')
+          .in('origem', ['workflow', 'gallery'])
+          .gte('data_competencia', startDate)
+          .lte('data_competencia', endDate);
+
+        if (errExt) {
+          console.error('❌ [WorkflowMetricsRealtime] Extrato:', errExt);
+          return;
         }
+
+        const receita = (linhas || []).reduce((sum, l: any) => {
+          const v = Number(l.valor) || 0;
+          if (l.natureza === 'pagamento') return sum + v;
+          if (l.natureza === 'estorno') return sum - v;
+          return sum;
+        }, 0);
+
+        setMetrics({
+          previsto,
+          receita,
+          aReceber,
+          sessoes: sessoesValidas.length,
+        });
       } catch (err) {
         console.error('❌ [WorkflowMetricsRealtime] Error:', err);
       }

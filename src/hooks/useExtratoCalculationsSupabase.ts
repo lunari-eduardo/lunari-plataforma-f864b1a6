@@ -29,7 +29,7 @@ export function useExtratoCalculationsSupabase(
 
       const { data, error } = await supabase
         .from('clientes_sessoes')
-        .select('valor_total, valor_pago')
+        .select('valor_total, valor_pago, status')
         .eq('tipo_registro', 'workflow')
         .gte('data_sessao', filtros.dataInicio)
         .lte('data_sessao', filtros.dataFim);
@@ -37,6 +37,9 @@ export function useExtratoCalculationsSupabase(
       if (error) throw error;
 
       return (data || []).reduce((acc, s: any) => {
+        // Onda 3: excluir sessões arquivadas (historico) ou sem status definido
+        // para paridade com o Dashboard.
+        if (!s.status || s.status === 'historico') return acc;
         const total = Number(s.valor_total) || 0;
         const pago = Number(s.valor_pago) || 0;
         const saldo = total - pago;
@@ -67,7 +70,7 @@ export function useExtratoCalculationsSupabase(
 
       let q = supabase
         .from('extrato_unificado')
-        .select('tipo, status, valor')
+        .select('tipo, status, valor, natureza')
         .eq('user_id', user.id)
         .gte(dataColumn, filtros.dataInicio)
         .lte(dataColumn, filtros.dataFim);
@@ -87,6 +90,7 @@ export function useExtratoCalculationsSupabase(
         saidasFaturadas: 0,
         saidasAgendadas: 0,
         countEntradas: 0,
+        estornos: 0,
       };
 
       (data || []).forEach((r: any) => {
@@ -97,6 +101,12 @@ export function useExtratoCalculationsSupabase(
           else if (r.status === 'Faturado') acc.entradasFaturadas += v;
           else if (r.status === 'Agendado') acc.entradasAgendadas += v;
         } else if (r.tipo === 'saida') {
+          // Onda 1/3: estornos NÃO são despesa — são redução de receita.
+          if (r.natureza === 'estorno') {
+            acc.estornos += v;
+            acc.entradasPagas -= v; // deduz da receita paga (regime caixa e competência)
+            return;
+          }
           if (r.status === 'Pago') acc.saidasPagas += v;
           else if (r.status === 'Faturado') acc.saidasFaturadas += v;
           else if (r.status === 'Agendado') acc.saidasAgendadas += v;
@@ -112,7 +122,8 @@ export function useExtratoCalculationsSupabase(
   const resumo = useMemo((): ResumoExtrato => {
     const t = totaisPeriodo || {
       entradasPagas: 0, entradasFaturadas: 0, entradasAgendadas: 0,
-      saidasPagas: 0, saidasFaturadas: 0, saidasAgendadas: 0, countEntradas: 0,
+      saidasPagas: 0, saidasFaturadas: 0, saidasAgendadas: 0,
+      countEntradas: 0, estornos: 0,
     };
 
     const receitaPrevista = regime === 'competencia' ? receitaPrevistaSessoes : 0;
