@@ -5643,6 +5643,10 @@ export type Database = {
         Returns: Json
       }
       user_has_gallery_access: { Args: { _user_id: string }; Returns: boolean }
+      workflow_a_receber: {
+        Args: { _end: string; _start: string }
+        Returns: number
+      }
     }
     Enums: {
       account_status: "active" | "suspended" | "canceled"
