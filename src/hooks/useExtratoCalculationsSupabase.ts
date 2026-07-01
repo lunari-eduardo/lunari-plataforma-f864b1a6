@@ -70,7 +70,7 @@ export function useExtratoCalculationsSupabase(
 
       let q = supabase
         .from('extrato_unificado')
-        .select('tipo, status, valor')
+        .select('tipo, status, valor, natureza')
         .eq('user_id', user.id)
         .gte(dataColumn, filtros.dataInicio)
         .lte(dataColumn, filtros.dataFim);
@@ -90,6 +90,7 @@ export function useExtratoCalculationsSupabase(
         saidasFaturadas: 0,
         saidasAgendadas: 0,
         countEntradas: 0,
+        estornos: 0,
       };
 
       (data || []).forEach((r: any) => {
@@ -100,6 +101,12 @@ export function useExtratoCalculationsSupabase(
           else if (r.status === 'Faturado') acc.entradasFaturadas += v;
           else if (r.status === 'Agendado') acc.entradasAgendadas += v;
         } else if (r.tipo === 'saida') {
+          // Onda 1/3: estornos NÃO são despesa — são redução de receita.
+          if (r.natureza === 'estorno') {
+            acc.estornos += v;
+            acc.entradasPagas -= v; // deduz da receita paga (regime caixa e competência)
+            return;
+          }
           if (r.status === 'Pago') acc.saidasPagas += v;
           else if (r.status === 'Faturado') acc.saidasFaturadas += v;
           else if (r.status === 'Agendado') acc.saidasAgendadas += v;
