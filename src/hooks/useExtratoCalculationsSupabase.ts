@@ -31,15 +31,15 @@ export function useExtratoCalculationsSupabase(
         .from('clientes_sessoes')
         .select('valor_total, valor_pago, status')
         .eq('tipo_registro', 'workflow')
+        .or('status.is.null,status.neq.historico')
         .gte('data_sessao', filtros.dataInicio)
         .lte('data_sessao', filtros.dataFim);
 
       if (error) throw error;
 
+      // Regra canônica: Σ GREATEST(valor_total - valor_pago, 0) por sessão.
+      // Sessões arquivadas (historico) já foram excluídas no filtro server-side.
       return (data || []).reduce((acc, s: any) => {
-        // Onda 3: excluir sessões arquivadas (historico) ou sem status definido
-        // para paridade com o Dashboard.
-        if (!s.status || s.status === 'historico') return acc;
         const total = Number(s.valor_total) || 0;
         const pago = Number(s.valor_pago) || 0;
         const saldo = total - pago;
