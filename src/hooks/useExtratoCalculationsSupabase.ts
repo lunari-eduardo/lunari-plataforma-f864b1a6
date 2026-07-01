@@ -29,7 +29,7 @@ export function useExtratoCalculationsSupabase(
 
       const { data, error } = await supabase
         .from('clientes_sessoes')
-        .select('valor_total, valor_pago')
+        .select('valor_total, valor_pago, status')
         .eq('tipo_registro', 'workflow')
         .gte('data_sessao', filtros.dataInicio)
         .lte('data_sessao', filtros.dataFim);
@@ -37,6 +37,9 @@ export function useExtratoCalculationsSupabase(
       if (error) throw error;
 
       return (data || []).reduce((acc, s: any) => {
+        // Onda 3: excluir sessões arquivadas (historico) ou sem status definido
+        // para paridade com o Dashboard.
+        if (!s.status || s.status === 'historico') return acc;
         const total = Number(s.valor_total) || 0;
         const pago = Number(s.valor_pago) || 0;
         const saldo = total - pago;
