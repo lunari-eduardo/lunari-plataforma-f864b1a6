@@ -46,9 +46,9 @@ export function useWorkflowMetricsByYear(year: number): WorkflowMetricsByYear {
         // Buscar todas as sessões do ano
         const { data, error } = await supabase
           .from('clientes_sessoes')
-          .select('data_sessao, valor_total, valor_pago')
+          .select('data_sessao, valor_total, valor_pago, tipo_registro')
           .eq('user_id', user.id)
-          .neq('status', 'historico')
+          .or('status.is.null,status.neq.historico')
           .gte('data_sessao', `${year}-01-01`)
           .lte('data_sessao', `${year}-12-31`);
 
@@ -57,31 +57,31 @@ export function useWorkflowMetricsByYear(year: number): WorkflowMetricsByYear {
           return;
         }
 
-        // Agrupar por mês
-        const porMes: Record<number, { receita: number; previsto: number; sessoes: number }> = {};
-        
-        // Inicializar todos os meses
+        // Agrupar por mês — "A Receber" = Σ GREATEST(saldo, 0) por sessão
+        // (evita que sobrepagamentos em uma sessão mascarem dívida em outra).
+        const porMes: Record<number, { receita: number; previsto: number; aReceber: number; sessoes: number }> = {};
         for (let m = 1; m <= 12; m++) {
-          porMes[m] = { receita: 0, previsto: 0, sessoes: 0 };
+          porMes[m] = { receita: 0, previsto: 0, aReceber: 0, sessoes: 0 };
         }
 
-        // Agregar dados
-        (data || []).forEach(sessao => {
+        (data || []).forEach((sessao: any) => {
           if (!sessao.data_sessao) return;
+          if ((sessao.tipo_registro ?? 'workflow') !== 'workflow') return;
           const mes = parseInt(sessao.data_sessao.split('-')[1]);
-          if (mes >= 1 && mes <= 12) {
-            porMes[mes].receita += Number(sessao.valor_pago) || 0;
-            porMes[mes].previsto += Number(sessao.valor_total) || 0;
-            porMes[mes].sessoes += 1;
-          }
+          if (mes < 1 || mes > 12) return;
+          const total = Number(sessao.valor_total) || 0;
+          const pago = Number(sessao.valor_pago) || 0;
+          porMes[mes].receita += pago;
+          porMes[mes].previsto += total;
+          porMes[mes].aReceber += Math.max(total - pago, 0);
+          porMes[mes].sessoes += 1;
         });
 
-        // Converter para array
         const result: MonthlyWorkflowMetrics[] = Object.entries(porMes).map(([mes, dados]) => ({
           mes: parseInt(mes),
           receita: dados.receita,
           previsto: dados.previsto,
-          aReceber: dados.previsto - dados.receita,
+          aReceber: dados.aReceber,
           sessoes: dados.sessoes
         }));
 

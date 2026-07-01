@@ -49,11 +49,14 @@ export function useWorkflowMetricsRealtime(
         }
 
         // 1) Sessões — previsto, a receber e contagem (fonte: clientes_sessoes)
-        //    Onda 2.2: aReceber via GREATEST(saldo, 0), excluindo historico e status NULL.
+        //    Regra canônica de "A Receber": Σ GREATEST(valor_total - valor_pago, 0)
+        //    por sessão, excluindo somente 'historico' (inclui status '' / NULL,
+        //    protegidos pelo trigger default_session_status). Filtra a workflow.
         const { data: sessoes, error: errSess } = await supabase
           .from('clientes_sessoes')
           .select('valor_total, valor_pago, status, tipo_registro')
           .eq('user_id', user.id)
+          .or('status.is.null,status.neq.historico')
           .gte('data_sessao', startDate)
           .lte('data_sessao', endDate);
 
@@ -63,17 +66,15 @@ export function useWorkflowMetricsRealtime(
         }
 
         const sessoesValidas = (sessoes || []).filter(
-          (s: any) => s.status && s.status !== 'historico'
+          (s: any) => (s.tipo_registro ?? 'workflow') === 'workflow'
         );
         const previsto = sessoesValidas.reduce(
           (sum, s: any) => sum + (Number(s.valor_total) || 0), 0
         );
-        const aReceber = sessoesValidas
-          .filter((s: any) => s.tipo_registro === 'workflow' || s.tipo_registro == null)
-          .reduce((sum, s: any) => {
-            const saldo = (Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0);
-            return sum + Math.max(saldo, 0);
-          }, 0);
+        const aReceber = sessoesValidas.reduce((sum, s: any) => {
+          const saldo = (Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0);
+          return sum + Math.max(saldo, 0);
+        }, 0);
 
         // 2) Receita — via view extrato_unificado (regime competência via data_competencia)
         //    Onda 2.1: usa transações reais (inclui órfãs/gallery), deduz estornos.
