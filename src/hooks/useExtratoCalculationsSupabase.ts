@@ -122,7 +122,8 @@ export function useExtratoCalculationsSupabase(
   const resumo = useMemo((): ResumoExtrato => {
     const t = totaisPeriodo || {
       entradasPagas: 0, entradasFaturadas: 0, entradasAgendadas: 0,
-      saidasPagas: 0, saidasFaturadas: 0, saidasAgendadas: 0, countEntradas: 0,
+      saidasPagas: 0, saidasFaturadas: 0, saidasAgendadas: 0,
+      countEntradas: 0, estornos: 0,
     };
 
     const receitaPrevista = regime === 'competencia' ? receitaPrevistaSessoes : 0;
