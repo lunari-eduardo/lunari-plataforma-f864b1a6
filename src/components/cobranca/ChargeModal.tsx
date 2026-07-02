@@ -688,6 +688,25 @@ export function ChargeModal({
 
                 <Separator />
 
+                {/* Dados do pagador — coleta inline antes de gerar cobrança */}
+                <PayerFieldsBlock
+                  value={payer}
+                  onChange={setPayer}
+                  onValidityChange={setPayerValidity}
+                  provider={
+                    selectedProvider === 'asaas'
+                      ? (asaasMode === 'link' ? 'link_asaas' : 'pix_asaas')
+                      : selectedProvider === 'mercadopago_link'
+                        ? 'link_mp'
+                        : selectedProvider === 'pix_manual'
+                          ? 'pix_manual'
+                          : null
+                  }
+                />
+
+                <Separator />
+
+
                 {/* Banner proativo: sessão tem saldo pendente de fotos extras */}
                 {ambiguity && finalidade === 'sessao' && (
                   <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
