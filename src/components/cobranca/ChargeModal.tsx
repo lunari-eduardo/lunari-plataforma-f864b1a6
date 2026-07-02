@@ -404,6 +404,7 @@ export function ChargeModal({
     if (!selectedProvider) return;
     const binding = await buildBindingPayload();
     if (!binding) return;
+    await persistPayerToCrm();
 
     if (selectedProvider === 'pix_manual') {
       const result = await createPixManualCharge({
