@@ -36,7 +36,15 @@ interface Props {
    * no provedor selecionado.
    */
   provider?: "pix_asaas" | "link_asaas" | "link_mp" | "pix_manual" | null;
+  /**
+   * Restringe a renderização apenas aos campos listados. Quando omitido,
+   * mostra todos. Útil para pedir apenas o que falta.
+   */
+  onlyShow?: Array<"nome" | "email" | "telefone" | "cpfCnpj">;
+  /** Suprime o label "Dados do pagador" (para uso em contextos já titulados). */
+  hideTitle?: boolean;
 }
+
 
 /**
  * Bloco reutilizável de coleta de dados do pagador — inline no ChargeModal.
