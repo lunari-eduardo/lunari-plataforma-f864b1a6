@@ -119,7 +119,7 @@ export const useWorkflowPackageData = () => {
           nome: (session as any)?.clientes?.nome || 'Sessão corrompida',
           email: '',
           descricao: '',
-          status: (session as any)?.status || 'agendado',
+          status: (session as any)?.status ?? '',
           whatsapp: '',
           categoria: (session as any)?.categoria || '',
           pacote: (session as any)?.pacote || '',

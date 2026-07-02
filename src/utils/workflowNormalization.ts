@@ -45,7 +45,7 @@ export function normalizeWorkflowSession(session: any): WorkflowSession {
     descricao: session.descricao ?? '',
     observacoes: session.observacoes ?? '',
     detalhes: session.detalhes ?? '',
-    status: session.status ?? 'agendado',
+    status: session.status ?? null,
     clientes: session.clientes ?? null,
   } as WorkflowSession;
 }

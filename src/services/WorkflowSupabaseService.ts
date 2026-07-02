@@ -601,7 +601,7 @@ export class WorkflowSupabaseService {
             categoria: session.categoria || 'Outros',
             pacote: session.pacote || '',
             descricao: session.descricao || '',
-            status: session.status || 'agendado',
+            status: session.status ?? null,
             valor_total: parseValue(session.total || session.valorPacote || 0),
             valor_pago: parseValue(session.valorPago || 0),
             produtos_incluidos: session.produtosList || [],

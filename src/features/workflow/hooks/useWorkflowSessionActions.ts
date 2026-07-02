@@ -208,7 +208,7 @@ export function useWorkflowSessionActions({
       if (currentSession) {
         mergeUpdate({
           ...currentSession,
-          status: normalized ?? "",
+          status: normalized as any,
           updated_at: new Date().toISOString(),
         });
       }
