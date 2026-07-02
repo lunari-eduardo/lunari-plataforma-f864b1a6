@@ -51,7 +51,7 @@ interface Props {
  * Nome/email/telefone/CPF pré-preenchidos a partir do cliente e editáveis.
  * Validação client-side (ASCII no email, DV no CPF/CNPJ, dígitos no telefone).
  */
-export function PayerFieldsBlock({ value, onChange, onValidityChange, provider }: Props) {
+export function PayerFieldsBlock({ value, onChange, onValidityChange, provider, onlyShow, hideTitle }: Props) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const emailRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -91,12 +91,19 @@ export function PayerFieldsBlock({ value, onChange, onValidityChange, provider }
 
   const missingForProvider = provider ? !validity.allValidFor(provider) : false;
 
+  const show = (field: "nome" | "email" | "telefone" | "cpfCnpj") =>
+    !onlyShow || onlyShow.includes(field);
+
   return (
     <div className="space-y-3">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-        <User className="h-3 w-3" />
-        Dados do pagador
-      </Label>
+      {!hideTitle && (
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+          <User className="h-3 w-3" />
+          Dados do pagador
+        </Label>
+      )}
+
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <div className="space-y-1 md:col-span-2">
