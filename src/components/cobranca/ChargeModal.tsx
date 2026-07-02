@@ -178,8 +178,10 @@ export function ChargeModal({
       setQtdFotos(0);
       setRpcSnapshot(null);
       setAmbiguity(null);
+      setPayerEditing(false);
       // Hidratar payer a partir do cliente
       (async () => {
+
         const { data } = await supabase
           .from('clientes')
           .select('nome, email, telefone, whatsapp, cpf_cnpj')
