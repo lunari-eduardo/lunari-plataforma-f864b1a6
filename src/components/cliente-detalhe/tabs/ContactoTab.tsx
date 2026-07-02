@@ -253,6 +253,15 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
               />
             </div>
 
+            {/* WhatsApp (canal separado do telefone; não é sobrescrito por webhooks) */}
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">WhatsApp</label>
+              <PhoneInputSmart
+                value={(cliente as any).whatsapp || ''}
+                onSave={async (v) => handleSaveField('whatsapp', v)}
+              />
+            </div>
+
             {/* Email */}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">E-mail</label>
@@ -265,18 +274,59 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
               />
             </div>
 
-            {/* Endereço */}
+            {/* Endereço completo com ViaCEP */}
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Endereço</label>
-              <InlineEditField
-                value={cliente.endereco || ''}
-                onSave={async (v) => handleSaveField('endereco', v)}
-                placeholder="Rua, número, bairro, cidade"
-                icon={<MapPin className="h-4 w-4" />}
+              <label className="text-xs text-muted-foreground mb-2 block flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                Endereço
+              </label>
+              <AddressFieldsBlock
+                value={{
+                  cep: (cliente as any).cep,
+                  endereco: cliente.endereco,
+                  endereco_numero: (cliente as any).endereco_numero,
+                  endereco_complemento: (cliente as any).endereco_complemento,
+                  bairro: (cliente as any).bairro,
+                  cidade: (cliente as any).cidade,
+                  uf: (cliente as any).uf,
+                }}
+                onSave={async (patch) => onUpdate(cliente.id, patch)}
               />
             </div>
           </AccordionContent>
         </AccordionItem>
+
+        {/* SEÇÃO 2b: Documentação fiscal */}
+        <AccordionItem value="fiscal" className="border rounded-lg px-4 bg-card">
+          <AccordionTrigger className="hover:no-underline py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <IdCard className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="text-left">
+                <span className="font-medium">Documentação fiscal</span>
+                {(cliente as any).cpf_cnpj && (
+                  <span className="text-xs text-muted-foreground ml-2">• Preenchido</span>
+                )}
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4 space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">CPF ou CNPJ</label>
+              <CpfCnpjInlineField
+                value={(cliente as any).cpf_cnpj || ''}
+                onSave={async (digits) => handleSaveField('cpf_cnpj', digits || null)}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Usado em cobranças PIX/Boleto do Asaas e comprovantes. Preenchido automaticamente
+                quando o cliente paga por qualquer meio integrado.
+              </p>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+
 
         {/* SEÇÃO 3: Como conheceu */}
         <AccordionItem value="origem" className="border rounded-lg px-4 bg-card">
