@@ -4,14 +4,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
-  User, Phone, Mail, MapPin, Heart, MessageSquare, Baby, Plus, Users, Calendar 
+  User, Phone, Mail, MapPin, Heart, MessageSquare, Baby, Plus, Users, Calendar, IdCard 
 } from "lucide-react";
 import { InlineEditField } from '../shared/InlineEditField';
 import { PhoneInputSmart } from '../shared/PhoneInputSmart';
 import { OrigemVisualSelect } from '../shared/OrigemVisualSelect';
 import { FamilyMiniCard } from '../shared/FamilyMiniCard';
+import { CpfCnpjInlineField } from '../shared/CpfCnpjInlineField';
+import { AddressFieldsBlock } from '../shared/AddressFieldsBlock';
 import { ClienteCompleto } from '@/types/cliente-supabase';
 import { useState, useEffect } from 'react';
+
 
 interface ContactoTabProps {
   cliente: ClienteCompleto;
