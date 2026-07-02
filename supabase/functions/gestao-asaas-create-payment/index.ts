@@ -4,11 +4,24 @@ import {
   assertNotAmbiguousSessionCharge,
   resolveCobrancaBinding,
 } from '../_shared/cobrancaBinding.ts';
+import { payerHintsFlags, resolvePayerHints } from '../_shared/payer-hints.ts';
+import {
+  ensureAsaasCustomerCpf,
+  isAsaasSafeEmail,
+  putAsaasCustomer,
+} from '../_shared/asaas-helpers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+function errorResponse(code: string, message: string, status = 400) {
+  return new Response(
+    JSON.stringify({ success: false, code, error: message }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  );
+}
 
 interface RequestBody {
   clienteId: string;
@@ -186,82 +199,149 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Get or create Asaas customer
+    // 2. Resolve payer hints (ASCII-safe) + validações fiscais para PIX/BOLETO
+    const hints = await resolvePayerHints({ supabase, clienteId });
+    console.log(`[gestao-asaas] hints: ${payerHintsFlags(hints)}`);
+
+    // PIX/BOLETO exigem CPF/CNPJ e telefone no customer Asaas
+    if (billingType === 'PIX' || billingType === 'BOLETO') {
+      if (!hints.cpfCnpj) {
+        return errorResponse(
+          'MISSING_CPF',
+          'CPF/CNPJ do cliente é obrigatório para gerar cobrança PIX/Boleto no Asaas.',
+        );
+      }
+      if (!hints.phone) {
+        return errorResponse(
+          'MISSING_PHONE',
+          'Telefone do cliente é obrigatório para gerar cobrança PIX/Boleto no Asaas.',
+        );
+      }
+    }
+    if (!hints.name) {
+      return errorResponse('MISSING_NAME', 'Nome do cliente é obrigatório.');
+    }
+
+    // 3. Get or create Asaas customer (com todos os dados fiscais disponíveis)
     let asaasCustomerId: string | null = null;
 
-    const { data: cliente } = await supabase
-      .from('clientes')
-      .select('nome, email, telefone, whatsapp')
-      .eq('id', clienteId)
-      .maybeSingle();
-
-    if (cliente) {
-      const clientEmail = cliente.email;
-      
-      if (clientEmail) {
-        const searchResp = await fetch(`${asaasBaseUrl}/v3/customers?email=${encodeURIComponent(clientEmail)}`, {
-          headers: { access_token: asaasApiKey },
-        });
-        if (searchResp.ok) {
-          const searchData = await searchResp.json();
-          if (searchData.data && searchData.data.length > 0) {
-            asaasCustomerId = searchData.data[0].id;
-            console.log(`📋 Found existing Asaas customer: ${asaasCustomerId}`);
-          }
+    // Busca por email primeiro (só se ASCII válido)
+    if (hints.email && isAsaasSafeEmail(hints.email)) {
+      const searchResp = await fetch(
+        `${asaasBaseUrl}/v3/customers?email=${encodeURIComponent(hints.email)}`,
+        { headers: { access_token: asaasApiKey } },
+      );
+      if (searchResp.ok) {
+        const searchData = await searchResp.json();
+        if (searchData.data && searchData.data.length > 0) {
+          asaasCustomerId = searchData.data[0].id;
+          console.log(`📋 Found existing Asaas customer: ${asaasCustomerId}`);
         }
       }
+    }
+    // Fallback: busca por externalReference (clienteId Lunari)
+    if (!asaasCustomerId) {
+      const searchResp = await fetch(
+        `${asaasBaseUrl}/v3/customers?externalReference=${encodeURIComponent(clienteId)}`,
+        { headers: { access_token: asaasApiKey } },
+      );
+      if (searchResp.ok) {
+        const searchData = await searchResp.json();
+        if (searchData.data && searchData.data.length > 0) {
+          asaasCustomerId = searchData.data[0].id;
+          console.log(`📋 Found existing Asaas customer (by ref): ${asaasCustomerId}`);
+        }
+      }
+    }
 
-      if (!asaasCustomerId) {
-        const createResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            access_token: asaasApiKey,
-          },
-          body: JSON.stringify({
-            name: cliente.nome || 'Cliente',
-            email: cliente.email || undefined,
-            phone: cliente.whatsapp || cliente.telefone || undefined,
-            externalReference: clienteId,
-          }),
-        });
+    const customerPayload: Record<string, unknown> = {
+      name: hints.name,
+      email: hints.email, // undefined removido pelo helper
+      phone: hints.phone,
+      mobilePhone: hints.phone,
+      cpfCnpj: hints.cpfCnpj,
+      postalCode: hints.postalCode,
+      address: hints.address,
+      addressNumber: hints.addressNumber,
+      complement: hints.complement,
+      province: hints.province,
+      cityName: hints.cityName,
+      state: hints.state,
+      externalReference: clienteId,
+    };
 
-        if (createResp.ok) {
-          const createData = await createResp.json();
-          asaasCustomerId = createData.id;
-          console.log(`📋 Created Asaas customer: ${asaasCustomerId}`);
+    if (asaasCustomerId) {
+      // Atualiza customer com os dados que temos (resiliente a email inválido)
+      const upd = await putAsaasCustomer(asaasBaseUrl, asaasApiKey, asaasCustomerId, customerPayload);
+      if (!upd.ok) {
+        console.warn('[gestao-asaas] customer update failed but proceeding', upd.data);
+      } else if (upd.retriedWithoutEmail) {
+        console.warn('[gestao-asaas] customer atualizado sem email (rejeitado pelo Asaas)');
+      }
+    } else {
+      // Cria novo customer. Tenta com email; se falhar por email inválido, retenta sem.
+      const cleanCreate = Object.fromEntries(
+        Object.entries(customerPayload).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+      );
+      const createResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+        body: JSON.stringify(cleanCreate),
+      });
+      const createData = await createResp.json();
+      if (createResp.ok && createData.id) {
+        asaasCustomerId = createData.id;
+        console.log(`📋 Created Asaas customer: ${asaasCustomerId}`);
+      } else {
+        const errors = Array.isArray(createData?.errors) ? createData.errors : [];
+        const emailErr = errors.some((e: any) =>
+          String(e?.code || '').toLowerCase().includes('invalid_email') ||
+          String(e?.description || '').toLowerCase().includes('email'),
+        );
+        if (emailErr && 'email' in cleanCreate) {
+          const { email: _drop, ...rest } = cleanCreate;
+          void _drop;
+          const retryResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+            body: JSON.stringify(rest),
+          });
+          const retryData = await retryResp.json();
+          if (retryResp.ok && retryData.id) {
+            asaasCustomerId = retryData.id;
+            console.warn('[gestao-asaas] customer criado sem email (rejeitado pelo Asaas)');
+          } else {
+            console.error('Failed to create Asaas customer (retry):', retryData);
+            return errorResponse('ASAAS_CUSTOMER_ERROR', 'Erro ao criar cliente no Asaas.', 500);
+          }
         } else {
-          const errData = await createResp.json();
-          console.error('Failed to create Asaas customer:', errData);
+          console.error('Failed to create Asaas customer:', createData);
+          return errorResponse('ASAAS_CUSTOMER_ERROR', 'Erro ao criar cliente no Asaas.', 500);
         }
       }
     }
 
     if (!asaasCustomerId) {
-      const createResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          access_token: asaasApiKey,
-        },
-        body: JSON.stringify({
-          name: 'Cliente Lunari',
-          externalReference: clienteId,
-        }),
-      });
+      return errorResponse('ASAAS_CUSTOMER_ERROR', 'Não foi possível resolver cliente Asaas.', 500);
+    }
 
-      if (createResp.ok) {
-        const createData = await createResp.json();
-        asaasCustomerId = createData.id;
-      } else {
-        const errData = await createResp.json();
-        console.error('Failed to create fallback Asaas customer:', errData);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Erro ao criar cliente no Asaas', code: 'ASAAS_CUSTOMER_ERROR' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // Pré-check crítico para PIX/BOLETO: garante que o customer tem cpfCnpj
+    if (billingType === 'PIX' || billingType === 'BOLETO') {
+      const check = await ensureAsaasCustomerCpf(
+        asaasBaseUrl,
+        asaasApiKey,
+        asaasCustomerId,
+        hints.cpfCnpj,
+      );
+      if (!check.ok) {
+        return errorResponse(
+          'MISSING_CPF',
+          'Não foi possível sincronizar CPF/CNPJ do cliente com o Asaas.',
         );
       }
     }
+
+
 
     // 3. Resolve fee settings (per-charge overrides > global settings)
     // New logic: ireiAntecipar controls whether anticipation exists at all
