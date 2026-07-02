@@ -193,62 +193,26 @@ serve(async (req) => {
 
     console.log(`[gestao-infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}`);
 
-    // Create InfinitePay checkout link
-    const valorEmCentavos = Math.round(valor * 100);
-    const webhookUrl = `${SUPABASE_URL}/functions/v1/infinitepay-webhook`;
+    /**
+     * NÃO chamamos mais a InfinitePay diretamente. Retornamos uma URL
+     * intermediária apontando para a página pública /pay/ip/:id no domínio
+     * do Gestão. Essa página coleta os dados que faltam no CRM (nome, CPF,
+     * telefone, endereço) e SÓ ENTÃO invoca `pay-infinitepay-finalize`, que
+     * chama a API real da InfinitePay com `customer{}`/`address{}` pré-preenchidos.
+     *
+     * Se a `ip_checkout_url` começa com PUBLIC_SITE_URL, é intermediária.
+     * Se começa com `checkout.infinitepay.io`, já foi finalizada.
+     */
+    const intermediateUrl = `${PUBLIC_SITE_URL}/pay/ip/${cobranca.id}`;
+    // Handle não é validado aqui — o finalize revalida antes de chamar a API.
+    // Apenas checamos existência para dar erro precoce ao fotógrafo.
+    void handle;
 
-    const infinitePayPayload = {
-      handle: handle,
-      items: [
-        {
-          quantity: 1,
-          price: valorEmCentavos,
-          description: descricao || "Serviço fotográfico",
-        },
-      ],
-      order_nsu: cobranca.id, // UUID da cobrança como NSU
-      webhook_url: webhookUrl,
-    };
-
-    console.log(`[gestao-infinitepay-create-link] Calling InfinitePay API with payload:`, JSON.stringify(infinitePayPayload));
-
-    const ipResponse = await fetch(INFINITEPAY_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(infinitePayPayload),
-    });
-
-    if (!ipResponse.ok) {
-      const errorText = await ipResponse.text();
-      console.error(`[gestao-infinitepay-create-link] InfinitePay API error: ${ipResponse.status} - ${errorText}`);
-      
-      // Delete the cobranca since we couldn't create the link
-      await supabase.from("cobrancas").delete().eq("id", cobranca.id);
-      
-      throw new Error(`Erro na API InfinitePay: ${ipResponse.status}`);
-    }
-
-    const ipData = await ipResponse.json();
-    console.log(`[gestao-infinitepay-create-link] InfinitePay response:`, JSON.stringify(ipData));
-
-    // Extract checkout URL from response
-    const checkoutUrl = ipData.checkout_url || ipData.url || ipData.link;
-    
-    if (!checkoutUrl) {
-      console.error("[gestao-infinitepay-create-link] No checkout URL in response:", ipData);
-      await supabase.from("cobrancas").delete().eq("id", cobranca.id);
-      throw new Error("URL de checkout não retornada pela InfinitePay");
-    }
-
-    // Update cobranca with checkout URL
     const { error: updateError } = await supabase
       .from("cobrancas")
       .update({
-        ip_checkout_url: checkoutUrl,
+        ip_checkout_url: intermediateUrl,
         ip_order_nsu: cobranca.id,
-        mp_payment_link: checkoutUrl, // Also store in legacy field for compatibility
       })
       .eq("id", cobranca.id);
 
@@ -256,7 +220,22 @@ serve(async (req) => {
       console.error("[gestao-infinitepay-create-link] Error updating cobranca:", updateError);
     }
 
-    console.log(`[gestao-infinitepay-create-link] Success! Checkout URL: ${checkoutUrl}`);
+    console.log(`[gestao-infinitepay-create-link] Success! Intermediate URL: ${intermediateUrl}`);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        cobrancaId: cobranca.id,
+        checkoutUrl: intermediateUrl,
+        provedor: "infinitepay",
+        intermediate: true,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+
 
     return new Response(
       JSON.stringify({
