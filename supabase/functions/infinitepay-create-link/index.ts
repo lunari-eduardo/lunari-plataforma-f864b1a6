@@ -48,7 +48,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // userId vem do body (chamada interna via Service Role Key)
-    const { userId, clienteId, sessionId, valor, descricao }: CreateLinkRequest = await req.json();
+    const { userId, clienteId, sessionId, valor, descricao, skipPrefillPage }: CreateLinkRequest = await req.json();
 
     if (!userId) {
       throw new Error("userId é obrigatório no body");
