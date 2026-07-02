@@ -140,6 +140,8 @@ export function ChargeModal({
     cpfCnpj: '',
   });
   const [payerValidity, setPayerValidity] = useState<PayerFieldsValidity | null>(null);
+  const [payerEditing, setPayerEditing] = useState(false);
+
 
   const {
     cobrancas,
