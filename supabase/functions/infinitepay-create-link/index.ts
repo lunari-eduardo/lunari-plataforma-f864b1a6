@@ -21,6 +21,7 @@ const corsHeaders = {
 const INFINITEPAY_API_URL = "https://api.checkout.infinitepay.io/links";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const PUBLIC_SITE_URL = (Deno.env.get("VITE_SITE_URL") || Deno.env.get("SITE_URL") || "https://app.lunarihub.com").replace(/\/$/, "");
 
 interface CreateLinkRequest {
   userId: string;
@@ -28,7 +29,15 @@ interface CreateLinkRequest {
   sessionId?: string;
   valor: number;
   descricao?: string;
+  /**
+   * Quando true, gera o link diretamente na InfinitePay sem página intermediária.
+   * Padrão false = retorna a URL da página pública /pay/ip/:id do Gestão para
+   * que o cliente final complete dados faltantes.
+   * O Gallery pode passar true para manter comportamento legado se necessário.
+   */
+  skipPrefillPage?: boolean;
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -39,7 +48,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // userId vem do body (chamada interna via Service Role Key)
-    const { userId, clienteId, sessionId, valor, descricao }: CreateLinkRequest = await req.json();
+    const { userId, clienteId, sessionId, valor, descricao, skipPrefillPage }: CreateLinkRequest = await req.json();
 
     if (!userId) {
       throw new Error("userId é obrigatório no body");
@@ -118,8 +127,35 @@ serve(async (req) => {
       throw new Error("Erro ao criar registro de cobrança");
     }
 
-    console.log(`[infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}`);
+    console.log(`[infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}, skipPrefillPage=${skipPrefillPage}`);
 
+    // Fluxo padrão (Gestão e Gallery): retorna URL intermediária /pay/ip/:id
+    // Cliente completa dados e página finaliza chamando pay-infinitepay-finalize.
+    if (!skipPrefillPage) {
+      const intermediateUrl = `${PUBLIC_SITE_URL}/pay/ip/${cobranca.id}`;
+      await supabase
+        .from("cobrancas")
+        .update({
+          ip_checkout_url: intermediateUrl,
+          ip_order_nsu: cobranca.id,
+        })
+        .eq("id", cobranca.id);
+      void handle;
+
+      console.log(`[infinitepay-create-link] Intermediate URL: ${intermediateUrl}`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          cobrancaId: cobranca.id,
+          checkoutUrl: intermediateUrl,
+          provedor: "infinitepay",
+          intermediate: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    // Fallback legado: gera link direto na InfinitePay sem prefill.
     const valorEmCentavos = Math.round(valor * 100);
     const webhookUrl = `${SUPABASE_URL}/functions/v1/infinitepay-webhook`;
 
@@ -136,7 +172,7 @@ serve(async (req) => {
       webhook_url: webhookUrl,
     };
 
-    console.log(`[infinitepay-create-link] Calling InfinitePay API with payload:`, JSON.stringify(infinitePayPayload));
+    console.log(`[infinitepay-create-link] (legacy) Calling InfinitePay API with payload:`, JSON.stringify(infinitePayPayload));
 
     const ipResponse = await fetch(INFINITEPAY_API_URL, {
       method: "POST",
@@ -155,7 +191,7 @@ serve(async (req) => {
     console.log(`[infinitepay-create-link] InfinitePay response:`, JSON.stringify(ipData));
 
     const checkoutUrl = ipData.checkout_url || ipData.url || ipData.link;
-    
+
     if (!checkoutUrl) {
       console.error("[infinitepay-create-link] No checkout URL in response:", ipData);
       await supabase.from("cobrancas").delete().eq("id", cobranca.id);
@@ -179,6 +215,7 @@ serve(async (req) => {
         cobrancaId: cobranca.id,
         checkoutUrl: checkoutUrl,
         provedor: "infinitepay",
+
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

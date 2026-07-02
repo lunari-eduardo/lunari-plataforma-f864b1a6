@@ -17,6 +17,8 @@ import Tarefas from "@/pages/Tarefas";
 import FeedTest from "@/pages/FeedTest";
 import LandingPage from "@/pages/LandingPage";
 import PublicCheckout from "@/pages/PublicCheckout";
+import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
+
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
 import NotFound from "@/pages/NotFound";
@@ -87,6 +89,8 @@ export default function PhotographerApp() {
 
               <Route path="/formulario/:token" element={<FormularioPublico />} />
               <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
+              <Route path="/pay/ip/:cobrancaId" element={<InfinitePayCheckout />} />
+
 
               <Route path="/landing" element={<Navigate to="/" replace />} />
 

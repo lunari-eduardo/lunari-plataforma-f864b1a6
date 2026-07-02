@@ -27,8 +27,11 @@ import {
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
+import { PayerSummaryChip } from './PayerSummaryChip';
+import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
 import { AlertTriangle } from 'lucide-react';
+
 
 /** Códigos de erro do backend → mensagens pt-BR mapeadas para exibição. */
 const BACKEND_ERROR_MESSAGES: Record<string, string> = {
@@ -137,6 +140,8 @@ export function ChargeModal({
     cpfCnpj: '',
   });
   const [payerValidity, setPayerValidity] = useState<PayerFieldsValidity | null>(null);
+  const [payerEditing, setPayerEditing] = useState(false);
+
 
   const {
     cobrancas,
@@ -173,8 +178,10 @@ export function ChargeModal({
       setQtdFotos(0);
       setRpcSnapshot(null);
       setAmbiguity(null);
+      setPayerEditing(false);
       // Hidratar payer a partir do cliente
       (async () => {
+
         const { data } = await supabase
           .from('clientes')
           .select('nome, email, telefone, whatsapp, cpf_cnpj')
@@ -688,21 +695,79 @@ export function ChargeModal({
 
                 <Separator />
 
-                {/* Dados do pagador — coleta inline antes de gerar cobrança */}
-                <PayerFieldsBlock
-                  value={payer}
-                  onChange={setPayer}
-                  onValidityChange={setPayerValidity}
-                  provider={
+                {/* Dados do pagador — coleta condicional:
+                    - Sem provedor: nada
+                    - InfinitePay: apenas resumo (coleta acontece na página pública /pay/ip)
+                    - Outros: mostra bloco completo com campos faltantes, ou chip se CRM já tem tudo */}
+                {(() => {
+                  const currentProvider: PayerProvider | null =
                     selectedProvider === 'asaas'
                       ? (asaasMode === 'link' ? 'link_asaas' : 'pix_asaas')
                       : selectedProvider === 'mercadopago_link'
                         ? 'link_mp'
-                        : selectedProvider === 'pix_manual'
-                          ? 'pix_manual'
-                          : null
+                        : selectedProvider === 'infinitepay'
+                          ? 'link_infinitepay'
+                          : selectedProvider === 'pix_manual'
+                            ? 'pix_manual'
+                            : null;
+
+                  if (!currentProvider) return null;
+
+                  const missing = computeMissingFields(currentProvider, payer);
+                  const showFullBlock = payerEditing || (missing.length > 0 && currentProvider !== 'link_infinitepay');
+
+                  if (currentProvider === 'link_infinitepay' && !payerEditing) {
+                    return (
+                      <PayerSummaryChip
+                        value={payer}
+                        onEdit={() => setPayerEditing(true)}
+                        hint="Se algum dado faltar, o próprio cliente completa na página de pagamento (dados são salvos aqui automaticamente)."
+                      />
+                    );
                   }
-                />
+
+                  if (currentProvider === 'pix_manual') {
+                    return null;
+                  }
+
+                  if (!showFullBlock) {
+                    return (
+                      <PayerSummaryChip
+                        value={payer}
+                        onEdit={() => setPayerEditing(true)}
+                        hint="Já temos tudo que este meio de pagamento precisa."
+                      />
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      <PayerFieldsBlock
+                        value={payer}
+                        onChange={setPayer}
+                        onValidityChange={setPayerValidity}
+                        provider={
+                          currentProvider === 'link_infinitepay' ? null : currentProvider
+                        }
+                        onlyShow={payerEditing ? undefined : (missing.length > 0 ? missing : undefined)}
+                      />
+                      {payerEditing && (
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => setPayerEditing(false)}
+                          >
+                            Recolher
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
 
                 <Separator />
 
