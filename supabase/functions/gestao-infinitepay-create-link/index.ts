@@ -237,18 +237,6 @@ serve(async (req) => {
     );
 
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        cobrancaId: cobranca.id,
-        checkoutUrl: checkoutUrl,
-        provedor: "infinitepay",
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
 
   } catch (error) {
     console.error("[gestao-infinitepay-create-link] Error:", error);
