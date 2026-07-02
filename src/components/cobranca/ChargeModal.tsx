@@ -464,6 +464,12 @@ export function ChargeModal({
   const handleAsaasGeneratePix = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
+    if (!payerValidity?.allValidFor('pix_asaas')) {
+      const { toast } = await import('sonner');
+      toast.error('Preencha nome, telefone e CPF/CNPJ válidos do pagador antes de gerar o PIX.');
+      return;
+    }
+    await persistPayerToCrm();
     setAsaasPixLoading(true);
     try {
       const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
@@ -480,7 +486,9 @@ export function ChargeModal({
       });
 
       if (response.error) throw new Error(response.error.message);
-      if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar PIX');
+      if (!response.data?.success) {
+        throw new Error(mapBackendError(response.data?.code, response.data?.error));
+      }
 
       const qrCode = response.data.pixQrCode ? `data:image/png;base64,${response.data.pixQrCode}` : null;
       setAsaasPixQrCode(qrCode);
