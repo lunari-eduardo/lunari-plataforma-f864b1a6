@@ -47,7 +47,7 @@ export const sessionsRepo = {
       .eq("user_id", userId)
       .gte("data_sessao", start)
       .lte("data_sessao", end)
-      .neq("status", "historico")
+      .or("status.is.null,status.neq.historico")
       .order("data_sessao", { ascending: true });
     if (error) throw error;
     return (data || []) as unknown as WorkflowSession[];
@@ -63,7 +63,7 @@ export const sessionsRepo = {
       .from("clientes_sessoes")
       .select(SELECT_WITH_CLIENTE)
       .eq("user_id", userId)
-      .neq("status", "historico")
+      .or("status.is.null,status.neq.historico")
       .gte("data_sessao", dateFilter)
       .order("data_sessao", { ascending: true })
       .order("hora_sessao", { ascending: true });

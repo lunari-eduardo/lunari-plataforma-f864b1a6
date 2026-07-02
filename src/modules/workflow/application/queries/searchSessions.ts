@@ -61,7 +61,7 @@ export const searchSessions = defineQuery({
         "id, session_id, data_sessao, status, pacote, categoria, valor_total, valor_pago, clientes(nome)",
       )
       .eq("user_id", userId)
-      .neq("status", "historico")
+      .or("status.is.null,status.neq.historico")
       .order("data_sessao", { ascending: false })
       .limit(limit);
 
