@@ -17,6 +17,8 @@ import Tarefas from "@/pages/Tarefas";
 import FeedTest from "@/pages/FeedTest";
 import LandingPage from "@/pages/LandingPage";
 import PublicCheckout from "@/pages/PublicCheckout";
+import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
+
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
 import NotFound from "@/pages/NotFound";
