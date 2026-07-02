@@ -81,3 +81,22 @@ export function isValidPhoneBR(value: string): boolean {
   const d = unmaskDigits(value);
   return d.length === 10 || d.length === 11;
 }
+
+/** Máscara CEP brasileiro: 00000-000 */
+export function maskCep(value: string): string {
+  const d = unmaskDigits(value).slice(0, 8);
+  return d.replace(/^(\d{5})(\d)/, "$1-$2");
+}
+
+/** CEP válido = exatamente 8 dígitos. */
+export function isValidCep(value: string): boolean {
+  return unmaskDigits(value).length === 8;
+}
+
+/** Lista das 27 UFs do Brasil (para Select). */
+export const UF_LIST = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
+  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
+] as const;
+export type UF = typeof UF_LIST[number];
+
