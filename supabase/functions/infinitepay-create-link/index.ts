@@ -21,6 +21,7 @@ const corsHeaders = {
 const INFINITEPAY_API_URL = "https://api.checkout.infinitepay.io/links";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const PUBLIC_SITE_URL = (Deno.env.get("VITE_SITE_URL") || Deno.env.get("SITE_URL") || "https://app.lunarihub.com").replace(/\/$/, "");
 
 interface CreateLinkRequest {
   userId: string;
@@ -28,7 +29,15 @@ interface CreateLinkRequest {
   sessionId?: string;
   valor: number;
   descricao?: string;
+  /**
+   * Quando true, gera o link diretamente na InfinitePay sem página intermediária.
+   * Padrão false = retorna a URL da página pública /pay/ip/:id do Gestão para
+   * que o cliente final complete dados faltantes.
+   * O Gallery pode passar true para manter comportamento legado se necessário.
+   */
+  skipPrefillPage?: boolean;
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
