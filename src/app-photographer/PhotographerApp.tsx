@@ -89,6 +89,8 @@ export default function PhotographerApp() {
 
               <Route path="/formulario/:token" element={<FormularioPublico />} />
               <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
+              <Route path="/pay/ip/:cobrancaId" element={<InfinitePayCheckout />} />
+
 
               <Route path="/landing" element={<Navigate to="/" replace />} />
 
