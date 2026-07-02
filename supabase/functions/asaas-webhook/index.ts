@@ -2,6 +2,69 @@
 // NUNCA usar para cobranças de fotógrafos. Chave via `_shared/platform-asaas.ts`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getPlatformAsaasConfig } from "../_shared/platform-asaas.ts";
+import { enrichClienteIfMissing } from "../_shared/enrich-cliente.ts";
+
+/**
+ * Enriquece o cadastro do cliente com dados vindos do Asaas após pagamento
+ * confirmado. Fire-and-forget: nunca falha o webhook por erro de enrich.
+ */
+async function enrichClienteFromAsaasPayment(
+  adminClient: any,
+  cobrancaId: string,
+  asaasCustomerId: string,
+  photographerUserId: string,
+) {
+  try {
+    const { data: integ } = await adminClient
+      .from("usuarios_integracoes")
+      .select("access_token, dados_extras")
+      .eq("user_id", photographerUserId)
+      .eq("provedor", "asaas")
+      .eq("status", "ativo")
+      .order("is_default", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!integ?.access_token) return;
+    const env = (integ.dados_extras as any)?.environment === "production" ? "production" : "sandbox";
+    const baseUrl = env === "production" ? "https://api.asaas.com" : "https://api-sandbox.asaas.com";
+
+    const custRes = await fetch(`${baseUrl}/v3/customers/${asaasCustomerId}`, {
+      headers: { access_token: integ.access_token },
+    });
+    if (!custRes.ok) {
+      console.warn(`[enrich] GET customer ${asaasCustomerId} → ${custRes.status}`);
+      await custRes.text().catch(() => {});
+      return;
+    }
+    const cust = await custRes.json();
+
+    const { data: cobranca } = await adminClient
+      .from("cobrancas")
+      .select("cliente_id")
+      .eq("id", cobrancaId)
+      .maybeSingle();
+    if (!cobranca?.cliente_id) return;
+
+    const result = await enrichClienteIfMissing(adminClient, cobranca.cliente_id, {
+      email: cust.email,
+      telefone: cust.mobilePhone || cust.phone,
+      cpfCnpj: cust.cpfCnpj,
+      cep: cust.postalCode,
+      endereco: cust.address,
+      enderecoNumero: cust.addressNumber,
+      enderecoComplemento: cust.complement,
+      bairro: cust.province,
+      cidade: cust.city || cust.cityName,
+      uf: cust.state,
+    });
+    if (result.updated) {
+      console.log(`[enrich] cliente ${cobranca.cliente_id} → ${result.fields.join(",")}`);
+    }
+  } catch (err) {
+    console.warn("[enrich] failed (ignored):", err);
+  }
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -232,7 +295,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.installment) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras")
+      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
       .eq("asaas_installment_id", payment.installment)
       .maybeSingle();
     if (data) return data;
@@ -242,7 +305,7 @@ async function findCobranca(adminClient: any, payment: any) {
   if (payment?.id) {
     const { data } = await adminClient
       .from("cobrancas")
-      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras")
+      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
       .eq("mp_payment_id", payment.id)
       .maybeSingle();
     if (data) return data;
@@ -455,6 +518,21 @@ Deno.serve(async (req) => {
           // Only mark as processed if upsert succeeded
           if (upsertSuccess && payment.id) {
             await markEventProcessed(adminClient, event, payment.id);
+          }
+
+          // Enrich cliente do CRM a partir do customer no Asaas (fire-and-forget)
+          if (
+            upsertSuccess &&
+            (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") &&
+            payment.customer &&
+            (cobranca as any).user_id
+          ) {
+            await enrichClienteFromAsaasPayment(
+              adminClient,
+              cobranca.id,
+              payment.customer,
+              (cobranca as any).user_id,
+            );
           }
         }
       }

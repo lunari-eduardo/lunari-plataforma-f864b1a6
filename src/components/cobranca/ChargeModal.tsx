@@ -26,7 +26,32 @@ import {
   assertNotAmbiguousSessionChargeClient,
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
+import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
+import { unmaskDigits } from '@/lib/validateCpfCnpj';
 import { AlertTriangle } from 'lucide-react';
+
+/** Códigos de erro do backend → mensagens pt-BR mapeadas para exibição. */
+const BACKEND_ERROR_MESSAGES: Record<string, string> = {
+  MISSING_CPF: 'CPF/CNPJ do cliente é obrigatório para gerar cobrança PIX/Boleto no Asaas.',
+  MISSING_PHONE: 'Telefone do cliente é obrigatório para gerar cobrança PIX/Boleto no Asaas.',
+  MISSING_NAME: 'Nome do cliente é obrigatório.',
+  MISSING_EMAIL: 'Email do cliente é obrigatório.',
+  INVALID_CPF: 'CPF/CNPJ inválido.',
+  INVALID_EMAIL: 'Este email não é aceito pelo Asaas. Use um email sem acentos ou caracteres especiais.',
+  ASAAS_CUSTOMER_ERROR: 'Erro ao sincronizar cliente com o Asaas.',
+  ASAAS_PAYMENT_ERROR: 'Erro ao criar cobrança no Asaas.',
+  PIX_GENERATION_FAILED: 'Falha ao gerar código PIX.',
+  PIX_DISABLED: 'PIX não está habilitado nas configurações Asaas.',
+  BOLETO_DISABLED: 'Boleto não está habilitado nas configurações Asaas.',
+  CARD_DISABLED: 'Cartão de crédito não está habilitado nas configurações Asaas.',
+  ASAAS_NOT_CONFIGURED: 'Integração Asaas não configurada.',
+};
+
+function mapBackendError(code?: string, fallback?: string): string {
+  if (code && BACKEND_ERROR_MESSAGES[code]) return BACKEND_ERROR_MESSAGES[code];
+  return fallback || 'Erro ao processar cobrança.';
+}
+
 
 interface ChargeModalProps {
   isOpen: boolean;
@@ -104,6 +129,15 @@ export function ChargeModal({
     status?: Cobranca['status'];
   } | null>(null);
 
+  // Dados do pagador (coletados inline antes de gerar cobrança)
+  const [payer, setPayer] = useState<PayerFieldsValue>({
+    nome: '',
+    email: '',
+    telefone: '',
+    cpfCnpj: '',
+  });
+  const [payerValidity, setPayerValidity] = useState<PayerFieldsValidity | null>(null);
+
   const {
     cobrancas,
     creatingCharge,
@@ -139,8 +173,31 @@ export function ChargeModal({
       setQtdFotos(0);
       setRpcSnapshot(null);
       setAmbiguity(null);
+      // Hidratar payer a partir do cliente
+      (async () => {
+        const { data } = await supabase
+          .from('clientes')
+          .select('nome, email, telefone, whatsapp, cpf_cnpj')
+          .eq('id', clienteId)
+          .maybeSingle();
+        if (data) {
+          setPayer({
+            nome: data.nome || clienteNome || '',
+            email: data.email || '',
+            telefone: (data.whatsapp || data.telefone || clienteWhatsapp || '').toString(),
+            cpfCnpj: (data as any).cpf_cnpj || '',
+          });
+        } else {
+          setPayer({
+            nome: clienteNome || '',
+            email: '',
+            telefone: clienteWhatsapp || '',
+            cpfCnpj: '',
+          });
+        }
+      })();
     }
-  }, [isOpen, valorSugerido]);
+  }, [isOpen, valorSugerido, clienteId, clienteNome, clienteWhatsapp]);
 
   // Snapshot canônico via RPC quando galeria selecionada (substitui cálculo local)
   useEffect(() => {
@@ -310,6 +367,38 @@ export function ChargeModal({
     }
     return { finalidade: 'fotos_extras', galeriaId, qtdFotos };
   };
+
+  /**
+   * Persiste os dados do pagador no CRM antes de gerar cobrança.
+   * Só grava em campos vazios (regra: nunca sobrescrever whatsapp).
+   */
+  const persistPayerToCrm = useCallback(async () => {
+    try {
+      const { data: current } = await supabase
+        .from('clientes')
+        .select('nome, email, telefone, cpf_cnpj')
+        .eq('id', clienteId)
+        .maybeSingle();
+      if (!current) return;
+      const patch: Record<string, string> = {};
+      const isEmpty = (v: unknown) => v == null || (typeof v === 'string' && v.trim() === '');
+      if (payer.nome.trim() && isEmpty(current.nome)) patch.nome = payer.nome.trim();
+      if (payer.email.trim() && isEmpty(current.email) && payerValidity?.email) {
+        patch.email = payer.email.trim();
+      }
+      if (payer.telefone && isEmpty(current.telefone) && payerValidity?.telefone) {
+        patch.telefone = unmaskDigits(payer.telefone);
+      }
+      if (payer.cpfCnpj && isEmpty((current as any).cpf_cnpj) && payerValidity?.cpfCnpj) {
+        (patch as any).cpf_cnpj = unmaskDigits(payer.cpfCnpj);
+      }
+      if (Object.keys(patch).length > 0) {
+        await supabase.from('clientes').update(patch).eq('id', clienteId);
+      }
+    } catch (err) {
+      console.warn('[ChargeModal] persistPayerToCrm failed:', err);
+    }
+  }, [clienteId, payer, payerValidity]);
 
   const handleGenerateCharge = async () => {
     if (!selectedProvider) return;
