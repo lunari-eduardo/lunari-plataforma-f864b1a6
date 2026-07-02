@@ -506,6 +506,12 @@ export function ChargeModal({
   const handleAsaasGenerateLink = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
+    if (!payerValidity?.allValidFor('link_asaas')) {
+      const { toast } = await import('sonner');
+      toast.error('Preencha nome, telefone e CPF/CNPJ válidos do pagador antes de gerar o link.');
+      return;
+    }
+    await persistPayerToCrm();
     setAsaasLinkLoading(true);
     try {
       // Get current user
