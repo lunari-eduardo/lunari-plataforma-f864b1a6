@@ -15,9 +15,14 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const INFINITEPAY_API_URL = "https://api.checkout.infinitepay.io/links";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+/**
+ * Domínio público onde a página /pay/ip/:id está hospedada. Fallback para
+ * o domínio de produção quando VITE_SITE_URL não estiver configurado como secret.
+ */
+const PUBLIC_SITE_URL = (Deno.env.get("VITE_SITE_URL") || Deno.env.get("SITE_URL") || "https://app.lunarihub.com").replace(/\/$/, "");
+
 
 interface CreateLinkRequest {
   clienteId: string;
