@@ -650,10 +650,16 @@ export type Database = {
       }
       clientes: {
         Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cpf_cnpj: string | null
           created_at: string | null
           data_nascimento: string | null
           email: string | null
           endereco: string | null
+          endereco_complemento: string | null
+          endereco_numero: string | null
           gallery_password: string | null
           gallery_status: string | null
           id: string
@@ -662,15 +668,22 @@ export type Database = {
           origem: string | null
           telefone: string | null
           total_galerias: number | null
+          uf: string | null
           updated_at: string | null
           user_id: string
           whatsapp: string | null
         }
         Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cpf_cnpj?: string | null
           created_at?: string | null
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          endereco_complemento?: string | null
+          endereco_numero?: string | null
           gallery_password?: string | null
           gallery_status?: string | null
           id?: string
@@ -679,15 +692,22 @@ export type Database = {
           origem?: string | null
           telefone?: string | null
           total_galerias?: number | null
+          uf?: string | null
           updated_at?: string | null
           user_id: string
           whatsapp?: string | null
         }
         Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cpf_cnpj?: string | null
           created_at?: string | null
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          endereco_complemento?: string | null
+          endereco_numero?: string | null
           gallery_password?: string | null
           gallery_status?: string | null
           id?: string
@@ -696,6 +716,7 @@ export type Database = {
           origem?: string | null
           telefone?: string | null
           total_galerias?: number | null
+          uf?: string | null
           updated_at?: string | null
           user_id?: string
           whatsapp?: string | null
@@ -1155,6 +1176,7 @@ export type Database = {
           galeria_id: string | null
           id: string
           ip_checkout_url: string | null
+          ip_invoice_slug: string | null
           ip_order_nsu: string | null
           ip_receipt_url: string | null
           ip_transaction_nsu: string | null
@@ -1195,6 +1217,7 @@ export type Database = {
           galeria_id?: string | null
           id?: string
           ip_checkout_url?: string | null
+          ip_invoice_slug?: string | null
           ip_order_nsu?: string | null
           ip_receipt_url?: string | null
           ip_transaction_nsu?: string | null
@@ -1235,6 +1258,7 @@ export type Database = {
           galeria_id?: string | null
           id?: string
           ip_checkout_url?: string | null
+          ip_invoice_slug?: string | null
           ip_order_nsu?: string | null
           ip_receipt_url?: string | null
           ip_transaction_nsu?: string | null
@@ -2593,6 +2617,7 @@ export type Database = {
           nome_sessao: string | null
           orcamento_id: string | null
           origin: string | null
+          payment_needs_regeneration: boolean
           permissao: string | null
           prazo_selecao: string | null
           prazo_selecao_dias: number | null
@@ -2644,6 +2669,7 @@ export type Database = {
           nome_sessao?: string | null
           orcamento_id?: string | null
           origin?: string | null
+          payment_needs_regeneration?: boolean
           permissao?: string | null
           prazo_selecao?: string | null
           prazo_selecao_dias?: number | null
@@ -2695,6 +2721,7 @@ export type Database = {
           nome_sessao?: string | null
           orcamento_id?: string | null
           origin?: string | null
+          payment_needs_regeneration?: boolean
           permissao?: string | null
           prazo_selecao?: string | null
           prazo_selecao_dias?: number | null
@@ -5572,6 +5599,10 @@ export type Database = {
         Returns: Json
       }
       refund_photo_credit: { Args: { _user_id: string }; Returns: undefined }
+      regenerate_pending_charge: {
+        Args: { p_gallery_id: string }
+        Returns: Json
+      }
       register_referral: { Args: { _referral_code: string }; Returns: boolean }
       release_advisory_lock: { Args: { lock_key: string }; Returns: boolean }
       renew_subscription_credits: {
@@ -5642,6 +5673,28 @@ export type Database = {
         Args: { p_visitor_id: string }
         Returns: Json
       }
+      upsert_visitor_contact:
+        | {
+            Args: {
+              p_email: string
+              p_nome: string
+              p_phone: string
+              p_token: string
+              p_visitor_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cpf_cnpj?: string
+              p_email: string
+              p_nome: string
+              p_phone: string
+              p_token: string
+              p_visitor_id: string
+            }
+            Returns: Json
+          }
       user_has_gallery_access: { Args: { _user_id: string }; Returns: boolean }
       workflow_a_receber: {
         Args: { _end: string; _start: string }
