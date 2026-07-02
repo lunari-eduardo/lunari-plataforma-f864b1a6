@@ -60,7 +60,7 @@ export const pendingPayments = defineQuery({
         "id, session_id, cliente_id, data_sessao, valor_total, valor_pago, clientes(nome)",
       )
       .eq("user_id", userId)
-      .neq("status", "historico")
+      .or("status.is.null,status.neq.historico")
       .gte("data_sessao", start)
       .lte("data_sessao", end)
       .order("data_sessao", { ascending: true })
