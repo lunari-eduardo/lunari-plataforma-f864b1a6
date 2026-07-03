@@ -57,6 +57,11 @@ export function useHelpArticleBySlug(slug: string) {
       return data as HelpArticle;
     },
     enabled: !!slug,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
