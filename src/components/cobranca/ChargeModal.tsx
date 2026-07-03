@@ -626,30 +626,31 @@ export function ChargeModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
+          className="max-w-lg md:max-w-3xl max-h-[92vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
           overlayClassName="backdrop-blur-sm bg-black/60 z-[59]"
         >
-          <DialogHeader className="p-4 pb-2">
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
+          <DialogHeader className="px-4 pt-3 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CreditCard className="h-4 w-4 text-primary" />
               Cobrar cliente
+              <span className="text-xs text-muted-foreground font-normal ml-1">· {clienteNome}</span>
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">{clienteNome}</p>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2 shrink-0" style={{ width: 'calc(100% - 32px)' }}>
-              <TabsTrigger value="cobrar" className="gap-2">
-                <CreditCard className="h-4 w-4" />
+            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2 shrink-0 h-9" style={{ width: 'calc(100% - 32px)' }}>
+              <TabsTrigger value="cobrar" className="gap-2 text-xs">
+                <CreditCard className="h-3.5 w-3.5" />
                 Nova Cobrança
               </TabsTrigger>
-              <TabsTrigger value="historico" className="gap-2">
-                <History className="h-4 w-4" />
+              <TabsTrigger value="historico" className="gap-2 text-xs">
+                <History className="h-3.5 w-3.5" />
                 Histórico ({cobrancas.length})
               </TabsTrigger>
             </TabsList>
 
             <div className="flex-1 min-h-0 overflow-y-auto">
+
               <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
                 {/* Valor da cobrança */}
                 <div className="space-y-3">
