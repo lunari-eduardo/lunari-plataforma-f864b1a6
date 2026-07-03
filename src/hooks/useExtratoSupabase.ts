@@ -119,7 +119,10 @@ export function useExtratoSupabase({
         totalPages: Math.ceil((count || 0) / pageSize)
       };
     },
-    staleTime: 30000,
+    staleTime: 2 * 60_000, // 2 min — realtime invalida em mutação
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // ============= REALTIME SUBSCRIPTIONS COM DEBOUNCE =============
