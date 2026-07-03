@@ -199,13 +199,18 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
 
 // ------------------------------ repo ------------------------------
 
+// A1/A2: projeção estreita para listagem. `mapRow` só lê estas colunas —
+// evita trafegar description, metadata, updated_at etc. em cada linha.
+const APPT_LIST_COLS =
+  "id, session_id, title, date, time, type, status, description, package_id, paid_amount, orcamento_id, origem, cliente_id, clientes ( nome )";
+
 export class SupabaseAppointmentsRepository implements AppointmentsRepository {
   async listByRange(range: DateRange): Promise<DomainAppointment[]> {
     const session = await requireSession();
 
     const { data, error } = await supabase
       .from("appointments")
-      .select(`*, clientes ( nome )`)
+      .select(APPT_LIST_COLS)
       .eq("user_id", session.user.id)
       .gte("date", range.start)
       .lte("date", range.end)
@@ -215,6 +220,7 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
     if (error) throw error;
     return (data || []).map(mapRow);
   }
+
 
   async getById(id: string): Promise<DomainAppointment | null> {
     const session = await requireSession();

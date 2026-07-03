@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './lib/egressLogger' // dev-only: loga respostas REST > 20KB
+
 
 // Auto-reload quando chunk fica obsoleto após deploy
 window.addEventListener('vite:preloadError', () => {

@@ -13,15 +13,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { WorkflowSession } from "../domain/session";
 
+// A2: Embed reduzido. Listagem só usa `nome` do cliente. Consumidores que
+// precisam de email/telefone/whatsapp devem buscar o cliente sob demanda
+// (query separada por id, com cache próprio) — evita trafegar contato em
+// cada linha de 100+ sessões por mês.
 const SELECT_WITH_CLIENTE = `
   *,
-  clientes (
-    nome,
-    email,
-    telefone,
-    whatsapp
-  )
+  clientes ( nome )
 ` as const;
+
 
 /** Formato YYYY-MM-DD sem timezone, idêntico ao usado pelo Context. */
 function dateOnly(d: Date): string {

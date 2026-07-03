@@ -37,9 +37,12 @@ export function useAgendaNotifications(): AppNotification[] {
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 10 * 60 * 1000);
+    // A3: reduz polling para 15min (notificação não precisa ser realtime;
+    // eventos importantes chegam pelo canal Realtime unificado).
+    const id = setInterval(fetchAll, 15 * 60 * 1000);
     return () => clearInterval(id);
   }, [fetchAll]);
+
 
   return items;
 }

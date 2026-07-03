@@ -341,7 +341,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
           
           const { data: fullSession } = await supabase
             .from('clientes_sessoes')
-            .select(`*, clientes(nome, email, telefone, whatsapp)`)
+            .select(`*, clientes(nome)`)
             .eq('id', session.id)
             .single();
           
@@ -363,7 +363,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
               console.log('🔄 [Realtime] Buscando sessão completa após UPDATE...');
               const { data: fullSession } = await supabase
                 .from('clientes_sessoes')
-                .select(`*, clientes(nome, email, telefone, whatsapp)`)
+                .select(`*, clientes(nome)`)
                 .eq('id', session.id)
                 .single();
               
@@ -396,7 +396,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
           setTimeout(async () => {
             const { data: updatedSession } = await supabase
               .from('clientes_sessoes')
-              .select(`*, clientes(nome, email, telefone, whatsapp)`)
+              .select(`*, clientes(nome)`)
               .eq('session_id', sessionId)
               .single();
             
@@ -549,7 +549,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('🔄 [CacheMerge] Hidratando dados do cliente...');
         const { data: fullSession } = await supabase
           .from('clientes_sessoes')
-          .select(`*, clientes(nome, email, telefone, whatsapp)`)
+          .select(`*, clientes(nome)`)
           .eq('id', session.id)
           .single();
         
@@ -634,7 +634,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         // Tentativa 1: por session_id (TEXT) — caminho padrão
         const byText = await supabase
           .from('clientes_sessoes')
-          .select('*, clientes(nome, email, telefone, whatsapp)')
+          .select('*, clientes(nome)')
           .eq('session_id', sessionId)
           .maybeSingle();
         if (byText.data) return byText.data;
@@ -642,7 +642,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         // Tentativa 2: por id UUID — fallback se o evento veio com UUID
         const byUuid = await supabase
           .from('clientes_sessoes')
-          .select('*, clientes(nome, email, telefone, whatsapp)')
+          .select('*, clientes(nome)')
           .eq('id', sessionId)
           .maybeSingle();
         return byUuid.data;
