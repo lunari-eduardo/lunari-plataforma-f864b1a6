@@ -5,8 +5,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
+import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
 import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
 import { useSessionPayments } from "@/hooks/useSessionPayments";
+import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
