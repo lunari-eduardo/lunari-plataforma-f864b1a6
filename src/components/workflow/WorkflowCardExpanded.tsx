@@ -351,8 +351,20 @@ export function WorkflowCardExpanded({
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total fotos extras:</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
-                <FotosExtrasPaymentBadge status={session.galeriaStatusPagamento} />
+                <span className="text-sm font-medium text-foreground">
+                  {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
+                </span>
+                <FotosExtrasPaymentBadge
+                  status={
+                    hasGaleria
+                      ? extrasFullyPaid
+                        ? "pago"
+                        : extrasPendente > 0
+                          ? "pendente"
+                          : session.galeriaStatusPagamento
+                      : session.galeriaStatusPagamento
+                  }
+                />
                 {session.extrasOverridden && isLinkedToGallery && (
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
@@ -374,6 +386,15 @@ export function WorkflowCardExpanded({
                 )}
               </div>
             </div>
+
+            {hasGaleria && extrasPendente > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-muted-foreground/80">Pendente extras:</span>
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(extrasPendente)}
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total produtos:</span>
