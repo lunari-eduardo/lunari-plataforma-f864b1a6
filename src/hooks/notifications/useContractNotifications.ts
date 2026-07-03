@@ -67,7 +67,7 @@ export function useContractNotifications(): AppNotification[] {
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 10 * 60 * 1000);
+    const id = setInterval(fetchAll, 15 * 60 * 1000) /* A3: reduz egress */;
     return () => clearInterval(id);
   }, [fetchAll]);
 
