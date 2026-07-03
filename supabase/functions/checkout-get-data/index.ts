@@ -281,7 +281,10 @@ Deno.serve(async (req) => {
           incluirTaxaAntecipacao: repassarTaxaAntecipacao,
         },
         accountFees,
+        payerHints,
+        payerMissing,
       }),
+
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
