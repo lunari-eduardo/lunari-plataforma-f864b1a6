@@ -5,8 +5,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
+import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
 import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
 import { useSessionPayments } from "@/hooks/useSessionPayments";
+import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
@@ -30,6 +32,7 @@ export function WorkflowCardExpanded({
   const { addPayment: addPaymentContext } = useAppContext();
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
+  const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
 
@@ -135,9 +138,22 @@ export function WorkflowCardExpanded({
   );
 
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
-  const valorFotoExtraTotal = formatCurrency(
-    parseCurrency(String(session.valorTotalFotoExtra || "0")),
+
+  // Snapshot canônico de fotos extras (RPC compartilhada com Gallery).
+  // Fonte única quando a sessão está vinculada a uma galeria — evita divergência
+  // entre workflow (qtd × valor local) e Gallery (RPC com regras congeladas +
+  // ciclos anteriores). Handoff §5.1.
+  const { calc: extraCalc, isLoading: extraCalcLoading } = useGalleryExtraCalc(
+    session.galeriaId || null,
   );
+  const hasGaleria = Boolean(session.galeriaId);
+  const valorFotoExtraTotal = hasGaleria
+    ? formatCurrency(extraCalc.valor_total_ideal)
+    : formatCurrency(parseCurrency(String(session.valorTotalFotoExtra || "0")));
+  const extrasPendente = hasGaleria
+    ? Math.max(0, extraCalc.valor_a_cobrar)
+    : 0;
+  const extrasFullyPaid = hasGaleria ? extraCalc.is_fully_paid === true : true;
 
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
@@ -335,8 +351,20 @@ export function WorkflowCardExpanded({
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total fotos extras:</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">{valorFotoExtraTotal}</span>
-                <FotosExtrasPaymentBadge status={session.galeriaStatusPagamento} />
+                <span className="text-sm font-medium text-foreground">
+                  {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
+                </span>
+                <FotosExtrasPaymentBadge
+                  status={
+                    hasGaleria
+                      ? extrasFullyPaid
+                        ? "pago"
+                        : extrasPendente > 0
+                          ? "pendente"
+                          : session.galeriaStatusPagamento
+                      : session.galeriaStatusPagamento
+                  }
+                />
                 {session.extrasOverridden && isLinkedToGallery && (
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
@@ -358,6 +386,15 @@ export function WorkflowCardExpanded({
                 )}
               </div>
             </div>
+
+            {hasGaleria && extrasPendente > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-muted-foreground/80">Pendente extras:</span>
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(extrasPendente)}
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Total produtos:</span>
@@ -396,6 +433,9 @@ export function WorkflowCardExpanded({
         <ExpandedActions
           session={session}
           onCobrar={() => setShowChargeModal(true)}
+          onCobrarExtras={() => setShowExtraChargeModal(true)}
+          extrasPendente={extrasPendente}
+          extrasFullyPaid={extrasFullyPaid}
           onAgendarPagamento={() => setShowAddPaymentModal(true)}
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
         />
@@ -438,6 +478,17 @@ export function WorkflowCardExpanded({
         sessionId={session.sessionId || session.id}
         valorSugerido={pendente}
       />
+
+      {session.galeriaId && (
+        <ExtraChargeModal
+          isOpen={showExtraChargeModal}
+          onClose={() => setShowExtraChargeModal(false)}
+          galeriaId={session.galeriaId}
+          clienteNome={session.nome}
+          clienteWhatsapp={session.whatsapp}
+          nomeSessao={session.pacote || session.nome}
+        />
+      )}
 
       <PaymentConfigModalExpanded
         isOpen={showAddPaymentModal}
