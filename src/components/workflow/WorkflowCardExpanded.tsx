@@ -479,6 +479,17 @@ export function WorkflowCardExpanded({
         valorSugerido={pendente}
       />
 
+      {session.galeriaId && (
+        <ExtraChargeModal
+          isOpen={showExtraChargeModal}
+          onClose={() => setShowExtraChargeModal(false)}
+          galeriaId={session.galeriaId}
+          clienteNome={session.nome}
+          clienteWhatsapp={session.whatsapp}
+          nomeSessao={session.pacote || session.nome}
+        />
+      )}
+
       <PaymentConfigModalExpanded
         isOpen={showAddPaymentModal}
         onClose={() => setShowAddPaymentModal(false)}
