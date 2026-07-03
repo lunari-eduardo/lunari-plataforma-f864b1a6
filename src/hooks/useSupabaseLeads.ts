@@ -40,7 +40,11 @@ export function useSupabaseLeads() {
       return (data || []).map(supabaseLeadToFrontend);
     },
     enabled: !!userId,
-    staleTime: 1000 * 30, // 30 seconds
+    // Egress A3 — realtime channel logo abaixo cobre atualizações; 5min de cache.
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Real-time subscription

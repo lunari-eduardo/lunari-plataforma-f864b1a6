@@ -31,6 +31,11 @@ export function useContratos(opts: UseContratosOpts = {}) {
       return (data || []) as unknown as Contrato[];
     },
     enabled: !!user,
+    // Egress A3 — realtime channel logo abaixo invalida; 5min de cache.
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // Realtime: ouve mudanças em contratos do usuário (atualizado por webhook/sync)
