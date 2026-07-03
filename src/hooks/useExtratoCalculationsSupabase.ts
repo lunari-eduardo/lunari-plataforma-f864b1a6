@@ -46,7 +46,10 @@ export function useExtratoCalculationsSupabase(
         return acc + (saldo > 0 ? saldo : 0);
       }, 0);
     },
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // ============= TOTAIS AGREGADOS DO PERÍODO (independente de paginação) =============
@@ -115,7 +118,10 @@ export function useExtratoCalculationsSupabase(
 
       return acc;
     },
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // ============= CÁLCULO DO RESUMO (a partir de totais agregados) =============
@@ -307,7 +313,10 @@ export function useExtratoCalculationsSupabase(
         }
       };
     },
-    staleTime: 30000,
+    staleTime: 2 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const demonstrativo = useMemo((): DemonstrativoSimplificado => {
