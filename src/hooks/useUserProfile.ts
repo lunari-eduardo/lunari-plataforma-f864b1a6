@@ -26,6 +26,9 @@ export function useUserProfile() {
     },
     enabled: !!user,
     staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     // Retry quando o erro for de auth (JWT expirado durante boot) — o
     // singleton ensureFreshSession garante 1 refresh por vez.
     retry: (count, err) => isAuthError(err) && count < 3,
