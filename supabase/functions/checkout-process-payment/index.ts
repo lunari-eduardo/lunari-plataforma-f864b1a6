@@ -5,10 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+interface PayerContact {
+  name?: string;
+  email?: string;
+  phone?: string;
+  cpfCnpj?: string;
+}
+
 interface RequestBody {
   cobrancaId: string;
   billingType: 'PIX' | 'CREDIT_CARD';
   installmentCount?: number;
+  /** Dados coletados inline no checkout público (email/CPF/telefone/nome faltantes). */
+  payerContact?: PayerContact;
   creditCard?: {
     holderName: string;
     number: string;
@@ -25,6 +34,7 @@ interface RequestBody {
     addressNumber: string;
   };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
