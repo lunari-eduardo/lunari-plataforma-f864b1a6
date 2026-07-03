@@ -287,14 +287,13 @@ export function ExtraChargeModal({
                 PIX gerado
               </Label>
               <PixManualSection
-                pixCode={result.pixDados.pixCopiaCola || result.pixDados.pixPayload || ''}
-                qrCodeBase64={result.pixDados.qrCodeBase64}
-                onConfirm={async () => {
-                  invalidate();
-                  toast.success('Confirme o recebimento no card do cliente.');
-                  onClose();
-                }}
+                valor={calc.valor_a_cobrar}
+                pixPayload={result.pixDados.pixCopiaCola || result.pixDados.pixPayload || ''}
                 loading={false}
+                clienteWhatsapp={clienteWhatsapp}
+                onGenerate={() => {
+                  /* já gerado */
+                }}
               />
             </div>
           )}
