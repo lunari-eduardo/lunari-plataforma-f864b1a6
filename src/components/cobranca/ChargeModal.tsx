@@ -513,12 +513,16 @@ export function ChargeModal({
   const handleAsaasGenerateLink = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
-    if (!payerValidity?.allValidFor('link_asaas')) {
+    // Link Asaas NÃO bloqueia por dados faltantes — o próprio cliente completa
+    // no checkout público (`/checkout/:id`). Aqui só validamos que temos um nome
+    // para identificar o pagador na cobrança gerada.
+    if (!payer.nome?.trim()) {
       const { toast } = await import('sonner');
-      toast.error('Preencha nome, telefone e CPF/CNPJ válidos do pagador antes de gerar o link.');
+      toast.error('Informe pelo menos o nome do pagador antes de gerar o link.');
       return;
     }
     await persistPayerToCrm();
+
     setAsaasLinkLoading(true);
     try {
       // Get current user
