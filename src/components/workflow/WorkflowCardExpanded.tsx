@@ -138,9 +138,22 @@ export function WorkflowCardExpanded({
   );
 
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
-  const valorFotoExtraTotal = formatCurrency(
-    parseCurrency(String(session.valorTotalFotoExtra || "0")),
+
+  // Snapshot canônico de fotos extras (RPC compartilhada com Gallery).
+  // Fonte única quando a sessão está vinculada a uma galeria — evita divergência
+  // entre workflow (qtd × valor local) e Gallery (RPC com regras congeladas +
+  // ciclos anteriores). Handoff §5.1.
+  const { calc: extraCalc, isLoading: extraCalcLoading } = useGalleryExtraCalc(
+    session.galeriaId || null,
   );
+  const hasGaleria = Boolean(session.galeriaId);
+  const valorFotoExtraTotal = hasGaleria
+    ? formatCurrency(extraCalc.valor_total_ideal)
+    : formatCurrency(parseCurrency(String(session.valorTotalFotoExtra || "0")));
+  const extrasPendente = hasGaleria
+    ? Math.max(0, extraCalc.valor_a_cobrar)
+    : 0;
+  const extrasFullyPaid = hasGaleria ? extraCalc.is_fully_paid === true : true;
 
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
