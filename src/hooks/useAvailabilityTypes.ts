@@ -15,7 +15,10 @@ export function useAvailabilityTypes() {
   const { data } = useQuery({
     queryKey: agendaKeys.availabilityTypes(),
     queryFn: () => repo.list(),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const availabilityTypes = useMemo<AvailabilityType[]>(() => data ?? [], [data]);
