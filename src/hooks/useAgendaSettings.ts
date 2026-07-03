@@ -21,7 +21,10 @@ export const useAgendaSettings = () => {
   const { data } = useQuery({
     queryKey: agendaKeys.settings(),
     queryFn: () => repo.load(),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const settings = useMemo<AgendaSettings>(() => data ?? DEFAULT_SETTINGS, [data]);
