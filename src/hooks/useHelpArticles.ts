@@ -30,6 +30,11 @@ export function useHelpArticles() {
       if (error) throw error;
       return (data || []) as HelpArticle[];
     },
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
