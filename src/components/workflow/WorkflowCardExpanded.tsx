@@ -433,6 +433,9 @@ export function WorkflowCardExpanded({
         <ExpandedActions
           session={session}
           onCobrar={() => setShowChargeModal(true)}
+          onCobrarExtras={() => setShowExtraChargeModal(true)}
+          extrasPendente={extrasPendente}
+          extrasFullyPaid={extrasFullyPaid}
           onAgendarPagamento={() => setShowAddPaymentModal(true)}
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
         />
