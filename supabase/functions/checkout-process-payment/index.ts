@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: RequestBody = await req.json();
-    const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo } = body;
+    const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo, payerContact } = body;
 
     if (!cobrancaId || !billingType) {
       return new Response(
@@ -55,6 +55,22 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // ——— Normalizadores/validadores comuns ———
+    const isAsciiEmail = (v?: string | null) => {
+      if (!v) return false;
+      const s = String(v).trim();
+      if (/[^\x00-\x7F]/.test(s)) return false;
+      return /^[\x21-\x7E]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s);
+    };
+    const digitsOnly = (v?: string | null) => (v ? String(v).replace(/\D/g, '') : '');
+    const normalizePhone = (v?: string | null): string | null => {
+      const d = digitsOnly(v);
+      if (!d) return null;
+      const local = d.length > 11 && d.startsWith('55') ? d.slice(2) : d;
+      return local.length === 10 || local.length === 11 ? local : null;
+    };
+
 
     // 1. Fetch and validate cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
