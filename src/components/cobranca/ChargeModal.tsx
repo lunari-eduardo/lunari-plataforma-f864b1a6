@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
+
 import { Switch } from '@/components/ui/switch';
 import { CreditCard, History, Settings2 } from 'lucide-react';
 import { useCobranca } from '@/hooks/useCobranca';
@@ -27,7 +27,7 @@ import {
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
-import { PayerSummaryChip } from './PayerSummaryChip';
+
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
 import { AlertTriangle } from 'lucide-react';
@@ -513,12 +513,16 @@ export function ChargeModal({
   const handleAsaasGenerateLink = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
-    if (!payerValidity?.allValidFor('link_asaas')) {
+    // Link Asaas NÃO bloqueia por dados faltantes — o próprio cliente completa
+    // no checkout público (`/checkout/:id`). Aqui só validamos que temos um nome
+    // para identificar o pagador na cobrança gerada.
+    if (!payer.nome?.trim()) {
       const { toast } = await import('sonner');
-      toast.error('Preencha nome, telefone e CPF/CNPJ válidos do pagador antes de gerar o link.');
+      toast.error('Informe pelo menos o nome do pagador antes de gerar o link.');
       return;
     }
     await persistPayerToCrm();
+
     setAsaasLinkLoading(true);
     try {
       // Get current user
@@ -622,275 +626,284 @@ export function ChargeModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent
-          className="max-w-lg max-h-[90vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
+          className="max-w-lg md:max-w-3xl max-h-[92vh] p-0 overflow-hidden z-[60] shadow-2xl border-2 border-border flex flex-col"
           overlayClassName="backdrop-blur-sm bg-black/60 z-[59]"
         >
-          <DialogHeader className="p-4 pb-2">
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
+          <DialogHeader className="px-4 pt-3 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CreditCard className="h-4 w-4 text-primary" />
               Cobrar cliente
+              <span className="text-xs text-muted-foreground font-normal ml-1">· {clienteNome}</span>
             </DialogTitle>
-            <p className="text-sm text-muted-foreground">{clienteNome}</p>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2 shrink-0" style={{ width: 'calc(100% - 32px)' }}>
-              <TabsTrigger value="cobrar" className="gap-2">
-                <CreditCard className="h-4 w-4" />
+            <TabsList className="w-full grid grid-cols-2 mx-4 mb-2 shrink-0 h-9" style={{ width: 'calc(100% - 32px)' }}>
+              <TabsTrigger value="cobrar" className="gap-2 text-xs">
+                <CreditCard className="h-3.5 w-3.5" />
                 Nova Cobrança
               </TabsTrigger>
-              <TabsTrigger value="historico" className="gap-2">
-                <History className="h-4 w-4" />
+              <TabsTrigger value="historico" className="gap-2 text-xs">
+                <History className="h-3.5 w-3.5" />
                 Histórico ({cobrancas.length})
               </TabsTrigger>
             </TabsList>
 
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <TabsContent value="cobrar" className="p-4 pt-2 space-y-4 m-0">
-                {/* Valor da cobrança */}
-                <div className="space-y-3">
-                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Valor da cobrança
-                  </Label>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        R$
-                      </span>
-                      <Input
-                        type="number"
-                        value={valor || ''}
-                        onChange={(e) => setValor(e.target.value === '' ? 0 : parseFloat(e.target.value))}
-                        onFocus={(e) => { if (valor === 0) e.target.value = ''; }}
-                        className="pl-10 h-10 text-lg font-semibold"
-                        disabled={valorType === 'total'}
-                        placeholder="0"
-                      />
-                    </div>
-                    
-                    <RadioGroup
-                      value={valorType}
-                      onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
-                      className="flex gap-3"
-                    >
-                      <div className="flex items-center space-x-1">
-                        <RadioGroupItem value="total" id="total" />
-                        <Label htmlFor="total" className="text-sm cursor-pointer">Total</Label>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <RadioGroupItem value="parcial" id="parcial" />
-                        <Label htmlFor="parcial" className="text-sm cursor-pointer">Parcial</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
 
-                  <Textarea
-                    placeholder="Descrição da cobrança (opcional)"
-                    value={descricao}
-                    onChange={(e) => setDescricao(e.target.value)}
-                    className="resize-none h-16 text-sm"
-                  />
-                </div>
-
-                <Separator />
-
-                {/* Dados do pagador — coleta condicional:
-                    - Sem provedor: nada
-                    - InfinitePay: apenas resumo (coleta acontece na página pública /pay/ip)
-                    - Outros: mostra bloco completo com campos faltantes, ou chip se CRM já tem tudo */}
-                {(() => {
-                  const currentProvider: PayerProvider | null =
-                    selectedProvider === 'asaas'
-                      ? (asaasMode === 'link' ? 'link_asaas' : 'pix_asaas')
-                      : selectedProvider === 'mercadopago_link'
-                        ? 'link_mp'
-                        : selectedProvider === 'infinitepay'
-                          ? 'link_infinitepay'
-                          : selectedProvider === 'pix_manual'
-                            ? 'pix_manual'
-                            : null;
-
-                  if (!currentProvider) return null;
-
-                  const missing = computeMissingFields(currentProvider, payer);
-                  const showFullBlock = payerEditing || (missing.length > 0 && currentProvider !== 'link_infinitepay');
-
-                  if (currentProvider === 'link_infinitepay' && !payerEditing) {
-                    return (
-                      <PayerSummaryChip
-                        value={payer}
-                        onEdit={() => setPayerEditing(true)}
-                        hint="Se algum dado faltar, o próprio cliente completa na página de pagamento (dados são salvos aqui automaticamente)."
-                      />
-                    );
-                  }
-
-                  if (currentProvider === 'pix_manual') {
-                    return null;
-                  }
-
-                  if (!showFullBlock) {
-                    return (
-                      <PayerSummaryChip
-                        value={payer}
-                        onEdit={() => setPayerEditing(true)}
-                        hint="Já temos tudo que este meio de pagamento precisa."
-                      />
-                    );
-                  }
-
-                  return (
+              <TabsContent value="cobrar" className="p-4 pt-2 m-0">
+                <div className="md:grid md:grid-cols-2 md:gap-5 space-y-4 md:space-y-0">
+                  {/* ========== COLUNA ESQUERDA ========== */}
+                  <div className="space-y-4">
+                    {/* Valor da cobrança */}
                     <div className="space-y-2">
-                      <PayerFieldsBlock
-                        value={payer}
-                        onChange={setPayer}
-                        onValidityChange={setPayerValidity}
-                        provider={
-                          currentProvider === 'link_infinitepay' ? null : currentProvider
-                        }
-                        onlyShow={payerEditing ? undefined : (missing.length > 0 ? missing : undefined)}
-                      />
-                      {payerEditing && (
-                        <div className="flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => setPayerEditing(false)}
-                          >
-                            Recolher
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-
-                <Separator />
-
-
-                {/* Banner proativo: sessão tem saldo pendente de fotos extras */}
-                {ambiguity && finalidade === 'sessao' && (
-                  <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <div>
-                          <strong>Fotos extras pendentes nesta sessão.</strong>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Galeria "{ambiguity.nomeGaleria ?? '—'}" · {ambiguity.qtdSugerida} fotos ·{' '}
-                            {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })}{' '}
-                            a cobrar. Cobrar como "sessão" pode duplicar receita.
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            setFinalidade('fotos_extras');
-                            setGaleriaId(ambiguity.galeriaId);
-                            setQtdFotos(ambiguity.qtdSugerida);
-                            setValor(ambiguity.valorSaldoExtras);
-                            setValorType('parcial');
-                          }}
-                        >
-                          Cobrar como fotos extras
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Finalidade da cobrança (sessao vs fotos extras) */}
-                <CobrancaFinalidadeSelector
-                  clienteId={clienteId}
-                  sessionId={sessionId}
-                  finalidade={finalidade}
-                  onFinalidadeChange={(v) => {
-                    setFinalidade(v);
-                    if (v === 'sessao') {
-                      setGaleriaId(null);
-                      setGaleriaInfo(null);
-                      setQtdFotos(0);
-                    }
-                  }}
-                  galeriaId={galeriaId}
-                  onGaleriaChange={(id, gal) => {
-                    setGaleriaId(id);
-                    setGaleriaInfo(gal);
-                  }}
-                  qtdFotos={qtdFotos}
-                  onQtdFotosChange={setQtdFotos}
-                />
-
-                <Separator />
-
-
-                {/* Provider Selection */}
-                <div className="space-y-3">
-                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Meio de cobrança
-                  </Label>
-                  
-                  <ProviderSelector
-                    selectedProvider={selectedProvider}
-                    onSelect={handleProviderSelect}
-                  />
-                </div>
-
-                {/* Per-charge Asaas overrides */}
-                {showAsaasSection && asaasSettings && asaasMode === 'options' && (
-                  <>
-                    <Separator />
-                    <div className="space-y-3">
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                        <Settings2 className="h-3 w-3" />
-                        Opções desta cobrança
+                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Valor da cobrança
                       </Label>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="override-taxas" className="text-sm">Repassar taxas de processamento</Label>
-                          <p className="text-xs text-muted-foreground">Cliente paga as taxas de cartão</p>
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                            R$
+                          </span>
+                          <Input
+                            type="number"
+                            value={valor || ''}
+                            onChange={(e) => setValor(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                            onFocus={(e) => { if (valor === 0) e.target.value = ''; }}
+                            className="pl-10 h-10 text-lg font-semibold"
+                            disabled={valorType === 'total'}
+                            placeholder="0"
+                          />
                         </div>
-                        <Switch id="override-taxas" checked={overrideRepassarTaxas} onCheckedChange={setOverrideRepassarTaxas} />
-                      </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="override-antecipar" className="text-sm">Antecipar parcelas</Label>
-                          <p className="text-xs text-muted-foreground">Solicitar antecipação no Asaas</p>
-                        </div>
-                        <Switch id="override-antecipar" checked={overrideAntecipar} onCheckedChange={(v) => {
-                          setOverrideAntecipar(v);
-                          if (!v) setOverrideRepassarAntecipacao(false);
-                        }} />
-                      </div>
-
-                      {overrideAntecipar && (
-                        <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
-                          <div>
-                            <Label htmlFor="override-repassar-antecipacao" className="text-sm">Repassar antecipação</Label>
-                            <p className="text-xs text-muted-foreground">Inclui taxa no valor do cliente</p>
+                        <RadioGroup
+                          value={valorType}
+                          onValueChange={(v) => setValorType(v as 'total' | 'parcial')}
+                          className="flex gap-3"
+                        >
+                          <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="total" id="total" />
+                            <Label htmlFor="total" className="text-xs cursor-pointer">Total</Label>
                           </div>
-                          <Switch id="override-repassar-antecipacao" checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
-                        </div>
-                      )}
+                          <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="parcial" id="parcial" />
+                            <Label htmlFor="parcial" className="text-xs cursor-pointer">Parcial</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      <Textarea
+                        placeholder="Descrição (opcional)"
+                        value={descricao}
+                        onChange={(e) => setDescricao(e.target.value)}
+                        className="resize-none h-14 text-sm"
+                      />
                     </div>
-                  </>
-                )}
 
-                <Separator />
+                    {/* Finalidade da cobrança */}
+                    <CobrancaFinalidadeSelector
+                      clienteId={clienteId}
+                      sessionId={sessionId}
+                      finalidade={finalidade}
+                      onFinalidadeChange={(v) => {
+                        setFinalidade(v);
+                        if (v === 'sessao') {
+                          setGaleriaId(null);
+                          setGaleriaInfo(null);
+                          setQtdFotos(0);
+                        }
+                      }}
+                      galeriaId={galeriaId}
+                      onGaleriaChange={(id, gal) => {
+                        setGaleriaId(id);
+                        setGaleriaInfo(gal);
+                      }}
+                      qtdFotos={qtdFotos}
+                      onQtdFotosChange={setQtdFotos}
+                    />
 
-                {/* Charge Generation Section */}
-                <div className="min-h-[120px]">
+                    {/* Banner ambiguidade */}
+                    {ambiguity && finalidade === 'sessao' && (
+                      <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div>
+                              <strong>Fotos extras pendentes nesta sessão.</strong>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Galeria "{ambiguity.nomeGaleria ?? '—'}" · {ambiguity.qtdSugerida} fotos ·{' '}
+                                {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                })}{' '}
+                                a cobrar. Cobrar como "sessão" pode duplicar receita.
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                setFinalidade('fotos_extras');
+                                setGaleriaId(ambiguity.galeriaId);
+                                setQtdFotos(ambiguity.qtdSugerida);
+                                setValor(ambiguity.valorSaldoExtras);
+                                setValorType('parcial');
+                              }}
+                            >
+                              Cobrar como fotos extras
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ========== COLUNA DIREITA ========== */}
+                  <div className="space-y-4">
+                    {/* Meio de cobrança */}
+                    <div className="space-y-2">
+                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Meio de cobrança
+                      </Label>
+                      <ProviderSelector
+                        selectedProvider={selectedProvider}
+                        onSelect={handleProviderSelect}
+                      />
+                    </div>
+
+                    {/* Dados do pagador — só aparece quando FALTA algo.
+                        - CRM completo: nada renderizado (economiza vertical).
+                        - InfinitePay: sempre um botão discreto (client-side completa no /pay/ip).
+                        - Outros com missing: bloco inline compacto só com campos faltantes. */}
+                    {(() => {
+                      const currentProvider: PayerProvider | null =
+                        selectedProvider === 'asaas'
+                          ? (asaasMode === 'link' ? 'link_asaas' : 'pix_asaas')
+                          : selectedProvider === 'mercadopago_link'
+                            ? 'link_mp'
+                            : selectedProvider === 'infinitepay'
+                              ? 'link_infinitepay'
+                              : selectedProvider === 'pix_manual'
+                                ? 'pix_manual'
+                                : null;
+
+                      if (!currentProvider || currentProvider === 'pix_manual') return null;
+
+                      const missing = computeMissingFields(currentProvider, payer);
+                      const nothingMissing = missing.length === 0;
+
+                      // InfinitePay: coleta pelo cliente. Botão discreto apenas.
+                      if (currentProvider === 'link_infinitepay') {
+                        if (payerEditing) {
+                          return (
+                            <div className="space-y-2">
+                              <PayerFieldsBlock
+                                value={payer}
+                                onChange={setPayer}
+                                onValidityChange={setPayerValidity}
+                                provider={null}
+                              />
+                              <div className="flex justify-end">
+                                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setPayerEditing(false)}>
+                                  Recolher
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span>Dados do pagador serão preenchidos pelo cliente na página de pagamento.</span>
+                            <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setPayerEditing(true)}>
+                              Editar
+                            </Button>
+                          </div>
+                        );
+                      }
+
+                      // Outros provedores: nada quando completo.
+                      if (nothingMissing && !payerEditing) {
+                        return (
+                          <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span>Dados do pagador OK.</span>
+                            <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setPayerEditing(true)}>
+                              Revisar
+                            </Button>
+                          </div>
+                        );
+                      }
+
+                      // Faltam campos: bloco inline compacto.
+                      return (
+                        <div className="space-y-2">
+                          <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Complete os dados do pagador
+                          </Label>
+                          <PayerFieldsBlock
+                            value={payer}
+                            onChange={setPayer}
+                            onValidityChange={setPayerValidity}
+                            provider={currentProvider}
+                            onlyShow={payerEditing ? undefined : missing}
+                          />
+                          {payerEditing && (
+                            <div className="flex justify-end">
+                              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setPayerEditing(false)}>
+                                Recolher
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Per-charge Asaas overrides */}
+                    {showAsaasSection && asaasSettings && asaasMode === 'options' && (
+                      <div className="space-y-2">
+                        <Label className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                          <Settings2 className="h-3 w-3" />
+                          Opções desta cobrança
+                        </Label>
+
+                        <div className="rounded-md border border-border/60 divide-y divide-border/40">
+                          <div className="flex items-center justify-between px-3 h-11">
+                            <div className="min-w-0">
+                              <Label htmlFor="override-taxas" className="text-sm">Repassar taxas de processamento</Label>
+                              <p className="text-[11px] text-muted-foreground truncate">Cliente paga as taxas de cartão</p>
+                            </div>
+                            <Switch id="override-taxas" checked={overrideRepassarTaxas} onCheckedChange={setOverrideRepassarTaxas} />
+                          </div>
+
+                          <div className="flex items-center justify-between px-3 h-11">
+                            <div className="min-w-0">
+                              <Label htmlFor="override-antecipar" className="text-sm">Antecipar parcelas</Label>
+                              <p className="text-[11px] text-muted-foreground truncate">Solicitar antecipação no Asaas</p>
+                            </div>
+                            <Switch id="override-antecipar" checked={overrideAntecipar} onCheckedChange={(v) => {
+                              setOverrideAntecipar(v);
+                              if (!v) setOverrideRepassarAntecipacao(false);
+                            }} />
+                          </div>
+
+                          {overrideAntecipar && (
+                            <div className="flex items-center justify-between px-3 h-11 bg-primary/5">
+                              <div className="min-w-0 pl-3 border-l-2 border-primary/40">
+                                <Label htmlFor="override-repassar-antecipacao" className="text-sm">Repassar antecipação</Label>
+                                <p className="text-[11px] text-muted-foreground truncate">Inclui taxa no valor do cliente</p>
+                              </div>
+                              <Switch id="override-repassar-antecipacao" checked={overrideRepassarAntecipacao} onCheckedChange={setOverrideRepassarAntecipacao} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ========== AÇÃO PRINCIPAL (largura total) ========== */}
+                <div className="mt-5 pt-4 border-t border-border/40 min-h-[110px]">
                   {showPixManualSection && (
                     <PixManualSection
                       valor={valor}
@@ -942,12 +955,14 @@ export function ChargeModal({
                   )}
 
                   {!selectedProvider && (
-                    <div className="flex items-center justify-center h-[120px] text-muted-foreground text-sm">
-                      Selecione um meio de cobrança acima
+                    <div className="flex items-center justify-center h-[110px] text-muted-foreground text-sm">
+                      Selecione um meio de cobrança
                     </div>
                   )}
                 </div>
               </TabsContent>
+
+
 
               <TabsContent value="historico" className="p-4 pt-2 m-0">
                 <ChargeHistory

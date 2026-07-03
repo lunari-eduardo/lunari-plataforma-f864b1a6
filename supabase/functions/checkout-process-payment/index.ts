@@ -5,10 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+interface PayerContact {
+  name?: string;
+  email?: string;
+  phone?: string;
+  cpfCnpj?: string;
+}
+
 interface RequestBody {
   cobrancaId: string;
   billingType: 'PIX' | 'CREDIT_CARD';
   installmentCount?: number;
+  /** Dados coletados inline no checkout público (email/CPF/telefone/nome faltantes). */
+  payerContact?: PayerContact;
   creditCard?: {
     holderName: string;
     number: string;
@@ -26,6 +35,7 @@ interface RequestBody {
   };
 }
 
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -37,7 +47,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: RequestBody = await req.json();
-    const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo } = body;
+    const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo, payerContact } = body;
 
     if (!cobrancaId || !billingType) {
       return new Response(
@@ -45,6 +55,22 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // ——— Normalizadores/validadores comuns ———
+    const isAsciiEmail = (v?: string | null) => {
+      if (!v) return false;
+      const s = String(v).trim();
+      if (/[^\x00-\x7F]/.test(s)) return false;
+      return /^[\x21-\x7E]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s);
+    };
+    const digitsOnly = (v?: string | null) => (v ? String(v).replace(/\D/g, '') : '');
+    const normalizePhone = (v?: string | null): string | null => {
+      const d = digitsOnly(v);
+      if (!d) return null;
+      const local = d.length > 11 && d.startsWith('55') ? d.slice(2) : d;
+      return local.length === 10 || local.length === 11 ? local : null;
+    };
+
 
     // 1. Fetch and validate cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
@@ -107,51 +133,147 @@ Deno.serve(async (req) => {
       ? 'https://api.asaas.com'
       : 'https://api-sandbox.asaas.com';
 
-    // 3. Get or create Asaas customer
+    // 3. Get or create Asaas customer — mescla dados do CRM com payerContact (inline collection)
     let asaasCustomerId: string | null = null;
 
     const { data: cliente } = await supabase
       .from('clientes')
-      .select('nome, email, telefone, whatsapp')
+      .select('nome, email, telefone, whatsapp, cpf_cnpj')
       .eq('id', cobranca.cliente_id)
       .maybeSingle();
 
-    if (cliente?.email) {
-      const searchResp = await fetch(`${asaasBaseUrl}/v3/customers?email=${encodeURIComponent(cliente.email)}`, {
+    // Merge: CRM primeiro, payerContact preenche o que faltar.
+    const mergedEmail = isAsciiEmail(cliente?.email) ? String(cliente!.email).trim()
+      : isAsciiEmail(payerContact?.email) ? String(payerContact!.email).trim()
+      : null;
+    const mergedName = cliente?.nome?.trim() || payerContact?.name?.trim() || null;
+    const mergedPhone = normalizePhone(cliente?.whatsapp || cliente?.telefone) || normalizePhone(payerContact?.phone);
+    const cpfFromCrm = digitsOnly((cliente as any)?.cpf_cnpj);
+    const cpfFromInline = digitsOnly(payerContact?.cpfCnpj);
+    const mergedCpf = (cpfFromCrm.length === 11 || cpfFromCrm.length === 14)
+      ? cpfFromCrm
+      : (cpfFromInline.length === 11 || cpfFromInline.length === 14 ? cpfFromInline : null);
+
+    // Persistir de volta no CRM tudo que veio inline e ainda está vazio no CRM.
+    if (payerContact) {
+      const patch: Record<string, string> = {};
+      const isEmpty = (v: unknown) => v == null || (typeof v === 'string' && v.trim() === '');
+      if (payerContact.name?.trim() && isEmpty(cliente?.nome)) patch.nome = payerContact.name.trim();
+      if (isAsciiEmail(payerContact.email) && isEmpty(cliente?.email)) patch.email = String(payerContact.email).trim();
+      const phInline = normalizePhone(payerContact.phone);
+      if (phInline && isEmpty(cliente?.whatsapp) && isEmpty(cliente?.telefone)) {
+        (patch as any).whatsapp = phInline;
+      }
+      if (cpfFromInline && cpfFromInline.length >= 11 && isEmpty((cliente as any)?.cpf_cnpj)) {
+        (patch as any).cpf_cnpj = cpfFromInline;
+      }
+      if (Object.keys(patch).length > 0) {
+        await supabase.from('clientes').update(patch).eq('id', cobranca.cliente_id);
+        console.log(`📝 CRM enriquecido a partir do checkout: ${Object.keys(patch).join(', ')}`);
+      }
+    }
+
+    // 3a. Busca customer existente (por email → por externalReference)
+    if (mergedEmail) {
+      const searchResp = await fetch(`${asaasBaseUrl}/v3/customers?email=${encodeURIComponent(mergedEmail)}`, {
         headers: { access_token: asaasApiKey },
       });
       if (searchResp.ok) {
         const searchData = await searchResp.json();
-        if (searchData.data?.length > 0) {
-          asaasCustomerId = searchData.data[0].id;
+        if (searchData.data?.length > 0) asaasCustomerId = searchData.data[0].id;
+      }
+    }
+    if (!asaasCustomerId) {
+      const refResp = await fetch(`${asaasBaseUrl}/v3/customers?externalReference=${encodeURIComponent(cobranca.cliente_id)}`, {
+        headers: { access_token: asaasApiKey },
+      });
+      if (refResp.ok) {
+        const refData = await refResp.json();
+        if (refData.data?.length > 0) asaasCustomerId = refData.data[0].id;
+      }
+    }
+
+    const customerPayload: Record<string, unknown> = {
+      name: mergedName || 'Cliente',
+      email: mergedEmail || undefined,
+      phone: mergedPhone || undefined,
+      mobilePhone: mergedPhone || undefined,
+      cpfCnpj: mergedCpf || undefined,
+      externalReference: cobranca.cliente_id,
+    };
+
+    if (asaasCustomerId) {
+      // Atualiza customer com dados mesclados; retry sem email se rejeitado.
+      const doPut = async (body: Record<string, unknown>) => {
+        const res = await fetch(`${asaasBaseUrl}/v3/customers/${asaasCustomerId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+          body: JSON.stringify(body),
+        });
+        return { ok: res.ok, data: await res.json().catch(() => null) };
+      };
+      const clean = Object.fromEntries(Object.entries(customerPayload).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+      const upd = await doPut(clean);
+      if (!upd.ok) {
+        const errs = Array.isArray(upd.data?.errors) ? upd.data.errors : [];
+        const emailErr = errs.some((e: any) => String(e?.code || '').toLowerCase().includes('invalid_email') || String(e?.description || '').toLowerCase().includes('email'));
+        if (emailErr && 'email' in clean) {
+          const { email: _drop, ...rest } = clean; void _drop;
+          const retry = await doPut(rest);
+          if (!retry.ok) console.warn('[checkout-process] customer update falhou mesmo sem email', retry.data);
+        } else {
+          console.warn('[checkout-process] customer update falhou', upd.data);
+        }
+      }
+    } else {
+      const cleanCreate = Object.fromEntries(Object.entries(customerPayload).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+      const createResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+        body: JSON.stringify(cleanCreate),
+      });
+      const createData = await createResp.json();
+      if (createResp.ok && createData.id) {
+        asaasCustomerId = createData.id;
+      } else {
+        const errs = Array.isArray(createData?.errors) ? createData.errors : [];
+        const emailErr = errs.some((e: any) => String(e?.code || '').toLowerCase().includes('invalid_email') || String(e?.description || '').toLowerCase().includes('email'));
+        if (emailErr && 'email' in cleanCreate) {
+          const { email: _drop, ...rest } = cleanCreate; void _drop;
+          const retryResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
+            body: JSON.stringify(rest),
+          });
+          const retryData = await retryResp.json();
+          if (retryResp.ok && retryData.id) {
+            asaasCustomerId = retryData.id;
+            console.warn('[checkout-process] customer criado sem email (rejeitado pelo Asaas)');
+          } else {
+            console.error('[checkout-process] customer create falhou (retry):', retryData);
+            return new Response(
+              JSON.stringify({ success: false, error: 'Erro ao criar cliente no Asaas', code: 'ASAAS_CUSTOMER_ERROR' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } else {
+          console.error('[checkout-process] customer create falhou:', createData);
+          return new Response(
+            JSON.stringify({ success: false, error: 'Erro ao criar cliente no Asaas', code: 'ASAAS_CUSTOMER_ERROR' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
       }
     }
 
-    if (!asaasCustomerId) {
-      const createResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-        body: JSON.stringify({
-          name: cliente?.nome || 'Cliente',
-          email: cliente?.email || undefined,
-          phone: cliente?.whatsapp || cliente?.telefone || undefined,
-          externalReference: cobranca.cliente_id,
-        }),
-      });
-
-      if (createResp.ok) {
-        const createData = await createResp.json();
-        asaasCustomerId = createData.id;
-      } else {
-        const errData = await createResp.json();
-        console.error('Failed to create Asaas customer:', errData);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Erro ao criar cliente no Asaas' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // 3b. Guard-rail: PIX exige CPF/CNPJ no customer Asaas.
+    if (billingType === 'PIX' && !mergedCpf) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'CPF/CNPJ do pagador é obrigatório para gerar PIX no Asaas.', code: 'MISSING_CPF' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
 
     // 4. Resolve fee settings (per-charge overrides from cobranca.dados_extras > global settings)
     const chargeOverrides = (cobranca.dados_extras || {}) as {
