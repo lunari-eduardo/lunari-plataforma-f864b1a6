@@ -27,7 +27,7 @@ import {
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
-import { PayerSummaryChip } from './PayerSummaryChip';
+
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
 import { AlertTriangle } from 'lucide-react';
