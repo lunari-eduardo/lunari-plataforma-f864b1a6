@@ -758,7 +758,7 @@ export const useWorkflowRealtime = () => {
       // ✅ FASE 7: CRÍTICO - Buscar sessão COMPLETA com dados do cliente após update
       const { data: fullUpdatedSession } = await supabase
         .from('clientes_sessoes')
-        .select(`*, clientes(nome, email, telefone, whatsapp)`)
+        .select(`*, clientes(nome)`)
         .eq('id', id)
         .single();
 
