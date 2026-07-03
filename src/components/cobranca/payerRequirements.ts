@@ -17,19 +17,20 @@ export type PayerProvider =
 export type PayerField = "nome" | "email" | "telefone" | "cpfCnpj";
 
 /**
- * link_infinitepay = []
- *   → a coleta acontece na página pública `/pay/ip/:id` pelo próprio cliente
- *     final; no ChargeModal do fotógrafo não bloqueamos nada.
- * pix_manual = []
- *   → PIX manual só usa dados do fotógrafo (chave), não do pagador.
+ * pix_asaas → exige nome+CPF+telefone (Asaas API bloqueia PIX sem eles).
+ * link_asaas → exige apenas nome; qualquer dado ausente é coletado inline
+ *              pelo próprio cliente na página pública `/checkout/:id`.
+ * link_mp → nome+email+telefone (regra MP).
+ * link_infinitepay/pix_manual → nada; coleta ocorre fora deste modal.
  */
 export const REQUIRED: Record<PayerProvider, PayerField[]> = {
   pix_asaas: ["nome", "cpfCnpj", "telefone"],
-  link_asaas: ["nome", "cpfCnpj", "telefone"],
+  link_asaas: ["nome"],
   link_mp: ["nome", "email", "telefone"],
   link_infinitepay: [],
   pix_manual: [],
 };
+
 
 /** Considera um campo "preenchido e válido" para efeito de bloquear/liberar. */
 export function fieldIsPresent(field: PayerField, v: PayerFieldsValue): boolean {
