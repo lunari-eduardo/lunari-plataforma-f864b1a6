@@ -37,7 +37,11 @@ export function useUnifiedPlans() {
       if (error) throw error;
       return (data as unknown as UnifiedPlan[]) || [];
     },
-    staleTime: 5 * 60 * 1000, // 5 min
+    staleTime: 30 * 60 * 1000, // 30 min — plans mudam raramente
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     retry: 2,
   });
 

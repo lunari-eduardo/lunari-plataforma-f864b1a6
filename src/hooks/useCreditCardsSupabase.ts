@@ -39,7 +39,10 @@ export function useCreditCardsSupabase() {
         throw error;
       }
     },
-    staleTime: 60000, // 1 minuto
+    staleTime: 5 * 60_000, // 5 minutos — realtime invalida em mutação
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // ============= REALTIME SUBSCRIPTION (COM DEBOUNCE) =============

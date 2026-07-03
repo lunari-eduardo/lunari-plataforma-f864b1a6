@@ -30,6 +30,11 @@ export function useHelpArticles() {
       if (error) throw error;
       return (data || []) as HelpArticle[];
     },
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -52,6 +57,11 @@ export function useHelpArticleBySlug(slug: string) {
       return data as HelpArticle;
     },
     enabled: !!slug,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -74,6 +84,10 @@ export function useHelpArticleByRoute(route: string) {
       return data as { id: string; slug: string; title: string } | null;
     },
     enabled: !!route,
-    staleTime: 5 * 60 * 1000, // Cache por 5 min
+    staleTime: 30 * 60 * 1000, // 30 min
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }

@@ -33,7 +33,10 @@ export function useSalesTopPerformances(
 ): TopPerformancesResult {
   const { data, isLoading } = useQuery({
     queryKey: ['sales-top-performances', selectedYear, selectedMonth, selectedCategory],
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;

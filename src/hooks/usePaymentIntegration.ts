@@ -145,7 +145,10 @@ export function usePaymentIntegration() {
       };
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 min — integrações mudam raramente
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const savePixManual = useMutation({
