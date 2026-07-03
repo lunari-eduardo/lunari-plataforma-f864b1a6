@@ -73,6 +73,48 @@ Deno.serve(async (req) => {
       .eq('user_id', cobranca.user_id)
       .maybeSingle();
 
+    // 2b. Fetch payer hints — pré-preenchimento + flags de campos ausentes.
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('nome, email, telefone, whatsapp, cpf_cnpj')
+      .eq('id', cobranca.cliente_id)
+      .maybeSingle();
+
+    const isAsciiEmail = (v?: string | null) => {
+      if (!v) return false;
+      const s = String(v).trim();
+      if (!s) return false;
+      if (/[^\x00-\x7F]/.test(s)) return false;
+      return /^[\x21-\x7E]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s);
+    };
+    const normalizePhone = (v?: string | null): string | null => {
+      if (!v) return null;
+      const d = String(v).replace(/\D/g, '');
+      if (d.length < 10 || d.length > 13) return null;
+      const local = d.length > 11 && d.startsWith('55') ? d.slice(2) : d;
+      return local.length === 10 || local.length === 11 ? local : null;
+    };
+    const cpfDigits = (v?: string | null) => (v ? String(v).replace(/\D/g, '') : '');
+    const isValidCpfLen = (v?: string | null) => {
+      const d = cpfDigits(v);
+      return d.length === 11 || d.length === 14;
+    };
+
+    const payerHints = {
+      fullName: cliente?.nome?.trim() || null,
+      email: isAsciiEmail(cliente?.email) ? String(cliente!.email).trim() : null,
+      phone: normalizePhone(cliente?.whatsapp || cliente?.telefone),
+      cpfCnpj: isValidCpfLen(cliente?.cpf_cnpj) ? cpfDigits(cliente?.cpf_cnpj) : null,
+    };
+    const payerMissing = {
+      name: !payerHints.fullName,
+      email: !payerHints.email,
+      phone: !payerHints.phone,
+      cpfCnpj: !payerHints.cpfCnpj,
+    };
+
+
+
     // 3. Fetch Asaas integration settings
     const { data: integracao } = await supabase
       .from('usuarios_integracoes')
