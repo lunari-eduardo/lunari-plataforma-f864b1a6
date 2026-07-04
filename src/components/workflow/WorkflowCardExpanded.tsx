@@ -140,20 +140,27 @@ export function WorkflowCardExpanded({
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
 
   // Snapshot canônico de fotos extras (RPC compartilhada com Gallery).
-  // Fonte única quando a sessão está vinculada a uma galeria — evita divergência
-  // entre workflow (qtd × valor local) e Gallery (RPC com regras congeladas +
-  // ciclos anteriores). Handoff §5.1.
-  const { calc: extraCalc, isLoading: extraCalcLoading } = useGalleryExtraCalc(
-    session.galeriaId || null,
-  );
-  const hasGaleria = Boolean(session.galeriaId);
-  const valorFotoExtraTotal = hasGaleria
-    ? formatCurrency(extraCalc.valor_total_ideal)
-    : formatCurrency(parseCurrency(String(session.valorTotalFotoExtra || "0")));
-  const extrasPendente = hasGaleria
-    ? Math.max(0, extraCalc.valor_a_cobrar)
-    : 0;
+  // Fonte única — resolve galeria por `session.galeriaId` OU, em fallback,
+  // por `galerias.session_id`. A RPC aplica desconto progressivo das faixas
+  // congeladas e considera pagamentos anteriores (handoff §5.1).
+  const { calc: extraCalc, resolvedGalleryId, isLoading: extraCalcLoading } =
+    useGalleryExtraCalc(session.galeriaId || null, {
+      sessionId: session.sessionId || null,
+    });
+  const hasGaleria = Boolean(resolvedGalleryId);
+  const valorFotoExtraLocal = parseCurrency(String(session.valorTotalFotoExtra || "0"));
+  const extrasTotalCanonico = hasGaleria ? extraCalc.valor_total_ideal : valorFotoExtraLocal;
+  const extrasPagoCanonico = hasGaleria ? extraCalc.valor_pago : 0;
+  const extrasPendente = hasGaleria ? Math.max(0, extraCalc.valor_a_cobrar) : 0;
   const extrasFullyPaid = hasGaleria ? extraCalc.is_fully_paid === true : true;
+  const valorFotoExtraTotal = formatCurrency(extrasTotalCanonico);
+
+  // Recompor totais visuais: substitui pedaço local de extras pelo canônico.
+  // Isso resolve o caso do desconto progressivo (ex: R$20 local vs R$12 real).
+  const baseSessaoVisual = Math.max(0, total - valorFotoExtraLocal);
+  const totalVisual = hasGaleria ? baseSessaoVisual + extrasTotalCanonico : total;
+  const pendenteVisual = Math.max(0, totalVisual - valorPago);
+  const pendenteSessaoSugerido = Math.max(0, pendenteVisual - extrasPendente);
 
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
