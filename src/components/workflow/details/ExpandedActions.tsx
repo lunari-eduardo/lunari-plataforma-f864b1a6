@@ -30,8 +30,9 @@ export function ExpandedActions({
   onAgendarPagamento,
   onAbrirPagamentos,
 }: Props) {
-  const hasGaleria = Boolean(session.galeriaId);
-  const showExtras = hasGaleria && (extrasPendente > 0 || !extrasFullyPaid);
+  // Extras vem da RPC canônica; pode existir mesmo sem `session.galeriaId`
+  // (fallback resolvido por session_id no card).
+  const showExtras = extrasPendente > 0 || (!extrasFullyPaid && !!onCobrarExtras);
 
   return (
     <div className="space-y-3 flex flex-col items-center justify-center py-4">
