@@ -310,7 +310,8 @@ export default function Agenda() {
     onViewChange: setView,
   });
 
-  const showSidebar = !isMobile && !isTablet && view !== 'year';
+  const sidebarApplicable = view !== 'year' && view !== 'month';
+  const showSidebar = !isMobile && !isTablet && sidebarApplicable;
   const isYearView = view === 'year';
 
   return (
@@ -329,7 +330,7 @@ export default function Agenda() {
               onOpenShare={view === 'day' ? openShareModal : undefined}
             />
           </div>
-          {!showSidebar && !isYearView && (
+          {!showSidebar && sidebarApplicable && (
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Abrir mini calendário">

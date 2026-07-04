@@ -100,7 +100,7 @@ export default function MonthlyView({
         {/* Days of the month */}
         {daysInMonth.map(day => {
           const dayEvents = getEventsForDay(day);
-          const maxDisplayEvents = 1;
+          const maxDisplayEvents = isMobile ? 1 : 3;
           const hasMoreEvents = dayEvents.length > maxDisplayEvents;
           const displayEvents = dayEvents.slice(0, maxDisplayEvents);
           
@@ -198,7 +198,7 @@ const DayCell = ({
     borderColor: fullDaySlot.color || 'hsl(var(--border))'
   } : {};
 
-  const cellClassName = `${classes.calendarCell} cursor-pointer transition-colors ${
+  const cellClassName = `${classes.calendarCell} md:min-h-[132px] lg:min-h-[148px] cursor-pointer transition-colors ${
     fullDaySlot 
       ? 'border-2' 
       : 'bg-card/40 dark:bg-card/[0.05] hover:bg-card/60 dark:hover:bg-white/[0.08] border border-white/20 dark:border-white/10 hover:border-white/40 dark:hover:border-white/20'
@@ -215,7 +215,7 @@ const DayCell = ({
     >
       <div className="flex justify-between items-center mb-1 md:mb-2">
         <span className={`
-          text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
+          text-xs md:text-base font-medium h-5 w-5 md:h-7 md:w-7 flex items-center justify-center rounded-full
           ${isToday(day) ? 'bg-primary text-primary-foreground' : 'text-foreground'}
         `}>
           {format(day, 'd')}
