@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRunCapability, CapabilityError } from "@/shared/capability/react";
+import { isOk } from "@/shared/result";
 import {
   getClientCredit,
   applyClientCredit,
@@ -47,7 +48,7 @@ export function useClienteCredito(clienteId?: string | null, incluirHistorico = 
         incluirHistorico,
         historicoLimit: 100,
       });
-      if (res.ok !== true) throw new CapabilityError((res as { error: any }).error);
+      if (!isOk(res)) throw new CapabilityError(res.error);
       return res.value as ClienteCreditoState;
     },
   });
@@ -89,7 +90,7 @@ export function useApplyClientCredit() {
   return useMutation({
     mutationFn: async (input: ApplyInput) => {
       const res = await run(applyClientCredit, input);
-      if (res.ok !== true) throw new CapabilityError((res as { error: any }).error);
+      if (!isOk(res)) throw new CapabilityError(res.error);
       return res.value;
     },
     onSuccess: (_data, vars) => {
@@ -119,7 +120,7 @@ export function useGrantClientCredit() {
         ...input,
         origem: input.origem ?? "ajuste_manual",
       });
-      if (res.ok !== true) throw new CapabilityError((res as { error: any }).error);
+      if (!isOk(res)) throw new CapabilityError(res.error);
       return res.value;
     },
     onSuccess: (_data, vars) => {
@@ -140,7 +141,7 @@ export function useRevokeClientCredit() {
   return useMutation({
     mutationFn: async ({ ledgerId, motivo }: RevokeInput) => {
       const res = await run(revokeClientCredit, { ledgerId, motivo });
-      if (res.ok !== true) throw new CapabilityError((res as { error: any }).error);
+      if (!isOk(res)) throw new CapabilityError(res.error);
       return res.value;
     },
     onSuccess: (_data, vars) => {
