@@ -101,7 +101,7 @@ export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
                   <th className="text-left px-3 py-2">Origem</th>
                   <th className="text-left px-3 py-2">Descrição</th>
                   <th className="text-right px-3 py-2">Valor</th>
-                  <th className="px-3 py-2 w-8"></th>
+                  
                 </tr>
               </thead>
               <tbody>
@@ -123,17 +123,6 @@ export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
                     >
                       {row.valor > 0 ? "+" : ""}
                       {formatCurrency(row.valor)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {!row.origem.startsWith("reversao_") && (
-                        <button
-                          className="text-muted-foreground hover:text-foreground"
-                          title="Reverter"
-                          onClick={() => handleRevoke(row)}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}
