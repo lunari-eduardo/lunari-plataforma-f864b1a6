@@ -167,11 +167,6 @@ export function ChargeModal({
       setOverrideRepassarTaxas(false);
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
-      setFinalidade('sessao');
-      setGaleriaId(null);
-      setGaleriaInfo(null);
-      setQtdFotos(0);
-      setRpcSnapshot(null);
       setAmbiguity(null);
       setPayerEditing(false);
       // Hidratar payer a partir do cliente
