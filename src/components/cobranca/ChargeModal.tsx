@@ -211,19 +211,15 @@ export function ChargeModal({
   // `ExtraChargeModal` (botão "Cobrar extras" do card do workflow).
 
 
-  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner proativo
+  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner
+  // informativo. Não altera "finalidade" (extras têm modal próprio).
   useEffect(() => {
-    if (!isOpen || !sessionId || finalidade !== 'sessao') {
+    if (!isOpen || !sessionId) {
       setAmbiguity(null);
       return;
     }
     let cancelled = false;
     (async () => {
-      const guard = await assertNotAmbiguousSessionChargeClient(sessionId, -1);
-      // Truque: passar valor inválido (-1) só pega o caminho se houver galeria com saldo;
-      // como não vai bater no ±1%, usamos uma busca direta abaixo.
-      void guard;
-      // Busca real do saldo da 1ª galeria com extras pendentes para exibir banner
       const { data: galerias } = await supabase
         .from('galerias')
         .select('id, nome_sessao, fotos_selecionadas, fotos_incluidas, status_pagamento')
@@ -238,6 +234,24 @@ export function ChargeModal({
         const snap = (rpc ?? {}) as ExtraPaymentSnapshot;
         const saldo = Number(snap.valor_a_cobrar ?? 0);
         if (saldo > 0) {
+          if (cancelled) return;
+          setAmbiguity({
+            galeriaId: g.id,
+            valorSaldoExtras: saldo,
+            qtdSugerida:
+              Number(snap.extras_necessarias ?? 0) - Number(snap.extras_pagas ?? 0),
+            nomeGaleria: g.nome_sessao ?? undefined,
+          });
+          return;
+        }
+      }
+      if (!cancelled) setAmbiguity(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, sessionId]);
+
           if (cancelled) return;
           setAmbiguity({
             galeriaId: g.id,
