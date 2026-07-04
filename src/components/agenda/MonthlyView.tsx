@@ -215,7 +215,7 @@ const DayCell = ({
     >
       <div className="flex justify-between items-center mb-1 md:mb-2">
         <span className={`
-          text-xs md:text-sm font-medium h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full
+          text-xs md:text-base font-medium h-5 w-5 md:h-7 md:w-7 flex items-center justify-center rounded-full
           ${isToday(day) ? 'bg-primary text-primary-foreground' : 'text-foreground'}
         `}>
           {format(day, 'd')}
