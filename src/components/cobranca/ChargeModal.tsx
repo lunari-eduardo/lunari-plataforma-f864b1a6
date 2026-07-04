@@ -252,23 +252,7 @@ export function ChargeModal({
     };
   }, [isOpen, sessionId]);
 
-          if (cancelled) return;
-          setAmbiguity({
-            galeriaId: g.id,
-            valorSaldoExtras: saldo,
-            qtdSugerida:
-              Number(snap.extras_necessarias ?? 0) - Number(snap.extras_pagas ?? 0),
-            nomeGaleria: g.nome_sessao ?? undefined,
-          });
-          return;
-        }
-      }
-      if (!cancelled) setAmbiguity(null);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, sessionId, finalidade]);
+
 
 
 
