@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ClientMetrics {
   totalSessoes: number;
   totalFaturado: number;
+  totalPago: number;
   aReceber: number;
   agendamentos: number;
   agendado: number;
@@ -15,6 +16,7 @@ export function useClientMetricsRealtime(clienteId: string) {
   const [metrics, setMetrics] = useState<ClientMetrics>({
     totalSessoes: 0,
     totalFaturado: 0,
+    totalPago: 0,
     aReceber: 0,
     agendamentos: 0,
     agendado: 0,
@@ -82,6 +84,7 @@ export function useClientMetricsRealtime(clienteId: string) {
       setMetrics({
         totalSessoes,
         totalFaturado,
+        totalPago,
         aReceber,
         agendamentos: appointmentsCount || 0,
         agendado: totalAgendado,

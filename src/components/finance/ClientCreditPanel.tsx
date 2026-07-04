@@ -13,11 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useClienteCredito,
   useGrantClientCredit,
-  useRevokeClientCredit,
-  type ClienteCreditoLedgerRow,
 } from "@/hooks/useClienteCredito";
 import { formatCurrency } from "@/utils/currencyUtils";
-import { Wallet, Plus, RotateCcw } from "lucide-react";
+import { Wallet, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,7 +39,6 @@ interface ClientCreditPanelProps {
 export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
   const { data, isLoading } = useClienteCredito(clienteId, true);
   const grant = useGrantClientCredit();
-  const revoke = useRevokeClientCredit();
   const [grantOpen, setGrantOpen] = useState(false);
   const [valorStr, setValorStr] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -70,14 +67,6 @@ export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
     }
   };
 
-  const handleRevoke = async (row: ClienteCreditoLedgerRow) => {
-    if (!confirm(`Reverter lançamento de ${formatCurrency(row.valor)}?`)) return;
-    try {
-      await revoke.mutateAsync({ ledgerId: row.id, clienteId });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao reverter");
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -112,7 +101,7 @@ export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
                   <th className="text-left px-3 py-2">Origem</th>
                   <th className="text-left px-3 py-2">Descrição</th>
                   <th className="text-right px-3 py-2">Valor</th>
-                  <th className="px-3 py-2 w-8"></th>
+                  
                 </tr>
               </thead>
               <tbody>
@@ -134,17 +123,6 @@ export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
                     >
                       {row.valor > 0 ? "+" : ""}
                       {formatCurrency(row.valor)}
-                    </td>
-                    <td className="px-3 py-2">
-                      {!row.origem.startsWith("reversao_") && (
-                        <button
-                          className="text-muted-foreground hover:text-foreground"
-                          title="Reverter"
-                          onClick={() => handleRevoke(row)}
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}
