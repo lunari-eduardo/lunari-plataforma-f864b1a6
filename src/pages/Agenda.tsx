@@ -310,7 +310,8 @@ export default function Agenda() {
     onViewChange: setView,
   });
 
-  const showSidebar = !isMobile && !isTablet && view !== 'year';
+  const sidebarApplicable = view !== 'year' && view !== 'month';
+  const showSidebar = !isMobile && !isTablet && sidebarApplicable;
   const isYearView = view === 'year';
 
   return (
