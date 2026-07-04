@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { RotateCcw, AlertTriangle, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import type { SessionPaymentExtended } from '@/types/sessionPayments';
 
