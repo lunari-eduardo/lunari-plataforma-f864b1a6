@@ -433,8 +433,6 @@ export function ChargeModal({
       tipoCobranca: 'link',
       provedor,
       finalidade: binding.finalidade,
-      galeriaId: binding.galeriaId,
-      qtdFotos: binding.qtdFotos,
     });
 
     if (result.success) {
