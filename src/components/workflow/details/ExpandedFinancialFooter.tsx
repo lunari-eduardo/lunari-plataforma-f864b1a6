@@ -37,6 +37,7 @@ export function ExpandedFinancialFooter({
   onPaymentAdd,
   onPaymentKeyDown,
   formatCurrency,
+  creditSlot,
 }: Props) {
   const showExtrasBreakdown =
     typeof extrasPendente === "number" && extrasPendente > 0;
