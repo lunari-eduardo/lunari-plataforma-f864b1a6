@@ -1,24 +1,31 @@
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, CircleDashed } from "lucide-react";
 
 interface FotosExtrasPaymentBadgeProps {
-  status: 'sem_vendas' | 'pendente' | 'pago' | 'pago_manual' | undefined;
+  status: 'sem_vendas' | 'pendente' | 'pago' | 'pago_manual' | 'parcial' | undefined;
 }
 
 export function FotosExtrasPaymentBadge({ status }: FotosExtrasPaymentBadgeProps) {
   if (!status || status === 'sem_vendas') return null;
-  
+
   const isPago = status === 'pago' || status === 'pago_manual';
-  const config = isPago 
-    ? { 
-        icon: CheckCircle2, 
-        className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-500/30', 
-        label: 'Pago' 
+  const isParcial = status === 'parcial';
+  const config = isPago
+    ? {
+        icon: CheckCircle2,
+        className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-500/30',
+        label: 'Pago'
       }
-    : { 
-        icon: Clock, 
-        className: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-500/30', 
-        label: 'Pendente' 
+    : isParcial
+    ? {
+        icon: CircleDashed,
+        className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-500/30',
+        label: 'Parcial'
+      }
+    : {
+        icon: Clock,
+        className: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-500/30',
+        label: 'Pendente'
       };
   
   const IconComponent = config.icon;
