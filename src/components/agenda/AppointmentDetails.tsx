@@ -19,6 +19,8 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { ClientCreditBanner } from '@/components/finance/ClientCreditBanner';
+import { ClientCreditApplyModal } from '@/components/finance/ClientCreditApplyModal';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/modules/agenda/presentation';
@@ -60,6 +62,7 @@ export default function AppointmentDetails({
   const [showClientEditModal, setShowClientEditModal] = useState(false);
   const [sendBriefingOpen, setSendBriefingOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
+  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
   const [viewRespostas, setViewRespostas] = useState<{
     id: string;
     titulo: string;
@@ -654,6 +657,15 @@ export default function AppointmentDetails({
                     R$ {Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago).toFixed(2)}
                   </span>
                 </div>
+
+                {resolvedClienteId && appointment.sessionId && (
+                  <ClientCreditBanner
+                    clienteId={resolvedClienteId}
+                    restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
+                    onApply={() => setCreditApplyOpen(true)}
+                    className="mt-2"
+                  />
+                )}
               </>
             ) : workflowInfo.hasSession ? (
               <p className="text-sm text-lunar-muted text-center py-2">
@@ -780,6 +792,17 @@ export default function AppointmentDetails({
 
       {/* Dialog do guard centralizado (usado pelo handleSave em confirmados) */}
       <SlotConflictDialog {...saveDialogProps} />
+
+      {resolvedClienteId && appointment.sessionId && sessionDetails && (
+        <ClientCreditApplyModal
+          isOpen={creditApplyOpen}
+          onClose={() => setCreditApplyOpen(false)}
+          clienteId={resolvedClienteId}
+          sessionId={appointment.sessionId}
+          restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
+          onApplied={() => fetchSessionDetails?.()}
+        />
+      )}
     </>
 
   );

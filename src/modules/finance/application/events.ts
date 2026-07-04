@@ -49,6 +49,27 @@ declare module "@/shared/event-bus" {
       photographerId: string;
       actor: "user" | "automation" | "ai";
     };
+    "finance.credit.granted": {
+      ledgerId: string;
+      clienteId: string;
+      valor: number;
+      origem: string;
+      photographerId: string;
+    };
+    "finance.credit.applied": {
+      ledgerId: string;
+      transacaoId: string;
+      clienteId: string;
+      sessionId: string;
+      valor: number;
+      photographerId: string;
+    };
+    "finance.credit.revoked": {
+      ledgerId: string;
+      originalLedgerId: string;
+      clienteId: string;
+      photographerId: string;
+    };
   }
 }
 

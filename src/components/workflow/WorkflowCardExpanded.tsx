@@ -15,6 +15,8 @@ import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
+import { ClientCreditBanner } from "@/components/finance/ClientCreditBanner";
+import { ClientCreditApplyModal } from "@/components/finance/ClientCreditApplyModal";
 
 interface WorkflowCardExpandedProps {
   session: SessionData;
@@ -35,6 +37,7 @@ export function WorkflowCardExpanded({
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
+  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
   const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || "");
@@ -457,6 +460,16 @@ export function WorkflowCardExpanded({
           </div>
         </div>
 
+        {/* Crédito do cliente (aparece só se saldo > 0) */}
+        {session.clienteId && (session.sessionId || session.id) && (
+          <ClientCreditBanner
+            clienteId={session.clienteId}
+            restanteSessao={pendenteVisual}
+            onApply={() => setCreditApplyOpen(true)}
+            className="mt-3"
+          />
+        )}
+
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
           session={session}
@@ -540,6 +553,16 @@ export function WorkflowCardExpanded({
         onConfirm={confirmExtraEdit}
         onCancel={cancelExtraEdit}
       />
+
+      {session.clienteId && (session.sessionId || session.id) && (
+        <ClientCreditApplyModal
+          isOpen={creditApplyOpen}
+          onClose={() => setCreditApplyOpen(false)}
+          clienteId={session.clienteId}
+          sessionId={session.sessionId || session.id}
+          restanteSessao={pendenteVisual}
+        />
+      )}
     </div>
   );
 }
