@@ -39,7 +39,6 @@ interface ClientCreditPanelProps {
 export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
   const { data, isLoading } = useClienteCredito(clienteId, true);
   const grant = useGrantClientCredit();
-  const revoke = useRevokeClientCredit();
   const [grantOpen, setGrantOpen] = useState(false);
   const [valorStr, setValorStr] = useState("");
   const [motivo, setMotivo] = useState("");
@@ -68,14 +67,6 @@ export function ClientCreditPanel({ clienteId }: ClientCreditPanelProps) {
     }
   };
 
-  const handleRevoke = async (row: ClienteCreditoLedgerRow) => {
-    if (!confirm(`Reverter lançamento de ${formatCurrency(row.valor)}?`)) return;
-    try {
-      await revoke.mutateAsync({ ledgerId: row.id, clienteId });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao reverter");
-    }
-  };
 
   return (
     <div className="space-y-4">
