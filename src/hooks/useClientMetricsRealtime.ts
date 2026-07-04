@@ -16,6 +16,7 @@ export function useClientMetricsRealtime(clienteId: string) {
   const [metrics, setMetrics] = useState<ClientMetrics>({
     totalSessoes: 0,
     totalFaturado: 0,
+    totalPago: 0,
     aReceber: 0,
     agendamentos: 0,
     agendado: 0,
