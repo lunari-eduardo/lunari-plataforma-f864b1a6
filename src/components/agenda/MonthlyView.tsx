@@ -77,13 +77,13 @@ export default function MonthlyView({
     });
   };
   return (
-    <div className="w-full h-full overflow-auto">
+    <div className="w-full h-full">
       <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-card/15 dark:bg-card/[0.03]">
         {/* Weekday headers */}
         {weekDays.map((day) => (
           <div 
             key={day} 
-            className="h-8 md:h-10 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-card/50 dark:bg-card/[0.06] border border-white/20 dark:border-white/10"
+            className="h-8 md:h-9 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-card/50 dark:bg-card/[0.06] border border-white/20 dark:border-white/10"
           >
             {day}
           </div>
