@@ -206,30 +206,10 @@ export function ChargeModal({
     }
   }, [isOpen, valorSugerido, clienteId, clienteNome, clienteWhatsapp]);
 
-  // Snapshot canônico via RPC quando galeria selecionada (substitui cálculo local)
-  useEffect(() => {
-    if (finalidade !== 'fotos_extras' || !galeriaId) {
-      setRpcSnapshot(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const guard = await assertExtraPaymentWithinIdealClient(galeriaId, 0);
-      if (cancelled) return;
-      const snap = guard.snapshot || (guard.error && 'snapshot' in guard.error ? guard.error.snapshot : null);
-      if (!snap) return;
-      setRpcSnapshot(snap);
-      // Sugere o saldo a cobrar quando ainda não houver valor digitado manualmente
-      const saldo = Number(snap.valor_a_cobrar ?? 0);
-      if (saldo > 0) {
-        setValor(saldo);
-        setValorType('parcial');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [finalidade, galeriaId]);
+  // (Removido) — o modal antigo tinha um bloco "Finalidade: Fotos extras"
+  // com snapshot da RPC. Extras agora são cobrados exclusivamente pelo
+  // `ExtraChargeModal` (botão "Cobrar extras" do card do workflow).
+
 
   // Detecta ambiguidade (sessão com saldo de extras pendente) — banner proativo
   useEffect(() => {
