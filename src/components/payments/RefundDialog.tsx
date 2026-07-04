@@ -40,12 +40,13 @@ function classifyProvider(payment: SessionPaymentExtended | null): {
 interface RefundDialogProps {
   payment: SessionPaymentExtended | null;
   onClose: () => void;
-  onConfirm: (motivo: string, autoRefund: boolean) => void | Promise<void>;
+  onConfirm: (motivo: string, autoRefund: boolean, keepAsCredit: boolean) => void | Promise<void>;
 }
 
 export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps) {
   const [motivo, setMotivo] = useState('');
   const [autoRefund, setAutoRefund] = useState(true);
+  const [keepAsCredit, setKeepAsCredit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const { automatable, label } = classifyProvider(payment);
@@ -55,14 +56,18 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
     if (payment) {
       setMotivo('');
       setAutoRefund(automatable); // default: true se automatizável
+      setKeepAsCredit(false);
       setSubmitting(false);
     }
   }, [payment?.id, automatable]);
 
+  // "Manter como crédito" desabilita/oculta o estorno no gateway (não devolve dinheiro).
+  const effectiveAutoRefund = !keepAsCredit && autoRefund;
+
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      await onConfirm(motivo, automatable && autoRefund);
+      await onConfirm(motivo, automatable && effectiveAutoRefund, keepAsCredit);
     } finally {
       setSubmitting(false);
     }
