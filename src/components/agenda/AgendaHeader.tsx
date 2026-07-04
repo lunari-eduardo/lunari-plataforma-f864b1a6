@@ -186,7 +186,7 @@ export default function AgendaHeader({
   // Desktop Layout
   return (
     <div className="flex flex-col items-center justify-center mb-4 gap-3">
-      <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-between w-full max-w-6xl mx-auto">
         <div className="flex items-center gap-4">
           <NavigationControls />
           <ViewToggleGroup />
