@@ -198,7 +198,7 @@ const DayCell = ({
     borderColor: fullDaySlot.color || 'hsl(var(--border))'
   } : {};
 
-  const cellClassName = `${classes.calendarCell} cursor-pointer transition-colors ${
+  const cellClassName = `${classes.calendarCell} md:min-h-[132px] lg:min-h-[148px] cursor-pointer transition-colors ${
     fullDaySlot 
       ? 'border-2' 
       : 'bg-card/40 dark:bg-card/[0.05] hover:bg-card/60 dark:hover:bg-white/[0.08] border border-white/20 dark:border-white/10 hover:border-white/40 dark:hover:border-white/20'
