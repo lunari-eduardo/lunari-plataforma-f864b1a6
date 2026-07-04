@@ -60,11 +60,22 @@ export function WorkflowCardCollapsed({
     return `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
   }, []);
 
-  // F5.2: session.restante já calculado em convertSessionToData (DB triggers).
+  // F5.2: pendente com sinal preservado (valores negativos = crédito/overpay).
+  const parseSignedMoney = (val: unknown): number => {
+    if (typeof val === "number") return val;
+    const str = String(val ?? "0");
+    const isNeg = /-/.test(str);
+    const cleaned = str.replace(/[^\d,]/g, "").replace(",", ".");
+    const n = parseFloat(cleaned) || 0;
+    return isNeg ? -n : n;
+  };
   const calculateRestante = useCallback(() => {
-    const restanteStr = typeof session.restante === "string" ? session.restante : String(session.restante || "0");
-    return parseFloat(restanteStr.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
-  }, [session.restante]);
+    const total = parseSignedMoney(session.total);
+    const pago = parseSignedMoney(session.valorPago);
+    // Se ambos existem, calcular diretamente para preservar sinal negativo (overpay).
+    if (total || pago) return total - pago;
+    return parseSignedMoney(session.restante);
+  }, [session.restante, session.total, session.valorPago]);
 
   const paymentSubmittingRef = useRef(false);
   const handlePaymentAdd = useCallback(async () => {
