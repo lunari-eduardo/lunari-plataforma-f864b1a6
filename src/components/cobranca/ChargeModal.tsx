@@ -20,9 +20,7 @@ import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
-import { CobrancaFinalidadeSelector, type GalleryOption, type CobrancaFinalidadeUI } from './CobrancaFinalidadeSelector';
 import {
-  assertExtraPaymentWithinIdealClient,
   assertNotAmbiguousSessionChargeClient,
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
@@ -99,18 +97,15 @@ export function ChargeModal({
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
 
-  // Contrato Gestão↔Gallery — finalidade da cobrança
-  const [finalidade, setFinalidade] = useState<CobrancaFinalidadeUI>('sessao');
-  const [galeriaId, setGaleriaId] = useState<string | null>(null);
-  const [galeriaInfo, setGaleriaInfo] = useState<GalleryOption | null>(null);
-  const [qtdFotos, setQtdFotos] = useState<number>(0);
-  const [rpcSnapshot, setRpcSnapshot] = useState<ExtraPaymentSnapshot | null>(null);
+  // Banner informativo de ambiguidade (fotos extras pendentes na sessão).
+  // Não altera fluxo — apenas orienta o usuário a usar o modal dedicado.
   const [ambiguity, setAmbiguity] = useState<{
     galeriaId: string;
     valorSaldoExtras: number;
     qtdSugerida: number;
     nomeGaleria?: string;
   } | null>(null);
+
 
 
   // Asaas sub-flow state
@@ -172,11 +167,6 @@ export function ChargeModal({
       setOverrideRepassarTaxas(false);
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
-      setFinalidade('sessao');
-      setGaleriaId(null);
-      setGaleriaInfo(null);
-      setQtdFotos(0);
-      setRpcSnapshot(null);
       setAmbiguity(null);
       setPayerEditing(false);
       // Hidratar payer a partir do cliente
@@ -206,44 +196,20 @@ export function ChargeModal({
     }
   }, [isOpen, valorSugerido, clienteId, clienteNome, clienteWhatsapp]);
 
-  // Snapshot canônico via RPC quando galeria selecionada (substitui cálculo local)
-  useEffect(() => {
-    if (finalidade !== 'fotos_extras' || !galeriaId) {
-      setRpcSnapshot(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const guard = await assertExtraPaymentWithinIdealClient(galeriaId, 0);
-      if (cancelled) return;
-      const snap = guard.snapshot || (guard.error && 'snapshot' in guard.error ? guard.error.snapshot : null);
-      if (!snap) return;
-      setRpcSnapshot(snap);
-      // Sugere o saldo a cobrar quando ainda não houver valor digitado manualmente
-      const saldo = Number(snap.valor_a_cobrar ?? 0);
-      if (saldo > 0) {
-        setValor(saldo);
-        setValorType('parcial');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [finalidade, galeriaId]);
+  // (Removido) — o modal antigo tinha um bloco "Finalidade: Fotos extras"
+  // com snapshot da RPC. Extras agora são cobrados exclusivamente pelo
+  // `ExtraChargeModal` (botão "Cobrar extras" do card do workflow).
 
-  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner proativo
+
+  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner
+  // informativo. Não altera "finalidade" (extras têm modal próprio).
   useEffect(() => {
-    if (!isOpen || !sessionId || finalidade !== 'sessao') {
+    if (!isOpen || !sessionId) {
       setAmbiguity(null);
       return;
     }
     let cancelled = false;
     (async () => {
-      const guard = await assertNotAmbiguousSessionChargeClient(sessionId, -1);
-      // Truque: passar valor inválido (-1) só pega o caminho se houver galeria com saldo;
-      // como não vai bater no ±1%, usamos uma busca direta abaixo.
-      void guard;
-      // Busca real do saldo da 1ª galeria com extras pendentes para exibir banner
       const { data: galerias } = await supabase
         .from('galerias')
         .select('id, nome_sessao, fotos_selecionadas, fotos_incluidas, status_pagamento')
@@ -274,7 +240,9 @@ export function ChargeModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, sessionId, finalidade]);
+  }, [isOpen, sessionId]);
+
+
 
 
 
@@ -337,43 +305,29 @@ export function ChargeModal({
 
   /**
    * Valida o contrato Gestão↔Gallery antes de submeter qualquer cobrança.
-   * Retorna o bloco a ser repassado às edge functions / inserts ou `null`
-   * se a validação falhar (toast já mostrado).
+   *
+   * IMPORTANTE: Este modal só cobra a SESSÃO. Fotos extras têm modal
+   * dedicado (`ExtraChargeModal`) que chama `gallery-create-payment`.
+   * Mantemos o guard anti-ambiguidade para bloquear "cobrar como sessão"
+   * um valor que bata com o saldo pendente de extras.
    */
   const buildBindingPayload = async (): Promise<
     | {
-        finalidade: 'sessao' | 'fotos_extras';
-        galeriaId?: string;
-        qtdFotos?: number;
+        finalidade: 'sessao';
       }
     | null
   > => {
     const { toast } = await import('sonner');
-    if (finalidade === 'sessao') {
-      if (sessionId) {
-        const guard = await assertNotAmbiguousSessionChargeClient(sessionId, valor);
-        if (guard.error) {
-          toast.error(guard.error.message);
-          return null;
-        }
+    if (sessionId) {
+      const guard = await assertNotAmbiguousSessionChargeClient(sessionId, valor);
+      if (guard.error) {
+        toast.error(guard.error.message);
+        return null;
       }
-      return { finalidade: 'sessao' };
     }
-    if (!galeriaId) {
-      toast.error('Selecione a galeria vinculada às fotos extras');
-      return null;
-    }
-    if (!qtdFotos || qtdFotos <= 0) {
-      toast.error('Informe a quantidade de fotos extras');
-      return null;
-    }
-    const guard = await assertExtraPaymentWithinIdealClient(galeriaId, valor);
-    if (guard.error) {
-      toast.error(guard.error.message);
-      return null;
-    }
-    return { finalidade: 'fotos_extras', galeriaId, qtdFotos };
+    return { finalidade: 'sessao' };
   };
+
 
   /**
    * Persiste os dados do pagador no CRM antes de gerar cobrança.
@@ -422,8 +376,6 @@ export function ChargeModal({
         tipoCobranca: 'pix',
         provedor: 'pix_manual',
         finalidade: binding.finalidade,
-        galeriaId: binding.galeriaId,
-        qtdFotos: binding.qtdFotos,
       });
 
       if (result.success) {
@@ -449,8 +401,6 @@ export function ChargeModal({
       tipoCobranca: 'link',
       provedor,
       finalidade: binding.finalidade,
-      galeriaId: binding.galeriaId,
-      qtdFotos: binding.qtdFotos,
     });
 
     if (result.success) {
@@ -487,8 +437,6 @@ export function ChargeModal({
           descricao: descricao || undefined,
           billingType: 'PIX',
           finalidade: binding.finalidade,
-          galeriaId: binding.galeriaId,
-          qtdFotos: binding.qtdFotos,
         },
       });
 
@@ -550,10 +498,8 @@ export function ChargeModal({
         finalidade: binding.finalidade,
         correlation_id: crypto.randomUUID(),
       };
-      if (binding.finalidade === 'fotos_extras') {
-        insertPayload.galeria_id = binding.galeriaId;
-        insertPayload.qtd_fotos = binding.qtdFotos;
-      }
+      // Este modal sempre cobra a sessão; extras têm modal dedicado.
+
       const { data: cobranca, error: insertError } = await supabase
         .from('cobrancas')
         .insert(insertPayload as any)
@@ -701,64 +647,32 @@ export function ChargeModal({
                       />
                     </div>
 
-                    {/* Finalidade da cobrança */}
-                    <CobrancaFinalidadeSelector
-                      clienteId={clienteId}
-                      sessionId={sessionId}
-                      finalidade={finalidade}
-                      onFinalidadeChange={(v) => {
-                        setFinalidade(v);
-                        if (v === 'sessao') {
-                          setGaleriaId(null);
-                          setGaleriaInfo(null);
-                          setQtdFotos(0);
-                        }
-                      }}
-                      galeriaId={galeriaId}
-                      onGaleriaChange={(id, gal) => {
-                        setGaleriaId(id);
-                        setGaleriaInfo(gal);
-                      }}
-                      qtdFotos={qtdFotos}
-                      onQtdFotosChange={setQtdFotos}
-                    />
-
-                    {/* Banner ambiguidade */}
-                    {ambiguity && finalidade === 'sessao' && (
+                    {/* Banner ambiguidade — apenas informativo.
+                        Cobrança de fotos extras agora é feita SEMPRE pelo
+                        modal dedicado (botão "Cobrar extras" no card), via
+                        edge `gallery-create-payment` (respeita desconto
+                        progressivo + pagamentos anteriores). */}
+                    {ambiguity && (
                       <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <div className="flex-1 space-y-2">
-                            <div>
-                              <strong>Fotos extras pendentes nesta sessão.</strong>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                Galeria "{ambiguity.nomeGaleria ?? '—'}" · {ambiguity.qtdSugerida} fotos ·{' '}
-                                {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL',
-                                })}{' '}
-                                a cobrar. Cobrar como "sessão" pode duplicar receita.
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setFinalidade('fotos_extras');
-                                setGaleriaId(ambiguity.galeriaId);
-                                setQtdFotos(ambiguity.qtdSugerida);
-                                setValor(ambiguity.valorSaldoExtras);
-                                setValorType('parcial');
-                              }}
-                            >
-                              Cobrar como fotos extras
-                            </Button>
+                          <div className="flex-1">
+                            <strong>Fotos extras pendentes nesta sessão.</strong>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Galeria "{ambiguity.nomeGaleria ?? '—'}" ·{' '}
+                              {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              })}{' '}
+                              a cobrar. Feche este modal e use o botão{' '}
+                              <strong>Cobrar extras</strong> do card para não duplicar receita.
+                            </p>
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
+
 
                   {/* ========== COLUNA DIREITA ========== */}
                   <div className="space-y-4">
