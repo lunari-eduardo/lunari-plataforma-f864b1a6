@@ -530,10 +530,8 @@ export function ChargeModal({
         finalidade: binding.finalidade,
         correlation_id: crypto.randomUUID(),
       };
-      if (binding.finalidade === 'fotos_extras') {
-        insertPayload.galeria_id = binding.galeriaId;
-        insertPayload.qtd_fotos = binding.qtdFotos;
-      }
+      // Este modal sempre cobra a sessão; extras têm modal dedicado.
+
       const { data: cobranca, error: insertError } = await supabase
         .from('cobrancas')
         .insert(insertPayload as any)
