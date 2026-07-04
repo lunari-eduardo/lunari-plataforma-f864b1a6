@@ -654,7 +654,7 @@ export default function AppointmentDetails({
                 <div className="flex justify-between text-sm font-medium items-center">
                   <span className="text-lunar-muted">Pendente</span>
                   <div className="flex items-center gap-2">
-                    {resolvedClienteId && appointment.sessionId && (
+                    {resolvedClienteId && appointment.sessionId && (sessionDetails.valorTotal - sessionDetails.valorPago) > 0 && (
                       <ClientCreditBadge
                         clienteId={resolvedClienteId}
                         onClick={() => setCreditApplyOpen(true)}
