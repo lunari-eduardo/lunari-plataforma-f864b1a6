@@ -46,6 +46,9 @@ import "./application/commands/markTransactionPending";
 import "./application/commands/createFinancialItem";
 import "./application/commands/createCategory";
 import "./application/commands/setGoal";
+import "./application/commands/grantClientCredit";
+import "./application/commands/applyClientCredit";
+import "./application/commands/revokeClientCredit";
 import "./application/queries/listFinancialItems";
 import "./application/queries/listGoals";
 import "./application/queries/goalsProgress";
@@ -57,6 +60,7 @@ import "./application/queries/listGroups";
 import "./application/queries/listCategories";
 import "./application/queries/kpisByNature";
 import "./application/queries/kpisByNatureRange";
+import "./application/queries/getClientCredit";
 
 // Re-export para uso direto
 export { createTransaction } from "./application/commands/createTransaction";
@@ -67,6 +71,9 @@ export { markTransactionPending } from "./application/commands/markTransactionPe
 export { createFinancialItem } from "./application/commands/createFinancialItem";
 export { createCategory } from "./application/commands/createCategory";
 export { setGoal } from "./application/commands/setGoal";
+export { grantClientCredit } from "./application/commands/grantClientCredit";
+export { applyClientCredit } from "./application/commands/applyClientCredit";
+export { revokeClientCredit } from "./application/commands/revokeClientCredit";
 export { listFinancialItems } from "./application/queries/listFinancialItems";
 export { listGoals } from "./application/queries/listGoals";
 export { goalsProgress } from "./application/queries/goalsProgress";
@@ -78,4 +85,5 @@ export { listGroups } from "./application/queries/listGroups";
 export { listCategories } from "./application/queries/listCategories";
 export { kpisByNature } from "./application/queries/kpisByNature";
 export { kpisByNatureRange } from "./application/queries/kpisByNatureRange";
+export { getClientCredit } from "./application/queries/getClientCredit";
 
