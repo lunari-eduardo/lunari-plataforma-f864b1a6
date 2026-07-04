@@ -657,6 +657,15 @@ export default function AppointmentDetails({
                     R$ {Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago).toFixed(2)}
                   </span>
                 </div>
+
+                {resolvedClienteId && appointment.sessionId && (
+                  <ClientCreditBanner
+                    clienteId={resolvedClienteId}
+                    restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
+                    onApply={() => setCreditApplyOpen(true)}
+                    className="mt-2"
+                  />
+                )}
               </>
             ) : workflowInfo.hasSession ? (
               <p className="text-sm text-lunar-muted text-center py-2">
