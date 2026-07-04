@@ -19,6 +19,8 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { ClientCreditBanner } from '@/components/finance/ClientCreditBanner';
+import { ClientCreditApplyModal } from '@/components/finance/ClientCreditApplyModal';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/modules/agenda/presentation';
