@@ -553,6 +553,16 @@ export function WorkflowCardExpanded({
         onConfirm={confirmExtraEdit}
         onCancel={cancelExtraEdit}
       />
+
+      {session.clienteId && (session.sessionId || session.id) && (
+        <ClientCreditApplyModal
+          isOpen={creditApplyOpen}
+          onClose={() => setCreditApplyOpen(false)}
+          clienteId={session.clienteId}
+          sessionId={session.sessionId || session.id}
+          restanteSessao={pendenteVisual}
+        />
+      )}
     </div>
   );
 }
