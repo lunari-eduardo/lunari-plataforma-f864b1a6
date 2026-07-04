@@ -337,43 +337,29 @@ export function ChargeModal({
 
   /**
    * Valida o contrato Gestão↔Gallery antes de submeter qualquer cobrança.
-   * Retorna o bloco a ser repassado às edge functions / inserts ou `null`
-   * se a validação falhar (toast já mostrado).
+   *
+   * IMPORTANTE: Este modal só cobra a SESSÃO. Fotos extras têm modal
+   * dedicado (`ExtraChargeModal`) que chama `gallery-create-payment`.
+   * Mantemos o guard anti-ambiguidade para bloquear "cobrar como sessão"
+   * um valor que bata com o saldo pendente de extras.
    */
   const buildBindingPayload = async (): Promise<
     | {
-        finalidade: 'sessao' | 'fotos_extras';
-        galeriaId?: string;
-        qtdFotos?: number;
+        finalidade: 'sessao';
       }
     | null
   > => {
     const { toast } = await import('sonner');
-    if (finalidade === 'sessao') {
-      if (sessionId) {
-        const guard = await assertNotAmbiguousSessionChargeClient(sessionId, valor);
-        if (guard.error) {
-          toast.error(guard.error.message);
-          return null;
-        }
+    if (sessionId) {
+      const guard = await assertNotAmbiguousSessionChargeClient(sessionId, valor);
+      if (guard.error) {
+        toast.error(guard.error.message);
+        return null;
       }
-      return { finalidade: 'sessao' };
     }
-    if (!galeriaId) {
-      toast.error('Selecione a galeria vinculada às fotos extras');
-      return null;
-    }
-    if (!qtdFotos || qtdFotos <= 0) {
-      toast.error('Informe a quantidade de fotos extras');
-      return null;
-    }
-    const guard = await assertExtraPaymentWithinIdealClient(galeriaId, valor);
-    if (guard.error) {
-      toast.error(guard.error.message);
-      return null;
-    }
-    return { finalidade: 'fotos_extras', galeriaId, qtdFotos };
+    return { finalidade: 'sessao' };
   };
+
 
   /**
    * Persiste os dados do pagador no CRM antes de gerar cobrança.
