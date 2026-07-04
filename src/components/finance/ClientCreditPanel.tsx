@@ -13,11 +13,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useClienteCredito,
   useGrantClientCredit,
-  useRevokeClientCredit,
-  type ClienteCreditoLedgerRow,
 } from "@/hooks/useClienteCredito";
 import { formatCurrency } from "@/utils/currencyUtils";
-import { Wallet, Plus, RotateCcw } from "lucide-react";
+import { Wallet, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
