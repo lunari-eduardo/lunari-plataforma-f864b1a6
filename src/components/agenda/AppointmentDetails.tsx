@@ -792,6 +792,17 @@ export default function AppointmentDetails({
 
       {/* Dialog do guard centralizado (usado pelo handleSave em confirmados) */}
       <SlotConflictDialog {...saveDialogProps} />
+
+      {resolvedClienteId && appointment.sessionId && sessionDetails && (
+        <ClientCreditApplyModal
+          isOpen={creditApplyOpen}
+          onClose={() => setCreditApplyOpen(false)}
+          clienteId={resolvedClienteId}
+          sessionId={appointment.sessionId}
+          restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
+          onApplied={() => fetchSessionDetails?.()}
+        />
+      )}
     </>
 
   );
