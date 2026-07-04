@@ -460,6 +460,16 @@ export function WorkflowCardExpanded({
           </div>
         </div>
 
+        {/* Crédito do cliente (aparece só se saldo > 0) */}
+        {session.clienteId && (session.sessionId || session.id) && (
+          <ClientCreditBanner
+            clienteId={session.clienteId}
+            restanteSessao={pendenteVisual}
+            onApply={() => setCreditApplyOpen(true)}
+            className="mt-3"
+          />
+        )}
+
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
           session={session}
