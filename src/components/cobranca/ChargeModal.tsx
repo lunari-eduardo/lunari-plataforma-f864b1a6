@@ -20,9 +20,7 @@ import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
-import { CobrancaFinalidadeSelector, type GalleryOption, type CobrancaFinalidadeUI } from './CobrancaFinalidadeSelector';
 import {
-  assertExtraPaymentWithinIdealClient,
   assertNotAmbiguousSessionChargeClient,
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
