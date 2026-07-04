@@ -510,9 +510,9 @@ export function SessionPaymentsManager({
       <RefundDialog
         payment={paymentToRefund}
         onClose={() => { setPaymentToRefund(null); setRefundMotivo(''); }}
-        onConfirm={async (motivo, autoRefund) => {
+        onConfirm={async (motivo, autoRefund, keepAsCredit) => {
           if (paymentToRefund) {
-            const ok = await refundPayment(paymentToRefund.id, { motivo: motivo || undefined, autoRefund });
+            const ok = await refundPayment(paymentToRefund.id, { motivo: motivo || undefined, autoRefund, keepAsCredit });
             if (ok) { setPaymentToRefund(null); setRefundMotivo(''); }
           }
         }}
