@@ -15,7 +15,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
-import { ClientCreditBanner } from "@/components/finance/ClientCreditBanner";
+import { ClientCreditBadge } from "@/components/finance/ClientCreditBadge";
 import { ClientCreditApplyModal } from "@/components/finance/ClientCreditApplyModal";
 
 interface WorkflowCardExpandedProps {
