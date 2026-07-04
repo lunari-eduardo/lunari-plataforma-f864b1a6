@@ -100,7 +100,7 @@ export default function MonthlyView({
         {/* Days of the month */}
         {daysInMonth.map(day => {
           const dayEvents = getEventsForDay(day);
-          const maxDisplayEvents = 1;
+          const maxDisplayEvents = isMobile ? 1 : 3;
           const hasMoreEvents = dayEvents.length > maxDisplayEvents;
           const displayEvents = dayEvents.slice(0, maxDisplayEvents);
           
