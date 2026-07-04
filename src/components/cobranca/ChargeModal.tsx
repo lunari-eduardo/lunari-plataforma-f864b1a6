@@ -97,18 +97,15 @@ export function ChargeModal({
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
 
-  // Contrato Gestão↔Gallery — finalidade da cobrança
-  const [finalidade, setFinalidade] = useState<CobrancaFinalidadeUI>('sessao');
-  const [galeriaId, setGaleriaId] = useState<string | null>(null);
-  const [galeriaInfo, setGaleriaInfo] = useState<GalleryOption | null>(null);
-  const [qtdFotos, setQtdFotos] = useState<number>(0);
-  const [rpcSnapshot, setRpcSnapshot] = useState<ExtraPaymentSnapshot | null>(null);
+  // Banner informativo de ambiguidade (fotos extras pendentes na sessão).
+  // Não altera fluxo — apenas orienta o usuário a usar o modal dedicado.
   const [ambiguity, setAmbiguity] = useState<{
     galeriaId: string;
     valorSaldoExtras: number;
     qtdSugerida: number;
     nomeGaleria?: string;
   } | null>(null);
+
 
 
   // Asaas sub-flow state
