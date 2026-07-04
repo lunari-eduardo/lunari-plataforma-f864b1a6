@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { runCapability } from "@/shared/capability";
+import { useRunCapability, CapabilityError } from "@/shared/capability/react";
+import {
+  getClientCredit,
+  applyClientCredit,
+  grantClientCredit,
+  revokeClientCredit,
+} from "@/modules/finance";
 
 export interface ClienteCreditoLedgerRow {
   id: string;
@@ -27,22 +33,21 @@ export interface ClienteCreditoState {
  */
 export function useClienteCredito(clienteId?: string | null, incluirHistorico = true) {
   const qc = useQueryClient();
+  const run = useRunCapability();
   const enabled = Boolean(clienteId);
 
-  const query = useQuery<ClienteCreditoState>({
+  const query = useQuery<ClienteCreditoState, CapabilityError>({
     queryKey: ["cliente-credito", clienteId ?? "none", incluirHistorico],
     enabled,
     staleTime: 15_000,
     queryFn: async () => {
       if (!clienteId) return { saldo: 0, proximaExpiracao: null, historico: [] };
-      const res = await runCapability("finance.credit.get", {
+      const res = await run(getClientCredit, {
         clienteId,
         incluirHistorico,
         historicoLimit: 100,
       });
-      if (!res.ok) {
-        throw new Error(res.error.message);
-      }
+      if (!res.ok) throw new CapabilityError(res.error);
       return res.value as ClienteCreditoState;
     },
   });
@@ -80,16 +85,18 @@ interface ApplyInput {
 
 export function useApplyClientCredit() {
   const qc = useQueryClient();
+  const run = useRunCapability();
   return useMutation({
     mutationFn: async (input: ApplyInput) => {
-      const res = await runCapability("finance.credit.apply", input);
-      if (!res.ok) throw new Error(res.error.message);
+      const res = await run(applyClientCredit, input);
+      if (!res.ok) throw new CapabilityError(res.error);
       return res.value;
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["cliente-credito", vars.clienteId] });
       qc.invalidateQueries({ queryKey: ["workflow"] });
       qc.invalidateQueries({ queryKey: ["session-payments"] });
+      qc.invalidateQueries({ queryKey: ["extrato"] });
     },
   });
 }
@@ -105,13 +112,14 @@ interface GrantInput {
 
 export function useGrantClientCredit() {
   const qc = useQueryClient();
+  const run = useRunCapability();
   return useMutation({
     mutationFn: async (input: GrantInput) => {
-      const res = await runCapability("finance.credit.grant", {
+      const res = await run(grantClientCredit, {
         ...input,
         origem: input.origem ?? "ajuste_manual",
       });
-      if (!res.ok) throw new Error(res.error.message);
+      if (!res.ok) throw new CapabilityError(res.error);
       return res.value;
     },
     onSuccess: (_data, vars) => {
@@ -128,10 +136,11 @@ interface RevokeInput {
 
 export function useRevokeClientCredit() {
   const qc = useQueryClient();
+  const run = useRunCapability();
   return useMutation({
     mutationFn: async ({ ledgerId, motivo }: RevokeInput) => {
-      const res = await runCapability("finance.credit.revoke", { ledgerId, motivo });
-      if (!res.ok) throw new Error(res.error.message);
+      const res = await run(revokeClientCredit, { ledgerId, motivo });
+      if (!res.ok) throw new CapabilityError(res.error);
       return res.value;
     },
     onSuccess: (_data, vars) => {
