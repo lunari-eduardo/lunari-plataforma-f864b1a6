@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { QrCode, Link2, XCircle, Eye, TrendingUp, Loader2 } from 'lucide-react';
+import { QrCode, Link2, XCircle, Eye, TrendingUp, Loader2, Image as ImageIcon, Receipt } from 'lucide-react';
 import { Cobranca, TipoCobranca, StatusCobranca } from '@/types/cobranca';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
@@ -16,23 +16,65 @@ interface ChargeHistoryProps {
   onView?: (cobranca: Cobranca) => void;
 }
 
-const tipoIcons: Record<TipoCobranca, React.ReactNode> = {
-  pix: <QrCode className="h-4 w-4" />,
-  link: <Link2 className="h-4 w-4" />,
-};
+/**
+ * Renderização segura de tipo/status/badge — aceita valores legados
+ * (`foto_extra`, `venda_galeria`, `card`, `pago_manual`, `manual`, ...)
+ * sem quebrar a tela com "Cannot read properties of undefined".
+ */
+function getTipoView(tipo: string | undefined) {
+  switch (tipo) {
+    case 'pix':
+      return { icon: <QrCode className="h-4 w-4" />, label: 'Pix' };
+    case 'link':
+      return { icon: <Link2 className="h-4 w-4" />, label: 'Link' };
+    case 'foto_extra':
+      return { icon: <ImageIcon className="h-4 w-4" />, label: 'Foto extra' };
+    case 'venda_galeria':
+      return { icon: <ImageIcon className="h-4 w-4" />, label: 'Venda galeria' };
+    case 'card':
+      return { icon: <Receipt className="h-4 w-4" />, label: 'Cartão' };
+    default:
+      return { icon: <Receipt className="h-4 w-4" />, label: tipo || '—' };
+  }
+}
 
-const tipoLabels: Record<TipoCobranca, string> = {
-  pix: 'Pix',
-  link: 'Link',
-};
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
-const statusBadges: Record<StatusCobranca, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-  pendente: { variant: 'secondary', label: 'Aguardando' },
-  parcialmente_pago: { variant: 'secondary', label: 'Parcial' },
-  pago: { variant: 'default', label: 'Pago' },
-  cancelado: { variant: 'outline', label: 'Cancelado' },
-  expirado: { variant: 'destructive', label: 'Expirado' },
-};
+function getStatusView(status: string | undefined): {
+  variant: BadgeVariant;
+  label: string;
+  className?: string;
+} {
+  switch (status) {
+    case 'pendente':
+      return { variant: 'secondary', label: 'Aguardando' };
+    case 'parcialmente_pago':
+      return {
+        variant: 'secondary',
+        label: 'Parcial',
+        className: 'bg-amber-100 text-amber-800 border-amber-200',
+      };
+    case 'pago':
+      return {
+        variant: 'default',
+        label: 'Pago',
+        className: 'bg-green-100 text-green-800 border-green-200',
+      };
+    case 'pago_manual':
+      return {
+        variant: 'default',
+        label: 'Pago manual',
+        className: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      };
+    case 'cancelado':
+      return { variant: 'outline', label: 'Cancelado' };
+    case 'expirado':
+      return { variant: 'destructive', label: 'Expirado' };
+    default:
+      return { variant: 'outline', label: status || '—' };
+  }
+}
+
 
 interface SimulationData {
   anticipableValue: number;
