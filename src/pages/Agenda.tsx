@@ -137,7 +137,8 @@ export default function Agenda() {
 
   const handleNavigateToday = useCallback(() => {
     navigateToday();
-  }, [navigateToday]);
+    if (view !== 'day') setView('day');
+  }, [navigateToday, view, setView]);
 
   // Handle day click in monthly view
   const handleDayClick = useCallback((selectedDate: Date) => {
