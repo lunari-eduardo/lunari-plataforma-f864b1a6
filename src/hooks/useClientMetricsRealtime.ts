@@ -84,6 +84,7 @@ export function useClientMetricsRealtime(clienteId: string) {
       setMetrics({
         totalSessoes,
         totalFaturado,
+        totalPago,
         aReceber,
         agendamentos: appointmentsCount || 0,
         agendado: totalAgendado,
