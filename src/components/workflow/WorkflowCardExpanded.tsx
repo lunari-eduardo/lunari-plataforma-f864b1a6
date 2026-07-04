@@ -15,7 +15,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
-import { ClientCreditBanner } from "@/components/finance/ClientCreditBanner";
+import { ClientCreditBadge } from "@/components/finance/ClientCreditBadge";
 import { ClientCreditApplyModal } from "@/components/finance/ClientCreditApplyModal";
 
 interface WorkflowCardExpandedProps {
@@ -460,15 +460,7 @@ export function WorkflowCardExpanded({
           </div>
         </div>
 
-        {/* Crédito do cliente (aparece só se saldo > 0) */}
-        {session.clienteId && (session.sessionId || session.id) && (
-          <ClientCreditBanner
-            clienteId={session.clienteId}
-            restanteSessao={pendenteVisual}
-            onApply={() => setCreditApplyOpen(true)}
-            className="mt-3"
-          />
-        )}
+        {/* (Crédito do cliente movido para badge no rodapé — ver ExpandedFinancialFooter) */}
 
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
@@ -494,6 +486,14 @@ export function WorkflowCardExpanded({
         onPaymentAdd={handlePaymentAdd}
         onPaymentKeyDown={handlePaymentKeyDown}
         formatCurrency={formatCurrency}
+        creditSlot={
+          session.clienteId ? (
+            <ClientCreditBadge
+              clienteId={session.clienteId}
+              onClick={() => setCreditApplyOpen(true)}
+            />
+          ) : null
+        }
       />
 
       {workflowPaymentsOpen && (

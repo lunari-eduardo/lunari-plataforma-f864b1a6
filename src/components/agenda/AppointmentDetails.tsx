@@ -19,7 +19,7 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
-import { ClientCreditBanner } from '@/components/finance/ClientCreditBanner';
+import { ClientCreditBadge } from '@/components/finance/ClientCreditBadge';
 import { ClientCreditApplyModal } from '@/components/finance/ClientCreditApplyModal';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
@@ -651,21 +651,20 @@ export default function AppointmentDetails({
                   <span className="text-lunar-muted">Pago</span>
                   <span className="text-lunar-success">R$ {sessionDetails.valorPago.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm font-medium">
+                <div className="flex justify-between text-sm font-medium items-center">
                   <span className="text-lunar-muted">Pendente</span>
-                  <span className={sessionDetails.valorTotal - sessionDetails.valorPago > 0 ? "text-lunar-warning" : "text-lunar-success"}>
-                    R$ {Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago).toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {resolvedClienteId && appointment.sessionId && (
+                      <ClientCreditBadge
+                        clienteId={resolvedClienteId}
+                        onClick={() => setCreditApplyOpen(true)}
+                      />
+                    )}
+                    <span className={sessionDetails.valorTotal - sessionDetails.valorPago > 0 ? "text-lunar-warning" : "text-lunar-success"}>
+                      R$ {Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-
-                {resolvedClienteId && appointment.sessionId && (
-                  <ClientCreditBanner
-                    clienteId={resolvedClienteId}
-                    restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
-                    onApply={() => setCreditApplyOpen(true)}
-                    className="mt-2"
-                  />
-                )}
               </>
             ) : workflowInfo.hasSession ? (
               <p className="text-sm text-lunar-muted text-center py-2">
