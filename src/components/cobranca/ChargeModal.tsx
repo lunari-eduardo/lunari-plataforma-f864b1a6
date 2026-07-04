@@ -408,8 +408,6 @@ export function ChargeModal({
         tipoCobranca: 'pix',
         provedor: 'pix_manual',
         finalidade: binding.finalidade,
-        galeriaId: binding.galeriaId,
-        qtdFotos: binding.qtdFotos,
       });
 
       if (result.success) {
