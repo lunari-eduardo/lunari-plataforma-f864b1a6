@@ -176,7 +176,7 @@ export function WorkflowCardExpanded({
   }, []);
 
   // Edição de fotos extras (sensível somente quando galeria tem vendas reais)
-  const isLinkedToGallery = Boolean(session.galeriaId);
+  const isLinkedToGallery = hasGaleria;
   const galeriaHasSales =
     isLinkedToGallery &&
     (session.galeriaStatusPagamento === "pago" ||
