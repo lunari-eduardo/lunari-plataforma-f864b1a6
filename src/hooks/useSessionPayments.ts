@@ -90,12 +90,18 @@ const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) =
 };
 
 // Estornar pagamento no Supabase (para pagos)
-const refundPaymentInSupabase = async (sessionId: string, paymentId: string, valor: number, motivo?: string) => {
+const refundPaymentInSupabase = async (
+  sessionId: string,
+  paymentId: string,
+  valor: number,
+  motivo?: string,
+  keepAsCredit?: boolean,
+) => {
   try {
     const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo);
+    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo, { keepAsCredit });
     if (success) {
-      console.log('✅ Pagamento estornado no Supabase:', paymentId);
+      console.log('✅ Pagamento estornado no Supabase:', paymentId, { keepAsCredit });
     }
     return success;
   } catch (error) {
