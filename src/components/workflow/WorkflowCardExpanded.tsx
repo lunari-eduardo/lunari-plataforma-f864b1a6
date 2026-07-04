@@ -449,9 +449,12 @@ export function WorkflowCardExpanded({
       </div>
 
       <ExpandedFinancialFooter
-        total={total}
+        total={totalVisual}
         valorPago={valorPago}
-        pendente={pendente}
+        pendente={pendenteVisual}
+        extrasTotal={hasGaleria ? extrasTotalCanonico : undefined}
+        extrasPago={hasGaleria ? extrasPagoCanonico : undefined}
+        extrasPendente={hasGaleria ? extrasPendente : undefined}
         paymentInput={paymentInput}
         setPaymentInput={setPaymentInput}
         onPaymentAdd={handlePaymentAdd}
@@ -471,7 +474,7 @@ export function WorkflowCardExpanded({
             );
           }}
           sessionData={session}
-          valorTotalCalculado={total}
+          valorTotalCalculado={totalVisual}
           onPaymentUpdate={() => {}}
         />
       )}
@@ -483,14 +486,14 @@ export function WorkflowCardExpanded({
         clienteNome={session.nome || "Cliente"}
         clienteWhatsapp={session.whatsapp}
         sessionId={session.sessionId || session.id}
-        valorSugerido={pendente}
+        valorSugerido={pendenteSessaoSugerido}
       />
 
-      {session.galeriaId && (
+      {resolvedGalleryId && (
         <ExtraChargeModal
           isOpen={showExtraChargeModal}
           onClose={() => setShowExtraChargeModal(false)}
-          galeriaId={session.galeriaId}
+          galeriaId={resolvedGalleryId}
           clienteNome={session.nome}
           clienteWhatsapp={session.whatsapp}
           nomeSessao={session.pacote || session.nome}
@@ -502,9 +505,9 @@ export function WorkflowCardExpanded({
         onClose={() => setShowAddPaymentModal(false)}
         sessionId={session.id}
         clienteId={session.clienteId}
-        valorTotal={total}
+        valorTotal={totalVisual}
         valorJaPago={valorPago}
-        valorRestante={pendente}
+        valorRestante={pendenteVisual}
         clienteNome={session.nome}
         onAddPayment={hookAddPayment}
         onCreateInstallments={createInstallments}
