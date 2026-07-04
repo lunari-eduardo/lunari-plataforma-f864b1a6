@@ -487,7 +487,7 @@ export function WorkflowCardExpanded({
         onPaymentKeyDown={handlePaymentKeyDown}
         formatCurrency={formatCurrency}
         creditSlot={
-          session.clienteId ? (
+          session.clienteId && pendenteVisual > 0 ? (
             <ClientCreditBadge
               clienteId={session.clienteId}
               onClick={() => setCreditApplyOpen(true)}
