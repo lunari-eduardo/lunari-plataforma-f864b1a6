@@ -486,6 +486,14 @@ export function WorkflowCardExpanded({
         onPaymentAdd={handlePaymentAdd}
         onPaymentKeyDown={handlePaymentKeyDown}
         formatCurrency={formatCurrency}
+        creditSlot={
+          session.clienteId ? (
+            <ClientCreditBadge
+              clienteId={session.clienteId}
+              onClick={() => setCreditApplyOpen(true)}
+            />
+          ) : null
+        }
       />
 
       {workflowPaymentsOpen && (
