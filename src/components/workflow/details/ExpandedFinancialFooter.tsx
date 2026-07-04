@@ -69,6 +69,7 @@ export function ExpandedFinancialFooter({
         </div>
 
         <div className="flex items-center gap-2">
+          {creditSlot}
           <span className="text-xs text-muted-foreground hidden md:inline">Adic. Pag. Rápido</span>
           <div className="flex items-center border border-border/50 dark:border-border rounded-md bg-background/50 dark:bg-background/80">
             <span className="text-sm text-muted-foreground pl-2">R$</span>
