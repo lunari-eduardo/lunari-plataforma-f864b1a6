@@ -469,8 +469,6 @@ export function ChargeModal({
           descricao: descricao || undefined,
           billingType: 'PIX',
           finalidade: binding.finalidade,
-          galeriaId: binding.galeriaId,
-          qtdFotos: binding.qtdFotos,
         },
       });
 
