@@ -62,6 +62,7 @@ export default function AppointmentDetails({
   const [showClientEditModal, setShowClientEditModal] = useState(false);
   const [sendBriefingOpen, setSendBriefingOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
+  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
   const [viewRespostas, setViewRespostas] = useState<{
     id: string;
     titulo: string;
