@@ -37,6 +37,7 @@ export function WorkflowCardExpanded({
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
+  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
   const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || "");
