@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ClientMetrics {
   totalSessoes: number;
   totalFaturado: number;
+  totalPago: number;
   aReceber: number;
   agendamentos: number;
   agendado: number;
