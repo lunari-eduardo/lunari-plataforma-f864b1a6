@@ -361,17 +361,37 @@ export function WorkflowCardExpanded({
                 <span className="text-sm font-medium text-foreground">
                   {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
                 </span>
-                <FotosExtrasPaymentBadge
-                  status={
-                    hasGaleria
-                      ? extrasFullyPaid
-                        ? "pago"
-                        : extrasPendente > 0
-                          ? "pendente"
-                          : session.galeriaStatusPagamento
-                      : session.galeriaStatusPagamento
+                {(() => {
+                  const extrasBadgeStatus = hasGaleria
+                    ? extrasTotalCanonico <= 0
+                      ? 'sem_vendas'
+                      : extrasPagoCanonico > 0 && extrasPendente > 0
+                        ? 'parcial'
+                        : extrasFullyPaid
+                          ? 'pago'
+                          : extrasPendente > 0
+                            ? 'pendente'
+                            : session.galeriaStatusPagamento
+                    : session.galeriaStatusPagamento;
+
+                  if (extrasBadgeStatus === 'parcial') {
+                    return (
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                              <FotosExtrasPaymentBadge status="parcial" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            Pago {formatCurrency(extrasPagoCanonico)} · Pendente {formatCurrency(extrasPendente)}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
                   }
-                />
+                  return <FotosExtrasPaymentBadge status={extrasBadgeStatus} />;
+                })()}
                 {session.extrasOverridden && isLinkedToGallery && (
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
@@ -393,6 +413,7 @@ export function WorkflowCardExpanded({
                 )}
               </div>
             </div>
+
 
             {hasGaleria && extrasPendente > 0 && (
               <div className="flex justify-between items-center">
