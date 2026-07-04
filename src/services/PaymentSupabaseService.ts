@@ -652,10 +652,12 @@ export class PaymentSupabaseService {
     sessionKey: string,
     paymentId: string,
     valor: number,
-    motivo?: string
+    motivo?: string,
+    options?: { keepAsCredit?: boolean }
   ): Promise<boolean> {
     try {
-      console.log('🔄 Estornando pagamento:', { sessionKey, paymentId, valor, motivo });
+      const keepAsCredit = options?.keepAsCredit === true;
+      console.log('🔄 Estornando pagamento:', { sessionKey, paymentId, valor, motivo, keepAsCredit });
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -669,7 +671,10 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      const descricao = `Estorno${motivo ? `: ${motivo}` : ''}`;
+      const descricaoBase = `Estorno${motivo ? `: ${motivo}` : ''}`;
+      const descricao = keepAsCredit
+        ? `${descricaoBase} [Mantido como crédito do cliente]`
+        : descricaoBase;
 
       const { error } = await supabase
         .from('clientes_transacoes')
@@ -691,8 +696,29 @@ export class PaymentSupabaseService {
 
       console.log('✅ Estorno criado com sucesso:', { paymentId, valor });
 
+      // Se marcado como "manter como crédito", concede o valor no ledger do cliente
+      if (keepAsCredit) {
+        const { error: creditErr } = await supabase.rpc('grant_client_credit', {
+          p_cliente_id: binding.cliente_id,
+          p_valor: valor,
+          p_origem: 'estorno_para_credito',
+          p_session_origem: binding.session_id,
+          p_descricao: motivo
+            ? `Crédito de estorno: ${motivo}`
+            : `Crédito de estorno do pagamento ${paymentId.slice(0, 8)}`,
+          p_expira_em: null,
+          p_transacao_id: null,
+        });
+        if (creditErr) {
+          console.error('⚠️ Estorno gravado, mas falha ao registrar crédito:', creditErr);
+          // Não falha a operação: estorno já foi feito. Apenas alerta.
+        } else {
+          console.log('✅ Crédito registrado no ledger do cliente');
+        }
+      }
+
       window.dispatchEvent(new CustomEvent('payment-refunded', {
-        detail: { sessionId: binding.session_id, paymentId, valor }
+        detail: { sessionId: binding.session_id, paymentId, valor, keepAsCredit }
       }));
 
       return true;

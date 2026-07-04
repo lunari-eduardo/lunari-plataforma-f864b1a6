@@ -90,12 +90,18 @@ const deletePaymentFromSupabase = async (sessionId: string, paymentId: string) =
 };
 
 // Estornar pagamento no Supabase (para pagos)
-const refundPaymentInSupabase = async (sessionId: string, paymentId: string, valor: number, motivo?: string) => {
+const refundPaymentInSupabase = async (
+  sessionId: string,
+  paymentId: string,
+  valor: number,
+  motivo?: string,
+  keepAsCredit?: boolean,
+) => {
   try {
     const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo);
+    const success = await PaymentSupabaseService.refundPayment(sessionId, paymentId, valor, motivo, { keepAsCredit });
     if (success) {
-      console.log('✅ Pagamento estornado no Supabase:', paymentId);
+      console.log('✅ Pagamento estornado no Supabase:', paymentId, { keepAsCredit });
     }
     return success;
   } catch (error) {
@@ -686,13 +692,16 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // options.autoRefund: se true e origem for asaas/mercadopago, chama API do gateway
   const refundPayment = useCallback(async (
     paymentId: string,
-    options?: { motivo?: string; autoRefund?: boolean }
+    options?: { motivo?: string; autoRefund?: boolean; keepAsCredit?: boolean }
   ) => {
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return false;
 
     const motivo = options?.motivo;
-    const autoRefund = options?.autoRefund === true;
+    const keepAsCredit = options?.keepAsCredit === true;
+    // "Manter como crédito" e "Estornar no gateway" são mutuamente exclusivos:
+    // se o valor vira crédito interno, o dinheiro NÃO deve voltar ao cliente.
+    const autoRefund = !keepAsCredit && options?.autoRefund === true;
 
     // Se auto refund solicitado, tentar API do gateway antes de gravar registro interno
     if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
@@ -777,11 +786,16 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     }
 
     // Sempre gravar registro interno (fonte de verdade financeira)
-    const motivoFinal = autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')
-      ? `${motivo || ''}${motivo ? ' ' : ''}[Estornado no gateway]`.trim()
-      : motivo;
+    const sufixos: string[] = [];
+    if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
+      sufixos.push('[Estornado no gateway]');
+    }
+    if (keepAsCredit) {
+      sufixos.push('[Mantido como crédito]');
+    }
+    const motivoFinal = [motivo, ...sufixos].filter(Boolean).join(' ').trim() || undefined;
 
-    const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivoFinal);
+    const success = await refundPaymentInSupabase(sessionId, paymentId, payment.valor, motivoFinal, keepAsCredit);
     if (success) {
       // Adicionar estorno à lista local
       const estorno: SessionPaymentExtended = {
@@ -795,6 +809,11 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         observacoes: `Estorno${motivoFinal ? `: ${motivoFinal}` : ''}`
       };
       setPayments(prev => [...prev, estorno]);
+
+      if (keepAsCredit) {
+        const { toast } = await import('sonner');
+        toast.success('Estorno registrado e valor mantido como crédito do cliente');
+      }
     }
     return success;
   }, [sessionId, payments]);

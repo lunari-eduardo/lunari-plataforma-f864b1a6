@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RotateCcw, AlertTriangle } from 'lucide-react';
+import { RotateCcw, AlertTriangle, Wallet } from 'lucide-react';
 import { formatCurrency } from '@/utils/financialUtils';
 import type { SessionPaymentExtended } from '@/types/sessionPayments';
 
@@ -40,12 +40,13 @@ function classifyProvider(payment: SessionPaymentExtended | null): {
 interface RefundDialogProps {
   payment: SessionPaymentExtended | null;
   onClose: () => void;
-  onConfirm: (motivo: string, autoRefund: boolean) => void | Promise<void>;
+  onConfirm: (motivo: string, autoRefund: boolean, keepAsCredit: boolean) => void | Promise<void>;
 }
 
 export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps) {
   const [motivo, setMotivo] = useState('');
   const [autoRefund, setAutoRefund] = useState(true);
+  const [keepAsCredit, setKeepAsCredit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const { automatable, label } = classifyProvider(payment);
@@ -55,14 +56,18 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
     if (payment) {
       setMotivo('');
       setAutoRefund(automatable); // default: true se automatizável
+      setKeepAsCredit(false);
       setSubmitting(false);
     }
   }, [payment?.id, automatable]);
 
+  // "Manter como crédito" desabilita/oculta o estorno no gateway (não devolve dinheiro).
+  const effectiveAutoRefund = !keepAsCredit && autoRefund;
+
   const handleConfirm = async () => {
     setSubmitting(true);
     try {
-      await onConfirm(motivo, automatable && autoRefund);
+      await onConfirm(motivo, automatable && effectiveAutoRefund, keepAsCredit);
     } finally {
       setSubmitting(false);
     }
@@ -114,37 +119,67 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
               </div>
 
               {automatable && (
-                <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
+                <label
+                  className={`flex items-start gap-2 pt-1 select-none ${keepAsCredit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
                   <Checkbox
-                    checked={autoRefund}
+                    checked={!keepAsCredit && autoRefund}
+                    disabled={keepAsCredit}
                     onCheckedChange={(v) => setAutoRefund(v === true)}
                     className="mt-0.5"
                   />
                   <span className="text-sm text-foreground">
                     Realizar estorno automaticamente no {label}
                     <span className="block text-xs text-muted-foreground mt-0.5">
-                      {autoRefund
-                        ? 'O valor será devolvido ao cliente via API do gateway.'
-                        : 'Apenas o controle interno será registrado; o estorno real deverá ser feito manualmente no painel do gateway.'}
+                      {keepAsCredit
+                        ? 'Desabilitado: o valor ficará como crédito no sistema em vez de voltar ao cliente.'
+                        : autoRefund
+                          ? 'O valor será devolvido ao cliente via API do gateway.'
+                          : 'Apenas o controle interno será registrado; o estorno real deverá ser feito manualmente no painel do gateway.'}
                     </span>
                   </span>
                 </label>
               )}
+
+              <label className="flex items-start gap-2 pt-1 cursor-pointer select-none rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2">
+                <Checkbox
+                  checked={keepAsCredit}
+                  onCheckedChange={(v) => setKeepAsCredit(v === true)}
+                  className="mt-0.5"
+                />
+                <span className="text-sm text-foreground flex-1">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <Wallet className="h-3.5 w-3.5 text-emerald-600" />
+                    Manter valor como crédito do cliente
+                  </span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
+                    {keepAsCredit
+                      ? `${payment ? formatCurrency(payment.valor) : ''} será adicionado ao saldo do cliente e poderá ser aplicado em uma próxima sessão.`
+                      : 'Em vez de devolver, o valor vira crédito interno para uso em futuras sessões.'}
+                  </span>
+                </span>
+              </label>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-orange-600 text-primary-foreground hover:bg-orange-700"
+            className={
+              keepAsCredit
+                ? 'bg-emerald-600 text-primary-foreground hover:bg-emerald-700'
+                : 'bg-orange-600 text-primary-foreground hover:bg-orange-700'
+            }
             onClick={(e) => { e.preventDefault(); handleConfirm(); }}
             disabled={submitting}
           >
             {submitting
               ? 'Processando...'
-              : automatable && autoRefund
-                ? 'Confirmar estorno'
-                : 'Registrar estorno interno'}
+              : keepAsCredit
+                ? 'Estornar e creditar'
+                : automatable && autoRefund
+                  ? 'Confirmar estorno'
+                  : 'Registrar estorno interno'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
