@@ -16,6 +16,8 @@ interface Props {
   onPaymentAdd: () => void;
   onPaymentKeyDown: (e: React.KeyboardEvent) => void;
   formatCurrency: (v: any) => string;
+  /** Slot opcional exibido à esquerda do input de pagamento rápido. */
+  creditSlot?: React.ReactNode;
 }
 
 /**
