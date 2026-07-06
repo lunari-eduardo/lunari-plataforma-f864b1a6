@@ -633,16 +633,41 @@ export function SessionPaymentsManager({
         }}
       />
 
-      {/* Charge Modal - Passar sessionId TEXTO para garantir vínculo correto */}
+      {/* Charge Modal (sessão) — passar sessionId TEXTO para vínculo correto.
+          Quando `combinedStep === 'session'`, ao fechar, abre extras (Opção A). */}
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => setShowChargeModal(false)}
+        onClose={() => {
+          setShowChargeModal(false);
+          if (combinedStep === 'session' && fin.resolvedGalleryId && fin.extrasPend > 0) {
+            setCombinedStep('extras');
+            // pequeno delay para animação do dialog anterior
+            setTimeout(() => setShowExtraChargeModal(true), 150);
+          } else {
+            setCombinedStep('idle');
+          }
+        }}
         clienteId={sessionData.clienteId || ''}
         clienteNome={sessionData.nome || 'Cliente'}
         clienteWhatsapp={sessionData.whatsapp}
         sessionId={sessionData.sessionId || sessionData.id}
-        valorSugerido={valorRestante}
+        valorSugerido={valorRestanteSessao}
       />
+
+      {/* Extra Charge Modal (fotos extras da galeria) */}
+      {fin.resolvedGalleryId && (
+        <ExtraChargeModal
+          isOpen={showExtraChargeModal}
+          onClose={() => {
+            setShowExtraChargeModal(false);
+            setCombinedStep('idle');
+          }}
+          galeriaId={fin.resolvedGalleryId}
+          clienteNome={sessionData.nome}
+          nomeSessao={sessionData.descricao || sessionData.categoria}
+          clienteWhatsapp={sessionData.whatsapp}
+        />
+      )}
     </>
   );
 
