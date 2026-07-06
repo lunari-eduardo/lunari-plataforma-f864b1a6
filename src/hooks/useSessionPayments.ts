@@ -840,40 +840,48 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     return success;
   }, [sessionId, payments]);
 
-  // Marcar como pago (atualiza de pendente para pago no Supabase)
+  // Marcar como pago (atualiza de pendente para pago no Supabase).
+  // Se o UPDATE no banco falhar, reverte o estado local e avisa o usuário.
   const markAsPaid = useCallback(async (paymentId: string) => {
     const dataPagamento = formatDateForStorage(new Date());
-    
-    setPayments(prev => {
-      const paidPayment = prev.find(p => p.id === paymentId);
-      if (!paidPayment) return prev;
-      
-      const finalPayment = { 
-        ...paidPayment, 
-        statusPagamento: 'pago' as const,
-        data: dataPagamento
-      };
-      
-      const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
-      
-      // Save to localStorage
-      savePaymentsToStorage(sessionId, updated);
-      
-      // Atualizar no Supabase (de pendente para pago) com fallback
-      (async () => {
-        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-        await PaymentSupabaseService.markPaymentAsPaid(
-          sessionId, 
-          paymentId, 
-          dataPagamento,
-          paidPayment.valor,
-          paidPayment.observacoes
-        );
-      })();
-      
-      return updated;
-    });
-  }, [sessionId]);
+    const original = payments.find(p => p.id === paymentId);
+    if (!original) return;
+
+    // Otimista
+    const optimistic = payments.map(p =>
+      p.id === paymentId ? { ...p, statusPagamento: 'pago' as const, data: dataPagamento } : p
+    );
+    setPayments(optimistic);
+    savePaymentsToStorage(sessionId, optimistic);
+
+    try {
+      const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
+      const ok = await PaymentSupabaseService.markPaymentAsPaid(
+        sessionId,
+        paymentId,
+        dataPagamento,
+        original.valor,
+        original.observacoes,
+      );
+
+      if (!ok) {
+        // Rollback + toast
+        setPayments(payments);
+        savePaymentsToStorage(sessionId, payments);
+        const { toast } = await import('sonner');
+        toast.error('Não foi possível marcar como pago. Tente novamente.');
+        return;
+      }
+
+      invalidateSessionQueries();
+    } catch (err) {
+      console.error('❌ markAsPaid falhou:', err);
+      setPayments(payments);
+      savePaymentsToStorage(sessionId, payments);
+      const { toast } = await import('sonner');
+      toast.error('Erro inesperado ao marcar pagamento como pago.');
+    }
+  }, [sessionId, payments, invalidateSessionQueries]);
 
   // Criar parcelas e salvar como pendentes no Supabase
   const createInstallments = useCallback(async (
