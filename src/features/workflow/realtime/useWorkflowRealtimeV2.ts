@@ -26,12 +26,21 @@ function emitLegacyEvent(
   sessionId?: string | null,
 ) {
   if (typeof window === "undefined") return;
+  const affectedId = sessionId ?? session?.id ?? null;
   try {
     window.dispatchEvent(
       new CustomEvent("workflow-session-updated", {
-        detail: { kind, session, sessionId: sessionId ?? session?.id ?? null, source: "realtime-v2" },
+        detail: { kind, session, sessionId: affectedId, source: "realtime-v2" },
       }),
     );
+    // Também sinaliza que os valores financeiros da sessão devem ser recomputados.
+    if (affectedId) {
+      window.dispatchEvent(
+        new CustomEvent("workflow-session-financials-stale", {
+          detail: { sessionId: affectedId, source: "realtime-v2" },
+        }),
+      );
+    }
     if (kind === "delete" && sessionId) {
       window.dispatchEvent(
         new CustomEvent("workflow-session-deleted", {
