@@ -97,6 +97,10 @@ export function SessionPaymentsManager({
     schedulePayment
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
 
+  // Fonte única de valores financeiros — evita parsing de string BR e reflete
+  // valor_total canônico do DB (com desconto progressivo aplicado pelo trigger).
+  const { financials } = useSessionFinancials(sessionData.id);
+
   // Convert back to legacy format for synchronization
   const convertToLegacyPayments = (extendedPayments: SessionPaymentExtended[]) => {
     return extendedPayments.map(p => ({
