@@ -358,27 +358,14 @@ export function WorkflowCardCollapsed({
             </div>
           </div>
 
-          {/* 9: Pendente/Crédito */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">
-              {pendente < 0 ? "Crédito" : "Pendente"}
-            </span>
-            <div className="min-h-8 flex items-center justify-end">
-              <span
-                className={`text-sm font-bold tabular-nums text-right ${
-                  pendente > 0
-                    ? "text-destructive"
-                    : pendente < 0
-                      ? "text-yellow-500"
-                      : "text-green-600"
-                }`}
-              >
-                {pendente < 0
-                  ? `+${formatCurrency(Math.abs(pendente))}`
-                  : formatCurrency(pendente)}
-              </span>
-            </div>
-          </div>
+          {/* 9: Pendente / Crédito da sessão */}
+          <CollapsedPendingCell
+            sessionId={session.sessionId || null}
+            clienteId={(session as any).clienteId || null}
+            pendente={pendente}
+            formatCurrency={formatCurrency}
+          />
+
 
           {/* 10: Galerias */}
           <div className="flex flex-col gap-1">
