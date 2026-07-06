@@ -655,10 +655,10 @@ export default function AppointmentDetails({
                   <span className="text-lunar-muted">Pendente</span>
                   <div className="flex items-center gap-2">
                     {resolvedClienteId && (
-                      <ClientCreditActionButton
+                      <SessionCreditBadge
                         clienteId={resolvedClienteId}
-                        currentSessionId={appointment.sessionId ?? null}
-                        currentSessionPendente={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
+                        sessionId={appointment.sessionId ?? null}
+                        sessionPendente={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
                       />
                     )}
                     <span className={sessionDetails.valorTotal - sessionDetails.valorPago > 0 ? "text-lunar-warning" : "text-lunar-success"}>
