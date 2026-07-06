@@ -150,12 +150,21 @@ export function useEnhancedClientMetrics(
       const primeiraSessao = datasOrdenadas.length > 0 ? datasOrdenadas[datasOrdenadas.length - 1] : null;
       
       // === MÉTRICAS FINANCEIRAS ===
-      const totalFaturado = sessoes.reduce((acc, s) => acc + (s.total || 0), 0);
-      const totalPago = sessoes.reduce((acc, s) => acc + (s.valorPago || 0), 0);
+      // Coerção defensiva: `s.total` / `s.valorPago` podem chegar como string
+      // formatada BR ("R$ 1.200,00") vindas de fontes legadas. Evita NaN.
+      const toNumberSafe = (v: unknown): number => {
+        if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+        if (typeof v !== 'string') return 0;
+        const cleaned = v.replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').trim();
+        const n = parseFloat(cleaned);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const totalFaturado = sessoes.reduce((acc, s) => acc + toNumberSafe(s.total), 0);
+      const totalPago = sessoes.reduce((acc, s) => acc + toNumberSafe(s.valorPago), 0);
       const aReceber = totalFaturado - totalPago;
-      
+
       const valoresSessoes = sessoes
-        .map(s => s.total || 0)
+        .map(s => toNumberSafe(s.total))
         .filter(v => v > 0)
         .sort((a, b) => a - b);
       

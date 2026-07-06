@@ -19,7 +19,8 @@ import type { WorkflowSession } from "../domain/session";
 // cada linha de 100+ sessões por mês.
 const SELECT_WITH_CLIENTE = `
   *,
-  clientes ( nome )
+  clientes ( nome ),
+  galerias ( id, total_fotos_extras_vendidas, valor_total_vendido )
 ` as const;
 
 

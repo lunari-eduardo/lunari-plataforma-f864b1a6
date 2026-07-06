@@ -33,9 +33,9 @@ export function useWorkflowMonthSessions() {
     { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
   );
 
-  const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>(
-    () => getSessionsForMonthSync(currentMonth.year, currentMonth.month) || [],
-  );
+  // Não inicializar com cache stale: valores financeiros exigem fetch fresco
+  // para não exibir flicker (ex.: total sem desconto por 500ms antes do refetch).
+  const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error] = useState<string | null>(null);
 

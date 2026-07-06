@@ -134,11 +134,11 @@ export function useGalleryExtraCalc(
   const query = useQuery({
     queryKey: ['gallery-extra-calc', resolvedGalleryId],
     enabled: !!resolvedGalleryId,
-    staleTime: 30_000,
+    staleTime: 5_000,
     gcTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('calculate_gallery_extra_payment', {
         p_gallery_id: resolvedGalleryId as string,

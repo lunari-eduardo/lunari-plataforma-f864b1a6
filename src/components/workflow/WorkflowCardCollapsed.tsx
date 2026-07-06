@@ -329,7 +329,11 @@ export function WorkflowCardCollapsed({
             </span>
             <div className="min-h-8 flex items-center justify-center">
               <span className="text-sm font-medium text-foreground tabular-nums">
-                {session.qtdFotosExtra || 0}
+                {/* Snapshot canônico da galeria (extras_necessarias) prevalece sobre
+                    session.qtdFotosExtra em cache (que pode estar 30s stale). */}
+                {hasGaleria && extraCalc.extras_necessarias > 0
+                  ? extraCalc.extras_necessarias
+                  : (session.qtdFotosExtra || 0)}
               </span>
             </div>
           </div>

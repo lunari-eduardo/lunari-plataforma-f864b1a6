@@ -15,6 +15,7 @@ import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
+import { useSessionFinancials } from '@/features/workflow/hooks/useSessionFinancials';
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
@@ -95,6 +96,10 @@ export function SessionPaymentsManager({
     createInstallments,
     schedulePayment
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
+
+  // Fonte única de valores financeiros — evita parsing de string BR e reflete
+  // valor_total canônico do DB (com desconto progressivo aplicado pelo trigger).
+  const { financials } = useSessionFinancials(sessionData.id);
 
   // Convert back to legacy format for synchronization
   const convertToLegacyPayments = (extendedPayments: SessionPaymentExtended[]) => {
@@ -226,9 +231,13 @@ export function SessionPaymentsManager({
     }
   };
 
-  const valorTotal = typeof sessionData.total === 'number' 
-    ? sessionData.total 
-    : parseFloat(sessionData.total?.replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0');
+  // Valor total autoritativo vem do DB via RPC (fonte única). Fallback só se o
+  // hook ainda não carregou (evita mostrar 0 em edge cases).
+  const valorTotal = financials.valor_total > 0
+    ? financials.valor_total
+    : (typeof sessionData.total === 'number'
+        ? sessionData.total
+        : parseFloat(String(sessionData.total ?? '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0'));
   const valorRestante = Math.max(0, valorTotal - totalPago);
 
   // Shared content
