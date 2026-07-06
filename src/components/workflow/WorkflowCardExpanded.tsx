@@ -37,7 +37,7 @@ export function WorkflowCardExpanded({
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
-  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
+  
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
   const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || "");
@@ -552,15 +552,6 @@ export function WorkflowCardExpanded({
         onCancel={cancelExtraEdit}
       />
 
-      {session.clienteId && (session.sessionId || session.id) && (
-        <ClientCreditApplyModal
-          isOpen={creditApplyOpen}
-          onClose={() => setCreditApplyOpen(false)}
-          clienteId={session.clienteId}
-          sessionId={session.sessionId || session.id}
-          restanteSessao={pendenteVisual}
-        />
-      )}
     </div>
   );
 }
