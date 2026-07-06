@@ -485,10 +485,10 @@ export function WorkflowCardExpanded({
         formatCurrency={formatCurrency}
         creditSlot={
           session.clienteId ? (
-            <ClientCreditActionButton
+            <SessionCreditBadge
               clienteId={session.clienteId}
-              currentSessionId={session.sessionId || session.id}
-              currentSessionPendente={pendenteVisual}
+              sessionId={session.sessionId || session.id}
+              sessionPendente={pendenteVisual}
             />
           ) : null
         }
