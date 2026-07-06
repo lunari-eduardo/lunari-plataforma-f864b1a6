@@ -8,24 +8,35 @@ interface WorkflowMetrics {
   receita: number;
   aReceber: number;
   sessoes: number;
+  creditosGerados: number;
+  creditosUtilizados: number;
+  caixaRecebido: number;
 }
 
+const EMPTY: WorkflowMetrics = {
+  previsto: 0,
+  receita: 0,
+  aReceber: 0,
+  sessoes: 0,
+  creditosGerados: 0,
+  creditosUtilizados: 0,
+  caixaRecebido: 0,
+};
+
 /**
- * Hook para métricas do Workflow em tempo real
- * Suporta filtro por year+month OU por startDate+endDate
+ * Hook canônico das métricas do Workflow no mês.
+ * Chama o RPC `workflow_month_metrics` que já:
+ *  - limita a receita ao valor da sessão (evita dupla contagem com crédito);
+ *  - calcula pendente como GREATEST(valor_total - valor_pago, 0);
+ *  - retorna créditos gerados/utilizados no mês e caixa real recebido.
  */
 export function useWorkflowMetricsRealtime(
-  year: number, 
+  year: number,
   month?: number,
   startDateOverride?: string,
   endDateOverride?: string
 ): WorkflowMetrics {
-  const [metrics, setMetrics] = useState<WorkflowMetrics>({
-    previsto: 0,
-    receita: 0,
-    aReceber: 0,
-    sessoes: 0
-  });
+  const [metrics, setMetrics] = useState<WorkflowMetrics>(EMPTY);
 
   useEffect(() => {
     const loadMetrics = async () => {
@@ -33,7 +44,6 @@ export function useWorkflowMetricsRealtime(
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Resolver janela de datas
         let startDate: string;
         let endDate: string;
         if (startDateOverride && endDateOverride) {
@@ -48,62 +58,28 @@ export function useWorkflowMetricsRealtime(
           endDate = `${year}-12-31`;
         }
 
-        // 1) Sessões — previsto, a receber e contagem (fonte: clientes_sessoes)
-        //    Regra canônica de "A Receber": Σ GREATEST(valor_total - valor_pago, 0)
-        //    por sessão, excluindo somente 'historico' (inclui status '' / NULL,
-        //    protegidos pelo trigger default_session_status). Filtra a workflow.
-        const { data: sessoes, error: errSess } = await supabase
-          .from('clientes_sessoes')
-          .select('valor_total, valor_pago, status, tipo_registro')
-          .eq('user_id', user.id)
-          .or('status.is.null,status.neq.historico')
-          .gte('data_sessao', startDate)
-          .lte('data_sessao', endDate);
+        const { data, error } = await supabase.rpc('workflow_month_metrics', {
+          p_user_id: user.id,
+          p_start: startDate,
+          p_end: endDate,
+        });
 
-        if (errSess) {
-          console.error('❌ [WorkflowMetricsRealtime] Sessões:', errSess);
+        if (error) {
+          console.error('❌ [WorkflowMetricsRealtime] RPC:', error);
           return;
         }
 
-        const sessoesValidas = (sessoes || []).filter(
-          (s: any) => (s.tipo_registro ?? 'workflow') === 'workflow'
-        );
-        const previsto = sessoesValidas.reduce(
-          (sum, s: any) => sum + (Number(s.valor_total) || 0), 0
-        );
-        const aReceber = sessoesValidas.reduce((sum, s: any) => {
-          const saldo = (Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0);
-          return sum + Math.max(saldo, 0);
-        }, 0);
-
-        // 2) Receita — via view extrato_unificado (regime competência via data_competencia)
-        //    Onda 2.1: usa transações reais (inclui órfãs/gallery), deduz estornos.
-        const { data: linhas, error: errExt } = await supabase
-          .from('extrato_unificado')
-          .select('tipo, valor, natureza, origem, status')
-          .eq('user_id', user.id)
-          .eq('status', 'Pago')
-          .in('origem', ['workflow', 'gallery'])
-          .gte('data_competencia', startDate)
-          .lte('data_competencia', endDate);
-
-        if (errExt) {
-          console.error('❌ [WorkflowMetricsRealtime] Extrato:', errExt);
-          return;
-        }
-
-        const receita = (linhas || []).reduce((sum, l: any) => {
-          const v = Number(l.valor) || 0;
-          if (l.natureza === 'pagamento') return sum + v;
-          if (l.natureza === 'estorno') return sum - v;
-          return sum;
-        }, 0);
+        const row: any = Array.isArray(data) ? data[0] : data;
+        if (!row) { setMetrics(EMPTY); return; }
 
         setMetrics({
-          previsto,
-          receita,
-          aReceber,
-          sessoes: sessoesValidas.length,
+          previsto: Number(row.previsto) || 0,
+          receita: Number(row.receita) || 0,
+          aReceber: Number(row.pendente) || 0,
+          sessoes: Number(row.sessoes) || 0,
+          creditosGerados: Number(row.creditos_gerados) || 0,
+          creditosUtilizados: Number(row.creditos_utilizados) || 0,
+          caixaRecebido: Number(row.caixa_recebido) || 0,
         });
       } catch (err) {
         console.error('❌ [WorkflowMetricsRealtime] Error:', err);
@@ -112,8 +88,6 @@ export function useWorkflowMetricsRealtime(
 
     loadMetrics();
 
-    // Onda 4b — quando ativa a flag, reagimos ao eventBus + CustomEvent do
-    // realtime unificado (v2) em vez de subir um canal Supabase dedicado.
     if (USE_METRICS_EVENT_BUS) {
       const reload = () => { void loadMetrics(); };
       const offCard = eventBus.on('workflow.card_updated', reload);
@@ -124,10 +98,12 @@ export function useWorkflowMetricsRealtime(
       const offAtt = eventBus.on('workflow.payment_attached', reload);
       window.addEventListener('workflow-session-updated', reload);
       window.addEventListener('workflow-session-deleted', reload);
+      window.addEventListener('payment-created', reload);
       return () => {
         offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt();
         window.removeEventListener('workflow-session-updated', reload);
         window.removeEventListener('workflow-session-deleted', reload);
+        window.removeEventListener('payment-created', reload);
       };
     }
 
@@ -142,6 +118,11 @@ export function useWorkflowMetricsRealtime(
         event: '*',
         schema: 'public',
         table: 'clientes_transacoes'
+      }, () => loadMetrics())
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'cliente_creditos_ledger'
       }, () => loadMetrics())
       .subscribe();
 
