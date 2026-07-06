@@ -131,6 +131,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const invalidateSessionQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['workflow'] });
+    queryClient.invalidateQueries({ queryKey: ['session-payments'] });
+    queryClient.invalidateQueries({ queryKey: ['cliente-credito'] });
+    queryClient.invalidateQueries({ queryKey: ['pending-sessions'] });
+  }, [queryClient]);
   // Onda 4d hotfix — sem user a Capability retorna UNAUTHENTICATED.
   const capabilityUser = useAuthUser();
   const capabilityUserRef = useRef(capabilityUser);
