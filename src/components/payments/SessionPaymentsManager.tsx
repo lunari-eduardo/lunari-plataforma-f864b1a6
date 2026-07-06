@@ -187,6 +187,10 @@ export function SessionPaymentsManager({
   };
 
   const getOriginLabel = (origem: string, observacoes?: string) => {
+    // Crédito do cliente
+    if (origem === 'credito' || observacoes?.toLowerCase().includes('crédito do cliente')) {
+      return 'Crédito do cliente';
+    }
     // Detectar InfinitePay
     if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
       return 'InfinitePay';
