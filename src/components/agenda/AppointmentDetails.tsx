@@ -19,7 +19,7 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
-import { ClientCreditActionButton } from '@/components/finance/ClientCreditActionButton';
+import { SessionCreditBadge } from '@/components/finance/SessionCreditBadge';
 
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
@@ -655,10 +655,10 @@ export default function AppointmentDetails({
                   <span className="text-lunar-muted">Pendente</span>
                   <div className="flex items-center gap-2">
                     {resolvedClienteId && (
-                      <ClientCreditActionButton
+                      <SessionCreditBadge
                         clienteId={resolvedClienteId}
-                        currentSessionId={appointment.sessionId ?? null}
-                        currentSessionPendente={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
+                        sessionId={appointment.sessionId ?? null}
+                        sessionPendente={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
                       />
                     )}
                     <span className={sessionDetails.valorTotal - sessionDetails.valorPago > 0 ? "text-lunar-warning" : "text-lunar-success"}>

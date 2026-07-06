@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { SessionPayment } from '@/types/workflow';
 import { formatDateForStorage } from '@/utils/dateUtils';
@@ -130,6 +131,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   const [payments, setPayments] = useState<SessionPaymentExtended[]>(initialPayments);
   const [loadedFromSupabase, setLoadedFromSupabase] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const invalidateSessionQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['workflow'] });
+    queryClient.invalidateQueries({ queryKey: ['session-payments'] });
+    queryClient.invalidateQueries({ queryKey: ['cliente-credito'] });
+    queryClient.invalidateQueries({ queryKey: ['pending-sessions'] });
+  }, [queryClient]);
   // Onda 4d hotfix — sem user a Capability retorna UNAUTHENTICATED.
   const capabilityUser = useAuthUser();
   const capabilityUserRef = useRef(capabilityUser);
@@ -260,17 +268,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             }
 
             // Detectar origem por descrição
-            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') || 
+            const isCredito = /\[CREDIT:/i.test(t.descricao || '');
+            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') ||
                                    t.descricao?.toLowerCase().includes('mercado pago');
             const isAsaas = t.descricao?.toLowerCase().includes('asaas');
             const isInfinitePay = t.descricao?.toLowerCase().includes('infinitepay');
             const isGateway = isMercadoPago || isAsaas || isInfinitePay;
-            
+
+            // Crédito do cliente aparece como pagamento efetivo, não editável avulsamente
+            const origem: SessionPaymentExtended['origem'] = isCredito
+              ? 'credito'
+              : isMercadoPago
+              ? 'mercadopago'
+              : isAsaas
+              ? 'asaas'
+              : isInfinitePay
+              ? 'infinitepay'
+              : 'supabase';
+
             // Permitir edição/exclusão para:
             // - Pagamentos pendentes (sempre)
-            // - Pagamentos pagos manuais que NÃO são de integração
-            const canEdit = isPending || (!isGateway && isPaid);
-            
+            // - Pagamentos pagos manuais que NÃO são de integração e NÃO são crédito
+            const canEdit = !isCredito && (isPending || (!isGateway && isPaid));
+
             // Calculate valor_liquido and taxas from transaction data
             const valorBruto = Number(t.valor) || 0;
             const valorLiq = t.valor_liquido != null ? Number(t.valor_liquido) : undefined;
@@ -288,9 +308,11 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               statusPagamento,
               numeroParcela,
               totalParcelas,
-              origem: isMercadoPago ? 'mercadopago' : isAsaas ? 'asaas' : isInfinitePay ? 'infinitepay' : 'supabase',
+              origem,
               editavel: canEdit,
-              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+              observacoes: (t.descricao || '')
+                .replace(/\s*\[ID:[^\]]+\]/, '')
+                .replace(/\s*\[CREDIT:[^\]]+\]/, '') || '',
               valorLiquido: valorLiq,
               taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
               taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
@@ -643,38 +665,41 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Editar pagamento existente
   const editPayment = useCallback((paymentId: string, updates: Partial<SessionPaymentExtended>) => {
     console.log('📝 [useSessionPayments] Editing payment:', { paymentId, updates });
-    
+
     setPayments(prev => {
       const updatedPayment = prev.find(p => p.id === paymentId);
       if (!updatedPayment) return prev;
-      
+
       const finalPayment = { ...updatedPayment, ...updates };
       const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
-      
+
       // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      
+
       // Persistir no Supabase
-      if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
-        // UPDATE pagamento pago
-        updatePaymentInSupabase(sessionId, paymentId, finalPayment);
-      } else {
-        // UPDATE pagamento pendente (agendado/parcelado)
-        (async () => {
-          const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-          await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
-            valor: finalPayment.valor,
-            dataVencimento: finalPayment.dataVencimento,
-            observacoes: finalPayment.observacoes,
-            numeroParcela: finalPayment.numeroParcela,
-            totalParcelas: finalPayment.totalParcelas
-          });
-        })();
-      }
-      
+      (async () => {
+        try {
+          if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
+            await updatePaymentInSupabase(sessionId, paymentId, finalPayment);
+          } else {
+            const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
+            await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
+              valor: finalPayment.valor,
+              dataVencimento: finalPayment.dataVencimento,
+              observacoes: finalPayment.observacoes,
+              numeroParcela: finalPayment.numeroParcela,
+              totalParcelas: finalPayment.totalParcelas
+            });
+          }
+          invalidateSessionQueries();
+        } catch (err) {
+          console.error('❌ editPayment persist error:', err);
+        }
+      })();
+
       return updated;
     });
-  }, [sessionId]);
+  }, [sessionId, invalidateSessionQueries]);
 
   // Excluir pagamento
   const deletePayment = useCallback((paymentId: string) => {
@@ -818,40 +843,48 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     return success;
   }, [sessionId, payments]);
 
-  // Marcar como pago (atualiza de pendente para pago no Supabase)
+  // Marcar como pago (atualiza de pendente para pago no Supabase).
+  // Se o UPDATE no banco falhar, reverte o estado local e avisa o usuário.
   const markAsPaid = useCallback(async (paymentId: string) => {
     const dataPagamento = formatDateForStorage(new Date());
-    
-    setPayments(prev => {
-      const paidPayment = prev.find(p => p.id === paymentId);
-      if (!paidPayment) return prev;
-      
-      const finalPayment = { 
-        ...paidPayment, 
-        statusPagamento: 'pago' as const,
-        data: dataPagamento
-      };
-      
-      const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
-      
-      // Save to localStorage
-      savePaymentsToStorage(sessionId, updated);
-      
-      // Atualizar no Supabase (de pendente para pago) com fallback
-      (async () => {
-        const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-        await PaymentSupabaseService.markPaymentAsPaid(
-          sessionId, 
-          paymentId, 
-          dataPagamento,
-          paidPayment.valor,
-          paidPayment.observacoes
-        );
-      })();
-      
-      return updated;
-    });
-  }, [sessionId]);
+    const original = payments.find(p => p.id === paymentId);
+    if (!original) return;
+
+    // Otimista
+    const optimistic = payments.map(p =>
+      p.id === paymentId ? { ...p, statusPagamento: 'pago' as const, data: dataPagamento } : p
+    );
+    setPayments(optimistic);
+    savePaymentsToStorage(sessionId, optimistic);
+
+    try {
+      const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
+      const ok = await PaymentSupabaseService.markPaymentAsPaid(
+        sessionId,
+        paymentId,
+        dataPagamento,
+        original.valor,
+        original.observacoes,
+      );
+
+      if (!ok) {
+        // Rollback + toast
+        setPayments(payments);
+        savePaymentsToStorage(sessionId, payments);
+        const { toast } = await import('sonner');
+        toast.error('Não foi possível marcar como pago. Tente novamente.');
+        return;
+      }
+
+      invalidateSessionQueries();
+    } catch (err) {
+      console.error('❌ markAsPaid falhou:', err);
+      setPayments(payments);
+      savePaymentsToStorage(sessionId, payments);
+      const { toast } = await import('sonner');
+      toast.error('Erro inesperado ao marcar pagamento como pago.');
+    }
+  }, [sessionId, payments, invalidateSessionQueries]);
 
   // Criar parcelas e salvar como pendentes no Supabase
   const createInstallments = useCallback(async (

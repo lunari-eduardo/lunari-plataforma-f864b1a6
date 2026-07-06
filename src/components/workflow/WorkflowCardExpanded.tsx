@@ -15,7 +15,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
-import { ClientCreditActionButton } from "@/components/finance/ClientCreditActionButton";
+import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 
 
 interface WorkflowCardExpandedProps {
@@ -485,10 +485,10 @@ export function WorkflowCardExpanded({
         formatCurrency={formatCurrency}
         creditSlot={
           session.clienteId ? (
-            <ClientCreditActionButton
+            <SessionCreditBadge
               clienteId={session.clienteId}
-              currentSessionId={session.sessionId || session.id}
-              currentSessionPendente={pendenteVisual}
+              sessionId={session.sessionId || session.id}
+              sessionPendente={pendenteVisual}
             />
           ) : null
         }

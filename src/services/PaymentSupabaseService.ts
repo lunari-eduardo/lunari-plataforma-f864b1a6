@@ -206,25 +206,43 @@ export class PaymentSupabaseService {
         originalDate = withTracking.data_transacao;
         console.log('✅ Found payment with tracking:', transactionIdToUpdate);
       } else {
-        console.log('⚠️ Payment not found with [ID:...], trying fallback for legacy data');
-        
-        // Fallback: buscar por dados originais (para pagamentos legados sem [ID:...])
-        const { data: legacy } = await supabase
-          .from('clientes_transacoes')
-          .select('id, descricao, valor, data_transacao')
-          .eq('session_id', binding.session_id)
-          .eq('cliente_id', binding.cliente_id)
-          .eq('user_id', user.id)
-          .eq('tipo', 'pagamento')
-          .order('created_at', { ascending: true });
+        console.log('⚠️ Payment not found with [ID:...], trying fallback');
 
-        // Encontrar o primeiro que NÃO tenha [ID:...] (é legado)
-        const legacyPayment = legacy?.find(t => !t.descricao.includes('[ID:'));
-        if (legacyPayment) {
-          transactionIdToUpdate = legacyPayment.id;
-          originalValue = Number(legacyPayment.valor);
-          originalDate = legacyPayment.data_transacao;
-          console.log('✅ Found legacy payment without tracking:', transactionIdToUpdate);
+        // Fallback 1: paymentId é UUID direto
+        const isUuid = /^[0-9a-f-]{36}$/i.test(paymentId);
+        if (isUuid) {
+          const { data: byId } = await supabase
+            .from('clientes_transacoes')
+            .select('id, valor, data_transacao, descricao')
+            .eq('id', paymentId)
+            .eq('session_id', binding.session_id)
+            .maybeSingle();
+          if (byId) {
+            transactionIdToUpdate = byId.id;
+            originalValue = Number(byId.valor);
+            originalDate = byId.data_transacao;
+            console.log('✅ Found payment by UUID:', transactionIdToUpdate);
+          }
+        }
+
+        // Fallback 2: pagamentos legados sem [ID:...] — primeiro pagamento sem marcador
+        if (!transactionIdToUpdate) {
+          const { data: legacy } = await supabase
+            .from('clientes_transacoes')
+            .select('id, descricao, valor, data_transacao')
+            .eq('session_id', binding.session_id)
+            .eq('cliente_id', binding.cliente_id)
+            .eq('user_id', user.id)
+            .eq('tipo', 'pagamento')
+            .order('created_at', { ascending: true });
+
+          const legacyPayment = legacy?.find(t => !t.descricao?.includes('[ID:'));
+          if (legacyPayment) {
+            transactionIdToUpdate = legacyPayment.id;
+            originalValue = Number(legacyPayment.valor);
+            originalDate = legacyPayment.data_transacao;
+            console.log('✅ Found legacy payment without tracking:', transactionIdToUpdate);
+          }
         }
       }
 
@@ -451,8 +469,8 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Atualizar de 'ajuste' (pendente) para 'pagamento'
-      const { data: updated, error } = await supabase
+      // 1) Try marcador [ID:paymentId]
+      let { data: updated, error } = await supabase
         .from('clientes_transacoes')
         .update({
           tipo: 'pagamento',
@@ -469,20 +487,31 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Fallback: se não encontrou nenhum registro, inserir como novo pagamento
-      if (!updated || updated.length === 0) {
-        console.warn('⚠️ Pending payment not found, inserting as new payment');
-        
-        if (!valor) {
-          console.error('❌ Cannot insert payment without valor');
+      // 2) Fallback: paymentId pode ser o próprio UUID da transação (dados legados)
+      const isUuid = /^[0-9a-f-]{36}$/i.test(paymentId);
+      if ((!updated || updated.length === 0) && isUuid) {
+        const retry = await supabase
+          .from('clientes_transacoes')
+          .update({
+            tipo: 'pagamento',
+            data_transacao: dataPagamento,
+            updated_at: new Date().toISOString(),
+            updated_by: user.id
+          })
+          .eq('id', paymentId)
+          .eq('session_id', binding.session_id)
+          .select('id');
+        updated = retry.data ?? [];
+        if (retry.error) {
+          console.error('❌ Fallback by id also failed:', retry.error);
           return false;
         }
+      }
 
-        return await this.saveSinglePaymentTracked(sessionKey, paymentId, {
-          valor,
-          data: dataPagamento,
-          observacoes
-        });
+      // 3) Nada encontrado — não faz INSERT silencioso para evitar duplicidade
+      if (!updated || updated.length === 0) {
+        console.error('❌ Pending payment not found for markAsPaid:', { sessionKey, paymentId });
+        return false;
       }
 
       // ✅ Disparar evento para sincronização imediata da UI

@@ -21,7 +21,7 @@ export interface SessionPayment {
   dataVencimento?: string;
   numeroParcela?: number;
   totalParcelas?: number;
-  origem: 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado' | 'supabase' | 'mercadopago' | 'infinitepay' | 'asaas';
+  origem: 'agenda' | 'workflow_rapido' | 'manual' | 'parcelado' | 'supabase' | 'mercadopago' | 'infinitepay' | 'asaas' | 'credito';
   editavel: boolean;
 }
 

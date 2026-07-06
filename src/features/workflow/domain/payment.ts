@@ -13,7 +13,8 @@ export type PaymentOrigem =
   | "supabase"
   | "mercadopago"
   | "infinitepay"
-  | "asaas";
+  | "asaas"
+  | "credito";
 
 export interface SessionPayment {
   id: string;
