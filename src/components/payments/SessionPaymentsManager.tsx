@@ -242,14 +242,30 @@ export function SessionPaymentsManager({
     }
   };
 
-  // Valor total autoritativo vem do DB via RPC (fonte única). Fallback só se o
-  // hook ainda não carregou (evita mostrar 0 em edge cases).
-  const valorTotal = financials.valor_total > 0
-    ? financials.valor_total
-    : (typeof sessionData.total === 'number'
-        ? sessionData.total
-        : parseFloat(String(sessionData.total ?? '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0'));
-  const valorRestante = Math.max(0, valorTotal - totalPago);
+  // Valores autoritativos combinam DB (sessão) + RPC canônica da galeria.
+  // Fallback ao `sessionData.total` só em cold-start extremo (SSR/edge).
+  const valorTotalFallback =
+    typeof sessionData.total === 'number'
+      ? sessionData.total
+      : parseFloat(String(sessionData.total ?? '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0');
+
+  const valorTotal = fin.totalVisual > 0 ? fin.totalVisual : valorTotalFallback;
+  const valorRestante = fin.totalVisual > 0 ? fin.pendenteTot : Math.max(0, valorTotalFallback - totalPago);
+  const valorRestanteSessao = fin.totalVisual > 0 ? fin.pendenteSess : valorRestante;
+
+  const showExtrasChip = fin.hasGaleria && fin.extrasIdeal > 0;
+  const gridCols = showExtrasChip ? 'grid-cols-2 lg:grid-cols-7' : 'grid-cols-2 lg:grid-cols-5';
+
+  const canCobrarSessao = valorRestanteSessao > 0.001;
+  const canCobrarExtras = fin.hasGaleria && fin.extrasPend > 0.001;
+  const canCobrarTudo = canCobrarSessao && canCobrarExtras;
+
+  const handleCobrarTudo = () => {
+    // Opção A: dispara ChargeModal (sessão). Ao fechar, `combinedStep`
+    // aciona ExtraChargeModal automaticamente para gerar o 2º link.
+    setCombinedStep('session');
+    setShowChargeModal(true);
+  };
 
   // Shared content
   const content = (
@@ -257,11 +273,28 @@ export function SessionPaymentsManager({
       {/* Financial Summary */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4 text-center">
+          <div className={`grid ${gridCols} gap-2 sm:gap-3 lg:gap-4 text-center`}>
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
               <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
             </div>
+            {showExtrasChip && (
+              <>
+                <div>
+                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Base sessão</p>
+                  <p className="font-semibold text-foreground text-xs sm:text-sm">{formatCurrency(fin.baseSessao)}</p>
+                </div>
+                <div>
+                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Extras</p>
+                  <p className="font-semibold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+                    {formatCurrency(fin.extrasIdeal)}
+                  </p>
+                  <p className="text-2xs text-muted-foreground">
+                    Pago {formatCurrency(fin.extrasPago)} · Pend {formatCurrency(fin.extrasPend)}
+                  </p>
+                </div>
+              </>
+            )}
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
               <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
@@ -294,18 +327,72 @@ export function SessionPaymentsManager({
               Histórico de Movimentações
             </CardTitle>
             <div className="flex gap-2 w-full sm:w-auto">
-              <Button 
-                onClick={() => setShowChargeModal(true)} 
-                variant="outline"
-                className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10" 
-                size="sm"
-              >
-                <Send className="h-3 w-3 md:h-4 md:w-4" />
-                Cobrar
-              </Button>
-              <Button 
-                onClick={() => setShowPaymentModal(true)} 
-                className="gap-2 flex-1 sm:flex-none h-8 text-xs" 
+              {fin.hasGaleria ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
+                      size="sm"
+                      disabled={!canCobrarSessao && !canCobrarExtras}
+                    >
+                      <Send className="h-3 w-3 md:h-4 md:w-4" />
+                      Cobrar
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      disabled={!canCobrarSessao}
+                      onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-2" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium">Cobrar sessão</div>
+                        <div className="text-2xs text-muted-foreground">{formatCurrency(valorRestanteSessao)}</div>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!canCobrarExtras}
+                      onClick={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+                    >
+                      <Images className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium">Cobrar extras</div>
+                        <div className="text-2xs text-muted-foreground">{formatCurrency(fin.extrasPend)}</div>
+                      </div>
+                    </DropdownMenuItem>
+                    {canCobrarTudo && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleCobrarTudo}>
+                          <Send className="h-3.5 w-3.5 mr-2 text-primary" />
+                          <div className="flex-1">
+                            <div className="text-xs font-medium">Cobrar tudo</div>
+                            <div className="text-2xs text-muted-foreground">
+                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 2 links
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                  variant="outline"
+                  disabled={!canCobrarSessao}
+                  className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
+                  size="sm"
+                >
+                  <Send className="h-3 w-3 md:h-4 md:w-4" />
+                  Cobrar
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowPaymentModal(true)}
+                className="gap-2 flex-1 sm:flex-none h-8 text-xs"
                 size="sm"
               >
                 <Plus className="h-3 w-3 md:h-4 md:w-4" />
