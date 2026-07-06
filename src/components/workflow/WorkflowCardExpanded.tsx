@@ -15,8 +15,8 @@ import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
-import { ClientCreditBadge } from "@/components/finance/ClientCreditBadge";
-import { ClientCreditApplyModal } from "@/components/finance/ClientCreditApplyModal";
+import { ClientCreditActionButton } from "@/components/finance/ClientCreditActionButton";
+
 
 interface WorkflowCardExpandedProps {
   session: SessionData;
@@ -37,7 +37,7 @@ export function WorkflowCardExpanded({
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
-  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
+  
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
   const [adicionalValue, setAdicionalValue] = useState(session.valorAdicional || "");
@@ -478,19 +478,17 @@ export function WorkflowCardExpanded({
         total={totalVisual}
         valorPago={valorPago}
         pendente={pendenteVisual}
-        extrasTotal={hasGaleria ? extrasTotalCanonico : undefined}
-        extrasPago={hasGaleria ? extrasPagoCanonico : undefined}
-        extrasPendente={hasGaleria ? extrasPendente : undefined}
         paymentInput={paymentInput}
         setPaymentInput={setPaymentInput}
         onPaymentAdd={handlePaymentAdd}
         onPaymentKeyDown={handlePaymentKeyDown}
         formatCurrency={formatCurrency}
         creditSlot={
-          session.clienteId && pendenteVisual > 0 ? (
-            <ClientCreditBadge
+          session.clienteId ? (
+            <ClientCreditActionButton
               clienteId={session.clienteId}
-              onClick={() => setCreditApplyOpen(true)}
+              currentSessionId={session.sessionId || session.id}
+              currentSessionPendente={pendenteVisual}
             />
           ) : null
         }
@@ -554,15 +552,6 @@ export function WorkflowCardExpanded({
         onCancel={cancelExtraEdit}
       />
 
-      {session.clienteId && (session.sessionId || session.id) && (
-        <ClientCreditApplyModal
-          isOpen={creditApplyOpen}
-          onClose={() => setCreditApplyOpen(false)}
-          clienteId={session.clienteId}
-          sessionId={session.sessionId || session.id}
-          restanteSessao={pendenteVisual}
-        />
-      )}
     </div>
   );
 }

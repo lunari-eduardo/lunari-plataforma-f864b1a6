@@ -7,10 +7,6 @@ interface Props {
   total: number;
   valorPago: number;
   pendente: number;
-  /** Breakdown opcional de fotos extras (RPC canônica da galeria). */
-  extrasTotal?: number;
-  extrasPago?: number;
-  extrasPendente?: number;
   paymentInput: string;
   setPaymentInput: (v: string) => void;
   onPaymentAdd: () => void;
@@ -21,17 +17,14 @@ interface Props {
 }
 
 /**
- * Footer financeiro do card expandido com input de pagamento rápido (Onda 5c).
- * Quando `extrasPendente > 0` mostra breakdown discreto para separar
- * visualmente sessão × extras.
+ * Footer financeiro do card expandido com input de pagamento rápido.
+ * Mostra apenas as métricas principais (total/pago/pendente); qualquer
+ * detalhamento de extras vive no bloco "Adicionais" acima.
  */
 export function ExpandedFinancialFooter({
   total,
   valorPago,
   pendente,
-  extrasTotal,
-  extrasPago,
-  extrasPendente,
   paymentInput,
   setPaymentInput,
   onPaymentAdd,
@@ -39,9 +32,6 @@ export function ExpandedFinancialFooter({
   formatCurrency,
   creditSlot,
 }: Props) {
-  const showExtrasBreakdown =
-    typeof extrasPendente === "number" && extrasPendente > 0;
-
   return (
     <div className="mt-6 pt-4 border-t border-border/30 dark:border-border/50">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -93,34 +83,6 @@ export function ExpandedFinancialFooter({
           </Button>
         </div>
       </div>
-
-      {showExtrasBreakdown && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-          <span className="uppercase tracking-wide text-[10px] font-semibold text-muted-foreground/80">
-            Fotos extras:
-          </span>
-          <span>
-            total{" "}
-            <span className="font-medium text-foreground">
-              {formatCurrency(extrasTotal ?? 0)}
-            </span>
-          </span>
-          <span className="text-muted-foreground/40">·</span>
-          <span>
-            pago{" "}
-            <span className="font-medium text-green-600">
-              {formatCurrency(extrasPago ?? 0)}
-            </span>
-          </span>
-          <span className="text-muted-foreground/40">·</span>
-          <span>
-            pendente{" "}
-            <span className="font-semibold text-amber-600 dark:text-amber-400">
-              {formatCurrency(extrasPendente ?? 0)}
-            </span>
-          </span>
-        </div>
-      )}
     </div>
   );
 }

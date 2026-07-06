@@ -19,8 +19,8 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
-import { ClientCreditBadge } from '@/components/finance/ClientCreditBadge';
-import { ClientCreditApplyModal } from '@/components/finance/ClientCreditApplyModal';
+import { ClientCreditActionButton } from '@/components/finance/ClientCreditActionButton';
+
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/modules/agenda/presentation';
@@ -62,7 +62,7 @@ export default function AppointmentDetails({
   const [showClientEditModal, setShowClientEditModal] = useState(false);
   const [sendBriefingOpen, setSendBriefingOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
-  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
+  
   const [viewRespostas, setViewRespostas] = useState<{
     id: string;
     titulo: string;
@@ -654,10 +654,11 @@ export default function AppointmentDetails({
                 <div className="flex justify-between text-sm font-medium items-center">
                   <span className="text-lunar-muted">Pendente</span>
                   <div className="flex items-center gap-2">
-                    {resolvedClienteId && appointment.sessionId && (sessionDetails.valorTotal - sessionDetails.valorPago) > 0 && (
-                      <ClientCreditBadge
+                    {resolvedClienteId && (
+                      <ClientCreditActionButton
                         clienteId={resolvedClienteId}
-                        onClick={() => setCreditApplyOpen(true)}
+                        currentSessionId={appointment.sessionId ?? null}
+                        currentSessionPendente={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
                       />
                     )}
                     <span className={sessionDetails.valorTotal - sessionDetails.valorPago > 0 ? "text-lunar-warning" : "text-lunar-success"}>
@@ -792,16 +793,6 @@ export default function AppointmentDetails({
       {/* Dialog do guard centralizado (usado pelo handleSave em confirmados) */}
       <SlotConflictDialog {...saveDialogProps} />
 
-      {resolvedClienteId && appointment.sessionId && sessionDetails && (
-        <ClientCreditApplyModal
-          isOpen={creditApplyOpen}
-          onClose={() => setCreditApplyOpen(false)}
-          clienteId={resolvedClienteId}
-          sessionId={appointment.sessionId}
-          restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
-          onApplied={() => fetchSessionDetails?.()}
-        />
-      )}
     </>
 
   );
