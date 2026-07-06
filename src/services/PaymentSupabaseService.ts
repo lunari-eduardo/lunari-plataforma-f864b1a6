@@ -451,8 +451,8 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Atualizar de 'ajuste' (pendente) para 'pagamento'
-      const { data: updated, error } = await supabase
+      // 1) Try marcador [ID:paymentId]
+      let { data: updated, error } = await supabase
         .from('clientes_transacoes')
         .update({
           tipo: 'pagamento',
@@ -469,20 +469,31 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // Fallback: se não encontrou nenhum registro, inserir como novo pagamento
-      if (!updated || updated.length === 0) {
-        console.warn('⚠️ Pending payment not found, inserting as new payment');
-        
-        if (!valor) {
-          console.error('❌ Cannot insert payment without valor');
+      // 2) Fallback: paymentId pode ser o próprio UUID da transação (dados legados)
+      const isUuid = /^[0-9a-f-]{36}$/i.test(paymentId);
+      if ((!updated || updated.length === 0) && isUuid) {
+        const retry = await supabase
+          .from('clientes_transacoes')
+          .update({
+            tipo: 'pagamento',
+            data_transacao: dataPagamento,
+            updated_at: new Date().toISOString(),
+            updated_by: user.id
+          })
+          .eq('id', paymentId)
+          .eq('session_id', binding.session_id)
+          .select('id');
+        updated = retry.data ?? [];
+        if (retry.error) {
+          console.error('❌ Fallback by id also failed:', retry.error);
           return false;
         }
+      }
 
-        return await this.saveSinglePaymentTracked(sessionKey, paymentId, {
-          valor,
-          data: dataPagamento,
-          observacoes
-        });
+      // 3) Nada encontrado — não faz INSERT silencioso para evitar duplicidade
+      if (!updated || updated.length === 0) {
+        console.error('❌ Pending payment not found for markAsPaid:', { sessionKey, paymentId });
+        return false;
       }
 
       // ✅ Disparar evento para sincronização imediata da UI
