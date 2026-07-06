@@ -665,38 +665,41 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
   // Editar pagamento existente
   const editPayment = useCallback((paymentId: string, updates: Partial<SessionPaymentExtended>) => {
     console.log('📝 [useSessionPayments] Editing payment:', { paymentId, updates });
-    
+
     setPayments(prev => {
       const updatedPayment = prev.find(p => p.id === paymentId);
       if (!updatedPayment) return prev;
-      
+
       const finalPayment = { ...updatedPayment, ...updates };
       const updated = prev.map(p => p.id === paymentId ? finalPayment : p);
-      
+
       // Save to localStorage
       savePaymentsToStorage(sessionId, updated);
-      
+
       // Persistir no Supabase
-      if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
-        // UPDATE pagamento pago
-        updatePaymentInSupabase(sessionId, paymentId, finalPayment);
-      } else {
-        // UPDATE pagamento pendente (agendado/parcelado)
-        (async () => {
-          const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
-          await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
-            valor: finalPayment.valor,
-            dataVencimento: finalPayment.dataVencimento,
-            observacoes: finalPayment.observacoes,
-            numeroParcela: finalPayment.numeroParcela,
-            totalParcelas: finalPayment.totalParcelas
-          });
-        })();
-      }
-      
+      (async () => {
+        try {
+          if (finalPayment.statusPagamento === 'pago' && finalPayment.data) {
+            await updatePaymentInSupabase(sessionId, paymentId, finalPayment);
+          } else {
+            const { PaymentSupabaseService } = await (await import('@/utils/dynamicImport')).dynamicImport(() => import('@/services/PaymentSupabaseService'));
+            await PaymentSupabaseService.updatePendingPayment(sessionId, paymentId, {
+              valor: finalPayment.valor,
+              dataVencimento: finalPayment.dataVencimento,
+              observacoes: finalPayment.observacoes,
+              numeroParcela: finalPayment.numeroParcela,
+              totalParcelas: finalPayment.totalParcelas
+            });
+          }
+          invalidateSessionQueries();
+        } catch (err) {
+          console.error('❌ editPayment persist error:', err);
+        }
+      })();
+
       return updated;
     });
-  }, [sessionId]);
+  }, [sessionId, invalidateSessionQueries]);
 
   // Excluir pagamento
   const deletePayment = useCallback((paymentId: string) => {
