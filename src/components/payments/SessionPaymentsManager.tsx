@@ -103,9 +103,14 @@ export function SessionPaymentsManager({
     schedulePayment
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
 
-  // Fonte única de valores financeiros — evita parsing de string BR e reflete
-  // valor_total canônico do DB (com desconto progressivo aplicado pelo trigger).
-  const { financials } = useSessionFinancials(sessionData.id);
+  // Painel financeiro composto — combina RPC da sessão + snapshot canônico da
+  // galeria (desconto progressivo). Mesma lógica usada nos cards do Workflow,
+  // eliminando divergências entre card e modal (fotos extras invisíveis, etc.).
+  const fin = useSessionFinancialsWithExtras(
+    sessionData.id,
+    sessionData.galeriaId,
+    sessionData.sessionId,
+  );
 
   // Convert back to legacy format for synchronization
   const convertToLegacyPayments = (extendedPayments: SessionPaymentExtended[]) => {
