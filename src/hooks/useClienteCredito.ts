@@ -98,6 +98,16 @@ export function useApplyClientCredit() {
       qc.invalidateQueries({ queryKey: ["workflow"] });
       qc.invalidateQueries({ queryKey: ["session-payments"] });
       qc.invalidateQueries({ queryKey: ["extrato"] });
+      qc.invalidateQueries({ queryKey: ["session-credit-context"] });
+      qc.invalidateQueries({ queryKey: ["pending-sessions"] });
+      // Dispara refetch autoritativo no WorkflowCache (busca valor_pago real do DB)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("payment-created", {
+            detail: { sessionId: vars.sessionId, valor: 0, paymentId: null },
+          }),
+        );
+      }
     },
   });
 }

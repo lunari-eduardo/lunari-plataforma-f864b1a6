@@ -18,6 +18,8 @@ import type { SessionData } from "@/types/workflow";
 import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
 import { CardGalleryButtons } from "./details/CardGalleryButtons";
 import { CardCollapsedModals } from "./details/CardCollapsedModals";
+import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
+import { useSessionCreditContext } from "@/hooks/useSessionCreditContext";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
@@ -356,27 +358,14 @@ export function WorkflowCardCollapsed({
             </div>
           </div>
 
-          {/* 9: Pendente/Crédito */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">
-              {pendente < 0 ? "Crédito" : "Pendente"}
-            </span>
-            <div className="min-h-8 flex items-center justify-end">
-              <span
-                className={`text-sm font-bold tabular-nums text-right ${
-                  pendente > 0
-                    ? "text-destructive"
-                    : pendente < 0
-                      ? "text-yellow-500"
-                      : "text-green-600"
-                }`}
-              >
-                {pendente < 0
-                  ? `+${formatCurrency(Math.abs(pendente))}`
-                  : formatCurrency(pendente)}
-              </span>
-            </div>
-          </div>
+          {/* 9: Pendente / Crédito da sessão */}
+          <CollapsedPendingCell
+            sessionId={session.sessionId || null}
+            clienteId={(session as any).clienteId || null}
+            pendente={pendente}
+            formatCurrency={formatCurrency}
+          />
+
 
           {/* 10: Galerias */}
           <div className="flex flex-col gap-1">
@@ -426,3 +415,51 @@ export function WorkflowCardCollapsed({
     </div>
   );
 }
+
+/**
+ * Célula "Pendente / Crédito" do card colapsado.
+ * - Fonte única: `useSessionCreditContext` decide se a sessão gerou crédito.
+ * - Se a sessão gerou crédito ainda disponível ou já consumido → renderiza SessionCreditBadge.
+ * - Caso contrário → mostra valor pendente (ou "Quitada").
+ */
+function CollapsedPendingCell({
+  sessionId,
+  clienteId,
+  pendente,
+  formatCurrency,
+}: {
+  sessionId: string | null;
+  clienteId: string | null;
+  pendente: number;
+  formatCurrency: (v: any) => string;
+}) {
+  const { data: ctx } = useSessionCreditContext(sessionId);
+  const generated = ctx?.generatedBySession ?? 0;
+  const showBadge = generated > 0 && clienteId;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-right">
+        {showBadge ? "Crédito" : "Pendente"}
+      </span>
+      <div className="min-h-8 flex items-center justify-end">
+        {showBadge ? (
+          <SessionCreditBadge
+            clienteId={clienteId as string}
+            sessionId={sessionId}
+            sessionPendente={Math.max(0, pendente)}
+          />
+        ) : (
+          <span
+            className={`text-sm font-bold tabular-nums text-right ${
+              pendente > 0.001 ? "text-destructive" : "text-green-600"
+            }`}
+          >
+            {formatCurrency(Math.max(0, pendente))}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
