@@ -231,9 +231,13 @@ export function SessionPaymentsManager({
     }
   };
 
-  const valorTotal = typeof sessionData.total === 'number' 
-    ? sessionData.total 
-    : parseFloat(sessionData.total?.replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0');
+  // Valor total autoritativo vem do DB via RPC (fonte única). Fallback só se o
+  // hook ainda não carregou (evita mostrar 0 em edge cases).
+  const valorTotal = financials.valor_total > 0
+    ? financials.valor_total
+    : (typeof sessionData.total === 'number'
+        ? sessionData.total
+        : parseFloat(String(sessionData.total ?? '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0'));
   const valorRestante = Math.max(0, valorTotal - totalPago);
 
   // Shared content
