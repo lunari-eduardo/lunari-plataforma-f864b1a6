@@ -18,6 +18,8 @@ import type { SessionData } from "@/types/workflow";
 import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
 import { CardGalleryButtons } from "./details/CardGalleryButtons";
 import { CardCollapsedModals } from "./details/CardCollapsedModals";
+import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
+import { useSessionCreditContext } from "@/hooks/useSessionCreditContext";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
