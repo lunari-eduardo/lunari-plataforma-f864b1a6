@@ -260,17 +260,29 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             }
 
             // Detectar origem por descrição
-            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') || 
+            const isCredito = /\[CREDIT:/i.test(t.descricao || '');
+            const isMercadoPago = t.descricao?.toLowerCase().includes('mp #') ||
                                    t.descricao?.toLowerCase().includes('mercado pago');
             const isAsaas = t.descricao?.toLowerCase().includes('asaas');
             const isInfinitePay = t.descricao?.toLowerCase().includes('infinitepay');
             const isGateway = isMercadoPago || isAsaas || isInfinitePay;
-            
+
+            // Crédito do cliente aparece como pagamento efetivo, não editável avulsamente
+            const origem: SessionPaymentExtended['origem'] = isCredito
+              ? 'credito'
+              : isMercadoPago
+              ? 'mercadopago'
+              : isAsaas
+              ? 'asaas'
+              : isInfinitePay
+              ? 'infinitepay'
+              : 'supabase';
+
             // Permitir edição/exclusão para:
             // - Pagamentos pendentes (sempre)
-            // - Pagamentos pagos manuais que NÃO são de integração
-            const canEdit = isPending || (!isGateway && isPaid);
-            
+            // - Pagamentos pagos manuais que NÃO são de integração e NÃO são crédito
+            const canEdit = !isCredito && (isPending || (!isGateway && isPaid));
+
             // Calculate valor_liquido and taxas from transaction data
             const valorBruto = Number(t.valor) || 0;
             const valorLiq = t.valor_liquido != null ? Number(t.valor_liquido) : undefined;
@@ -288,9 +300,11 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               statusPagamento,
               numeroParcela,
               totalParcelas,
-              origem: isMercadoPago ? 'mercadopago' : isAsaas ? 'asaas' : isInfinitePay ? 'infinitepay' : 'supabase',
+              origem,
               editavel: canEdit,
-              observacoes: t.descricao?.replace(/\s*\[ID:[^\]]+\]/, '') || '',
+              observacoes: (t.descricao || '')
+                .replace(/\s*\[ID:[^\]]+\]/, '')
+                .replace(/\s*\[CREDIT:[^\]]+\]/, '') || '',
               valorLiquido: valorLiq,
               taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
               taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
