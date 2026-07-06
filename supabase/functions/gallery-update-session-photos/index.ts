@@ -96,21 +96,20 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
-    // Campos de fotos extras - sync vinda do Gallery sempre limpa override manual
+    // Campos de fotos extras - sync vinda do Gallery sempre limpa override manual.
+    // IMPORTANTE: apenas `qtd_fotos_extra` é gravado. Os campos `valor_foto_extra`
+    // e `valor_total_foto_extra` são recalculados pelo trigger DB
+    // `recalculate_fotos_extras_total`, que aplica a faixa de desconto progressivo
+    // correta com base na quantidade da sessão. Escrever esses campos daqui causa
+    // race conditions: o trigger poderia sobrescrever com fallback qtd × unit.
     const hasExtrasSync = body.qtdFotosExtra !== undefined
       || body.valorFotoExtra !== undefined
       || body.valorTotalFotoExtra !== undefined;
     if (body.qtdFotosExtra !== undefined) {
       updateData.qtd_fotos_extra = body.qtdFotosExtra;
     }
-    if (body.valorFotoExtra !== undefined) {
-      updateData.valor_foto_extra = body.valorFotoExtra;
-    }
-    if (body.valorTotalFotoExtra !== undefined) {
-      updateData.valor_total_foto_extra = body.valorTotalFotoExtra;
-    }
     if (hasExtrasSync) {
-      // Reset do override: dados reais do Gallery têm prioridade sobre ajuste manual
+      // Reset do override: dados reais do Gallery têm prioridade sobre ajuste manual.
       updateData.extras_overridden = false;
       updateData.extras_overridden_at = null;
     }
