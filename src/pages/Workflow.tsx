@@ -14,6 +14,7 @@ import { useWorkflowPackageData } from "@/hooks/useWorkflowPackageData";
 import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { usePricingMigration } from "@/hooks/usePricingMigration";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { useWorkflowMetricsRealtime } from "@/hooks/useWorkflowMetricsRealtime";
 
 import { useWorkflowMonthSessions } from "@/features/workflow/hooks/useWorkflowMonthSessions";
 import { useWorkflowFilters } from "@/features/workflow/hooks/useWorkflowFilters";
@@ -94,22 +95,19 @@ function WorkflowContent() {
     valor: `R$ ${(Number(p.preco_venda) || 0).toFixed(2).replace(".", ",")}`,
   }));
 
-  // ── Métricas financeiras (dados crus do banco) ──────────────────────
-  const financials = useMemo(() => {
-    const previsto = month.workflowSessions.reduce(
-      (sum, s) => sum + (Number(s.valor_total) || 0),
-      0,
-    );
-    const receita = month.workflowSessions.reduce(
-      (sum, s) => sum + (Number(s.valor_pago) || 0),
-      0,
-    );
-    return {
-      totalMonth: previsto,
-      paidMonth: receita,
-      remainingMonth: previsto - receita,
-    };
-  }, [month.workflowSessions]);
+  // ── Métricas financeiras (fonte canônica: RPC workflow_month_metrics) ──
+  const metrics = useWorkflowMetricsRealtime(
+    month.currentMonth.year,
+    month.currentMonth.month,
+  );
+  const financials = useMemo(() => ({
+    totalMonth: metrics.previsto,
+    paidMonth: metrics.receita,
+    remainingMonth: metrics.aReceber,
+    creditosGerados: metrics.creditosGerados,
+    creditosUtilizados: metrics.creditosUtilizados,
+    caixaRecebido: metrics.caixaRecebido,
+  }), [metrics]);
 
   // ── Estados de loading/erro globais ────────────────────────────────
   if ((month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0) {
