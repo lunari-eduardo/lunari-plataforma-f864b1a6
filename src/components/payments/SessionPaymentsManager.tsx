@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, CheckCircle2, Calendar, DollarSign, Package, Send, QrCode, Link2, Loader2, RotateCcw, Images, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay, formatDateTimeForDisplay } from '@/utils/dateUtils';
 import { useSessionPayments } from '@/hooks/useSessionPayments';
@@ -13,9 +14,10 @@ import { SessionPaymentExtended } from '@/types/sessionPayments';
 import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalExpanded';
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
+import { ExtraChargeModal } from '@/components/cobranca/ExtraChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
-import { useSessionFinancials } from '@/features/workflow/hooks/useSessionFinancials';
+import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
@@ -33,6 +35,10 @@ export function SessionPaymentsManager({
 }: SessionPaymentsManagerProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
+  const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
+  /** Orquestração "Cobrar tudo" (Opção A): abre ChargeModal e, ao fechar,
+   *  aciona automaticamente ExtraChargeModal para gerar o 2º link. */
+  const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
   const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
@@ -97,9 +103,14 @@ export function SessionPaymentsManager({
     schedulePayment
   } = useSessionPayments(sessionData.id, convertExistingPayments(sessionData.pagamentos || []));
 
-  // Fonte única de valores financeiros — evita parsing de string BR e reflete
-  // valor_total canônico do DB (com desconto progressivo aplicado pelo trigger).
-  const { financials } = useSessionFinancials(sessionData.id);
+  // Painel financeiro composto — combina RPC da sessão + snapshot canônico da
+  // galeria (desconto progressivo). Mesma lógica usada nos cards do Workflow,
+  // eliminando divergências entre card e modal (fotos extras invisíveis, etc.).
+  const fin = useSessionFinancialsWithExtras(
+    sessionData.id,
+    sessionData.galeriaId,
+    sessionData.sessionId,
+  );
 
   // Convert back to legacy format for synchronization
   const convertToLegacyPayments = (extendedPayments: SessionPaymentExtended[]) => {
@@ -231,14 +242,30 @@ export function SessionPaymentsManager({
     }
   };
 
-  // Valor total autoritativo vem do DB via RPC (fonte única). Fallback só se o
-  // hook ainda não carregou (evita mostrar 0 em edge cases).
-  const valorTotal = financials.valor_total > 0
-    ? financials.valor_total
-    : (typeof sessionData.total === 'number'
-        ? sessionData.total
-        : parseFloat(String(sessionData.total ?? '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0'));
-  const valorRestante = Math.max(0, valorTotal - totalPago);
+  // Valores autoritativos combinam DB (sessão) + RPC canônica da galeria.
+  // Fallback ao `sessionData.total` só em cold-start extremo (SSR/edge).
+  const valorTotalFallback =
+    typeof sessionData.total === 'number'
+      ? sessionData.total
+      : parseFloat(String(sessionData.total ?? '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim() || '0');
+
+  const valorTotal = fin.totalVisual > 0 ? fin.totalVisual : valorTotalFallback;
+  const valorRestante = fin.totalVisual > 0 ? fin.pendenteTot : Math.max(0, valorTotalFallback - totalPago);
+  const valorRestanteSessao = fin.totalVisual > 0 ? fin.pendenteSess : valorRestante;
+
+  const showExtrasChip = fin.hasGaleria && fin.extrasIdeal > 0;
+  const gridCols = showExtrasChip ? 'grid-cols-2 lg:grid-cols-7' : 'grid-cols-2 lg:grid-cols-5';
+
+  const canCobrarSessao = valorRestanteSessao > 0.001;
+  const canCobrarExtras = fin.hasGaleria && fin.extrasPend > 0.001;
+  const canCobrarTudo = canCobrarSessao && canCobrarExtras;
+
+  const handleCobrarTudo = () => {
+    // Opção A: dispara ChargeModal (sessão). Ao fechar, `combinedStep`
+    // aciona ExtraChargeModal automaticamente para gerar o 2º link.
+    setCombinedStep('session');
+    setShowChargeModal(true);
+  };
 
   // Shared content
   const content = (
@@ -246,11 +273,28 @@ export function SessionPaymentsManager({
       {/* Financial Summary */}
       <Card className="mb-6">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4 text-center">
+          <div className={`grid ${gridCols} gap-2 sm:gap-3 lg:gap-4 text-center`}>
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
               <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
             </div>
+            {showExtrasChip && (
+              <>
+                <div>
+                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Base sessão</p>
+                  <p className="font-semibold text-foreground text-xs sm:text-sm">{formatCurrency(fin.baseSessao)}</p>
+                </div>
+                <div>
+                  <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Extras</p>
+                  <p className="font-semibold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+                    {formatCurrency(fin.extrasIdeal)}
+                  </p>
+                  <p className="text-2xs text-muted-foreground">
+                    Pago {formatCurrency(fin.extrasPago)} · Pend {formatCurrency(fin.extrasPend)}
+                  </p>
+                </div>
+              </>
+            )}
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
               <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
@@ -283,18 +327,72 @@ export function SessionPaymentsManager({
               Histórico de Movimentações
             </CardTitle>
             <div className="flex gap-2 w-full sm:w-auto">
-              <Button 
-                onClick={() => setShowChargeModal(true)} 
-                variant="outline"
-                className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10" 
-                size="sm"
-              >
-                <Send className="h-3 w-3 md:h-4 md:w-4" />
-                Cobrar
-              </Button>
-              <Button 
-                onClick={() => setShowPaymentModal(true)} 
-                className="gap-2 flex-1 sm:flex-none h-8 text-xs" 
+              {fin.hasGaleria ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
+                      size="sm"
+                      disabled={!canCobrarSessao && !canCobrarExtras}
+                    >
+                      <Send className="h-3 w-3 md:h-4 md:w-4" />
+                      Cobrar
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      disabled={!canCobrarSessao}
+                      onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-2" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium">Cobrar sessão</div>
+                        <div className="text-2xs text-muted-foreground">{formatCurrency(valorRestanteSessao)}</div>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={!canCobrarExtras}
+                      onClick={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+                    >
+                      <Images className="h-3.5 w-3.5 mr-2 text-amber-500" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium">Cobrar extras</div>
+                        <div className="text-2xs text-muted-foreground">{formatCurrency(fin.extrasPend)}</div>
+                      </div>
+                    </DropdownMenuItem>
+                    {canCobrarTudo && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleCobrarTudo}>
+                          <Send className="h-3.5 w-3.5 mr-2 text-primary" />
+                          <div className="flex-1">
+                            <div className="text-xs font-medium">Cobrar tudo</div>
+                            <div className="text-2xs text-muted-foreground">
+                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 2 links
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                  variant="outline"
+                  disabled={!canCobrarSessao}
+                  className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
+                  size="sm"
+                >
+                  <Send className="h-3 w-3 md:h-4 md:w-4" />
+                  Cobrar
+                </Button>
+              )}
+              <Button
+                onClick={() => setShowPaymentModal(true)}
+                className="gap-2 flex-1 sm:flex-none h-8 text-xs"
                 size="sm"
               >
                 <Plus className="h-3 w-3 md:h-4 md:w-4" />
@@ -535,16 +633,41 @@ export function SessionPaymentsManager({
         }}
       />
 
-      {/* Charge Modal - Passar sessionId TEXTO para garantir vínculo correto */}
+      {/* Charge Modal (sessão) — passar sessionId TEXTO para vínculo correto.
+          Quando `combinedStep === 'session'`, ao fechar, abre extras (Opção A). */}
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => setShowChargeModal(false)}
+        onClose={() => {
+          setShowChargeModal(false);
+          if (combinedStep === 'session' && fin.resolvedGalleryId && fin.extrasPend > 0) {
+            setCombinedStep('extras');
+            // pequeno delay para animação do dialog anterior
+            setTimeout(() => setShowExtraChargeModal(true), 150);
+          } else {
+            setCombinedStep('idle');
+          }
+        }}
         clienteId={sessionData.clienteId || ''}
         clienteNome={sessionData.nome || 'Cliente'}
         clienteWhatsapp={sessionData.whatsapp}
         sessionId={sessionData.sessionId || sessionData.id}
-        valorSugerido={valorRestante}
+        valorSugerido={valorRestanteSessao}
       />
+
+      {/* Extra Charge Modal (fotos extras da galeria) */}
+      {fin.resolvedGalleryId && (
+        <ExtraChargeModal
+          isOpen={showExtraChargeModal}
+          onClose={() => {
+            setShowExtraChargeModal(false);
+            setCombinedStep('idle');
+          }}
+          galeriaId={fin.resolvedGalleryId}
+          clienteNome={sessionData.nome}
+          nomeSessao={sessionData.descricao || sessionData.categoria}
+          clienteWhatsapp={sessionData.whatsapp}
+        />
+      )}
     </>
   );
 
