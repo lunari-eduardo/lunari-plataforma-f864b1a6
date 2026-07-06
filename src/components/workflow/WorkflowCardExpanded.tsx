@@ -16,7 +16,7 @@ import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
 import { ClientCreditActionButton } from "@/components/finance/ClientCreditActionButton";
-import { ClientCreditApplyModal } from "@/components/finance/ClientCreditApplyModal";
+
 
 interface WorkflowCardExpandedProps {
   session: SessionData;

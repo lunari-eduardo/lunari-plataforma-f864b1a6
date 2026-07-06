@@ -19,7 +19,7 @@ import { ClientEditModal } from './ClientEditModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
 import { FormularioRespostasView } from '@/components/formularios/FormularioRespostasView';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
-import { ClientCreditBadge } from '@/components/finance/ClientCreditBadge';
+import { ClientCreditActionButton } from '@/components/finance/ClientCreditActionButton';
 import { ClientCreditApplyModal } from '@/components/finance/ClientCreditApplyModal';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
@@ -654,10 +654,11 @@ export default function AppointmentDetails({
                 <div className="flex justify-between text-sm font-medium items-center">
                   <span className="text-lunar-muted">Pendente</span>
                   <div className="flex items-center gap-2">
-                    {resolvedClienteId && appointment.sessionId && (sessionDetails.valorTotal - sessionDetails.valorPago) > 0 && (
-                      <ClientCreditBadge
+                    {resolvedClienteId && (
+                      <ClientCreditActionButton
                         clienteId={resolvedClienteId}
-                        onClick={() => setCreditApplyOpen(true)}
+                        currentSessionId={appointment.sessionId ?? null}
+                        currentSessionPendente={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
                       />
                     )}
                     <span className={sessionDetails.valorTotal - sessionDetails.valorPago > 0 ? "text-lunar-warning" : "text-lunar-success"}>
