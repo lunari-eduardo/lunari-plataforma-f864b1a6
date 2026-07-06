@@ -62,7 +62,7 @@ export default function AppointmentDetails({
   const [showClientEditModal, setShowClientEditModal] = useState(false);
   const [sendBriefingOpen, setSendBriefingOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
-  const [creditApplyOpen, setCreditApplyOpen] = useState(false);
+  
   const [viewRespostas, setViewRespostas] = useState<{
     id: string;
     titulo: string;
@@ -793,16 +793,6 @@ export default function AppointmentDetails({
       {/* Dialog do guard centralizado (usado pelo handleSave em confirmados) */}
       <SlotConflictDialog {...saveDialogProps} />
 
-      {resolvedClienteId && appointment.sessionId && sessionDetails && (
-        <ClientCreditApplyModal
-          isOpen={creditApplyOpen}
-          onClose={() => setCreditApplyOpen(false)}
-          clienteId={resolvedClienteId}
-          sessionId={appointment.sessionId}
-          restanteSessao={Math.max(0, sessionDetails.valorTotal - sessionDetails.valorPago)}
-          onApplied={() => fetchSessionDetails?.()}
-        />
-      )}
     </>
 
   );
