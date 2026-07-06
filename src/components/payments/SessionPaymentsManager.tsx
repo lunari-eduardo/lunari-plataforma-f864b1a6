@@ -150,6 +150,10 @@ export function SessionPaymentsManager({
   };
 
   const getOriginIcon = (origem: string, observacoes?: string) => {
+    // Crédito do cliente
+    if (origem === 'credito' || observacoes?.toLowerCase().includes('crédito do cliente')) {
+      return <CreditCard className="h-3 w-3 text-emerald-600" />;
+    }
     // Detectar InfinitePay
     if (origem === 'infinitepay' || observacoes?.toLowerCase().includes('infinitepay')) {
       return <Link2 className="h-3 w-3 text-green-600" />;
