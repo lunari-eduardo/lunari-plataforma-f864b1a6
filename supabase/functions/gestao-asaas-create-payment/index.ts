@@ -571,7 +571,22 @@ Deno.serve(async (req) => {
       console.error('Error saving cobrança:', cobrancaError);
     }
 
+    // Defensive cancellation: cobrança combinada substitui pendentes anteriores da sessão
+    if (
+      binding.finalidade === 'sessao_e_extras' &&
+      sessionId &&
+      cobranca?.id
+    ) {
+      const result = await cancelStalePendingChargesForSession(
+        supabase, sessionId, cobranca.id,
+      );
+      if (result.cancelled > 0) {
+        console.log(`[gestao-asaas-create-payment] Cancelled ${result.cancelled} stale pending charges`);
+      }
+    }
+
     // Transaction creation is handled EXCLUSIVELY by the database trigger
+
 
     return new Response(
       JSON.stringify({
