@@ -38,8 +38,10 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** Orquestração "Cobrar tudo" (Opção A): abre ChargeModal e, ao fechar,
-   *  aciona automaticamente ExtraChargeModal para gerar o 2º link. */
+  const [showCombinedModal, setShowCombinedModal] = useState(false);
+  /** Orquestração "Cobrar tudo" legada (Opção A): abre ChargeModal e, ao fechar,
+   *  aciona automaticamente ExtraChargeModal para gerar o 2º link.
+   *  Usado apenas quando `FEATURE_COMBINED_CHARGE` está desligado. */
   const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
