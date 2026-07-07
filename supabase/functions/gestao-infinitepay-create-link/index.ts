@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   assertExtraPaymentWithinIdeal,
   assertNotAmbiguousSessionCharge,
+  cancelStalePendingChargesForSession,
   resolveCobrancaBinding,
 } from "../_shared/cobrancaBinding.ts";
 
@@ -30,11 +31,14 @@ interface CreateLinkRequest {
   valor: number;
   descricao?: string;
   // Contrato Gestão↔Gallery (opcional; default = 'sessao')
-  finalidade?: "sessao" | "fotos_extras";
+  finalidade?: "sessao" | "fotos_extras" | "sessao_e_extras";
   galeriaId?: string;
   qtdFotos?: number;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string;
+  valorSessaoComponente?: number;
+  valorExtrasComponente?: number;
+  allowAmbiguous?: boolean;
 }
 
 serve(async (req) => {
@@ -80,6 +84,9 @@ serve(async (req) => {
         qtdFotos: body.qtdFotos,
         snapshotFotosIncluidas: body.snapshotFotosIncluidas,
         correlationId: body.correlationId,
+        valorSessaoComponente: body.valorSessaoComponente,
+        valorExtrasComponente: body.valorExtrasComponente,
+        valorTotal: valor,
       },
     );
     if (bindingError || !binding) {
@@ -98,12 +105,24 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+    } else if (binding.finalidade === "sessao_e_extras" && binding.galeria_id && binding.valor_extras_componente) {
+      const guard = await assertExtraPaymentWithinIdeal(
+        supabase,
+        binding.galeria_id,
+        binding.valor_extras_componente,
+      );
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     } else if (binding.finalidade === "sessao" && sessionId) {
       const guard = await assertNotAmbiguousSessionCharge(
         supabase,
         sessionId,
         valor,
-        (body as { allowAmbiguous?: boolean }).allowAmbiguous === true,
+        body.allowAmbiguous === true,
       );
       if (guard.error) {
         return new Response(
@@ -182,6 +201,8 @@ serve(async (req) => {
         qtd_fotos: binding.qtd_fotos,
         snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
         correlation_id: binding.correlation_id,
+        valor_sessao_componente: binding.valor_sessao_componente,
+        valor_extras_componente: binding.valor_extras_componente,
       })
       .select()
       .single();
@@ -189,6 +210,16 @@ serve(async (req) => {
     if (cobError || !cobranca) {
       console.error("[gestao-infinitepay-create-link] Error creating cobranca:", cobError);
       throw new Error("Erro ao criar registro de cobrança");
+    }
+
+    // Defensive cancellation: cobrança combinada substitui pendentes anteriores
+    if (binding.finalidade === "sessao_e_extras" && normalizedSessionId) {
+      const result = await cancelStalePendingChargesForSession(
+        supabase, normalizedSessionId, cobranca.id,
+      );
+      if (result.cancelled > 0) {
+        console.log(`[gestao-infinitepay-create-link] Cancelled ${result.cancelled} stale pending charges`);
+      }
     }
 
     console.log(`[gestao-infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}`);

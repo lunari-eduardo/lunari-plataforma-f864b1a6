@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
 import {
   assertExtraPaymentWithinIdeal,
   assertNotAmbiguousSessionCharge,
+  cancelStalePendingChargesForSession,
   resolveCobrancaBinding,
 } from '../_shared/cobrancaBinding.ts';
 import { payerHintsFlags, resolvePayerHints } from '../_shared/payer-hints.ts';
@@ -52,11 +53,14 @@ interface RequestBody {
     repassarTaxaAntecipacao?: boolean;
   };
   // Contrato Gestão↔Gallery (opcional; default = 'sessao')
-  finalidade?: 'sessao' | 'fotos_extras';
+  finalidade?: 'sessao' | 'fotos_extras' | 'sessao_e_extras';
   galeriaId?: string;
   qtdFotos?: number;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string;
+  valorSessaoComponente?: number;
+  valorExtrasComponente?: number;
+  allowAmbiguous?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -111,6 +115,9 @@ Deno.serve(async (req) => {
         qtdFotos: body.qtdFotos,
         snapshotFotosIncluidas: body.snapshotFotosIncluidas,
         correlationId: body.correlationId,
+        valorSessaoComponente: body.valorSessaoComponente,
+        valorExtrasComponente: body.valorExtrasComponente,
+        valorTotal: valor,
       },
     );
     if (bindingError || !binding) {
@@ -129,10 +136,23 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    } else if (binding.finalidade === 'sessao_e_extras' && binding.galeria_id && binding.valor_extras_componente) {
+      // Cobrança combinada: garantir que o componente de extras não excede o saldo ideal
+      const guard = await assertExtraPaymentWithinIdeal(
+        supabase,
+        binding.galeria_id,
+        binding.valor_extras_componente,
+      );
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     } else if (binding.finalidade === 'sessao' && sessionId) {
       const guard = await assertNotAmbiguousSessionCharge(
         supabase, sessionId, valor,
-        (body as { allowAmbiguous?: boolean }).allowAmbiguous === true,
+        body.allowAmbiguous === true,
       );
       if (guard.error) {
         return new Response(
@@ -524,6 +544,8 @@ Deno.serve(async (req) => {
       qtd_fotos: binding.qtd_fotos,
       snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
       correlation_id: binding.correlation_id,
+      valor_sessao_componente: binding.valor_sessao_componente,
+      valor_extras_componente: binding.valor_extras_componente,
     };
 
     if (billingType === 'PIX' && pixData) {
@@ -549,7 +571,22 @@ Deno.serve(async (req) => {
       console.error('Error saving cobrança:', cobrancaError);
     }
 
+    // Defensive cancellation: cobrança combinada substitui pendentes anteriores da sessão
+    if (
+      binding.finalidade === 'sessao_e_extras' &&
+      sessionId &&
+      cobranca?.id
+    ) {
+      const result = await cancelStalePendingChargesForSession(
+        supabase, sessionId, cobranca.id,
+      );
+      if (result.cancelled > 0) {
+        console.log(`[gestao-asaas-create-payment] Cancelled ${result.cancelled} stale pending charges`);
+      }
+    }
+
     // Transaction creation is handled EXCLUSIVELY by the database trigger
+
 
     return new Response(
       JSON.stringify({

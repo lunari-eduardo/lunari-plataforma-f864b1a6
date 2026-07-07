@@ -15,6 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   assertExtraPaymentWithinIdeal,
   assertNotAmbiguousSessionCharge,
+  cancelStalePendingChargesForSession,
   resolveCobrancaBinding,
 } from "../_shared/cobrancaBinding.ts";
 
@@ -85,6 +86,9 @@ serve(async (req) => {
         qtdFotos: body.qtdFotos,
         snapshotFotosIncluidas: body.snapshotFotosIncluidas,
         correlationId: body.correlationId,
+        valorSessaoComponente: body.valorSessaoComponente,
+        valorExtrasComponente: body.valorExtrasComponente,
+        valorTotal: valor,
       },
     );
     if (bindingError || !binding) {
@@ -97,6 +101,16 @@ serve(async (req) => {
     // Guardas de contrato (anti-overcharge + anti-ambiguidade)
     if (binding.finalidade === 'fotos_extras' && binding.galeria_id) {
       const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor);
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    } else if (binding.finalidade === 'sessao_e_extras' && binding.galeria_id && binding.valor_extras_componente) {
+      const guard = await assertExtraPaymentWithinIdeal(
+        supabase, binding.galeria_id, binding.valor_extras_componente,
+      );
       if (guard.error) {
         return new Response(
           JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
@@ -243,11 +257,18 @@ serve(async (req) => {
         qtd_fotos: binding.qtd_fotos,
         snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
         correlation_id: binding.correlation_id,
+        valor_sessao_componente: binding.valor_sessao_componente,
+        valor_extras_componente: binding.valor_extras_componente,
       })
       .select()
       .single();
 
     if (insertError) throw new Error('Falha ao salvar cobrança');
+
+    if (binding.finalidade === 'sessao_e_extras' && textSessionId && cobranca?.id) {
+      const r = await cancelStalePendingChargesForSession(supabase, textSessionId, cobranca.id);
+      if (r.cancelled > 0) console.log(`[mercadopago-create-link] Cancelled ${r.cancelled} stale pending charges`);
+    }
 
     console.log('[mercadopago-create-link] Cobrança salva com session_id:', textSessionId);
 

@@ -7,7 +7,7 @@
  * de fotos extras invisíveis para o Gallery.
  */
 
-export type CobrancaFinalidade = "sessao" | "fotos_extras";
+export type CobrancaFinalidade = "sessao" | "fotos_extras" | "sessao_e_extras";
 
 export interface RawBindingInput {
   finalidade?: CobrancaFinalidade | string | null;
@@ -15,6 +15,17 @@ export interface RawBindingInput {
   qtdFotos?: number | null;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string | null;
+  /**
+   * Componentes obrigatórios quando `finalidade='sessao_e_extras'`.
+   * Devem somar exatamente `valorTotal` (±0,01).
+   */
+  valorSessaoComponente?: number | null;
+  valorExtrasComponente?: number | null;
+  /**
+   * Valor total da cobrança — usado para validar a soma dos componentes
+   * em cobranças combinadas. Opcional em `sessao`/`fotos_extras`.
+   */
+  valorTotal?: number | null;
 }
 
 export interface ResolvedBinding {
@@ -23,6 +34,8 @@ export interface ResolvedBinding {
   qtd_fotos: number | null;
   snapshot_fotos_incluidas: number | null;
   correlation_id: string;
+  valor_sessao_componente: number | null;
+  valor_extras_componente: number | null;
 }
 
 export interface BindingError {
@@ -34,7 +47,9 @@ export interface BindingError {
     | "INVALID_FINALIDADE"
     | "EXTRA_PAYMENT_RPC_FAILED"
     | "EXTRA_PAYMENT_EXCEEDS_IDEAL"
-    | "AMBIGUOUS_PURPOSE_USE_FOTOS_EXTRAS";
+    | "AMBIGUOUS_PURPOSE_USE_FOTOS_EXTRAS"
+    | "MISSING_COMBINED_BREAKDOWN"
+    | "INVALID_COMBINED_BREAKDOWN";
   message: string;
   // deno-lint-ignore no-explicit-any
   details?: Record<string, any>;
@@ -55,11 +70,16 @@ export async function resolveCobrancaBinding(
 ): Promise<{ binding?: ResolvedBinding; error?: BindingError }> {
   const finalidadeRaw = (raw.finalidade ?? "sessao").toString().toLowerCase();
 
-  if (finalidadeRaw !== "sessao" && finalidadeRaw !== "fotos_extras") {
+  if (
+    finalidadeRaw !== "sessao" &&
+    finalidadeRaw !== "fotos_extras" &&
+    finalidadeRaw !== "sessao_e_extras"
+  ) {
     return {
       error: {
         code: "INVALID_FINALIDADE",
-        message: `Finalidade inválida: ${finalidadeRaw}. Aceitas: 'sessao' ou 'fotos_extras'.`,
+        message:
+          `Finalidade inválida: ${finalidadeRaw}. Aceitas: 'sessao', 'fotos_extras' ou 'sessao_e_extras'.`,
       },
     };
   }
@@ -74,11 +94,13 @@ export async function resolveCobrancaBinding(
         qtd_fotos: null,
         snapshot_fotos_incluidas: null,
         correlation_id,
+        valor_sessao_componente: null,
+        valor_extras_componente: null,
       },
     };
   }
 
-  // finalidade === 'fotos_extras' → galeriaId + qtdFotos obrigatórios
+  // fotos_extras OR sessao_e_extras → galeriaId + qtdFotos obrigatórios
   if (!raw.galeriaId) {
     return {
       error: {
@@ -124,18 +146,97 @@ export async function resolveCobrancaBinding(
     };
   }
 
+  const snapshot_fotos_incluidas =
+    raw.snapshotFotosIncluidas != null
+      ? Number(raw.snapshotFotosIncluidas)
+      : null;
+
+  if (finalidadeRaw === "fotos_extras") {
+    return {
+      binding: {
+        finalidade: "fotos_extras",
+        galeria_id: gal.id,
+        qtd_fotos: Math.trunc(qtd),
+        snapshot_fotos_incluidas,
+        correlation_id,
+        valor_sessao_componente: null,
+        valor_extras_componente: null,
+      },
+    };
+  }
+
+  // finalidade === 'sessao_e_extras' → componentes obrigatórios
+  const vSessao = Number(raw.valorSessaoComponente ?? NaN);
+  const vExtras = Number(raw.valorExtrasComponente ?? NaN);
+  const vTotal = Number(raw.valorTotal ?? NaN);
+
+  if (
+    !Number.isFinite(vSessao) || vSessao <= 0 ||
+    !Number.isFinite(vExtras) || vExtras <= 0
+  ) {
+    return {
+      error: {
+        code: "MISSING_COMBINED_BREAKDOWN",
+        message:
+          "Cobrança combinada exige valorSessaoComponente e valorExtrasComponente maiores que zero.",
+      },
+    };
+  }
+
+  if (Number.isFinite(vTotal)) {
+    const soma = Number((vSessao + vExtras).toFixed(2));
+    if (Math.abs(soma - Number(vTotal.toFixed(2))) > 0.01) {
+      return {
+        error: {
+          code: "INVALID_COMBINED_BREAKDOWN",
+          message:
+            `Soma dos componentes (R$ ${soma.toFixed(2)}) não bate com valor total (R$ ${vTotal.toFixed(2)}).`,
+          details: { vSessao, vExtras, vTotal, soma },
+        },
+      };
+    }
+  }
+
   return {
     binding: {
-      finalidade: "fotos_extras",
+      finalidade: "sessao_e_extras",
       galeria_id: gal.id,
       qtd_fotos: Math.trunc(qtd),
-      snapshot_fotos_incluidas:
-        raw.snapshotFotosIncluidas != null
-          ? Number(raw.snapshotFotosIncluidas)
-          : null,
+      snapshot_fotos_incluidas,
       correlation_id,
+      valor_sessao_componente: Number(vSessao.toFixed(2)),
+      valor_extras_componente: Number(vExtras.toFixed(2)),
     },
   };
+}
+
+/**
+ * Cancela cobranças pendentes anteriores (mesma sessão, outro id) para evitar
+ * "duas cobranças abertas" quando o usuário emite uma nova (tipicamente uma
+ * combinada `sessao_e_extras`). Marca `status='cancelado'` — o webhook
+ * eventual já é idempotente e ignora cobranças canceladas.
+ *
+ * Só cancela cobranças `pendente` (não `pago`, `parcialmente_pago`, etc).
+ */
+export async function cancelStalePendingChargesForSession(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  sessionId: string,
+  keepCobrancaId: string,
+): Promise<{ cancelled: number }> {
+  const { data, error } = await supabase
+    .from("cobrancas")
+    .update({ status: "cancelado" })
+    .eq("session_id", sessionId)
+    .eq("status", "pendente")
+    .neq("id", keepCobrancaId)
+    .select("id");
+
+  if (error) {
+    console.error("cancelStalePendingChargesForSession error:", error);
+    return { cancelled: 0 };
+  }
+  return { cancelled: (data ?? []).length };
 }
 
 /**
