@@ -678,6 +678,25 @@ export function SessionPaymentsManager({
           clienteWhatsapp={sessionData.whatsapp}
         />
       )}
+
+      {/* Combined Charge Modal — link único (Fase 4 do plano "Cobrar tudo").
+          Só é aberto quando FEATURE_COMBINED_CHARGE está ativo E há
+          galeriaId + saldo em ambos (sessão e extras). */}
+      {FEATURE_COMBINED_CHARGE && fin.resolvedGalleryId && (
+        <CombinedChargeModal
+          isOpen={showCombinedModal}
+          onClose={() => setShowCombinedModal(false)}
+          clienteId={sessionData.clienteId || ''}
+          clienteNome={sessionData.nome || 'Cliente'}
+          clienteWhatsapp={sessionData.whatsapp}
+          sessionId={sessionData.sessionId || sessionData.id}
+          galeriaId={fin.resolvedGalleryId}
+          valorSessaoComponente={Number(valorRestanteSessao.toFixed(2))}
+          valorExtrasComponente={Number(fin.extrasPend.toFixed(2))}
+          qtdFotosExtras={Math.max(1, fin.qtdExtras - fin.qtdExtrasPagas)}
+          nomeSessao={sessionData.descricao || sessionData.categoria}
+        />
+      )}
     </>
   );
 
