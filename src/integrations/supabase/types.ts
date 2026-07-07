@@ -1288,7 +1288,9 @@ export type Database = {
           updated_at: string | null
           user_id: string
           valor: number
+          valor_extras_componente: number | null
           valor_liquido: number | null
+          valor_sessao_componente: number | null
           visitor_id: string | null
         }
         Insert: {
@@ -1329,7 +1331,9 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           valor: number
+          valor_extras_componente?: number | null
           valor_liquido?: number | null
+          valor_sessao_componente?: number | null
           visitor_id?: string | null
         }
         Update: {
@@ -1370,7 +1374,9 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           valor?: number
+          valor_extras_componente?: number | null
           valor_liquido?: number | null
+          valor_sessao_componente?: number | null
           visitor_id?: string | null
         }
         Relationships: [
