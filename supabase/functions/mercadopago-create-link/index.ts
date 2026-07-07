@@ -257,11 +257,18 @@ serve(async (req) => {
         qtd_fotos: binding.qtd_fotos,
         snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
         correlation_id: binding.correlation_id,
+        valor_sessao_componente: binding.valor_sessao_componente,
+        valor_extras_componente: binding.valor_extras_componente,
       })
       .select()
       .single();
 
     if (insertError) throw new Error('Falha ao salvar cobrança');
+
+    if (binding.finalidade === 'sessao_e_extras' && textSessionId && cobranca?.id) {
+      const r = await cancelStalePendingChargesForSession(supabase, textSessionId, cobranca.id);
+      if (r.cancelled > 0) console.log(`[mercadopago-create-link] Cancelled ${r.cancelled} stale pending charges`);
+    }
 
     console.log('[mercadopago-create-link] Cobrança salva com session_id:', textSessionId);
 
