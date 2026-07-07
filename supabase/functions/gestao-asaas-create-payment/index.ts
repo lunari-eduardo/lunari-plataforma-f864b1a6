@@ -544,6 +544,8 @@ Deno.serve(async (req) => {
       qtd_fotos: binding.qtd_fotos,
       snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
       correlation_id: binding.correlation_id,
+      valor_sessao_componente: binding.valor_sessao_componente,
+      valor_extras_componente: binding.valor_extras_componente,
     };
 
     if (billingType === 'PIX' && pixData) {
