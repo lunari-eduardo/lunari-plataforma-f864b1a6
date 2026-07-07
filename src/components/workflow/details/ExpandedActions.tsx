@@ -2,14 +2,17 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Plus, Send, Images } from "lucide-react";
 import { SessaoContratoButton } from "@/components/contratos/SessaoContratoButton";
+import { FEATURE_COMBINED_CHARGE } from "@/features/workflow/config";
 import type { SessionData } from "@/types/workflow";
 
 interface Props {
   session: SessionData;
   onCobrar: () => void;
   onCobrarExtras?: () => void;
+  onCobrarTudo?: () => void;
   extrasPendente?: number;
   extrasFullyPaid?: boolean;
+  sessaoPendente?: number;
   onAgendarPagamento: () => void;
   onAbrirPagamentos: () => void;
 }
