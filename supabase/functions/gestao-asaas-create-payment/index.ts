@@ -53,11 +53,14 @@ interface RequestBody {
     repassarTaxaAntecipacao?: boolean;
   };
   // Contrato Gestão↔Gallery (opcional; default = 'sessao')
-  finalidade?: 'sessao' | 'fotos_extras';
+  finalidade?: 'sessao' | 'fotos_extras' | 'sessao_e_extras';
   galeriaId?: string;
   qtdFotos?: number;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string;
+  valorSessaoComponente?: number;
+  valorExtrasComponente?: number;
+  allowAmbiguous?: boolean;
 }
 
 Deno.serve(async (req) => {
