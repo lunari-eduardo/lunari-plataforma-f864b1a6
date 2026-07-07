@@ -149,6 +149,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
             qtdFotos: request.qtdFotos,
             snapshotFotosIncluidas: request.snapshotFotosIncluidas,
             correlationId: request.correlationId,
+            valorSessaoComponente: request.valorSessaoComponente,
+            valorExtrasComponente: request.valorExtrasComponente,
           },
         });
       } else {
@@ -165,6 +167,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
             qtdFotos: request.qtdFotos,
             snapshotFotosIncluidas: request.snapshotFotosIncluidas,
             correlationId: request.correlationId,
+            valorSessaoComponente: request.valorSessaoComponente,
+            valorExtrasComponente: request.valorExtrasComponente,
           },
         });
       }
