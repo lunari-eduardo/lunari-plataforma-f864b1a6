@@ -201,6 +201,8 @@ serve(async (req) => {
         qtd_fotos: binding.qtd_fotos,
         snapshot_fotos_incluidas: binding.snapshot_fotos_incluidas,
         correlation_id: binding.correlation_id,
+        valor_sessao_componente: binding.valor_sessao_componente,
+        valor_extras_componente: binding.valor_extras_componente,
       })
       .select()
       .single();
@@ -208,6 +210,16 @@ serve(async (req) => {
     if (cobError || !cobranca) {
       console.error("[gestao-infinitepay-create-link] Error creating cobranca:", cobError);
       throw new Error("Erro ao criar registro de cobrança");
+    }
+
+    // Defensive cancellation: cobrança combinada substitui pendentes anteriores
+    if (binding.finalidade === "sessao_e_extras" && normalizedSessionId) {
+      const result = await cancelStalePendingChargesForSession(
+        supabase, normalizedSessionId, cobranca.id,
+      );
+      if (result.cancelled > 0) {
+        console.log(`[gestao-infinitepay-create-link] Cancelled ${result.cancelled} stale pending charges`);
+      }
     }
 
     console.log(`[gestao-infinitepay-create-link] Cobranca created: ${cobranca.id}, session_id: ${normalizedSessionId}`);
