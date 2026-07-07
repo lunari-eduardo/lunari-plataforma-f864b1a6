@@ -99,6 +99,9 @@ serve(async (req) => {
         qtdFotos: body.qtdFotos,
         snapshotFotosIncluidas: body.snapshotFotosIncluidas,
         correlationId: body.correlationId,
+        valorSessaoComponente: body.valorSessaoComponente,
+        valorExtrasComponente: body.valorExtrasComponente,
+        valorTotal: valor,
       },
     );
     if (bindingError || !binding) {
@@ -111,6 +114,16 @@ serve(async (req) => {
     // Guardas de contrato
     if (binding.finalidade === 'fotos_extras' && binding.galeria_id) {
       const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor);
+      if (guard.error) {
+        return new Response(
+          JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    } else if (binding.finalidade === 'sessao_e_extras' && binding.galeria_id && binding.valor_extras_componente) {
+      const guard = await assertExtraPaymentWithinIdeal(
+        supabase, binding.galeria_id, binding.valor_extras_componente,
+      );
       if (guard.error) {
         return new Response(
           JSON.stringify({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }),
