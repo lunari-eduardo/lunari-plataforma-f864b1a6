@@ -66,3 +66,20 @@ export function updatesRequireRefreeze(updates: Record<string, unknown>): boolea
   }
   return false;
 }
+
+/**
+ * Fase 4 — "Cobrar tudo" com link único (`finalidade='sessao_e_extras'`).
+ *
+ * Quando `true`, o botão "Cobrar tudo" (menu Cobrar do card do Workflow e do
+ * modal de Pagamentos) abre o `CombinedChargeModal`, que gera **UM** link
+ * cobrindo sessão + fotos extras. Ao ser pago, o webhook + triggers do banco
+ * dão baixa nos dois saldos.
+ *
+ * Quando `false` (default até Fase 5 ser aceita em produção), mantém a
+ * orquestração legada "Opção A" (2 links em sequência) usada em
+ * `SessionPaymentsManager`.
+ *
+ * Setar `VITE_FEATURE_COMBINED_CHARGE=true` habilita em runtime sem deploy.
+ */
+export const FEATURE_COMBINED_CHARGE =
+  import.meta.env.VITE_FEATURE_COMBINED_CHARGE === "true";
