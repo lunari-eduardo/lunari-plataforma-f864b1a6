@@ -149,6 +149,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
             qtdFotos: request.qtdFotos,
             snapshotFotosIncluidas: request.snapshotFotosIncluidas,
             correlationId: request.correlationId,
+            valorSessaoComponente: request.valorSessaoComponente,
+            valorExtrasComponente: request.valorExtrasComponente,
           },
         });
       } else {
@@ -165,6 +167,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
             qtdFotos: request.qtdFotos,
             snapshotFotosIncluidas: request.snapshotFotosIncluidas,
             correlationId: request.correlationId,
+            valorSessaoComponente: request.valorSessaoComponente,
+            valorExtrasComponente: request.valorExtrasComponente,
           },
         });
       }
@@ -260,6 +264,28 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         insertPayload.galeria_id = request.galeriaId;
         insertPayload.qtd_fotos = request.qtdFotos;
         insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
+      } else if (request.finalidade === 'sessao_e_extras') {
+        if (
+          !request.galeriaId ||
+          !request.qtdFotos || request.qtdFotos <= 0 ||
+          !request.valorSessaoComponente || request.valorSessaoComponente <= 0 ||
+          !request.valorExtrasComponente || request.valorExtrasComponente <= 0
+        ) {
+          throw new Error('Cobrança combinada exige galeria, quantidade e componentes de sessão/extras.');
+        }
+        const soma = Number((request.valorSessaoComponente + request.valorExtrasComponente).toFixed(2));
+        if (Math.abs(soma - Number(request.valor.toFixed(2))) > 0.01) {
+          throw new Error('Soma dos componentes não bate com o valor total.');
+        }
+        // Guard: componente de extras não pode exceder saldo ideal da galeria
+        const { assertExtraPaymentWithinIdealClient } = await import('@/components/cobranca/_chargeGuards');
+        const guard = await assertExtraPaymentWithinIdealClient(request.galeriaId, request.valorExtrasComponente);
+        if (guard.error) throw new Error(guard.error.message);
+        insertPayload.galeria_id = request.galeriaId;
+        insertPayload.qtd_fotos = request.qtdFotos;
+        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
+        insertPayload.valor_sessao_componente = request.valorSessaoComponente;
+        insertPayload.valor_extras_componente = request.valorExtrasComponente;
       } else if (request.sessionId) {
         const { assertNotAmbiguousSessionChargeClient } = await import('@/components/cobranca/_chargeGuards');
         const guard = await assertNotAmbiguousSessionChargeClient(request.sessionId, request.valor);
