@@ -7,7 +7,7 @@
  * de fotos extras invisíveis para o Gallery.
  */
 
-export type CobrancaFinalidade = "sessao" | "fotos_extras";
+export type CobrancaFinalidade = "sessao" | "fotos_extras" | "sessao_e_extras";
 
 export interface RawBindingInput {
   finalidade?: CobrancaFinalidade | string | null;
@@ -15,6 +15,17 @@ export interface RawBindingInput {
   qtdFotos?: number | null;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string | null;
+  /**
+   * Componentes obrigatórios quando `finalidade='sessao_e_extras'`.
+   * Devem somar exatamente `valorTotal` (±0,01).
+   */
+  valorSessaoComponente?: number | null;
+  valorExtrasComponente?: number | null;
+  /**
+   * Valor total da cobrança — usado para validar a soma dos componentes
+   * em cobranças combinadas. Opcional em `sessao`/`fotos_extras`.
+   */
+  valorTotal?: number | null;
 }
 
 export interface ResolvedBinding {
@@ -23,6 +34,8 @@ export interface ResolvedBinding {
   qtd_fotos: number | null;
   snapshot_fotos_incluidas: number | null;
   correlation_id: string;
+  valor_sessao_componente: number | null;
+  valor_extras_componente: number | null;
 }
 
 export interface BindingError {
@@ -34,7 +47,9 @@ export interface BindingError {
     | "INVALID_FINALIDADE"
     | "EXTRA_PAYMENT_RPC_FAILED"
     | "EXTRA_PAYMENT_EXCEEDS_IDEAL"
-    | "AMBIGUOUS_PURPOSE_USE_FOTOS_EXTRAS";
+    | "AMBIGUOUS_PURPOSE_USE_FOTOS_EXTRAS"
+    | "MISSING_COMBINED_BREAKDOWN"
+    | "INVALID_COMBINED_BREAKDOWN";
   message: string;
   // deno-lint-ignore no-explicit-any
   details?: Record<string, any>;
