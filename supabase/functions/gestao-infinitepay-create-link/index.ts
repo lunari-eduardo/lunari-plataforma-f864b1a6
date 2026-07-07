@@ -31,11 +31,14 @@ interface CreateLinkRequest {
   valor: number;
   descricao?: string;
   // Contrato Gestão↔Gallery (opcional; default = 'sessao')
-  finalidade?: "sessao" | "fotos_extras";
+  finalidade?: "sessao" | "fotos_extras" | "sessao_e_extras";
   galeriaId?: string;
   qtdFotos?: number;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string;
+  valorSessaoComponente?: number;
+  valorExtrasComponente?: number;
+  allowAmbiguous?: boolean;
 }
 
 serve(async (req) => {
