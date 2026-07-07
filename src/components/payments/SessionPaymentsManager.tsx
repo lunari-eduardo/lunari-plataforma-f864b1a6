@@ -15,9 +15,11 @@ import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalE
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { ExtraChargeModal } from '@/components/cobranca/ExtraChargeModal';
+import { CombinedChargeModal } from '@/components/cobranca/CombinedChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
+import { FEATURE_COMBINED_CHARGE } from '@/features/workflow/config';
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
