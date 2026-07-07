@@ -43,12 +43,16 @@ export interface CreateCobrancaRequest {
   descricao?: string;
   tipoCobranca: TipoCobranca;
   provedor?: ProvedorPagamento;
-  // Contrato Gestão↔Gallery — quando 'fotos_extras', galeriaId e qtdFotos são obrigatórios
-  finalidade?: 'sessao' | 'fotos_extras';
+  // Contrato Gestão↔Gallery — quando 'fotos_extras', galeriaId e qtdFotos são obrigatórios.
+  // Quando 'sessao_e_extras', galeriaId + qtdFotos + valorSessaoComponente + valorExtrasComponente são obrigatórios.
+  finalidade?: 'sessao' | 'fotos_extras' | 'sessao_e_extras';
   galeriaId?: string;
   qtdFotos?: number;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string;
+  /** Breakdown obrigatório quando finalidade='sessao_e_extras'. Soma deve = valor. */
+  valorSessaoComponente?: number;
+  valorExtrasComponente?: number;
 }
 
 export interface CobrancaResponse {
