@@ -53,9 +53,9 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body: CreatePaymentRequest = await req.json();
-    const { galleryId, sessionId, clienteId, valor, descricao } = body;
+    const { galleryId, sessionId, clienteId, valor, descricao, qtdFotosExtras, fotosIncluidasGaleria } = body;
 
-    console.log("[gallery-create-payment] Request:", JSON.stringify({ galleryId, sessionId, clienteId, valor }));
+    console.log("[gallery-create-payment] Request:", JSON.stringify({ galleryId, sessionId, clienteId, valor, qtdFotosExtras }));
 
     // ----- Validação de entrada ---------------------------------------------
     if (!clienteId) return jsonResponse({ success: false, error: "clienteId é obrigatório" }, 400);
