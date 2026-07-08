@@ -5885,9 +5885,12 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: {
           credito_gerado: number
+          credito_liquido: number
           credito_utilizado: number
           desconto_manual: number
           desconto_progressivo: number
+          extras_pago: number
+          extras_pendente: number
           qtd_extras_galeria: number
           qtd_fotos_extra: number
           session_id: string

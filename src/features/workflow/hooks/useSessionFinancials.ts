@@ -28,6 +28,9 @@ export interface SessionFinancials {
   qtd_extras_galeria: number;
   credito_gerado: number;
   credito_utilizado: number;
+  credito_liquido: number;
+  extras_pago: number;
+  extras_pendente: number;
 }
 
 const ZERO: Omit<SessionFinancials, 'session_id'> = {
@@ -45,6 +48,9 @@ const ZERO: Omit<SessionFinancials, 'session_id'> = {
   qtd_extras_galeria: 0,
   credito_gerado: 0,
   credito_utilizado: 0,
+  credito_liquido: 0,
+  extras_pago: 0,
+  extras_pendente: 0,
 };
 
 function toNum(v: unknown): number {
@@ -70,6 +76,9 @@ function normalize(row: Record<string, unknown> | null | undefined, sessionId: s
     qtd_extras_galeria: Math.round(toNum(row.qtd_extras_galeria)),
     credito_gerado: toNum(row.credito_gerado),
     credito_utilizado: toNum(row.credito_utilizado),
+    credito_liquido: toNum(row.credito_liquido),
+    extras_pago: toNum(row.extras_pago),
+    extras_pendente: toNum(row.extras_pendente),
   };
 }
 

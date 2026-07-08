@@ -1,77 +1,70 @@
 /**
  * Fonte única para o "painel financeiro" de UMA sessão do Workflow.
  *
- * ⚠️ Regra arquitetural (Opção A — desconto global):
+ * ⚠️ Regra arquitetural (Opção A — desconto global + sessão vence preço):
  *   O card NUNCA calcula. Toda a matemática (base + extras + produtos +
- *   adicional − desconto) vive na RPC `workflow_session_financials`,
- *   que também consulta a galeria como fonte dos extras quando existir.
- *
- * Este hook é apenas um adaptador que mapeia os campos da RPC canônica
- * para o formato esperado pelos componentes do Workflow. Ele não faz
- * subtrações, nem `Math.max`, nem mistura de fontes. Se algum valor
- * parecer errado, corrija a RPC — não este arquivo.
+ *   adicional − desconto, extras pagos/pendentes, créditos) vive na RPC
+ *   `workflow_session_financials`. A galeria não é mais consultada aqui —
+ *   o próprio RPC já soma os pagamentos vinculados às cobranças com
+ *   finalidade `fotos_extras` / `sessao_e_extras`.
  */
 import { useMemo } from 'react';
 import { useSessionFinancials } from './useSessionFinancials';
-import { useGalleryExtraCalc } from '@/hooks/useGalleryExtraCalc';
 
 export interface SessionFinancialsWithExtras {
-  /** Base da sessão (pacote + produtos + adicional − desconto), sem extras. Derivado apenas para exibição. */
+  /** Base da sessão (pacote + produtos + adicional − desconto), sem extras. Apenas apresentação. */
   baseSessao: number;
   /** Valor canônico dos extras (já com desconto progressivo aplicado). */
   extrasIdeal: number;
-  /** Extras já pagos (transações de finalidade fotos_extras). Vem da RPC da galeria (auditoria). */
+  /** Extras já pagos (soma de transações vinculadas às cobranças de extras). */
   extrasPago: number;
-  /** Extras ainda em aberto. Vem da RPC da galeria (auditoria de cobrança). */
+  /** Extras ainda em aberto. */
   extrasPend: number;
-  /** Total da sessão — VEM DA RPC, não é calculado aqui. */
+  /** Total da sessão — VEM DA RPC. */
   totalVisual: number;
   /** Total pago da sessão — VEM DA RPC. */
   pagoTotal: number;
   /** Pendente total — VEM DA RPC. */
   pendenteTot: number;
-  /** Pendente apenas da sessão (excluindo extras em aberto), para os botões de cobrança. */
+  /** Pendente apenas da sessão (excluindo extras em aberto), para botões de cobrança. */
   pendenteSess: number;
-  /** True quando a galeria foi resolvida (por id direto ou via session_id). */
+  /** True quando há galeria vinculada à sessão (via qtd_extras_galeria > 0 ou galeriaId presente). */
   hasGaleria: boolean;
-  /** UUID da galeria resolvida (útil para ExtraChargeModal). */
+  /** Compatibilidade com callers antigos (ExtraChargeModal). Preservado como null aqui. */
   resolvedGalleryId: string | null;
   /** Contadores de fotos extras. */
   qtdExtras: number;
   qtdExtrasPagas: number;
-  /** Loading composto. */
+  /** Crédito líquido (gerado − utilizado). */
+  creditoLiquido: number;
+  /** Loading. */
   isLoading: boolean;
 }
 
 export function useSessionFinancialsWithExtras(
   sessionId: string | null | undefined,
   galeriaId?: string | null,
-  sessionSlug?: string | null,
+  _sessionSlug?: string | null,
 ): SessionFinancialsWithExtras {
-  const { financials, isLoading: loadingFin } = useSessionFinancials(sessionId);
-  // Galeria é consultada APENAS para os contadores de "pago / a cobrar" de
-  // extras — o valor canônico total já vem da RPC principal.
-  const { calc, resolvedGalleryId, isLoading: loadingGal } = useGalleryExtraCalc(
-    galeriaId || null,
-    { sessionId: sessionSlug || null },
-  );
+  const { financials, isLoading } = useSessionFinancials(sessionId);
 
   return useMemo(() => {
-    const hasGaleria = Boolean(resolvedGalleryId);
-
-    // Todos os valores canônicos vêm da RPC. Nada de subtração/Math.max aqui.
     const totalVisual = financials.valor_total;
     const pagoTotal = financials.valor_pago;
     const pendenteTot = financials.valor_pendente;
     const extrasIdeal = financials.valor_extras_com_desconto;
-    // "baseSessao" é apenas apresentacional (para o breakdown do card).
+    const extrasPago = financials.extras_pago;
+    const extrasPend = financials.extras_pendente;
     const baseSessao = Math.max(0, totalVisual - extrasIdeal);
-
-    // Auditoria de cobrança de extras — quanto já foi cobrado/pago
-    // separadamente na galeria e quanto ainda falta cobrar.
-    const extrasPago = hasGaleria ? Math.max(0, Number(calc.valor_pago) || 0) : 0;
-    const extrasPend = hasGaleria ? Math.max(0, Number(calc.valor_a_cobrar) || 0) : 0;
     const pendenteSess = Math.max(0, pendenteTot - extrasPend);
+    const hasGaleria = Boolean(galeriaId) || financials.qtd_extras_galeria > 0;
+
+    // qtdExtrasPagas: derivado do valor pago vs unitário efetivo (aproximação
+    // segura para UI; a fonte de verdade é `extras_pago` em R$).
+    const unit = financials.qtd_fotos_extra > 0
+      ? extrasIdeal / financials.qtd_fotos_extra
+      : 0;
+    const qtdExtrasPagas = unit > 0 ? Math.min(financials.qtd_fotos_extra, Math.round(extrasPago / unit)) : 0;
 
     return {
       baseSessao: Number(baseSessao.toFixed(2)),
@@ -83,10 +76,11 @@ export function useSessionFinancialsWithExtras(
       pendenteTot: Number(pendenteTot.toFixed(2)),
       pendenteSess: Number(pendenteSess.toFixed(2)),
       hasGaleria,
-      resolvedGalleryId: resolvedGalleryId ?? null,
+      resolvedGalleryId: galeriaId ?? null,
       qtdExtras: financials.qtd_fotos_extra,
-      qtdExtrasPagas: hasGaleria ? Number(calc.extras_pagas) || 0 : 0,
-      isLoading: loadingFin || loadingGal,
+      qtdExtrasPagas,
+      creditoLiquido: Number((financials.credito_liquido ?? 0).toFixed(2)),
+      isLoading,
     };
-  }, [financials, calc, resolvedGalleryId, loadingFin, loadingGal]);
+  }, [financials, galeriaId, isLoading]);
 }
