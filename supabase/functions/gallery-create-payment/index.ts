@@ -33,6 +33,8 @@ interface CreatePaymentRequest {
   clienteId: string;
   valor: number;
   descricao?: string;
+  qtdFotosExtras?: number;
+  fotosIncluidasGaleria?: number;
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -51,9 +53,9 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body: CreatePaymentRequest = await req.json();
-    const { galleryId, sessionId, clienteId, valor, descricao } = body;
+    const { galleryId, sessionId, clienteId, valor, descricao, qtdFotosExtras, fotosIncluidasGaleria } = body;
 
-    console.log("[gallery-create-payment] Request:", JSON.stringify({ galleryId, sessionId, clienteId, valor }));
+    console.log("[gallery-create-payment] Request:", JSON.stringify({ galleryId, sessionId, clienteId, valor, qtdFotosExtras }));
 
     // ----- Validação de entrada ---------------------------------------------
     if (!clienteId) return jsonResponse({ success: false, error: "clienteId é obrigatório" }, 400);
@@ -214,6 +216,9 @@ serve(async (req) => {
           tipo_cobranca: "link",
           provedor: "infinitepay",
           status: "pendente",
+          finalidade: finalGalleryId ? "fotos_extras" : "sessao",
+          qtd_fotos: finalGalleryId ? (qtdFotosExtras ?? null) : null,
+          snapshot_fotos_incluidas: finalGalleryId ? (fotosIncluidasGaleria ?? null) : null,
         })
         .select()
         .single();
@@ -317,6 +322,9 @@ serve(async (req) => {
           mp_preference_id: mpResult.id,
           mp_payment_link: mpResult.init_point,
           mp_expiration_date: preferenceData.expiration_date_to,
+          finalidade: finalGalleryId ? "fotos_extras" : "sessao",
+          qtd_fotos: finalGalleryId ? (qtdFotosExtras ?? null) : null,
+          snapshot_fotos_incluidas: finalGalleryId ? (fotosIncluidasGaleria ?? null) : null,
         })
         .select()
         .single();
@@ -416,6 +424,9 @@ serve(async (req) => {
           status: "pendente",
           mp_payment_id: asaasPayment.id, // reuse generic slot p/ reconciliação
           mp_payment_link: checkoutUrl,
+          finalidade: finalGalleryId ? "fotos_extras" : "sessao",
+          qtd_fotos: finalGalleryId ? (qtdFotosExtras ?? null) : null,
+          snapshot_fotos_incluidas: finalGalleryId ? (fotosIncluidasGaleria ?? null) : null,
           dados_extras: {
             asaas_payment_id: asaasPayment.id,
             asaas_customer_id: asaasCustomerId,
