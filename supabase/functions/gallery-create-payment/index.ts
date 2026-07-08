@@ -216,6 +216,9 @@ serve(async (req) => {
           tipo_cobranca: "link",
           provedor: "infinitepay",
           status: "pendente",
+          finalidade: finalGalleryId ? "fotos_extras" : "sessao",
+          qtd_fotos: finalGalleryId ? (qtdFotosExtras ?? null) : null,
+          snapshot_fotos_incluidas: finalGalleryId ? (fotosIncluidasGaleria ?? null) : null,
         })
         .select()
         .single();
