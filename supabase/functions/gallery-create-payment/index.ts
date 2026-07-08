@@ -322,6 +322,9 @@ serve(async (req) => {
           mp_preference_id: mpResult.id,
           mp_payment_link: mpResult.init_point,
           mp_expiration_date: preferenceData.expiration_date_to,
+          finalidade: finalGalleryId ? "fotos_extras" : "sessao",
+          qtd_fotos: finalGalleryId ? (qtdFotosExtras ?? null) : null,
+          snapshot_fotos_incluidas: finalGalleryId ? (fotosIncluidasGaleria ?? null) : null,
         })
         .select()
         .single();
