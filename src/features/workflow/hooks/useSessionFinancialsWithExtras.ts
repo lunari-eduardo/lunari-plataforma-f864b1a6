@@ -1,45 +1,36 @@
 /**
  * Fonte única para o "painel financeiro" de UMA sessão do Workflow.
  *
- * Combina duas RPCs canônicas — porque o valor "canônico" das fotos extras
- * vive na galeria (RPC `calculate_gallery_extra_payment`, que aplica
- * desconto progressivo e faixas congeladas em tempo real), enquanto o
- * restante (base do pacote, produtos, adicional, desconto manual,
- * pagamentos e ledger de créditos) vive em `workflow_session_financials`.
+ * ⚠️ Regra arquitetural (Opção A — desconto global):
+ *   O card NUNCA calcula. Toda a matemática (base + extras + produtos +
+ *   adicional − desconto) vive na RPC `workflow_session_financials`,
+ *   que também consulta a galeria como fonte dos extras quando existir.
  *
- * Espelha a lógica de recomposição já usada nos cards do Workflow
- * (`WorkflowCardCollapsed` e `WorkflowCardExpanded`):
- *
- *   baseSessao   = valor_total − valor_extras_com_desconto
- *   extrasIdeal  = hasGaleria ? extraCalc.valor_total_ideal : valor_extras_com_desconto
- *   totalVisual  = baseSessao + extrasIdeal
- *   pendenteTot  = max(0, totalVisual − valor_pago)
- *   pendenteSess = max(0, pendenteTot − extrasPend)
- *
- * Todos os campos retornados são `number` — nunca strings BR — e o hook
- * herda os realtimes dos dois hooks internos (clientes_sessoes,
- * clientes_transacoes, cliente_creditos_ledger, galerias, cobrancas).
+ * Este hook é apenas um adaptador que mapeia os campos da RPC canônica
+ * para o formato esperado pelos componentes do Workflow. Ele não faz
+ * subtrações, nem `Math.max`, nem mistura de fontes. Se algum valor
+ * parecer errado, corrija a RPC — não este arquivo.
  */
 import { useMemo } from 'react';
 import { useSessionFinancials } from './useSessionFinancials';
 import { useGalleryExtraCalc } from '@/hooks/useGalleryExtraCalc';
 
 export interface SessionFinancialsWithExtras {
-  /** Base da sessão (pacote + produtos + adicional − desconto), sem extras. */
+  /** Base da sessão (pacote + produtos + adicional − desconto), sem extras. Derivado apenas para exibição. */
   baseSessao: number;
-  /** Valor canônico dos extras (com desconto progressivo, se aplicável). */
+  /** Valor canônico dos extras (já com desconto progressivo aplicado). */
   extrasIdeal: number;
-  /** Extras já pagos (transações vinculadas à galeria com finalidade fotos_extras). */
+  /** Extras já pagos (transações de finalidade fotos_extras). Vem da RPC da galeria (auditoria). */
   extrasPago: number;
-  /** Extras ainda em aberto (`valor_a_cobrar` da RPC). */
+  /** Extras ainda em aberto. Vem da RPC da galeria (auditoria de cobrança). */
   extrasPend: number;
-  /** Total visual — o que o cliente deve pela sessão + extras. */
+  /** Total da sessão — VEM DA RPC, não é calculado aqui. */
   totalVisual: number;
-  /** Total pago (transações — inclui pagamentos de sessão e de extras). */
+  /** Total pago da sessão — VEM DA RPC. */
   pagoTotal: number;
-  /** Pendente total (sessão + extras). */
+  /** Pendente total — VEM DA RPC. */
   pendenteTot: number;
-  /** Pendente apenas da sessão (excluindo extras em aberto). */
+  /** Pendente apenas da sessão (excluindo extras em aberto), para os botões de cobrança. */
   pendenteSess: number;
   /** True quando a galeria foi resolvida (por id direto ou via session_id). */
   hasGaleria: boolean;
@@ -58,6 +49,8 @@ export function useSessionFinancialsWithExtras(
   sessionSlug?: string | null,
 ): SessionFinancialsWithExtras {
   const { financials, isLoading: loadingFin } = useSessionFinancials(sessionId);
+  // Galeria é consultada APENAS para os contadores de "pago / a cobrar" de
+  // extras — o valor canônico total já vem da RPC principal.
   const { calc, resolvedGalleryId, isLoading: loadingGal } = useGalleryExtraCalc(
     galeriaId || null,
     { sessionId: sessionSlug || null },
@@ -66,24 +59,18 @@ export function useSessionFinancialsWithExtras(
   return useMemo(() => {
     const hasGaleria = Boolean(resolvedGalleryId);
 
-    // baseSessao = valor_total gravado no DB menos a parcela de extras
-    // atualmente computada pelo trigger. Assim, quando substituímos
-    // `valor_extras_com_desconto` pela versão canônica (galeria), o
-    // resultado permanece consistente mesmo se o trigger estiver atrasado.
-    const baseSessao = Math.max(
-      0,
-      financials.valor_total - financials.valor_extras_com_desconto,
-    );
-
-    const extrasIdeal = hasGaleria
-      ? calc.valor_total_ideal
-      : financials.valor_extras_com_desconto;
-    const extrasPago = hasGaleria ? calc.valor_pago : 0;
-    const extrasPend = hasGaleria ? Math.max(0, calc.valor_a_cobrar) : 0;
-
-    const totalVisual = baseSessao + extrasIdeal;
+    // Todos os valores canônicos vêm da RPC. Nada de subtração/Math.max aqui.
+    const totalVisual = financials.valor_total;
     const pagoTotal = financials.valor_pago;
-    const pendenteTot = Math.max(0, totalVisual - pagoTotal);
+    const pendenteTot = financials.valor_pendente;
+    const extrasIdeal = financials.valor_extras_com_desconto;
+    // "baseSessao" é apenas apresentacional (para o breakdown do card).
+    const baseSessao = Math.max(0, totalVisual - extrasIdeal);
+
+    // Auditoria de cobrança de extras — quanto já foi cobrado/pago
+    // separadamente na galeria e quanto ainda falta cobrar.
+    const extrasPago = hasGaleria ? Math.max(0, Number(calc.valor_pago) || 0) : 0;
+    const extrasPend = hasGaleria ? Math.max(0, Number(calc.valor_a_cobrar) || 0) : 0;
     const pendenteSess = Math.max(0, pendenteTot - extrasPend);
 
     return {
@@ -97,8 +84,8 @@ export function useSessionFinancialsWithExtras(
       pendenteSess: Number(pendenteSess.toFixed(2)),
       hasGaleria,
       resolvedGalleryId: resolvedGalleryId ?? null,
-      qtdExtras: hasGaleria ? calc.extras_necessarias : financials.qtd_fotos_extra,
-      qtdExtrasPagas: hasGaleria ? calc.extras_pagas : 0,
+      qtdExtras: financials.qtd_fotos_extra,
+      qtdExtrasPagas: hasGaleria ? Number(calc.extras_pagas) || 0 : 0,
       isLoading: loadingFin || loadingGal,
     };
   }, [financials, calc, resolvedGalleryId, loadingFin, loadingGal]);
