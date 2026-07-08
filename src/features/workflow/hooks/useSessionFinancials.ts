@@ -133,6 +133,23 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
           if ([newOrig, newCons, oldOrig, oldCons].includes(sessionId)) invalidate();
         },
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cobrancas' },
+        (payload) => {
+          const newSess = (payload.new as any)?.session_id;
+          const oldSess = (payload.old as any)?.session_id;
+          if (newSess === sessionId || oldSess === sessionId) invalidate();
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'galerias' },
+        (payload) => {
+          const g: any = payload.new || payload.old;
+          if (g?.session_id === sessionId) invalidate();
+        },
+      )
       .subscribe();
 
     const bridgeHandler = (event: Event) => {
