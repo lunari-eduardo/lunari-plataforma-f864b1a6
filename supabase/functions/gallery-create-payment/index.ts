@@ -424,6 +424,9 @@ serve(async (req) => {
           status: "pendente",
           mp_payment_id: asaasPayment.id, // reuse generic slot p/ reconciliação
           mp_payment_link: checkoutUrl,
+          finalidade: finalGalleryId ? "fotos_extras" : "sessao",
+          qtd_fotos: finalGalleryId ? (qtdFotosExtras ?? null) : null,
+          snapshot_fotos_incluidas: finalGalleryId ? (fotosIncluidasGaleria ?? null) : null,
           dados_extras: {
             asaas_payment_id: asaasPayment.id,
             asaas_customer_id: asaasCustomerId,
