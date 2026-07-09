@@ -72,7 +72,7 @@ serve(async (req) => {
     let sessionCurrentStatus: string | null = null;
 
     // Buscar a sessão primeiro
-    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id, status');
+    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id, status, galeria_id');
     
     if (body.sessionUuid) {
       findQuery = findQuery.eq('id', body.sessionUuid);
