@@ -18,6 +18,7 @@ import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
+import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
 
 
 interface WorkflowCardExpandedProps {
