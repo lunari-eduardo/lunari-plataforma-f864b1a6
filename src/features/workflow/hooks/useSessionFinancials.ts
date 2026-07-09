@@ -31,6 +31,8 @@ export interface SessionFinancials {
   credito_liquido: number;
   extras_pago: number;
   extras_pendente: number;
+  extras_liquido: number;
+  desconto_aplicado_extras: number;
 }
 
 const ZERO: Omit<SessionFinancials, 'session_id'> = {
@@ -51,7 +53,10 @@ const ZERO: Omit<SessionFinancials, 'session_id'> = {
   credito_liquido: 0,
   extras_pago: 0,
   extras_pendente: 0,
+  extras_liquido: 0,
+  desconto_aplicado_extras: 0,
 };
+
 
 function toNum(v: unknown): number {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? '0'));
@@ -79,8 +84,11 @@ function normalize(row: Record<string, unknown> | null | undefined, sessionId: s
     credito_liquido: toNum(row.credito_liquido),
     extras_pago: toNum(row.extras_pago),
     extras_pendente: toNum(row.extras_pendente),
+    extras_liquido: toNum(row.extras_liquido),
+    desconto_aplicado_extras: toNum(row.desconto_aplicado_extras),
   };
 }
+
 
 export function useSessionFinancials(sessionId: string | null | undefined) {
   const queryClient = useQueryClient();

@@ -14,11 +14,15 @@ import { useSessionFinancials } from './useSessionFinancials';
 export interface SessionFinancialsWithExtras {
   /** Base da sessão (pacote + produtos + adicional − desconto), sem extras. Apenas apresentação. */
   baseSessao: number;
-  /** Valor canônico dos extras (já com desconto progressivo aplicado). */
+  /** Valor bruto dos extras (com desconto progressivo, ANTES do desconto manual). */
   extrasIdeal: number;
+  /** Valor dos extras após aplicar o excedente do desconto manual (fonte de verdade). */
+  extrasLiquido: number;
+  /** Excedente do desconto manual aplicado sobre os extras. */
+  descontoAplicadoExtras: number;
   /** Extras já pagos (soma de transações vinculadas às cobranças de extras). */
   extrasPago: number;
-  /** Extras ainda em aberto. */
+  /** Extras ainda em aberto (baseado em `extras_pendente` da RPC). */
   extrasPend: number;
   /** Total da sessão — VEM DA RPC. */
   totalVisual: number;
@@ -28,16 +32,13 @@ export interface SessionFinancialsWithExtras {
   pendenteTot: number;
   /** Pendente apenas da sessão (excluindo extras em aberto), para botões de cobrança. */
   pendenteSess: number;
-  /** True quando há galeria vinculada à sessão (via qtd_extras_galeria > 0 ou galeriaId presente). */
+  /** True quando há galeria vinculada à sessão. */
   hasGaleria: boolean;
-  /** Compatibilidade com callers antigos (ExtraChargeModal). Preservado como null aqui. */
+  /** Compatibilidade com callers antigos. */
   resolvedGalleryId: string | null;
-  /** Contadores de fotos extras. */
   qtdExtras: number;
   qtdExtrasPagas: number;
-  /** Crédito líquido (gerado − utilizado). */
   creditoLiquido: number;
-  /** Loading. */
   isLoading: boolean;
 }
 
@@ -53,22 +54,24 @@ export function useSessionFinancialsWithExtras(
     const pagoTotal = financials.valor_pago;
     const pendenteTot = financials.valor_pendente;
     const extrasIdeal = financials.valor_extras_com_desconto;
+    const extrasLiquido = financials.extras_liquido ?? extrasIdeal;
+    const descontoAplicadoExtras = financials.desconto_aplicado_extras ?? 0;
     const extrasPago = financials.extras_pago;
     const extrasPend = financials.extras_pendente;
-    const baseSessao = Math.max(0, totalVisual - extrasIdeal);
+    const baseSessao = Math.max(0, totalVisual - extrasLiquido);
     const pendenteSess = Math.max(0, pendenteTot - extrasPend);
     const hasGaleria = Boolean(galeriaId) || financials.qtd_extras_galeria > 0;
 
-    // qtdExtrasPagas: derivado do valor pago vs unitário efetivo (aproximação
-    // segura para UI; a fonte de verdade é `extras_pago` em R$).
     const unit = financials.qtd_fotos_extra > 0
-      ? extrasIdeal / financials.qtd_fotos_extra
+      ? extrasLiquido / financials.qtd_fotos_extra
       : 0;
     const qtdExtrasPagas = unit > 0 ? Math.min(financials.qtd_fotos_extra, Math.round(extrasPago / unit)) : 0;
 
     return {
       baseSessao: Number(baseSessao.toFixed(2)),
       extrasIdeal: Number(extrasIdeal.toFixed(2)),
+      extrasLiquido: Number(extrasLiquido.toFixed(2)),
+      descontoAplicadoExtras: Number(descontoAplicadoExtras.toFixed(2)),
       extrasPago: Number(extrasPago.toFixed(2)),
       extrasPend: Number(extrasPend.toFixed(2)),
       totalVisual: Number(totalVisual.toFixed(2)),
@@ -84,3 +87,4 @@ export function useSessionFinancialsWithExtras(
     };
   }, [financials, galeriaId, isLoading]);
 }
+

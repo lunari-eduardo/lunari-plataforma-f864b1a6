@@ -72,7 +72,7 @@ serve(async (req) => {
     let sessionCurrentStatus: string | null = null;
 
     // Buscar a sessão primeiro
-    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id, status');
+    let findQuery = supabase.from('clientes_sessoes').select('id, session_id, user_id, status, galeria_id');
     
     if (body.sessionUuid) {
       findQuery = findQuery.eq('id', body.sessionUuid);
@@ -105,14 +105,37 @@ serve(async (req) => {
     const hasExtrasSync = body.qtdFotosExtra !== undefined
       || body.valorFotoExtra !== undefined
       || body.valorTotalFotoExtra !== undefined;
-    if (body.qtdFotosExtra !== undefined) {
+
+    // GATE: só propaga qtd_fotos_extra quando a galeria estiver com seleção
+    // finalizada (ou o cliente estiver finalizando agora). Isso evita mostrar
+    // extras pendentes prematuramente no workflow enquanto o cliente ainda
+    // está selecionando. O DB também tem trigger de guarda como defesa dupla.
+    let allowExtrasPropagation = body.selecaoFinalizada === true;
+    if (body.qtdFotosExtra !== undefined && !allowExtrasPropagation) {
+      const galeriaLookupId = body.galeriaId ?? (sessionData as any)?.galeria_id ?? null;
+      if (galeriaLookupId) {
+        const { data: gal } = await supabase
+          .from('galerias')
+          .select('status')
+          .eq('id', galeriaLookupId)
+          .maybeSingle();
+        const galStatus = (gal as any)?.status ?? null;
+        if (galStatus && !['rascunho', 'enviado', 'selecao_iniciada'].includes(galStatus)) {
+          allowExtrasPropagation = true;
+        }
+        console.log('🔐 Gate extras: galStatus=', galStatus, 'allow=', allowExtrasPropagation);
+      }
+    }
+
+    if (body.qtdFotosExtra !== undefined && allowExtrasPropagation) {
       updateData.qtd_fotos_extra = body.qtdFotosExtra;
     }
-    if (hasExtrasSync) {
+    if (hasExtrasSync && allowExtrasPropagation) {
       // Reset do override: dados reais do Gallery têm prioridade sobre ajuste manual.
       updateData.extras_overridden = false;
       updateData.extras_overridden_at = null;
     }
+
     
     // Status da galeria
     if (body.statusGaleria !== undefined) {
