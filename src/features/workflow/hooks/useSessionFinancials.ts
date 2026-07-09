@@ -31,6 +31,8 @@ export interface SessionFinancials {
   credito_liquido: number;
   extras_pago: number;
   extras_pendente: number;
+  extras_liquido: number;
+  desconto_aplicado_extras: number;
 }
 
 const ZERO: Omit<SessionFinancials, 'session_id'> = {
@@ -51,7 +53,10 @@ const ZERO: Omit<SessionFinancials, 'session_id'> = {
   credito_liquido: 0,
   extras_pago: 0,
   extras_pendente: 0,
+  extras_liquido: 0,
+  desconto_aplicado_extras: 0,
 };
+
 
 function toNum(v: unknown): number {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? '0'));
