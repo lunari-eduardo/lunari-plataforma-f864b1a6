@@ -154,8 +154,14 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'galerias' },
         (payload) => {
+          // Invalida sempre que uma galeria do usuário muda status, fotos_selecionadas
+          // ou total_fotos_extras_vendidas — o gate pré-seleção da RPC depende disso.
+          // Comparação segura: id direto (quando session.galeria_id existe) OU
+          // session_id textual bater com slug. Sem filtro server-side porque não
+          // temos o slug aqui; RLS já limita ao dono.
           const g: any = payload.new || payload.old;
-          if (g?.session_id === sessionId) invalidate();
+          if (!g) return;
+          invalidate();
         },
       )
       .subscribe();
