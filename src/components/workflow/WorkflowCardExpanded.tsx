@@ -18,6 +18,7 @@ import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
+import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
 
 
 interface WorkflowCardExpandedProps {
@@ -146,27 +147,33 @@ export function WorkflowCardExpanded({
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
 
   // Snapshot canônico de fotos extras (RPC compartilhada com Gallery).
-  // Fonte única — resolve galeria por `session.galeriaId` OU, em fallback,
-  // por `galerias.session_id`. A RPC aplica desconto progressivo das faixas
-  // congeladas e considera pagamentos anteriores (handoff §5.1).
+  // `useGalleryExtraCalc` fica RESERVADO ao fluxo de cobrança (ExtraChargeModal /
+  // CombinedChargeModal) — provê `resolvedGalleryId` e `extras_necessarias/pagas`.
+  // Todo DISPLAY (totais, pendente, extras) vem de `useSessionFinancialsWithExtras`,
+  // que é a única fonte de verdade compartilhada com card colapsado, modal de
+  // pagamentos e CRM. Isso elimina divergência entre superfícies.
   const { calc: extraCalc, resolvedGalleryId, isLoading: extraCalcLoading } =
     useGalleryExtraCalc(session.galeriaId || null, {
       sessionId: session.sessionId || null,
     });
-  const hasGaleria = Boolean(resolvedGalleryId);
-  const valorFotoExtraLocal = parseCurrency(String(session.valorTotalFotoExtra || "0"));
-  const extrasTotalCanonico = hasGaleria ? extraCalc.valor_total_ideal : valorFotoExtraLocal;
-  const extrasPagoCanonico = hasGaleria ? extraCalc.valor_pago : 0;
-  const extrasPendente = hasGaleria ? Math.max(0, extraCalc.valor_a_cobrar) : 0;
-  const extrasFullyPaid = hasGaleria ? extraCalc.is_fully_paid === true : true;
+
+  const fin = useSessionFinancialsWithExtras(
+    session.id,
+    session.galeriaId || resolvedGalleryId || null,
+    session.sessionId || null,
+  );
+
+  const hasGaleria = fin.hasGaleria || Boolean(resolvedGalleryId);
+  const extrasTotalCanonico = fin.extrasLiquido;
+  const extrasPagoCanonico = fin.extrasPago;
+  const extrasPendente = fin.extrasPend;
+  const extrasFullyPaid = fin.extrasPend <= 0.001;
   const valorFotoExtraTotal = formatCurrency(extrasTotalCanonico);
 
-  // Recompor totais visuais: substitui pedaço local de extras pelo canônico.
-  // Isso resolve o caso do desconto progressivo (ex: R$20 local vs R$12 real).
-  const baseSessaoVisual = Math.max(0, total - valorFotoExtraLocal);
-  const totalVisual = hasGaleria ? baseSessaoVisual + extrasTotalCanonico : total;
-  const pendenteVisual = Math.max(0, totalVisual - valorPago);
-  const pendenteSessaoSugerido = Math.max(0, pendenteVisual - extrasPendente);
+  // Totais visuais vêm 100% da RPC — sem recomposição local.
+  const totalVisual = fin.totalVisual;
+  const pendenteVisual = fin.pendenteTot;
+  const pendenteSessaoSugerido = fin.pendenteSess;
 
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
