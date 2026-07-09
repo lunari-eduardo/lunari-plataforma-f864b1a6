@@ -84,8 +84,11 @@ function normalize(row: Record<string, unknown> | null | undefined, sessionId: s
     credito_liquido: toNum(row.credito_liquido),
     extras_pago: toNum(row.extras_pago),
     extras_pendente: toNum(row.extras_pendente),
+    extras_liquido: toNum(row.extras_liquido),
+    desconto_aplicado_extras: toNum(row.desconto_aplicado_extras),
   };
 }
+
 
 export function useSessionFinancials(sessionId: string | null | undefined) {
   const queryClient = useQueryClient();
