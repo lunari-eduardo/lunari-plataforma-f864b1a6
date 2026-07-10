@@ -66,7 +66,7 @@ export function WorkflowTable({
       productOptions={productOptions}
       onStatusChange={onStatusChange}
       onEditSession={onEditSession}
-      onAddPayment={onAddPayment}
+      
       onDeleteSession={onDeleteSession}
       onFieldUpdate={onFieldUpdate}
     />
