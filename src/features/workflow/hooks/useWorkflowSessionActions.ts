@@ -259,7 +259,7 @@ export function useWorkflowSessionActions({
         throw error;
       }
     },
-    [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability],
+    [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability, pacotesCtx, categoriasCtx],
   );
 
   const handleStatusChange = useCallback(
