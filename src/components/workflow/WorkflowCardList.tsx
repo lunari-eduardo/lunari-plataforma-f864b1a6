@@ -11,7 +11,7 @@ interface WorkflowCardListProps {
   productOptions: any[];
   onStatusChange: (id: string, newStatus: string) => void;
   onEditSession: (id: string) => void;
-  onAddPayment: (id: string) => void;
+  
   onDeleteSession?: (id: string, sessionTitle: string, paymentCount: number, action: DeleteAction) => void;
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
 }
