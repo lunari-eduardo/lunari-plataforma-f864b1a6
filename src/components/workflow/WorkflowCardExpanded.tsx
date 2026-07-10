@@ -578,19 +578,6 @@ export function WorkflowCardExpanded({
         />
       )}
 
-      <PaymentConfigModalExpanded
-        isOpen={showAddPaymentModal}
-        onClose={() => setShowAddPaymentModal(false)}
-        sessionId={session.id}
-        clienteId={session.clienteId}
-        valorTotal={totalVisual}
-        valorJaPago={valorPago}
-        valorRestante={pendenteVisual}
-        clienteNome={session.nome}
-        onAddPayment={hookAddPayment}
-        onCreateInstallments={createInstallments}
-        onSchedulePayment={schedulePayment}
-      />
 
       <OverrideExtrasDialog
         pendingExtraEdit={pendingExtraEdit}
