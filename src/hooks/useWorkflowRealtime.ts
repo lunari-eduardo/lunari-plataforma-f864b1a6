@@ -286,11 +286,14 @@ export const useWorkflowRealtime = () => {
               sanitizedUpdates.valor_foto_extra = 0;
               sanitizedUpdates.valor_total_foto_extra = 0;
               sanitizedUpdates.categoria = '';
-              // Zerar regras_congeladas (objeto vazio passa pelo guard NULL)
+              // Zerar regras_congeladas (objeto vazio passa pelo guard NULL);
+              // novo dataCongelamento sinaliza re-freeze legítimo e libera o
+              // guard trg_guard_regras_congeladas_sessoes.
               sanitizedUpdates.regras_congeladas = {
                 pacote: null,
                 precificacaoFotoExtra: null,
-                produtos: []
+                produtos: [],
+                dataCongelamento: new Date().toISOString(),
               } as any;
               // Preservar apenas produtos manuais
               const produtosAtuais = currentSession?.produtos_incluidos || [];
