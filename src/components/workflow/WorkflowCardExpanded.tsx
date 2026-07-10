@@ -496,7 +496,7 @@ export function WorkflowCardExpanded({
           extrasPendente={extrasPendente}
           extrasFullyPaid={extrasFullyPaid}
           sessaoPendente={pendenteSessaoSugerido}
-          onAgendarPagamento={() => setShowAddPaymentModal(true)}
+          
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
         />
       </div>
