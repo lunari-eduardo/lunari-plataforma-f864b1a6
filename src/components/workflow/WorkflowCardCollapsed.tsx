@@ -322,7 +322,7 @@ export function WorkflowCardCollapsed({
           <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pacote</span>
             <WorkflowPackageCombobox
-              key={`package-${session.id}-${pacoteAtual}`}
+              key={`package-${session.id}`}
               value={pacoteAtual}
               displayName={displayPackageName}
               onValueChange={(packageData) => {
