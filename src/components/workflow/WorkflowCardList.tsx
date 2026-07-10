@@ -24,7 +24,7 @@ export function WorkflowCardList({
   productOptions,
   onStatusChange,
   onEditSession,
-  onAddPayment,
+  
   onDeleteSession,
   onFieldUpdate,
 }: WorkflowCardListProps) {
