@@ -40,6 +40,9 @@ export { listStatusOptions } from "./application/queries/listStatusOptions";
 export { searchSessions } from "./application/queries/searchSessions";
 export { metricsForMonth } from "./application/queries/metricsForMonth";
 export { pendingPayments } from "./application/queries/pendingPayments";
+export { getSessionFinancials } from "./application/queries/getSessionFinancials";
+export { listSessionsByPaymentStatus } from "./application/queries/listSessionsByPaymentStatus";
+export { diagnoseSession } from "./application/queries/diagnoseSession";
 
 export { WorkflowCardSchema, WorkflowSessionStatusSchema } from "./domain/types";
 export type { WorkflowCard } from "./domain/types";
