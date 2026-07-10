@@ -61,6 +61,7 @@ import "./application/queries/listCategories";
 import "./application/queries/kpisByNature";
 import "./application/queries/kpisByNatureRange";
 import "./application/queries/getClientCredit";
+import "./application/queries/listClientsWithCredit";
 
 // Re-export para uso direto
 export { createTransaction } from "./application/commands/createTransaction";
