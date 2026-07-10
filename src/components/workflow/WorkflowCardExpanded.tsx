@@ -66,6 +66,9 @@ export function WorkflowCardExpanded({
     setAdicionalValue(session.valorAdicional || "");
     setObsValue(session.observacoes || "");
     setValorFotoExtraValue(session.valorFotoExtra || "");
+    // Não sobrescreve o input quando o campo cru da sessão está 0 mas a galeria
+    // já tem qtd sincronizada (RPC) — evita mostrar 0 no expandido enquanto o
+    // header mostra o número real. `fin.qtdExtras` é aplicado logo abaixo.
     setQtdFotosExtraValue(String(session.qtdFotosExtra || 0));
   }, [
     session.desconto,
