@@ -329,11 +329,7 @@ export function useWorkflowSessionActions({
     updateSession,
     handleStatusChange,
     handleEditSession,
-    handleAddPayment,
     handleDeleteSession,
     handleFieldUpdate,
-    manualPaymentSessionId,
-    handleManualPaymentClose,
-    handleManualPaymentSuccess,
   };
 }
