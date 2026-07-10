@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Plus, Send, Images } from "lucide-react";
+import { CreditCard, Send, Images } from "lucide-react";
 import { SessaoContratoButton } from "@/components/contratos/SessaoContratoButton";
 import { FEATURE_COMBINED_CHARGE } from "@/features/workflow/config";
 import type { SessionData } from "@/types/workflow";
@@ -13,7 +13,6 @@ interface Props {
   extrasPendente?: number;
   extrasFullyPaid?: boolean;
   sessaoPendente?: number;
-  onAgendarPagamento: () => void;
   onAbrirPagamentos: () => void;
 }
 
@@ -32,11 +31,8 @@ export function ExpandedActions({
   extrasPendente = 0,
   extrasFullyPaid = false,
   sessaoPendente = 0,
-  onAgendarPagamento,
   onAbrirPagamentos,
 }: Props) {
-  // Extras vem da RPC canônica; pode existir mesmo sem `session.galeriaId`
-  // (fallback resolvido por session_id no card).
   const showExtras = extrasPendente > 0 || (!extrasFullyPaid && !!onCobrarExtras);
   const showCobrarTudo =
     FEATURE_COMBINED_CHARGE &&
@@ -84,11 +80,6 @@ export function ExpandedActions({
             Cobrar tudo (1 link)
           </Button>
         )}
-
-        <Button size="sm" onClick={onAgendarPagamento} className="gap-2 w-full">
-          <Plus className="h-3.5 w-3.5" />
-          Agendar pagamento manual
-        </Button>
 
         <div className="w-full border-t border-border/20 my-1" />
 
