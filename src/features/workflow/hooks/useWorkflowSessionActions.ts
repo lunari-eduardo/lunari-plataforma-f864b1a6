@@ -44,6 +44,7 @@ export function useWorkflowSessionActions({
 }: Params) {
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
   const runCapability = useRunCapability();
+  const { pacotes: pacotesCtx, categoriasFull: categoriasCtx } = useAppContext();
 
   const updateSession = useCallback(
     async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
