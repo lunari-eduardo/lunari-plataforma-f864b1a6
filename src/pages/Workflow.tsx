@@ -5,7 +5,7 @@ import { Search } from "lucide-react";
 
 import { WorkflowTable } from "@/components/workflow/WorkflowTable";
 import { WorkflowFilters } from "@/components/workflow/WorkflowFilters";
-import { ManualPaymentModal } from "@/components/workflow/ManualPaymentModal";
+
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 import { useWorkflowStatus } from "@/hooks/useWorkflowStatus";
