@@ -21,6 +21,9 @@ import "./application/queries/listStatusOptions";
 import "./application/queries/searchSessions";
 import "./application/queries/metricsForMonth";
 import "./application/queries/pendingPayments";
+import "./application/queries/getSessionFinancials";
+import "./application/queries/listSessionsByPaymentStatus";
+import "./application/queries/diagnoseSession";
 
 // Re-export para uso direto via TanStack hooks ou execute()
 export { advanceCard } from "./application/commands/advanceCard";
