@@ -44,7 +44,7 @@ export function WorkflowCardCollapsed({
   onFieldUpdate,
   onDeleteSession,
 }: WorkflowCardCollapsedProps) {
-  const { addPayment } = useAppContext();
+  const { addPayment, pacotes } = useAppContext();
   const { hasGaleryAccess, accessState } = useAccessControl();
   const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
 
