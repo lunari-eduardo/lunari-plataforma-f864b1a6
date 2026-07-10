@@ -53,12 +53,6 @@ export function WorkflowCardExpanded({
     | null
   >(null);
 
-  const {
-    addPayment: hookAddPayment,
-    createInstallments,
-    schedulePayment,
-  } = useSessionPayments(session.id, session.pagamentos || []);
-
   useEffect(() => {
     setDescontoValue(session.desconto || "");
     setAdicionalValue(session.valorAdicional || "");
