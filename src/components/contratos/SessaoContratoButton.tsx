@@ -87,33 +87,24 @@ export function SessaoContratoButton({
             variant={algumPendenteParaMim ? 'default' : 'outline'}
             size="sm"
             onClick={handleClick}
-            className={cn('gap-2 w-full justify-between', className)}
+            className={cn('gap-2 w-full', className)}
             aria-label="Contratos da sessão"
           >
-            <span className="flex items-center gap-2">
-              <FileSignature className="h-3.5 w-3.5" />
+            <FileSignature className="h-4 w-4" />
+            <span className="flex-1 text-center">
               {algumPendenteParaMim ? 'Assinar contrato' : label}
             </span>
             {algumPendenteParaMim ? (
-              <span className="flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-                </span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
               </span>
             ) : (
               statusPrincipal && (
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'h-2 w-2 rounded-full',
-                      dotColor[statusPrincipal]
-                    )}
-                  />
-                  <span className="text-[10px] text-muted-foreground">
-                    {CONTRATO_STATUS_LABELS[statusPrincipal]}
-                  </span>
-                </span>
+                <span
+                  className={cn('h-2 w-2 rounded-full', dotColor[statusPrincipal])}
+                  title={CONTRATO_STATUS_LABELS[statusPrincipal]}
+                />
               )
             )}
           </Button>
