@@ -327,10 +327,10 @@ export function WorkflowCardCollapsed({
             </span>
             <div className="min-h-8 flex items-center justify-center">
               <span className="text-sm font-medium text-foreground tabular-nums">
-                {/* Snapshot canônico da galeria (extras_necessarias) prevalece sobre
-                    session.qtdFotosExtra em cache (que pode estar 30s stale). */}
-                {hasGaleria && extraCalc.extras_necessarias > 0
-                  ? extraCalc.extras_necessarias
+                {/* Fonte única: RPC workflow_session_financials.
+                    Compartilha cache com o card expandido e o modal de pagamento. */}
+                {hasGaleria && fin.qtdExtras > 0
+                  ? fin.qtdExtras
                   : (session.qtdFotosExtra || 0)}
               </span>
             </div>
