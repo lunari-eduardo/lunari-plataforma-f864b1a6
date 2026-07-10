@@ -237,13 +237,6 @@ function WorkflowContent() {
         onClose={() => setIsTasksPanelOpen(false)}
         currentMonth={month.currentMonth}
       />
-
-      <ManualPaymentModal
-        isOpen={actions.manualPaymentSessionId !== null}
-        onClose={actions.handleManualPaymentClose}
-        sessionId={actions.manualPaymentSessionId}
-        onSuccess={actions.handleManualPaymentSuccess}
-      />
     </div>
   );
 }
