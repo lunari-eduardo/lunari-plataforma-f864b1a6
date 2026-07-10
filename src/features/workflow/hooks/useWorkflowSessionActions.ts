@@ -97,9 +97,74 @@ export function useWorkflowSessionActions({
             case "produtosList":
               cacheSafeUpdates.produtos_incluidos = value as any;
               break;
-            case "pacote":
-              cacheSafeUpdates.pacote = value as any;
+            case "pacote": {
+              // Otimista completo: resolve o pacote localmente (AppContext já
+              // hidratado — sem network) e preenche o snapshot que o servidor
+              // vai persistir. Sem isso, o card fica ~4s mostrando o UUID cru.
+              const rawVal = typeof value === "string" ? value : "";
+              const currentAny = currentSession as any;
+              if (rawVal === "") {
+                cacheSafeUpdates.pacote = "";
+                (cacheSafeUpdates as any).categoria = "";
+                (cacheSafeUpdates as any).valor_base_pacote = 0;
+                (cacheSafeUpdates as any).valor_foto_extra = 0;
+                (cacheSafeUpdates as any).valor_total_foto_extra = 0;
+                const manuais = Array.isArray(currentAny.produtos_incluidos)
+                  ? currentAny.produtos_incluidos.filter((p: any) => p?.tipo === "manual")
+                  : [];
+                (cacheSafeUpdates as any).produtos_incluidos = manuais;
+                (cacheSafeUpdates as any).regras_congeladas = {
+                  pacote: null,
+                  precificacaoFotoExtra: null,
+                  produtos: [],
+                  dataCongelamento: new Date().toISOString(),
+                };
+              } else {
+                const pkg = (pacotesCtx || []).find(
+                  (p: any) => p.id === rawVal || p.nome === rawVal,
+                );
+                if (pkg) {
+                  const catNome =
+                    (categoriasCtx || []).find((c: any) => c.id === pkg.categoria_id)?.nome ||
+                    currentAny.categoria ||
+                    "";
+                  const qtdAtual = Number(currentAny.qtd_fotos_extra) || 0;
+                  const valorFotoExtra = Number(pkg.valor_foto_extra) || 0;
+                  const manuais = Array.isArray(currentAny.produtos_incluidos)
+                    ? currentAny.produtos_incluidos.filter((p: any) => p?.tipo === "manual")
+                    : [];
+                  const produtosPacote = Array.isArray(pkg.produtosIncluidos)
+                    ? pkg.produtosIncluidos
+                    : [];
+                  cacheSafeUpdates.pacote = pkg.nome;
+                  (cacheSafeUpdates as any).categoria = catNome;
+                  (cacheSafeUpdates as any).valor_base_pacote = Number(pkg.valor_base) || 0;
+                  (cacheSafeUpdates as any).valor_foto_extra = valorFotoExtra;
+                  (cacheSafeUpdates as any).valor_total_foto_extra = Number(
+                    (qtdAtual * valorFotoExtra).toFixed(2),
+                  );
+                  (cacheSafeUpdates as any).produtos_incluidos = [...produtosPacote, ...manuais];
+                  (cacheSafeUpdates as any).regras_congeladas = {
+                    ...(currentAny.regras_congeladas || {}),
+                    pacote: {
+                      id: pkg.id,
+                      nome: pkg.nome,
+                      categoria: catNome,
+                      valorBase: Number(pkg.valor_base) || 0,
+                      valorFotoExtra,
+                      valorFotoExtraEfetivo: valorFotoExtra,
+                      fotosIncluidas: Number(pkg.fotos_incluidas) || 0,
+                    },
+                    dataCongelamento: new Date().toISOString(),
+                  };
+                } else {
+                  // Fallback: pacote não encontrado localmente → grava valor
+                  // cru e deixa o servidor resolver (comportamento antigo).
+                  cacheSafeUpdates.pacote = rawVal as any;
+                }
+              }
               break;
+            }
             case "categoria":
               cacheSafeUpdates.categoria = value as any;
               break;
