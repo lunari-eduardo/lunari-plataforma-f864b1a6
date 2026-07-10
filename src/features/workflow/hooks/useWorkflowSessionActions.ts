@@ -237,24 +237,6 @@ export function useWorkflowSessionActions({
     console.log("Edit session:", sessionId);
   }, []);
 
-  // Manual payment modal (Onda 4b)
-  const [manualPaymentSessionId, setManualPaymentSessionId] = useState<string | null>(null);
-
-  const handleAddPayment = useCallback((sessionId: string) => {
-    setManualPaymentSessionId(sessionId);
-  }, []);
-
-  const handleManualPaymentClose = useCallback(() => setManualPaymentSessionId(null), []);
-
-  const handleManualPaymentSuccess = useCallback(
-    (sessionId: string) => {
-      void ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
-      window.dispatchEvent(
-        new CustomEvent("payment-created", { detail: { sessionId, valor: 0, paymentId: null } }),
-      );
-    },
-    [ensureMonthLoaded, currentMonth],
-  );
 
   const handleDeleteSession = useCallback(
     async (
