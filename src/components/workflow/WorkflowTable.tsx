@@ -53,7 +53,7 @@ export function WorkflowTable({
   productOptions,
   onStatusChange,
   onEditSession,
-  onAddPayment,
+  
   onDeleteSession,
   onFieldUpdate,
 }: WorkflowTableProps) {
