@@ -216,7 +216,7 @@ function WorkflowContent() {
               productOptions={productOptions}
               onStatusChange={actions.handleStatusChange}
               onEditSession={actions.handleEditSession}
-              onAddPayment={actions.handleAddPayment}
+              
               onDeleteSession={actions.handleDeleteSession}
               onFieldUpdate={actions.handleFieldUpdate}
               visibleColumns={columns.visibleColumns}
