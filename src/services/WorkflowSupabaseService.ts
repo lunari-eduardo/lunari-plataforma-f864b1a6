@@ -381,7 +381,7 @@ export class WorkflowSupabaseService {
         valor_pago: Number(hydratedData.paidAmount || hydratedData.paid_amount || 0),
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
-        valor_foto_extra: valorFotoExtraInicial,
+        valor_foto_extra: Number(packageData?.valor_foto_extra) || valorFotoExtraInicial || 0,
         qtd_fotos_extra: 0,
         valor_total_foto_extra: 0,
         regras_congeladas: regrasCongeladas as any,
