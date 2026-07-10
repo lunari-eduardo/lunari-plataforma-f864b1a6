@@ -114,6 +114,7 @@ interface AppContextType {
   origens: OrigemCliente[];
   clientes: Cliente[];
   categorias: string[];
+  categoriasFull: Array<{ id: string; nome: string }>;
   produtos: any[];
   pacotes: any[];
   
