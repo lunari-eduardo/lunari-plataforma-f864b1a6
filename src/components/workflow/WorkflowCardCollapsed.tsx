@@ -44,7 +44,7 @@ export function WorkflowCardCollapsed({
   onFieldUpdate,
   onDeleteSession,
 }: WorkflowCardCollapsedProps) {
-  const { addPayment } = useAppContext();
+  const { addPayment, pacotes } = useAppContext();
   const { hasGaleryAccess, accessState } = useAccessControl();
   const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
 
@@ -168,9 +168,41 @@ export function WorkflowCardCollapsed({
 
     const parseValor = (str?: string) =>
       Number(String(str || "").replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+
+    // Fallback ao registro real do pacote (via id congelado ou nome), caso
+    // regras_congeladas esteja incompleto/NULL (ex.: sessões antigas ou
+    // freezing que falhou no createSessionFromAppointment).
+    const frozenPkg = session.regras_congeladas?.pacote as any | undefined;
+    const pacoteAtualRegistro = (pacotes || []).find((p: any) => {
+      if (frozenPkg?.id && p.id === frozenPkg.id) return true;
+      if (session.pacote && p.nome === session.pacote) return true;
+      return false;
+    });
+
     const valorAtualSessao = parseValor(session.valorFotoExtra);
-    const valorCongelado = Number(session.regras_congeladas?.pacote?.valorFotoExtra) || 0;
-    const precoExtraAtual = valorAtualSessao > 0 ? valorAtualSessao : valorCongelado;
+    const valorCongelado = Number(frozenPkg?.valorFotoExtra) || 0;
+    const valorPacoteAtual = Number(pacoteAtualRegistro?.valor_foto_extra) || 0;
+    const precoExtraAtual =
+      valorAtualSessao > 0
+        ? valorAtualSessao
+        : valorCongelado > 0
+        ? valorCongelado
+        : valorPacoteAtual;
+
+    const fotosIncluidas =
+      Number(frozenPkg?.fotosIncluidas) ||
+      Number(pacoteAtualRegistro?.fotos_incluidas) ||
+      undefined;
+
+    const modeloCobranca =
+      session.regras_congeladas?.precificacaoFotoExtra?.modelo || "fixo";
+
+    if (!frozenPkg && pacoteAtualRegistro) {
+      console.warn(
+        "[Workflow→Gallery] regras_congeladas ausente — usando registro atual do pacote como fallback",
+        { sessionId: session.id, pacoteId: pacoteAtualRegistro.id },
+      );
+    }
 
     const url = buildGalleryNewUrl({
       sessionId: session.sessionId || session.id,
@@ -179,15 +211,18 @@ export function WorkflowCardCollapsed({
       clienteNome: session.nome,
       clienteEmail: session.email || "",
       clienteTelefone: session.whatsapp || "",
-      pacoteNome: session.regras_congeladas?.pacote?.nome || session.pacote,
-      pacoteCategoria: session.regras_congeladas?.pacote?.categoria || session.categoria,
-      fotosIncluidas: session.regras_congeladas?.pacote?.fotosIncluidas,
-      modeloCobranca: session.regras_congeladas?.precificacaoFotoExtra?.modelo,
+      pacoteNome: frozenPkg?.nome || pacoteAtualRegistro?.nome || session.pacote,
+      pacoteCategoria:
+        frozenPkg?.categoria ||
+        pacoteAtualRegistro?.categorias?.nome ||
+        session.categoria,
+      fotosIncluidas,
+      modeloCobranca,
       precoExtra: precoExtraAtual,
       tipoAssinatura: accessState.planCode,
     });
     window.open(url, "_blank", "noopener,noreferrer");
-  }, [session, hasGaleryAccess, accessState.planCode, galerias]);
+  }, [session, hasGaleryAccess, accessState.planCode, galerias, pacotes]);
 
   const handleCreateEntrega = useCallback(() => {
     if (!hasGaleryAccess) {

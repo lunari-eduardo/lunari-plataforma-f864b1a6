@@ -233,14 +233,15 @@ export class WorkflowSupabaseService {
       // Freeze complete package and product data with CURRENT pricing model
       const { pricingFreezingService } = await import('@/services/PricingFreezingService');
       
-      // ✅ FASE 4: Aceitar package_id ou packageId (camelCase/snake_case) com tolerância
-      const packageId = appointmentData.package_id || appointmentData.packageId;
+      // ✅ FASE 4: Sempre priorizar dados hidratados do banco
+      const packageId = hydratedData.package_id || hydratedData.packageId
+        || appointmentData.package_id || appointmentData.packageId;
       
       // FASE 4: Congelar dados de precificação com tolerância a pacote ausente
       console.log('📦 PackageId being frozen:', packageId, 'Categoria:', categoria);
       
       // FASE 3: Enhanced freezing with fallbacks to ensure valor_base_pacote is always set
-      let regrasCongeladas;
+      let regrasCongeladas: any;
       let valorBasePacote = 0;
       
       if (packageId) {
@@ -249,28 +250,45 @@ export class WorkflowSupabaseService {
           categoria
         );
         
-        if (!regrasCongeladas) {
-          console.warn('⚠️ Falha ao congelar dados de precificação, usando fallbacks');
-          // FASE 1: Try to get package value directly as fallback
-          if (packageData?.valor_base) {
-            valorBasePacote = Number(packageData.valor_base);
-            console.log('💰 Using package valor_base as fallback:', valorBasePacote);
+        if (!regrasCongeladas || !regrasCongeladas.pacote) {
+          console.warn('⚠️ Freezing sem .pacote — reconstruindo a partir de packageData');
+          if (packageData) {
+            valorBasePacote = Number(packageData.valor_base) || 0;
+            regrasCongeladas = {
+              modelo: 'completo',
+              dataCongelamento: new Date().toISOString(),
+              pacote: {
+                id: packageData.id,
+                nome: packageData.nome,
+                valorBase: valorBasePacote,
+                valorFotoExtra: Number(packageData.valor_foto_extra) || 0,
+                fotosIncluidas: Number(packageData.fotos_incluidas) || 0,
+                categoria: (packageData as any).categorias?.nome || categoria || 'Sessão',
+                categoriaId: packageData.categoria_id,
+                produtosIncluidos: Array.isArray(packageData.produtos_incluidos)
+                  ? packageData.produtos_incluidos
+                  : [],
+              },
+              produtos: Array.isArray(packageData.produtos_incluidos)
+                ? packageData.produtos_incluidos
+                : [],
+              precificacaoFotoExtra: {
+                modelo: 'fixo',
+                valorFixo: Number(packageData.valor_foto_extra) || 0,
+              },
+            };
           } else {
             valorBasePacote = 0;
-            console.log('⚠️ Sem pacote, valor base será 0');
+            regrasCongeladas = {
+              modelo: 'completo',
+              dataCongelamento: new Date().toISOString(),
+              produtos: [],
+              precificacaoFotoExtra: { modelo: 'fixo' },
+            };
           }
-          
-          regrasCongeladas = {
-            modelo: 'fixo',
-            valorBase: valorBasePacote,
-            produtos: packageData?.produtos_incluidos || [],
-            categoria: categoria || 'Outros'
-          };
         } else {
           console.log('✅ Dados congelados com sucesso:', Object.keys(regrasCongeladas));
           
-          // ✅ CORREÇÃO CRÍTICA: Resolver valorBasePacote de múltiplas fontes
-          // Prioridade: top-level valorBase > pacote.valorBase > packageData.valor_base
           valorBasePacote = Number(regrasCongeladas.valorBase) 
             || Number(regrasCongeladas.pacote?.valorBase)
             || Number(packageData?.valor_base) 
@@ -282,24 +300,18 @@ export class WorkflowSupabaseService {
             'packageData?.valor_base': packageData?.valor_base,
             'FINAL valorBasePacote': valorBasePacote
           });
-          
-          // Se mesmo assim for 0, avisar
-          if (valorBasePacote === 0) {
-            console.warn('⚠️ valorBasePacote é 0 mesmo com regras congeladas');
-          }
         }
       } else {
         console.warn('⚠️ Criando sessão sem pacote, usando regras mínimas');
-        // FASE 3: Even without package, try to use valorTotal
         if (valorTotal > 0) {
           valorBasePacote = valorTotal;
         }
         
         regrasCongeladas = {
-          modelo: 'fixo',
-          valorBase: valorBasePacote,
+          modelo: 'completo',
+          dataCongelamento: new Date().toISOString(),
           produtos: [],
-          categoria: categoria || 'Outros'
+          precificacaoFotoExtra: { modelo: 'fixo' },
         };
       }
       
@@ -369,7 +381,7 @@ export class WorkflowSupabaseService {
         valor_pago: Number(hydratedData.paidAmount || hydratedData.paid_amount || 0),
         produtos_incluidos: packageData?.produtos_incluidos || [],
         // Set default extra photo values from frozen pricing model
-        valor_foto_extra: valorFotoExtraInicial,
+        valor_foto_extra: Number(packageData?.valor_foto_extra) || valorFotoExtraInicial || 0,
         qtd_fotos_extra: 0,
         valor_total_foto_extra: 0,
         regras_congeladas: regrasCongeladas as any,
