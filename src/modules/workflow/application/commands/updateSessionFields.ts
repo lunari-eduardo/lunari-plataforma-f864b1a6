@@ -33,6 +33,11 @@ const ForbiddenKeys = new Set([
   "clientes",
   "pagamentos",
   "galerias",
+  // regras_congeladas só pode ser reescrita pelo caminho de re-freeze
+  // legítimo (useWorkflowRealtime + PricingFreezingService), que gera novo
+  // dataCongelamento. Bloquear aqui evita disparar o guard SQL por escrita
+  // silenciosa vinda de IA / mobile / capabilities.
+  "regras_congeladas",
 ]);
 
 const Input = z.object({
