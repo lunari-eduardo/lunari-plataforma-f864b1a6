@@ -151,10 +151,16 @@ export function WorkflowCardCollapsed({
   const parcialmenteCompletos =
     hasProdutos && produtosProduzidos.length > 0 && produtosProduzidos.length < session.produtosList!.length;
 
-  // pacote vazio (limpo) ignora regras_congeladas
+  // pacote vazio (limpo) ignora regras_congeladas.
+  // Resolução: regras congeladas > lookup local em `pacotes` (caso o otimista
+  // ainda não tenha o snapshot completo) > valor cru salvo na sessão.
   const pacoteAtual = (session.pacote ?? "").toString();
   const displayPackageName =
-    pacoteAtual === "" ? "" : session.regras_congeladas?.pacote?.nome || pacoteAtual;
+    pacoteAtual === ""
+      ? ""
+      : session.regras_congeladas?.pacote?.nome ||
+        (pacotes || []).find((p: any) => p.id === pacoteAtual || p.nome === pacoteAtual)?.nome ||
+        pacoteAtual;
 
   const handleCreateSelecao = useCallback(() => {
     if (!hasGaleryAccess) {
@@ -316,7 +322,7 @@ export function WorkflowCardCollapsed({
           <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pacote</span>
             <WorkflowPackageCombobox
-              key={`package-${session.id}-${pacoteAtual}`}
+              key={`package-${session.id}`}
               value={pacoteAtual}
               displayName={displayPackageName}
               onValueChange={(packageData) => {

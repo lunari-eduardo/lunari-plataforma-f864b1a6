@@ -114,6 +114,7 @@ interface AppContextType {
   origens: OrigemCliente[];
   clientes: Cliente[];
   categorias: string[];
+  categoriasFull: Array<{ id: string; nome: string }>;
   produtos: any[];
   pacotes: any[];
   
@@ -240,7 +241,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   
   // Use real-time data from Supabase instead of localStorage
-  const categorias = realtimeConfig.categorias?.map(cat => cat.nome) || [];
+  const categoriasFull = (realtimeConfig.categorias || []) as Array<{ id: string; nome: string }>;
+  const categorias = categoriasFull.map((cat: any) => cat.nome);
   const produtos = realtimeConfig.produtos || [];
   const pacotes = realtimeConfig.pacotes || [];
 
@@ -981,6 +983,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     origens,
     clientes,
     categorias,
+    categoriasFull,
     produtos,
     pacotes,
     appointments,
