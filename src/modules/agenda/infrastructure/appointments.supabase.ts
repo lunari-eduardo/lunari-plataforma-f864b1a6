@@ -102,60 +102,82 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
     if (session) {
       console.log("🎯 [agenda.repo] Sessão criada com sucesso:", session.id);
 
-      // Patch redundante: corrigir inversão categoria/pacote E valor_base_pacote = 0
+      // Patch redundante: corrigir inversão categoria/pacote, valor_base_pacote = 0,
+      // valor_foto_extra ausente e regras_congeladas.pacote incompleto.
       setTimeout(async () => {
         try {
           const { data: checkSession } = await supabase
             .from("clientes_sessoes")
-            .select("id, categoria, pacote, valor_base_pacote, appointment_id, user_id")
+            .select("id, categoria, pacote, valor_base_pacote, valor_foto_extra, regras_congeladas, appointment_id, user_id")
             .eq("id", session.id)
             .maybeSingle();
 
+          if (!checkSession) return;
+
+          const rcPacote =
+            (checkSession.regras_congeladas as any)?.pacote &&
+            typeof (checkSession.regras_congeladas as any).pacote === "object"
+              ? (checkSession.regras_congeladas as any).pacote
+              : null;
+
           const needsPatch =
-            checkSession &&
             hydrated.packageId &&
             (!checkSession.pacote ||
               checkSession.categoria === checkSession.pacote ||
-              Number(checkSession.valor_base_pacote) === 0);
+              Number(checkSession.valor_base_pacote) === 0 ||
+              !rcPacote);
 
           if (!needsPatch) return;
 
           const { data: pkg } = await supabase
             .from("pacotes")
-            .select("nome, valor_base, categoria_id, categorias!inner ( nome )")
+            .select("id, nome, valor_base, valor_foto_extra, fotos_incluidas, categoria_id, produtos_incluidos, categorias!inner ( id, nome )")
             .eq("id", hydrated.packageId)
             .maybeSingle();
 
-          if (pkg) {
-            await supabase
-              .from("clientes_sessoes")
-              .update({
-                categoria: (pkg.categorias as any)?.nome || "Sessão",
-                pacote: pkg.nome,
-                valor_base_pacote: Number(pkg.valor_base) || 0,
-              })
-              .eq("id", session.id);
-            return;
+          if (!pkg) return;
+
+          const categoriaNome = (pkg.categorias as any)?.nome || "Sessão";
+          const categoriaId = (pkg.categorias as any)?.id || pkg.categoria_id;
+          const produtos = Array.isArray(pkg.produtos_incluidos)
+            ? pkg.produtos_incluidos
+            : [];
+
+          const patch: Record<string, any> = {
+            categoria: categoriaNome,
+            pacote: pkg.nome,
+            valor_base_pacote: Number(pkg.valor_base) || 0,
+          };
+
+          // valor_foto_extra: só preencher se estiver 0
+          if (!Number(checkSession.valor_foto_extra)) {
+            patch.valor_foto_extra = Number(pkg.valor_foto_extra) || 0;
           }
 
-          if (checkSession?.pacote && checkSession.user_id) {
-            const { data: pkgByName } = await supabase
-              .from("pacotes")
-              .select("nome, valor_base, categoria_id, categorias!inner ( nome )")
-              .eq("nome", checkSession.pacote)
-              .eq("user_id", checkSession.user_id)
-              .maybeSingle();
-
-            if (pkgByName) {
-              await supabase
-                .from("clientes_sessoes")
-                .update({
-                  categoria: (pkgByName.categorias as any)?.nome || "Sessão",
-                  valor_base_pacote: Number(pkgByName.valor_base) || 0,
-                })
-                .eq("id", session.id);
-            }
+          // regras_congeladas: reconstruir se ausente/sem .pacote
+          if (!rcPacote) {
+            patch.regras_congeladas = {
+              modelo: "completo",
+              dataCongelamento: new Date().toISOString(),
+              pacote: {
+                id: pkg.id,
+                nome: pkg.nome,
+                valorBase: Number(pkg.valor_base) || 0,
+                valorFotoExtra: Number(pkg.valor_foto_extra) || 0,
+                fotosIncluidas: Number(pkg.fotos_incluidas) || 0,
+                categoria: categoriaNome,
+                categoriaId,
+                produtosIncluidos: produtos,
+              },
+              produtos,
+              precificacaoFotoExtra: {
+                modelo: "fixo",
+                valorFixo: Number(pkg.valor_foto_extra) || 0,
+              },
+            };
           }
+
+          await supabase.from("clientes_sessoes").update(patch).eq("id", session.id);
         } catch (patchError) {
           console.error("⚠️ [agenda.repo] Erro no patch redundante:", patchError);
         }
