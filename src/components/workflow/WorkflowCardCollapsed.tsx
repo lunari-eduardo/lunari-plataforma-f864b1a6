@@ -12,7 +12,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { buildGalleryNewUrl, buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import { useAppContext } from "@/contexts/AppContext";
-import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
+import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
