@@ -180,7 +180,7 @@ export function WorkflowCardExpanded({
     if (session.extrasOverridden) return;
     const rpcQtd = fin.qtdExtras || 0;
     const rawQtd = Number(session.qtdFotosExtra) || 0;
-    if (rpcQtd > 0 && rawQtd === 0) {
+    if (rpcQtd !== rawQtd) {
       setQtdFotosExtraValue(String(rpcQtd));
     }
   }, [fin.qtdExtras, session.extrasOverridden, session.qtdFotosExtra]);
