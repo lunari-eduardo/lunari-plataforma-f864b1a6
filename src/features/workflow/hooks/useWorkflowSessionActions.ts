@@ -11,6 +11,7 @@ import {
 } from "@/modules/workflow";
 import { USE_CAPABILITY_UPDATE_FIELDS, updatesRequireRefreeze } from "@/features/workflow/config";
 import { recalcFotosExtras, recalcSessionValorTotal } from "@/utils/fotosExtrasCalculator";
+import { useAppContext } from "@/contexts/AppContext";
 import type { WorkflowCurrentMonth } from "./useWorkflowMonthSessions";
 
 interface Params {
