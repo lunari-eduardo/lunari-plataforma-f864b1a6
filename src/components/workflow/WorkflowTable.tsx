@@ -26,7 +26,7 @@ interface WorkflowTableProps {
   productOptions: any[];
   onStatusChange: (id: string, newStatus: string) => void;
   onEditSession: (id: string) => void;
-  onAddPayment: (id: string) => void;
+  
   onDeleteSession?: (
     id: string,
     sessionTitle: string,
