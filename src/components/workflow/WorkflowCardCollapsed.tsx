@@ -12,7 +12,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { buildGalleryNewUrl, buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
 import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import { useAppContext } from "@/contexts/AppContext";
-import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
+import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
@@ -73,33 +73,31 @@ export function WorkflowCardCollapsed({
     return isNeg ? -n : n;
   };
 
-  // Fonte única (mesma do card expandido): snapshot canônico da galeria
-  // aplica desconto progressivo. Compartilha cache com WorkflowCardExpanded
-  // via queryKey = ['gallery-extra-calc', resolvedGalleryId], evitando flicker.
-  const { calc: extraCalc, resolvedGalleryId } = useGalleryExtraCalc(
+  // Fonte única (RPC workflow_session_financials): mesma usada pelo card
+  // expandido e pelo modal de pagamento. Evita divergência entre "topo"
+  // e "expandido" ao reabrir a galeria e adicionar nova seleção.
+  const fin = useSessionFinancialsWithExtras(
+    session.id || null,
     session.galeriaId || null,
-    { sessionId: session.sessionId || null },
+    session.sessionId || null,
   );
-  const hasGaleria = Boolean(resolvedGalleryId);
+  const hasGaleria = fin.hasGaleria;
 
   const calculateRestante = useCallback(() => {
     const total = parseSignedMoney(session.total);
     const pago = parseSignedMoney(session.valorPago);
-    if (hasGaleria && extraCalc.valor_total_ideal > 0) {
-      const extrasLocal = parseSignedMoney((session as any).valorTotalFotoExtra ?? 0);
-      const baseSessao = Math.max(0, total - extrasLocal);
-      return baseSessao + extraCalc.valor_total_ideal - pago;
+    if (hasGaleria && fin.totalVisual > 0) {
+      return fin.pendenteTot;
     }
-    // Se ambos existem, calcular diretamente para preservar sinal negativo (overpay).
     if (total || pago) return total - pago;
     return parseSignedMoney(session.restante);
   }, [
     session.restante,
     session.total,
     session.valorPago,
-    (session as any).valorTotalFotoExtra,
     hasGaleria,
-    extraCalc.valor_total_ideal,
+    fin.totalVisual,
+    fin.pendenteTot,
   ]);
 
   const paymentSubmittingRef = useRef(false);
@@ -329,10 +327,10 @@ export function WorkflowCardCollapsed({
             </span>
             <div className="min-h-8 flex items-center justify-center">
               <span className="text-sm font-medium text-foreground tabular-nums">
-                {/* Snapshot canônico da galeria (extras_necessarias) prevalece sobre
-                    session.qtdFotosExtra em cache (que pode estar 30s stale). */}
-                {hasGaleria && extraCalc.extras_necessarias > 0
-                  ? extraCalc.extras_necessarias
+                {/* Fonte única: RPC workflow_session_financials.
+                    Compartilha cache com o card expandido e o modal de pagamento. */}
+                {hasGaleria && fin.qtdExtras > 0
+                  ? fin.qtdExtras
                   : (session.qtdFotosExtra || 0)}
               </span>
             </div>
