@@ -173,6 +173,18 @@ export function WorkflowCardExpanded({
   const extrasFullyPaid = fin.extrasPend <= 0.001;
   const valorFotoExtraTotal = formatCurrency(extrasTotalCanonico);
 
+  // Se o valor cru da sessão está zerado mas a RPC já resolveu a qtd pela
+  // galeria (seleção finalizada), reflete a RPC no input — o header do card
+  // já usa esse mesmo número. Só sincroniza quando NÃO há override manual.
+  useEffect(() => {
+    if (session.extrasOverridden) return;
+    const rpcQtd = fin.qtdExtras || 0;
+    const rawQtd = Number(session.qtdFotosExtra) || 0;
+    if (rpcQtd > 0 && rawQtd === 0) {
+      setQtdFotosExtraValue(String(rpcQtd));
+    }
+  }, [fin.qtdExtras, session.extrasOverridden, session.qtdFotosExtra]);
+
   // Totais visuais vêm 100% da RPC — sem recomposição local.
   const totalVisual = fin.totalVisual;
   const pendenteVisual = fin.pendenteTot;
