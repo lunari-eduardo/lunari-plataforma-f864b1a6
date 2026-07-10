@@ -8,7 +8,6 @@ import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
 import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 import { FEATURE_COMBINED_CHARGE } from "@/features/workflow/config";
-import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
 import { useSessionPayments } from "@/hooks/useSessionPayments";
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
