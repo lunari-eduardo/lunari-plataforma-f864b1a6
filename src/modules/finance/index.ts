@@ -61,6 +61,7 @@ import "./application/queries/listCategories";
 import "./application/queries/kpisByNature";
 import "./application/queries/kpisByNatureRange";
 import "./application/queries/getClientCredit";
+import "./application/queries/listClientsWithCredit";
 
 // Re-export para uso direto
 export { createTransaction } from "./application/commands/createTransaction";
@@ -86,4 +87,5 @@ export { listCategories } from "./application/queries/listCategories";
 export { kpisByNature } from "./application/queries/kpisByNature";
 export { kpisByNatureRange } from "./application/queries/kpisByNatureRange";
 export { getClientCredit } from "./application/queries/getClientCredit";
+export { listClientsWithCredit } from "./application/queries/listClientsWithCredit";
 

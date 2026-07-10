@@ -18,6 +18,14 @@ declare module "@/shared/event-bus" {
       paymentUrl: string | null;
       reused: boolean;
     };
+    "billing.manual_payment_registered": {
+      sessionId: string;
+      paymentId: string;
+      valor: number;
+      meio: "pix" | "dinheiro" | "transferencia" | "cartao_externo" | "outro";
+      escopo: "sessao" | "fotos_extras" | "sessao_e_extras";
+      photographerId: string;
+    };
   }
 }
 

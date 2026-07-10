@@ -6,8 +6,14 @@
 // Registra os eventos do módulo no LunariEvents
 import "./domain/events";
 
-// Capabilities (commands)
+// Capabilities (registram-se no registry ao importar)
+import "./application/commands/createGalleryPayment";
+import "./application/commands/registerManualPayment";
+import "./application/queries/listSessionPayments";
+
 export { createGalleryPayment } from "./application/commands/createGalleryPayment";
+export { registerManualPayment } from "./application/commands/registerManualPayment";
+export { listSessionPayments } from "./application/queries/listSessionPayments";
 
 // Tipos públicos
 export type {
@@ -16,6 +22,7 @@ export type {
   CreateGalleryPaymentOutput,
 } from "./domain/types";
 
-// Lista explícita para exposição ao AI Assistant
 import { createGalleryPayment as _c1 } from "./application/commands/createGalleryPayment";
-export const billingCapabilities = [_c1] as const;
+import { registerManualPayment as _c2 } from "./application/commands/registerManualPayment";
+import { listSessionPayments as _q1 } from "./application/queries/listSessionPayments";
+export const billingCapabilities = [_c1, _c2, _q1] as const;
