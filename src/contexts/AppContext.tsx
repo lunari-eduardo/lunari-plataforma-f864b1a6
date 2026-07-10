@@ -983,6 +983,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     origens,
     clientes,
     categorias,
+    categoriasFull,
     produtos,
     pacotes,
     appointments,
