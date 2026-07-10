@@ -1,15 +1,13 @@
 /**
  * Registry agregado das superfícies de IA (`ai/`) de cada módulo.
  * Este arquivo é o ÚNICO ponto de importação para o chat/runtime do
- * Assistente Lu. Importar de módulos individuais aqui garante que suas
- * capabilities sejam registradas antes de listadas.
+ * Assistente Lu. Importar os módulos aqui garante que suas capabilities
+ * sejam registradas antes de listadas.
  */
-import "./workflow";
+import "@/features/workflow"; // registra capabilities de workflow
 import "./billing";
 import "./gallery";
 import "./finance";
-import "./tasks";
-import "./agenda";
 
 import { listWorkflowAITools } from "@/features/workflow/ai";
 import { listBillingAITools } from "./billing/ai";

@@ -87,4 +87,5 @@ export { listCategories } from "./application/queries/listCategories";
 export { kpisByNature } from "./application/queries/kpisByNature";
 export { kpisByNatureRange } from "./application/queries/kpisByNatureRange";
 export { getClientCredit } from "./application/queries/getClientCredit";
+export { listClientsWithCredit } from "./application/queries/listClientsWithCredit";
 
