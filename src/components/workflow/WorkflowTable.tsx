@@ -26,7 +26,7 @@ interface WorkflowTableProps {
   productOptions: any[];
   onStatusChange: (id: string, newStatus: string) => void;
   onEditSession: (id: string) => void;
-  onAddPayment: (id: string) => void;
+  
   onDeleteSession?: (
     id: string,
     sessionTitle: string,
@@ -53,7 +53,7 @@ export function WorkflowTable({
   productOptions,
   onStatusChange,
   onEditSession,
-  onAddPayment,
+  
   onDeleteSession,
   onFieldUpdate,
 }: WorkflowTableProps) {
@@ -66,7 +66,7 @@ export function WorkflowTable({
       productOptions={productOptions}
       onStatusChange={onStatusChange}
       onEditSession={onEditSession}
-      onAddPayment={onAddPayment}
+      
       onDeleteSession={onDeleteSession}
       onFieldUpdate={onFieldUpdate}
     />

@@ -8,8 +8,7 @@ import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
 import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 import { FEATURE_COMBINED_CHARGE } from "@/features/workflow/config";
-import { PaymentConfigModalExpanded } from "@/components/crm/PaymentConfigModalExpanded";
-import { useSessionPayments } from "@/hooks/useSessionPayments";
+
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
@@ -39,7 +38,6 @@ export function WorkflowCardExpanded({
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   const [showCombinedModal, setShowCombinedModal] = useState(false);
-  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
 
@@ -54,12 +52,6 @@ export function WorkflowCardExpanded({
     | { field: "qtdFotosExtra"; nextValue: string; previousValue: string }
     | null
   >(null);
-
-  const {
-    addPayment: hookAddPayment,
-    createInstallments,
-    schedulePayment,
-  } = useSessionPayments(session.id, session.pagamentos || []);
 
   useEffect(() => {
     setDescontoValue(session.desconto || "");
@@ -180,7 +172,7 @@ export function WorkflowCardExpanded({
     if (session.extrasOverridden) return;
     const rpcQtd = fin.qtdExtras || 0;
     const rawQtd = Number(session.qtdFotosExtra) || 0;
-    if (rpcQtd > 0 && rawQtd === 0) {
+    if (rpcQtd !== rawQtd) {
       setQtdFotosExtraValue(String(rpcQtd));
     }
   }, [fin.qtdExtras, session.extrasOverridden, session.qtdFotosExtra]);
@@ -496,7 +488,7 @@ export function WorkflowCardExpanded({
           extrasPendente={extrasPendente}
           extrasFullyPaid={extrasFullyPaid}
           sessaoPendente={pendenteSessaoSugerido}
-          onAgendarPagamento={() => setShowAddPaymentModal(true)}
+          
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
         />
       </div>
@@ -578,19 +570,6 @@ export function WorkflowCardExpanded({
         />
       )}
 
-      <PaymentConfigModalExpanded
-        isOpen={showAddPaymentModal}
-        onClose={() => setShowAddPaymentModal(false)}
-        sessionId={session.id}
-        clienteId={session.clienteId}
-        valorTotal={totalVisual}
-        valorJaPago={valorPago}
-        valorRestante={pendenteVisual}
-        clienteNome={session.nome}
-        onAddPayment={hookAddPayment}
-        onCreateInstallments={createInstallments}
-        onSchedulePayment={schedulePayment}
-      />
 
       <OverrideExtrasDialog
         pendingExtraEdit={pendingExtraEdit}
