@@ -180,7 +180,9 @@ export function useWorkflowSessionActions({
           touchedFotoExtra ||
           "valor_adicional" in cacheSafeUpdates ||
           "desconto" in cacheSafeUpdates ||
-          "produtos_incluidos" in cacheSafeUpdates;
+          "produtos_incluidos" in cacheSafeUpdates ||
+          "valor_base_pacote" in cacheSafeUpdates ||
+          "valor_total_foto_extra" in cacheSafeUpdates;
 
         if (touchedTotalAffectingField) {
           const currentAny = currentSession as any;
