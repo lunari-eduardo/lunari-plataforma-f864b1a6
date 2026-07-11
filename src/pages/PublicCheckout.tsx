@@ -207,6 +207,7 @@ export default function PublicCheckout() {
     phone: missing.phone && payerPhone.replace(/\D/g, '').length < 10,
     cpfCnpj: missing.cpfCnpj && !validateCpfCnpj(payerCpf),
   };
+  const noMissingFields = !stillMissing.name && !stillMissing.email && !stillMissing.phone && !stillMissing.cpfCnpj;
 
   // PIX flow
   const generatePix = useCallback(async () => {
