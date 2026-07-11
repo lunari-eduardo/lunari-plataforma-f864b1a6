@@ -33,7 +33,10 @@ export function WorkflowDeleteConfirmModal({
     if (!sessionData) return;
     setLoading(true);
     try {
-      onConfirm(action);
+      // Sem pagamentos: força 'remove' para garantir que o agendamento
+      // vinculado também seja excluído da agenda.
+      const effectiveAction: DeleteAction = sessionData.hasPayments ? action : 'remove';
+      onConfirm(effectiveAction);
       onClose();
     } finally {
       setLoading(false);
