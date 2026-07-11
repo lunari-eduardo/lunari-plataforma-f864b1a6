@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
 import { FEATURE_COMBINED_CHARGE } from '@/features/workflow/config';
+import { supabase } from '@/integrations/supabase/client';
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
