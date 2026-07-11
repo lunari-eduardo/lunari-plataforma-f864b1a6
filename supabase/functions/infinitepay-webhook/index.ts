@@ -248,12 +248,31 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("[infinitepay-webhook] Error:", error);
-    
+    // Log detalhado — nunca deixar "Unknown error" opaco em produção.
+    const errMessage = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
+    console.error("[infinitepay-webhook] Error:", errMessage, errStack, {
+      order_nsu: (payload as any)?.order_nsu,
+      payload,
+    });
+
+    try {
+      await supabase
+        .from("webhook_logs")
+        .update({
+          status: "error",
+          error_message: `${errMessage}${errStack ? ` | ${errStack.split("\n").slice(0, 3).join(" | ")}` : ""}`,
+        })
+        .eq("order_nsu", (payload as any)?.order_nsu ?? "pending_parse")
+        .eq("provedor", "infinitepay");
+    } catch {
+      // ignora falha de log
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: errMessage || "Unknown error",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
