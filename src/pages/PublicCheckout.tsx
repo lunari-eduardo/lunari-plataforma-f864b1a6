@@ -133,6 +133,7 @@ export default function PublicCheckout() {
   const [pixError, setPixError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
+  const autoPixRef = useRef<boolean>(false);
 
   // Payer inline collection (PIX + shared)
   const [payerName, setPayerName] = useState('');
