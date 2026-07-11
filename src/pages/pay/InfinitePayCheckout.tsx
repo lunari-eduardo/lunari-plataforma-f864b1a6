@@ -63,6 +63,19 @@ export default function InfinitePayCheckout() {
   const [submitting, setSubmitting] = useState(false);
   const [showOptional, setShowOptional] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const autoSubmittedRef = useRef(false);
+
+  // ——— FORÇAR MODO LIGHT no checkout público ———
+  useEffect(() => {
+    const html = document.documentElement;
+    const hadDark = html.classList.contains('dark');
+    html.classList.remove('dark');
+    html.classList.add('light');
+    return () => {
+      html.classList.remove('light');
+      if (hadDark) html.classList.add('dark');
+    };
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!cobrancaId) return;
