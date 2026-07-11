@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
 import { FEATURE_COMBINED_CHARGE } from '@/features/workflow/config';
+import { supabase } from '@/integrations/supabase/client';
 interface SessionPaymentsManagerProps {
   sessionData: any;
   onPaymentUpdate: (sessionId: string, totalPaid: number, fullPaymentsArray?: any[]) => void;
@@ -136,6 +137,45 @@ export function SessionPaymentsManager({
 
   // Removed: useEffect that called onPaymentUpdate on every payments change.
   // valor_pago is now managed entirely by DB triggers. No frontend sync needed.
+
+  // Reconciliação de fallback: quando o painel abre, varre TODAS as cobranças
+  // pendentes/parcialmente pagas desta sessão e aciona `check-payment-status`
+  // para cada uma. Cobre o cenário em que o webhook (InfinitePay/Mercado Pago)
+  // falhou silenciosamente e o front continua vendo "pendente".
+  useEffect(() => {
+    const isVisible = displayMode === 'card' || isOpen === true;
+    if (!isVisible) return;
+    const sid = sessionData?.sessionId || sessionData?.id;
+    if (!sid) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('cobrancas')
+          .select('id, status')
+          .eq('session_id', sid)
+          .in('status', ['pendente', 'parcialmente_pago']);
+        if (error || !data || cancelled) return;
+        for (const c of data) {
+          if (cancelled) return;
+          try {
+            await supabase.functions.invoke('check-payment-status', {
+              body: { cobrancaId: c.id, forceUpdate: false },
+            });
+          } catch (e) {
+            console.warn('[SessionPaymentsManager] reconcile falhou para', c.id, e);
+          }
+        }
+      } catch (e) {
+        console.warn('[SessionPaymentsManager] reconcile geral falhou', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [displayMode, isOpen, sessionData?.id, sessionData?.sessionId]);
 
   const getStatusBadge = (payment: SessionPaymentExtended) => {
     // Se tem statusRecebimento (parcela Asaas), usar esse status
