@@ -278,6 +278,18 @@ export default function PublicCheckout() {
     }
   }, [cobrancaId, payerCpf, payerEmail, payerName, payerPhone]);
 
+  // Auto-gerar PIX quando o CRM já enviou todos os dados necessários
+  useEffect(() => {
+    if (autoPixRef.current) return;
+    if (!data || tab !== 'pix' || !data.settings.habilitarPix) return;
+    if (pixCopiaECola || pixLoading || pixError) return;
+    if (!noMissingFields) return;
+    if (!validateCpfCnpj(payerCpf)) return;
+    autoPixRef.current = true;
+    void generatePix();
+  }, [data, tab, noMissingFields, payerCpf, pixCopiaECola, pixLoading, pixError, generatePix]);
+
+
   const handleCopyPix = async () => {
     if (!pixCopiaECola) return;
     try {
