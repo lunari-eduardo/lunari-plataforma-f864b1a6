@@ -34,11 +34,9 @@ export function ExpandedActions({
   onAbrirPagamentos,
 }: Props) {
   const showExtras = extrasPendente > 0 || (!extrasFullyPaid && !!onCobrarExtras);
-  const showCobrarTudo =
-    FEATURE_COMBINED_CHARGE &&
-    !!onCobrarTudo &&
-    sessaoPendente > 0.001 &&
-    extrasPendente > 0.001;
+  // Botão "Cobrar tudo (1 link)" foi removido — extras de galeria são cobradas
+  // exclusivamente pelo Gallery (edge canônica `gallery-create-payment`).
+  const showCobrarTudo = false;
 
   return (
     <div className="space-y-3 flex flex-col items-center justify-center py-4">
