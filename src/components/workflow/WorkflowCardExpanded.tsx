@@ -549,24 +549,7 @@ export function WorkflowCardExpanded({
         />
       )}
 
-      {FEATURE_COMBINED_CHARGE && resolvedGalleryId && session.clienteId && (
-        <CombinedChargeModal
-          isOpen={showCombinedModal}
-          onClose={() => setShowCombinedModal(false)}
-          clienteId={session.clienteId}
-          clienteNome={session.nome || 'Cliente'}
-          clienteWhatsapp={session.whatsapp}
-          sessionId={session.sessionId || session.id}
-          galeriaId={resolvedGalleryId}
-          valorSessaoComponente={Number(pendenteSessaoSugerido.toFixed(2))}
-          valorExtrasComponente={Number(extrasPendente.toFixed(2))}
-          qtdFotosExtras={Math.max(
-            1,
-            Number(extraCalc.extras_necessarias ?? 0) - Number(extraCalc.extras_pagas ?? 0),
-          )}
-          nomeSessao={session.pacote || session.nome}
-        />
-      )}
+      {/* CombinedChargeModal removido — extras cobradas exclusivamente pelo Gallery. */}
 
 
       <OverrideExtrasDialog
