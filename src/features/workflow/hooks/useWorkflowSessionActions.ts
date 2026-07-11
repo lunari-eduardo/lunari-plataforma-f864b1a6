@@ -355,7 +355,7 @@ export function useWorkflowSessionActions({
 
       if (deleteAction === "preserve") {
         title = "Sessão arquivada";
-        description = "Sessão movida para o histórico do cliente.";
+        description = "Sessão movida para o histórico do cliente. Agendamento mantido na agenda como compromisso avulso.";
       } else if (deleteAction === "refund") {
         title = "Sessão excluída com estorno";
         const partes: string[] = ["Sessão e agendamento removidos"];
