@@ -303,14 +303,8 @@ export function SessionPaymentsManager({
   const canCobrarTudo = canCobrarSessao && canCobrarExtras;
 
   const handleCobrarTudo = () => {
-    if (FEATURE_COMBINED_CHARGE) {
-      // Novo fluxo: link único (finalidade='sessao_e_extras')
-      setCombinedStep('idle');
-      setShowCombinedModal(true);
-      return;
-    }
-    // Legado (Opção A): dispara ChargeModal (sessão). Ao fechar, `combinedStep`
-    // aciona ExtraChargeModal automaticamente para gerar o 2º link.
+    // Opção A canônica: 2 links sequenciais (sessão → extras via Gallery).
+    // Extras nunca são cobradas pelo Gestão diretamente.
     setCombinedStep('session');
     setShowChargeModal(true);
   };
