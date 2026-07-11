@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { CreditCard, Send, Images } from "lucide-react";
 import { SessaoContratoButton } from "@/components/contratos/SessaoContratoButton";
-import { FEATURE_COMBINED_CHARGE } from "@/features/workflow/config";
+// FEATURE_COMBINED_CHARGE removido: cobrança combinada foi descontinuada no Gestão.
 import type { SessionData } from "@/types/workflow";
 
 interface Props {
