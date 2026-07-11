@@ -482,7 +482,7 @@ export function WorkflowCardExpanded({
           session={session}
           onCobrar={() => setShowChargeModal(true)}
           onCobrarExtras={() => setShowExtraChargeModal(true)}
-          onCobrarTudo={() => setShowCombinedModal(true)}
+          onCobrarTudo={undefined}
           extrasPendente={extrasPendente}
           extrasFullyPaid={extrasFullyPaid}
           sessaoPendente={pendenteSessaoSugerido}
