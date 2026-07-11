@@ -105,7 +105,7 @@ export function WorkflowDeleteConfirmModal({
                             Cancelar sessão (preservar histórico)
                           </p>
                           <p className="text-xs text-lunar-textSecondary">
-                            Oculta a sessão do workflow. Valores pagos e dados ficam preservados no histórico do cliente (somente leitura)
+                            Arquiva a sessão no histórico do cliente. O agendamento fica na agenda como compromisso avulso (sem vínculo com a sessão). Pagamentos preservados.
                           </p>
                         </div>
                       </Label>
