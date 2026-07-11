@@ -439,14 +439,21 @@ export default function PublicCheckout() {
 
   if (pixConfirmed || cardSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(30,20%,97%)] p-4">
+      <div className="light min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-[hsl(30,20%,97%)] p-4">
         <Sonner />
         <div className="max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
-          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-emerald-100">
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-emerald-100 shadow-sm">
             <CheckCircle className="h-10 w-10 text-emerald-600" />
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900">Pagamento confirmado!</h1>
-          <p className="text-neutral-600">Obrigado! Seu pagamento foi processado com sucesso.</p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-neutral-900">Pagamento confirmado!</h1>
+            <p className="text-neutral-600">Obrigado! Seu pagamento foi processado com sucesso.</p>
+          </div>
+          {data?.photographer?.name && (
+            <p className="text-xs text-neutral-500 pt-4 border-t border-neutral-100">
+              {data.photographer.name}
+            </p>
+          )}
         </div>
       </div>
     );
