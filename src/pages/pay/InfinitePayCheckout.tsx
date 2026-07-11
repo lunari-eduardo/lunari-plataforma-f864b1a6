@@ -122,6 +122,34 @@ export default function InfinitePayCheckout() {
         setPhase("polling");
         return;
       }
+
+      // Skip form quando CRM já tem tudo que o provedor precisa
+      const snap = payload.payer_snapshot;
+      const missing = Array.isArray(payload.missingFields) ? payload.missingFields : [];
+      const hasName = (snap.nome || "").trim().length >= 2;
+      const hasPhone = isValidPhoneBR(snap.telefone || "");
+      const canAutoSubmit =
+        !autoSubmittedRef.current && missing.length === 0 && hasName && hasPhone;
+
+      if (canAutoSubmit) {
+        autoSubmittedRef.current = true;
+        setPhase("redirecting");
+        void submitFinalize({
+          nome: snap.nome,
+          email: snap.email,
+          telefone: snap.telefone,
+          cpfCnpj: snap.cpfCnpj,
+          cep: snap.cep,
+          endereco: snap.endereco,
+          enderecoNumero: snap.endereco_numero,
+          enderecoComplemento: snap.endereco_complemento,
+          bairro: snap.bairro,
+          cidade: snap.cidade,
+          uf: snap.uf,
+        });
+        return;
+      }
+
       setPhase("form");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao carregar");
