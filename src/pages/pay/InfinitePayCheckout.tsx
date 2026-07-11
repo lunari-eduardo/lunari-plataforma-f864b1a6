@@ -225,8 +225,12 @@ export default function InfinitePayCheckout() {
   const emailOk = email.trim() === "" || isAsciiEmail(email);
   const canSubmit = nomeOk && telefoneOk && cpfOk && emailOk && !submitting;
 
-  const handleSubmit = async () => {
-    if (!canSubmit || !cobrancaId) return;
+  const submitFinalize = useCallback(async (raw: {
+    nome?: string; email?: string; telefone?: string; cpfCnpj?: string;
+    cep?: string; endereco?: string; enderecoNumero?: string; enderecoComplemento?: string;
+    bairro?: string; cidade?: string; uf?: string;
+  }) => {
+    if (!cobrancaId) return;
     setSubmitting(true);
     setErrorMsg("");
     try {
@@ -241,17 +245,17 @@ export default function InfinitePayCheckout() {
         body: JSON.stringify({
           cobrancaId,
           payerPatch: {
-            nome: nome.trim() || undefined,
-            email: email.trim() || undefined,
-            telefone: unmaskDigits(telefone) || undefined,
-            cpfCnpj: unmaskDigits(cpfCnpj) || undefined,
-            cep: unmaskDigits(cep) || undefined,
-            endereco: endereco.trim() || undefined,
-            enderecoNumero: numero.trim() || undefined,
-            enderecoComplemento: complemento.trim() || undefined,
-            bairro: bairro.trim() || undefined,
-            cidade: cidade.trim() || undefined,
-            uf: uf.trim() || undefined,
+            nome: raw.nome?.trim() || undefined,
+            email: raw.email?.trim() || undefined,
+            telefone: unmaskDigits(raw.telefone || "") || undefined,
+            cpfCnpj: unmaskDigits(raw.cpfCnpj || "") || undefined,
+            cep: unmaskDigits(raw.cep || "") || undefined,
+            endereco: raw.endereco?.trim() || undefined,
+            enderecoNumero: raw.enderecoNumero?.trim() || undefined,
+            enderecoComplemento: raw.enderecoComplemento?.trim() || undefined,
+            bairro: raw.bairro?.trim() || undefined,
+            cidade: raw.cidade?.trim() || undefined,
+            uf: raw.uf?.trim() || undefined,
           },
         }),
       });
@@ -259,17 +263,25 @@ export default function InfinitePayCheckout() {
       if (!res.ok || !json.success) {
         setErrorMsg(json.error || "Não foi possível gerar o pagamento. Tente novamente.");
         setSubmitting(false);
+        setPhase("form");
         return;
       }
       setPhase("redirecting");
-      // Pequeno delay para UX
-      setTimeout(() => {
-        window.location.href = json.checkoutUrl;
-      }, 400);
+      setTimeout(() => { window.location.href = json.checkoutUrl; }, 400);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao processar");
       setSubmitting(false);
+      setPhase("form");
     }
+  }, [cobrancaId]);
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    await submitFinalize({
+      nome, email, telefone, cpfCnpj,
+      cep, endereco, enderecoNumero: numero, enderecoComplemento: complemento,
+      bairro, cidade, uf,
+    });
   };
 
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
