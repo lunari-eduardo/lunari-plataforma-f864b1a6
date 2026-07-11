@@ -89,15 +89,19 @@ export function useSessionsRealtime(clienteId?: string) {
     }
   }, []);
 
-  // Delete session
+  // Delete session — SEMPRE via RPC atômica para garantir remoção do
+  // agendamento vinculado e integridade financeira. Nunca fazer DELETE direto.
   const deleteSession = useCallback(async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('clientes_sessoes')
-        .delete()
-        .eq('id', id);
+      const { data, error } = await supabase.rpc('delete_workflow_session_cascade', {
+        p_session_pk: id,
+        p_action: 'remove',
+      });
 
       if (error) throw error;
+      if (data && typeof data === 'object' && (data as any).success === false) {
+        throw new Error((data as any).error || 'Falha ao excluir sessão');
+      }
 
       toast.success('Sessão excluída com sucesso');
     } catch (err) {
