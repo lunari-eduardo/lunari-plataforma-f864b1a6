@@ -6,8 +6,7 @@ import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
-import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
-import { FEATURE_COMBINED_CHARGE } from "@/features/workflow/config";
+// CombinedChargeModal removido: extras exclusivos do Gallery (gallery-create-payment).
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
@@ -37,7 +36,6 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  const [showCombinedModal, setShowCombinedModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
 
@@ -484,7 +482,7 @@ export function WorkflowCardExpanded({
           session={session}
           onCobrar={() => setShowChargeModal(true)}
           onCobrarExtras={() => setShowExtraChargeModal(true)}
-          onCobrarTudo={() => setShowCombinedModal(true)}
+          onCobrarTudo={undefined}
           extrasPendente={extrasPendente}
           extrasFullyPaid={extrasFullyPaid}
           sessaoPendente={pendenteSessaoSugerido}
@@ -551,24 +549,7 @@ export function WorkflowCardExpanded({
         />
       )}
 
-      {FEATURE_COMBINED_CHARGE && resolvedGalleryId && session.clienteId && (
-        <CombinedChargeModal
-          isOpen={showCombinedModal}
-          onClose={() => setShowCombinedModal(false)}
-          clienteId={session.clienteId}
-          clienteNome={session.nome || 'Cliente'}
-          clienteWhatsapp={session.whatsapp}
-          sessionId={session.sessionId || session.id}
-          galeriaId={resolvedGalleryId}
-          valorSessaoComponente={Number(pendenteSessaoSugerido.toFixed(2))}
-          valorExtrasComponente={Number(extrasPendente.toFixed(2))}
-          qtdFotosExtras={Math.max(
-            1,
-            Number(extraCalc.extras_necessarias ?? 0) - Number(extraCalc.extras_pagas ?? 0),
-          )}
-          nomeSessao={session.pacote || session.nome}
-        />
-      )}
+      {/* CombinedChargeModal removido — extras cobradas exclusivamente pelo Gallery. */}
 
 
       <OverrideExtrasDialog

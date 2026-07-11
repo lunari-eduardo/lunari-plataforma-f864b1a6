@@ -67,6 +67,17 @@ export async function resolveCobrancaBinding(
   supabase: any,
   userId: string,
   raw: RawBindingInput,
+  /**
+   * Whitelist de finalidades aceitas pelo caller. Default = apenas 'sessao'.
+   *
+   * CONTRATO Gestão↔Gallery (2026-07-11):
+   *   Cobranças com finalidade `fotos_extras` / `sessao_e_extras` são
+   *   EXCLUSIVAS da edge canônica `gallery-create-payment` (projeto Gallery).
+   *   Nenhuma edge do Gestão pode criá-las diretamente — o cálculo canônico
+   *   vem da RPC `calculate_gallery_extra_payment`, e criar cobranças por
+   *   fora causa drift financeiro na galeria.
+   */
+  allowedFinalidades: CobrancaFinalidade[] = ["sessao"],
 ): Promise<{ binding?: ResolvedBinding; error?: BindingError }> {
   const finalidadeRaw = (raw.finalidade ?? "sessao").toString().toLowerCase();
 
@@ -80,6 +91,20 @@ export async function resolveCobrancaBinding(
         code: "INVALID_FINALIDADE",
         message:
           `Finalidade inválida: ${finalidadeRaw}. Aceitas: 'sessao', 'fotos_extras' ou 'sessao_e_extras'.`,
+      },
+    };
+  }
+
+  if (!allowedFinalidades.includes(finalidadeRaw as CobrancaFinalidade)) {
+    return {
+      error: {
+        code: "INVALID_FINALIDADE",
+        message:
+          `Finalidade '${finalidadeRaw}' não é permitida neste endpoint. ` +
+          `Cobrança de fotos extras deve ser criada via edge canônica do Gallery ` +
+          `(POST /functions/v1/gallery-create-payment). ` +
+          `Aceitas aqui: ${allowedFinalidades.join(", ")}.`,
+        details: { allowedFinalidades, received: finalidadeRaw },
       },
     };
   }

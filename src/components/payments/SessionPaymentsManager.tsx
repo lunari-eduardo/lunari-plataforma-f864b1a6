@@ -15,11 +15,9 @@ import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalE
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { ExtraChargeModal } from '@/components/cobranca/ExtraChargeModal';
-import { CombinedChargeModal } from '@/components/cobranca/CombinedChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
-import { FEATURE_COMBINED_CHARGE } from '@/features/workflow/config';
 import { supabase } from '@/integrations/supabase/client';
 interface SessionPaymentsManagerProps {
   sessionData: any;
@@ -39,10 +37,10 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  const [showCombinedModal, setShowCombinedModal] = useState(false);
-  /** Orquestração "Cobrar tudo" legada (Opção A): abre ChargeModal e, ao fechar,
-   *  aciona automaticamente ExtraChargeModal para gerar o 2º link.
-   *  Usado apenas quando `FEATURE_COMBINED_CHARGE` está desligado. */
+  /** Orquestração "Cobrar tudo" (Opção A canônica): abre ChargeModal (sessão)
+   *  e, ao fechar, aciona automaticamente ExtraChargeModal para gerar o 2º link.
+   *  O caminho de "link único" (finalidade='sessao_e_extras') foi CONGELADO —
+   *  cobrança de extras é exclusiva do Gallery via gallery-create-payment. */
   const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
@@ -305,14 +303,8 @@ export function SessionPaymentsManager({
   const canCobrarTudo = canCobrarSessao && canCobrarExtras;
 
   const handleCobrarTudo = () => {
-    if (FEATURE_COMBINED_CHARGE) {
-      // Novo fluxo: link único (finalidade='sessao_e_extras')
-      setCombinedStep('idle');
-      setShowCombinedModal(true);
-      return;
-    }
-    // Legado (Opção A): dispara ChargeModal (sessão). Ao fechar, `combinedStep`
-    // aciona ExtraChargeModal automaticamente para gerar o 2º link.
+    // Opção A canônica: 2 links sequenciais (sessão → extras via Gallery).
+    // Extras nunca são cobradas pelo Gestão diretamente.
     setCombinedStep('session');
     setShowChargeModal(true);
   };
@@ -719,24 +711,7 @@ export function SessionPaymentsManager({
         />
       )}
 
-      {/* Combined Charge Modal — link único (Fase 4 do plano "Cobrar tudo").
-          Só é aberto quando FEATURE_COMBINED_CHARGE está ativo E há
-          galeriaId + saldo em ambos (sessão e extras). */}
-      {FEATURE_COMBINED_CHARGE && fin.resolvedGalleryId && (
-        <CombinedChargeModal
-          isOpen={showCombinedModal}
-          onClose={() => setShowCombinedModal(false)}
-          clienteId={sessionData.clienteId || ''}
-          clienteNome={sessionData.nome || 'Cliente'}
-          clienteWhatsapp={sessionData.whatsapp}
-          sessionId={sessionData.sessionId || sessionData.id}
-          galeriaId={fin.resolvedGalleryId}
-          valorSessaoComponente={Number(valorRestanteSessao.toFixed(2))}
-          valorExtrasComponente={Number(fin.extrasPend.toFixed(2))}
-          qtdFotosExtras={Math.max(1, fin.qtdExtras - fin.qtdExtrasPagas)}
-          nomeSessao={sessionData.descricao || sessionData.categoria}
-        />
-      )}
+      {/* CombinedChargeModal foi removido — extras de galeria são exclusivas do Gallery. */}
     </>
   );
 

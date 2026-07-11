@@ -124,6 +124,20 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const createLinkCharge = async (request: CreateCobrancaRequest, installments?: number): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
+      // Contrato Gestão↔Gallery: extras SÓ podem ser cobrados via
+      // edge canônica `gallery-create-payment` (Gallery). Bloqueia
+      // aqui qualquer tentativa de criar cobrança de extras/combinada
+      // pelo caminho antigo do Gestão.
+      if (
+        request.finalidade === 'fotos_extras' ||
+        request.finalidade === 'sessao_e_extras'
+      ) {
+        const msg =
+          'Cobrança de fotos extras deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
+        toast.error(msg);
+        return { success: false, error: msg };
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
@@ -205,6 +219,19 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const createPixManualCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
+      // Contrato Gestão↔Gallery: extras SÓ podem ser cobrados via
+      // edge canônica `gallery-create-payment` (Gallery). Bloqueia
+      // qualquer tentativa de INSERT direto de fotos_extras/combinada.
+      if (
+        request.finalidade === 'fotos_extras' ||
+        request.finalidade === 'sessao_e_extras'
+      ) {
+        const msg =
+          'Cobrança de fotos extras deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
+        toast.error(msg);
+        return { success: false, error: msg };
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -238,7 +265,7 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         identificador: request.sessionId?.substring(0, 20) || '***',
       });
 
-      // Save charge to database
+      // Save charge to database — SEMPRE finalidade='sessao' aqui.
       const insertPayload: Record<string, unknown> = {
         user_id: user.id,
         cliente_id: request.clienteId,
@@ -249,48 +276,16 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         provedor: 'pix_manual',
         status: 'pendente',
         mp_pix_copia_cola: pixPayload, // Reuse existing field
-        finalidade: request.finalidade || 'sessao',
+        finalidade: 'sessao',
         correlation_id: request.correlationId || crypto.randomUUID(),
       };
 
-      if (request.finalidade === 'fotos_extras') {
-        if (!request.galeriaId || !request.qtdFotos || request.qtdFotos <= 0) {
-          throw new Error('Cobrança de fotos extras exige galeria e quantidade.');
-        }
-        // Guard anti-overcharge via RPC canônica
-        const { assertExtraPaymentWithinIdealClient } = await import('@/components/cobranca/_chargeGuards');
-        const guard = await assertExtraPaymentWithinIdealClient(request.galeriaId, request.valor);
-        if (guard.error) throw new Error(guard.error.message);
-        insertPayload.galeria_id = request.galeriaId;
-        insertPayload.qtd_fotos = request.qtdFotos;
-        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
-      } else if (request.finalidade === 'sessao_e_extras') {
-        if (
-          !request.galeriaId ||
-          !request.qtdFotos || request.qtdFotos <= 0 ||
-          !request.valorSessaoComponente || request.valorSessaoComponente <= 0 ||
-          !request.valorExtrasComponente || request.valorExtrasComponente <= 0
-        ) {
-          throw new Error('Cobrança combinada exige galeria, quantidade e componentes de sessão/extras.');
-        }
-        const soma = Number((request.valorSessaoComponente + request.valorExtrasComponente).toFixed(2));
-        if (Math.abs(soma - Number(request.valor.toFixed(2))) > 0.01) {
-          throw new Error('Soma dos componentes não bate com o valor total.');
-        }
-        // Guard: componente de extras não pode exceder saldo ideal da galeria
-        const { assertExtraPaymentWithinIdealClient } = await import('@/components/cobranca/_chargeGuards');
-        const guard = await assertExtraPaymentWithinIdealClient(request.galeriaId, request.valorExtrasComponente);
-        if (guard.error) throw new Error(guard.error.message);
-        insertPayload.galeria_id = request.galeriaId;
-        insertPayload.qtd_fotos = request.qtdFotos;
-        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
-        insertPayload.valor_sessao_componente = request.valorSessaoComponente;
-        insertPayload.valor_extras_componente = request.valorExtrasComponente;
-      } else if (request.sessionId) {
+      if (request.sessionId) {
         const { assertNotAmbiguousSessionChargeClient } = await import('@/components/cobranca/_chargeGuards');
         const guard = await assertNotAmbiguousSessionChargeClient(request.sessionId, request.valor);
         if (guard.error) throw new Error(guard.error.message);
       }
+
 
       const { data: cobranca, error } = await supabase
         .from('cobrancas')
