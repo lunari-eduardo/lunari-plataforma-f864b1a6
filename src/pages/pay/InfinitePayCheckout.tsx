@@ -287,53 +287,55 @@ export default function InfinitePayCheckout() {
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
+    <div className="light min-h-screen bg-[hsl(30,20%,97%)] text-neutral-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header comercial */}
         {data && (
           <div className="text-center mb-4">
-            <p className="text-sm text-muted-foreground">Pagamento para</p>
-            <h1 className="text-lg font-semibold">{data.photographer.display_name}</h1>
+            <p className="text-xs uppercase tracking-widest text-neutral-500">Pagamento para</p>
+            <h1 className="text-base font-medium text-neutral-700 mt-1">{data.photographer.display_name}</h1>
           </div>
         )}
 
-        <Card className="p-5 shadow-lg border-2">
+        <Card className="p-6 shadow-sm border border-neutral-200 bg-white rounded-2xl">
           {phase === "loading" && (
             <div className="flex flex-col items-center py-10 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Carregando pagamento…</p>
+              <p className="text-sm text-neutral-600">Carregando pagamento…</p>
             </div>
           )}
 
           {phase === "error" && (
             <div className="flex flex-col items-center py-8 gap-3 text-center">
               <AlertCircle className="h-10 w-10 text-destructive" />
-              <h2 className="font-semibold">Não foi possível abrir esta cobrança</h2>
-              <p className="text-sm text-muted-foreground">{errorMsg}</p>
+              <h2 className="font-semibold text-neutral-900">Não foi possível abrir esta cobrança</h2>
+              <p className="text-sm text-neutral-600">{errorMsg}</p>
             </div>
           )}
 
           {phase === "paid" && (
-            <div className="flex flex-col items-center py-8 gap-3 text-center">
-              <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-              <h2 className="font-semibold text-lg">Pagamento confirmado</h2>
-              <p className="text-sm text-muted-foreground">Você já pode fechar esta janela.</p>
+            <div className="flex flex-col items-center py-10 gap-4 text-center animate-in fade-in zoom-in duration-500">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="h-9 w-9 text-emerald-600" />
+              </div>
+              <h2 className="font-semibold text-xl text-neutral-900">Pagamento confirmado</h2>
+              <p className="text-sm text-neutral-600">Obrigado! Você já pode fechar esta janela.</p>
             </div>
           )}
 
           {phase === "redirecting" && (
-            <div className="flex flex-col items-center py-10 gap-3 text-center">
+            <div className="flex flex-col items-center py-12 gap-3 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm">Redirecionando ao checkout seguro…</p>
-              <p className="text-xs text-muted-foreground">Se não abrir automaticamente, verifique bloqueadores.</p>
+              <p className="text-sm text-neutral-800 font-medium">Redirecionando ao checkout seguro…</p>
+              <p className="text-xs text-neutral-500">Se não abrir automaticamente, verifique bloqueadores.</p>
             </div>
           )}
 
           {phase === "polling" && (
             <div className="flex flex-col items-center py-10 gap-3 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <h2 className="font-semibold">Pagamento em processamento</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="font-semibold text-neutral-900">Pagamento em processamento</h2>
+              <p className="text-sm text-neutral-600">
                 Aguardando confirmação da InfinitePay… isso pode levar alguns segundos.
               </p>
             </div>
@@ -342,11 +344,11 @@ export default function InfinitePayCheckout() {
           {phase === "form" && data && (
             <div className="space-y-4">
               {/* Valor destaque */}
-              <div className="text-center py-3 border-b">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor a pagar</p>
-                <p className="text-3xl font-bold tracking-tight">{brl(data.cobranca.valor)}</p>
+              <div className="text-center pb-4 border-b border-neutral-100">
+                <p className="text-[11px] uppercase tracking-widest text-neutral-500">Valor a pagar</p>
+                <p className="text-3xl font-bold tracking-tight text-primary mt-1">{brl(data.cobranca.valor)}</p>
                 {data.cobranca.descricao && (
-                  <p className="text-xs text-muted-foreground mt-1">{data.cobranca.descricao}</p>
+                  <p className="text-xs text-neutral-600 mt-1">{data.cobranca.descricao}</p>
                 )}
               </div>
 
