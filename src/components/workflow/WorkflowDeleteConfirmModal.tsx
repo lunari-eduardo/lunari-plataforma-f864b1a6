@@ -33,7 +33,10 @@ export function WorkflowDeleteConfirmModal({
     if (!sessionData) return;
     setLoading(true);
     try {
-      onConfirm(action);
+      // Sem pagamentos: força 'remove' para garantir que o agendamento
+      // vinculado também seja excluído da agenda.
+      const effectiveAction: DeleteAction = sessionData.hasPayments ? action : 'remove';
+      onConfirm(effectiveAction);
       onClose();
     } finally {
       setLoading(false);
@@ -102,7 +105,7 @@ export function WorkflowDeleteConfirmModal({
                             Cancelar sessão (preservar histórico)
                           </p>
                           <p className="text-xs text-lunar-textSecondary">
-                            Oculta a sessão do workflow. Valores pagos e dados ficam preservados no histórico do cliente (somente leitura)
+                            Arquiva a sessão no histórico do cliente. O agendamento fica na agenda como compromisso avulso (sem vínculo com a sessão). Pagamentos preservados.
                           </p>
                         </div>
                       </Label>
@@ -147,7 +150,7 @@ export function WorkflowDeleteConfirmModal({
               ) : (
                 <div className="p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
                   <p className="text-sm text-lunar-text">
-                    Esta sessão será excluída permanentemente.
+                    Esta sessão será excluída permanentemente, junto com o agendamento vinculado na agenda.
                   </p>
                 </div>
               )}
