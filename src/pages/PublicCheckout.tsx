@@ -133,6 +133,7 @@ export default function PublicCheckout() {
   const [pixError, setPixError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
+  const autoPixRef = useRef<boolean>(false);
 
   // Payer inline collection (PIX + shared)
   const [payerName, setPayerName] = useState('');
@@ -206,6 +207,7 @@ export default function PublicCheckout() {
     phone: missing.phone && payerPhone.replace(/\D/g, '').length < 10,
     cpfCnpj: missing.cpfCnpj && !validateCpfCnpj(payerCpf),
   };
+  const noMissingFields = !stillMissing.name && !stillMissing.email && !stillMissing.phone && !stillMissing.cpfCnpj;
 
   // PIX flow
   const generatePix = useCallback(async () => {
@@ -275,6 +277,18 @@ export default function PublicCheckout() {
       setPixLoading(false);
     }
   }, [cobrancaId, payerCpf, payerEmail, payerName, payerPhone]);
+
+  // Auto-gerar PIX quando o CRM já enviou todos os dados necessários
+  useEffect(() => {
+    if (autoPixRef.current) return;
+    if (!data || tab !== 'pix' || !data.settings.habilitarPix) return;
+    if (pixCopiaECola || pixLoading || pixError) return;
+    if (!noMissingFields) return;
+    if (!validateCpfCnpj(payerCpf)) return;
+    autoPixRef.current = true;
+    void generatePix();
+  }, [data, tab, noMissingFields, payerCpf, pixCopiaECola, pixLoading, pixError, generatePix]);
+
 
   const handleCopyPix = async () => {
     if (!pixCopiaECola) return;
@@ -438,14 +452,21 @@ export default function PublicCheckout() {
 
   if (pixConfirmed || cardSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(30,20%,97%)] p-4">
+      <div className="light min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-[hsl(30,20%,97%)] p-4">
         <Sonner />
         <div className="max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
-          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-emerald-100">
+          <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-emerald-100 shadow-sm">
             <CheckCircle className="h-10 w-10 text-emerald-600" />
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900">Pagamento confirmado!</h1>
-          <p className="text-neutral-600">Obrigado! Seu pagamento foi processado com sucesso.</p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-neutral-900">Pagamento confirmado!</h1>
+            <p className="text-neutral-600">Obrigado! Seu pagamento foi processado com sucesso.</p>
+          </div>
+          {data?.photographer?.name && (
+            <p className="text-xs text-neutral-500 pt-4 border-t border-neutral-100">
+              {data.photographer.name}
+            </p>
+          )}
         </div>
       </div>
     );

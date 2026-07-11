@@ -63,6 +63,19 @@ export default function InfinitePayCheckout() {
   const [submitting, setSubmitting] = useState(false);
   const [showOptional, setShowOptional] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const autoSubmittedRef = useRef(false);
+
+  // ——— FORÇAR MODO LIGHT no checkout público ———
+  useEffect(() => {
+    const html = document.documentElement;
+    const hadDark = html.classList.contains('dark');
+    html.classList.remove('dark');
+    html.classList.add('light');
+    return () => {
+      html.classList.remove('light');
+      if (hadDark) html.classList.add('dark');
+    };
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!cobrancaId) return;
@@ -109,6 +122,34 @@ export default function InfinitePayCheckout() {
         setPhase("polling");
         return;
       }
+
+      // Skip form quando CRM já tem tudo que o provedor precisa
+      const snap = payload.payer_snapshot;
+      const missing = Array.isArray(payload.missingFields) ? payload.missingFields : [];
+      const hasName = (snap.nome || "").trim().length >= 2;
+      const hasPhone = isValidPhoneBR(snap.telefone || "");
+      const canAutoSubmit =
+        !autoSubmittedRef.current && missing.length === 0 && hasName && hasPhone;
+
+      if (canAutoSubmit) {
+        autoSubmittedRef.current = true;
+        setPhase("redirecting");
+        void submitFinalize({
+          nome: snap.nome,
+          email: snap.email,
+          telefone: snap.telefone,
+          cpfCnpj: snap.cpfCnpj,
+          cep: snap.cep,
+          endereco: snap.endereco,
+          enderecoNumero: snap.endereco_numero,
+          enderecoComplemento: snap.endereco_complemento,
+          bairro: snap.bairro,
+          cidade: snap.cidade,
+          uf: snap.uf,
+        });
+        return;
+      }
+
       setPhase("form");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao carregar");
@@ -184,8 +225,12 @@ export default function InfinitePayCheckout() {
   const emailOk = email.trim() === "" || isAsciiEmail(email);
   const canSubmit = nomeOk && telefoneOk && cpfOk && emailOk && !submitting;
 
-  const handleSubmit = async () => {
-    if (!canSubmit || !cobrancaId) return;
+  const submitFinalize = useCallback(async (raw: {
+    nome?: string; email?: string; telefone?: string; cpfCnpj?: string;
+    cep?: string; endereco?: string; enderecoNumero?: string; enderecoComplemento?: string;
+    bairro?: string; cidade?: string; uf?: string;
+  }) => {
+    if (!cobrancaId) return;
     setSubmitting(true);
     setErrorMsg("");
     try {
@@ -200,17 +245,17 @@ export default function InfinitePayCheckout() {
         body: JSON.stringify({
           cobrancaId,
           payerPatch: {
-            nome: nome.trim() || undefined,
-            email: email.trim() || undefined,
-            telefone: unmaskDigits(telefone) || undefined,
-            cpfCnpj: unmaskDigits(cpfCnpj) || undefined,
-            cep: unmaskDigits(cep) || undefined,
-            endereco: endereco.trim() || undefined,
-            enderecoNumero: numero.trim() || undefined,
-            enderecoComplemento: complemento.trim() || undefined,
-            bairro: bairro.trim() || undefined,
-            cidade: cidade.trim() || undefined,
-            uf: uf.trim() || undefined,
+            nome: raw.nome?.trim() || undefined,
+            email: raw.email?.trim() || undefined,
+            telefone: unmaskDigits(raw.telefone || "") || undefined,
+            cpfCnpj: unmaskDigits(raw.cpfCnpj || "") || undefined,
+            cep: unmaskDigits(raw.cep || "") || undefined,
+            endereco: raw.endereco?.trim() || undefined,
+            enderecoNumero: raw.enderecoNumero?.trim() || undefined,
+            enderecoComplemento: raw.enderecoComplemento?.trim() || undefined,
+            bairro: raw.bairro?.trim() || undefined,
+            cidade: raw.cidade?.trim() || undefined,
+            uf: raw.uf?.trim() || undefined,
           },
         }),
       });
@@ -218,69 +263,79 @@ export default function InfinitePayCheckout() {
       if (!res.ok || !json.success) {
         setErrorMsg(json.error || "Não foi possível gerar o pagamento. Tente novamente.");
         setSubmitting(false);
+        setPhase("form");
         return;
       }
       setPhase("redirecting");
-      // Pequeno delay para UX
-      setTimeout(() => {
-        window.location.href = json.checkoutUrl;
-      }, 400);
+      setTimeout(() => { window.location.href = json.checkoutUrl; }, 400);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Erro ao processar");
       setSubmitting(false);
+      setPhase("form");
     }
+  }, [cobrancaId]);
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    await submitFinalize({
+      nome, email, telefone, cpfCnpj,
+      cep, endereco, enderecoNumero: numero, enderecoComplemento: complemento,
+      bairro, cidade, uf,
+    });
   };
 
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
+    <div className="light min-h-screen bg-[hsl(30,20%,97%)] text-neutral-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header comercial */}
         {data && (
           <div className="text-center mb-4">
-            <p className="text-sm text-muted-foreground">Pagamento para</p>
-            <h1 className="text-lg font-semibold">{data.photographer.display_name}</h1>
+            <p className="text-xs uppercase tracking-widest text-neutral-500">Pagamento para</p>
+            <h1 className="text-base font-medium text-neutral-700 mt-1">{data.photographer.display_name}</h1>
           </div>
         )}
 
-        <Card className="p-5 shadow-lg border-2">
+        <Card className="p-6 shadow-sm border border-neutral-200 bg-white rounded-2xl">
           {phase === "loading" && (
             <div className="flex flex-col items-center py-10 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Carregando pagamento…</p>
+              <p className="text-sm text-neutral-600">Carregando pagamento…</p>
             </div>
           )}
 
           {phase === "error" && (
             <div className="flex flex-col items-center py-8 gap-3 text-center">
               <AlertCircle className="h-10 w-10 text-destructive" />
-              <h2 className="font-semibold">Não foi possível abrir esta cobrança</h2>
-              <p className="text-sm text-muted-foreground">{errorMsg}</p>
+              <h2 className="font-semibold text-neutral-900">Não foi possível abrir esta cobrança</h2>
+              <p className="text-sm text-neutral-600">{errorMsg}</p>
             </div>
           )}
 
           {phase === "paid" && (
-            <div className="flex flex-col items-center py-8 gap-3 text-center">
-              <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-              <h2 className="font-semibold text-lg">Pagamento confirmado</h2>
-              <p className="text-sm text-muted-foreground">Você já pode fechar esta janela.</p>
+            <div className="flex flex-col items-center py-10 gap-4 text-center animate-in fade-in zoom-in duration-500">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="h-9 w-9 text-emerald-600" />
+              </div>
+              <h2 className="font-semibold text-xl text-neutral-900">Pagamento confirmado</h2>
+              <p className="text-sm text-neutral-600">Obrigado! Você já pode fechar esta janela.</p>
             </div>
           )}
 
           {phase === "redirecting" && (
-            <div className="flex flex-col items-center py-10 gap-3 text-center">
+            <div className="flex flex-col items-center py-12 gap-3 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm">Redirecionando ao checkout seguro…</p>
-              <p className="text-xs text-muted-foreground">Se não abrir automaticamente, verifique bloqueadores.</p>
+              <p className="text-sm text-neutral-800 font-medium">Redirecionando ao checkout seguro…</p>
+              <p className="text-xs text-neutral-500">Se não abrir automaticamente, verifique bloqueadores.</p>
             </div>
           )}
 
           {phase === "polling" && (
             <div className="flex flex-col items-center py-10 gap-3 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <h2 className="font-semibold">Pagamento em processamento</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="font-semibold text-neutral-900">Pagamento em processamento</h2>
+              <p className="text-sm text-neutral-600">
                 Aguardando confirmação da InfinitePay… isso pode levar alguns segundos.
               </p>
             </div>
@@ -289,11 +344,11 @@ export default function InfinitePayCheckout() {
           {phase === "form" && data && (
             <div className="space-y-4">
               {/* Valor destaque */}
-              <div className="text-center py-3 border-b">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor a pagar</p>
-                <p className="text-3xl font-bold tracking-tight">{brl(data.cobranca.valor)}</p>
+              <div className="text-center pb-4 border-b border-neutral-100">
+                <p className="text-[11px] uppercase tracking-widest text-neutral-500">Valor a pagar</p>
+                <p className="text-3xl font-bold tracking-tight text-primary mt-1">{brl(data.cobranca.valor)}</p>
                 {data.cobranca.descricao && (
-                  <p className="text-xs text-muted-foreground mt-1">{data.cobranca.descricao}</p>
+                  <p className="text-xs text-neutral-600 mt-1">{data.cobranca.descricao}</p>
                 )}
               </div>
 
