@@ -150,7 +150,7 @@ export function WorkflowDeleteConfirmModal({
               ) : (
                 <div className="p-3 rounded-lg border border-lunar-border bg-lunar-surface/50">
                   <p className="text-sm text-lunar-text">
-                    Esta sessão será excluída permanentemente.
+                    Esta sessão será excluída permanentemente, junto com o agendamento vinculado na agenda.
                   </p>
                 </div>
               )}
