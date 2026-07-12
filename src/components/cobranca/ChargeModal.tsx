@@ -584,6 +584,7 @@ export function ChargeModal({
               Cobrar cliente
               <span className="text-xs text-muted-foreground font-normal ml-1">· {clienteNome}</span>
             </DialogTitle>
+            {step ? <ChargeStepBadge step={step} /> : null}
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
