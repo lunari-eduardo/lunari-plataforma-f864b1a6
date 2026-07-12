@@ -257,7 +257,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         identificador: request.sessionId?.substring(0, 20) || '***',
       });
 
-      // Save charge to database — SEMPRE finalidade='sessao' aqui.
+      // Save charge to database — respeita finalidade recebida.
+      const finalidadeReq = request.finalidade ?? 'sessao';
       const insertPayload: Record<string, unknown> = {
         user_id: user.id,
         cliente_id: request.clienteId,
@@ -268,11 +269,19 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         provedor: 'pix_manual',
         status: 'pendente',
         mp_pix_copia_cola: pixPayload, // Reuse existing field
-        finalidade: 'sessao',
+        finalidade: finalidadeReq,
         correlation_id: request.correlationId || crypto.randomUUID(),
       };
 
-      if (request.sessionId) {
+      if (finalidadeReq === 'sessao_e_extras') {
+        insertPayload.galeria_id = request.galeriaId ?? null;
+        insertPayload.qtd_fotos = request.qtdFotos ?? null;
+        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
+        insertPayload.valor_sessao_componente = request.valorSessaoComponente ?? null;
+        insertPayload.valor_extras_componente = request.valorExtrasComponente ?? null;
+      }
+
+      if (finalidadeReq === 'sessao' && request.sessionId) {
         const { assertNotAmbiguousSessionChargeClient } = await import('@/components/cobranca/_chargeGuards');
         const guard = await assertNotAmbiguousSessionChargeClient(request.sessionId, request.valor);
         if (guard.error) throw new Error(guard.error.message);
