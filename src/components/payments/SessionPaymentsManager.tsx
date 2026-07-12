@@ -418,7 +418,7 @@ export function SessionPaymentsManager({
                 </DropdownMenu>
               ) : (
                 <Button
-                  onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                  onClick={() => setShowChargeModal(true)}
                   variant="outline"
                   disabled={!canCobrarSessao}
                   className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
