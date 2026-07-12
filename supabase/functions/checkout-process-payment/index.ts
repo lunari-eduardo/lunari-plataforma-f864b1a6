@@ -532,10 +532,14 @@ Deno.serve(async (req) => {
               .maybeSingle();
 
             if (parcelaError) {
-              console.error('Error creating parcela for CONFIRMED CC:', parcelaError);
+              console.error(
+                `❌ Error creating parcela for CONFIRMED CC | cobranca=${cobrancaId} payment=${paymentData.id}:`,
+                parcelaError,
+              );
             } else {
               paid = true;
             }
+
           } else {
             console.warn('Could not fetch payment details for CONFIRMED CC');
           }
