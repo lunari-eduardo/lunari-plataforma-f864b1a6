@@ -534,7 +534,28 @@ Deno.serve(async (req) => {
               (cobranca as any).user_id,
             );
           }
+
+          // Hard-fail: se identificamos a cobrança mas não conseguimos gravar
+          // a parcela (ex.: constraint faltando, RLS, timeout), retornamos 500
+          // para que o Asaas reentregue o webhook. Silenciar aqui deixa a
+          // cobrança presa em "pendente" mesmo depois do pagamento confirmado.
+          if (!upsertSuccess) {
+            console.error(
+              `❌ Webhook ${event} não persistiu parcela | cobranca=${cobranca.id} payment=${payment.id}`,
+            );
+            return new Response(
+              JSON.stringify({
+                received: false,
+                error: "parcela_upsert_failed",
+                cobrancaId: cobranca.id,
+                paymentId: payment.id,
+                event,
+              }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
         }
+
       }
     }
 
