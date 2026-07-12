@@ -36,6 +36,9 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
+  /** Orquestra "Cobrar tudo": abre ChargeModal (sessão) e, ao concluir,
+   *  encadeia ExtraChargeModal (extras via Gallery). 2 links, fluxo canônico. */
+  const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
   const [paymentInput, setPaymentInput] = useState("");
   
 
