@@ -84,6 +84,7 @@ export function ChargeModal({
   clienteWhatsapp,
   sessionId,
   valorSugerido,
+  step,
 }: ChargeModalProps) {
   const [valor, setValor] = useState(valorSugerido);
   const [valorType, setValorType] = useState<'total' | 'parcial'>('total');
