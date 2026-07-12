@@ -25,6 +25,7 @@ import {
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
+import { ChargeStepBadge } from './ChargeStepBadge';
 
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
