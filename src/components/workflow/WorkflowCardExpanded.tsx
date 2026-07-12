@@ -482,11 +482,11 @@ export function WorkflowCardExpanded({
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
           session={session}
-          onCobrar={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
-          onCobrarExtras={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+          onCobrar={() => setShowChargeModal(true)}
+          onCobrarExtras={() => setShowExtraChargeModal(true)}
           onCobrarTudo={
             resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
-              ? () => { setCombinedStep('session'); setShowChargeModal(true); }
+              ? () => setShowCombinedChargeModal(true)
               : undefined
           }
           extrasPendente={extrasPendente}
