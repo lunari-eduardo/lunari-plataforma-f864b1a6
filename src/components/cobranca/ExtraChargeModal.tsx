@@ -75,6 +75,7 @@ export function ExtraChargeModal({
   clienteNome,
   nomeSessao,
   clienteWhatsapp,
+  step,
 }: ExtraChargeModalProps) {
   const queryClient = useQueryClient();
   const { calc, isLoading, invalidate } = useGalleryExtraCalc(isOpen ? galeriaId : null);
