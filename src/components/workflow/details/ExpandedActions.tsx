@@ -30,8 +30,8 @@ const formatBRL = (v: number) =>
  * Coluna de ações (Bloco 3) do card expandido.
  *
  * UX unificada com o modal de Pagamentos: um único botão "Cobrar" com
- * dropdown que expõe Sessão / Extras / Tudo. "Cobrar tudo" dispara o
- * fluxo canônico de 2 links (sessão via Gestão → extras via Gallery).
+ * dropdown que expõe Sessão / Extras / Tudo. "Cobrar tudo" gera UM link
+ * único (finalidade `sessao_e_extras`) via CombinedChargeModal.
  */
 export function ExpandedActions({
   session,
