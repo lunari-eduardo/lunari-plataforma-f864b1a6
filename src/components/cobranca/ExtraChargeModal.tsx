@@ -24,6 +24,7 @@ import { PixManualSection } from './PixManualSection';
 import { toast } from 'sonner';
 import { useGalleryExtraCalc } from '@/hooks/useGalleryExtraCalc';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChargeStepBadge } from './ChargeStepBadge';
 
 interface ExtraChargeModalProps {
   isOpen: boolean;
