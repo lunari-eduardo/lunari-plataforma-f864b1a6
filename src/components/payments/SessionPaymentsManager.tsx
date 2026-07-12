@@ -301,10 +301,8 @@ export function SessionPaymentsManager({
   const canCobrarTudo = canCobrarSessao && canCobrarExtras;
 
   const handleCobrarTudo = () => {
-    // Opção A canônica: 2 links sequenciais (sessão → extras via Gallery).
-    // Extras nunca são cobradas pelo Gestão diretamente.
-    setCombinedStep('session');
-    setShowChargeModal(true);
+    // Link único combinando sessão + extras (finalidade `sessao_e_extras`).
+    setShowCombinedChargeModal(true);
   };
 
   // Shared content
