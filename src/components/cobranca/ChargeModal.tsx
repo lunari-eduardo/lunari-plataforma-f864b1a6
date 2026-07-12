@@ -62,6 +62,8 @@ interface ChargeModalProps {
   clienteWhatsapp?: string;
   sessionId?: string;
   valorSugerido: number;
+  /** Quando presente, exibe stepper no header (fluxo "Cobrar tudo"). */
+  step?: import('./ChargeStepBadge').ChargeStep | null;
 }
 
 interface AsaasSettingsState {
