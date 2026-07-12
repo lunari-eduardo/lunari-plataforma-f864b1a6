@@ -36,6 +36,9 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
+  /** Orquestra "Cobrar tudo": abre ChargeModal (sessão) e, ao concluir,
+   *  encadeia ExtraChargeModal (extras via Gallery). 2 links, fluxo canônico. */
+  const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
   const [paymentInput, setPaymentInput] = useState("");
   
 
@@ -480,13 +483,17 @@ export function WorkflowCardExpanded({
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
           session={session}
-          onCobrar={() => setShowChargeModal(true)}
-          onCobrarExtras={() => setShowExtraChargeModal(true)}
-          onCobrarTudo={undefined}
+          onCobrar={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+          onCobrarExtras={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+          onCobrarTudo={
+            resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
+              ? () => { setCombinedStep('session'); setShowChargeModal(true); }
+              : undefined
+          }
           extrasPendente={extrasPendente}
           extrasFullyPaid={extrasFullyPaid}
           sessaoPendente={pendenteSessaoSugerido}
-          
+          hasGaleria={hasGaleria}
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
         />
       </div>
@@ -530,22 +537,40 @@ export function WorkflowCardExpanded({
 
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => setShowChargeModal(false)}
+        onClose={() => {
+          setShowChargeModal(false);
+          if (combinedStep === 'session' && resolvedGalleryId && extrasPendente > 0.001) {
+            setCombinedStep('extras');
+            setTimeout(() => setShowExtraChargeModal(true), 150);
+          } else {
+            setCombinedStep('idle');
+          }
+        }}
         clienteId={session.clienteId || ""}
         clienteNome={session.nome || "Cliente"}
         clienteWhatsapp={session.whatsapp}
         sessionId={session.sessionId || session.id}
         valorSugerido={pendenteSessaoSugerido}
+        step={
+          combinedStep === 'session'
+            ? { current: 1, total: 2, label: 'Sessão', nextLabel: 'Extras' }
+            : null
+        }
       />
 
       {resolvedGalleryId && (
         <ExtraChargeModal
           isOpen={showExtraChargeModal}
-          onClose={() => setShowExtraChargeModal(false)}
+          onClose={() => { setShowExtraChargeModal(false); setCombinedStep('idle'); }}
           galeriaId={resolvedGalleryId}
           clienteNome={session.nome}
           clienteWhatsapp={session.whatsapp}
           nomeSessao={session.pacote || session.nome}
+          step={
+            combinedStep === 'extras'
+              ? { current: 2, total: 2, label: 'Extras' }
+              : null
+          }
         />
       )}
 

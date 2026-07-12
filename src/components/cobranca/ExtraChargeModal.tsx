@@ -24,6 +24,7 @@ import { PixManualSection } from './PixManualSection';
 import { toast } from 'sonner';
 import { useGalleryExtraCalc } from '@/hooks/useGalleryExtraCalc';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChargeStepBadge } from './ChargeStepBadge';
 
 interface ExtraChargeModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ interface ExtraChargeModalProps {
   clienteNome?: string;
   nomeSessao?: string;
   clienteWhatsapp?: string;
+  /** Quando presente, exibe stepper no header (fluxo "Cobrar tudo"). */
+  step?: import('./ChargeStepBadge').ChargeStep | null;
 }
 
 type GalleryPaymentResponse = {
@@ -73,6 +76,7 @@ export function ExtraChargeModal({
   clienteNome,
   nomeSessao,
   clienteWhatsapp,
+  step,
 }: ExtraChargeModalProps) {
   const queryClient = useQueryClient();
   const { calc, isLoading, invalidate } = useGalleryExtraCalc(isOpen ? galeriaId : null);
@@ -213,6 +217,7 @@ export function ExtraChargeModal({
             {nomeSessao && <span>Galeria: <strong className="text-foreground">{nomeSessao}</strong></span>}
             {clienteNome && <span>Cliente: <strong className="text-foreground">{clienteNome}</strong></span>}
           </div>
+          {step ? <ChargeStepBadge step={step} /> : null}
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

@@ -1,8 +1,14 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Send, Images } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CreditCard, Send, Images, ChevronDown } from "lucide-react";
 import { SessaoContratoButton } from "@/components/contratos/SessaoContratoButton";
-// FEATURE_COMBINED_CHARGE removido: cobrança combinada foi descontinuada no Gestão.
 import type { SessionData } from "@/types/workflow";
 
 interface Props {
@@ -13,15 +19,19 @@ interface Props {
   extrasPendente?: number;
   extrasFullyPaid?: boolean;
   sessaoPendente?: number;
+  hasGaleria?: boolean;
   onAbrirPagamentos: () => void;
 }
+
+const formatBRL = (v: number) =>
+  Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 /**
  * Coluna de ações (Bloco 3) do card expandido.
  *
- * "Cobrar extras" aparece quando a sessão está vinculada a uma galeria com
- * saldo > 0 (via RPC canônica `calculate_gallery_extra_payment`). Nunca
- * bloqueia "Cobrar" (sessão) — ambos independentes (handoff §3).
+ * UX unificada com o modal de Pagamentos: um único botão "Cobrar" com
+ * dropdown que expõe Sessão / Extras / Tudo. "Cobrar tudo" dispara o
+ * fluxo canônico de 2 links (sessão via Gestão → extras via Gallery).
  */
 export function ExpandedActions({
   session,
@@ -31,12 +41,15 @@ export function ExpandedActions({
   extrasPendente = 0,
   extrasFullyPaid = false,
   sessaoPendente = 0,
+  hasGaleria = false,
   onAbrirPagamentos,
 }: Props) {
-  const showExtras = extrasPendente > 0 || (!extrasFullyPaid && !!onCobrarExtras);
-  // Botão "Cobrar tudo (1 link)" foi removido — extras de galeria são cobradas
-  // exclusivamente pelo Gallery (edge canônica `gallery-create-payment`).
-  const showCobrarTudo = false;
+  const canCobrarSessao = sessaoPendente > 0.001;
+  const canCobrarExtras =
+    hasGaleria && !!onCobrarExtras && extrasPendente > 0.001 && !extrasFullyPaid;
+  const canCobrarTudo = canCobrarSessao && canCobrarExtras && !!onCobrarTudo;
+
+  const showDropdown = hasGaleria && (canCobrarExtras || extrasPendente > 0);
 
   return (
     <div className="space-y-3 flex flex-col items-center justify-center py-4">
@@ -45,37 +58,73 @@ export function ExpandedActions({
       </h4>
 
       <div className="flex flex-col items-center gap-2 w-full max-w-[220px]">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onCobrar}
-          className="gap-2 w-full border-primary text-primary hover:bg-primary/10"
-        >
-          <Send className="h-3.5 w-3.5" />
-          Cobrar sessão
-        </Button>
-
-        {showExtras && onCobrarExtras && (
+        {showDropdown ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canCobrarSessao && !canCobrarExtras}
+                className="gap-2 w-full border-primary text-primary hover:bg-primary/10"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Cobrar
+                <ChevronDown className="h-3 w-3 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuItem
+                disabled={!canCobrarSessao}
+                onClick={() => canCobrarSessao && onCobrar()}
+                className="gap-2"
+              >
+                <Send className="h-3.5 w-3.5 text-primary" />
+                <div className="flex-1">
+                  <div className="text-xs font-medium">Cobrar sessão</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {formatBRL(sessaoPendente)}
+                  </div>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!canCobrarExtras}
+                onClick={() => canCobrarExtras && onCobrarExtras?.()}
+                className="gap-2"
+              >
+                <Images className="h-3.5 w-3.5 text-amber-500" />
+                <div className="flex-1">
+                  <div className="text-xs font-medium">Cobrar extras</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {formatBRL(extrasPendente)}
+                  </div>
+                </div>
+              </DropdownMenuItem>
+              {canCobrarTudo && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onCobrarTudo} className="gap-2">
+                    <Send className="h-3.5 w-3.5 text-primary" />
+                    <div className="flex-1">
+                      <div className="text-xs font-medium">Cobrar tudo</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {formatBRL(sessaoPendente + extrasPendente)} · 2 links
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
           <Button
             variant="outline"
             size="sm"
-            onClick={onCobrarExtras}
-            disabled={extrasPendente <= 0}
-            className="gap-2 w-full border-amber-500/60 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-          >
-            <Images className="h-3.5 w-3.5" />
-            Cobrar extras
-          </Button>
-        )}
-
-        {showCobrarTudo && (
-          <Button
-            size="sm"
-            onClick={onCobrarTudo}
-            className="gap-2 w-full bg-primary hover:bg-primary/90"
+            onClick={onCobrar}
+            disabled={!canCobrarSessao}
+            className="gap-2 w-full border-primary text-primary hover:bg-primary/10"
           >
             <Send className="h-3.5 w-3.5" />
-            Cobrar tudo (1 link)
+            Cobrar sessão
           </Button>
         )}
 

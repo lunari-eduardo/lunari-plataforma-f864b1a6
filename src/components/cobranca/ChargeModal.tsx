@@ -25,6 +25,7 @@ import {
   type ExtraPaymentSnapshot,
 } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
+import { ChargeStepBadge } from './ChargeStepBadge';
 
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
@@ -62,6 +63,8 @@ interface ChargeModalProps {
   clienteWhatsapp?: string;
   sessionId?: string;
   valorSugerido: number;
+  /** Quando presente, exibe stepper no header (fluxo "Cobrar tudo"). */
+  step?: import('./ChargeStepBadge').ChargeStep | null;
 }
 
 interface AsaasSettingsState {
@@ -82,6 +85,7 @@ export function ChargeModal({
   clienteWhatsapp,
   sessionId,
   valorSugerido,
+  step,
 }: ChargeModalProps) {
   const [valor, setValor] = useState(valorSugerido);
   const [valorType, setValorType] = useState<'total' | 'parcial'>('total');
@@ -581,6 +585,7 @@ export function ChargeModal({
               Cobrar cliente
               <span className="text-xs text-muted-foreground font-normal ml-1">· {clienteNome}</span>
             </DialogTitle>
+            {step ? <ChargeStepBadge step={step} /> : null}
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cobrar' | 'historico')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
