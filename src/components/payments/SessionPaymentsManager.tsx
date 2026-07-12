@@ -382,7 +382,7 @@ export function SessionPaymentsManager({
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem
                       disabled={!canCobrarSessao}
-                      onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                      onClick={() => setShowChargeModal(true)}
                     >
                       <Send className="h-3.5 w-3.5 mr-2" />
                       <div className="flex-1">
