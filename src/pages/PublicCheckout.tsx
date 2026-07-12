@@ -477,32 +477,33 @@ export default function PublicCheckout() {
 
   // ——— Layout base (estilo Gallery, imagens 4 e 5) ———
   return (
-    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] text-neutral-900 px-4 py-8">
+    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] text-neutral-900 px-4 py-6">
       <Sonner />
-      <div className="max-w-md w-full space-y-6">
-        {/* Header — logo/nome do fotógrafo (pequeno) */}
-        {photographer.logoUrl ? (
-          <img src={photographer.logoUrl} alt={photographer.name || 'Estúdio'} className="h-10 mx-auto object-contain opacity-90" />
-        ) : photographer.name ? (
-          <h1 className="text-sm font-medium text-center text-neutral-500">{photographer.name}</h1>
-        ) : null}
-
-        {/* Selo segurança */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-primary">
-          <Lock className="h-3 w-3" />
-          Ambiente seguro e criptografado
+      <div className="max-w-md w-full space-y-4">
+        {/* Header — logo/nome do fotógrafo + selo em uma linha compacta */}
+        <div className="flex items-center justify-between gap-3">
+          {photographer.logoUrl ? (
+            <img src={photographer.logoUrl} alt={photographer.name || 'Estúdio'} className="h-8 object-contain opacity-90" />
+          ) : photographer.name ? (
+            <h1 className="text-sm font-medium text-neutral-500 truncate">{photographer.name}</h1>
+          ) : <span />}
+          <div className="flex items-center gap-1 text-[10px] text-primary shrink-0">
+            <Lock className="h-3 w-3" />
+            Ambiente seguro
+          </div>
         </div>
 
-        {/* Valor destacado */}
-        <div className="text-center space-y-1">
-          <p className="text-[11px] uppercase tracking-widest text-neutral-500 font-medium">Pagamento</p>
-          <p className="text-4xl font-bold text-primary tracking-tight">
+        {/* Valor destacado (compacto) */}
+        <div className="text-center">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Pagamento</p>
+          <p className="text-3xl font-bold text-primary tracking-tight leading-tight">
             R$ {cobranca.valor.toFixed(2).replace('.', ',')}
           </p>
           {cobranca.descricao && (
-            <p className="text-sm text-neutral-600">{cobranca.descricao}</p>
+            <p className="text-xs text-neutral-600 mt-0.5">{cobranca.descricao}</p>
           )}
         </div>
+
 
         {/* Tabs segmentadas (pill) — só quando ambos habilitados */}
         {bothTabs && (
@@ -643,153 +644,109 @@ export default function PublicCheckout() {
 
         {/* ══════════════════ CARTÃO ══════════════════ */}
         {tab === 'card' && settings.habilitarCartao && (
-          <div className="space-y-5">
+          <div className="space-y-3">
             {/* Dados do titular */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-neutral-900">
-                <User className="h-4 w-4 text-primary" />
-                Dados do titular
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-neutral-700">Nome no cartão</Label>
-                <Input
-                  value={payerName}
-                  onChange={(e) => setPayerName(e.target.value.toUpperCase())}
-                  placeholder="NOME COMPLETO"
-                  className="bg-white border-neutral-200"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-neutral-700">CPF / CNPJ</Label>
+            <div className="grid grid-cols-1 gap-2">
+              <Input
+                value={payerName}
+                onChange={(e) => setPayerName(e.target.value.toUpperCase())}
+                placeholder="Nome no cartão"
+                className="h-9 bg-white border-neutral-200"
+              />
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   value={payerCpf}
                   onChange={(e) => setPayerCpf(maskCpfCnpj(e.target.value))}
-                  placeholder="000.000.000-00"
+                  placeholder="CPF / CNPJ"
                   inputMode="numeric"
-                  className="bg-white border-neutral-200"
+                  className="h-9 bg-white border-neutral-200"
                 />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-neutral-700">Email do titular</Label>
                 <Input
                   type="email"
                   value={payerEmail}
                   onChange={(e) => setPayerEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                  className="bg-white border-neutral-200"
+                  placeholder="Email"
+                  className="h-9 bg-white border-neutral-200"
                 />
               </div>
             </div>
 
             {/* Dados do cartão */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-neutral-900">
-                <CreditCard className="h-4 w-4 text-primary" />
-                Dados do cartão
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-neutral-700">Número do cartão</Label>
+            <div className="grid grid-cols-1 gap-2">
+              <Input
+                value={cardNumber}
+                onChange={(e) => setCardNumber(maskCardNumber(e.target.value))}
+                placeholder="Número do cartão"
+                inputMode="numeric"
+                className="h-9 bg-white border-neutral-200"
+              />
+              <div className="grid grid-cols-3 gap-2">
                 <Input
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(maskCardNumber(e.target.value))}
-                  placeholder="0000 0000 0000 0000"
+                  value={cardExpiry}
+                  onChange={(e) => setCardExpiry(maskExpiry(e.target.value))}
+                  placeholder="MM/AA"
                   inputMode="numeric"
-                  className="bg-white border-neutral-200"
+                  className="h-9 bg-white border-neutral-200"
+                />
+                <Input
+                  value={cardCvv}
+                  onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="CVV"
+                  inputMode="numeric"
+                  className="h-9 bg-white border-neutral-200"
+                />
+                <Input
+                  value={cardCep}
+                  onChange={(e) => setCardCep(maskCep(e.target.value))}
+                  placeholder="CEP"
+                  inputMode="numeric"
+                  className="h-9 bg-white border-neutral-200"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-neutral-700">Validade</Label>
-                  <Input
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(maskExpiry(e.target.value))}
-                    placeholder="MM/AA"
-                    inputMode="numeric"
-                    className="bg-white border-neutral-200"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-neutral-700 flex items-center justify-between">
-                    CVV <span className="text-[10px] text-neutral-400">verso</span>
-                  </Label>
-                  <Input
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="000"
-                    inputMode="numeric"
-                    className="bg-white border-neutral-200"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Contato */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-neutral-900">
-                <Phone className="h-4 w-4 text-primary" />
-                Contato
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-neutral-700">Telefone <span className="text-neutral-400 text-[10px]">(opcional)</span></Label>
-                  <Input
-                    value={payerPhone}
-                    onChange={(e) => setPayerPhone(maskPhone(e.target.value))}
-                    placeholder="(00) 00000-0000"
-                    inputMode="tel"
-                    className="bg-white border-neutral-200"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-neutral-700">CEP</Label>
-                  <Input
-                    value={cardCep}
-                    onChange={(e) => setCardCep(maskCep(e.target.value))}
-                    placeholder="00000-000"
-                    inputMode="numeric"
-                    className="bg-white border-neutral-200"
-                  />
-                </div>
-              </div>
+              <Input
+                value={payerPhone}
+                onChange={(e) => setPayerPhone(maskPhone(e.target.value))}
+                placeholder="Telefone (opcional)"
+                inputMode="tel"
+                className="h-9 bg-white border-neutral-200"
+              />
             </div>
 
             {/* Parcelas */}
-            <div className="space-y-1">
-              <Label className="text-xs text-neutral-700">Parcelas</Label>
-              <Select value={cardInstallments} onValueChange={setCardInstallments}>
-                <SelectTrigger className="bg-white border-neutral-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {installmentOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={cardInstallments} onValueChange={setCardInstallments}>
+              <SelectTrigger className="h-9 bg-white border-neutral-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {installmentOptions.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {cardError && (
-              <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/5 border border-destructive/20 rounded-md p-3">
+              <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/5 border border-destructive/20 rounded-md p-2.5">
                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>{cardError}</span>
               </div>
             )}
 
             <Button
-              className="w-full h-12 gap-2 text-base font-medium"
+              className="w-full h-11 gap-2 text-base font-medium"
               onClick={handleCardSubmit}
               disabled={cardLoading}
             >
               {cardLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
-              Finalizar pagamento · R$ {valorComTaxas.toFixed(2).replace('.', ',')}
+              Finalizar · R$ {valorComTaxas.toFixed(2).replace('.', ',')}
             </Button>
 
-            <p className="text-xs text-neutral-500 text-center flex items-center justify-center gap-1.5">
+            <p className="text-[10px] text-neutral-500 text-center flex items-center justify-center gap-1">
               <ShieldCheck className="h-3 w-3" />
               Seus dados estão protegidos com segurança de ponta a ponta.
             </p>
           </div>
         )}
+
 
         {/* Voltar */}
         {(pixCopiaECola || tab === 'card') && (
