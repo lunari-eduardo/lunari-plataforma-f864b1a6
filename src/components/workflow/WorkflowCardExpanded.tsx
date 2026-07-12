@@ -6,7 +6,7 @@ import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
-// CombinedChargeModal removido: extras exclusivos do Gallery (gallery-create-payment).
+import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
@@ -36,9 +36,8 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** Orquestra "Cobrar tudo": abre ChargeModal (sessão) e, ao concluir,
-   *  encadeia ExtraChargeModal (extras via Gallery). 2 links, fluxo canônico. */
-  const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
+  /** "Cobrar tudo" agora abre UM único modal (link único `sessao_e_extras`). */
+  const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
 
@@ -483,11 +482,11 @@ export function WorkflowCardExpanded({
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
           session={session}
-          onCobrar={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
-          onCobrarExtras={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+          onCobrar={() => setShowChargeModal(true)}
+          onCobrarExtras={() => setShowExtraChargeModal(true)}
           onCobrarTudo={
             resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
-              ? () => { setCombinedStep('session'); setShowChargeModal(true); }
+              ? () => setShowCombinedChargeModal(true)
               : undefined
           }
           extrasPendente={extrasPendente}
@@ -537,44 +536,42 @@ export function WorkflowCardExpanded({
 
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => {
-          setShowChargeModal(false);
-          if (combinedStep === 'session' && resolvedGalleryId && extrasPendente > 0.001) {
-            setCombinedStep('extras');
-            setTimeout(() => setShowExtraChargeModal(true), 150);
-          } else {
-            setCombinedStep('idle');
-          }
-        }}
+        onClose={() => setShowChargeModal(false)}
         clienteId={session.clienteId || ""}
         clienteNome={session.nome || "Cliente"}
         clienteWhatsapp={session.whatsapp}
         sessionId={session.sessionId || session.id}
         valorSugerido={pendenteSessaoSugerido}
-        step={
-          combinedStep === 'session'
-            ? { current: 1, total: 2, label: 'Sessão', nextLabel: 'Extras' }
-            : null
-        }
       />
 
       {resolvedGalleryId && (
         <ExtraChargeModal
           isOpen={showExtraChargeModal}
-          onClose={() => { setShowExtraChargeModal(false); setCombinedStep('idle'); }}
+          onClose={() => setShowExtraChargeModal(false)}
           galeriaId={resolvedGalleryId}
           clienteNome={session.nome}
           clienteWhatsapp={session.whatsapp}
           nomeSessao={session.pacote || session.nome}
-          step={
-            combinedStep === 'extras'
-              ? { current: 2, total: 2, label: 'Extras' }
-              : null
-          }
         />
       )}
 
-      {/* CombinedChargeModal removido — extras cobradas exclusivamente pelo Gallery. */}
+      {resolvedGalleryId && showCombinedChargeModal && (
+        <CombinedChargeModal
+          isOpen={showCombinedChargeModal}
+          onClose={() => setShowCombinedChargeModal(false)}
+          clienteId={session.clienteId || ""}
+          clienteNome={session.nome || "Cliente"}
+          clienteWhatsapp={session.whatsapp}
+          sessionId={session.sessionId || session.id}
+          galeriaId={resolvedGalleryId}
+          valorSessaoComponente={pendenteSessaoSugerido}
+          valorExtrasComponente={extrasPendente}
+          qtdFotosExtras={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}
+          snapshotFotosIncluidas={extraCalc?.included_count ?? null}
+          nomeSessao={session.pacote || session.nome}
+        />
+      )}
+
 
 
       <OverrideExtrasDialog

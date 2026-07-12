@@ -124,16 +124,12 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const createLinkCharge = async (request: CreateCobrancaRequest, installments?: number): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
-      // Contrato Gestão↔Gallery: extras SÓ podem ser cobrados via
-      // edge canônica `gallery-create-payment` (Gallery). Bloqueia
-      // aqui qualquer tentativa de criar cobrança de extras/combinada
-      // pelo caminho antigo do Gestão.
-      if (
-        request.finalidade === 'fotos_extras' ||
-        request.finalidade === 'sessao_e_extras'
-      ) {
+      // Contrato Gestão↔Gallery (2026-07-12): cobrança de fotos extras PURA
+      // continua exclusiva da edge canônica `gallery-create-payment` (Gallery).
+      // A combinada `sessao_e_extras` (link único) é permitida no Gestão.
+      if (request.finalidade === 'fotos_extras') {
         const msg =
-          'Cobrança de fotos extras deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
+          'Cobrança de fotos extras (isolada) deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
         toast.error(msg);
         return { success: false, error: msg };
       }
@@ -219,15 +215,11 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const createPixManualCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
-      // Contrato Gestão↔Gallery: extras SÓ podem ser cobrados via
-      // edge canônica `gallery-create-payment` (Gallery). Bloqueia
-      // qualquer tentativa de INSERT direto de fotos_extras/combinada.
-      if (
-        request.finalidade === 'fotos_extras' ||
-        request.finalidade === 'sessao_e_extras'
-      ) {
+      // Contrato Gestão↔Gallery (2026-07-12): fotos extras isoladas continuam
+      // no Gallery (gallery-create-payment). Combinada `sessao_e_extras` OK.
+      if (request.finalidade === 'fotos_extras') {
         const msg =
-          'Cobrança de fotos extras deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
+          'Cobrança de fotos extras (isolada) deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
         toast.error(msg);
         return { success: false, error: msg };
       }
@@ -265,7 +257,8 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         identificador: request.sessionId?.substring(0, 20) || '***',
       });
 
-      // Save charge to database — SEMPRE finalidade='sessao' aqui.
+      // Save charge to database — respeita finalidade recebida.
+      const finalidadeReq = request.finalidade ?? 'sessao';
       const insertPayload: Record<string, unknown> = {
         user_id: user.id,
         cliente_id: request.clienteId,
@@ -276,11 +269,19 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         provedor: 'pix_manual',
         status: 'pendente',
         mp_pix_copia_cola: pixPayload, // Reuse existing field
-        finalidade: 'sessao',
+        finalidade: finalidadeReq,
         correlation_id: request.correlationId || crypto.randomUUID(),
       };
 
-      if (request.sessionId) {
+      if (finalidadeReq === 'sessao_e_extras') {
+        insertPayload.galeria_id = request.galeriaId ?? null;
+        insertPayload.qtd_fotos = request.qtdFotos ?? null;
+        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
+        insertPayload.valor_sessao_componente = request.valorSessaoComponente ?? null;
+        insertPayload.valor_extras_componente = request.valorExtrasComponente ?? null;
+      }
+
+      if (finalidadeReq === 'sessao' && request.sessionId) {
         const { assertNotAmbiguousSessionChargeClient } = await import('@/components/cobranca/_chargeGuards');
         const guard = await assertNotAmbiguousSessionChargeClient(request.sessionId, request.valor);
         if (guard.error) throw new Error(guard.error.message);

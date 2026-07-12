@@ -15,6 +15,7 @@ import { PaymentConfigModalExpanded } from '@/components/crm/PaymentConfigModalE
 import { EditPaymentModal } from '@/components/crm/EditPaymentModal';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { ExtraChargeModal } from '@/components/cobranca/ExtraChargeModal';
+import { CombinedChargeModal } from '@/components/cobranca/CombinedChargeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefundDialog } from '@/components/payments/RefundDialog';
 import { useSessionFinancialsWithExtras } from '@/features/workflow/hooks/useSessionFinancialsWithExtras';
@@ -37,11 +38,8 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** Orquestração "Cobrar tudo" (Opção A canônica): abre ChargeModal (sessão)
-   *  e, ao fechar, aciona automaticamente ExtraChargeModal para gerar o 2º link.
-   *  O caminho de "link único" (finalidade='sessao_e_extras') foi CONGELADO —
-   *  cobrança de extras é exclusiva do Gallery via gallery-create-payment. */
-  const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
+  /** "Cobrar tudo": abre UM único modal (finalidade `sessao_e_extras`, link único). */
+  const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
   const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
@@ -303,10 +301,8 @@ export function SessionPaymentsManager({
   const canCobrarTudo = canCobrarSessao && canCobrarExtras;
 
   const handleCobrarTudo = () => {
-    // Opção A canônica: 2 links sequenciais (sessão → extras via Gallery).
-    // Extras nunca são cobradas pelo Gestão diretamente.
-    setCombinedStep('session');
-    setShowChargeModal(true);
+    // Link único combinando sessão + extras (finalidade `sessao_e_extras`).
+    setShowCombinedChargeModal(true);
   };
 
   // Shared content
@@ -386,7 +382,7 @@ export function SessionPaymentsManager({
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem
                       disabled={!canCobrarSessao}
-                      onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                      onClick={() => setShowChargeModal(true)}
                     >
                       <Send className="h-3.5 w-3.5 mr-2" />
                       <div className="flex-1">
@@ -396,7 +392,7 @@ export function SessionPaymentsManager({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={!canCobrarExtras}
-                      onClick={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+                      onClick={() => setShowExtraChargeModal(true)}
                     >
                       <Images className="h-3.5 w-3.5 mr-2 text-amber-500" />
                       <div className="flex-1">
@@ -412,7 +408,7 @@ export function SessionPaymentsManager({
                           <div className="flex-1">
                             <div className="text-xs font-medium">Cobrar tudo</div>
                             <div className="text-2xs text-muted-foreground">
-                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 2 links
+                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 1 link único
                             </div>
                           </div>
                         </DropdownMenuItem>
@@ -422,7 +418,7 @@ export function SessionPaymentsManager({
                 </DropdownMenu>
               ) : (
                 <Button
-                  onClick={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+                  onClick={() => setShowChargeModal(true)}
                   variant="outline"
                   disabled={!canCobrarSessao}
                   className="gap-2 flex-1 sm:flex-none h-8 text-xs border-primary text-primary hover:bg-primary/10"
@@ -675,53 +671,45 @@ export function SessionPaymentsManager({
         }}
       />
 
-      {/* Charge Modal (sessão) — passar sessionId TEXTO para vínculo correto.
-          Quando `combinedStep === 'session'`, ao fechar, abre extras (Opção A). */}
+      {/* Charge Modal (sessão isolada) */}
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => {
-          setShowChargeModal(false);
-          if (combinedStep === 'session' && fin.resolvedGalleryId && fin.extrasPend > 0) {
-            setCombinedStep('extras');
-            // pequeno delay para animação do dialog anterior
-            setTimeout(() => setShowExtraChargeModal(true), 150);
-          } else {
-            setCombinedStep('idle');
-          }
-        }}
+        onClose={() => setShowChargeModal(false)}
         clienteId={sessionData.clienteId || ''}
         clienteNome={sessionData.nome || 'Cliente'}
         clienteWhatsapp={sessionData.whatsapp}
         sessionId={sessionData.sessionId || sessionData.id}
         valorSugerido={valorRestanteSessao}
-        step={
-          combinedStep === 'session'
-            ? { current: 1, total: 2, label: 'Sessão', nextLabel: 'Extras' }
-            : null
-        }
       />
 
       {/* Extra Charge Modal (fotos extras da galeria) */}
       {fin.resolvedGalleryId && (
         <ExtraChargeModal
           isOpen={showExtraChargeModal}
-          onClose={() => {
-            setShowExtraChargeModal(false);
-            setCombinedStep('idle');
-          }}
+          onClose={() => setShowExtraChargeModal(false)}
           galeriaId={fin.resolvedGalleryId}
           clienteNome={sessionData.nome}
           nomeSessao={sessionData.descricao || sessionData.categoria}
           clienteWhatsapp={sessionData.whatsapp}
-          step={
-            combinedStep === 'extras'
-              ? { current: 2, total: 2, label: 'Extras' }
-              : null
-          }
         />
       )}
 
-      {/* CombinedChargeModal foi removido — extras de galeria são exclusivas do Gallery. */}
+      {/* Combined Charge Modal — link único cobrindo sessão + extras */}
+      {fin.resolvedGalleryId && showCombinedChargeModal && (
+        <CombinedChargeModal
+          isOpen={showCombinedChargeModal}
+          onClose={() => setShowCombinedChargeModal(false)}
+          clienteId={sessionData.clienteId || ''}
+          clienteNome={sessionData.nome || 'Cliente'}
+          clienteWhatsapp={sessionData.whatsapp}
+          sessionId={sessionData.sessionId || sessionData.id}
+          galeriaId={fin.resolvedGalleryId}
+          valorSessaoComponente={valorRestanteSessao}
+          valorExtrasComponente={fin.extrasPend}
+          qtdFotosExtras={fin.qtdExtras || 0}
+          nomeSessao={sessionData.descricao || sessionData.categoria}
+        />
+      )}
     </>
   );
 
