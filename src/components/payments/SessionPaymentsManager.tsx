@@ -38,11 +38,8 @@ export function SessionPaymentsManager({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** Orquestração "Cobrar tudo" (Opção A canônica): abre ChargeModal (sessão)
-   *  e, ao fechar, aciona automaticamente ExtraChargeModal para gerar o 2º link.
-   *  O caminho de "link único" (finalidade='sessao_e_extras') foi CONGELADO —
-   *  cobrança de extras é exclusiva do Gallery via gallery-create-payment. */
-  const [combinedStep, setCombinedStep] = useState<'idle' | 'session' | 'extras'>('idle');
+  /** "Cobrar tudo": abre UM único modal (finalidade `sessao_e_extras`, link único). */
+  const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SessionPaymentExtended | null>(null);
   const [paymentToDelete, setPaymentToDelete] = useState<SessionPaymentExtended | null>(null);
   const [paymentToRefund, setPaymentToRefund] = useState<SessionPaymentExtended | null>(null);
