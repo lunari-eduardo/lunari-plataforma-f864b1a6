@@ -694,6 +694,11 @@ export function SessionPaymentsManager({
         clienteWhatsapp={sessionData.whatsapp}
         sessionId={sessionData.sessionId || sessionData.id}
         valorSugerido={valorRestanteSessao}
+        step={
+          combinedStep === 'session'
+            ? { current: 1, total: 2, label: 'Sessão', nextLabel: 'Extras' }
+            : null
+        }
       />
 
       {/* Extra Charge Modal (fotos extras da galeria) */}
@@ -708,6 +713,11 @@ export function SessionPaymentsManager({
           clienteNome={sessionData.nome}
           nomeSessao={sessionData.descricao || sessionData.categoria}
           clienteWhatsapp={sessionData.whatsapp}
+          step={
+            combinedStep === 'extras'
+              ? { current: 2, total: 2, label: 'Extras' }
+              : null
+          }
         />
       )}
 
