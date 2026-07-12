@@ -671,53 +671,45 @@ export function SessionPaymentsManager({
         }}
       />
 
-      {/* Charge Modal (sessão) — passar sessionId TEXTO para vínculo correto.
-          Quando `combinedStep === 'session'`, ao fechar, abre extras (Opção A). */}
+      {/* Charge Modal (sessão isolada) */}
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => {
-          setShowChargeModal(false);
-          if (combinedStep === 'session' && fin.resolvedGalleryId && fin.extrasPend > 0) {
-            setCombinedStep('extras');
-            // pequeno delay para animação do dialog anterior
-            setTimeout(() => setShowExtraChargeModal(true), 150);
-          } else {
-            setCombinedStep('idle');
-          }
-        }}
+        onClose={() => setShowChargeModal(false)}
         clienteId={sessionData.clienteId || ''}
         clienteNome={sessionData.nome || 'Cliente'}
         clienteWhatsapp={sessionData.whatsapp}
         sessionId={sessionData.sessionId || sessionData.id}
         valorSugerido={valorRestanteSessao}
-        step={
-          combinedStep === 'session'
-            ? { current: 1, total: 2, label: 'Sessão', nextLabel: 'Extras' }
-            : null
-        }
       />
 
       {/* Extra Charge Modal (fotos extras da galeria) */}
       {fin.resolvedGalleryId && (
         <ExtraChargeModal
           isOpen={showExtraChargeModal}
-          onClose={() => {
-            setShowExtraChargeModal(false);
-            setCombinedStep('idle');
-          }}
+          onClose={() => setShowExtraChargeModal(false)}
           galeriaId={fin.resolvedGalleryId}
           clienteNome={sessionData.nome}
           nomeSessao={sessionData.descricao || sessionData.categoria}
           clienteWhatsapp={sessionData.whatsapp}
-          step={
-            combinedStep === 'extras'
-              ? { current: 2, total: 2, label: 'Extras' }
-              : null
-          }
         />
       )}
 
-      {/* CombinedChargeModal foi removido — extras de galeria são exclusivas do Gallery. */}
+      {/* Combined Charge Modal — link único cobrindo sessão + extras */}
+      {fin.resolvedGalleryId && showCombinedChargeModal && (
+        <CombinedChargeModal
+          isOpen={showCombinedChargeModal}
+          onClose={() => setShowCombinedChargeModal(false)}
+          clienteId={sessionData.clienteId || ''}
+          clienteNome={sessionData.nome || 'Cliente'}
+          clienteWhatsapp={sessionData.whatsapp}
+          sessionId={sessionData.sessionId || sessionData.id}
+          galeriaId={fin.resolvedGalleryId}
+          valorSessaoComponente={valorRestanteSessao}
+          valorExtrasComponente={fin.extrasPend}
+          qtdFotosExtras={fin.qtdExtras || 0}
+          nomeSessao={sessionData.descricao || sessionData.categoria}
+        />
+      )}
     </>
   );
 
