@@ -477,32 +477,33 @@ export default function PublicCheckout() {
 
   // ——— Layout base (estilo Gallery, imagens 4 e 5) ———
   return (
-    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] text-neutral-900 px-4 py-8">
+    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] text-neutral-900 px-4 py-6">
       <Sonner />
-      <div className="max-w-md w-full space-y-6">
-        {/* Header — logo/nome do fotógrafo (pequeno) */}
-        {photographer.logoUrl ? (
-          <img src={photographer.logoUrl} alt={photographer.name || 'Estúdio'} className="h-10 mx-auto object-contain opacity-90" />
-        ) : photographer.name ? (
-          <h1 className="text-sm font-medium text-center text-neutral-500">{photographer.name}</h1>
-        ) : null}
-
-        {/* Selo segurança */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-primary">
-          <Lock className="h-3 w-3" />
-          Ambiente seguro e criptografado
+      <div className="max-w-md w-full space-y-4">
+        {/* Header — logo/nome do fotógrafo + selo em uma linha compacta */}
+        <div className="flex items-center justify-between gap-3">
+          {photographer.logoUrl ? (
+            <img src={photographer.logoUrl} alt={photographer.name || 'Estúdio'} className="h-8 object-contain opacity-90" />
+          ) : photographer.name ? (
+            <h1 className="text-sm font-medium text-neutral-500 truncate">{photographer.name}</h1>
+          ) : <span />}
+          <div className="flex items-center gap-1 text-[10px] text-primary shrink-0">
+            <Lock className="h-3 w-3" />
+            Ambiente seguro
+          </div>
         </div>
 
-        {/* Valor destacado */}
-        <div className="text-center space-y-1">
-          <p className="text-[11px] uppercase tracking-widest text-neutral-500 font-medium">Pagamento</p>
-          <p className="text-4xl font-bold text-primary tracking-tight">
+        {/* Valor destacado (compacto) */}
+        <div className="text-center">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Pagamento</p>
+          <p className="text-3xl font-bold text-primary tracking-tight leading-tight">
             R$ {cobranca.valor.toFixed(2).replace('.', ',')}
           </p>
           {cobranca.descricao && (
-            <p className="text-sm text-neutral-600">{cobranca.descricao}</p>
+            <p className="text-xs text-neutral-600 mt-0.5">{cobranca.descricao}</p>
           )}
         </div>
+
 
         {/* Tabs segmentadas (pill) — só quando ambos habilitados */}
         {bothTabs && (
