@@ -32,6 +32,8 @@ interface ExtraChargeModalProps {
   clienteNome?: string;
   nomeSessao?: string;
   clienteWhatsapp?: string;
+  /** Quando presente, exibe stepper no header (fluxo "Cobrar tudo"). */
+  step?: import('./ChargeStepBadge').ChargeStep | null;
 }
 
 type GalleryPaymentResponse = {
