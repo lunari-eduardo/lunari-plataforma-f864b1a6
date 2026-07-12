@@ -537,22 +537,40 @@ export function WorkflowCardExpanded({
 
       <ChargeModal
         isOpen={showChargeModal}
-        onClose={() => setShowChargeModal(false)}
+        onClose={() => {
+          setShowChargeModal(false);
+          if (combinedStep === 'session' && resolvedGalleryId && extrasPendente > 0.001) {
+            setCombinedStep('extras');
+            setTimeout(() => setShowExtraChargeModal(true), 150);
+          } else {
+            setCombinedStep('idle');
+          }
+        }}
         clienteId={session.clienteId || ""}
         clienteNome={session.nome || "Cliente"}
         clienteWhatsapp={session.whatsapp}
         sessionId={session.sessionId || session.id}
         valorSugerido={pendenteSessaoSugerido}
+        step={
+          combinedStep === 'session'
+            ? { current: 1, total: 2, label: 'Sessão', nextLabel: 'Extras' }
+            : null
+        }
       />
 
       {resolvedGalleryId && (
         <ExtraChargeModal
           isOpen={showExtraChargeModal}
-          onClose={() => setShowExtraChargeModal(false)}
+          onClose={() => { setShowExtraChargeModal(false); setCombinedStep('idle'); }}
           galeriaId={resolvedGalleryId}
           clienteNome={session.nome}
           clienteWhatsapp={session.whatsapp}
           nomeSessao={session.pacote || session.nome}
+          step={
+            combinedStep === 'extras'
+              ? { current: 2, total: 2, label: 'Extras' }
+              : null
+          }
         />
       )}
 
