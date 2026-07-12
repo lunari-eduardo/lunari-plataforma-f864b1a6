@@ -6,7 +6,7 @@ import { WorkflowPaymentsModal } from "./WorkflowPaymentsModal";
 import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
-// CombinedChargeModal removido: extras exclusivos do Gallery (gallery-create-payment).
+import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
