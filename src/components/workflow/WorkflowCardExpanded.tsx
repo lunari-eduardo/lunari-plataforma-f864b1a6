@@ -483,13 +483,17 @@ export function WorkflowCardExpanded({
         {/* BLOCO 3 - Ações */}
         <ExpandedActions
           session={session}
-          onCobrar={() => setShowChargeModal(true)}
-          onCobrarExtras={() => setShowExtraChargeModal(true)}
-          onCobrarTudo={undefined}
+          onCobrar={() => { setCombinedStep('idle'); setShowChargeModal(true); }}
+          onCobrarExtras={() => { setCombinedStep('idle'); setShowExtraChargeModal(true); }}
+          onCobrarTudo={
+            resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
+              ? () => { setCombinedStep('session'); setShowChargeModal(true); }
+              : undefined
+          }
           extrasPendente={extrasPendente}
           extrasFullyPaid={extrasFullyPaid}
           sessaoPendente={pendenteSessaoSugerido}
-          
+          hasGaleria={hasGaleria}
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
         />
       </div>
