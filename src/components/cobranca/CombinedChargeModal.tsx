@@ -533,10 +533,9 @@ export function CombinedChargeModal({
       <AsaasPixModal
         isOpen={asaasPixModalOpen}
         onClose={() => setAsaasPixModalOpen(false)}
-        qrCode={asaasPixQrCode}
-        copiaECola={asaasPixCopiaECola}
+        pixQrCode={asaasPixQrCode}
+        pixCopiaECola={asaasPixCopiaECola}
         valor={valorTotal}
-        cobrancaId={currentChargeId || undefined}
         clienteWhatsapp={clienteWhatsapp}
       />
     </>
