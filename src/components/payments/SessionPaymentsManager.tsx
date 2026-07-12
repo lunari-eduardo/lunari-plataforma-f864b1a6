@@ -408,7 +408,7 @@ export function SessionPaymentsManager({
                           <div className="flex-1">
                             <div className="text-xs font-medium">Cobrar tudo</div>
                             <div className="text-2xs text-muted-foreground">
-                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 2 links
+                              {formatCurrency(valorRestanteSessao + fin.extrasPend)} · 1 link único
                             </div>
                           </div>
                         </DropdownMenuItem>
