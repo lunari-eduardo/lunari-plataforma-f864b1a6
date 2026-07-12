@@ -68,16 +68,17 @@ export async function resolveCobrancaBinding(
   userId: string,
   raw: RawBindingInput,
   /**
-   * Whitelist de finalidades aceitas pelo caller. Default = apenas 'sessao'.
+   * Whitelist de finalidades aceitas pelo caller.
    *
-   * CONTRATO Gestão↔Gallery (2026-07-11):
-   *   Cobranças com finalidade `fotos_extras` / `sessao_e_extras` são
-   *   EXCLUSIVAS da edge canônica `gallery-create-payment` (projeto Gallery).
-   *   Nenhuma edge do Gestão pode criá-las diretamente — o cálculo canônico
-   *   vem da RPC `calculate_gallery_extra_payment`, e criar cobranças por
-   *   fora causa drift financeiro na galeria.
+   * CONTRATO Gestão↔Gallery (2026-07-12):
+   *   - `sessao` e `sessao_e_extras` são criadas pelo Gestão (fluxo "Cobrar tudo"
+   *     em UM link único). O componente de extras é validado contra a RPC
+   *     canônica `calculate_gallery_extra_payment` pelos guards downstream.
+   *   - `fotos_extras` PURA continua EXCLUSIVA da edge canônica do Gallery
+   *     (`gallery-create-payment`). Nenhuma edge do Gestão passa essa finalidade
+   *     na whitelist — o default abaixo já a rejeita.
    */
-  allowedFinalidades: CobrancaFinalidade[] = ["sessao"],
+  allowedFinalidades: CobrancaFinalidade[] = ["sessao", "sessao_e_extras"],
 ): Promise<{ binding?: ResolvedBinding; error?: BindingError }> {
   const finalidadeRaw = (raw.finalidade ?? "sessao").toString().toLowerCase();
 
