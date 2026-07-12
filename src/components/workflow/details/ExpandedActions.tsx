@@ -107,7 +107,7 @@ export function ExpandedActions({
                     <div className="flex-1">
                       <div className="text-xs font-medium">Cobrar tudo</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {formatBRL(sessaoPendente + extrasPendente)} · 2 links
+                        {formatBRL(sessaoPendente + extrasPendente)} · 1 link único
                       </div>
                     </div>
                   </DropdownMenuItem>
