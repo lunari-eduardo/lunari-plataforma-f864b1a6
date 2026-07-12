@@ -215,15 +215,11 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
   const createPixManualCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
-      // Contrato Gestão↔Gallery: extras SÓ podem ser cobrados via
-      // edge canônica `gallery-create-payment` (Gallery). Bloqueia
-      // qualquer tentativa de INSERT direto de fotos_extras/combinada.
-      if (
-        request.finalidade === 'fotos_extras' ||
-        request.finalidade === 'sessao_e_extras'
-      ) {
+      // Contrato Gestão↔Gallery (2026-07-12): fotos extras isoladas continuam
+      // no Gallery (gallery-create-payment). Combinada `sessao_e_extras` OK.
+      if (request.finalidade === 'fotos_extras') {
         const msg =
-          'Cobrança de fotos extras deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
+          'Cobrança de fotos extras (isolada) deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
         toast.error(msg);
         return { success: false, error: msg };
       }
