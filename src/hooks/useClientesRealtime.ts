@@ -18,6 +18,9 @@ export function useClientesRealtime() {
   const [familia, setFamilia] = useState<ClienteFamilia[]>([]);
   const [documentos, setDocumentos] = useState<ClienteDocumento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Sufixo único por instância — impede colisão quando várias telas montam este hook simultaneamente.
+  // Sem isso, dois canais com o mesmo nome viram o mesmo objeto no SDK e o unmount de um derruba o outro.
+  const instanceId = useId();
 
   // ============= INITIAL DATA LOADING =============
   
