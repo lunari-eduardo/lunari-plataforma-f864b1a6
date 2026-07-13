@@ -70,7 +70,7 @@ export function useClientesRealtime() {
       const userId = session.user.id;
 
       clientesChannel = supabase
-        .channel(`clientes_changes_${userId}`)
+        .channel(`clientes_changes_${userId}_${instanceId}`)
         .on(
           'postgres_changes',
           {
@@ -95,7 +95,7 @@ export function useClientesRealtime() {
         .subscribe();
 
       familiaChannel = supabase
-        .channel(`familia_changes_${userId}`)
+        .channel(`familia_changes_${userId}_${instanceId}`)
         .on(
           'postgres_changes',
           {
@@ -119,7 +119,7 @@ export function useClientesRealtime() {
         .subscribe();
 
       documentosChannel = supabase
-        .channel(`documentos_changes_${userId}`)
+        .channel(`documentos_changes_${userId}_${instanceId}`)
         .on(
           'postgres_changes',
           {
