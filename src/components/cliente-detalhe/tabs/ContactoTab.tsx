@@ -244,23 +244,15 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
             </div>
           </AccordionTrigger>
           <AccordionContent className="pb-4 space-y-4">
-            {/* Telefone Inteligente */}
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Telefone</label>
-              <PhoneInputSmart
-                value={cliente.telefone || ''}
-                onSave={async (v) => handleSaveField('telefone', v)}
-              />
-            </div>
-
-            {/* WhatsApp (canal separado do telefone; não é sobrescrito por webhooks) */}
+            {/* WhatsApp — canal único (grava em whatsapp + telefone para compat) */}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">WhatsApp</label>
               <PhoneInputSmart
-                value={(cliente as any).whatsapp || ''}
-                onSave={async (v) => handleSaveField('whatsapp', v)}
+                value={(cliente as any).whatsapp || cliente.telefone || ''}
+                onSave={async (v) => onUpdate(cliente.id, { whatsapp: v, telefone: v })}
               />
             </div>
+
 
             {/* Email */}
             <div>
