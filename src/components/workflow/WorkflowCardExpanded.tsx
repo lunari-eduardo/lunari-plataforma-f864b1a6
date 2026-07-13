@@ -495,6 +495,8 @@ export function WorkflowCardExpanded({
           sessaoPendente={pendenteSessaoSugerido}
           hasGaleria={hasGaleria}
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
+          onRegistrarPagamento={() => setShowManualPaymentModal(true)}
+          canRegistrar={pendenteVisual > 0.001}
         />
       </div>
 
