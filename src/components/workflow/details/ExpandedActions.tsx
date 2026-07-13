@@ -46,6 +46,8 @@ export function ExpandedActions({
   sessaoPendente = 0,
   hasGaleria = false,
   onAbrirPagamentos,
+  onRegistrarPagamento,
+  canRegistrar,
 }: Props) {
   const canCobrarSessao = sessaoPendente > 0.001;
   const canCobrarExtras =
