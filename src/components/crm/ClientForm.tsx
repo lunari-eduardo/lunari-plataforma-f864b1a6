@@ -82,7 +82,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
       }
     }
 
-    onSave(formData);
+    onSave({ ...formData, whatsapp: formData.telefone });
   };
 
   return (
@@ -101,7 +101,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="telefone">Telefone</Label>
+          <Label htmlFor="telefone">WhatsApp</Label>
           <Input
             id="telefone"
             name="telefone"
@@ -110,6 +110,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
             placeholder="(Opcional) +55 (11) 00000-0000"
           />
         </div>
+
 
         <div className="space-y-2">
           <Label htmlFor="email">E-mail</Label>
