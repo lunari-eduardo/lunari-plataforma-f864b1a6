@@ -7,6 +7,7 @@ import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
 import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
+import { ManualPaymentModal } from "./ManualPaymentModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
