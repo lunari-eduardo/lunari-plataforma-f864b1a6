@@ -1,0 +1,1 @@
+ALTER TABLE public.clientes REPLICA IDENTITY FULL;
