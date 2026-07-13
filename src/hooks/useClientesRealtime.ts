@@ -150,7 +150,7 @@ export function useClientesRealtime() {
       if (familiaChannel) supabase.removeChannel(familiaChannel);
       if (documentosChannel) supabase.removeChannel(documentosChannel);
     };
-  }, []);
+  }, [instanceId]);
 
   // ============= CLIENTE OPERATIONS =============
   
