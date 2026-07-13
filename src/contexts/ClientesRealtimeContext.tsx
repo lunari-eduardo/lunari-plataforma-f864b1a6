@@ -23,14 +23,15 @@ export function ClientesRealtimeProvider({ children }: { children: ReactNode }) 
 
 /**
  * Drop-in replacement do hook `useClientesRealtime` original.
- * Se estiver dentro do Provider, retorna a instância compartilhada.
- * Caso contrário, faz fallback para uma instância local (compatibilidade).
+ * Retorna a instância compartilhada montada pelo Provider.
+ * O Provider é montado em `App.tsx` acima de todas as rotas autenticadas.
  */
-export function useClientesRealtime(): Ctx {
+export function useClientesRealtimeContext(): Ctx {
   const ctx = useContext(ClientesRealtimeContext);
-  // Fallback: componentes fora do provider ainda funcionam de forma isolada.
-  // Evita crash durante refactor incremental.
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const local = ctx ? null : useClientesRealtimeInternal();
-  return (ctx ?? local) as Ctx;
+  if (!ctx) {
+    throw new Error(
+      'useClientesRealtimeContext deve ser usado dentro de <ClientesRealtimeProvider>'
+    );
+  }
+  return ctx;
 }
