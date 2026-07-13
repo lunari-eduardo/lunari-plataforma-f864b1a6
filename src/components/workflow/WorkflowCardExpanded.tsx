@@ -584,6 +584,16 @@ export function WorkflowCardExpanded({
         onCancel={cancelExtraEdit}
       />
 
+      <ManualPaymentModal
+        isOpen={showManualPaymentModal}
+        onClose={() => setShowManualPaymentModal(false)}
+        session={session}
+        sessaoPendente={pendenteSessaoSugerido}
+        extrasPendente={extrasPendente}
+        hasGaleria={hasGaleria}
+      />
+
+
     </div>
   );
 }
