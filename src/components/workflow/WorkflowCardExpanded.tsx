@@ -7,6 +7,7 @@ import { FotosExtrasPaymentBadge } from "./FotosExtrasPaymentBadge";
 import { ChargeModal } from "@/components/cobranca/ChargeModal";
 import { ExtraChargeModal } from "@/components/cobranca/ExtraChargeModal";
 import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
+import { ManualPaymentModal } from "./ManualPaymentModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
 import { Lock } from "lucide-react";
@@ -38,6 +39,7 @@ export function WorkflowCardExpanded({
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   /** "Cobrar tudo" agora abre UM único modal (link único `sessao_e_extras`). */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
+  const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
 
@@ -494,6 +496,8 @@ export function WorkflowCardExpanded({
           sessaoPendente={pendenteSessaoSugerido}
           hasGaleria={hasGaleria}
           onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
+          onRegistrarPagamento={() => setShowManualPaymentModal(true)}
+          canRegistrar={pendenteVisual > 0.001}
         />
       </div>
 
@@ -579,6 +583,16 @@ export function WorkflowCardExpanded({
         onConfirm={confirmExtraEdit}
         onCancel={cancelExtraEdit}
       />
+
+      <ManualPaymentModal
+        isOpen={showManualPaymentModal}
+        onClose={() => setShowManualPaymentModal(false)}
+        session={session}
+        sessaoPendente={pendenteSessaoSugerido}
+        extrasPendente={extrasPendente}
+        hasGaleria={hasGaleria}
+      />
+
 
     </div>
   );
