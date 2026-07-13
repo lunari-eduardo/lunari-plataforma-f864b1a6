@@ -43,9 +43,9 @@ export function ClientHeader({ cliente, onBack }: ClientHeaderProps) {
 
       {/* Linha 3: Ações com scroll horizontal em mobile */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-        {cliente.telefone && (
+        {((cliente as any).whatsapp || cliente.telefone) && (
           <Button asChild variant="outline" size="sm" className="h-8 text-xs whitespace-nowrap flex-shrink-0">
-            <a href={`https://wa.me/${cliente.telefone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+            <a href={`https://wa.me/${(((cliente as any).whatsapp || cliente.telefone) as string).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-3 w-3 mr-1" />
               WhatsApp
             </a>
