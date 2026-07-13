@@ -237,7 +237,7 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
               </div>
               <div className="text-left">
                 <span className="font-medium">Contato</span>
-                {(cliente.telefone || cliente.email) && (
+                {((cliente as any).whatsapp || cliente.telefone || cliente.email) && (
                   <span className="text-xs text-muted-foreground ml-2">• Informado</span>
                 )}
               </div>
