@@ -130,7 +130,7 @@ export function ManualPaymentModal({
         observacao: observacao.trim() || undefined,
       });
 
-      if (result.ok === false) {
+      if (isErr(result)) {
         const code = result.error.code;
         const msg =
           code === "UNAUTHENTICATED"
