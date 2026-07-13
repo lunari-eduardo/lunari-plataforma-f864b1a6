@@ -6,6 +6,13 @@ export interface ClienteSupabase {
   telefone: string;
   whatsapp?: string;
   endereco?: string;
+  endereco_numero?: string | null;
+  endereco_complemento?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  uf?: string | null;
+  cep?: string | null;
+  cpf_cnpj?: string | null;
   observacoes?: string;
   origem?: string;
   data_nascimento?: string;
