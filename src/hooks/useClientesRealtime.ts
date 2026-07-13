@@ -179,10 +179,12 @@ export function useClientesRealtime() {
 
   const atualizarCliente = useCallback(async (id: string, dados: Partial<ClienteSupabase>) => {
     try {
-      // Não disparar update sem nada para mudar
-      if (!dados || Object.keys(dados).length === 0) {
-        return;
-      }
+      if (!dados || Object.keys(dados).length === 0) return;
+
+      // Optimistic: reflete na UI antes do broadcast Realtime chegar
+      setClientes(prev => prev.map(c =>
+        c.id === id ? { ...c, ...dados, updated_at: new Date().toISOString() } as ClienteSupabase : c
+      ));
 
       const { error } = await supabase
         .from('clientes')
@@ -190,7 +192,6 @@ export function useClientesRealtime() {
         .eq('id', id);
 
       if (error) throw error;
-      // Sem toast de sucesso aqui — feedback visual é do componente que chamou
     } catch (error) {
       console.error('❌ Error updating client:', error);
       toast.error('Erro ao atualizar cliente');
@@ -199,16 +200,24 @@ export function useClientesRealtime() {
   }, []);
 
   const removerCliente = useCallback(async (id: string) => {
+    // Snapshot para rollback caso o delete falhe
+    let snapshot: ClienteSupabase[] = [];
     try {
+      setClientes(prev => {
+        snapshot = prev;
+        return prev.filter(c => c.id !== id);
+      });
+
       const { error } = await supabase
         .from('clientes')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      
       toast.success('Cliente removido com sucesso');
     } catch (error) {
+      // Rollback
+      setClientes(snapshot);
       console.error('❌ Error removing client:', error);
       toast.error('Erro ao remover cliente');
       throw error;
