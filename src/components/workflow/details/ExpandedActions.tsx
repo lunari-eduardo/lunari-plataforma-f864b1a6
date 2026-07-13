@@ -7,8 +7,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CreditCard, Send, Images, ChevronDown } from "lucide-react";
+import { CreditCard, Send, Images, ChevronDown, Wallet } from "lucide-react";
 import { SessaoContratoButton } from "@/components/contratos/SessaoContratoButton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SessionData } from "@/types/workflow";
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
   sessaoPendente?: number;
   hasGaleria?: boolean;
   onAbrirPagamentos: () => void;
+  onRegistrarPagamento: () => void;
+  canRegistrar: boolean;
 }
 
 const formatBRL = (v: number) =>
