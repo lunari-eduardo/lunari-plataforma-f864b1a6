@@ -38,6 +38,7 @@ export function WorkflowCardExpanded({
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
   /** "Cobrar tudo" agora abre UM único modal (link único `sessao_e_extras`). */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
+  const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
 
