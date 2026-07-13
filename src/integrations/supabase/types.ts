@@ -333,6 +333,69 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_extras_backfill_20260713: {
+        Row: {
+          backup_at: string | null
+          data_sessao: string | null
+          desconto: number | null
+          excedente: number | null
+          extras_overridden_antes: boolean | null
+          id: string | null
+          qtd_calculada: number | null
+          qtd_fotos_extra_antes: number | null
+          resto_para_valor_adicional: number | null
+          session_id: string | null
+          unit: number | null
+          user_id: string | null
+          valor_adicional: number | null
+          valor_base_pacote: number | null
+          valor_extras_calculado: number | null
+          valor_foto_extra_antes: number | null
+          valor_pago: number | null
+          valor_total_foto_extra_antes: number | null
+        }
+        Insert: {
+          backup_at?: string | null
+          data_sessao?: string | null
+          desconto?: number | null
+          excedente?: number | null
+          extras_overridden_antes?: boolean | null
+          id?: string | null
+          qtd_calculada?: number | null
+          qtd_fotos_extra_antes?: number | null
+          resto_para_valor_adicional?: number | null
+          session_id?: string | null
+          unit?: number | null
+          user_id?: string | null
+          valor_adicional?: number | null
+          valor_base_pacote?: number | null
+          valor_extras_calculado?: number | null
+          valor_foto_extra_antes?: number | null
+          valor_pago?: number | null
+          valor_total_foto_extra_antes?: number | null
+        }
+        Update: {
+          backup_at?: string | null
+          data_sessao?: string | null
+          desconto?: number | null
+          excedente?: number | null
+          extras_overridden_antes?: boolean | null
+          id?: string | null
+          qtd_calculada?: number | null
+          qtd_fotos_extra_antes?: number | null
+          resto_para_valor_adicional?: number | null
+          session_id?: string | null
+          unit?: number | null
+          user_id?: string | null
+          valor_adicional?: number | null
+          valor_base_pacote?: number | null
+          valor_extras_calculado?: number | null
+          valor_foto_extra_antes?: number | null
+          valor_pago?: number | null
+          valor_total_foto_extra_antes?: number | null
+        }
+        Relationships: []
+      }
       backup_recovery_extras_audit_20260424: {
         Row: {
           appointment_id: string | null
@@ -915,6 +978,7 @@ export type Database = {
           qtd_fotos_extra: number | null
           regras_congeladas: Json | null
           session_id: string
+          snapshot_extras_at_gallery_delete: Json | null
           status: string | null
           status_financeiro: string | null
           status_galeria: string | null
@@ -952,6 +1016,7 @@ export type Database = {
           qtd_fotos_extra?: number | null
           regras_congeladas?: Json | null
           session_id: string
+          snapshot_extras_at_gallery_delete?: Json | null
           status?: string | null
           status_financeiro?: string | null
           status_galeria?: string | null
@@ -989,6 +1054,7 @@ export type Database = {
           qtd_fotos_extra?: number | null
           regras_congeladas?: Json | null
           session_id?: string
+          snapshot_extras_at_gallery_delete?: Json | null
           status?: string | null
           status_financeiro?: string | null
           status_galeria?: string | null
