@@ -3,7 +3,7 @@
  * Replaces localStorage-based client system with real-time database
  */
 
-import { useEffect, useCallback, useState, useMemo } from 'react';
+import { useEffect, useCallback, useState, useMemo, useId } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { 
@@ -18,6 +18,9 @@ export function useClientesRealtime() {
   const [familia, setFamilia] = useState<ClienteFamilia[]>([]);
   const [documentos, setDocumentos] = useState<ClienteDocumento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Sufixo único por instância — impede colisão quando várias telas montam este hook simultaneamente.
+  // Sem isso, dois canais com o mesmo nome viram o mesmo objeto no SDK e o unmount de um derruba o outro.
+  const instanceId = useId();
 
   // ============= INITIAL DATA LOADING =============
   
@@ -67,7 +70,7 @@ export function useClientesRealtime() {
       const userId = session.user.id;
 
       clientesChannel = supabase
-        .channel(`clientes_changes_${userId}`)
+        .channel(`clientes_changes_${userId}_${instanceId}`)
         .on(
           'postgres_changes',
           {
@@ -92,7 +95,7 @@ export function useClientesRealtime() {
         .subscribe();
 
       familiaChannel = supabase
-        .channel(`familia_changes_${userId}`)
+        .channel(`familia_changes_${userId}_${instanceId}`)
         .on(
           'postgres_changes',
           {
@@ -116,7 +119,7 @@ export function useClientesRealtime() {
         .subscribe();
 
       documentosChannel = supabase
-        .channel(`documentos_changes_${userId}`)
+        .channel(`documentos_changes_${userId}_${instanceId}`)
         .on(
           'postgres_changes',
           {
@@ -147,7 +150,7 @@ export function useClientesRealtime() {
       if (familiaChannel) supabase.removeChannel(familiaChannel);
       if (documentosChannel) supabase.removeChannel(documentosChannel);
     };
-  }, []);
+  }, [instanceId]);
 
   // ============= CLIENTE OPERATIONS =============
   
@@ -179,10 +182,12 @@ export function useClientesRealtime() {
 
   const atualizarCliente = useCallback(async (id: string, dados: Partial<ClienteSupabase>) => {
     try {
-      // Não disparar update sem nada para mudar
-      if (!dados || Object.keys(dados).length === 0) {
-        return;
-      }
+      if (!dados || Object.keys(dados).length === 0) return;
+
+      // Optimistic: reflete na UI antes do broadcast Realtime chegar
+      setClientes(prev => prev.map(c =>
+        c.id === id ? { ...c, ...dados, updated_at: new Date().toISOString() } as ClienteSupabase : c
+      ));
 
       const { error } = await supabase
         .from('clientes')
@@ -190,7 +195,6 @@ export function useClientesRealtime() {
         .eq('id', id);
 
       if (error) throw error;
-      // Sem toast de sucesso aqui — feedback visual é do componente que chamou
     } catch (error) {
       console.error('❌ Error updating client:', error);
       toast.error('Erro ao atualizar cliente');
@@ -199,16 +203,24 @@ export function useClientesRealtime() {
   }, []);
 
   const removerCliente = useCallback(async (id: string) => {
+    // Snapshot para rollback caso o delete falhe
+    let snapshot: ClienteSupabase[] = [];
     try {
+      setClientes(prev => {
+        snapshot = prev;
+        return prev.filter(c => c.id !== id);
+      });
+
       const { error } = await supabase
         .from('clientes')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      
       toast.success('Cliente removido com sucesso');
     } catch (error) {
+      // Rollback
+      setClientes(snapshot);
       console.error('❌ Error removing client:', error);
       toast.error('Erro ao remover cliente');
       throw error;
@@ -245,14 +257,15 @@ export function useClientesRealtime() {
 
   const atualizarFamilia = useCallback(async (id: string, dados: Partial<ClienteFamilia>) => {
     try {
+      // Optimistic merge
+      setFamilia(prev => prev.map(f => (f.id === id ? { ...f, ...dados } as ClienteFamilia : f)));
+
       const { error } = await supabase
         .from('clientes_familia')
         .update(dados)
         .eq('id', id);
 
       if (error) throw error;
-      
-      console.log('✅ Family member updated');
     } catch (error) {
       console.error('❌ Error updating family member:', error);
       toast.error('Erro ao atualizar membro da família');
@@ -261,15 +274,21 @@ export function useClientesRealtime() {
   }, []);
 
   const removerFamilia = useCallback(async (id: string) => {
+    let snapshot: ClienteFamilia[] = [];
     try {
+      setFamilia(prev => {
+        snapshot = prev;
+        return prev.filter(f => f.id !== id);
+      });
+
       const { error } = await supabase
         .from('clientes_familia')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      // Sem toast — UI já remove o card visualmente
     } catch (error) {
+      setFamilia(snapshot);
       console.error('❌ Error removing family member:', error);
       toast.error('Erro ao remover membro da família');
       throw error;
@@ -438,6 +457,8 @@ export function useClientesRealtime() {
       for (const [key, col] of Object.entries(FIELD_MAP)) {
         if (key in dadosBasicos) {
           const v = (dadosBasicos as any)[key];
+          // Guard: coluna `nome` é NOT NULL — nunca enviar vazio/null
+          if (col === 'nome' && (v === null || v === undefined || v === '')) continue;
           (updateData as any)[col] = v === '' ? null : v;
         }
       }
