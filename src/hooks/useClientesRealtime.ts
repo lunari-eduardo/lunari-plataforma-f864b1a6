@@ -413,16 +413,34 @@ export function useClientesRealtime() {
       // Separar dados do cliente dos dados da família
       const { conjuge, filhos, ...dadosBasicos } = dadosCliente;
 
-      // 1. Montar update PARCIAL apenas com campos realmente enviados
-      // Isso evita sobrescrever campos não tocados (ex.: salvar telefone não apaga email)
+      // 1. Montar update PARCIAL — mapeia camelCase (UI) -> snake_case (DB).
+      // Só inclui as chaves realmente enviadas pra não sobrescrever demais colunas.
+      const FIELD_MAP: Record<string, keyof ClienteSupabase> = {
+        nome: 'nome',
+        email: 'email',
+        telefone: 'telefone',
+        whatsapp: 'whatsapp',
+        endereco: 'endereco',
+        observacoes: 'observacoes',
+        origem: 'origem',
+        dataNascimento: 'data_nascimento',
+        data_nascimento: 'data_nascimento',
+        cpf_cnpj: 'cpf_cnpj',
+        cep: 'cep',
+        endereco_numero: 'endereco_numero',
+        endereco_complemento: 'endereco_complemento',
+        bairro: 'bairro',
+        cidade: 'cidade',
+        uf: 'uf',
+      };
+
       const updateData: Partial<ClienteSupabase> = {};
-      if ('nome' in dadosBasicos) updateData.nome = dadosBasicos.nome;
-      if ('email' in dadosBasicos) updateData.email = dadosBasicos.email || null;
-      if ('telefone' in dadosBasicos) updateData.telefone = dadosBasicos.telefone || null;
-      if ('endereco' in dadosBasicos) updateData.endereco = dadosBasicos.endereco || null;
-      if ('observacoes' in dadosBasicos) updateData.observacoes = dadosBasicos.observacoes || null;
-      if ('origem' in dadosBasicos) updateData.origem = dadosBasicos.origem || null;
-      if ('dataNascimento' in dadosBasicos) updateData.data_nascimento = dadosBasicos.dataNascimento || null;
+      for (const [key, col] of Object.entries(FIELD_MAP)) {
+        if (key in dadosBasicos) {
+          const v = (dadosBasicos as any)[key];
+          (updateData as any)[col] = v === '' ? null : v;
+        }
+      }
 
       // Só chama update se houver algo a alterar
       if (Object.keys(updateData).length > 0) {
