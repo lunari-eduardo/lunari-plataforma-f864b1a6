@@ -254,14 +254,15 @@ export function useClientesRealtime() {
 
   const atualizarFamilia = useCallback(async (id: string, dados: Partial<ClienteFamilia>) => {
     try {
+      // Optimistic merge
+      setFamilia(prev => prev.map(f => (f.id === id ? { ...f, ...dados } as ClienteFamilia : f)));
+
       const { error } = await supabase
         .from('clientes_familia')
         .update(dados)
         .eq('id', id);
 
       if (error) throw error;
-      
-      console.log('✅ Family member updated');
     } catch (error) {
       console.error('❌ Error updating family member:', error);
       toast.error('Erro ao atualizar membro da família');
@@ -270,15 +271,21 @@ export function useClientesRealtime() {
   }, []);
 
   const removerFamilia = useCallback(async (id: string) => {
+    let snapshot: ClienteFamilia[] = [];
     try {
+      setFamilia(prev => {
+        snapshot = prev;
+        return prev.filter(f => f.id !== id);
+      });
+
       const { error } = await supabase
         .from('clientes_familia')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-      // Sem toast — UI já remove o card visualmente
     } catch (error) {
+      setFamilia(snapshot);
       console.error('❌ Error removing family member:', error);
       toast.error('Erro ao remover membro da família');
       throw error;
