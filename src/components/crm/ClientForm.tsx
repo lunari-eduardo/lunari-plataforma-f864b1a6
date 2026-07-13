@@ -82,7 +82,7 @@ export default function ClientForm({ client, onSave, onCancel }: ClientFormProps
       }
     }
 
-    onSave(formData);
+    onSave({ ...formData, whatsapp: formData.telefone });
   };
 
   return (
