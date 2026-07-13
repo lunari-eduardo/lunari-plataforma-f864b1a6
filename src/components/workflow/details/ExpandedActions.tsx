@@ -133,12 +133,37 @@ export function ExpandedActions({
           </Button>
         )}
 
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRegistrarPagamento}
+                  disabled={!canRegistrar}
+                  className="gap-2 w-full"
+                >
+                  <Wallet className="h-4 w-4" />
+                  Registrar pagamento
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {!canRegistrar && (
+              <TooltipContent side="top" className="text-xs">
+                Nada pendente para registrar.
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+
         <div className="w-full border-t border-border/20 my-1" />
 
         <Button variant="outline" size="sm" onClick={onAbrirPagamentos} className="gap-2 w-full">
           <CreditCard className="h-4 w-4" />
           Pagamentos
         </Button>
+
 
         {session.clienteId && (
           <SessaoContratoButton
