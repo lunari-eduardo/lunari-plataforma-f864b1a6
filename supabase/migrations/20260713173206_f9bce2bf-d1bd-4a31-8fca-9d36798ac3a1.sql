@@ -1,0 +1,1 @@
+UPDATE public.clientes SET whatsapp = telefone WHERE whatsapp IS NULL AND telefone IS NOT NULL AND telefone <> '';
