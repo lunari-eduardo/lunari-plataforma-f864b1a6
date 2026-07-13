@@ -454,6 +454,8 @@ export function useClientesRealtime() {
       for (const [key, col] of Object.entries(FIELD_MAP)) {
         if (key in dadosBasicos) {
           const v = (dadosBasicos as any)[key];
+          // Guard: coluna `nome` é NOT NULL — nunca enviar vazio/null
+          if (col === 'nome' && (v === null || v === undefined || v === '')) continue;
           (updateData as any)[col] = v === '' ? null : v;
         }
       }
