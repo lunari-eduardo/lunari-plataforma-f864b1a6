@@ -38,6 +38,15 @@ export function AddressFieldsBlock({ value, onSave }: Props) {
   const [uf, setUf] = useState(value.uf || "");
   const [looking, setLooking] = useState(false);
 
+  // Sync prop -> state quando valor externo muda (realtime, ViaCEP em outra aba, etc.)
+  useEffect(() => { setCep(value.cep ? maskCep(value.cep) : ""); }, [value.cep]);
+  useEffect(() => { setEndereco(value.endereco || ""); }, [value.endereco]);
+  useEffect(() => { setNumero(value.endereco_numero || ""); }, [value.endereco_numero]);
+  useEffect(() => { setComplemento(value.endereco_complemento || ""); }, [value.endereco_complemento]);
+  useEffect(() => { setBairro(value.bairro || ""); }, [value.bairro]);
+  useEffect(() => { setCidade(value.cidade || ""); }, [value.cidade]);
+  useEffect(() => { setUf(value.uf || ""); }, [value.uf]);
+
   const persist = async (patch: Partial<AddressValue>) => {
     try {
       await onSave(patch);
