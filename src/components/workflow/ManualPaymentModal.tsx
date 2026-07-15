@@ -59,6 +59,7 @@ export function ManualPaymentModal({
   extrasPendente,
   hasGaleria,
 }: Props) {
+  const runCapability = useRunCapability();
   const canSessao = sessaoPendente > 0.001;
   const canExtras = hasGaleria && extrasPendente > 0.001;
   const canTudo = canSessao && canExtras;
