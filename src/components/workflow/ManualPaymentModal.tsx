@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { isErr } from "@/shared/result";
+import { useRunCapability } from "@/shared/capability/react";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 
