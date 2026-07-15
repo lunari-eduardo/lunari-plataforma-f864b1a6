@@ -124,7 +124,7 @@ export function ManualPaymentModal({
     setSubmitting(true);
     try {
       const { registerManualPayment } = await import("@/modules/billing");
-      const result = await registerManualPayment.execute({
+      const result = await runCapability(registerManualPayment, {
         sessionId: session.id,
         valor: Number(valor.toFixed(2)),
         dataPagamento: data,
