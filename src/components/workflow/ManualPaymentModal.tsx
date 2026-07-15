@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { isErr } from "@/shared/result";
+import { useRunCapability } from "@/shared/capability/react";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 
@@ -58,6 +59,7 @@ export function ManualPaymentModal({
   extrasPendente,
   hasGaleria,
 }: Props) {
+  const runCapability = useRunCapability();
   const canSessao = sessaoPendente > 0.001;
   const canExtras = hasGaleria && extrasPendente > 0.001;
   const canTudo = canSessao && canExtras;
@@ -122,7 +124,7 @@ export function ManualPaymentModal({
     setSubmitting(true);
     try {
       const { registerManualPayment } = await import("@/modules/billing");
-      const result = await registerManualPayment.execute({
+      const result = await runCapability(registerManualPayment, {
         sessionId: session.id,
         valor: Number(valor.toFixed(2)),
         dataPagamento: data,
