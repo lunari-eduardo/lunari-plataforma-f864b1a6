@@ -15,7 +15,15 @@ import MinhaConta from "@/pages/MinhaConta";
 import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
 import FeedTest from "@/pages/FeedTest";
-import LandingPage from "@/pages/LandingPage";
+import HomePage from "@/pages/site/HomePage";
+import StudioPage from "@/pages/site/StudioPage";
+import GalleryOverviewPage from "@/pages/site/GalleryOverviewPage";
+import GallerySelectPage from "@/pages/site/GallerySelectPage";
+import GalleryTransferPage from "@/pages/site/GalleryTransferPage";
+import PrecosPage from "@/pages/site/PrecosPage";
+import SobrePage from "@/pages/site/SobrePage";
+import ContatoPage from "@/pages/site/ContatoPage";
+import { SiteLayout } from "@/components/site/SiteLayout";
 import PublicCheckout from "@/pages/PublicCheckout";
 import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
 
@@ -79,8 +87,18 @@ export default function PhotographerApp() {
           <AppProvider>
             <BuildMonitor />
             <Routes>
-              {/* ============ PUBLIC ROUTES (SEO) ============ */}
-              <Route path="/" element={<LandingPage />} />
+              {/* ============ PUBLIC INSTITUTIONAL SITE (SiteLayout) ============ */}
+              <Route element={<SiteLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/studio" element={<StudioPage />} />
+                <Route path="/gallery" element={<GalleryOverviewPage />} />
+                <Route path="/gallery/select" element={<GallerySelectPage />} />
+                <Route path="/gallery/transfer" element={<GalleryTransferPage />} />
+                <Route path="/precos" element={<PrecosPage />} />
+                <Route path="/sobre" element={<SobrePage />} />
+                <Route path="/contato" element={<ContatoPage />} />
+              </Route>
+
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/conteudos" element={<Conteudos />} />
