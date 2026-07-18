@@ -1,13 +1,12 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  EyebrowTag,
   PrimaryButton,
   GhostLink,
+  GridLines,
+  TechLabel,
   EASE,
-  displayFont,
-  uiFont,
 } from "./primitives";
 import { HeroMockup } from "./mockups/HeroMockup";
 
@@ -16,76 +15,118 @@ export function LunariHero() {
   const reduce = useReducedMotion();
 
   const fadeUp = (delay: number) => ({
-    initial: reduce ? {} : { opacity: 0, y: 24 },
+    initial: reduce ? {} : { opacity: 0, y: 20 },
     animate: reduce ? {} : { opacity: 1, y: 0 },
-    transition: { duration: 0.9, ease: EASE, delay },
+    transition: { duration: 0.8, ease: EASE, delay },
   });
 
   return (
-    <section className="relative min-h-[92vh] w-full overflow-hidden pt-32 pb-16 md:pt-40">
-      {/* Ambient light */}
+    <section className="relative w-full overflow-hidden pt-32 pb-16 md:pt-36">
+      <GridLines />
+
+      {/* halo ember bem sutil no canto */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+        className="pointer-events-none absolute -top-32 right-[10%] h-[400px] w-[600px] opacity-[0.18] blur-3xl"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(201,123,58,0.18), transparent 70%)",
+            "radial-gradient(closest-side, rgba(255,90,31,0.6), transparent 70%)",
         }}
       />
 
       <div className="relative mx-auto max-w-[1200px] px-6 md:px-8">
-        <motion.div {...fadeUp(0)} className="flex justify-center">
-          <EyebrowTag>Feito por fotógrafos, não por engenheiros de SaaS</EyebrowTag>
+        {/* Eyebrow + section index */}
+        <motion.div {...fadeUp(0)} className="flex items-center gap-4">
+          <TechLabel>01 / 08 · Overview</TechLabel>
+          <span className="h-px w-12 bg-[rgba(10,10,10,0.14)]" />
+          <span
+            className="inline-flex items-center gap-2 text-[11px] font-medium text-[rgba(10,10,10,0.55)]"
+            style={{ fontFamily: '"Geist", sans-serif' }}
+          >
+            <span
+              className="inline-block h-[6px] w-[6px] animate-pulse rounded-full"
+              style={{ background: "#FF5A1F" }}
+            />
+            Feito por fotógrafos, não por engenheiros de SaaS
+          </span>
         </motion.div>
 
+        {/* Headline — alinhada à esquerda, tamanho medido */}
         <motion.h1
-          {...fadeUp(0.1)}
-          className="mx-auto mt-8 max-w-[900px] text-center text-[44px] leading-[1.02] tracking-[-0.025em] text-[#0B1B2B] md:text-[72px]"
-          style={displayFont}
+          {...fadeUp(0.08)}
+          className="mt-10 max-w-[900px] text-[44px] font-medium leading-[1.02] tracking-[-0.035em] text-[#0A0A0A] md:text-[68px]"
+          style={{ fontFamily: '"Geist", sans-serif' }}
         >
-          O primeiro sistema que{" "}
-          <em className="font-normal italic text-[#C97B3A]">entende</em> o que é
-          uma sessão.
+          O primeiro sistema
+          <br />
+          que{" "}
+          <span
+            className="italic font-normal"
+            style={{ fontFamily: '"Instrument Serif", serif', color: "#0A0A0A" }}
+          >
+            entende
+          </span>{" "}
+          o que é uma sessão.
         </motion.h1>
 
         <motion.p
-          {...fadeUp(0.2)}
-          className="mx-auto mt-7 max-w-[600px] text-center text-[17px] leading-[1.55] text-[#0B1B2B]/65 md:text-[18px]"
-          style={uiFont}
+          {...fadeUp(0.16)}
+          className="mt-7 max-w-[560px] text-[16px] leading-[1.6] text-[rgba(10,10,10,0.6)] md:text-[17px]"
         >
           CRM, agenda, contratos, financeiro, galeria e IA operando como um só
-          cérebro. Enquanto os outros vendem 6 ferramentas, a Lunari entrega{" "}
-          <span className="text-[#0B1B2B]">um estúdio inteiro</span>.
+          cérebro. Enquanto os outros vendem seis ferramentas, a Lunari entrega{" "}
+          <span className="text-[#0A0A0A]">um estúdio inteiro</span>.
         </motion.p>
 
         <motion.div
-          {...fadeUp(0.3)}
-          className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
+          {...fadeUp(0.24)}
+          className="mt-9 flex flex-wrap items-center gap-4"
         >
           <PrimaryButton onClick={() => nav("/auth")}>
             Testar 30 dias grátis
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
           </PrimaryButton>
-          <GhostLink onClick={() => {
-            document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" });
-          }}>
-            <Play className="h-3.5 w-3.5" strokeWidth={2.5} />
-            Ver o sistema em ação
+          <GhostLink
+            onClick={() =>
+              document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" })
+            }
+          >
+            Ver o sistema em ação →
           </GhostLink>
+          <span className="ml-2 text-[12px] text-[rgba(10,10,10,0.4)]" style={{ fontFamily: '"Geist Mono", monospace' }}>
+            sem cartão · cancele quando quiser
+          </span>
         </motion.div>
 
-        <motion.p
-          {...fadeUp(0.4)}
-          className="mt-4 text-center text-[13px] text-[#0B1B2B]/45"
-          style={uiFont}
+        {/* KPIs técnicos abaixo do CTA — dá densidade */}
+        <motion.div
+          {...fadeUp(0.32)}
+          className="mt-14 grid max-w-[720px] grid-cols-3 gap-8 border-t border-[rgba(10,10,10,0.08)] pt-8"
         >
-          Sem cartão de crédito · Cancele a qualquer momento
-        </motion.p>
+          {[
+            ["3.2s", "p95 dashboard"],
+            ["6→1", "ferramentas → um cérebro"],
+            ["24/7", "assistente Lu ao vivo"],
+          ].map(([v, l]) => (
+            <div key={l}>
+              <div
+                className="text-[26px] font-medium tabular-nums text-[#0A0A0A]"
+                style={{ fontFamily: '"Geist", sans-serif', letterSpacing: "-0.02em" }}
+              >
+                {v}
+              </div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgba(10,10,10,0.45)]" style={{ fontFamily: '"Geist Mono", monospace' }}>
+                {l}
+              </div>
+            </div>
+          ))}
+        </motion.div>
 
         {/* Mockup */}
         <motion.div
-          initial={reduce ? {} : { opacity: 0, y: 40, scale: 0.98 }}
-          animate={reduce ? {} : { opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1.1, ease: EASE, delay: 0.5 }}
+          initial={reduce ? {} : { opacity: 0, y: 40 }}
+          animate={reduce ? {} : { opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: EASE, delay: 0.4 }}
           className="relative mt-16 md:mt-20"
         >
           <HeroMockup />

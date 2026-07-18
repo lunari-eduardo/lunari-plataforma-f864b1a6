@@ -14,8 +14,8 @@ import { SEOHead } from "@/components/seo/SEOHead";
 export default function LandingPage() {
   return (
     <div
-      className="min-h-screen bg-[#F5F1EA] text-[#0B1B2B] antialiased"
-      style={{ fontFamily: '"Inter Tight", sans-serif' }}
+      className="min-h-screen bg-[#FAFAF7] text-[#0A0A0A] antialiased"
+      style={{ fontFamily: '"Geist", "Inter Tight", sans-serif', letterSpacing: "-0.005em" }}
     >
       <SEOHead
         title="Lunari · O primeiro sistema que pensa como um fotógrafo"

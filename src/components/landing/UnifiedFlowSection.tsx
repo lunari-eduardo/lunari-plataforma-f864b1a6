@@ -22,17 +22,17 @@ export function UnifiedFlowSection() {
 
       <Reveal delay={0.05}>
         <h2
-          className="mx-auto mt-8 max-w-[860px] text-center text-[36px] leading-[1.05] tracking-[-0.025em] text-[#0B1B2B] md:text-[56px]"
+          className="mx-auto mt-8 max-w-[860px] text-center text-[36px] leading-[1.05] tracking-[-0.025em] text-[#0A0A0A] md:text-[56px]"
           style={displayFont}
         >
           Um cliente entra.{" "}
-          <span className="italic text-[#C97B3A]">Um fluxo o leva ao pós-venda.</span>
+          <span className="italic text-[#FF5A1F]">Um fluxo o leva ao pós-venda.</span>
         </h2>
       </Reveal>
 
       <Reveal delay={0.1}>
         <p
-          className="mx-auto mt-6 max-w-[580px] text-center text-[17px] leading-[1.55] text-[#0B1B2B]/60"
+          className="mx-auto mt-6 max-w-[580px] text-center text-[17px] leading-[1.55] text-[#0A0A0A]/60"
           style={uiFont}
         >
           CRM, agenda, contratos, financeiro, galeria e IA deixam de funcionar
@@ -44,9 +44,9 @@ export function UnifiedFlowSection() {
       <Reveal delay={0.2}>
         <div className="mt-20 hidden md:block">
           <div className="relative">
-            <div className="absolute left-6 right-6 top-[26px] h-px bg-[#0B1B2B]/10" />
+            <div className="absolute left-6 right-6 top-[26px] h-px bg-[#0F0F10]/10" />
             <div
-              className="absolute left-6 top-[26px] h-px bg-[#C97B3A]"
+              className="absolute left-6 top-[26px] h-px bg-[#FF5A1F]"
               style={{ width: "62%" }}
             />
             <div className="relative grid grid-cols-7 gap-2">
@@ -57,26 +57,26 @@ export function UnifiedFlowSection() {
                     <div
                       className={`flex h-[52px] w-[52px] items-center justify-center rounded-full border transition-all ${
                         active
-                          ? "border-[#C97B3A] bg-[#F5F1EA]"
-                          : "border-[#0B1B2B]/15 bg-white"
+                          ? "border-[#FF5A1F] bg-[#FAFAF7]"
+                          : "border-[#0A0A0A]/15 bg-white"
                       }`}
                     >
                       <div
                         className={`h-2 w-2 rounded-full ${
-                          active ? "bg-[#C97B3A]" : "bg-[#0B1B2B]/25"
+                          active ? "bg-[#FF5A1F]" : "bg-[#0F0F10]/25"
                         }`}
                       />
                     </div>
                     <div
                       className={`mt-4 text-[13px] font-semibold ${
-                        active ? "text-[#0B1B2B]" : "text-[#0B1B2B]/45"
+                        active ? "text-[#0A0A0A]" : "text-[#0A0A0A]/45"
                       }`}
                       style={uiFont}
                     >
                       {step.label}
                     </div>
                     <div
-                      className="mt-1 text-[11px] text-[#0B1B2B]/45"
+                      className="mt-1 text-[11px] text-[#0A0A0A]/45"
                       style={uiFont}
                     >
                       {step.detail}
@@ -93,14 +93,14 @@ export function UnifiedFlowSection() {
           {flow.map((step, i) => (
             <div
               key={step.label}
-              className="flex items-center justify-between rounded-[10px] border border-[#0B1B2B]/10 bg-[#F5F1EA]/40 px-4 py-3"
+              className="flex items-center justify-between rounded-[10px] border border-[#0A0A0A]/10 bg-[#FAFAF7]/40 px-4 py-3"
             >
               <div>
-                <div className="text-[14px] font-semibold text-[#0B1B2B]">{step.label}</div>
-                <div className="text-[12px] text-[#0B1B2B]/50">{step.detail}</div>
+                <div className="text-[14px] font-semibold text-[#0A0A0A]">{step.label}</div>
+                <div className="text-[12px] text-[#0A0A0A]/50">{step.detail}</div>
               </div>
               {i < flow.length - 1 && (
-                <ArrowRight className="h-4 w-4 text-[#0B1B2B]/25" />
+                <ArrowRight className="h-4 w-4 text-[#0A0A0A]/25" />
               )}
             </div>
           ))}
@@ -109,11 +109,11 @@ export function UnifiedFlowSection() {
 
       <Reveal delay={0.3}>
         <p
-          className="mt-16 text-center text-[18px] text-[#0B1B2B] md:text-[22px]"
+          className="mt-16 text-center text-[18px] text-[#0A0A0A] md:text-[22px]"
           style={displayFont}
         >
           Todo o estúdio atualizado.{" "}
-          <span className="italic text-[#C97B3A]">Em uma ação.</span>
+          <span className="italic text-[#FF5A1F]">Em uma ação.</span>
         </p>
       </Reveal>
     </SectionShell>

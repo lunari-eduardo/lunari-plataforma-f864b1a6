@@ -11,7 +11,7 @@ const pains = [
 
 export function ProblemSection() {
   return (
-    <SectionShell className="bg-[#F5F1EA]">
+    <SectionShell className="bg-[#FAFAF7]">
       <Reveal>
         <div className="flex justify-center">
           <EyebrowTag>O custo invisível</EyebrowTag>
@@ -20,11 +20,11 @@ export function ProblemSection() {
 
       <Reveal delay={0.05}>
         <h2
-          className="mx-auto mt-8 max-w-[860px] text-center text-[36px] leading-[1.05] tracking-[-0.025em] text-[#0B1B2B] md:text-[56px]"
+          className="mx-auto mt-8 max-w-[860px] text-center text-[36px] leading-[1.05] tracking-[-0.025em] text-[#0A0A0A] md:text-[56px]"
           style={displayFont}
         >
           Você não tem problema de clientes.{" "}
-          <span className="italic text-[#C97B3A]">Tem problema de sistema.</span>
+          <span className="italic text-[#FF5A1F]">Tem problema de sistema.</span>
         </h2>
       </Reveal>
 
@@ -32,16 +32,16 @@ export function ProblemSection() {
         {pains.map((p, i) => (
           <Reveal key={p.tool} delay={0.08 + i * 0.04}>
             <div
-              className="flex items-baseline justify-between border-b border-[#0B1B2B]/8 py-5"
+              className="flex items-baseline justify-between border-b border-[#0A0A0A]/8 py-5"
               style={uiFont}
             >
               <span
-                className="text-[22px] font-medium text-[#0B1B2B] md:text-[26px]"
+                className="text-[22px] font-medium text-[#0A0A0A] md:text-[26px]"
                 style={displayFont}
               >
                 {p.tool}
               </span>
-              <span className="text-[13px] uppercase tracking-[0.14em] text-[#0B1B2B]/50">
+              <span className="text-[13px] uppercase tracking-[0.14em] text-[#0A0A0A]/50">
                 para {p.for}
               </span>
             </div>
@@ -53,13 +53,13 @@ export function ProblemSection() {
         <div className="mx-auto mt-14 max-w-[720px] text-center">
           <div className="flex items-center justify-center gap-8" style={uiFont}>
             <Stat n="5" label="abas abertas" />
-            <div className="h-8 w-px bg-[#0B1B2B]/10" />
+            <div className="h-8 w-px bg-[#0A0A0A]/10" />
             <Stat n="14h" label="por semana" />
-            <div className="h-8 w-px bg-[#0B1B2B]/10" />
+            <div className="h-8 w-px bg-[#0A0A0A]/10" />
             <Stat n="0" label="visão real" />
           </div>
           <p
-            className="mt-10 text-[20px] italic text-[#C97B3A] md:text-[24px]"
+            className="mt-10 text-[20px] italic text-[#FF5A1F] md:text-[24px]"
             style={displayFont}
           >
             Isso não é organização. É sobrevivência.
@@ -74,12 +74,12 @@ function Stat({ n, label }: { n: string; label: string }) {
   return (
     <div>
       <div
-        className="text-[32px] font-medium text-[#0B1B2B] md:text-[40px]"
+        className="text-[32px] font-medium text-[#0A0A0A] md:text-[40px]"
         style={displayFont}
       >
         {n}
       </div>
-      <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#0B1B2B]/50">
+      <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#0A0A0A]/50">
         {label}
       </div>
     </div>
