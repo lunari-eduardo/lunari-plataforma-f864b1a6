@@ -59,7 +59,7 @@ export function EyebrowTag({
     <span
       className="inline-flex items-center gap-2.5 text-[10px] uppercase tracking-[0.22em] font-medium"
       style={{
-        fontFamily: '"Geist Mono", "JetBrains Mono", monospace',
+        fontFamily: '"Geist Mono", "Geist Mono", "JetBrains Mono", monospace',
         color: isDark ? "rgba(255,255,255,0.55)" : "rgba(10,10,10,0.55)",
       }}
     >
@@ -126,7 +126,7 @@ export function PrimaryButton({
       onClick={onClick}
       className={`group inline-flex h-10 items-center justify-center gap-2 rounded-[8px] px-5 text-[14px] font-medium transition-all duration-300 hover:-translate-y-[1px] active:translate-y-0 ${className}`}
       style={{
-        fontFamily: '"Geist", "Inter Tight", sans-serif',
+        fontFamily: '"Geist", "Geist", "Inter Tight", sans-serif',
         background: isDark ? TOKENS.paper : TOKENS.ink,
         color: isDark ? TOKENS.ink : TOKENS.paper,
         letterSpacing: "-0.005em",
@@ -157,7 +157,7 @@ export function GhostLink({
       onClick={onClick}
       className={`group inline-flex items-center gap-1.5 text-[14px] font-medium transition-colors ${className}`}
       style={{
-        fontFamily: '"Geist", "Inter Tight", sans-serif',
+        fontFamily: '"Geist", "Geist", "Inter Tight", sans-serif',
         color: isDark ? "rgba(255,255,255,0.7)" : "rgba(10,10,10,0.7)",
         letterSpacing: "-0.005em",
       }}
@@ -204,7 +204,7 @@ export function TechLabel({
     <span
       className={`text-[10px] uppercase tracking-[0.22em] tabular-nums ${className}`}
       style={{
-        fontFamily: '"Geist Mono", "JetBrains Mono", monospace',
+        fontFamily: '"Geist Mono", "Geist Mono", "JetBrains Mono", monospace',
         color: tone === "dark" ? "rgba(255,255,255,0.45)" : "rgba(10,10,10,0.45)",
       }}
     >
@@ -214,6 +214,6 @@ export function TechLabel({
 }
 
 // Fontes inline (mantidas para retrocompat com componentes existentes)
-export const displayFont = { fontFamily: '"Instrument Serif", "Fraunces", Georgia, serif' };
-export const uiFont = { fontFamily: '"Geist", "Inter Tight", sans-serif', letterSpacing: "-0.005em" };
-export const monoFont = { fontFamily: '"Geist Mono", "JetBrains Mono", monospace' };
+export const displayFont = { fontFamily: '"Instrument Serif", "Instrument Serif", "Fraunces", Georgia, serif' };
+export const uiFont = { fontFamily: '"Geist", "Geist", "Inter Tight", sans-serif', letterSpacing: "-0.005em" };
+export const monoFont = { fontFamily: '"Geist Mono", "Geist Mono", "JetBrains Mono", monospace' };

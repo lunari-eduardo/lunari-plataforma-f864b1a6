@@ -4,13 +4,13 @@ import { SectionShell, Reveal, PrimaryButton, displayFont, uiFont } from "./prim
 export function ClosingSection() {
   const nav = useNavigate();
   return (
-    <SectionShell className="relative overflow-hidden bg-[#0B1B2B] text-[#F5F1EA]">
+    <SectionShell className="relative overflow-hidden bg-[#0A0A0A] text-[#FAFAF7]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[500px] opacity-40 blur-3xl"
         style={{
           background:
-            "radial-gradient(closest-side at 50% 0%, rgba(201,123,58,0.35), transparent 70%)",
+            "radial-gradient(closest-side at 50% 0%, rgba(255,90,31,0.35), transparent 70%)",
         }}
       />
       <div className="relative text-center">
@@ -21,7 +21,7 @@ export function ClosingSection() {
           >
             Você não precisa de mais uma ferramenta.
             <br />
-            <span className="italic text-[#C97B3A]">Precisa de um estúdio que pensa com você.</span>
+            <span className="italic text-[#FF5A1F]">Precisa de um estúdio que pensa com você.</span>
           </h2>
         </Reveal>
 
@@ -29,7 +29,7 @@ export function ClosingSection() {
           <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <button
               onClick={() => nav("/auth")}
-              className="h-12 rounded-[6px] bg-[#C97B3A] px-8 text-[16px] font-semibold text-[#0B1B2B] transition-all hover:-translate-y-[1px] hover:brightness-105"
+              className="h-12 rounded-[6px] bg-[#FF5A1F] px-8 text-[16px] font-semibold text-[#0A0A0A] transition-all hover:-translate-y-[1px] hover:brightness-105"
               style={uiFont}
             >
               Começar 30 dias grátis

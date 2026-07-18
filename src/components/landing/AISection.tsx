@@ -9,14 +9,14 @@ const questions = [
 
 export function AISection() {
   return (
-    <SectionShell id="ia" className="relative overflow-hidden bg-[#0B1B2B] text-[#F5F1EA]">
+    <SectionShell id="ia" className="relative overflow-hidden bg-[#0A0A0A] text-[#FAFAF7]">
       {/* subtle warm glow */}
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 right-0 h-[500px] w-[700px] opacity-30 blur-3xl"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(201,123,58,0.35), transparent 70%)",
+            "radial-gradient(closest-side, rgba(255,90,31,0.35), transparent 70%)",
         }}
       />
 
@@ -24,7 +24,7 @@ export function AISection() {
         <Reveal>
           <div className="flex justify-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/60">
-              <span className="h-1 w-1 rounded-full bg-[#C97B3A]" />
+              <span className="h-1 w-1 rounded-full bg-[#FF5A1F]" />
               Assistente Lunari
             </span>
           </div>
@@ -36,7 +36,7 @@ export function AISection() {
             style={displayFont}
           >
             Sua planilha não te responde.{" "}
-            <span className="italic text-[#C97B3A]">A Lu responde.</span>
+            <span className="italic text-[#FF5A1F]">A Lu responde.</span>
           </h2>
         </Reveal>
 
@@ -55,7 +55,7 @@ export function AISection() {
           <div className="mx-auto mt-16 max-w-[720px]">
             <div className="rounded-[16px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm">
               <div className="mb-4 flex items-center gap-2.5" style={uiFont}>
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#C97B3A] text-[12px] font-semibold text-[#0B1B2B]" style={displayFont}>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FF5A1F] text-[12px] font-semibold text-[#0A0A0A]" style={displayFont}>
                   Lu
                 </span>
                 <span className="text-[13px] text-white/60">respondendo agora</span>
@@ -64,7 +64,7 @@ export function AISection() {
               <div className="space-y-3" style={monoFont}>
                 {questions.map((q, i) => (
                   <div key={q} className="flex items-start gap-3 text-[13px]">
-                    <span className="text-[#C97B3A]/70">›</span>
+                    <span className="text-[#FF5A1F]/70">›</span>
                     <span className="text-white/80">{q}</span>
                   </div>
                 ))}
@@ -78,9 +78,9 @@ export function AISection() {
                   className="mt-3 text-[16px] leading-[1.5] text-white/90 md:text-[18px]"
                   style={displayFont}
                 >
-                  Este mês você fechou <span className="text-[#C97B3A]">17 sessões</span>,
-                  faturou <span className="text-[#C97B3A]">R$ 24.380</span> líquido e
-                  tem <span className="text-[#C97B3A]">4 clientes</span> com extras
+                  Este mês você fechou <span className="text-[#FF5A1F]">17 sessões</span>,
+                  faturou <span className="text-[#FF5A1F]">R$ 24.380</span> líquido e
+                  tem <span className="text-[#FF5A1F]">4 clientes</span> com extras
                   vencidos. Quer que eu prepare a régua de cobrança?
                 </p>
               </div>
