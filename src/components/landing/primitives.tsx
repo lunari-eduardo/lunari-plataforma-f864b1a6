@@ -22,12 +22,15 @@ export const TOKENS = {
   paper: "#FAFAF7",
   ink: "#0A0A0A",
   deep: "#0F0F10",
-  ember: "#FF5A1F",
+  navy: "#061720",          // fundo escuro alternativo (assistente Lu, promoStrip)
+  ember: "#b0632f",         // accent terra sobre paper
+  emberOnDark: "#c47a3f",   // accent terra levemente mais quente sobre navy/deep
   hair: "rgba(10,10,10,0.08)",
   hairStrong: "rgba(10,10,10,0.14)",
   hairDark: "rgba(255,255,255,0.08)",
   hairDarkStrong: "rgba(255,255,255,0.14)",
 };
+
 
 export function SectionShell({
   children,
