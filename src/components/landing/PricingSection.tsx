@@ -52,7 +52,7 @@ export function PricingSection() {
             <div
               className={`flex h-full flex-col rounded-[14px] border p-8 transition-all ${
                 p.highlight
-                  ? "border-[#0A0A0A] bg-[#0A0A0A] text-[#FAFAF7]"
+                  ? "border-[#0A0A0A] bg-[#0F0F10] text-[#FAFAF7]"
                   : "border-[#0A0A0A]/12 bg-white text-[#0A0A0A] hover:border-[#0A0A0A]/25"
               }`}
               style={{
@@ -103,7 +103,7 @@ export function PricingSection() {
                   className={`h-11 w-full rounded-[6px] text-[15px] font-semibold transition-all ${
                     p.highlight
                       ? "bg-[#FF5A1F] text-[#0A0A0A] hover:brightness-105"
-                      : "bg-[#0A0A0A] text-[#FAFAF7] hover:-translate-y-[1px]"
+                      : "bg-[#0F0F10] text-[#FAFAF7] hover:-translate-y-[1px]"
                   }`}
                   style={uiFont}
                 >

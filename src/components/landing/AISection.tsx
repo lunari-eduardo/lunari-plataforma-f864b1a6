@@ -9,7 +9,7 @@ const questions = [
 
 export function AISection() {
   return (
-    <SectionShell id="ia" className="relative overflow-hidden bg-[#0A0A0A] text-[#FAFAF7]">
+    <SectionShell id="ia" className="relative overflow-hidden bg-[#0F0F10] text-[#FAFAF7]">
       {/* subtle warm glow */}
       <div
         aria-hidden

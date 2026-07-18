@@ -44,7 +44,7 @@ export function UnifiedFlowSection() {
       <Reveal delay={0.2}>
         <div className="mt-20 hidden md:block">
           <div className="relative">
-            <div className="absolute left-6 right-6 top-[26px] h-px bg-[#0A0A0A]/10" />
+            <div className="absolute left-6 right-6 top-[26px] h-px bg-[#0F0F10]/10" />
             <div
               className="absolute left-6 top-[26px] h-px bg-[#FF5A1F]"
               style={{ width: "62%" }}
@@ -63,7 +63,7 @@ export function UnifiedFlowSection() {
                     >
                       <div
                         className={`h-2 w-2 rounded-full ${
-                          active ? "bg-[#FF5A1F]" : "bg-[#0A0A0A]/25"
+                          active ? "bg-[#FF5A1F]" : "bg-[#0F0F10]/25"
                         }`}
                       />
                     </div>
