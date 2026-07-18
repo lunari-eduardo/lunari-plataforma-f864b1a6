@@ -87,8 +87,18 @@ export default function PhotographerApp() {
           <AppProvider>
             <BuildMonitor />
             <Routes>
-              {/* ============ PUBLIC ROUTES (SEO) ============ */}
-              <Route path="/" element={<LandingPage />} />
+              {/* ============ PUBLIC INSTITUTIONAL SITE (SiteLayout) ============ */}
+              <Route element={<SiteLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/studio" element={<StudioPage />} />
+                <Route path="/gallery" element={<GalleryOverviewPage />} />
+                <Route path="/gallery/select" element={<GallerySelectPage />} />
+                <Route path="/gallery/transfer" element={<GalleryTransferPage />} />
+                <Route path="/precos" element={<PrecosPage />} />
+                <Route path="/sobre" element={<SobrePage />} />
+                <Route path="/contato" element={<ContatoPage />} />
+              </Route>
+
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/conteudos" element={<Conteudos />} />
