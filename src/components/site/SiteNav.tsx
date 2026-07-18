@@ -62,7 +62,7 @@ export function SiteNav() {
         >
           <span
             className="inline-block h-[7px] w-[7px] rounded-full"
-            style={{ background: "#FF5A1F", boxShadow: "0 0 0 3px rgba(255,90,31,0.12)" }}
+            style={{ background: "#b0632f", boxShadow: "0 0 0 3px rgba(176,99,47,0.12)" }}
           />
           lunari
           <span
@@ -106,7 +106,7 @@ export function SiteNav() {
                           className={({ isActive }) =>
                             `block px-4 py-3 transition-colors ${
                               isActive
-                                ? "bg-[rgba(255,90,31,0.06)]"
+                                ? "bg-[rgba(176,99,47,0.06)]"
                                 : "hover:bg-[rgba(10,10,10,0.03)]"
                             }`
                           }

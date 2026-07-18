@@ -42,7 +42,7 @@ export function PricingSection() {
           style={displayFont}
         >
           Você paga menos que uma sessão.{" "}
-          <span className="italic text-[#FF5A1F]">Ganha o estúdio inteiro.</span>
+          <span className="italic text-[#b0632f]">Ganha o estúdio inteiro.</span>
         </h2>
       </Reveal>
 
@@ -66,7 +66,7 @@ export function PricingSection() {
                   {p.name}
                 </span>
                 {p.highlight && (
-                  <span className="rounded-full bg-[#FF5A1F] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0A0A0A]">
+                  <span className="rounded-full bg-[#b0632f] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#0A0A0A]">
                     Recomendado
                   </span>
                 )}
@@ -88,7 +88,7 @@ export function PricingSection() {
                   <li key={f} className="flex items-start gap-2.5 text-[14px]">
                     <Check
                       className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                        p.highlight ? "text-[#FF5A1F]" : "text-[#FF5A1F]"
+                        p.highlight ? "text-[#b0632f]" : "text-[#b0632f]"
                       }`}
                       strokeWidth={2.5}
                     />
@@ -102,7 +102,7 @@ export function PricingSection() {
                   onClick={() => nav("/auth")}
                   className={`h-11 w-full rounded-[6px] text-[15px] font-semibold transition-all ${
                     p.highlight
-                      ? "bg-[#FF5A1F] text-[#0A0A0A] hover:brightness-105"
+                      ? "bg-[#b0632f] text-[#0A0A0A] hover:brightness-105"
                       : "bg-[#0F0F10] text-[#FAFAF7] hover:-translate-y-[1px]"
                   }`}
                   style={uiFont}

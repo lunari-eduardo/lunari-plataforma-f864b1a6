@@ -54,7 +54,7 @@ function PlanCard({ plan, cadence }: { plan: Plan; cadence: Cadence }) {
     >
       {highlight && (
         <span
-          className="absolute right-6 top-6 rounded-full bg-[#FF5A1F] px-2.5 py-1 text-[9px] uppercase tracking-[0.16em] text-white"
+          className="absolute right-6 top-6 rounded-full bg-[#b0632f] px-2.5 py-1 text-[9px] uppercase tracking-[0.16em] text-white"
           style={monoFont}
         >
           Mais popular
@@ -95,7 +95,7 @@ function PlanCard({ plan, cadence }: { plan: Plan; cadence: Cadence }) {
               highlight ? "text-white/85" : "text-[#0A0A0A]/85"
             }`}
           >
-            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#FF5A1F]" strokeWidth={2.5} />
+            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#b0632f]" strokeWidth={2.5} />
             {f}
           </li>
         ))}
@@ -153,7 +153,7 @@ export default function PrecosPage() {
               className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[76px]"
               style={displayFont}
             >
-              Um preço que <span className="italic text-[#FF5A1F]">cabe.</span>
+              Um preço que <span className="italic text-[#b0632f]">cabe.</span>
             </h1>
           </Reveal>
           <Reveal delay={0.1}>

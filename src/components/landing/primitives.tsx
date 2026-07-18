@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
  * - paper  #FAFAF7 (background neutro, quase branco)
  * - ink    #0A0A0A (preto verdadeiro)
  * - deep   #0F0F10 (fundo escuro para seções de quebra)
- * - ember  #FF5A1F (accent digital, uso ≤2× por dobra)
+ * - ember  #b0632f (accent digital, uso ≤2× por dobra)
  * - hair   rgba(10,10,10,.06)
  *
  * Tipografia:
@@ -78,7 +78,7 @@ export function EyebrowTag({
         className="inline-block h-[6px] w-[6px] rounded-full"
         style={{
           background: TOKENS.ember,
-          boxShadow: `0 0 0 3px ${isDark ? "rgba(255,90,31,0.12)" : "rgba(255,90,31,0.08)"}`,
+          boxShadow: `0 0 0 3px ${isDark ? "rgba(176,99,47,0.12)" : "rgba(176,99,47,0.08)"}`,
         }}
       />
       {children}

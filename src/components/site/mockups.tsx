@@ -48,7 +48,7 @@ export function WindowFrame({
 export function StudioWorkflowMock() {
   const cols = [
     { label: "Lead", count: 8, color: "#0A0A0A/70" },
-    { label: "Sessão", count: 3, color: "#FF5A1F" },
+    { label: "Sessão", count: 3, color: "#b0632f" },
     { label: "Edição", count: 5 },
     { label: "Entrega", count: 2 },
   ];
@@ -87,7 +87,7 @@ export function StudioWorkflowMock() {
 export function StudioAgendaMock() {
   const hours = ["09h", "11h", "14h", "16h"];
   const events = [
-    { row: 0, label: "Ensaio Maria", color: "#FF5A1F" },
+    { row: 0, label: "Ensaio Maria", color: "#b0632f" },
     { row: 2, label: "Casamento", color: "#0A0A0A" },
     { row: 3, label: "Newborn", color: "#0A0A0A" },
   ];
@@ -169,7 +169,7 @@ export function StudioFinanceMock() {
                 <span
                   className={`rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${
                     r.ok
-                      ? "bg-[#FF5A1F]/12 text-[#FF5A1F]"
+                      ? "bg-[#b0632f]/12 text-[#b0632f]"
                       : "bg-[#0A0A0A]/8 text-[#0A0A0A]/60"
                   }`}
                   style={monoFont}
@@ -195,7 +195,7 @@ export function GallerySelectMock() {
       <div className="p-4">
         <div className="mb-3 flex items-center justify-between" style={uiFont}>
           <span className="text-[13px] font-medium">Selecione até 10 fotos</span>
-          <span className="rounded-full bg-[#FF5A1F]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#FF5A1F]" style={monoFont}>
+          <span className="rounded-full bg-[#b0632f]/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#b0632f]" style={monoFont}>
             12 · R$ 25 em extras
           </span>
         </div>
@@ -207,13 +207,13 @@ export function GallerySelectMock() {
                 key={i}
                 className={`aspect-square rounded-[4px] border ${
                   selected
-                    ? "border-[#FF5A1F] bg-gradient-to-br from-[#FF5A1F]/15 to-[#FF5A1F]/30"
+                    ? "border-[#b0632f] bg-gradient-to-br from-[#b0632f]/15 to-[#b0632f]/30"
                     : "border-[rgba(10,10,10,0.08)] bg-gradient-to-br from-[#0A0A0A]/5 to-[#0A0A0A]/15"
                 }`}
               >
                 {selected && (
                   <div className="flex h-full items-end justify-end p-1">
-                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#FF5A1F] text-[8px] font-semibold text-white">
+                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#b0632f] text-[8px] font-semibold text-white">
                       ✓
                     </span>
                   </div>
@@ -254,12 +254,12 @@ export function GalleryTransferMock() {
         </div>
         <div className="mt-3 flex items-center justify-between rounded-[6px] border border-white/10 bg-white/5 px-3 py-2.5" style={uiFont}>
           <div className="flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#FF5A1F]" />
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#b0632f]" />
             <span className="text-[11px] text-white/60" style={monoFont}>
               Protegido por senha · Marca d'água
             </span>
           </div>
-          <button className="rounded-[4px] bg-[#FF5A1F] px-3 py-1 text-[11px] font-medium text-white" style={uiFont}>
+          <button className="rounded-[4px] bg-[#b0632f] px-3 py-1 text-[11px] font-medium text-white" style={uiFont}>
             Baixar tudo (ZIP)
           </button>
         </div>

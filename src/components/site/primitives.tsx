@@ -55,7 +55,7 @@ export function ProductHero({
                 {emphasis && (
                   <>
                     {" "}
-                    <span className="italic text-[#FF5A1F]">{emphasis}</span>
+                    <span className="italic text-[#b0632f]">{emphasis}</span>
                   </>
                 )}
               </h1>
@@ -194,7 +194,7 @@ export function FeatureRow({
                 {bullets.map((b) => (
                   <li key={b} className="flex items-start gap-3 text-[14px]">
                     <Check
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#FF5A1F]"
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#b0632f]"
                       strokeWidth={2.5}
                     />
                     <span className={dark ? "text-[rgba(255,255,255,0.8)]" : "text-[#0A0A0A]/80"}>
@@ -248,7 +248,7 @@ export function CTABlock({
             {emphasis && (
               <>
                 {" "}
-                <span className="italic text-[#FF5A1F]">{emphasis}</span>
+                <span className="italic text-[#b0632f]">{emphasis}</span>
               </>
             )}
           </h2>
@@ -406,7 +406,7 @@ export function ComparisonTable({
               <th
                 key={p.key}
                 className={`py-5 px-4 text-[13px] ${
-                  p.highlight ? "text-[#FF5A1F]" : "text-[#0A0A0A]"
+                  p.highlight ? "text-[#b0632f]" : "text-[#0A0A0A]"
                 }`}
               >
                 {p.name}
@@ -437,7 +437,7 @@ export function ComparisonTable({
                     return (
                       <td key={p.key} className="py-4 px-4 text-[13px] text-[#0A0A0A]/80">
                         {v === true ? (
-                          <Check className="h-4 w-4 text-[#FF5A1F]" strokeWidth={2.5} />
+                          <Check className="h-4 w-4 text-[#b0632f]" strokeWidth={2.5} />
                         ) : v === false || v === undefined ? (
                           <Minus className="h-4 w-4 text-[#0A0A0A]/25" />
                         ) : (
