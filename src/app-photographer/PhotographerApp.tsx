@@ -15,7 +15,15 @@ import MinhaConta from "@/pages/MinhaConta";
 import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
 import FeedTest from "@/pages/FeedTest";
-import LandingPage from "@/pages/LandingPage";
+import HomePage from "@/pages/site/HomePage";
+import StudioPage from "@/pages/site/StudioPage";
+import GalleryOverviewPage from "@/pages/site/GalleryOverviewPage";
+import GallerySelectPage from "@/pages/site/GallerySelectPage";
+import GalleryTransferPage from "@/pages/site/GalleryTransferPage";
+import PrecosPage from "@/pages/site/PrecosPage";
+import SobrePage from "@/pages/site/SobrePage";
+import ContatoPage from "@/pages/site/ContatoPage";
+import { SiteLayout } from "@/components/site/SiteLayout";
 import PublicCheckout from "@/pages/PublicCheckout";
 import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
 
