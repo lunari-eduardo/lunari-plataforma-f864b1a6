@@ -21,7 +21,7 @@ export function ProofSection() {
           style={displayFont}
         >
           "Não é software. É a primeira vez que eu enxergo{" "}
-          <em className="italic text-[#FF5A1F]">o estúdio inteiro</em> em uma tela."
+          <em className="italic text-[#b0632f]">o estúdio inteiro</em> em uma tela."
         </blockquote>
         <p className="mt-6 text-center text-[13px] uppercase tracking-[0.16em] text-[#0A0A0A]/50" style={uiFont}>
           Isabela — estúdio de família, Curitiba

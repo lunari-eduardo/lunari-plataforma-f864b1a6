@@ -23,7 +23,7 @@ export function GallerySection() {
           style={displayFont}
         >
           A galeria não é um produto separado.{" "}
-          <span className="italic text-[#FF5A1F]">É o mesmo cérebro.</span>
+          <span className="italic text-[#b0632f]">É o mesmo cérebro.</span>
         </h2>
       </Reveal>
 
@@ -38,8 +38,8 @@ export function GallerySection() {
           <div className="space-y-5" style={uiFont}>
             {points.map((p) => (
               <div key={p} className="flex items-start gap-3">
-                <div className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#FF5A1F]/12">
-                  <Check className="h-3 w-3 text-[#FF5A1F]" strokeWidth={2.5} />
+                <div className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#b0632f]/12">
+                  <Check className="h-3 w-3 text-[#b0632f]" strokeWidth={2.5} />
                 </div>
                 <p className="text-[17px] leading-[1.5] text-[#0A0A0A]">{p}</p>
               </div>
@@ -85,7 +85,7 @@ function GalleryMockup() {
                 style={{ background: tones[i] }}
               >
                 {selected && (
-                  <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5A1F] text-white">
+                  <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#b0632f] text-white">
                     <Check className="h-3 w-3" strokeWidth={3} />
                   </div>
                 )}
@@ -105,8 +105,8 @@ function GalleryMockup() {
             <ProgressRow label="Pagamento" />
             <ProgressRow label="Entrega" />
           </div>
-          <div className="mt-6 rounded-[8px] border border-[#FF5A1F]/25 bg-[#FF5A1F]/8 p-3">
-            <div className="text-[10px] uppercase tracking-[0.14em] text-[#FF5A1F]">
+          <div className="mt-6 rounded-[8px] border border-[#b0632f]/25 bg-[#b0632f]/8 p-3">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-[#b0632f]">
               +6 extras
             </div>
             <div className="mt-1 text-[15px] font-semibold text-[#0A0A0A]" style={displayFont}>
@@ -124,7 +124,7 @@ function ProgressRow({ label, done, active }: { label: string; done?: boolean; a
     <div className="flex items-center gap-2">
       <span
         className={`h-2 w-2 rounded-full ${
-          done ? "bg-[#0A0A0A]" : active ? "bg-[#FF5A1F]" : "bg-[#0A0A0A]/15"
+          done ? "bg-[#0A0A0A]" : active ? "bg-[#b0632f]" : "bg-[#0A0A0A]/15"
         }`}
       />
       <span className={done || active ? "text-[#0A0A0A]" : "text-[#0A0A0A]/40"}>

@@ -4295,6 +4295,80 @@ export type Database = {
         }
         Relationships: []
       }
+      site_promotions: {
+        Row: {
+          badge_label: string | null
+          created_at: string
+          cta_href: string | null
+          cta_label: string
+          discount_type: string
+          discount_value_cents: number
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          show_on_home: boolean
+          show_on_pricing: boolean
+          slug: string
+          sort_order: number
+          starts_at: string | null
+          subtitle: string | null
+          target_credit_package_id: string | null
+          target_plan_code: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          badge_label?: string | null
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string
+          discount_type?: string
+          discount_value_cents?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          show_on_home?: boolean
+          show_on_pricing?: boolean
+          slug: string
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          target_credit_package_id?: string | null
+          target_plan_code?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          badge_label?: string | null
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string
+          discount_type?: string
+          discount_value_cents?: number
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          show_on_home?: boolean
+          show_on_pricing?: boolean
+          slug?: string
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          target_credit_package_id?: string | null
+          target_plan_code?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_promotions_target_credit_package_id_fkey"
+            columns: ["target_credit_package_id"]
+            isOneToOne: false
+            referencedRelation: "gallery_credit_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null

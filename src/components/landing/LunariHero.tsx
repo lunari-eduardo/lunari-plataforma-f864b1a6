@@ -30,7 +30,7 @@ export function LunariHero() {
         className="pointer-events-none absolute -top-32 right-[10%] h-[400px] w-[600px] opacity-[0.18] blur-3xl"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(255,90,31,0.6), transparent 70%)",
+            "radial-gradient(closest-side, rgba(176,99,47,0.6), transparent 70%)",
         }}
       />
 
@@ -45,7 +45,7 @@ export function LunariHero() {
           >
             <span
               className="inline-block h-[6px] w-[6px] animate-pulse rounded-full"
-              style={{ background: "#FF5A1F" }}
+              style={{ background: "#b0632f" }}
             />
             Feito por fotógrafos, não por engenheiros de SaaS
           </span>

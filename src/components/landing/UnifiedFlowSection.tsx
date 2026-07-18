@@ -26,7 +26,7 @@ export function UnifiedFlowSection() {
           style={displayFont}
         >
           Um cliente entra.{" "}
-          <span className="italic text-[#FF5A1F]">Um fluxo o leva ao pós-venda.</span>
+          <span className="italic text-[#b0632f]">Um fluxo o leva ao pós-venda.</span>
         </h2>
       </Reveal>
 
@@ -46,7 +46,7 @@ export function UnifiedFlowSection() {
           <div className="relative">
             <div className="absolute left-6 right-6 top-[26px] h-px bg-[#0F0F10]/10" />
             <div
-              className="absolute left-6 top-[26px] h-px bg-[#FF5A1F]"
+              className="absolute left-6 top-[26px] h-px bg-[#b0632f]"
               style={{ width: "62%" }}
             />
             <div className="relative grid grid-cols-7 gap-2">
@@ -57,13 +57,13 @@ export function UnifiedFlowSection() {
                     <div
                       className={`flex h-[52px] w-[52px] items-center justify-center rounded-full border transition-all ${
                         active
-                          ? "border-[#FF5A1F] bg-[#FAFAF7]"
+                          ? "border-[#b0632f] bg-[#FAFAF7]"
                           : "border-[#0A0A0A]/15 bg-white"
                       }`}
                     >
                       <div
                         className={`h-2 w-2 rounded-full ${
-                          active ? "bg-[#FF5A1F]" : "bg-[#0F0F10]/25"
+                          active ? "bg-[#b0632f]" : "bg-[#0F0F10]/25"
                         }`}
                       />
                     </div>
@@ -113,7 +113,7 @@ export function UnifiedFlowSection() {
           style={displayFont}
         >
           Todo o estúdio atualizado.{" "}
-          <span className="italic text-[#FF5A1F]">Em uma ação.</span>
+          <span className="italic text-[#b0632f]">Em uma ação.</span>
         </p>
       </Reveal>
     </SectionShell>

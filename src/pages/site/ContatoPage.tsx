@@ -42,7 +42,7 @@ export default function ContatoPage() {
                 className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[72px]"
                 style={displayFont}
               >
-                Fala com a <span className="italic text-[#FF5A1F]">gente.</span>
+                Fala com a <span className="italic text-[#b0632f]">gente.</span>
               </h1>
             </Reveal>
             <Reveal delay={0.1}>
