@@ -448,13 +448,13 @@ export function FAQBlock({
   const [open, setOpen] = useState<number | null>(0);
   const isLight = tone === "light";
   return (
-    <SectionShell className="relative overflow-hidden">
+    <SectionShell className="relative isolate overflow-hidden">
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: toneBg(tone) }}
+        className="absolute inset-0"
+        style={{ background: toneBg(tone), zIndex: 0 }}
       />
-      <div className="grid gap-12 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:gap-24">
+      <div className="relative grid gap-12 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:gap-24" style={{ zIndex: 1 }}>
         <div>
           <Reveal>
             <EyebrowTag tone={asTitleTone(tone)}>FAQ</EyebrowTag>
