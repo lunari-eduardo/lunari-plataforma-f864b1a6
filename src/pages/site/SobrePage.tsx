@@ -91,8 +91,12 @@ export default function SobrePage() {
                   {v.n}
                 </span>
                 <h3
-                  className="mt-4 text-[26px] leading-[1.15] tracking-[-0.02em]"
-                  style={displayFont}
+                  className="mt-4 text-[26px] leading-[1.15] tracking-[-0.028em]"
+                  style={{
+                    fontFamily: '"Geist", "Inter Tight", sans-serif',
+                    color: "#0A0A0A",
+                    fontWeight: 600,
+                  }}
                 >
                   {v.title}
                 </h3>
@@ -114,6 +118,7 @@ export default function SobrePage() {
         description="30 dias, sem cartão, sem promessa vazia."
         secondaryLabel="Falar com a Lunari"
         secondaryTo="/contato"
+        tone="navy"
       />
     </>
   );

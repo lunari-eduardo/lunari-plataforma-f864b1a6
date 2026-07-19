@@ -43,7 +43,8 @@ export default function StudioPage() {
       <FeatureRow
         index="01"
         eyebrow="Workflow"
-        title="Do lead ao pós-venda, sem trocar de aba."
+        title="Do lead ao pós-venda,"
+        emphasis="sem trocar de aba."
         description="Cada card carrega o cliente, o valor, a próxima ação e o histórico. Nada se perde entre você e o cliente."
         bullets={[
           "Colunas configuráveis por tipo de trabalho",
@@ -56,7 +57,8 @@ export default function StudioPage() {
       <FeatureRow
         index="02"
         eyebrow="Agenda"
-        title="Sua agenda entende que sessão é dinheiro."
+        title="Sua agenda entende"
+        emphasis="que sessão é dinheiro."
         description="Cada evento carrega o cliente, o valor combinado e o status financeiro. Sincroniza com Google Calendar sem duplicar."
         bullets={[
           "Horários de trabalho e bloqueios inteligentes",
@@ -65,12 +67,14 @@ export default function StudioPage() {
         ]}
         mockup={<StudioAgendaMock />}
         reversed
+        tone="navy"
       />
 
       <FeatureRow
         index="03"
         eyebrow="Financeiro"
-        title="Todos os PIX, todas as gateways, uma tela."
+        title="Todos os PIX, todas as gateways,"
+        emphasis="uma tela."
         description="PIX manual, Asaas, InfinitePay e MercadoPago conciliados automaticamente. Você vê recebido, pendente e a receber — de verdade."
         bullets={[
           "Baixa automática por webhook (sem cola de comprovante)",
@@ -86,6 +90,7 @@ export default function StudioPage() {
         description="30 dias com tudo. Se não valer a pena, você sai e leva seus dados."
         secondaryLabel="Ver planos"
         secondaryTo="/precos"
+        tone="dark"
       />
       <FAQBlock
         title="Sobre o Studio"

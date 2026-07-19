@@ -46,7 +46,8 @@ export default function GalleryTransferPage() {
       <FeatureRow
         index="01"
         eyebrow="Proteção"
-        title="Nada de link público."
+        title="Nada de link"
+        emphasis="público."
         description="Cada galeria tem senha, prazo de expiração e — se você quiser — marca d'água na visualização."
         bullets={[
           "Senha por galeria (não por foto)",
@@ -59,7 +60,8 @@ export default function GalleryTransferPage() {
       <FeatureRow
         index="02"
         eyebrow="Storage"
-        title="Cloudflare R2. Sem custo extra."
+        title="Cloudflare R2."
+        emphasis="Sem custo extra."
         description="Suas fotos vivem em armazenamento redundante global. Sem taxa por GB, sem surpresa no fim do mês."
         bullets={[
           "R2 incluso em todos os planos com Gallery",
@@ -68,6 +70,7 @@ export default function GalleryTransferPage() {
         ]}
         mockup={<GalleryTransferMock />}
         reversed
+        tone="navy"
       />
 
       <CTABlock
@@ -76,6 +79,7 @@ export default function GalleryTransferPage() {
         description="Seu cliente não deveria depender de um link do WeTransfer que expira em 7 dias."
         secondaryLabel="Ver planos"
         secondaryTo="/precos"
+        tone="dark"
       />
 
       <FAQBlock
