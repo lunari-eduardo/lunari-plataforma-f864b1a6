@@ -7,6 +7,7 @@ import {
   FAQBlock,
   BreadcrumbTrail,
   SectionShell,
+  SectionTitle,
   EyebrowTag,
   Reveal,
   displayFont,
