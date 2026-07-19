@@ -98,6 +98,19 @@ export default function Index() {
         <ContasAPagarCard />
         <TarefasPendentesCard />
       </section>
+
+      {/* Indicadores principais (métricas inferiores) */}
+      <section aria-label="Indicadores principais">
+        <KPIGroupCard
+          receitaMes={receitaMes}
+          metaMes={metaMes}
+          progressoMeta={progressoMeta}
+          topCategoria={topCategoria}
+          novosClientes60d={novosClientes60d}
+          valorPrevisto={valorPrevisto}
+          isLoading={metricsLoading}
+        />
+      </section>
     </main>
   );
 }
