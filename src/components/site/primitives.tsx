@@ -436,20 +436,28 @@ export function CTABlock({
 export function FAQBlock({
   items,
   title = "Perguntas frequentes",
+  tone = "light",
 }: {
   items: { q: string; a: string }[];
   title?: string;
+  tone?: Tone;
 }) {
   const [open, setOpen] = useState<number | null>(0);
+  const isLight = tone === "light";
   return (
-    <SectionShell>
+    <SectionShell className="relative overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{ background: toneBg(tone) }}
+      />
       <div className="grid gap-12 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:gap-24">
         <div>
           <Reveal>
-            <EyebrowTag>FAQ</EyebrowTag>
+            <EyebrowTag tone={asTitleTone(tone)}>FAQ</EyebrowTag>
           </Reveal>
           <Reveal delay={0.05}>
-            <SectionTitle as="h2" size="sm" className="mt-6">
+            <SectionTitle as="h2" size="sm" tone={asTitleTone(tone)} className="mt-6">
               {title}
             </SectionTitle>
           </Reveal>
@@ -458,7 +466,7 @@ export function FAQBlock({
           {items.map((it, i) => {
             const isOpen = open === i;
             return (
-              <div key={i} className="border-b" style={{ borderColor: TOKENS.hair }}>
+              <div key={i} className="border-b" style={{ borderColor: toneHair(tone) }}>
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
                   className="flex w-full items-center justify-between gap-6 py-6 text-left"
@@ -467,7 +475,7 @@ export function FAQBlock({
                     className="text-[16px] md:text-[18px]"
                     style={{
                       ...uiFont,
-                      color: TOKENS.ink,
+                      color: toneText(tone),
                       fontWeight: 500,
                       letterSpacing: "-0.01em",
                     }}
@@ -478,13 +486,13 @@ export function FAQBlock({
                     className={`h-5 w-5 flex-shrink-0 transition-transform ${
                       isOpen ? "rotate-180" : ""
                     }`}
-                    style={{ color: "rgba(10,10,10,0.5)" }}
+                    style={{ color: toneMutedSoft(tone) }}
                   />
                 </button>
                 {isOpen && (
                   <p
                     className="pb-6 text-[15px] leading-[1.65]"
-                    style={{ ...uiFont, color: "rgba(10,10,10,0.72)" }}
+                    style={{ ...uiFont, color: toneMuted(tone) }}
                   >
                     {it.a}
                   </p>
