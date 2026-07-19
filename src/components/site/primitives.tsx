@@ -268,27 +268,29 @@ export function FeatureRow({
   const isLight = tone === "light";
   return (
     <SectionShell
-      className="relative overflow-hidden"
+      className="relative isolate overflow-hidden"
     >
       {/* Background por tone */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: toneBg(tone) }}
+        className="absolute inset-0"
+        style={{ background: toneBg(tone), zIndex: 0 }}
       />
       {!isLight && (
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 opacity-60"
+          className="absolute inset-0 opacity-60"
           style={{
+            zIndex: 0,
             background: `radial-gradient(700px 400px at 20% 10%, rgba(196,122,63,0.10), transparent 60%), radial-gradient(600px 400px at 90% 90%, rgba(6,23,32,0.6), transparent 60%)`,
           }}
         />
       )}
       <div
-        className={`grid gap-12 md:grid-cols-2 md:items-center ${
+        className={`relative grid gap-12 md:grid-cols-2 md:items-center ${
           reversed ? "md:[&>*:first-child]:order-2" : ""
         }`}
+        style={{ zIndex: 1 }}
       >
         <div>
           <Reveal>
