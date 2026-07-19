@@ -38,6 +38,7 @@ export default function Index() {
     novosClientes60d,
     isLoading: metricsLoading,
   } = useDashboardMetrics();
+  const overdueCount = overdueAccounts.length;
   const pendingCount = overdueAccounts.length + upcomingAccounts.length;
 
   return (
