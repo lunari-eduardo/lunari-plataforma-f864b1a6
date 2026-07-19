@@ -365,22 +365,23 @@ export function CTABlock({
   const nav = useNavigate();
   const isLight = tone === "light";
   return (
-    <SectionShell className="relative overflow-hidden">
+    <SectionShell className="relative isolate overflow-hidden">
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: toneBg(tone) }}
+        className="absolute inset-0"
+        style={{ background: toneBg(tone), zIndex: 0 }}
       />
       {!isLight && (
         <div
           aria-hidden
-          className="absolute inset-0 -z-10"
+          className="absolute inset-0"
           style={{
+            zIndex: 0,
             background: `radial-gradient(800px 500px at 50% 0%, rgba(196,122,63,0.14), transparent 65%)`,
           }}
         />
       )}
-      <div className="mx-auto max-w-[780px] text-center">
+      <div className="relative mx-auto max-w-[780px] text-center" style={{ zIndex: 1 }}>
         <Reveal>
           <SectionTitle
             as="h2"
