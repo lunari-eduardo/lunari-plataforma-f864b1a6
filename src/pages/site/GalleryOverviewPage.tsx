@@ -46,7 +46,14 @@ function ProductCard({
       }}
     >
       <EyebrowTag tone={dark ? "dark" : "light"}>{eyebrow}</EyebrowTag>
-      <h3 className="mt-5 text-[28px] leading-[1.1] tracking-[-0.02em] md:text-[36px]" style={displayFont}>
+      <h3
+        className="mt-5 text-[28px] leading-[1.1] tracking-[-0.02em] md:text-[36px]"
+        style={{
+          fontFamily: '"Geist", "Inter Tight", sans-serif',
+          color: dark ? "#FAFAF7" : "#0A0A0A",
+          fontWeight: 600,
+          letterSpacing: "-0.028em",
+        }}>
         {title}
       </h3>
       <p
@@ -110,8 +117,18 @@ export default function GalleryOverviewPage() {
         <Reveal>
           <div className="mb-10 max-w-[640px]">
             <EyebrowTag index="01">Dois produtos, uma alma</EyebrowTag>
-            <h2 className="mt-5 text-[36px] leading-[1.05] tracking-[-0.025em] md:text-[52px]" style={displayFont}>
-              Escolha o momento do cliente.
+            <h2
+              className="mt-5 text-[36px] leading-[1.05] tracking-[-0.028em] md:text-[52px]"
+              style={{
+                fontFamily: '"Geist", "Inter Tight", sans-serif',
+                color: "#0A0A0A",
+                fontWeight: 600,
+              }}
+            >
+              Escolha o momento{" "}
+              <span className="italic" style={{ ...displayFont, color: "#b0632f", fontWeight: 400 }}>
+                do cliente.
+              </span>
             </h2>
             <p className="mt-5 text-[16px] leading-[1.6] text-[#0A0A0A]/70 md:text-[18px]" style={uiFont}>
               <b className="text-[#0A0A0A]">Select</b> é a hora da escolha — o cliente seleciona, você cobra
@@ -159,6 +176,7 @@ export default function GalleryOverviewPage() {
         description="Gallery é ainda mais forte quando conectada ao Studio Pro. Combo tem desconto."
         secondaryLabel="Ver combos"
         secondaryTo="/precos"
+        tone="dark"
       />
 
       <FAQBlock

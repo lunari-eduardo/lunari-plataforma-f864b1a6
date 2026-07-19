@@ -45,7 +45,8 @@ export default function GallerySelectPage() {
       <FeatureRow
         index="01"
         eyebrow="Regras congeladas"
-        title="O preço vale o que valia no dia."
+        title="O preço vale o que valia"
+        emphasis="no dia."
         description="Quando você entrega a galeria, o preço da foto extra fica congelado. Aumentou depois? Não afeta essa sessão."
         bullets={[
           "Preço unitário congelado por sessão",
@@ -58,7 +59,8 @@ export default function GallerySelectPage() {
       <FeatureRow
         index="02"
         eyebrow="Cobrança automática"
-        title="Extras viram cobrança na hora."
+        title="Extras viram cobrança"
+        emphasis="na hora."
         description="Assim que o cliente finaliza a seleção, a Lunari calcula extras e gera o link de pagamento. Sessão ainda em aberto? Vira um link único."
         bullets={[
           "PIX, Asaas, InfinitePay ou MercadoPago",
@@ -67,6 +69,7 @@ export default function GallerySelectPage() {
         ]}
         mockup={<StudioFinanceMock />}
         reversed
+        tone="navy"
       />
 
       <CTABlock
@@ -75,6 +78,7 @@ export default function GallerySelectPage() {
         description="Sua cliente não deveria receber PIX manual em 2026. Nem você deveria mandar."
         secondaryLabel="Comparar planos"
         secondaryTo="/precos"
+        tone="dark"
       />
 
       <FAQBlock

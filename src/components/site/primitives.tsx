@@ -9,10 +9,92 @@ import {
   GhostLink,
   GridLines,
   TechLabel,
+  TOKENS,
   displayFont,
   uiFont,
   monoFont,
 } from "@/components/landing/primitives";
+import { SectionTitle } from "@/components/site/SectionTitle";
+
+type Tone = "light" | "dark" | "navy";
+
+const toneBg = (t: Tone) =>
+  t === "navy" ? TOKENS.navy : t === "dark" ? TOKENS.deep : "transparent";
+const toneText = (t: Tone) => (t === "light" ? TOKENS.ink : TOKENS.paper);
+const toneMuted = (t: Tone) =>
+  t === "light" ? "rgba(10,10,10,0.72)" : "rgba(255,255,255,0.72)";
+const toneMutedSoft = (t: Tone) =>
+  t === "light" ? "rgba(10,10,10,0.5)" : "rgba(255,255,255,0.5)";
+const toneHair = (t: Tone) =>
+  t === "light" ? "rgba(10,10,10,0.08)" : "rgba(255,255,255,0.08)";
+const toneAccent = (t: Tone) => (t === "light" ? TOKENS.ember : TOKENS.emberOnDark);
+const asTitleTone = (t: Tone): "light" | "dark" => (t === "light" ? "light" : "dark");
+
+/* =========================================================
+   Hero FX — camadas decorativas para dar respiro premium
+   ========================================================= */
+function GradientHalo({ tone = "light" }: { tone?: Tone }) {
+  const color = tone === "light" ? "176,99,47" : "196,122,63";
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background: `radial-gradient(640px 420px at 88% 18%, rgba(${color},0.12), transparent 62%), radial-gradient(520px 360px at 8% 92%, rgba(${color},0.06), transparent 60%)`,
+      }}
+    />
+  );
+}
+
+function NoiseLayer() {
+  // SVG noise inline (baixo custo, sem asset externo)
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`;
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 mix-blend-multiply"
+      style={{
+        backgroundImage: `url("data:image/svg+xml;utf8,${svg}")`,
+        opacity: 0.035,
+      }}
+    />
+  );
+}
+
+function MockPlate({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative">
+      <div
+        aria-hidden
+        className="absolute -inset-6 md:-inset-8 rounded-[28px]"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.55) 100%)",
+          border: `1px solid ${TOKENS.hair}`,
+          boxShadow:
+            "0 40px 80px -40px rgba(10,10,10,0.22), 0 2px 0 rgba(255,255,255,0.6) inset",
+          backdropFilter: "blur(20px)",
+        }}
+      />
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
+function ScrollHint({ index = "01", total = "06" }: { index?: string; total?: string }) {
+  return (
+    <div
+      className="mt-16 flex items-center gap-3 text-[10px] uppercase tracking-[0.24em]"
+      style={{ ...monoFont, color: "rgba(10,10,10,0.4)" }}
+    >
+      <span className="tabular-nums">
+        {index} / {total}
+      </span>
+      <span className="h-px w-10 bg-[rgba(10,10,10,0.15)]" />
+      <span>role para explorar</span>
+    </div>
+  );
+}
 
 /* =========================================================
    ProductHero — hero de página de produto (asymmetric grid)
@@ -26,6 +108,8 @@ export function ProductHero({
   secondaryLabel = "Ver planos",
   secondaryTo = "/precos",
   mockup,
+  scrollIndex = "01",
+  scrollTotal = "06",
 }: {
   eyebrow: string;
   title: string;
@@ -35,11 +119,15 @@ export function ProductHero({
   secondaryLabel?: string;
   secondaryTo?: string;
   mockup?: ReactNode;
+  scrollIndex?: string;
+  scrollTotal?: string;
 }) {
   const nav = useNavigate();
   return (
-    <section className="relative overflow-hidden pt-36 pb-16 md:pt-44 md:pb-24">
+    <section className="relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-28">
+      <GradientHalo />
       <GridLines />
+      <NoiseLayer />
       <div className="relative mx-auto max-w-[1200px] px-6 md:px-8">
         <div className="grid gap-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center">
           <div>
@@ -48,22 +136,24 @@ export function ProductHero({
             </Reveal>
             <Reveal delay={0.05}>
               <h1
-                className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] text-[#0A0A0A] md:text-[76px]"
-                style={displayFont}
+                className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[76px]"
+                style={{ ...displayFont, color: TOKENS.ink }}
               >
                 {title}
                 {emphasis && (
                   <>
                     {" "}
-                    <span className="italic text-[#b0632f]">{emphasis}</span>
+                    <span className="italic" style={{ color: TOKENS.ember }}>
+                      {emphasis}
+                    </span>
                   </>
                 )}
               </h1>
             </Reveal>
             <Reveal delay={0.1}>
               <p
-                className="mt-6 max-w-[520px] text-[17px] leading-[1.55] text-[#0A0A0A]/70 md:text-[19px]"
-                style={uiFont}
+                className="mt-6 max-w-[520px] text-[17px] leading-[1.55] md:text-[19px]"
+                style={{ ...uiFont, color: "rgba(10,10,10,0.72)" }}
               >
                 {description}
               </p>
@@ -74,14 +164,28 @@ export function ProductHero({
                 <GhostLink onClick={() => nav(secondaryTo)}>{secondaryLabel} →</GhostLink>
               </div>
             </Reveal>
+            <Reveal delay={0.22}>
+              <ScrollHint index={scrollIndex} total={scrollTotal} />
+            </Reveal>
           </div>
 
           <Reveal delay={0.2}>
-            <div className="relative">{mockup}</div>
+            <MockPlate>{mockup}</MockPlate>
           </Reveal>
         </div>
       </div>
     </section>
+  );
+}
+
+/* =========================================================
+   HairlineDivider — separador editorial entre seções claras
+   ========================================================= */
+export function HairlineDivider() {
+  return (
+    <div className="mx-auto max-w-[1200px] px-6 md:px-8">
+      <div className="h-px w-full" style={{ background: TOKENS.hair }} />
+    </div>
   );
 }
 
@@ -93,36 +197,36 @@ export function MetricsStrip({
   tone = "light",
 }: {
   items: { value: string; label: string }[];
-  tone?: "light" | "dark";
+  tone?: Tone;
 }) {
-  const dark = tone === "dark";
   return (
     <section
       className="relative border-y"
       style={{
-        borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(10,10,10,0.08)",
-        background: dark ? "#0F0F10" : "transparent",
+        borderColor: toneHair(tone),
+        background: toneBg(tone),
       }}
     >
       <div className="mx-auto max-w-[1200px] px-6 md:px-8">
-        <div className="grid grid-cols-2 divide-x md:grid-cols-4"
-          style={{ borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(10,10,10,0.08)" }}
+        <div
+          className="grid grid-cols-2 divide-x md:grid-cols-4"
+          style={{ borderColor: toneHair(tone) }}
         >
           {items.map((m, i) => (
             <div
               key={i}
               className="px-4 py-10 md:py-14"
-              style={{ borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(10,10,10,0.08)" }}
+              style={{ borderColor: toneHair(tone) }}
             >
               <div
                 className="text-[36px] leading-none tracking-[-0.02em] md:text-[52px]"
-                style={{ ...displayFont, color: dark ? "#FAFAF7" : "#0A0A0A" }}
+                style={{ ...uiFont, color: toneText(tone), fontWeight: 600, letterSpacing: "-0.028em" }}
               >
                 {m.value}
               </div>
               <div
                 className="mt-3 text-[11px] uppercase tracking-[0.2em]"
-                style={{ ...monoFont, color: dark ? "rgba(255,255,255,0.5)" : "rgba(10,10,10,0.5)" }}
+                style={{ ...monoFont, color: toneMutedSoft(tone) }}
               >
                 {m.label}
               </div>
@@ -141,6 +245,7 @@ export function FeatureRow({
   index,
   eyebrow,
   title,
+  emphasis,
   description,
   bullets,
   mockup,
@@ -150,15 +255,33 @@ export function FeatureRow({
   index: string;
   eyebrow: string;
   title: string;
+  emphasis?: string;
   description: string;
   bullets?: string[];
   mockup: ReactNode;
   reversed?: boolean;
-  tone?: "light" | "dark";
+  tone?: Tone;
 }) {
-  const dark = tone === "dark";
+  const isLight = tone === "light";
   return (
-    <SectionShell className={dark ? "bg-[#0F0F10] text-[#FAFAF7]" : ""}>
+    <SectionShell
+      className="relative overflow-hidden"
+    >
+      {/* Background por tone */}
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{ background: toneBg(tone) }}
+      />
+      {!isLight && (
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 opacity-60"
+          style={{
+            background: `radial-gradient(700px 400px at 20% 10%, rgba(196,122,63,0.10), transparent 60%), radial-gradient(600px 400px at 90% 90%, rgba(6,23,32,0.6), transparent 60%)`,
+          }}
+        />
+      )}
       <div
         className={`grid gap-12 md:grid-cols-2 md:items-center ${
           reversed ? "md:[&>*:first-child]:order-2" : ""
@@ -166,24 +289,25 @@ export function FeatureRow({
       >
         <div>
           <Reveal>
-            <EyebrowTag index={index} tone={dark ? "dark" : "light"}>
+            <EyebrowTag index={index} tone={asTitleTone(tone)}>
               {eyebrow}
             </EyebrowTag>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2
-              className="mt-6 text-[32px] leading-[1.05] tracking-[-0.025em] md:text-[48px]"
-              style={displayFont}
+            <SectionTitle
+              as="h2"
+              size="md"
+              tone={asTitleTone(tone)}
+              emphasis={emphasis}
+              className="mt-6"
             >
               {title}
-            </h2>
+            </SectionTitle>
           </Reveal>
           <Reveal delay={0.1}>
             <p
-              className={`mt-5 max-w-[460px] text-[16px] leading-[1.6] md:text-[17px] ${
-                dark ? "text-[rgba(255,255,255,0.7)]" : "text-[#0A0A0A]/70"
-              }`}
-              style={uiFont}
+              className="mt-5 max-w-[460px] text-[16px] leading-[1.6] md:text-[17px]"
+              style={{ ...uiFont, color: toneMuted(tone) }}
             >
               {description}
             </p>
@@ -194,12 +318,11 @@ export function FeatureRow({
                 {bullets.map((b) => (
                   <li key={b} className="flex items-start gap-3 text-[14px]">
                     <Check
-                      className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#b0632f]"
+                      className="mt-0.5 h-4 w-4 flex-shrink-0"
                       strokeWidth={2.5}
+                      style={{ color: toneAccent(tone) }}
                     />
-                    <span className={dark ? "text-[rgba(255,255,255,0.8)]" : "text-[#0A0A0A]/80"}>
-                      {b}
-                    </span>
+                    <span style={{ color: toneMuted(tone) }}>{b}</span>
                   </li>
                 ))}
               </ul>
@@ -232,34 +355,42 @@ export function CTABlock({
   primaryLabel?: string;
   secondaryLabel?: string;
   secondaryTo?: string;
-  tone?: "light" | "dark";
+  tone?: Tone;
 }) {
   const nav = useNavigate();
-  const dark = tone === "dark";
+  const isLight = tone === "light";
   return (
-    <SectionShell className={dark ? "bg-[#0F0F10] text-[#FAFAF7]" : ""}>
+    <SectionShell className="relative overflow-hidden">
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{ background: toneBg(tone) }}
+      />
+      {!isLight && (
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10"
+          style={{
+            background: `radial-gradient(800px 500px at 50% 0%, rgba(196,122,63,0.14), transparent 65%)`,
+          }}
+        />
+      )}
       <div className="mx-auto max-w-[780px] text-center">
         <Reveal>
-          <h2
-            className="text-[40px] leading-[1.05] tracking-[-0.03em] md:text-[64px]"
-            style={displayFont}
+          <SectionTitle
+            as="h2"
+            size="lg"
+            tone={asTitleTone(tone)}
+            emphasis={emphasis}
           >
             {title}
-            {emphasis && (
-              <>
-                {" "}
-                <span className="italic text-[#b0632f]">{emphasis}</span>
-              </>
-            )}
-          </h2>
+          </SectionTitle>
         </Reveal>
         {description && (
           <Reveal delay={0.05}>
             <p
-              className={`mx-auto mt-6 max-w-[520px] text-[16px] leading-[1.6] md:text-[18px] ${
-                dark ? "text-[rgba(255,255,255,0.7)]" : "text-[#0A0A0A]/70"
-              }`}
-              style={uiFont}
+              className="mx-auto mt-6 max-w-[520px] text-[16px] leading-[1.6] md:text-[18px]"
+              style={{ ...uiFont, color: toneMuted(tone) }}
             >
               {description}
             </p>
@@ -267,11 +398,17 @@ export function CTABlock({
         )}
         <Reveal delay={0.1}>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <PrimaryButton onClick={() => nav("/auth")} tone={dark ? "dark" : "light"}>
+            <PrimaryButton
+              onClick={() => nav("/auth")}
+              tone={isLight ? "light" : "dark"}
+            >
               {primaryLabel}
             </PrimaryButton>
             {secondaryLabel && secondaryTo && (
-              <GhostLink onClick={() => nav(secondaryTo)} tone={dark ? "dark" : "light"}>
+              <GhostLink
+                onClick={() => nav(secondaryTo)}
+                tone={isLight ? "light" : "dark"}
+              >
                 {secondaryLabel} →
               </GhostLink>
             )}
@@ -279,10 +416,8 @@ export function CTABlock({
         </Reveal>
         <Reveal delay={0.15}>
           <p
-            className={`mt-6 text-[12px] ${
-              dark ? "text-[rgba(255,255,255,0.45)]" : "text-[#0A0A0A]/45"
-            }`}
-            style={uiFont}
+            className="mt-6 text-[12px]"
+            style={{ ...uiFont, color: toneMutedSoft(tone) }}
           >
             Sem cartão de crédito · Cancele quando quiser
           </p>
@@ -311,39 +446,42 @@ export function FAQBlock({
             <EyebrowTag>FAQ</EyebrowTag>
           </Reveal>
           <Reveal delay={0.05}>
-            <h2
-              className="mt-6 text-[32px] leading-[1.05] tracking-[-0.025em] md:text-[44px]"
-              style={displayFont}
-            >
+            <SectionTitle as="h2" size="sm" className="mt-6">
               {title}
-            </h2>
+            </SectionTitle>
           </Reveal>
         </div>
         <div>
           {items.map((it, i) => {
             const isOpen = open === i;
             return (
-              <div key={i} className="border-b border-[rgba(10,10,10,0.08)]">
+              <div key={i} className="border-b" style={{ borderColor: TOKENS.hair }}>
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
                   className="flex w-full items-center justify-between gap-6 py-6 text-left"
                 >
                   <span
-                    className="text-[16px] font-medium text-[#0A0A0A] md:text-[18px]"
-                    style={uiFont}
+                    className="text-[16px] md:text-[18px]"
+                    style={{
+                      ...uiFont,
+                      color: TOKENS.ink,
+                      fontWeight: 500,
+                      letterSpacing: "-0.01em",
+                    }}
                   >
                     {it.q}
                   </span>
                   <ChevronDown
-                    className={`h-5 w-5 flex-shrink-0 text-[#0A0A0A]/50 transition-transform ${
+                    className={`h-5 w-5 flex-shrink-0 transition-transform ${
                       isOpen ? "rotate-180" : ""
                     }`}
+                    style={{ color: "rgba(10,10,10,0.5)" }}
                   />
                 </button>
                 {isOpen && (
                   <p
-                    className="pb-6 text-[15px] leading-[1.65] text-[#0A0A0A]/70"
-                    style={uiFont}
+                    className="pb-6 text-[15px] leading-[1.65]"
+                    style={{ ...uiFont, color: "rgba(10,10,10,0.72)" }}
                   >
                     {it.a}
                   </p>
@@ -457,5 +595,5 @@ export function ComparisonTable({
 }
 
 /* Re-export primitivos consumidos por páginas */
-export { SectionShell, EyebrowTag, Reveal, PrimaryButton, GhostLink, GridLines, TechLabel };
+export { SectionShell, EyebrowTag, Reveal, PrimaryButton, GhostLink, GridLines, TechLabel, SectionTitle };
 export { displayFont, uiFont, monoFont };
