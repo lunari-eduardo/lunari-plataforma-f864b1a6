@@ -10,6 +10,8 @@ import { TarefasPendentesCard } from "@/components/dashboard/TarefasPendentesCar
 import useTodayOverview from "@/hooks/useTodayOverview";
 import { useProductionReminders } from "@/hooks/useProductionReminders";
 import { useFinancialDashboardData } from "@/hooks/useFinancialDashboardData";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 
 export default function Index() {
   useEffect(() => {
@@ -27,7 +29,15 @@ export default function Index() {
   const { sessionsToday, tasksToday } = useTodayOverview();
   const lembretesProducao = useProductionReminders();
   const { overdueAccounts, upcomingAccounts } = useFinancialDashboardData();
-
+  const {
+    receitaMes,
+    valorPrevisto,
+    metaMes,
+    progressoMeta,
+    topCategoria,
+    novosClientes60d,
+    isLoading: metricsLoading,
+  } = useDashboardMetrics();
   const overdueCount = overdueAccounts.length;
   const pendingCount = overdueAccounts.length + upcomingAccounts.length;
 
@@ -87,6 +97,19 @@ export default function Index() {
       <section className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <ContasAPagarCard />
         <TarefasPendentesCard />
+      </section>
+
+      {/* Indicadores principais (métricas inferiores) */}
+      <section aria-label="Indicadores principais">
+        <KPIGroupCard
+          receitaMes={receitaMes}
+          metaMes={metaMes}
+          progressoMeta={progressoMeta}
+          topCategoria={topCategoria}
+          novosClientes60d={novosClientes60d}
+          valorPrevisto={valorPrevisto}
+          isLoading={metricsLoading}
+        />
       </section>
     </main>
   );
