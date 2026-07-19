@@ -7,6 +7,7 @@ import {
   FAQBlock,
   BreadcrumbTrail,
   SectionShell,
+  SectionTitle,
   EyebrowTag,
   Reveal,
   displayFont,
@@ -117,19 +118,9 @@ export default function GalleryOverviewPage() {
         <Reveal>
           <div className="mb-10 max-w-[640px]">
             <EyebrowTag index="01">Dois produtos, uma alma</EyebrowTag>
-            <h2
-              className="mt-5 text-[36px] leading-[1.05] tracking-[-0.028em] md:text-[52px]"
-              style={{
-                fontFamily: '"Geist", "Inter Tight", sans-serif',
-                color: "#0A0A0A",
-                fontWeight: 600,
-              }}
-            >
-              Escolha o momento{" "}
-              <span className="italic" style={{ ...displayFont, color: "#b0632f", fontWeight: 400 }}>
-                do cliente.
-              </span>
-            </h2>
+            <SectionTitle as="h2" size="md" emphasis="do cliente." className="mt-5">
+              Escolha o momento
+            </SectionTitle>
             <p className="mt-5 text-[16px] leading-[1.6] text-[#0A0A0A]/70 md:text-[18px]" style={uiFont}>
               <b className="text-[#0A0A0A]">Select</b> é a hora da escolha — o cliente seleciona, você cobra
               extras. <b className="text-[#0A0A0A]">Transfer</b> é a entrega final — com senha, marca e prazo.
