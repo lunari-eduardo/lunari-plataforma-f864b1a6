@@ -24,7 +24,7 @@ const toneText = (t: Tone) => (t === "light" ? TOKENS.ink : TOKENS.paper);
 const toneMuted = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.72)" : "rgba(255,255,255,0.72)";
 const toneMutedSoft = (t: Tone) =>
-  t === "light" ? "rgba(10,10,10,0.5)" : "rgba(255,255,255,0.5)";
+  t === "light" ? "rgba(10,10,10,0.62)" : "rgba(255,255,255,0.55)";
 const toneHair = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.08)" : "rgba(255,255,255,0.08)";
 const toneAccent = (t: Tone) => (t === "light" ? TOKENS.ember : TOKENS.emberOnDark);
@@ -268,27 +268,29 @@ export function FeatureRow({
   const isLight = tone === "light";
   return (
     <SectionShell
-      className="relative overflow-hidden"
+      className="relative isolate overflow-hidden"
     >
       {/* Background por tone */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: toneBg(tone) }}
+        className="absolute inset-0"
+        style={{ background: toneBg(tone), zIndex: 0 }}
       />
       {!isLight && (
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 opacity-60"
+          className="absolute inset-0 opacity-60"
           style={{
+            zIndex: 0,
             background: `radial-gradient(700px 400px at 20% 10%, rgba(196,122,63,0.10), transparent 60%), radial-gradient(600px 400px at 90% 90%, rgba(6,23,32,0.6), transparent 60%)`,
           }}
         />
       )}
       <div
-        className={`grid gap-12 md:grid-cols-2 md:items-center ${
+        className={`relative grid gap-12 md:grid-cols-2 md:items-center ${
           reversed ? "md:[&>*:first-child]:order-2" : ""
         }`}
+        style={{ zIndex: 1 }}
       >
         <div>
           <Reveal>
@@ -363,22 +365,23 @@ export function CTABlock({
   const nav = useNavigate();
   const isLight = tone === "light";
   return (
-    <SectionShell className="relative overflow-hidden">
+    <SectionShell className="relative isolate overflow-hidden">
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: toneBg(tone) }}
+        className="absolute inset-0"
+        style={{ background: toneBg(tone), zIndex: 0 }}
       />
       {!isLight && (
         <div
           aria-hidden
-          className="absolute inset-0 -z-10"
+          className="absolute inset-0"
           style={{
+            zIndex: 0,
             background: `radial-gradient(800px 500px at 50% 0%, rgba(196,122,63,0.14), transparent 65%)`,
           }}
         />
       )}
-      <div className="mx-auto max-w-[780px] text-center">
+      <div className="relative mx-auto max-w-[780px] text-center" style={{ zIndex: 1 }}>
         <Reveal>
           <SectionTitle
             as="h2"
@@ -445,13 +448,13 @@ export function FAQBlock({
   const [open, setOpen] = useState<number | null>(0);
   const isLight = tone === "light";
   return (
-    <SectionShell className="relative overflow-hidden">
+    <SectionShell className="relative isolate overflow-hidden">
       <div
         aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: toneBg(tone) }}
+        className="absolute inset-0"
+        style={{ background: toneBg(tone), zIndex: 0 }}
       />
-      <div className="grid gap-12 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:gap-24">
+      <div className="relative grid gap-12 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:gap-24" style={{ zIndex: 1 }}>
         <div>
           <Reveal>
             <EyebrowTag tone={asTitleTone(tone)}>FAQ</EyebrowTag>
