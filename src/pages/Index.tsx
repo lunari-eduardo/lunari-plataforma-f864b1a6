@@ -1,23 +1,20 @@
-import { useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Calendar } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
-import { HighPriorityDueSoonCard } from "@/modules/tasks/presentation/components/HighPriorityDueSoonCard";
-import { FinancialRemindersCard } from "@/components/dashboard/FinancialRemindersCard";
+import { useEffect } from "react";
+import { CalendarDays, CheckSquare, AlertCircle, Clock } from "lucide-react";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
-import DailyHero from "@/components/dashboard/DailyHero";
-import { useAppointmentsRangeQuery } from "@/modules/agenda";
-import { format, addDays } from "date-fns";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ProximosAgendamentosCard } from "@/components/dashboard/ProximosAgendamentosCard";
+import { ProductionRemindersCard } from "@/components/dashboard/ProductionRemindersCard";
+import { ContasAPagarCard } from "@/components/dashboard/ContasAPagarCard";
+import { TarefasPendentesCard } from "@/components/dashboard/TarefasPendentesCard";
+import useTodayOverview from "@/hooks/useTodayOverview";
 import { useProductionReminders } from "@/hooks/useProductionReminders";
-import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
-import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
+import { useFinancialDashboardData } from "@/hooks/useFinancialDashboardData";
 
 export default function Index() {
-  // SEO basics
   useEffect(() => {
-    const desc = "Dashboard: receita do mês vs metas, categoria mais rentável, novos clientes e próximos agendamentos.";
+    const desc =
+      "Dashboard: sessões do dia, tarefas, contas a pagar e próximos agendamentos.";
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement("meta");
@@ -25,143 +22,72 @@ export default function Index() {
       document.head.appendChild(meta);
     }
     meta.setAttribute("content", desc);
-    const linkRel = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!linkRel) {
-      const link = document.createElement("link");
-      link.setAttribute("rel", "canonical");
-      link.setAttribute("href", window.location.href);
-      document.head.appendChild(link);
-    }
   }, []);
 
-  // Próximos 60 dias é suficiente para o card "Próximos Agendamentos"
-  const today = useMemo(() => new Date(), []);
-  const rangeStart = useMemo(() => format(today, "yyyy-MM-dd"), [today]);
-  const rangeEnd = useMemo(() => format(addDays(today, 60), "yyyy-MM-dd"), [today]);
-  const { data: appointments = [] } = useAppointmentsRangeQuery({
-    start: rangeStart,
-    end: rangeEnd,
-  });
+  const { sessionsToday, tasksToday } = useTodayOverview();
   const lembretesProducao = useProductionReminders();
-  
-  const {
-    receitaMes,
-    valorPrevisto,
-    metaMes,
-    progressoMeta,
-    topCategoria,
-    novosClientes60d,
-    isLoading: metricsLoading
-  } = useDashboardMetrics();
+  const { overdueAccounts, upcomingAccounts } = useFinancialDashboardData();
 
-  const proximosAgendamentos = useMemo(() => {
-    const now = new Date();
-    const todayKey = format(now, "yyyy-MM-dd");
-
-    const items = appointments
-      .filter(a => a.status === "confirmado")
-      .filter(a => {
-        // a.date é ISO yyyy-MM-dd no domínio
-        if (a.date > todayKey) return true;
-        if (a.date === todayKey) {
-          const [hh, mm] = a.time.split(":").map(Number);
-          const [yy, mo, dd] = a.date.split("-").map(Number);
-          const appointmentDateTime = new Date(yy, mo - 1, dd, hh || 0, mm || 0);
-          return appointmentDateTime >= now;
-        }
-        return false;
-      })
-      .map(a => {
-        const [yy, mo, dd] = a.date.split("-").map(Number);
-        return {
-          id: a.id,
-          cliente: a.client,
-          tipo: a.type,
-          data: new Date(yy, mo - 1, dd),
-          hora: a.time,
-        };
-      })
-      .sort((a, b) => a.data.getTime() - b.data.getTime())
-      .slice(0, 3);
-    
-    return items;
-  }, [appointments]);
+  const overdueCount = overdueAccounts.length;
+  const pendingCount = overdueAccounts.length + upcomingAccounts.length;
 
   return (
-    <>
-      <main className="space-y-6 relative z-10">
-        <InstallPWAButton />
-        
-        <section aria-label="Resumo do dia" className="animate-fade-in">
-          <DailyHero />
-        </section>
+    <main className="space-y-6 relative z-10">
+      <InstallPWAButton />
 
-        {/* Próximos Agendamentos + Lembretes de Produção */}
-        <section className="grid gap-6 grid-cols-1 lg:grid-cols-5 animate-fade-in">
-          <div className="lg:col-span-3">
-            <Card className="rounded-2xl h-full">
-              <CardHeader className="pb-3 flex flex-row items-center justify-between py-[6px]">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-brand-gradient">
-                    <Calendar className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <CardTitle className="font-semibold text-base">Próximos Agendamentos</CardTitle>
-                </div>
-                <Link to="/app/agenda">
-                  <Button variant="ghost" size="sm">Ver todos</Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                {proximosAgendamentos.length === 0 ? (
-                  <div className="flex items-center justify-center py-[7px]">
-                    <p className="text-muted-foreground text-xs">Nenhum agendamento confirmado</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {proximosAgendamentos.map(ev => (
-                      <div key={ev.id} className="border-b pb-3 last:border-b-0 last:pb-0">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium text-xs">{ev.cliente}</p>
-                            <p className="text-muted-foreground mt-0.5 text-2xs">{ev.tipo}</p>
-                          </div>
-                          <div className="text-right text-2xs text-muted-foreground">
-                            <div>{ev.data.toLocaleDateString("pt-BR")}</div>
-                            <div className="mt-0.5">{ev.hora}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="lg:col-span-2">
-            <ProductionRemindersCard lembretes={lembretesProducao} />
-          </div>
-        </section>
+      <DashboardHeader />
 
-        {/* Critical Cards */}
-        <section className="grid gap-6 animate-fade-in auto-rows-auto lg:auto-rows-fr grid-cols-1 lg:grid-cols-2">
-          <div className="h-full"><FinancialRemindersCard /></div>
-          <div className="h-full"><HighPriorityDueSoonCard /></div>
-        </section>
+      {/* KPIs */}
+      <section
+        aria-label="Indicadores rápidos"
+        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      >
+        <StatCard
+          icon={CalendarDays}
+          value={sessionsToday}
+          label="Sessões hoje"
+          subtitle={sessionsToday === 0 ? "Nenhuma agendada" : "Confirmadas"}
+          href="/app/agenda"
+        />
+        <StatCard
+          icon={CheckSquare}
+          value={tasksToday}
+          label="Tarefas hoje"
+          subtitle={tasksToday === 0 ? "Tudo em dia" : "Para concluir"}
+          href="/app/tarefas"
+          tone="success"
+        />
+        <StatCard
+          icon={AlertCircle}
+          value={overdueCount}
+          label="Atrasadas"
+          subtitle={overdueCount === 0 ? "Nada em atraso" : "Requer atenção"}
+          href="/app/financas"
+        />
+        <StatCard
+          icon={Clock}
+          value={pendingCount}
+          label="Pendentes"
+          subtitle={pendingCount === 0 ? "Sem pendências" : "Contas em aberto"}
+          href="/app/financas"
+        />
+      </section>
 
-        {/* Indicadores principais */}
-        <section aria-label="Indicadores principais" className="animate-fade-in">
-          <KPIGroupCard
-            receitaMes={receitaMes}
-            metaMes={metaMes}
-            progressoMeta={progressoMeta}
-            topCategoria={topCategoria}
-            novosClientes60d={novosClientes60d}
-            valorPrevisto={valorPrevisto}
-            isLoading={metricsLoading}
-          />
-        </section>
-      </main>
-    </>
+      {/* Próximos Agendamentos + Lembretes de Produção */}
+      <section className="grid gap-4 sm:gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <ProximosAgendamentosCard />
+        </div>
+        <div className="lg:col-span-2">
+          <ProductionRemindersCard lembretes={lembretesProducao} />
+        </div>
+      </section>
+
+      {/* Contas a Pagar + Tarefas Pendentes */}
+      <section className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        <ContasAPagarCard />
+        <TarefasPendentesCard />
+      </section>
+    </main>
   );
 }
