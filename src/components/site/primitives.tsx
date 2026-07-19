@@ -136,14 +136,17 @@ export function ProductHero({
             </Reveal>
             <Reveal delay={0.05}>
               <h1
-                className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[76px]"
-                style={{ ...displayFont, color: TOKENS.ink }}
+                className="mt-6 text-[44px] leading-[1.02] md:text-[76px]"
+                style={{ ...uiFont, color: TOKENS.ink, fontWeight: 600, letterSpacing: "-0.032em" }}
               >
                 {title}
                 {emphasis && (
                   <>
                     {" "}
-                    <span className="italic" style={{ color: TOKENS.ember }}>
+                    <span
+                      className="italic"
+                      style={{ ...displayFont, color: TOKENS.ember, fontWeight: 400 }}
+                    >
                       {emphasis}
                     </span>
                   </>
