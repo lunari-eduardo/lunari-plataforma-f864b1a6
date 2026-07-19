@@ -10,6 +10,8 @@ import { TarefasPendentesCard } from "@/components/dashboard/TarefasPendentesCar
 import useTodayOverview from "@/hooks/useTodayOverview";
 import { useProductionReminders } from "@/hooks/useProductionReminders";
 import { useFinancialDashboardData } from "@/hooks/useFinancialDashboardData";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
 
 export default function Index() {
   useEffect(() => {
