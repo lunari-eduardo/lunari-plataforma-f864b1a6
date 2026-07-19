@@ -24,7 +24,7 @@ const toneText = (t: Tone) => (t === "light" ? TOKENS.ink : TOKENS.paper);
 const toneMuted = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.72)" : "rgba(255,255,255,0.72)";
 const toneMutedSoft = (t: Tone) =>
-  t === "light" ? "rgba(10,10,10,0.5)" : "rgba(255,255,255,0.5)";
+  t === "light" ? "rgba(10,10,10,0.62)" : "rgba(255,255,255,0.55)";
 const toneHair = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.08)" : "rgba(255,255,255,0.08)";
 const toneAccent = (t: Tone) => (t === "light" ? TOKENS.ember : TOKENS.emberOnDark);
