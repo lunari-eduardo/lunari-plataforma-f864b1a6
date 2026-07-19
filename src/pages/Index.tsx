@@ -29,8 +29,15 @@ export default function Index() {
   const { sessionsToday, tasksToday } = useTodayOverview();
   const lembretesProducao = useProductionReminders();
   const { overdueAccounts, upcomingAccounts } = useFinancialDashboardData();
-
-  const overdueCount = overdueAccounts.length;
+  const {
+    receitaMes,
+    valorPrevisto,
+    metaMes,
+    progressoMeta,
+    topCategoria,
+    novosClientes60d,
+    isLoading: metricsLoading,
+  } = useDashboardMetrics();
   const pendingCount = overdueAccounts.length + upcomingAccounts.length;
 
   return (
