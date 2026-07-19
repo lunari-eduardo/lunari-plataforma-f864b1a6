@@ -37,7 +37,7 @@ export function LunariHero() {
       <div className="relative mx-auto max-w-[1200px] px-6 md:px-8">
         {/* Eyebrow + section index */}
         <motion.div {...fadeUp(0)} className="flex items-center gap-4">
-          <TechLabel>01 / 08 · Overview</TechLabel>
+          <TechLabel>{"\n"}</TechLabel>
           <span className="h-px w-12 bg-[rgba(10,10,10,0.14)]" />
           <span
             className="inline-flex items-center gap-2 text-[11px] font-medium text-[rgba(10,10,10,0.55)]"
@@ -47,7 +47,7 @@ export function LunariHero() {
               className="inline-block h-[6px] w-[6px] animate-pulse rounded-full"
               style={{ background: "#b0632f" }}
             />
-            Feito por fotógrafos, não por engenheiros de SaaS
+            O SISTEMA MAIS COMPLETO PARA FOTÓGRAFOS, FEITO POR FOTÓGRAFOS - EM CADA DETALHE{"\n"}
           </span>
         </motion.div>
 
@@ -64,9 +64,9 @@ export function LunariHero() {
             className="italic font-normal"
             style={{ fontFamily: '"Instrument Serif", serif', color: "#0A0A0A" }}
           >
-            entende
+            pensa
           </span>{" "}
-          o que é uma sessão.
+          como um fotógrafo.
         </motion.h1>
 
         <motion.p
@@ -74,7 +74,7 @@ export function LunariHero() {
           className="mt-7 max-w-[560px] text-[16px] leading-[1.6] text-[rgba(10,10,10,0.6)] md:text-[17px]"
         >
           CRM, agenda, contratos, financeiro, galeria e IA operando como um só
-          cérebro. Enquanto os outros vendem seis ferramentas, a Lunari entrega{" "}
+          cérebro. Enquanto os outros vendem seis ferramentas, o Lunari entrega{" "}
           <span className="text-[#0A0A0A]">um estúdio inteiro</span>.
         </motion.p>
 

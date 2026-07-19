@@ -19,9 +19,9 @@ export function ClosingSection() {
             className="mx-auto max-w-[900px] text-[42px] leading-[1.05] tracking-[-0.025em] md:text-[76px]"
             style={displayFont}
           >
-            Você não precisa de mais uma ferramenta.
+            Você tem 30 dias para testar
             <br />
-            <span className="italic text-[#b0632f]">Precisa de um estúdio que pensa com você.</span>
+            <span className="italic text-[#b0632f]">Ou pode continuar fragmentado.</span>
           </h2>
         </Reveal>
 
