@@ -25,6 +25,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/tasks";
+import { MIRROR_ROOT_TAG } from "@/features/workflow/domain/productTaskMirror";
+
+/** Deriva título/subtítulo enxuto para tarefas-espelho (Workflow ↔ Tarefas).
+ *  Formato completo persistido: "<Etapa> — <Produto> · <Cliente>".
+ *  No dock exibimos apenas a etapa; o resto vai como subtítulo. */
+function deriveMirrorDisplay(task: Task): { title: string; subtitle?: string } {
+  if (!task.tags?.includes(MIRROR_ROOT_TAG)) return { title: task.title };
+  const [etapa, resto] = task.title.split(" — ");
+  if (!resto) return { title: task.title };
+  return { title: etapa.trim(), subtitle: resto.trim() };
+}
 
 interface WorkflowTasksPanelProps {
   currentMonth: { month: number; year: number };
