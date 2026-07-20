@@ -281,16 +281,26 @@ function TaskRowContent({
 
       <Checkbox checked={isDone} onCheckedChange={() => onToggle()} className="mt-0.5 h-3.5 w-3.5" />
 
-      <div className="flex-1 min-w-0">
-        <span className={cn("text-sm leading-snug block truncate", isDone && "line-through text-muted-foreground")}>
-          {task.title}
-        </span>
-        {task.dueDate && (
-          <span className="text-[10px] text-muted-foreground">
-            {format(parseISO(task.dueDate), "dd MMM", { locale: ptBR })}
-          </span>
-        )}
-      </div>
+      {(() => {
+        const { title, subtitle } = deriveMirrorDisplay(task);
+        return (
+          <div className="flex-1 min-w-0">
+            <span className={cn("text-sm leading-snug block truncate", isDone && "line-through text-muted-foreground")}>
+              {title}
+            </span>
+            {subtitle && (
+              <span className="text-[10px] text-muted-foreground block truncate">
+                {subtitle}
+              </span>
+            )}
+            {task.dueDate && !subtitle && (
+              <span className="text-[10px] text-muted-foreground">
+                {format(parseISO(task.dueDate), "dd MMM", { locale: ptBR })}
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Delete button on hover */}
       <button
