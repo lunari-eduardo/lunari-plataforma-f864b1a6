@@ -66,6 +66,7 @@ export function useProductTaskMirror(): void {
   const { user } = useAuth();
   const runCapability = useRunCapability();
   const tasks = useTasks();
+  const { deleteTask: deleteTaskLocal } = useSupabaseTasks();
   const version = useWorkflowVersion();
   const { getDefaultOpenKey, isTerminalKey, statuses } = useSupabaseTaskStatuses();
 
