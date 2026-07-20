@@ -503,18 +503,20 @@ function TaskRowContent({
         );
       })()}
 
-      {/* Delete button on hover */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-destructive"
-        title="Excluir tarefa"
-        tabIndex={-1}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      {/* Delete button on hover — oculto para tarefas-espelho (são derivadas). */}
+      {!isMirrorTask(task) && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-destructive"
+          title="Excluir tarefa"
+          tabIndex={-1}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       <span
         className={cn(
