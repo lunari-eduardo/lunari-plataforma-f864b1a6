@@ -149,18 +149,20 @@ function WorkflowContent() {
           onToggle={setShowMetrics}
           financials={financials}
           sessionCount={filters.filteredSessions.length}
+          isLoading={metrics.isLoading}
         />
 
         <WorkflowMonthSwitcher
           month={month.currentMonth.month}
           year={month.currentMonth.year}
           isPreloading={month.isPreloading}
+          isChanging={isChanging}
           onPrev={month.goPrev}
           onNext={month.goNext}
           onToday={month.goToday}
         />
 
-        <div className="rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10">
+        <div className={`rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10 transition-opacity ${isChanging ? 'opacity-60 pointer-events-none' : ''}`}>
           <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
             <div className="relative flex-1 max-w-sm min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
