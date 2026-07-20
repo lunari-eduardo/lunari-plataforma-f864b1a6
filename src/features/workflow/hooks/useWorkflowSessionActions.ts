@@ -131,15 +131,18 @@ export function useWorkflowSessionActions({
             case "produtosList": {
               const produtosArr = Array.isArray(value) ? (value as any[]) : [];
               cacheSafeUpdates.produtos_incluidos = produtosArr as any;
-              // Deriva denormalizados no MESMO cacheSafeUpdates —
-              // substitui as 3 chamadas extras que o modal fazia
-              // ("produto", "qtdProduto", "valorTotalProduto") e que
+              // Denormalizados são derivados apenas para o cache local
+              // (camelCase — não existem no schema do DB). Vão em
+              // `uiDenormFields` e são merged no payload otimista, nunca
+              // no RPC. Substitui as 3 chamadas extras do modal que
               // sobrescreviam produtos_incluidos por closure stale.
               const { produto, qtdProduto, valorTotalProduto } =
                 deriveDenormalizedProdutos(produtosArr as any);
-              (cacheSafeUpdates as any).produto = produto;
-              (cacheSafeUpdates as any).qtd_produto = qtdProduto;
-              (cacheSafeUpdates as any).valor_total_produto = valorTotalProduto;
+              uiDenormFields = {
+                produto,
+                qtdProduto,
+                valorTotalProduto: `R$ ${valorTotalProduto.toFixed(2).replace(".", ",")}`,
+              };
               break;
             }
             case "pacote": {
