@@ -275,11 +275,12 @@ export function useWorkflowSessionActions({
           (cacheSafeUpdates as any).valor_total = novoValorTotal;
         }
 
-        if (Object.keys(cacheSafeUpdates).length > 0 && !needsRefreeze) {
+        if ((Object.keys(cacheSafeUpdates).length > 0 || uiDenormFields) && !needsRefreeze) {
           const nowIso = new Date().toISOString();
           const merged: WorkflowSession = {
             ...currentSession,
             ...cacheSafeUpdates,
+            ...(uiDenormFields ?? {}),
             updated_at: nowIso,
           };
           // mergeUpdate recebe payload PARCIAL (só id + delta + updated_at) —
@@ -288,6 +289,7 @@ export function useWorkflowSessionActions({
           const deltaPayload = {
             id: sessionId,
             ...cacheSafeUpdates,
+            ...(uiDenormFields ?? {}),
             updated_at: nowIso,
           } as unknown as WorkflowSession;
           mergeUpdate(deltaPayload);
