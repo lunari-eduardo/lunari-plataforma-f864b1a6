@@ -4,6 +4,7 @@ import { indexedDBCache } from '@/services/IndexedDBCache';
 import { WorkflowSession } from '@/features/workflow';
 import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowSessionPartial } from '@/utils/workflowNormalization';
 import { sessionsRepo } from '@/features/workflow/data';
+import { workflowStore } from '@/features/workflow/store/workflowStore';
 import { isWorkflowRealtimeV2Enabled } from '@/features/workflow/realtime';
 import { eventBus } from '@/shared/event-bus';
 import { prefetchMonthMetrics } from '@/features/workflow/data/metricsRepo';
@@ -130,10 +131,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     // e outros consumidores fora do mês visível dependem dele para o clique não
     // retornar silenciosamente em "sessão não encontrada".
     try {
-      // Import dinâmico para evitar ciclo de módulo.
-      import("@/features/workflow/store/workflowStore").then(({ workflowStore }) => {
-        workflowStore.upsertMany(normalized);
-      });
+      workflowStore.upsertMany(normalized);
     } catch { /* noop */ }
 
     if (userId) {
