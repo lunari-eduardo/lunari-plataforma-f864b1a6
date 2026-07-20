@@ -109,6 +109,9 @@ function WorkflowContent() {
     caixaRecebido: metrics.caixaRecebido,
   }), [metrics]);
 
+  // Sinal unificado "trocando de mês" — cobre sessões e métricas.
+  const isChanging = month.loading || month.isLoadingCurrentMonth || metrics.isLoading;
+
   // ── Estados de loading/erro globais ────────────────────────────────
   if ((month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0) {
     return (
