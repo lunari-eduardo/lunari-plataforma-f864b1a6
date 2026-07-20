@@ -1,10 +1,14 @@
 import { RegrasPrecoFotoExtraCongeladas } from '@/contexts/AppContext';
 
 export interface ProdutoWorkflow {
+  id?: string;
+  produtoId?: string;
   nome: string;
   quantidade: number;
   valorUnitario: number;
   tipo: 'incluso' | 'manual';
+  fluxo?: 'padrao' | 'custom';
+  etapas?: Array<{ id: string; nome: string; done: boolean }>;
   produzido?: boolean;
   entregue?: boolean;
 }

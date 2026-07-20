@@ -2,73 +2,74 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCurrencyInput } from "@/hooks/useCurrencyInput";
+import { ProdutoFlowTimeline } from "./ProdutoFlowTimeline";
+import { ProdutoFlowEditPopover } from "./ProdutoFlowEditPopover";
+import {
+  hydrateProduto,
+  switchFluxo,
+  toggleEtapaAt,
+  type EtapaProducao,
+  type ProdutoWorkflowFlow,
+} from "@/features/workflow/domain/productFlow";
 
-export interface ProdutoWorkflow {
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
-  tipo: "incluso" | "manual";
-  produzido?: boolean;
-  entregue?: boolean;
-}
+// Re-export para manter compatibilidade com imports existentes.
+export type ProdutoWorkflow = ProdutoWorkflowFlow;
 
 interface Props {
-  produto: ProdutoWorkflow;
+  produto: ProdutoWorkflowFlow;
   index: number;
+  ultimoCustomNomes?: string[];
   onQuantidadeChange: (index: number, q: number) => void;
+  onValorUnitarioChange: (index: number, v: number) => void;
   onRemove: (index: number) => void;
-  onSetFlag: (index: number, key: "produzido" | "entregue", value: boolean) => void;
+  onEtapasChange: (index: number, etapas: EtapaProducao[]) => void;
+  onFluxoChange: (index: number, fluxo: "padrao" | "custom") => void;
+  onCustomFlowSaved: (nomes: string[]) => void;
   formatCurrency: (v: number | undefined | null) => string;
 }
 
 export function ProdutoRow({
-  produto, index, onQuantidadeChange, onRemove, onSetFlag, formatCurrency,
+  produto,
+  index,
+  ultimoCustomNomes,
+  onQuantidadeChange,
+  onValorUnitarioChange,
+  onRemove,
+  onEtapasChange,
+  onFluxoChange,
+  onCustomFlowSaved,
+  formatCurrency,
 }: Props) {
-  return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-muted/50 rounded-lg border">
-      <div className="flex-1 min-w-0 w-full">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium truncate text-xs sm:text-sm" title={produto.nome}>
-            {produto.nome}
-          </span>
-          {produto.tipo === "incluso" && (
-            <Badge variant="secondary" className="text-xs">Incluso no pacote</Badge>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] sm:text-xs text-muted-foreground">
-          <span>
-            Preço unit.: {produto.tipo === "incluso" ? "R$ 0,00 (incluso)" : formatCurrency(produto.valorUnitario)}
-          </span>
-          <span>
-            Subtotal: {produto.tipo === "incluso" ? "R$ 0,00 (incluso)" : formatCurrency(produto.valorUnitario * produto.quantidade)}
-          </span>
-        </div>
-      </div>
+  const hydrated = hydrateProduto(produto);
+  const etapas = hydrated.etapas ?? [];
+  const fluxo = hydrated.fluxo ?? "padrao";
 
-      <div className="w-full sm:w-auto flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <Checkbox
-              id={`prod-${index}`}
-              checked={!!produto.produzido}
-              onCheckedChange={(checked) => onSetFlag(index, "produzido", !!checked)}
-              className="h-4 w-4"
-            />
-            <Label htmlFor={`prod-${index}`} className="text-[11px]">Produção</Label>
-          </div>
-          <div className="flex items-center gap-1">
-            <Checkbox
-              id={`ent-${index}`}
-              checked={!!produto.entregue}
-              onCheckedChange={(checked) => onSetFlag(index, "entregue", !!checked)}
-              className="h-4 w-4"
-            />
-            <Label htmlFor={`ent-${index}`} className="text-[11px]">Entrega</Label>
+  const valorInput = useCurrencyInput({
+    value: produto.valorUnitario || 0,
+    onChange: (v) => onValorUnitarioChange(index, v),
+  });
+
+  const isIncluso = produto.tipo === "incluso";
+  const subtotal = isIncluso ? 0 : (produto.valorUnitario || 0) * (produto.quantidade || 0);
+
+  return (
+    <div className="flex flex-col gap-3 p-3 bg-muted/50 rounded-lg border">
+      {/* Cabeçalho: nome + badge + qtd + remover */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="font-medium truncate text-xs sm:text-sm" title={produto.nome}>
+              {produto.nome}
+            </span>
+            {isIncluso && (
+              <Badge variant="secondary" className="text-[10px]">Incluso no pacote</Badge>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1">
             <Label className="text-[11px]">Qtd:</Label>
             <Input
@@ -84,11 +85,68 @@ export function ProdutoRow({
             size="sm"
             onClick={() => onRemove(index)}
             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            aria-label="Remover produto"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {/* Valor unitário + subtotal */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+        <div className="flex items-center gap-2">
+          <Label className="text-[11px] text-muted-foreground w-20">Preço unit.:</Label>
+          {isIncluso ? (
+            <div className="text-xs text-muted-foreground italic">R$ 0,00 (incluso)</div>
+          ) : (
+            <div className="flex items-center gap-1 flex-1">
+              <span className="text-[11px] text-muted-foreground">R$</span>
+              <Input
+                {...valorInput.inputProps}
+                className="h-8 text-xs w-28"
+                placeholder="0,00"
+              />
+            </div>
+          )}
+        </div>
+        <div className="text-[11px] text-muted-foreground sm:text-right">
+          Subtotal: <span className="text-foreground font-medium">{isIncluso ? "R$ 0,00" : formatCurrency(subtotal)}</span>
+        </div>
+      </div>
+
+      {/* Fluxo de produção */}
+      <div className="border-t pt-2 space-y-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Label className="text-[11px] text-muted-foreground">Fluxo:</Label>
+            <Tabs
+              value={fluxo}
+              onValueChange={(v) => onFluxoChange(index, v as "padrao" | "custom")}
+            >
+              <TabsList className="h-7 p-0.5">
+                <TabsTrigger value="padrao" className="h-6 px-2 text-[11px]">Padrão</TabsTrigger>
+                <TabsTrigger value="custom" className="h-6 px-2 text-[11px]">Personalizado</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          {fluxo === "custom" && (
+            <ProdutoFlowEditPopover
+              etapas={etapas}
+              onSave={(novasEtapas, nomes) => {
+                onEtapasChange(index, novasEtapas);
+                onCustomFlowSaved(nomes);
+              }}
+            />
+          )}
+        </div>
+        <ProdutoFlowTimeline
+          etapas={etapas}
+          onToggle={(i) => onEtapasChange(index, toggleEtapaAt(etapas, i))}
+        />
+      </div>
     </div>
   );
 }
+
+// Helper reutilizável se algum caller quiser aplicar switch fora do modal.
+export const switchProdutoFluxo = switchFluxo;

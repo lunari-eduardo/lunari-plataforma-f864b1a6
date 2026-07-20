@@ -5187,6 +5187,7 @@ export type Database = {
         Row: {
           configuracoes_agenda: Json | null
           configuracoes_financeiro: Json | null
+          configuracoes_workflow: Json
           created_at: string
           id: string
           idioma: string | null
@@ -5200,6 +5201,7 @@ export type Database = {
         Insert: {
           configuracoes_agenda?: Json | null
           configuracoes_financeiro?: Json | null
+          configuracoes_workflow?: Json
           created_at?: string
           id?: string
           idioma?: string | null
@@ -5213,6 +5215,7 @@ export type Database = {
         Update: {
           configuracoes_agenda?: Json | null
           configuracoes_financeiro?: Json | null
+          configuracoes_workflow?: Json
           created_at?: string
           id?: string
           idioma?: string | null

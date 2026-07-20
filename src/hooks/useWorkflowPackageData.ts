@@ -51,6 +51,9 @@ export const useWorkflowPackageData = () => {
               const produtoAtual = produtosIncluidos.find((pi: any) => pi.id === fp.id || pi.nome === fp.nome);
               return {
                 ...fp,
+                fluxo: produtoAtual?.fluxo ?? fp.fluxo,
+                etapas: produtoAtual?.etapas ?? fp.etapas,
+                valorUnitario: produtoAtual?.valorUnitario ?? fp.valorUnitario,
                 produzido: produtoAtual?.produzido ?? fp.produzido ?? false,
                 entregue: produtoAtual?.entregue ?? fp.entregue ?? false
               };
@@ -100,7 +103,7 @@ export const useWorkflowPackageData = () => {
           restante: formatBRL(restanteNum),
           desconto: formatBRL(descontoNum),
           pagamentos: safeArray((session as any).pagamentos),
-          produtosList: frozenProducts.length > 0 ? frozenProducts : produtosIncluidos,
+          produtosList: produtosList,
           clienteId: session.cliente_id,
           sessionId: session.session_id,
           galeriaId: (session as any).galeria_id,
