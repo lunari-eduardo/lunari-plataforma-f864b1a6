@@ -111,18 +111,17 @@ export function useProductTaskMirror(): void {
       for (const p of produtos) {
         const hydrated = hydrateProduto(p);
         const pid = hydrated.id;
-        // Anti-eco: se esta sessão+produto+hash acabou de ser gravada pelo
-        // toggle do dock, pular reconciliação (a tarefa já foi atualizada
-        // otimisticamente pelo próprio handler).
-        if (pid && mirrorMemoStore.matches(session.id, pid, etapasHash(hydrated.etapas ?? []))) {
-          memoSet.add(pid);
-          continue;
-        }
-        // Também memoizado (janela ativa) mas hash divergente: ainda proteger
-        // contra deleção — deixamos o próximo tick reconciliar quando os
-        // hashes convergirem.
+        // Anti-eco AMPLIADO: qualquer write recente (mesmo com hash divergente)
+        // congela a reconciliação para este produto. O produto no workflowStore
+        // pode estar stale (persist ainda em vôo); construir spec a partir dele
+        // recriaria/reverteria a tarefa para a etapa antiga.
+        //
+        // Enquanto a memo estiver ativa, o handler otimista (dock/modal) é a
+        // fonte visual; quando o store convergir e a memo expirar, o próximo
+        // tick reconcilia normalmente.
         if (pid && mirrorMemoStore.hasRecent(session.id, pid)) {
           memoSet.add(pid);
+          continue;
         }
         const s = buildMirrorSpec(session, hydrated);
         if (s) specs.push(s);
