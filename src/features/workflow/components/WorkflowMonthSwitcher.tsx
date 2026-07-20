@@ -13,21 +13,28 @@ interface Props {
   month: number;
   year: number;
   isPreloading: boolean;
-  isChanging?: boolean;
+  /** true quando NÃO há dado visível — spinner completo (cold load). */
+  isColdLoading?: boolean;
+  /** true quando há dado visível mas revalidando em background — dot sutil. */
+  isRevalidating?: boolean;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  onHoverPrev?: () => void;
+  onHoverNext?: () => void;
 }
 
 /**
  * Seletor de mês centralizado.
  *
- * - Enquanto `isChanging`, mostra spinner ao lado do nome do mês (feedback).
- * - Debounce leve nos cliques (100ms) evita disparar múltiplos fetches
- *   quando o usuário clica rápido em Prev/Next.
+ * Feedback visual distinto para cold-load vs revalidação silenciosa:
+ * - Cold: Loader2 girando.
+ * - Revalidando: dot pulsante 6px, cor muted — não bloqueia leitura.
+ * Debounce 100ms nos cliques para evitar spam de fetches.
  */
 export function WorkflowMonthSwitcher({
-  month, year, isPreloading, isChanging = false, onPrev, onNext, onToday,
+  month, year, isPreloading, isColdLoading = false, isRevalidating = false,
+  onPrev, onNext, onToday, onHoverPrev, onHoverNext,
 }: Props) {
   const lastClickRef = useRef(0);
 
@@ -38,20 +45,37 @@ export function WorkflowMonthSwitcher({
     fn();
   };
 
-  const busy = isChanging || isPreloading;
+  const cold = isColdLoading || isPreloading;
+  const hint = !cold && isRevalidating;
 
   return (
     <div className="flex items-center justify-center gap-2">
-      <Button variant="outline" size="sm" onClick={throttled(onPrev)}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={throttled(onPrev)}
+        onMouseEnter={onHoverPrev}
+      >
         <ChevronLeft className="h-4 w-4" />
       </Button>
       <span className="font-medium text-lg min-w-[180px] text-center inline-flex items-center justify-center gap-2">
         {getMonthName(month)} {year}
-        {busy && (
+        {cold && (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Carregando" />
         )}
+        {hint && (
+          <span
+            className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse"
+            aria-label="Atualizando"
+          />
+        )}
       </span>
-      <Button variant="outline" size="sm" onClick={throttled(onNext)}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={throttled(onNext)}
+        onMouseEnter={onHoverNext}
+      >
         <ChevronRight className="h-4 w-4" />
       </Button>
       <Button variant="ghost" size="sm" onClick={throttled(onToday)}>
