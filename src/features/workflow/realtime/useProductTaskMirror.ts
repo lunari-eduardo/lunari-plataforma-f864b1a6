@@ -22,9 +22,10 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { workflowStore } from "@/features/workflow/store/workflowStore";
 import { useTasks } from "@/modules/tasks/presentation/hooks/useTasks";
+import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
 import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { useRunCapability } from "@/shared/capability";
-import { createTask, updateTask, completeTask } from "@/modules/tasks";
+import { createTask, updateTask } from "@/modules/tasks";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
 import {
