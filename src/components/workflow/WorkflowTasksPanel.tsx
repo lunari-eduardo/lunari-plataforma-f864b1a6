@@ -252,9 +252,10 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
                     task={task}
                     onToggle={() => handleToggleStatus(task)}
                     onDelete={() => deleteTask(task.id)}
-                    isDone={false}
+                    isDone={pendingToggleIds.has(task.id)}
                   />
                 ))}
+
               </div>
             </section>
           )}
