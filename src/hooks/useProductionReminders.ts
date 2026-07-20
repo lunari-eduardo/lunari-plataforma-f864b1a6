@@ -4,6 +4,9 @@ import { useWorkflowCache } from '@/contexts/WorkflowCacheContext';
 import { WorkflowSession } from '@/features/workflow';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { hydrateProduto, isEntregue } from '@/features/workflow/domain/productFlow';
+
+const isPendente = (p: any) => !isEntregue(hydrateProduto(p).etapas);
 
 interface ProductionReminder {
   id: string;
@@ -29,7 +32,7 @@ export function useProductionReminders(): ProductionReminder[] {
       const mesAno = format(new Date(dataSessao + 'T12:00:00'), "MMMM 'de' yyyy", { locale: ptBR });
       
       produtos.forEach((p: any) => {
-        if (!p.produzido) {
+        if (isPendente(p)) {
           pending.push({
             id: `${session.id}-${p.nome}`,
             cliente: clienteNome,
@@ -70,7 +73,7 @@ export function useProductionReminders(): ProductionReminder[] {
     // Filtrar sessões que têm pelo menos 1 produto não produzido
     const sessionsWithPending = (data || []).filter((session: any) => {
       const produtos = session.produtos_incluidos as any[] || [];
-      return produtos.some((p: any) => !p.produzido);
+      return produtos.some(isPendente);
     });
 
     setReminders(extractReminders(sessionsWithPending as WorkflowSession[]));
@@ -85,7 +88,7 @@ export function useProductionReminders(): ProductionReminder[] {
       // Filtrar apenas sessões com produtos pendentes
       const sessionsWithPending = sessions.filter(session => {
         const produtos = session.produtos_incluidos as any[] || [];
-        return produtos.some((p: any) => !p.produzido);
+        return produtos.some(isPendente);
       });
       setReminders(extractReminders(sessionsWithPending));
     });
