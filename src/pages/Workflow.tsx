@@ -272,14 +272,12 @@ function WorkflowContent() {
         onOpen={() => setIsTasksPanelOpen(true)}
         onClose={() => setIsTasksPanelOpen(false)}
         currentMonth={month.currentMonth}
-        monthSessionIds={useMemo(
-          () => new Set(month.workflowSessions.map((s) => s.id)),
-          [month.workflowSessions],
-        )}
+        monthSessionIds={monthSessionIds}
         onSessionProductsChange={(sessionId, novosProdutos) =>
           actions.handleFieldUpdate(sessionId, "produtosList", novosProdutos)
         }
       />
+
 
     </div>
   );
