@@ -62,20 +62,26 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
         <span className="text-[11px] text-muted-foreground">Receita</span>
-        <span className="text-sm font-bold text-green-500">{formatCurrency(financials.paidMonth)}</span>
+        {isLoading
+          ? <Skeleton />
+          : <span className="text-sm font-bold text-green-500">{formatCurrency(financials.paidMonth)}</span>}
       </div>
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
         <span className="text-[11px] text-muted-foreground">Previsto</span>
-        <span className="text-sm font-bold text-blue-500">{formatCurrency(financials.totalMonth)}</span>
+        {isLoading
+          ? <Skeleton />
+          : <span className="text-sm font-bold text-blue-500">{formatCurrency(financials.totalMonth)}</span>}
       </div>
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
         <span className="text-[11px] text-muted-foreground">Pendente</span>
-        <span className="text-sm font-bold text-orange-500">{formatCurrency(financials.remainingMonth)}</span>
+        {isLoading
+          ? <Skeleton />
+          : <span className="text-sm font-bold text-orange-500">{formatCurrency(financials.remainingMonth)}</span>}
       </div>
 
-      {creditosGerados > 0 && (
+      {!isLoading && creditosGerados > 0 && (
         <div className="flex items-center gap-1.5" title="Crédito gerado por overpayment em sessões deste mês">
           <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
           <span className="text-[11px] text-muted-foreground">Créd. gerados</span>
@@ -83,7 +89,7 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
         </div>
       )}
 
-      {creditosUtilizados > 0 && (
+      {!isLoading && creditosUtilizados > 0 && (
         <div className="flex items-center gap-1.5" title="Créditos aplicados como pagamento em sessões deste mês">
           <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
           <span className="text-[11px] text-muted-foreground">Créd. utilizados</span>
@@ -102,7 +108,9 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
         <span className="text-[11px] text-muted-foreground">Sessões</span>
-        <span className="text-sm font-bold">{sessionCount}</span>
+        {isLoading
+          ? <Skeleton w="w-8" />
+          : <span className="text-sm font-bold">{sessionCount}</span>}
       </div>
       <Button
         variant="ghost"
