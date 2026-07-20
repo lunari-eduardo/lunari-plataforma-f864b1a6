@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import type { WorkflowSession } from "@/features/workflow";
@@ -14,7 +14,11 @@ export type WorkflowCurrentMonth = { month: number; year: number };
  *  - reload no visibilitychange
  *  - navegação de mês (prev/next/today)
  *
- * Comportamento preservado bit-a-bit do Workflow.tsx original.
+ * Correções (troca de mês):
+ *  - Ao mudar `currentMonth`, se não há cache, `workflowSessions` é ZERADO
+ *    antes do fetch — evita mostrar dados do mês anterior enquanto carrega.
+ *  - Guarda de mês atual (ref) impede que `subscribe` ou fetches lentos
+ *    reintroduzam dados de mês obsoleto após cliques rápidos.
  */
 export function useWorkflowMonthSessions() {
   const {
@@ -33,34 +37,50 @@ export function useWorkflowMonthSessions() {
     { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
   );
 
-  // Não inicializar com cache stale: valores financeiros exigem fetch fresco
-  // para não exibir flicker (ex.: total sem desconto por 500ms antes do refetch).
   const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error] = useState<string | null>(null);
 
+  // Ref sempre com o mês corrente — usada como guarda contra writes de fetches
+  // antigos que resolveriam após o usuário já ter mudado de mês.
+  const currentMonthRef = useRef(currentMonth);
+  useEffect(() => { currentMonthRef.current = currentMonth; }, [currentMonth]);
+
   // FASE 1 — carregar mês corrente (cache-first)
   useEffect(() => {
+    let cancelled = false;
     const loadMonth = async () => {
       const key = `${currentMonth.year}-${currentMonth.month}`;
       const cached = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
       if (cached !== null) {
         console.log(`⚡ [Workflow] Cache hit for ${key} (${cached.length} sessions)`);
         setWorkflowSessions(cached);
+        // Silent revalidate em background
         ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
         return;
       }
+      // Sem cache → zerar imediatamente para o gate de loading disparar,
+      // sem "vazamento" das sessões do mês anterior.
+      setWorkflowSessions([]);
       setLoading(true);
       console.log(`🔄 [Workflow] No cache for ${key}, fetching from Supabase...`);
       try {
         await ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+        if (cancelled) return;
+        // Após fetch, ler do cache o mês corrente (pode ter mudado).
+        const ref = currentMonthRef.current;
+        if (ref.year === currentMonth.year && ref.month === currentMonth.month) {
+          const fresh = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
+          if (fresh) setWorkflowSessions(fresh);
+        }
       } catch (err) {
         console.error(`❌ [Workflow] Error loading month:`, err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     loadMonth();
+    return () => { cancelled = true; };
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
 
   // FASE 2 — visibilitychange
@@ -74,15 +94,13 @@ export function useWorkflowMonthSessions() {
     return () => document.removeEventListener("visibilitychange", handler);
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
 
-  // Leitura direta ao trocar mês
-  useEffect(() => {
-    const sessions = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-    if (sessions) setWorkflowSessions(sessions);
-  }, [currentMonth, getSessionsForMonthSync]);
-
-  // Subscribe ao cache (realtime)
+  // Subscribe ao cache (realtime) — filtra sempre pelo mês corrente (ref)
   useEffect(() => {
     return subscribe((allSessions) => {
+      const ref = currentMonthRef.current;
+      // Guarda: só aceita updates para o mês visível
+      if (ref.year !== currentMonth.year || ref.month !== currentMonth.month) return;
+
       const filtered = allSessions.filter((s) => {
         if (!s.data_sessao) return false;
         const [year, month] = s.data_sessao.split("-").map(Number);
