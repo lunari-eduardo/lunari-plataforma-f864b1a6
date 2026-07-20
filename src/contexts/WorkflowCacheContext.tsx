@@ -6,7 +6,10 @@ import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowS
 import { sessionsRepo } from '@/features/workflow/data';
 import { isWorkflowRealtimeV2Enabled } from '@/features/workflow/realtime';
 import { eventBus } from '@/shared/event-bus';
+import { prefetchMonthMetrics } from '@/features/workflow/data/metricsRepo';
+import { metricsCache } from '@/features/workflow/data/metricsCache';
 import '@/modules/workflow/domain/events';
+
 
 // Helper para extrair ano/mês de string YYYY-MM-DD sem conversão de timezone
 const getYearMonthFromDateString = (dateString: string): { year: number; month: number } => {
@@ -295,8 +298,14 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       );
     }
 
+    // Prefetch das métricas dos mesmos meses — hit síncrono ao trocar de mês.
+    monthsToPreload.forEach(({ year, month }) => {
+      prefetchMonthMetrics(userId, year, month);
+    });
+
     setIsPreloading(false);
   };
+
 
   const setupRealtimeSubscription = () => {
     if (!userId) return;
