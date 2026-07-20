@@ -242,12 +242,14 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const invalidateMonth = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);
     memoryCache.current.delete(key);
-    
+
     if (userId) {
+      metricsCache.invalidate(userId, year, month);
       await indexedDBCache.remove(userId, year, month);
       await fetchAndCacheMonth(year, month);
     }
   }, [userId]);
+
 
   const fetchAndCacheMonth = async (year: number, month: number) => {
     if (!userId) return;
