@@ -21,11 +21,13 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { workflowStore } from "@/features/workflow/store/workflowStore";
+import { sessionsRepo } from "@/features/workflow/data/sessionsRepo";
 import { useTasks } from "@/modules/tasks/presentation/hooks/useTasks";
 import { useSupabaseTasks } from "@/hooks/useSupabaseTasks";
 import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { useRunCapability } from "@/shared/capability";
 import { createTask, updateTask } from "@/modules/tasks";
+import { tasksStore } from "@/modules/tasks/presentation/store/tasksStore";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
 import type { WorkflowSession } from "@/features/workflow/domain/session";
@@ -51,6 +53,42 @@ import {
   type ProdutoWorkflowFlow,
 } from "@/features/workflow/domain/productFlow";
 import { mirrorMemoStore } from "@/features/workflow/realtime/mirrorMemoStore";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function resolveSessionForMirrorToggle(
+  sessionRef: string,
+  userId?: string,
+): Promise<WorkflowSession | null> {
+  const fromStore =
+    workflowStore.getById(sessionRef) ?? workflowStore.getBySessionId(sessionRef);
+  if (fromStore) return fromStore;
+  if (!userId) return null;
+
+  const tryFetch = async (mode: "id" | "sessionId") => {
+    try {
+      return mode === "id"
+        ? await sessionsRepo.getById(userId, sessionRef)
+        : await sessionsRepo.getBySessionId(userId, sessionRef);
+    } catch (e) {
+      console.warn("[useMirrorToggleHandler] fallback DB falhou", { mode, e });
+      return null;
+    }
+  };
+
+  const preferred = UUID_RE.test(sessionRef) ? "id" : "sessionId";
+  const alt = preferred === "id" ? "sessionId" : "id";
+  const fresh = (await tryFetch(preferred)) ?? (await tryFetch(alt));
+  if (fresh) {
+    try {
+      workflowStore.upsert(fresh as WorkflowSession);
+    } catch {
+      /* noop */
+    }
+    return fresh as WorkflowSession;
+  }
+  return null;
+}
 
 const DEBOUNCE_MS = 180;
 
