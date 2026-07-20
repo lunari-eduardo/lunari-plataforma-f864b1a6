@@ -18,7 +18,7 @@
  * Sem migration; sem canal realtime novo. Reaproveita `TasksRealtimeBridge`.
  */
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { workflowStore } from "@/features/workflow/store/workflowStore";
 import { useTasks } from "@/modules/tasks/presentation/hooks/useTasks";
@@ -29,14 +29,25 @@ import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
 import {
   buildMirrorSpec,
+  buildTitle,
   extractProdutoIdFromTask,
   findMirrorTask,
+  findProdutoIndexInSession,
   listMirrorTasksForSession,
   MIRROR_ROOT_TAG,
   taskSignature,
   type MirrorSpec,
 } from "@/features/workflow/domain/productTaskMirror";
-import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
+import {
+  advanceOne,
+  etapasHash,
+  hydrateProduto,
+  retreatOne,
+  isEntregue,
+  etapaAtualIndex,
+  type ProdutoWorkflowFlow,
+} from "@/features/workflow/domain/productFlow";
+import { mirrorMemoStore } from "@/features/workflow/realtime/mirrorMemoStore";
 
 const DEBOUNCE_MS = 180;
 
