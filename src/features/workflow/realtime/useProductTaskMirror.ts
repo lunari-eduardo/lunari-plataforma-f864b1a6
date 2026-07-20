@@ -28,6 +28,7 @@ import { useRunCapability } from "@/shared/capability";
 import { createTask, updateTask } from "@/modules/tasks";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
+import type { WorkflowSession } from "@/features/workflow/domain/session";
 import {
   buildMirrorSpec,
   buildTitle,

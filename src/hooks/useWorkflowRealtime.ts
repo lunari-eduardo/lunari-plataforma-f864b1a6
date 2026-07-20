@@ -669,11 +669,17 @@ export const useWorkflowRealtime = () => {
         let hasChanges = false;
         const fieldsToCheck = ['pacote', 'valor_total', 'valor_pago', 'qtd_fotos_extra', 'valor_foto_extra', 'valor_total_foto_extra', 'produtos_incluidos', 'categoria', 'descricao', 'status', 'regras_congeladas', 'desconto', 'valor_adicional', 'observacoes', 'detalhes'];
         
-        // ✅ CORREÇÃO: Forçar update quando regras_congeladas é modificado
-        // Isso garante que pacote e categoria sejam persistidos mesmo se o cache local já tiver os novos valores
+        // ✅ CORREÇÃO: Forçar update quando regras_congeladas OU produtos_incluidos
+        // mudam. Sem isso, uma corrida entre a linha "fresh" (buscada linha ~248)
+        // e o payload otimista pode gerar diff=false e engolir toggles de
+        // etapas no dock/modal (sintoma: check pisca e volta a vazio).
         if (sanitizedUpdates.regras_congeladas) {
           hasChanges = true;
           console.log('🔄 [FORCE] regras_congeladas modificado - forçando update para persistir pacote/categoria');
+        }
+        if ('produtos_incluidos' in sanitizedUpdates) {
+          hasChanges = true;
+          console.log('🔄 [FORCE] produtos_incluidos modificado - forçando update (protege etapas do fluxo).');
         }
         
         if (!hasChanges) {
