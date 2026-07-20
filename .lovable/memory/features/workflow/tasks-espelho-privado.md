@@ -13,13 +13,17 @@ type: feature
 
 ## Sincronia
 
-- **Unidirecional**: Produto → Tarefa. O reconciliador cria/atualiza/conclui tarefas conforme o estado das etapas do produto.
-- **Não existe** direção reversa. Marcar/desmarcar a tarefa-espelho no dock **não** avança nem retrocede etapas do produto.
-- Etapas só podem ser alteradas pelo modal "Gerenciar produtos" no card do Workflow.
+- **Bidirecional controlada** Produto ↔ Tarefa via `useMirrorToggleHandler` + `mirrorMemoStore` (janela 3s anti-eco).
+- Modal "Gerenciar produtos" e checkbox no dock avançam/retrocedem a mesma lista de etapas.
+- Reconciliador (Produto → Tarefa) cria/atualiza título quando etapa muda, e **apaga** a tarefa quando:
+  - o produto atinge a última etapa (`isEntregue`), OU
+  - o produto é removido da sessão (órfã).
+- Regressão pelo modal (entregue → pendente) recria a tarefa com o novo título automaticamente.
 
 ## Dock do Workflow (`WorkflowTasksPanel`)
 
 Três seções, nessa ordem:
-1. **Produção** — todas as tarefas-espelho pendentes (independente do mês/dueDate).
-2. **Vencendo neste mês** — tarefas normais (não-espelho) com `dueDate` no mês corrente. Inclui CTA "Ver todas as tarefas →" para `/app/tarefas`.
-3. **Concluídas** — colapsável, agrega concluídas de ambos os grupos.
+1. **Produção** — tarefas-espelho pendentes de sessões do mês corrente.
+2. **Vencendo neste mês** — tarefas normais com `dueDate` no mês corrente. CTA "Ver todas as tarefas →" `/app/tarefas`.
+3. **Concluídas** — colapsável, **apenas** tarefas normais. Tarefas-espelho nunca aparecem aqui (são apagadas ao entregar).
+
