@@ -244,6 +244,8 @@ export interface MirrorToggleDeps {
   ) => Promise<unknown> | unknown;
   /** Atualização otimista da tarefa no store local. */
   updateTaskLocal: (taskId: string, patch: Partial<Task>) => Promise<unknown> | unknown;
+  /** Remoção otimista da tarefa no store local (usada quando produto entrega). */
+  removeTaskLocal: (taskId: string) => Promise<unknown> | unknown;
 }
 
 export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
