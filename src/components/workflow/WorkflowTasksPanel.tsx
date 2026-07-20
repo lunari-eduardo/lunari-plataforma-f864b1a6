@@ -37,6 +37,8 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/tasks";
 import { MIRROR_ROOT_TAG } from "@/features/workflow/domain/productTaskMirror";
 import { isMirrorTask } from "@/features/workflow/domain/taskClassification";
+import { useMirrorToggleHandler } from "@/features/workflow/realtime/useProductTaskMirror";
+import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
 
 /** Deriva título/subtítulo enxuto para tarefas-espelho.
  *  Formato completo: "<Etapa> — <Produto> · <Cliente>". */
@@ -49,10 +51,12 @@ function deriveMirrorDisplay(task: Task): { title: string; subtitle?: string } {
 
 interface WorkflowTasksPanelProps {
   currentMonth: { month: number; year: number };
+  monthSessionIds?: Set<string>;
+  onSessionProductsChange?: (sessionId: string, novosProdutos: ProdutoWorkflowFlow[]) => Promise<unknown> | unknown;
   onCollapse?: () => void;
 }
 
-export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPanelProps) {
+export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionProductsChange, onCollapse }: WorkflowTasksPanelProps) {
   const { tasks, updateTask, addTask, deleteTask, loading } = useSupabaseTasks();
   const { isTerminalKey, getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
   const [showCompleted, setShowCompleted] = useState(false);
