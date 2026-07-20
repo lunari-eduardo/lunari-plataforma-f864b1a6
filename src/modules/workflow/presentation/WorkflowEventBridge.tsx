@@ -14,9 +14,13 @@ import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { eventBus } from "@/shared/event-bus";
 import { deriveWorkflowPaymentAttached } from "../application/handlers/onBillingChargeCreated";
+import { useProductTaskMirror } from "@/features/workflow/realtime/useProductTaskMirror";
 
 export const WorkflowEventBridge: React.FC = () => {
   const qc = useQueryClient();
+
+  // Onda: Integração Workflow ↔ Tarefas — reconciliador bidirecional.
+  useProductTaskMirror();
 
   React.useEffect(() => {
     const off = eventBus.on("billing.charge_created", async (event) => {
