@@ -426,23 +426,49 @@ export const useWorkflowRealtime = () => {
           case 'produtosList':
             // BLOCO C: Completar case produtosList
             if (Array.isArray(value)) {
-              // Converter para formato do banco
-              const produtosConvertidos = value.map((p: any) => ({
-                id: p.id,
-                nome: p.nome,
-                quantidade: Number(p.quantidade) || 0,
-                valorUnitario: Number(p.valorUnitario) || 0,
-                tipo: p.tipo || 'manual',
-                produzido: p.produzido || false,
-                entregue: p.entregue || false
-              }));
-              
+              // Preservar TODOS os campos novos do fluxo de produção
+              // (fluxo/etapas) além dos legados (produzido/entregue).
+              // Sem essa passagem transparente, o toggle das etapas some
+              // silenciosamente da linha do banco.
+              const produtosConvertidos = value.map((p: any) => {
+                const etapas = Array.isArray(p.etapas)
+                  ? p.etapas.map((e: any) => ({
+                      id: String(e?.id ?? ''),
+                      nome: String(e?.nome ?? ''),
+                      done: !!e?.done,
+                    }))
+                  : undefined;
+                const base: any = {
+                  id: p.id,
+                  produtoId: p.produtoId,
+                  nome: p.nome,
+                  quantidade: Number(p.quantidade) || 0,
+                  valorUnitario: Number(p.valorUnitario) || 0,
+                  tipo: p.tipo || 'manual',
+                  fluxo: p.fluxo === 'custom' ? 'custom' : 'padrao',
+                  produzido: !!p.produzido,
+                  entregue: !!p.entregue,
+                };
+                if (etapas && etapas.length > 0) {
+                  base.etapas = etapas;
+                  // Reconcilia flags legados a partir das etapas para
+                  // manter coerência com telas antigas.
+                  const entregue = etapas.every((e: any) => e.done);
+                  const produzido = etapas.length > 1
+                    ? etapas.slice(0, -1).every((e: any) => e.done)
+                    : entregue;
+                  base.entregue = entregue;
+                  base.produzido = produzido;
+                }
+                return base;
+              });
+
               sanitizedUpdates.produtos_incluidos = produtosConvertidos;
-              
+
               // Recalcular total de produtos manuais
               const totalProdutosManuais = calculateManualProductsTotal(produtosConvertidos);
               console.log('📦 Total produtos manuais recalculado:', totalProdutosManuais);
-              
+
               // Buscar sessão atual para recalcular total geral
               const { data: freshSession } = await supabase
                 .from('clientes_sessoes')
@@ -450,26 +476,28 @@ export const useWorkflowRealtime = () => {
                 .eq('id', id)
                 .eq('user_id', user.user.id)
                 .single();
-              
+
               if (freshSession) {
-                // Re-congelar dados dos produtos
+                // Re-congelar dados dos produtos (só mexe em regras_congeladas.produtos;
+                // não substitui produtos_incluidos).
                 const { pricingFreezingService } = await import('@/services/PricingFreezingService');
                 const regrasAtualizadas = await pricingFreezingService.recongelarProdutos(
                   freshSession.regras_congeladas as any,
                   produtosConvertidos
                 );
                 sanitizedUpdates.regras_congeladas = regrasAtualizadas as any;
-                
+
                 // Recalcular valor total da sessão usando função correta
                 const { calculateSessionTotalFromRow } = await import('@/utils/sessionCalculations');
                 const updatedSession = { ...freshSession, produtos_incluidos: produtosConvertidos };
                 const novoValorTotal = calculateSessionTotalFromRow(updatedSession);
                 sanitizedUpdates.valor_total = novoValorTotal;
-                
+
                 console.log('📦 Produtos atualizados - recongelados e total recalculado:', novoValorTotal);
               }
             }
             break;
+
           case 'descricao':
           case 'status':
           case 'categoria':

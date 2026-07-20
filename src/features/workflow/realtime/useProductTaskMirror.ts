@@ -126,8 +126,19 @@ export function useProductTaskMirror(): void {
       const session = sessionsById.get(sessionId);
       if (!session) continue;
 
+      // Guarda anti-sobrescrita durante edição humana:
+      // se a sessão foi atualizada nos últimos 2s (usuário salvou etapas
+      // no modal, ou realtime acabou de sincronizar), adia a aplicação
+      // do avanço/retrocesso via tarefa até o próximo tick.
+      const updatedAt = (session as any).updated_at;
+      if (updatedAt) {
+        const age = Date.now() - new Date(updatedAt).getTime();
+        if (age >= 0 && age < 2000) continue;
+      }
+
       const inflightKey = `${sessionId}:${produtoId}`;
       if (productWriteInFlightRef.current.has(inflightKey)) continue;
+
 
       const produtos = normalizeProdutos(session.produtos_incluidos);
       const idxProd = produtos.findIndex((p) => p.id === produtoId);
