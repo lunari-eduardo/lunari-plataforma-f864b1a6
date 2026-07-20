@@ -15,23 +15,27 @@ interface Props {
   onToggle: (next: boolean) => void;
   financials: Financials;
   sessionCount: number;
+  isLoading?: boolean;
 }
 
 const formatCurrency = (value: unknown) =>
   `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
 
+const Skeleton = ({ w = "w-16" }: { w?: string }) => (
+  <span
+    className={`inline-block h-4 ${w} rounded bg-muted/60 animate-pulse`}
+    aria-hidden="true"
+  />
+);
+
 /**
  * Barra de métricas do Workflow.
  * Fonte canônica: RPC `workflow_month_metrics` (via useWorkflowMetricsRealtime).
  *
- * Regras:
- * - `Receita` = Σ LEAST(valor_pago, valor_total) por sessão do mês
- *   (nunca ultrapassa o valor da sessão; overpayment vira crédito).
- * - `Pendente` = Σ GREATEST(valor_total - valor_pago, 0). Nunca negativo.
- * - `Créditos gerados/utilizados` e `Caixa` aparecem apenas quando > 0
- *   para não poluir o layout.
+ * Enquanto `isLoading`, valores são substituídos por skeletons — evita
+ * mostrar valores do mês anterior durante a troca.
  */
-export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionCount }: Props) {
+export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionCount, isLoading = false }: Props) {
   if (!showMetrics) {
     return (
       <div className="flex items-center">
@@ -51,7 +55,7 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
   const creditosGerados = Number(financials.creditosGerados) || 0;
   const creditosUtilizados = Number(financials.creditosUtilizados) || 0;
   const caixaRecebido = Number(financials.caixaRecebido) || 0;
-  const showCaixaChip = caixaRecebido > 0 && Math.abs(caixaRecebido - financials.paidMonth) > 0.005;
+  const showCaixaChip = !isLoading && caixaRecebido > 0 && Math.abs(caixaRecebido - financials.paidMonth) > 0.005;
 
   return (
     <div className="flex items-center gap-4 sm:gap-5 flex-wrap bg-card/30 backdrop-blur-lg dark:bg-card/[0.04] border border-white/50 dark:border-white/10 rounded-lg px-4 py-2.5">
