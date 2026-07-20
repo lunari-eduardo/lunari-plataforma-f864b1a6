@@ -172,10 +172,9 @@ export function useProductTaskMirror(): void {
         return;
       }
 
-      // Caso 2: existe. Produto entregue → concluir (uma vez).
+      // Caso 2: existe. Produto entregue → APAGAR tarefa (sem histórico).
       if (spec.isEntregue) {
-        if (isTerminalKey(existing.status)) return;
-        await concludeTask(existing, spec.title);
+        await removeTask(existing);
         return;
       }
 
@@ -208,26 +207,18 @@ export function useProductTaskMirror(): void {
       }
     }
 
-    async function concludeTask(task: Task, forcedTitle?: string) {
-      const inflightKey = task.id;
+    async function removeTask(task: Task) {
+      const inflightKey = `del:${task.id}`;
       if (taskWriteInFlightRef.current.has(inflightKey)) return;
       taskWriteInFlightRef.current.add(inflightKey);
       try {
-        if (forcedTitle && forcedTitle !== task.title) {
-          await runCapability(updateTask, {
-            id: task.id,
-            patch: { title: forcedTitle } as never,
-          });
-        }
-        const res = await runCapability(completeTask, { id: task.id });
-        if (isOk(res)) {
-          lastWriteByTaskRef.current.set(task.id, {
-            sig: taskSignature(forcedTitle ?? task.title, true),
-            at: Date.now(),
-          });
-        }
+        await deleteTaskLocal(task.id);
+        lastWriteByTaskRef.current.set(task.id, {
+          sig: `DEL::${task.id}`,
+          at: Date.now(),
+        });
       } catch (e) {
-        console.warn("[productTaskMirror] falha ao concluir tarefa", e);
+        console.warn("[productTaskMirror] falha ao excluir tarefa", e);
       } finally {
         setTimeout(() => taskWriteInFlightRef.current.delete(inflightKey), 500);
       }
