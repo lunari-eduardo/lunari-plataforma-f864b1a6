@@ -150,6 +150,9 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     updateTaskLocal: async (taskId, patch) => {
       await updateTask(taskId, patch as any);
     },
+    removeTaskLocal: async (taskId) => {
+      await deleteTask(taskId);
+    },
   });
 
   const handleToggleStatus = async (task: Task) => {
