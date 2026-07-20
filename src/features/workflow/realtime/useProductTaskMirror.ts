@@ -130,12 +130,11 @@ export function useProductTaskMirror(): void {
         await applySpec(spec, existing);
       }
 
-      // Órfãs: tarefas cujo produtoId não existe mais → conclui.
+      // Órfãs: tarefas cujo produtoId não existe mais → apagar.
       for (const t of sessionMirrors) {
         const pid = extractProdutoIdFromTask(t);
         if (!pid || seenProductIds.has(pid)) continue;
-        if (isTerminalKey(t.status)) continue;
-        await concludeTask(t);
+        await removeTask(t);
       }
     }
 
