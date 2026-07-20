@@ -37,6 +37,8 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/tasks";
 import { MIRROR_ROOT_TAG } from "@/features/workflow/domain/productTaskMirror";
 import { isMirrorTask } from "@/features/workflow/domain/taskClassification";
+import { useMirrorToggleHandler } from "@/features/workflow/realtime/useProductTaskMirror";
+import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
 
 /** Deriva título/subtítulo enxuto para tarefas-espelho.
  *  Formato completo: "<Etapa> — <Produto> · <Cliente>". */
@@ -49,10 +51,12 @@ function deriveMirrorDisplay(task: Task): { title: string; subtitle?: string } {
 
 interface WorkflowTasksPanelProps {
   currentMonth: { month: number; year: number };
+  monthSessionIds?: Set<string>;
+  onSessionProductsChange?: (sessionId: string, novosProdutos: ProdutoWorkflowFlow[]) => Promise<unknown> | unknown;
   onCollapse?: () => void;
 }
 
-export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPanelProps) {
+export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionProductsChange, onCollapse }: WorkflowTasksPanelProps) {
   const { tasks, updateTask, addTask, deleteTask, loading } = useSupabaseTasks();
   const { isTerminalKey, getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
   const [showCompleted, setShowCompleted] = useState(false);
@@ -68,9 +72,14 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
 
   // === Segregação ===
-  // 1) Tarefas-espelho (Produção): SEMPRE aparecem, independente do mês/dueDate.
+  // 1) Tarefas-espelho (Produção): aparecem apenas para sessões do mês corrente
+  //    (evita poluir o dock com produtos de meses vizinhos em cache).
   // 2) Tarefas normais: SÓ aparecem se tiverem dueDate dentro do mês corrente.
-  const mirrorAll = useMemo(() => tasks.filter(isMirrorTask), [tasks]);
+  const mirrorAll = useMemo(() => {
+    const all = tasks.filter(isMirrorTask);
+    if (!monthSessionIds || monthSessionIds.size === 0) return all;
+    return all.filter((t) => t.relatedSessionId && monthSessionIds.has(t.relatedSessionId));
+  }, [tasks, monthSessionIds]);
   const normalMonth = useMemo(() => {
     return tasks.filter((t) => {
       if (isMirrorTask(t)) return false;
@@ -136,7 +145,21 @@ export function WorkflowTasksPanel({ currentMonth, onCollapse }: WorkflowTasksPa
     });
   };
 
+  const toggleMirror = useMirrorToggleHandler({
+    updateSessionProducts: async (sessionId, novosProdutos) => {
+      if (onSessionProductsChange) await onSessionProductsChange(sessionId, novosProdutos);
+    },
+    updateTaskLocal: async (taskId, patch) => {
+      await updateTask(taskId, patch as any);
+    },
+  });
+
   const handleToggleStatus = async (task: Task) => {
+    if (isMirrorTask(task)) {
+      const nextIsDone = !isTerminalKey(task.status);
+      await toggleMirror(task, nextIsDone);
+      return;
+    }
     const nextStatus = isTerminalKey(task.status) ? getDefaultOpenKey() : getDoneKey();
     await updateTask(task.id, { status: nextStatus });
   };
@@ -480,18 +503,20 @@ function TaskRowContent({
         );
       })()}
 
-      {/* Delete button on hover */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-destructive"
-        title="Excluir tarefa"
-        tabIndex={-1}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      {/* Delete button on hover — oculto para tarefas-espelho (são derivadas). */}
+      {!isMirrorTask(task) && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="mt-0.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-destructive"
+          title="Excluir tarefa"
+          tabIndex={-1}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
 
       <span
         className={cn(

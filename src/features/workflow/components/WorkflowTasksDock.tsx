@@ -1,25 +1,40 @@
 import { Button } from "@/components/ui/button";
 import { PanelRightOpen } from "lucide-react";
 import { WorkflowTasksPanel } from "@/components/workflow/WorkflowTasksPanel";
+import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
 
 interface Props {
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
   currentMonth: { month: number; year: number };
+  monthSessionIds?: Set<string>;
+  onSessionProductsChange?: (sessionId: string, novosProdutos: ProdutoWorkflowFlow[]) => Promise<unknown> | unknown;
 }
 
 /**
  * Onda 5a — docks (desktop fixo + mobile empilhado) do painel de tarefas.
  */
-export function WorkflowTasksDock({ isOpen, onOpen, onClose, currentMonth }: Props) {
+export function WorkflowTasksDock({
+  isOpen,
+  onOpen,
+  onClose,
+  currentMonth,
+  monthSessionIds,
+  onSessionProductsChange,
+}: Props) {
   return (
     <>
       {/* Desktop dock */}
       <div className="hidden lg:block fixed right-0 top-[60px] bottom-0 z-30">
         {isOpen ? (
           <div className="h-full w-[320px] transition-transform duration-200 ease-out animate-in slide-in-from-right">
-            <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={onClose} />
+            <WorkflowTasksPanel
+              currentMonth={currentMonth}
+              monthSessionIds={monthSessionIds}
+              onSessionProductsChange={onSessionProductsChange}
+              onCollapse={onClose}
+            />
           </div>
         ) : (
           <button
@@ -39,7 +54,12 @@ export function WorkflowTasksDock({ isOpen, onOpen, onClose, currentMonth }: Pro
       <div className="lg:hidden">
         {isOpen && (
           <div className="w-full">
-            <WorkflowTasksPanel currentMonth={currentMonth} onCollapse={onClose} />
+            <WorkflowTasksPanel
+              currentMonth={currentMonth}
+              monthSessionIds={monthSessionIds}
+              onSessionProductsChange={onSessionProductsChange}
+              onCollapse={onClose}
+            />
           </div>
         )}
         {!isOpen && (
@@ -57,3 +77,4 @@ export function WorkflowTasksDock({ isOpen, onOpen, onClose, currentMonth }: Pro
     </>
   );
 }
+

@@ -77,6 +77,12 @@ function WorkflowContent() {
     true,
   );
 
+  // Ids das sessões do mês atual (usado pelo dock para filtrar tarefas-espelho).
+  const monthSessionIds = useMemo(
+    () => new Set(month.workflowSessions.map((s) => s.id)),
+    [month.workflowSessions],
+  );
+
   // ── Mapeamento de opções ────────────────────────────────────────────
   const categoryOptions: CategoryOption[] = categorias.map((cat, i) => ({
     id: String(i + 1),
@@ -266,7 +272,13 @@ function WorkflowContent() {
         onOpen={() => setIsTasksPanelOpen(true)}
         onClose={() => setIsTasksPanelOpen(false)}
         currentMonth={month.currentMonth}
+        monthSessionIds={monthSessionIds}
+        onSessionProductsChange={(sessionId, novosProdutos) =>
+          actions.handleFieldUpdate(sessionId, "produtosList", novosProdutos)
+        }
       />
+
+
     </div>
   );
 }
