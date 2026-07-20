@@ -1,6 +1,6 @@
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -13,32 +13,48 @@ interface Props {
   month: number;
   year: number;
   isPreloading: boolean;
+  isChanging?: boolean;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
 }
 
 /**
- * Onda 5a — seletor de mês centralizado extraído do Workflow.tsx.
+ * Seletor de mês centralizado.
+ *
+ * - Enquanto `isChanging`, mostra spinner ao lado do nome do mês (feedback).
+ * - Debounce leve nos cliques (100ms) evita disparar múltiplos fetches
+ *   quando o usuário clica rápido em Prev/Next.
  */
-export function WorkflowMonthSwitcher({ month, year, isPreloading, onPrev, onNext, onToday }: Props) {
+export function WorkflowMonthSwitcher({
+  month, year, isPreloading, isChanging = false, onPrev, onNext, onToday,
+}: Props) {
+  const lastClickRef = useRef(0);
+
+  const throttled = (fn: () => void) => () => {
+    const now = Date.now();
+    if (now - lastClickRef.current < 100) return;
+    lastClickRef.current = now;
+    fn();
+  };
+
+  const busy = isChanging || isPreloading;
+
   return (
     <div className="flex items-center justify-center gap-2">
-      <Button variant="outline" size="sm" onClick={onPrev}>
+      <Button variant="outline" size="sm" onClick={throttled(onPrev)}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="font-medium text-lg min-w-[160px] text-center">
+      <span className="font-medium text-lg min-w-[180px] text-center inline-flex items-center justify-center gap-2">
         {getMonthName(month)} {year}
+        {busy && (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Carregando" />
+        )}
       </span>
-      {isPreloading && (
-        <Badge variant="outline" className="absolute">
-          ⏳
-        </Badge>
-      )}
-      <Button variant="outline" size="sm" onClick={onNext}>
+      <Button variant="outline" size="sm" onClick={throttled(onNext)}>
         <ChevronRight className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={onToday}>
+      <Button variant="ghost" size="sm" onClick={throttled(onToday)}>
         Hoje
       </Button>
     </div>

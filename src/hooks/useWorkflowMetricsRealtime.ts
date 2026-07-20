@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { USE_METRICS_EVENT_BUS } from '@/features/workflow/config';
 import { eventBus } from '@/shared/event-bus';
@@ -11,6 +11,7 @@ interface WorkflowMetrics {
   creditosGerados: number;
   creditosUtilizados: number;
   caixaRecebido: number;
+  isLoading: boolean;
 }
 
 const EMPTY: WorkflowMetrics = {
@@ -21,14 +22,14 @@ const EMPTY: WorkflowMetrics = {
   creditosGerados: 0,
   creditosUtilizados: 0,
   caixaRecebido: 0,
+  isLoading: false,
 };
 
 /**
  * Hook canônico das métricas do Workflow no mês.
- * Chama o RPC `workflow_month_metrics` que já:
- *  - limita a receita ao valor da sessão (evita dupla contagem com crédito);
- *  - calcula pendente como GREATEST(valor_total - valor_pago, 0);
- *  - retorna créditos gerados/utilizados no mês e caixa real recebido.
+ * - Reseta imediatamente ao trocar `year/month` (evita mostrar valores do mês anterior).
+ * - Cancela writes de RPCs antigos via flag `cancelled` (proteção a cliques rápidos).
+ * - Expõe `isLoading` para a UI renderizar skeletons.
  */
 export function useWorkflowMetricsRealtime(
   year: number,
@@ -37,12 +38,22 @@ export function useWorkflowMetricsRealtime(
   endDateOverride?: string
 ): WorkflowMetrics {
   const [metrics, setMetrics] = useState<WorkflowMetrics>(EMPTY);
+  // Ref para permitir que o handler de realtime chame o loader mais recente
+  const loaderRef = useRef<() => void>(() => {});
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Reset determinístico ao trocar de período: evita flicker com dados antigos
+    setMetrics({ ...EMPTY, isLoading: true });
+
     const loadMetrics = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          if (!cancelled) setMetrics({ ...EMPTY, isLoading: false });
+          return;
+        }
 
         let startDate: string;
         let endDate: string;
@@ -64,13 +75,16 @@ export function useWorkflowMetricsRealtime(
           p_end: endDate,
         });
 
+        if (cancelled) return;
+
         if (error) {
           console.error('❌ [WorkflowMetricsRealtime] RPC:', error);
+          setMetrics((prev) => ({ ...prev, isLoading: false }));
           return;
         }
 
         const row: any = Array.isArray(data) ? data[0] : data;
-        if (!row) { setMetrics(EMPTY); return; }
+        if (!row) { setMetrics({ ...EMPTY, isLoading: false }); return; }
 
         setMetrics({
           previsto: Number(row.previsto) || 0,
@@ -80,13 +94,16 @@ export function useWorkflowMetricsRealtime(
           creditosGerados: Number(row.creditos_gerados) || 0,
           creditosUtilizados: Number(row.creditos_utilizados) || 0,
           caixaRecebido: Number(row.caixa_recebido) || 0,
+          isLoading: false,
         });
       } catch (err) {
         console.error('❌ [WorkflowMetricsRealtime] Error:', err);
+        if (!cancelled) setMetrics((prev) => ({ ...prev, isLoading: false }));
       }
     };
 
-    loadMetrics();
+    loaderRef.current = () => { void loadMetrics(); };
+    void loadMetrics();
 
     if (USE_METRICS_EVENT_BUS) {
       const reload = () => { void loadMetrics(); };
@@ -100,6 +117,7 @@ export function useWorkflowMetricsRealtime(
       window.addEventListener('workflow-session-deleted', reload);
       window.addEventListener('payment-created', reload);
       return () => {
+        cancelled = true;
         offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt();
         window.removeEventListener('workflow-session-updated', reload);
         window.removeEventListener('workflow-session-deleted', reload);
@@ -113,20 +131,21 @@ export function useWorkflowMetricsRealtime(
         event: '*',
         schema: 'public',
         table: 'clientes_sessoes'
-      }, () => loadMetrics())
+      }, () => loaderRef.current())
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'clientes_transacoes'
-      }, () => loadMetrics())
+      }, () => loaderRef.current())
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'cliente_creditos_ledger'
-      }, () => loadMetrics())
+      }, () => loaderRef.current())
       .subscribe();
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [year, month, startDateOverride, endDateOverride]);
