@@ -94,6 +94,9 @@ export function useWorkflowSessionActions({
         const needsRefreeze = false;
 
         const cacheSafeUpdates: Partial<WorkflowSession> = {};
+        // Denormalizados (camelCase) que existem só no cache/store da UI —
+        // nunca são enviados ao DB/RPC (não existem no schema).
+        let uiDenormFields: Record<string, unknown> | null = null;
         for (const [field, value] of Object.entries(validUpdates)) {
           switch (field) {
             case "desconto":
