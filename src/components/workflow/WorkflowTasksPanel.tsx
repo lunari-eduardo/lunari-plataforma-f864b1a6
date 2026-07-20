@@ -64,6 +64,10 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Ids das tarefas-espelho com toggle em vôo — checkbox mostra checked
+  // imediatamente e ignora cliques duplicados enquanto persiste.
+  const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(() => new Set());
+
 
   const monthStart = useMemo(
     () => new Date(currentMonth.year, currentMonth.month - 1, 1),
@@ -154,13 +158,32 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
 
   const handleToggleStatus = async (task: Task) => {
     if (isMirrorTask(task)) {
+      if (pendingToggleIds.has(task.id)) return; // debounce clique duplo
       const nextIsDone = !isTerminalKey(task.status);
-      await toggleMirror(task, nextIsDone);
+      setPendingToggleIds((prev) => {
+        const n = new Set(prev);
+        n.add(task.id);
+        return n;
+      });
+      try {
+        await toggleMirror(task, nextIsDone);
+      } finally {
+        // Libera após pequena janela pra evitar re-clique antes do realtime propagar.
+        setTimeout(() => {
+          setPendingToggleIds((prev) => {
+            if (!prev.has(task.id)) return prev;
+            const n = new Set(prev);
+            n.delete(task.id);
+            return n;
+          });
+        }, 400);
+      }
       return;
     }
     const nextStatus = isTerminalKey(task.status) ? getDefaultOpenKey() : getDoneKey();
     await updateTask(task.id, { status: nextStatus });
   };
+
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
@@ -229,9 +252,10 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
                     task={task}
                     onToggle={() => handleToggleStatus(task)}
                     onDelete={() => deleteTask(task.id)}
-                    isDone={false}
+                    isDone={pendingToggleIds.has(task.id)}
                   />
                 ))}
+
               </div>
             </section>
           )}
