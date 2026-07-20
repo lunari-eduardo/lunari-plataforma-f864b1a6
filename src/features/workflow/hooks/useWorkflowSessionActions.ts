@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useWorkflowRealtime } from "@/features/workflow";
 import type { WorkflowSession } from "@/features/workflow";
 import { workflowStore } from "@/features/workflow/store/workflowStore";
+import { sessionsRepo } from "@/features/workflow/data/sessionsRepo";
 import { isOk } from "@/shared/result";
 import { useRunCapability } from "@/shared/capability";
 import {
@@ -12,7 +13,9 @@ import {
 } from "@/modules/workflow";
 import { USE_CAPABILITY_UPDATE_FIELDS, updatesRequireRefreeze } from "@/features/workflow/config";
 import { recalcFotosExtras, recalcSessionValorTotal } from "@/utils/fotosExtrasCalculator";
+import { deriveDenormalizedProdutos } from "@/features/workflow/domain/productDenorm";
 import { useAppContext } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { WorkflowCurrentMonth } from "./useWorkflowMonthSessions";
 
 interface Params {
@@ -46,11 +49,41 @@ export function useWorkflowSessionActions({
   const { updateSession: updateSessionRealtime } = useWorkflowRealtime();
   const runCapability = useRunCapability();
   const { pacotes: pacotesCtx, categoriasFull: categoriasCtx } = useAppContext();
+  const { user } = useAuth();
+
+  // Ref sempre com o snapshot mais recente — evita closure stale em chamadas
+  // seriais dentro do mesmo tick (bug clássico do modal com 4 onFieldUpdate).
+  const workflowSessionsRef = useRef(workflowSessions);
+  useEffect(() => {
+    workflowSessionsRef.current = workflowSessions;
+  }, [workflowSessions]);
+
+  // Localiza a sessão em qualquer fonte: React state (mês corrente),
+  // workflowStore (cache global) ou DB (último recurso). Fecha o buraco
+  // onde dock/venda avulsa clicavam em sessão fora do mês em cache e o
+  // updateSession lançava "Sessão não encontrada".
+  const resolveCurrentSession = useCallback(
+    async (sessionId: string): Promise<WorkflowSession | null> => {
+      const fromState = workflowSessionsRef.current.find((s) => s.id === sessionId);
+      if (fromState) return fromState;
+      const fromStore = workflowStore.getById(sessionId);
+      if (fromStore) return fromStore;
+      if (!user?.id) return null;
+      try {
+        const fresh = await sessionsRepo.getById(user.id, sessionId);
+        return (fresh as WorkflowSession) ?? null;
+      } catch (e) {
+        console.warn("[updateSession] fallback DB falhou", e);
+        return null;
+      }
+    },
+    [user?.id],
+  );
 
   const updateSession = useCallback(
     async (sessionId: string, updates: Partial<WorkflowSession>, silent = false) => {
       try {
-        const currentSession = workflowSessions.find((s) => s.id === sessionId);
+        const currentSession = await resolveCurrentSession(sessionId);
         if (!currentSession) throw new Error("Sessão não encontrada");
 
         const validUpdates = { ...updates };
@@ -61,6 +94,9 @@ export function useWorkflowSessionActions({
         const needsRefreeze = false;
 
         const cacheSafeUpdates: Partial<WorkflowSession> = {};
+        // Denormalizados (camelCase) que existem só no cache/store da UI —
+        // nunca são enviados ao DB/RPC (não existem no schema).
+        let uiDenormFields: Record<string, unknown> | null = null;
         for (const [field, value] of Object.entries(validUpdates)) {
           switch (field) {
             case "desconto":
@@ -95,9 +131,23 @@ export function useWorkflowSessionActions({
                 raw === "" || raw === "__CLEAR__" ? null : raw;
               break;
             }
-            case "produtosList":
-              cacheSafeUpdates.produtos_incluidos = value as any;
+            case "produtosList": {
+              const produtosArr = Array.isArray(value) ? (value as any[]) : [];
+              cacheSafeUpdates.produtos_incluidos = produtosArr as any;
+              // Denormalizados são derivados apenas para o cache local
+              // (camelCase — não existem no schema do DB). Vão em
+              // `uiDenormFields` e são merged no payload otimista, nunca
+              // no RPC. Substitui as 3 chamadas extras do modal que
+              // sobrescreviam produtos_incluidos por closure stale.
+              const { produto, qtdProduto, valorTotalProduto } =
+                deriveDenormalizedProdutos(produtosArr as any);
+              uiDenormFields = {
+                produto,
+                qtdProduto,
+                valorTotalProduto: `R$ ${valorTotalProduto.toFixed(2).replace(".", ",")}`,
+              };
               break;
+            }
             case "pacote": {
               // Otimista completo: resolve o pacote localmente (AppContext já
               // hidratado — sem network) e preenche o snapshot que o servidor
@@ -159,8 +209,6 @@ export function useWorkflowSessionActions({
                     dataCongelamento: new Date().toISOString(),
                   };
                 } else {
-                  // Fallback: pacote não encontrado localmente → grava valor
-                  // cru e deixa o servidor resolver (comportamento antigo).
                   cacheSafeUpdates.pacote = rawVal as any;
                 }
               }
@@ -227,17 +275,27 @@ export function useWorkflowSessionActions({
           (cacheSafeUpdates as any).valor_total = novoValorTotal;
         }
 
-        if (Object.keys(cacheSafeUpdates).length > 0 && !needsRefreeze) {
+        if ((Object.keys(cacheSafeUpdates).length > 0 || uiDenormFields) && !needsRefreeze) {
+          const nowIso = new Date().toISOString();
           const merged: WorkflowSession = {
             ...currentSession,
             ...cacheSafeUpdates,
-            updated_at: new Date().toISOString(),
+            ...(uiDenormFields ?? {}),
+            updated_at: nowIso,
           };
-          mergeUpdate(merged);
-          // Otimismo também no workflowStore quando produtos_incluidos muda —
-          // garante paridade imediata entre dock e modal (reconciliador de
-          // tarefas-espelho lê daqui). Sem isso, corrida entre `mergeUpdate`
-          // e o refetch do realtime-v2 fazia etapas piscarem.
+          // mergeUpdate recebe payload PARCIAL (só id + delta + updated_at) —
+          // o cache faz shallow-merge internamente. Spread do currentSession
+          // stale causava overwrite de produtos_incluidos em chamadas seriais.
+          const deltaPayload = {
+            id: sessionId,
+            ...cacheSafeUpdates,
+            ...(uiDenormFields ?? {}),
+            updated_at: nowIso,
+          } as unknown as WorkflowSession;
+          mergeUpdate(deltaPayload);
+          // Store SEMPRE recebe o merged completo quando produtos_incluidos
+          // muda — reconciliador Produto→Tarefa lê daqui e precisa do row
+          // inteiro (clientes, cliente_id, etc.).
           if ("produtos_incluidos" in cacheSafeUpdates) {
             try {
               workflowStore.upsert(merged);
@@ -272,7 +330,7 @@ export function useWorkflowSessionActions({
         throw error;
       }
     },
-    [workflowSessions, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability, pacotesCtx, categoriasCtx],
+    [resolveCurrentSession, mergeUpdate, forceRefresh, updateSessionRealtime, runCapability, pacotesCtx, categoriasCtx],
   );
 
   const handleStatusChange = useCallback(

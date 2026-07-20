@@ -69,45 +69,11 @@ export function CardCollapsedModals({
               ...p,
               valorUnitario: p.tipo === "incluso" ? 0 : p.valorUnitario,
             }));
-
-            onFieldUpdate(session.id, "produtosList", produtosCorrigidos);
-
-            const produtosManuais = produtosCorrigidos.filter((p) => p.tipo === "manual");
-            const valorTotalManuais = produtosManuais.reduce(
-              (total, p) => total + p.valorUnitario * p.quantidade,
-              0,
-            );
-
-            if (produtosManuais.length > 0) {
-              const nomesProdutos = produtosManuais.map((p) => p.nome).join(", ");
-              const nomesInclusos = produtosCorrigidos
-                .filter((p) => p.tipo === "incluso")
-                .map((p) => p.nome);
-              const nomeCompleto =
-                nomesInclusos.length > 0
-                  ? `${nomesProdutos} + ${nomesInclusos.length} incluso(s)`
-                  : nomesProdutos;
-              onFieldUpdate(session.id, "produto", nomeCompleto);
-              onFieldUpdate(
-                session.id,
-                "qtdProduto",
-                produtosManuais.reduce((total, p) => total + p.quantidade, 0),
-              );
-            } else if (produtosCorrigidos.filter((p) => p.tipo === "incluso").length > 0) {
-              const produtosInclusos = produtosCorrigidos.filter((p) => p.tipo === "incluso");
-              onFieldUpdate(session.id, "produto", `${produtosInclusos.length} produto(s) incluso(s)`);
-              onFieldUpdate(session.id, "qtdProduto", 0);
-            } else {
-              onFieldUpdate(session.id, "produto", "");
-              onFieldUpdate(session.id, "qtdProduto", 0);
-            }
-
-            await onFieldUpdate(
-              session.id,
-              "valorTotalProduto",
-              formatCurrency(valorTotalManuais),
-              true,
-            );
+            // ÚNICA chamada de save: reducer central em `useWorkflowSessionActions`
+            // deriva `produto` / `qtdProduto` / `valorTotalProduto` a partir de
+            // `produtosList`. Emissões seriais causavam overwrite por closure
+            // stale (chamadas 2/3/4 restauravam produtos antigos do currentSession).
+            await onFieldUpdate(session.id, "produtosList", produtosCorrigidos);
           }}
         />
       )}
