@@ -96,10 +96,7 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     () => mirrorAll.filter((t) => !isTerminalKey(t.status)),
     [mirrorAll, isTerminalKey]
   );
-  const mirrorDone = useMemo(
-    () => mirrorAll.filter((t) => isTerminalKey(t.status)),
-    [mirrorAll, isTerminalKey]
-  );
+
   const normalPending = useMemo(
     () => normalMonth.filter((t) => !isTerminalKey(t.status)),
     [normalMonth, isTerminalKey]
@@ -109,12 +106,10 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     [normalMonth, isTerminalKey]
   );
 
-  const completedAll = useMemo(
-    () => [...mirrorDone, ...normalDone],
-    [mirrorDone, normalDone]
-  );
+  // Concluídas: apenas tarefas normais. Tarefas-espelho são apagadas ao entregar.
+  const completedAll = normalDone;
   const totalPending = mirrorPending.length + normalPending.length;
-  const isEmpty = mirrorAll.length === 0 && normalMonth.length === 0;
+  const isEmpty = mirrorPending.length === 0 && normalMonth.length === 0;
 
   // Sync orderedIds só com tarefas normais pendentes (espelho é ordenado automaticamente).
   useEffect(() => {
@@ -151,6 +146,9 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     },
     updateTaskLocal: async (taskId, patch) => {
       await updateTask(taskId, patch as any);
+    },
+    removeTaskLocal: async (taskId) => {
+      await deleteTask(taskId);
     },
   });
 
