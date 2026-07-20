@@ -34,6 +34,7 @@ import {
 import { isOk } from '@/shared/result';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseTasksRepo } from '@/modules/tasks/infrastructure/supabase/tasksRepo';
+import { excludeMirror } from '@/features/workflow/domain/taskClassification';
 
 function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter(task => {
@@ -71,7 +72,10 @@ function filterTasks(tasks: Task[], filters: TaskFilters): Task[] {
 export default function Tarefas() {
   // Onda 4c: leitura via tasksStore (alimentado pelo canal realtime único em App.tsx).
   // Mutações vão por Capabilities; updates otimistas via `tasksStore.applyOptimisticPatch`.
-  const tasks = useTasks();
+  // Tarefas-espelho do Workflow (tag `workflow:produto`) são privadas ao dock
+  // lateral do Workflow e nunca aparecem no Kanban/Lista de Tarefas.
+  const allTasks = useTasks();
+  const tasks = useMemo(() => excludeMirror(allTasks), [allTasks]);
   const applyOptimisticPatch = useCallback(
     (id: string, patch: Partial<Task>) => tasksStore.applyOptimisticPatch(id, patch),
     [],
