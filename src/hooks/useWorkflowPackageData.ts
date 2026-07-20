@@ -42,23 +42,37 @@ export const useWorkflowPackageData = () => {
       try {
         const packageData = resolvePackageData(session);
 
-        // Mesclar status de produzido/entregue de produtos_incluidos com dados congelados
+        // FONTE ÚNICA DE VERDADE: `produtos_incluidos` (JSONB da linha).
+        // `regras_congeladas.produtos` só é usado para *preencher* valores
+        // ausentes (ex.: `valorUnitario` congelado em imports legados) —
+        // NUNCA sobrescreve `fluxo`/`etapas`/`produzido`/`entregue`, que são
+        // estado vivo controlado pelo modal e pelo dock.
         const frozenProducts = safeArray(session?.regras_congeladas?.produtos);
         const produtosIncluidos = safeArray(session?.produtos_incluidos);
 
-        const produtosList = frozenProducts.length > 0
-          ? frozenProducts.map((fp: any) => {
-              const produtoAtual = produtosIncluidos.find((pi: any) => pi.id === fp.id || pi.nome === fp.nome);
+        const findFrozen = (pi: any) =>
+          frozenProducts.find((fp: any) =>
+            (pi.id && fp.id === pi.id)
+            || (pi.produtoId && fp.produtoId === pi.produtoId)
+            || (pi.produtoId && fp.id === pi.produtoId)
+            || (pi.nome && fp.nome === pi.nome)
+          );
+
+        const produtosList = produtosIncluidos.length > 0
+          ? produtosIncluidos.map((pi: any) => {
+              const fp: any = findFrozen(pi) || {};
               return {
                 ...fp,
-                fluxo: produtoAtual?.fluxo ?? fp.fluxo,
-                etapas: produtoAtual?.etapas ?? fp.etapas,
-                valorUnitario: produtoAtual?.valorUnitario ?? fp.valorUnitario,
-                produzido: produtoAtual?.produzido ?? fp.produzido ?? false,
-                entregue: produtoAtual?.entregue ?? fp.entregue ?? false
+                ...pi,
+                // Preserva valorUnitario vivo, mas cai para congelado se pi vier 0/undefined
+                valorUnitario: pi.valorUnitario ?? fp.valorUnitario ?? 0,
+                fluxo: pi.fluxo ?? fp.fluxo,
+                etapas: pi.etapas ?? fp.etapas,
+                produzido: pi.produzido ?? fp.produzido ?? false,
+                entregue: pi.entregue ?? fp.entregue ?? false,
               };
             })
-          : produtosIncluidos;
+          : frozenProducts;
 
         // BLOCO B: Normalizar todos os valores numéricos ANTES de usar .toFixed()
         const descontoNum = toSafeNumber(session.desconto);
