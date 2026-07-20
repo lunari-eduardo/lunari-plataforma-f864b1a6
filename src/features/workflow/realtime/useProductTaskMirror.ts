@@ -96,8 +96,13 @@ export function useProductTaskMirror(): void {
 
     // === Direção ÚNICA: Produto → Tarefa (create/update/complete) ===
     const specsBySession = new Map<string, MirrorSpec[]>();
+    // produtos que estavam memoizados (write recente do dock/modal). Precisam
+    // ser tratados como "vistos" para NÃO serem apagados como órfãos.
+    const memoizedBySession = new Map<string, Set<string>>();
     for (const session of sessions) {
       const produtos = normalizeProdutos(session.produtos_incluidos);
+      const memoSet = new Set<string>();
+      memoizedBySession.set(session.id, memoSet);
       if (produtos.length === 0) {
         specsBySession.set(session.id, []);
         continue;
@@ -110,7 +115,14 @@ export function useProductTaskMirror(): void {
         // toggle do dock, pular reconciliação (a tarefa já foi atualizada
         // otimisticamente pelo próprio handler).
         if (pid && mirrorMemoStore.matches(session.id, pid, etapasHash(hydrated.etapas ?? []))) {
+          memoSet.add(pid);
           continue;
+        }
+        // Também memoizado (janela ativa) mas hash divergente: ainda proteger
+        // contra deleção — deixamos o próximo tick reconciliar quando os
+        // hashes convergirem.
+        if (pid && mirrorMemoStore.hasRecent(session.id, pid)) {
+          memoSet.add(pid);
         }
         const s = buildMirrorSpec(session, hydrated);
         if (s) specs.push(s);
@@ -123,6 +135,7 @@ export function useProductTaskMirror(): void {
       if (!session) continue;
       const sessionMirrors = listMirrorTasksForSession(tasks, sessionId);
       const seenProductIds = new Set<string>();
+      const memoizedProductIds = memoizedBySession.get(sessionId) ?? new Set<string>();
 
       for (const spec of specs) {
         seenProductIds.add(spec.produtoId);
@@ -131,12 +144,17 @@ export function useProductTaskMirror(): void {
       }
 
       // Órfãs: tarefas cujo produtoId não existe mais → apagar.
+      // NUNCA apagar produtos memoizados (write recente em janela anti-eco).
       for (const t of sessionMirrors) {
         const pid = extractProdutoIdFromTask(t);
-        if (!pid || seenProductIds.has(pid)) continue;
+        if (!pid || seenProductIds.has(pid) || memoizedProductIds.has(pid)) continue;
+        // Trava extra: se houve write recente para essa task, não apagar.
+        const lastWrite = lastWriteByTaskRef.current.get(t.id);
+        if (lastWrite && Date.now() - lastWrite.at < 1500) continue;
         await removeTask(t);
       }
     }
+
 
     async function applySpec(spec: MirrorSpec, existing: Task | undefined) {
       const openKey = getDefaultOpenKey();
