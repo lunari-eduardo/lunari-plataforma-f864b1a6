@@ -390,9 +390,6 @@ export function WorkflowCardCollapsed({
               />
             </div>
           </div>
-              </Button>
-            </div>
-          </div>
 
           {/* 9: Pendente / Crédito da sessão */}
           <CollapsedPendingCell
