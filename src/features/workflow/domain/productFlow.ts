@@ -85,6 +85,27 @@ export function isEntregue(etapas: EtapaProducao[] | undefined | null): boolean 
   return etapas.every((e) => e.done);
 }
 
+/** Avança uma etapa: marca o primeiro !done como done. No-op se tudo pronto. */
+export function advanceOne(etapas: EtapaProducao[]): EtapaProducao[] {
+  const idx = etapas.findIndex((e) => !e.done);
+  if (idx === -1) return etapas;
+  return etapas.map((e, i) => (i === idx ? { ...e, done: true } : e));
+}
+
+/** Retrocede uma etapa: marca a última done como !done. No-op se nada done. */
+export function retreatOne(etapas: EtapaProducao[]): EtapaProducao[] {
+  let last = -1;
+  for (let i = 0; i < etapas.length; i++) if (etapas[i].done) last = i;
+  if (last === -1) return etapas;
+  return etapas.map((e, i) => (i === last ? { ...e, done: false } : e));
+}
+
+/** Hash estável do padrão done/pendente — usado para dedup do eco. */
+export function etapasHash(etapas: EtapaProducao[] | undefined | null): string {
+  if (!etapas || etapas.length === 0) return "";
+  return etapas.map((e) => (e.done ? "1" : "0")).join("");
+}
+
 /** Hidrata um item legado (só `produzido`/`entregue`) em um item completo. */
 export function hydrateProduto<T extends ProdutoWorkflowFlow>(p: T): T {
   if (p.etapas && p.etapas.length > 0) {
