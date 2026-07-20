@@ -51,47 +51,68 @@ export function GerenciarProdutosModal({
   const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflowFlow[]>([]);
   const [resetSignal, setResetSignal] = useState(false);
   const [customFlowToPersist, setCustomFlowToPersist] = useState<string[] | null>(null);
+  // Ids de produtos com edições locais pendentes — preservados no merge.
+  const dirtyIdsRef = useRef<Set<string>>(new Set());
 
   const { produtos: produtosConfig } = useRealtimeConfiguration();
   const { prefs, saveUltimoFluxoCustom } = useWorkflowPreferences();
 
-  const isInitialized = useRef(false);
   const wasOpen = useRef(false);
 
   useEffect(() => {
     if (open && !wasOpen.current) {
       setResetSignal(true);
       requestAnimationFrame(() => setResetSignal(false));
+      dirtyIdsRef.current = new Set();
     }
     wasOpen.current = open;
   }, [open]);
 
+  // Merge não-destrutivo: quando a prop `produtos` mudar (realtime/toggle no
+  // dock, etc.), sobrescreve apenas produtos que NÃO estão marcados como
+  // dirty pelo usuário. Também roda na abertura para hidratar o estado.
   useEffect(() => {
-    if (open && !isInitialized.current) {
-      const produtosCorrigidos = produtos.map((produto) => {
-        let nomeProduto = produto.nome;
-        if (!nomeProduto || nomeProduto.startsWith("Produto ID:")) {
-          const produtoEncontrado =
-            produtosConfig.find(
-              (p) => p.nome === produto.nome || p.id === produto.nome || produto.nome?.includes(p.id),
-            ) ||
-            productOptions.find(
-              (p) => p.nome === produto.nome || p.id === produto.nome || produto.nome?.includes(p.id),
-            );
-          if (produtoEncontrado) nomeProduto = produtoEncontrado.nome;
-        }
-        const hydrated = hydrateProduto({
-          ...produto,
-          nome: nomeProduto,
-          valorUnitario: produto.tipo === "incluso" ? 0 : produto.valorUnitario,
-        });
-        return { ...hydrated, id: hydrated.id ?? genId() };
+    if (!open) return;
+    const hydratedProps = produtos.map((produto) => {
+      let nomeProduto = produto.nome;
+      if (!nomeProduto || nomeProduto.startsWith("Produto ID:")) {
+        const produtoEncontrado =
+          produtosConfig.find(
+            (p) => p.nome === produto.nome || p.id === produto.nome || produto.nome?.includes(p.id),
+          ) ||
+          productOptions.find(
+            (p) => p.nome === produto.nome || p.id === produto.nome || produto.nome?.includes(p.id),
+          );
+        if (produtoEncontrado) nomeProduto = produtoEncontrado.nome;
+      }
+      const hydrated = hydrateProduto({
+        ...produto,
+        nome: nomeProduto,
+        valorUnitario: produto.tipo === "incluso" ? 0 : produto.valorUnitario,
       });
-      setLocalProdutos(produtosCorrigidos);
-      setCustomFlowToPersist(null);
-      isInitialized.current = true;
-    }
-    if (!open) isInitialized.current = false;
+      return { ...hydrated, id: hydrated.id ?? genId() };
+    });
+
+    setLocalProdutos((prev) => {
+      // Primeira hidratação: usa a prop inteira.
+      if (prev.length === 0) return hydratedProps;
+      const dirty = dirtyIdsRef.current;
+      const prevById = new Map(prev.map((p) => [p.id ?? "", p]));
+      const merged = hydratedProps.map((incoming) => {
+        const id = incoming.id ?? "";
+        if (id && dirty.has(id)) {
+          const local = prevById.get(id);
+          if (local) return local; // preserva edição local não salva
+        }
+        return incoming;
+      });
+      // Preserva produtos novos criados localmente que ainda não foram salvos.
+      const incomingIds = new Set(hydratedProps.map((p) => p.id));
+      for (const p of prev) {
+        if (!incomingIds.has(p.id) && p.id && dirty.has(p.id)) merged.push(p);
+      }
+      return merged;
+    });
   }, [open, produtos, produtosConfig, productOptions]);
 
   const totais = useMemo(() => {
