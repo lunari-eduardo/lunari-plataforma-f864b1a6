@@ -312,6 +312,7 @@ export interface MirrorToggleDeps {
 }
 
 export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
+  const { user } = useAuth();
   const { getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
   const depsRef = useRef(deps);
   depsRef.current = deps;
@@ -320,11 +321,33 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
     async (task: Task, nextIsDone: boolean) => {
       const produtoId = extractProdutoIdFromTask(task);
       if (!produtoId || !task.relatedSessionId) return;
-      const session = workflowStore.getById(task.relatedSessionId);
-      if (!session) return;
-      const produtos = normalizeProdutos(session.produtos_incluidos).map(hydrateProduto);
+      const session = await resolveSessionForMirrorToggle(task.relatedSessionId, user?.id);
+      if (!session) {
+        console.warn("[useMirrorToggleHandler] sessão não encontrada para tarefa-espelho", {
+          taskId: task.id,
+          relatedSessionId: task.relatedSessionId,
+        });
+        return;
+      }
+      // Normaliza produtos com o mesmo fallback do reconciliador (id determinístico
+      // para produtos legados/venda avulsa sem id persistido).
+      const produtos = normalizeProdutos(session.produtos_incluidos).map((p, i) => {
+        const hydrated = hydrateProduto(p);
+        if (hydrated.id) return hydrated;
+        return {
+          ...hydrated,
+          id: deterministicProductId(session.id, hydrated.nome, i),
+        };
+      });
       const idx = findProdutoIndexInSession(produtos, produtoId);
-      if (idx === -1) return;
+      if (idx === -1) {
+        console.warn("[useMirrorToggleHandler] produto da tarefa-espelho não encontrado", {
+          taskId: task.id,
+          sessionId: session.id,
+          produtoId,
+        });
+        return;
+      }
 
       const produto = produtos[idx];
       const etapas = produto.etapas ?? [];
@@ -346,8 +369,6 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
       const novaLista = produtos.map((p, i) => (i === idx ? novoProduto : p));
 
       // Otimismo no workflowStore: reconciliador (Produto → Tarefa) lê daqui.
-      // Sem isso, na próxima passada (180ms) ele veria etapas antigas e
-      // reescreveria a tarefa com o título antigo (revert visível).
       try {
         workflowStore.upsert({
           ...(session as WorkflowSession),
@@ -358,10 +379,7 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
         console.warn("[useMirrorToggleHandler] falha no upsert otimista do store", e);
       }
 
-      // Memoriza o hash — evita eco na próxima passada do reconciliador.
-      mirrorMemoStore.memorize(session.id, produtoId, etapasHash(novasEtapas));
-
-      // Título esperado para a tarefa (mesma regra do buildMirrorSpec).
+      // Título esperado (mesma regra do buildMirrorSpec).
       const clienteNome = (session as any).clientes?.nome ?? "";
       const novoTitulo = buildTitle({
         produtoNome: produto.nome,
@@ -371,37 +389,60 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
         isEntregue: entregue,
       });
 
-      // Otimismo: aplica na UI da tarefa imediatamente.
+      // Memoriza hash + título esperado — evita eco na próxima passada do reconciliador.
+      mirrorMemoStore.memorize(session.id, produtoId, etapasHash(novasEtapas), novoTitulo);
+
+      // Otimismo visual da tarefa via store local (sem round-trip). A escrita
+      // canônica no banco acontece depois que o produto for salvo.
       try {
         if (entregue) {
-          await depsRef.current.removeTaskLocal(task.id);
+          tasksStore.remove(task.id);
         } else {
-          await depsRef.current.updateTaskLocal(task.id, {
+          tasksStore.applyOptimisticPatch(task.id, {
             title: novoTitulo,
             status: getDefaultOpenKey(),
-          } as Partial<Task>);
+          } as any);
         }
       } catch (e) {
         console.warn("[useMirrorToggleHandler] falha ao aplicar tarefa otimista", e);
       }
 
-      // Persiste no produto — em caso de erro, reverte a tarefa e limpa memo.
+      // Product-first: salva o produto e SÓ ENTÃO ajusta/apaga a tarefa no banco.
       try {
         await depsRef.current.updateSessionProducts(session.id, novaLista);
-      } catch (e) {
-        console.warn("[useMirrorToggleHandler] falha ao gravar produto — revertendo tarefa", e);
-        mirrorMemoStore.clear(session.id);
         try {
-          await depsRef.current.updateTaskLocal(task.id, {
-            title: task.title,
-            status: task.status,
-          } as Partial<Task>);
+          if (entregue) {
+            await depsRef.current.removeTaskLocal(task.id);
+          } else {
+            await depsRef.current.updateTaskLocal(task.id, {
+              title: novoTitulo,
+              status: getDefaultOpenKey(),
+            } as Partial<Task>);
+          }
+        } catch (e) {
+          console.warn(
+            "[useMirrorToggleHandler] produto salvo, mas persistência da task falhou",
+            e,
+          );
+        }
+      } catch (e) {
+        console.warn("[useMirrorToggleHandler] falha ao gravar produto — revertendo", e);
+        mirrorMemoStore.clear(session.id, produtoId);
+        try {
+          if (entregue) {
+            tasksStore.upsert(task as any);
+          } else {
+            tasksStore.applyOptimisticPatch(task.id, {
+              title: task.title,
+              status: task.status,
+            } as any);
+          }
         } catch {
           /* noop */
         }
       }
     },
-    [getDoneKey, getDefaultOpenKey],
+    [getDoneKey, getDefaultOpenKey, user?.id],
   );
 }
 
