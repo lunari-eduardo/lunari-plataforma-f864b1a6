@@ -42,6 +42,26 @@ const slugId = (prefix: string, nome: string, i: number) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "")}`;
 
+/**
+ * Id determinístico para produtos legados que não têm `id` persistido
+ * (ex.: vendas avulsas antigas, importações). Estável entre reconciliações
+ * — sessão+nome+índice — para que a dedup por tag `produto:<id>` funcione.
+ */
+export function deterministicProductId(
+  sessionId: string,
+  nome: string,
+  idx: number,
+): string {
+  const slug = (nome || "produto")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 40);
+  return `legacy_${sessionId}_${idx}_${slug || "produto"}`;
+}
+
 export function buildEtapasPadrao(): EtapaProducao[] {
   return ETAPAS_PADRAO_NOMES.map((nome, i) => ({
     id: slugId("std", nome, i),
