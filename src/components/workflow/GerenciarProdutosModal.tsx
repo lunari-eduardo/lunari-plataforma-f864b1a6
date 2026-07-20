@@ -126,29 +126,55 @@ export function GerenciarProdutosModal({
   const formatCurrency = (value: number | undefined | null) =>
     `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
 
-  const patchProduto = (index: number, patch: Partial<ProdutoWorkflowFlow>) =>
-    setLocalProdutos((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+  const markDirtyAt = (index: number) => {
+    setLocalProdutos((prev) => {
+      const p = prev[index];
+      if (p?.id) dirtyIdsRef.current.add(p.id);
+      return prev;
+    });
+  };
+
+  const patchProduto = (index: number, patch: Partial<ProdutoWorkflowFlow>) => {
+    setLocalProdutos((prev) =>
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        if (p.id) dirtyIdsRef.current.add(p.id);
+        return { ...p, ...patch };
+      }),
+    );
+  };
 
   const handleQuantidadeChange = (index: number, novaQuantidade: number) =>
     patchProduto(index, { quantidade: Math.max(0, novaQuantidade) });
 
   const handleValorUnitarioChange = (index: number, novoValor: number) => {
     setLocalProdutos((prev) =>
-      prev.map((p, i) =>
-        i === index && p.tipo === "manual" ? { ...p, valorUnitario: Math.max(0, novoValor) } : p,
-      ),
+      prev.map((p, i) => {
+        if (i !== index || p.tipo !== "manual") return p;
+        if (p.id) dirtyIdsRef.current.add(p.id);
+        return { ...p, valorUnitario: Math.max(0, novoValor) };
+      }),
     );
   };
 
-  const handleRemoverProduto = (index: number) =>
-    setLocalProdutos((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoverProduto = (index: number) => {
+    setLocalProdutos((prev) => {
+      const p = prev[index];
+      if (p?.id) dirtyIdsRef.current.add(p.id);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const handleEtapasChange = (index: number, etapas: EtapaProducao[]) =>
     patchProduto(index, { etapas });
 
   const handleFluxoChange = (index: number, fluxo: "padrao" | "custom") =>
     setLocalProdutos((prev) =>
-      prev.map((p, i) => (i === index ? switchFluxo(p, fluxo, prefs.ultimoFluxoCustom) : p)),
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        if (p.id) dirtyIdsRef.current.add(p.id);
+        return switchFluxo(p, fluxo, prefs.ultimoFluxoCustom);
+      }),
     );
 
   const handleCustomFlowSaved = (nomes: string[]) => {
@@ -161,17 +187,23 @@ export function GerenciarProdutosModal({
     const produtoExistente = localProdutos.find((p) => p.nome === product.nome);
     if (produtoExistente) {
       setLocalProdutos((prev) =>
-        prev.map((p) => (p.nome === product.nome ? { ...p, quantidade: (p.quantidade || 0) + 1 } : p)),
+        prev.map((p) => {
+          if (p.nome !== product.nome) return p;
+          if (p.id) dirtyIdsRef.current.add(p.id);
+          return { ...p, quantidade: (p.quantidade || 0) + 1 };
+        }),
       );
       return;
     }
     const valorString = productData.valor || "R$ 0,00";
     const valorUnitario =
       parseFloat(valorString.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+    const newId = genId();
+    dirtyIdsRef.current.add(newId);
     setLocalProdutos((prev) => [
       ...prev,
       {
-        id: genId(),
+        id: newId,
         produtoId: productData.id,
         nome: product.nome,
         quantidade: 1,
@@ -199,8 +231,10 @@ export function GerenciarProdutosModal({
       // Fire-and-forget — não bloqueia o fechamento do modal.
       saveUltimoFluxoCustom(customFlowToPersist).catch(() => {});
     }
+    dirtyIdsRef.current = new Set();
     onOpenChange(false);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
