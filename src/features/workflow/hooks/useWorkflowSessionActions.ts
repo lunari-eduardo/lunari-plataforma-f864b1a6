@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useWorkflowRealtime } from "@/features/workflow";
 import type { WorkflowSession } from "@/features/workflow";
 import { workflowStore } from "@/features/workflow/store/workflowStore";
+import { sessionsRepo } from "@/features/workflow/data/sessionsRepo";
 import { isOk } from "@/shared/result";
 import { useRunCapability } from "@/shared/capability";
 import {
@@ -12,7 +13,9 @@ import {
 } from "@/modules/workflow";
 import { USE_CAPABILITY_UPDATE_FIELDS, updatesRequireRefreeze } from "@/features/workflow/config";
 import { recalcFotosExtras, recalcSessionValorTotal } from "@/utils/fotosExtrasCalculator";
+import { deriveDenormalizedProdutos } from "@/features/workflow/domain/productDenorm";
 import { useAppContext } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { WorkflowCurrentMonth } from "./useWorkflowMonthSessions";
 
 interface Params {
