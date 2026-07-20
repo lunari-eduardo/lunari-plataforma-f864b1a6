@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineCommand } from "@/shared/capability";
 import { domainError, err, isOk, ok } from "@/shared/result";
 import { supabaseTasksRepo } from "../../infrastructure/supabase/tasksRepo";
+import { tasksStore } from "../../presentation/store/tasksStore";
 import { resolveUserId } from "../_auth";
 
 const Patch = z.object({
@@ -58,6 +59,11 @@ export const updateTask = defineCommand({
         Object.entries(patch).map(([k, v]) => [k, v === null ? undefined : v]),
       );
       const task = await supabaseTasksRepo.update(id, normalized, userId);
+      // Upsert local imediato — evita esperar o eco do canal Realtime.
+      // Idempotente com o evento postgres_changes (anti-eco via `lastSeq`).
+      if (ctx.runtime === "client") {
+        try { tasksStore.upsert(task); } catch { /* noop */ }
+      }
       const changedKeys = Object.keys(patch);
       await ctx.emit("tasks.updated", { id, changedKeys, photographerId: userId });
       return ok({ id, changedKeys, task });
