@@ -158,13 +158,32 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
 
   const handleToggleStatus = async (task: Task) => {
     if (isMirrorTask(task)) {
+      if (pendingToggleIds.has(task.id)) return; // debounce clique duplo
       const nextIsDone = !isTerminalKey(task.status);
-      await toggleMirror(task, nextIsDone);
+      setPendingToggleIds((prev) => {
+        const n = new Set(prev);
+        n.add(task.id);
+        return n;
+      });
+      try {
+        await toggleMirror(task, nextIsDone);
+      } finally {
+        // Libera após pequena janela pra evitar re-clique antes do realtime propagar.
+        setTimeout(() => {
+          setPendingToggleIds((prev) => {
+            if (!prev.has(task.id)) return prev;
+            const n = new Set(prev);
+            n.delete(task.id);
+            return n;
+          });
+        }, 400);
+      }
       return;
     }
     const nextStatus = isTerminalKey(task.status) ? getDefaultOpenKey() : getDoneKey();
     await updateTask(task.id, { status: nextStatus });
   };
+
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
