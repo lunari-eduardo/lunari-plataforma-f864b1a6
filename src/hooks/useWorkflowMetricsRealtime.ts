@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { USE_METRICS_EVENT_BUS } from '@/features/workflow/config';
-import { eventBus } from '@/shared/event-bus';
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { USE_METRICS_EVENT_BUS } from "@/features/workflow/config";
+import { eventBus } from "@/shared/event-bus";
+import { metricsCache } from "@/features/workflow/data/metricsCache";
+import { fetchMonthMetrics } from "@/features/workflow/data/metricsRepo";
 
-interface WorkflowMetrics {
+export interface WorkflowMetrics {
   previsto: number;
   receita: number;
   aReceber: number;
@@ -11,10 +13,15 @@ interface WorkflowMetrics {
   creditosGerados: number;
   creditosUtilizados: number;
   caixaRecebido: number;
+  /** true quando NÃO há dado exibível (nem cache) — UI mostra skeleton. */
+  isColdLoading: boolean;
+  /** true quando há dado visível mas um refresh está em curso — UI NÃO bloqueia. */
+  isRevalidating: boolean;
+  /** @deprecated alias de `isColdLoading` para compat com componentes existentes. */
   isLoading: boolean;
 }
 
-const EMPTY: WorkflowMetrics = {
+const EMPTY_DATA = {
   previsto: 0,
   receita: 0,
   aReceber: 0,
@@ -22,126 +29,170 @@ const EMPTY: WorkflowMetrics = {
   creditosGerados: 0,
   creditosUtilizados: 0,
   caixaRecebido: 0,
-  isLoading: false,
+};
+
+const initialCold: WorkflowMetrics = {
+  ...EMPTY_DATA,
+  isColdLoading: true,
+  isRevalidating: false,
+  isLoading: true,
 };
 
 /**
- * Hook canônico das métricas do Workflow no mês.
- * - Reseta imediatamente ao trocar `year/month` (evita mostrar valores do mês anterior).
- * - Cancela writes de RPCs antigos via flag `cancelled` (proteção a cliques rápidos).
- * - Expõe `isLoading` para a UI renderizar skeletons.
+ * Métricas do Workflow com padrão SWR (stale-while-revalidate).
+ *
+ * Fluxo:
+ * 1. Cache-hit síncrono → renderiza dado antigo com `isRevalidating=true`.
+ *    A tabela permanece INTERATIVA (Workflow.tsx não bloqueia em revalidate).
+ * 2. Cache-miss síncrono → tenta IDB assíncrono; se achar promove para hit.
+ *    Caso contrário mantém `isColdLoading=true` → skeleton.
+ * 3. RPC sempre é disparado (com dedup) e, ao chegar, atualiza + cache.
+ * 4. Eventos de pagamento/card_updated invalidam cache e refazem SWR.
  */
 export function useWorkflowMetricsRealtime(
   year: number,
   month?: number,
   startDateOverride?: string,
-  endDateOverride?: string
+  endDateOverride?: string,
 ): WorkflowMetrics {
-  const [metrics, setMetrics] = useState<WorkflowMetrics>(EMPTY);
-  // Ref para permitir que o handler de realtime chame o loader mais recente
+  const [metrics, setMetrics] = useState<WorkflowMetrics>(initialCold);
   const loaderRef = useRef<() => void>(() => {});
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    const usingOverride = Boolean(startDateOverride && endDateOverride);
+    const cacheableMonth = !usingOverride && typeof month === "number";
 
-    // Reset determinístico ao trocar de período: evita flicker com dados antigos
-    setMetrics({ ...EMPTY, isLoading: true });
+    // Seed inicial: se há cache síncrono, começa em revalidate; senão cold.
+    const seedFromCacheSync = async (userId: string) => {
+      if (!cacheableMonth) {
+        setMetrics((prev) => ({ ...prev, isColdLoading: true, isRevalidating: false, isLoading: true }));
+        return;
+      }
+      const hit = metricsCache.getSync(userId, year, month!);
+      if (hit) {
+        setMetrics({
+          ...hit,
+          isColdLoading: false,
+          isRevalidating: true,
+          isLoading: false,
+        });
+        return;
+      }
+      // Miss síncrono → mostra cold e tenta IDB
+      setMetrics({ ...EMPTY_DATA, isColdLoading: true, isRevalidating: false, isLoading: true });
+      const persisted = await metricsCache.get(userId, year, month!);
+      if (cancelled || !persisted) return;
+      setMetrics({
+        ...persisted,
+        isColdLoading: false,
+        isRevalidating: true,
+        isLoading: false,
+      });
+    };
 
-    const loadMetrics = async () => {
+    const loadFresh = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) {
-          if (!cancelled) setMetrics({ ...EMPTY, isLoading: false });
+          setMetrics({ ...EMPTY_DATA, isColdLoading: false, isRevalidating: false, isLoading: false });
+          return;
+        }
+        userIdRef.current = user.id;
+
+        // Se veio override de datas, mantém caminho legado (sem cache).
+        if (usingOverride) {
+          const { data, error } = await supabase.rpc("workflow_month_metrics", {
+            p_user_id: user.id,
+            p_start: startDateOverride!,
+            p_end: endDateOverride!,
+          });
+          if (cancelled) return;
+          if (error) throw error;
+          const row: any = Array.isArray(data) ? data[0] : data;
+          if (!row) {
+            setMetrics({ ...EMPTY_DATA, isColdLoading: false, isRevalidating: false, isLoading: false });
+            return;
+          }
+          setMetrics({
+            previsto: Number(row.previsto) || 0,
+            receita: Number(row.receita) || 0,
+            aReceber: Number(row.pendente) || 0,
+            sessoes: Number(row.sessoes) || 0,
+            creditosGerados: Number(row.creditos_gerados) || 0,
+            creditosUtilizados: Number(row.creditos_utilizados) || 0,
+            caixaRecebido: Number(row.caixa_recebido) || 0,
+            isColdLoading: false,
+            isRevalidating: false,
+            isLoading: false,
+          });
           return;
         }
 
-        let startDate: string;
-        let endDate: string;
-        if (startDateOverride && endDateOverride) {
-          startDate = startDateOverride;
-          endDate = endDateOverride;
-        } else if (month) {
-          startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-          const lastDay = new Date(year, month, 0).getDate();
-          endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-        } else {
-          startDate = `${year}-01-01`;
-          endDate = `${year}-12-31`;
-        }
+        if (!cacheableMonth) return;
 
-        const { data, error } = await supabase.rpc('workflow_month_metrics', {
-          p_user_id: user.id,
-          p_start: startDate,
-          p_end: endDate,
-        });
-
+        // Semeia da cache antes de ir ao RPC.
+        await seedFromCacheSync(user.id);
         if (cancelled) return;
 
-        if (error) {
-          console.error('❌ [WorkflowMetricsRealtime] RPC:', error);
-          setMetrics((prev) => ({ ...prev, isLoading: false }));
+        const fresh = await fetchMonthMetrics(user.id, year, month!);
+        if (cancelled) return;
+        if (!fresh) {
+          setMetrics((prev) => ({ ...prev, isColdLoading: false, isRevalidating: false, isLoading: false }));
           return;
         }
-
-        const row: any = Array.isArray(data) ? data[0] : data;
-        if (!row) { setMetrics({ ...EMPTY, isLoading: false }); return; }
-
         setMetrics({
-          previsto: Number(row.previsto) || 0,
-          receita: Number(row.receita) || 0,
-          aReceber: Number(row.pendente) || 0,
-          sessoes: Number(row.sessoes) || 0,
-          creditosGerados: Number(row.creditos_gerados) || 0,
-          creditosUtilizados: Number(row.creditos_utilizados) || 0,
-          caixaRecebido: Number(row.caixa_recebido) || 0,
+          ...fresh,
+          isColdLoading: false,
+          isRevalidating: false,
           isLoading: false,
         });
       } catch (err) {
-        console.error('❌ [WorkflowMetricsRealtime] Error:', err);
-        if (!cancelled) setMetrics((prev) => ({ ...prev, isLoading: false }));
+        console.error("❌ [WorkflowMetricsRealtime]", err);
+        if (!cancelled) {
+          setMetrics((prev) => ({ ...prev, isColdLoading: false, isRevalidating: false, isLoading: false }));
+        }
       }
     };
 
-    loaderRef.current = () => { void loadMetrics(); };
-    void loadMetrics();
+    loaderRef.current = () => { void loadFresh(); };
+    void loadFresh();
+
+    // Handler de invalidação: dropa cache do mês corrente e re-executa.
+    const invalidateAndReload = () => {
+      const uid = userIdRef.current;
+      if (uid && cacheableMonth) metricsCache.invalidate(uid, year, month!);
+      // Marca revalidação (mantém números visíveis)
+      setMetrics((prev) => ({ ...prev, isRevalidating: true }));
+      loaderRef.current();
+    };
 
     if (USE_METRICS_EVENT_BUS) {
-      const reload = () => { void loadMetrics(); };
-      const offCard = eventBus.on('workflow.card_updated', reload);
-      const offAdv = eventBus.on('workflow.card_advanced', reload);
-      const offDel = eventBus.on('workflow.card_deleted', reload);
-      const offPay = eventBus.on('workflow.payment_added', reload);
-      const offRef = eventBus.on('workflow.payment_refunded', reload);
-      const offAtt = eventBus.on('workflow.payment_attached', reload);
-      window.addEventListener('workflow-session-updated', reload);
-      window.addEventListener('workflow-session-deleted', reload);
-      window.addEventListener('payment-created', reload);
+      const offCard = eventBus.on("workflow.card_updated", invalidateAndReload);
+      const offAdv = eventBus.on("workflow.card_advanced", invalidateAndReload);
+      const offDel = eventBus.on("workflow.card_deleted", invalidateAndReload);
+      const offPay = eventBus.on("workflow.payment_added", invalidateAndReload);
+      const offRef = eventBus.on("workflow.payment_refunded", invalidateAndReload);
+      const offAtt = eventBus.on("workflow.payment_attached", invalidateAndReload);
+      window.addEventListener("workflow-session-updated", invalidateAndReload);
+      window.addEventListener("workflow-session-deleted", invalidateAndReload);
+      window.addEventListener("payment-created", invalidateAndReload);
       return () => {
         cancelled = true;
         offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt();
-        window.removeEventListener('workflow-session-updated', reload);
-        window.removeEventListener('workflow-session-deleted', reload);
-        window.removeEventListener('payment-created', reload);
+        window.removeEventListener("workflow-session-updated", invalidateAndReload);
+        window.removeEventListener("workflow-session-deleted", invalidateAndReload);
+        window.removeEventListener("payment-created", invalidateAndReload);
       };
     }
 
     const channel = supabase
-      .channel(`workflow-metrics-${year}-${month || 'all'}-${startDateOverride || ''}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'clientes_sessoes'
-      }, () => loaderRef.current())
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'clientes_transacoes'
-      }, () => loaderRef.current())
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'cliente_creditos_ledger'
-      }, () => loaderRef.current())
+      .channel(`workflow-metrics-${year}-${month || "all"}-${startDateOverride || ""}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "clientes_sessoes" }, invalidateAndReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "clientes_transacoes" }, invalidateAndReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cliente_creditos_ledger" }, invalidateAndReload)
       .subscribe();
 
     return () => {
