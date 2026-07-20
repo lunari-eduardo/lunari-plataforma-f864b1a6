@@ -6,9 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Package } from "lucide-react";
 import { useRealtimeConfiguration } from "@/hooks/useRealtimeConfiguration";
-import { ProdutoRow, ProdutoWorkflow } from "./produtos/ProdutoRow";
+import { ProdutoRow } from "./produtos/ProdutoRow";
 import { ProductSearchInput } from "./produtos/ProductSearchInput";
 import { ProdutosFinancialSummary } from "./produtos/ProdutosFinancialSummary";
+import { useWorkflowPreferences } from "@/hooks/useWorkflowPreferences";
+import {
+  buildEtapasPadrao,
+  hydrateProduto,
+  switchFluxo,
+  syncLegacyFlags,
+  type EtapaProducao,
+  type ProdutoWorkflowFlow,
+} from "@/features/workflow/domain/productFlow";
 
 interface ProductOption {
   id: string;
@@ -21,10 +30,15 @@ interface GerenciarProdutosModalProps {
   onOpenChange: (open: boolean) => void;
   sessionId: string;
   clienteName: string;
-  produtos: ProdutoWorkflow[];
+  produtos: ProdutoWorkflowFlow[];
   productOptions: ProductOption[];
-  onSave: (produtos: ProdutoWorkflow[]) => void;
+  onSave: (produtos: ProdutoWorkflowFlow[]) => void;
 }
+
+const genId = () =>
+  (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 export function GerenciarProdutosModal({
   open,
@@ -34,15 +48,16 @@ export function GerenciarProdutosModal({
   productOptions,
   onSave,
 }: GerenciarProdutosModalProps) {
-  const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflow[]>([]);
+  const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflowFlow[]>([]);
   const [resetSignal, setResetSignal] = useState(false);
+  const [customFlowToPersist, setCustomFlowToPersist] = useState<string[] | null>(null);
 
   const { produtos: produtosConfig } = useRealtimeConfiguration();
+  const { prefs, saveUltimoFluxoCustom } = useWorkflowPreferences();
 
   const isInitialized = useRef(false);
   const wasOpen = useRef(false);
 
-  // Sinal de reset para o ProductSearchInput a cada abertura
   useEffect(() => {
     if (open && !wasOpen.current) {
       setResetSignal(true);
@@ -65,15 +80,15 @@ export function GerenciarProdutosModal({
             );
           if (produtoEncontrado) nomeProduto = produtoEncontrado.nome;
         }
-        return {
+        const hydrated = hydrateProduto({
           ...produto,
           nome: nomeProduto,
           valorUnitario: produto.tipo === "incluso" ? 0 : produto.valorUnitario,
-          produzido: produto.produzido ?? false,
-          entregue: produto.entregue ?? false,
-        };
+        });
+        return { ...hydrated, id: hydrated.id ?? genId() };
       });
       setLocalProdutos(produtosCorrigidos);
+      setCustomFlowToPersist(null);
       isInitialized.current = true;
     }
     if (!open) isInitialized.current = false;
@@ -82,26 +97,41 @@ export function GerenciarProdutosModal({
   const totais = useMemo(() => {
     const manuais = localProdutos.filter((p) => p.tipo === "manual");
     const inclusos = localProdutos.filter((p) => p.tipo === "incluso");
-    const totalManuais = manuais.reduce((t, p) => t + p.valorUnitario * p.quantidade, 0);
-    const totalInclusos = inclusos.reduce((t, p) => t + p.valorUnitario * p.quantidade, 0);
+    const totalManuais = manuais.reduce((t, p) => t + (p.valorUnitario || 0) * (p.quantidade || 0), 0);
+    const totalInclusos = inclusos.reduce((t, p) => t + (p.valorUnitario || 0) * (p.quantidade || 0), 0);
     return { manuais: totalManuais, inclusos: totalInclusos, geral: totalManuais + totalInclusos };
   }, [localProdutos]);
 
   const formatCurrency = (value: number | undefined | null) =>
     `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
 
-  const handleQuantidadeChange = (index: number, novaQuantidade: number) => {
+  const patchProduto = (index: number, patch: Partial<ProdutoWorkflowFlow>) =>
+    setLocalProdutos((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+
+  const handleQuantidadeChange = (index: number, novaQuantidade: number) =>
+    patchProduto(index, { quantidade: Math.max(0, novaQuantidade) });
+
+  const handleValorUnitarioChange = (index: number, novoValor: number) => {
     setLocalProdutos((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, quantidade: Math.max(0, novaQuantidade) } : p)),
+      prev.map((p, i) =>
+        i === index && p.tipo === "manual" ? { ...p, valorUnitario: Math.max(0, novoValor) } : p,
+      ),
     );
   };
 
-  const handleRemoverProduto = (index: number) => {
+  const handleRemoverProduto = (index: number) =>
     setLocalProdutos((prev) => prev.filter((_, i) => i !== index));
-  };
 
-  const handleSetFlag = (index: number, key: "produzido" | "entregue", value: boolean) => {
-    setLocalProdutos((prev) => prev.map((p, i) => (i === index ? { ...p, [key]: value } : p)));
+  const handleEtapasChange = (index: number, etapas: EtapaProducao[]) =>
+    patchProduto(index, { etapas });
+
+  const handleFluxoChange = (index: number, fluxo: "padrao" | "custom") =>
+    setLocalProdutos((prev) =>
+      prev.map((p, i) => (i === index ? switchFluxo(p, fluxo, prefs.ultimoFluxoCustom) : p)),
+    );
+
+  const handleCustomFlowSaved = (nomes: string[]) => {
+    setCustomFlowToPersist(nomes);
   };
 
   const handleSelectProduct = (product: ProductOption) => {
@@ -110,33 +140,44 @@ export function GerenciarProdutosModal({
     const produtoExistente = localProdutos.find((p) => p.nome === product.nome);
     if (produtoExistente) {
       setLocalProdutos((prev) =>
-        prev.map((p) => (p.nome === product.nome ? { ...p, quantidade: p.quantidade + 1 } : p)),
+        prev.map((p) => (p.nome === product.nome ? { ...p, quantidade: (p.quantidade || 0) + 1 } : p)),
       );
-    } else {
-      const valorString = productData.valor || "R$ 0,00";
-      const valorUnitario =
-        parseFloat(valorString.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
-      setLocalProdutos((prev) => [
-        ...prev,
-        {
-          nome: product.nome,
-          quantidade: 1,
-          valorUnitario,
-          tipo: "manual",
-          produzido: false,
-          entregue: false,
-        },
-      ]);
+      return;
     }
+    const valorString = productData.valor || "R$ 0,00";
+    const valorUnitario =
+      parseFloat(valorString.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
+    setLocalProdutos((prev) => [
+      ...prev,
+      {
+        id: genId(),
+        produtoId: productData.id,
+        nome: product.nome,
+        quantidade: 1,
+        valorUnitario,
+        tipo: "manual",
+        fluxo: "padrao",
+        etapas: buildEtapasPadrao(),
+        produzido: false,
+        entregue: false,
+      },
+    ]);
   };
 
-  const handleSave = () => {
-    const produtosParaSalvar = localProdutos.map((p) => ({
-      ...p,
-      produzido: !!p.produzido,
-      entregue: !!p.entregue,
-    }));
+  const handleSave = async () => {
+    const produtosParaSalvar = localProdutos.map((p) =>
+      syncLegacyFlags({
+        ...p,
+        id: p.id ?? genId(),
+        fluxo: p.fluxo ?? "padrao",
+        etapas: p.etapas && p.etapas.length > 0 ? p.etapas : buildEtapasPadrao(),
+      }),
+    );
     onSave(produtosParaSalvar);
+    if (customFlowToPersist && customFlowToPersist.length > 0) {
+      // Fire-and-forget — não bloqueia o fechamento do modal.
+      saveUltimoFluxoCustom(customFlowToPersist).catch(() => {});
+    }
     onOpenChange(false);
   };
 
@@ -157,11 +198,11 @@ export function GerenciarProdutosModal({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
-            <Package className="h-5 w-5 text-blue-600" />
+            <Package className="h-5 w-5 text-primary" />
             Gerenciar Produtos para: {clienteName}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground text-xs">
-            Adicione, remova ou edite os produtos associados a este projeto.
+            Ajuste quantidade, preço unitário e etapas de produção de cada produto.
           </DialogDescription>
         </DialogHeader>
 
@@ -172,12 +213,16 @@ export function GerenciarProdutosModal({
               <div className="space-y-2">
                 {localProdutos.map((produto, index) => (
                   <ProdutoRow
-                    key={index}
+                    key={produto.id ?? index}
                     produto={produto}
                     index={index}
+                    ultimoCustomNomes={prefs.ultimoFluxoCustom}
                     onQuantidadeChange={handleQuantidadeChange}
+                    onValorUnitarioChange={handleValorUnitarioChange}
                     onRemove={handleRemoverProduto}
-                    onSetFlag={handleSetFlag}
+                    onEtapasChange={handleEtapasChange}
+                    onFluxoChange={handleFluxoChange}
+                    onCustomFlowSaved={handleCustomFlowSaved}
                     formatCurrency={formatCurrency}
                   />
                 ))}
