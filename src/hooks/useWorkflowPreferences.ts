@@ -53,7 +53,8 @@ export function useWorkflowPreferences() {
       .select("id, configuracoes_workflow")
       .eq("user_id", user.id)
       .maybeSingle();
-    const merged = { ...(existing?.configuracoes_workflow ?? {}), ultimoFluxoCustom: clean };
+    const currentCfg = (existing?.configuracoes_workflow ?? {}) as Record<string, unknown>;
+    const merged = { ...currentCfg, ultimoFluxoCustom: clean };
     if (existing?.id) {
       await supabase
         .from("user_preferences")
