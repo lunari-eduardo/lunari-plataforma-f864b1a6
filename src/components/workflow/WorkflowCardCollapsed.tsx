@@ -18,6 +18,7 @@ import type { SessionData } from "@/types/workflow";
 import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
 import { CardGalleryButtons } from "./details/CardGalleryButtons";
 import { CardCollapsedModals } from "./details/CardCollapsedModals";
+import { ProductStatusChip } from "./details/ProductStatusChip";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionCreditContext } from "@/hooks/useSessionCreditContext";
 
@@ -145,11 +146,7 @@ export function WorkflowCardCollapsed({
   );
 
   const pendente = calculateRestante();
-  const hasProdutos = session.produtosList && session.produtosList.length > 0;
-  const produtosProduzidos = hasProdutos ? session.produtosList!.filter((p) => p.produzido) : [];
-  const todosCompletos = hasProdutos && produtosProduzidos.length === session.produtosList!.length;
-  const parcialmenteCompletos =
-    hasProdutos && produtosProduzidos.length > 0 && produtosProduzidos.length < session.produtosList!.length;
+  const hasProdutos = !!(session.produtosList && session.produtosList.length > 0);
 
   // pacote vazio (limpo) ignora regras_congeladas.
   // Resolução: regras congeladas > lookup local em `pacotes` (caso o otimista
@@ -387,20 +384,12 @@ export function WorkflowCardCollapsed({
               Produtos
             </span>
             <div className="min-h-8 flex items-center justify-center">
-              <Button
-                variant="outline"
-                size="sm"
+              <ProductStatusChip
+                produtos={session.produtosList as any}
                 onClick={() => setModalAberto(true)}
-                className="h-8 min-w-[60px] px-3 text-xs border rounded-md bg-background hover:bg-muted"
-              >
-                <Package
-                  className={`h-3.5 w-3.5 mr-1 ${hasProdutos ? "text-primary" : "text-muted-foreground"}`}
-                />
-                <span className="tabular-nums">{hasProdutos ? session.produtosList!.length : 0}</span>
-                {todosCompletos && <span className="ml-1 w-2 h-2 bg-green-500 rounded-full" />}
-                {parcialmenteCompletos && (
-                  <span className="ml-1 w-2 h-2 bg-yellow-500 rounded-full" />
-                )}
+              />
+            </div>
+          </div>
               </Button>
             </div>
           </div>
