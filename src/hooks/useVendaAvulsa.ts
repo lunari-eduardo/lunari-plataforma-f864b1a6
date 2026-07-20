@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { hydrateProduto } from '@/features/workflow/domain/productFlow';
+
 
 export interface VendaAvulsaProduto {
   nome: string;
@@ -35,12 +37,17 @@ export function useVendaAvulsa() {
       const categoria = input.categoria || 'Venda Avulsa';
 
       // Convert products to produtos_incluidos JSONB format
-      const produtosIncluidos = (input.produtos || []).map(p => ({
+      // Hidrata cada produto com id estável, fluxo e etapas — condição
+      // necessária para o reconciliador Produto → Tarefa (buildMirrorSpec)
+      // criar a tarefa-espelho automaticamente no dock do Workflow.
+      const produtosIncluidos = (input.produtos || []).map(p => hydrateProduto({
+        id: (globalThis.crypto?.randomUUID?.() ?? `p-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
         nome: p.nome,
         quantidade: p.quantidade,
         valorUnitario: p.valorUnitario,
         tipo: 'manual' as const,
-      }));
+        fluxo: 'padrao' as const,
+      } as any));
 
       // Calculate component totals
       const valorBase = input.valorBasePacote || 0;
