@@ -72,9 +72,14 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
   const monthEnd = useMemo(() => endOfMonth(monthStart), [monthStart]);
 
   // === Segregação ===
-  // 1) Tarefas-espelho (Produção): SEMPRE aparecem, independente do mês/dueDate.
+  // 1) Tarefas-espelho (Produção): aparecem apenas para sessões do mês corrente
+  //    (evita poluir o dock com produtos de meses vizinhos em cache).
   // 2) Tarefas normais: SÓ aparecem se tiverem dueDate dentro do mês corrente.
-  const mirrorAll = useMemo(() => tasks.filter(isMirrorTask), [tasks]);
+  const mirrorAll = useMemo(() => {
+    const all = tasks.filter(isMirrorTask);
+    if (!monthSessionIds || monthSessionIds.size === 0) return all;
+    return all.filter((t) => t.relatedSessionId && monthSessionIds.has(t.relatedSessionId));
+  }, [tasks, monthSessionIds]);
   const normalMonth = useMemo(() => {
     return tasks.filter((t) => {
       if (isMirrorTask(t)) return false;
@@ -140,7 +145,21 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     });
   };
 
+  const toggleMirror = useMirrorToggleHandler({
+    updateSessionProducts: async (sessionId, novosProdutos) => {
+      if (onSessionProductsChange) await onSessionProductsChange(sessionId, novosProdutos);
+    },
+    updateTaskLocal: async (taskId, patch) => {
+      await updateTask(taskId, patch as any);
+    },
+  });
+
   const handleToggleStatus = async (task: Task) => {
+    if (isMirrorTask(task)) {
+      const nextIsDone = !isTerminalKey(task.status);
+      await toggleMirror(task, nextIsDone);
+      return;
+    }
     const nextStatus = isTerminalKey(task.status) ? getDefaultOpenKey() : getDoneKey();
     await updateTask(task.id, { status: nextStatus });
   };
