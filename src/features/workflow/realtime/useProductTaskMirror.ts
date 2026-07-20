@@ -240,3 +240,94 @@ function normalizeProdutos(raw: unknown): ProdutoWorkflowFlow[] {
     .filter((p): p is ProdutoWorkflowFlow => !!p && typeof p === "object")
     .map((p) => p as ProdutoWorkflowFlow);
 }
+
+// =====================================================================
+// Toggle handler Tarefa → Produto (reintrodução bidirecional controlada).
+// =====================================================================
+export interface MirrorToggleDeps {
+  /** Persistência de `produtosList` no cache/DB (ex.: `actions.handleFieldUpdate`). */
+  updateSessionProducts: (
+    sessionId: string,
+    novosProdutos: ProdutoWorkflowFlow[],
+  ) => Promise<unknown> | unknown;
+  /** Atualização otimista da tarefa no store local. */
+  updateTaskLocal: (taskId: string, patch: Partial<Task>) => Promise<unknown> | unknown;
+}
+
+export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
+  const { getDoneKey, getDefaultOpenKey } = useSupabaseTaskStatuses();
+  const depsRef = useRef(deps);
+  depsRef.current = deps;
+
+  return useCallback(
+    async (task: Task, nextIsDone: boolean) => {
+      const produtoId = extractProdutoIdFromTask(task);
+      if (!produtoId || !task.relatedSessionId) return;
+      const session = workflowStore.getById(task.relatedSessionId);
+      if (!session) return;
+      const produtos = normalizeProdutos(session.produtos_incluidos).map(hydrateProduto);
+      const idx = findProdutoIndexInSession(produtos, produtoId);
+      if (idx === -1) return;
+
+      const produto = produtos[idx];
+      const etapas = produto.etapas ?? [];
+      const novasEtapas = nextIsDone ? advanceOne(etapas) : retreatOne(etapas);
+      if (novasEtapas === etapas) return; // no-op
+
+      const entregue = isEntregue(novasEtapas);
+      const proxIdx = etapaAtualIndex(novasEtapas);
+      const proxNome = entregue ? null : novasEtapas[proxIdx]?.nome ?? null;
+      const novoProduto: ProdutoWorkflowFlow = {
+        ...produto,
+        etapas: novasEtapas,
+        entregue,
+        produzido:
+          novasEtapas.length > 1
+            ? novasEtapas.slice(0, -1).every((e) => e.done)
+            : entregue,
+      };
+      const novaLista = produtos.map((p, i) => (i === idx ? novoProduto : p));
+
+      // Memoriza o hash — evita eco na próxima passada do reconciliador.
+      mirrorMemoStore.memorize(session.id, produtoId, etapasHash(novasEtapas));
+
+      // Título esperado para a tarefa (mesma regra do buildMirrorSpec).
+      const clienteNome = (session as any).clientes?.nome ?? "";
+      const novoTitulo = buildTitle({
+        produtoNome: produto.nome,
+        quantidade: Number(produto.quantidade) || 1,
+        clienteNome,
+        etapaAtualNome: proxNome,
+        isEntregue: entregue,
+      });
+
+      // Otimismo: aplica na UI da tarefa imediatamente.
+      try {
+        await depsRef.current.updateTaskLocal(task.id, {
+          title: novoTitulo,
+          status: entregue ? getDoneKey() : getDefaultOpenKey(),
+        } as Partial<Task>);
+      } catch (e) {
+        console.warn("[useMirrorToggleHandler] falha ao aplicar tarefa otimista", e);
+      }
+
+      // Persiste no produto — em caso de erro, reverte a tarefa e limpa memo.
+      try {
+        await depsRef.current.updateSessionProducts(session.id, novaLista);
+      } catch (e) {
+        console.warn("[useMirrorToggleHandler] falha ao gravar produto — revertendo tarefa", e);
+        mirrorMemoStore.clear(session.id);
+        try {
+          await depsRef.current.updateTaskLocal(task.id, {
+            title: task.title,
+            status: task.status,
+          } as Partial<Task>);
+        } catch {
+          /* noop */
+        }
+      }
+    },
+    [getDoneKey, getDefaultOpenKey],
+  );
+}
+
