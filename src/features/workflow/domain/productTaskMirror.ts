@@ -112,6 +112,17 @@ export function extractProdutoIdFromTask(task: Task): string | null {
   return tag ? tag.slice("produto:".length) : null;
 }
 
+/** Localiza índice do produto dentro de `produtos_incluidos` — tenta `id`, depois `produtoId`. */
+export function findProdutoIndexInSession(
+  produtos: ProdutoWorkflowFlow[] | undefined | null,
+  produtoId: string,
+): number {
+  if (!Array.isArray(produtos)) return -1;
+  const byId = produtos.findIndex((p) => p?.id === produtoId);
+  if (byId !== -1) return byId;
+  return produtos.findIndex((p) => p?.produtoId === produtoId);
+}
+
 /** Assinatura estável (title+isDone) — usada para dedup de escrita/eco. */
 export function taskSignature(title: string, isDone: boolean): string {
   return `${isDone ? "D" : "O"}::${title}`;
