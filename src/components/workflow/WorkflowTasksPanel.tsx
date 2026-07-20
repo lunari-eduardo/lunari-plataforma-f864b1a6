@@ -96,10 +96,7 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     () => mirrorAll.filter((t) => !isTerminalKey(t.status)),
     [mirrorAll, isTerminalKey]
   );
-  const mirrorDone = useMemo(
-    () => mirrorAll.filter((t) => isTerminalKey(t.status)),
-    [mirrorAll, isTerminalKey]
-  );
+
   const normalPending = useMemo(
     () => normalMonth.filter((t) => !isTerminalKey(t.status)),
     [normalMonth, isTerminalKey]
