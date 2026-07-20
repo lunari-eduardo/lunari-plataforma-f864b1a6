@@ -1,5 +1,5 @@
 /**
- * Reconciliador Produto ↔ Tarefa (Onda: Integração com Tarefas).
+ * Espelho UNIDIRECIONAL Produto → Tarefa (Onda: Integração com Tarefas).
  *
  * Estratégia:
  *  1. Assina `workflowStore` + `useTasks()` + `taskStatusesStore`.
@@ -10,12 +10,10 @@
  *       - existe com título/status divergente → atualiza
  *       - produto entregue → conclui (mantém histórico no dock)
  *       - tarefa órfã (produtoId sumiu) → conclui
- *  3. Detecta ação vinda do dock: se uma tarefa-espelho passou para status
- *     terminal E o produto correspondente ainda tem etapas pendentes, avança
- *     UMA etapa no produto. Se reabriu, retrocede uma etapa.
- *  4. Anti-eco: guarda a assinatura (title+isDone) que o reconciliador escreveu
- *     por 3s. Escritas retornadas pelo realtime com a mesma assinatura são
- *     ignoradas (não disparam interpretação inversa).
+ *
+ * NOTA: A direção reversa (Tarefa → Produto) foi REMOVIDA. Etapas do produto
+ * só podem ser alteradas pelo modal "Gerenciar produtos" do card do Workflow.
+ * Marcar/desmarcar a tarefa-espelho no dock NÃO avança/retrocede etapas.
  *
  * Sem migration; sem canal realtime novo. Reaproveita `TasksRealtimeBridge`.
  */
@@ -27,10 +25,8 @@ import { useTasks } from "@/modules/tasks/presentation/hooks/useTasks";
 import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { useRunCapability } from "@/shared/capability";
 import { createTask, updateTask, completeTask } from "@/modules/tasks";
-import { updateSessionFields } from "@/modules/workflow";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
-import type { WorkflowSession } from "@/features/workflow/domain/session";
 import {
   buildMirrorSpec,
   extractProdutoIdFromTask,
@@ -40,16 +36,8 @@ import {
   taskSignature,
   type MirrorSpec,
 } from "@/features/workflow/domain/productTaskMirror";
-import {
-  hydrateProduto,
-  etapaAtualIndex,
-  toggleEtapaAt,
-  syncLegacyFlags,
-  isEntregue,
-  type ProdutoWorkflowFlow,
-} from "@/features/workflow/domain/productFlow";
+import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
 
-const ECHO_TTL_MS = 3_000;
 const DEBOUNCE_MS = 180;
 
 type WriteMemo = { sig: string; at: number };
@@ -67,19 +55,16 @@ export function useProductTaskMirror(): void {
   const runCapability = useRunCapability();
   const tasks = useTasks();
   const version = useWorkflowVersion();
-  const { getDoneKey, getDefaultOpenKey, isTerminalKey, statuses } =
-    useSupabaseTaskStatuses();
+  const { getDefaultOpenKey, isTerminalKey, statuses } = useSupabaseTaskStatuses();
 
   // Memórias mutáveis (sem re-render):
-  const lastWriteByTaskRef = useRef<Map<string, WriteMemo>>(new Map()); // taskId → sig
-  const prevTaskStatusRef = useRef<Map<string, string>>(new Map()); // taskId → status
-  const productWriteInFlightRef = useRef<Set<string>>(new Set()); // sessionId:produtoId
-  const taskWriteInFlightRef = useRef<Set<string>>(new Set()); // taskId | new:sessionId:produtoId
+  const lastWriteByTaskRef = useRef<Map<string, WriteMemo>>(new Map());
+  const taskWriteInFlightRef = useRef<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
-    if (!statuses || statuses.length === 0) return; // aguarda statuses
+    if (!statuses || statuses.length === 0) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -95,90 +80,8 @@ export function useProductTaskMirror(): void {
   async function reconcile() {
     const sessions = workflowStore.getAll();
     const sessionsById = new Map(sessions.map((s) => [s.id, s]));
-    const mirrorTasks = tasks.filter(
-      (t) => Array.isArray(t.tags) && t.tags.includes(MIRROR_ROOT_TAG),
-    );
 
-    // === 1) Direção Tarefa → Produto (avanço / retrocesso de etapa) ===
-    // Detecta transições de status desde a última passada.
-    const prevMap = prevTaskStatusRef.current;
-    const nextMap = new Map<string, string>();
-    for (const t of mirrorTasks) nextMap.set(t.id, t.status);
-
-    for (const task of mirrorTasks) {
-      const prevStatus = prevMap.get(task.id);
-      const currStatus = task.status;
-      if (prevStatus === undefined) continue; // primeira observação — sem transição
-      if (prevStatus === currStatus) continue;
-
-      const wasDone = isTerminalKey(prevStatus);
-      const isDone = isTerminalKey(currStatus);
-      if (wasDone === isDone) continue; // mudou entre estados abertos: ignora
-
-      // Anti-eco: se essa assinatura foi ESCRITA por nós há < 3s, ignora.
-      const memo = lastWriteByTaskRef.current.get(task.id);
-      const currSig = taskSignature(task.title, isDone);
-      if (memo && memo.sig === currSig && Date.now() - memo.at < ECHO_TTL_MS) continue;
-
-      const sessionId = task.relatedSessionId ?? "";
-      const produtoId = extractProdutoIdFromTask(task);
-      if (!sessionId || !produtoId) continue;
-      const session = sessionsById.get(sessionId);
-      if (!session) continue;
-
-      // Guarda anti-sobrescrita durante edição humana:
-      // se a sessão foi atualizada nos últimos 2s (usuário salvou etapas
-      // no modal, ou realtime acabou de sincronizar), adia a aplicação
-      // do avanço/retrocesso via tarefa até o próximo tick.
-      const updatedAt = (session as any).updated_at;
-      if (updatedAt) {
-        const age = Date.now() - new Date(updatedAt).getTime();
-        if (age >= 0 && age < 2000) continue;
-      }
-
-      const inflightKey = `${sessionId}:${produtoId}`;
-      if (productWriteInFlightRef.current.has(inflightKey)) continue;
-
-
-      const produtos = normalizeProdutos(session.produtos_incluidos);
-      const idxProd = produtos.findIndex((p) => p.id === produtoId);
-      if (idxProd < 0) continue;
-      const produto = hydrateProduto(produtos[idxProd]);
-      const etapas = produto.etapas ?? [];
-      if (etapas.length === 0) continue;
-
-      let newEtapas = etapas;
-      if (isDone) {
-        // Avança 1 etapa: marca a etapa atual como done.
-        const currIdx = etapaAtualIndex(etapas);
-        if (currIdx >= etapas.length) continue; // já tudo concluído
-        newEtapas = toggleEtapaAt(etapas, currIdx);
-      } else {
-        // Reabriu: retrocede 1 etapa (desmarca última done).
-        const doneCount = etapas.filter((e) => e.done).length;
-        if (doneCount === 0) continue;
-        newEtapas = toggleEtapaAt(etapas, doneCount - 1);
-      }
-
-      const novoProduto = syncLegacyFlags({ ...produto, etapas: newEtapas });
-      const novos = [...produtos];
-      novos[idxProd] = novoProduto;
-
-      productWriteInFlightRef.current.add(inflightKey);
-      try {
-        await runCapability(updateSessionFields, {
-          sessionId,
-          fields: { produtos_incluidos: novos as unknown as Record<string, unknown> },
-        });
-      } catch (e) {
-        console.warn("[productTaskMirror] falha ao aplicar tarefa→produto", e);
-      } finally {
-        setTimeout(() => productWriteInFlightRef.current.delete(inflightKey), 500);
-      }
-    }
-    prevTaskStatusRef.current = nextMap;
-
-    // === 2) Direção Produto → Tarefa (create/update/complete) ===
+    // === Direção ÚNICA: Produto → Tarefa (create/update/complete) ===
     const specsBySession = new Map<string, MirrorSpec[]>();
     for (const session of sessions) {
       const produtos = normalizeProdutos(session.produtos_incluidos);
@@ -215,26 +118,12 @@ export function useProductTaskMirror(): void {
       }
     }
 
-    // === 3) Tarefas-espelho de sessões que sumiram do cache: conclui ===
-    for (const t of mirrorTasks) {
-      const sid = t.relatedSessionId ?? "";
-      if (!sid) continue;
-      if (sessionsById.has(sid)) continue;
-      if (isTerminalKey(t.status)) continue;
-      // Só concluímos se realmente sabemos que a sessão foi removida.
-      // Se o mês não está carregado, não temos essa certeza — pulamos.
-      // Heurística: se qualquer outra tarefa-espelho da mesma sessão está
-      // apontando para uma sessão em cache, cache tem esse mês. Caso não,
-      // não concluir (evita fechar tarefas de meses fora do cache).
-    }
-
     async function applySpec(spec: MirrorSpec, existing: Task | undefined) {
-      const doneKey = getDoneKey();
       const openKey = getDefaultOpenKey();
 
       // Caso 1: não existe tarefa → cria (a menos que já esteja entregue).
       if (!existing) {
-        if (spec.isEntregue) return; // produto já concluído e sem histórico → nada a criar
+        if (spec.isEntregue) return;
         const inflightKey = `new:${spec.sessionId}:${spec.produtoId}`;
         if (taskWriteInFlightRef.current.has(inflightKey)) return;
         taskWriteInFlightRef.current.add(inflightKey);
