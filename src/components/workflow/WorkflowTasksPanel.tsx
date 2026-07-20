@@ -64,6 +64,10 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Ids das tarefas-espelho com toggle em vôo — checkbox mostra checked
+  // imediatamente e ignora cliques duplicados enquanto persiste.
+  const [pendingToggleIds, setPendingToggleIds] = useState<Set<string>>(() => new Set());
+
 
   const monthStart = useMemo(
     () => new Date(currentMonth.year, currentMonth.month - 1, 1),
