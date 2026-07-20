@@ -102,7 +102,15 @@ export function useProductTaskMirror(): void {
       }
       const specs: MirrorSpec[] = [];
       for (const p of produtos) {
-        const s = buildMirrorSpec(session, p);
+        const hydrated = hydrateProduto(p);
+        const pid = hydrated.id;
+        // Anti-eco: se esta sessão+produto+hash acabou de ser gravada pelo
+        // toggle do dock, pular reconciliação (a tarefa já foi atualizada
+        // otimisticamente pelo próprio handler).
+        if (pid && mirrorMemoStore.matches(session.id, pid, etapasHash(hydrated.etapas ?? []))) {
+          continue;
+        }
+        const s = buildMirrorSpec(session, hydrated);
         if (s) specs.push(s);
       }
       specsBySession.set(session.id, specs);
