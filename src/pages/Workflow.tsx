@@ -109,8 +109,29 @@ function WorkflowContent() {
     caixaRecebido: metrics.caixaRecebido,
   }), [metrics]);
 
-  // Sinal unificado "trocando de mês" — cobre sessões e métricas.
-  const isChanging = month.loading || month.isLoadingCurrentMonth || metrics.isLoading;
+  // SWR: cold = sem dado exibível; revalidate = tem dado, atualizando.
+  // Só bloqueamos a tabela em cold real (sem sessões visíveis).
+  const isColdSessions =
+    (month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0;
+  const isColdMetrics = metrics.isColdLoading;
+  const isRevalidating =
+    month.loading || month.isLoadingCurrentMonth || metrics.isRevalidating;
+  const blockTable = isColdSessions;
+
+  // Prefetch de meses adjacentes ao pairar sobre as setas
+  const prefetchAdjacent = (delta: -1 | 1) => {
+    const { year, month: m } = month.currentMonth;
+    const ny = delta === -1 && m === 1 ? year - 1 : delta === 1 && m === 12 ? year + 1 : year;
+    const nm = delta === -1 ? (m === 1 ? 12 : m - 1) : m === 12 ? 1 : m + 1;
+    month.ensureMonthLoaded(ny, nm, false).catch(() => {});
+    import("@/features/workflow/data/metricsRepo").then(({ prefetchMonthMetrics }) => {
+      import("@/integrations/supabase/client").then(({ supabase }) => {
+        supabase.auth.getUser().then(({ data }) => {
+          if (data.user) prefetchMonthMetrics(data.user.id, ny, nm);
+        });
+      });
+    });
+  };
 
   // ── Estados de loading/erro globais ────────────────────────────────
   if ((month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0) {
@@ -149,20 +170,24 @@ function WorkflowContent() {
           onToggle={setShowMetrics}
           financials={financials}
           sessionCount={filters.filteredSessions.length}
-          isLoading={metrics.isLoading}
+          isLoading={isColdMetrics}
         />
 
         <WorkflowMonthSwitcher
           month={month.currentMonth.month}
           year={month.currentMonth.year}
           isPreloading={month.isPreloading}
-          isChanging={isChanging}
+          isColdLoading={isColdSessions || isColdMetrics}
+          isRevalidating={isRevalidating}
           onPrev={month.goPrev}
           onNext={month.goNext}
           onToday={month.goToday}
+          onHoverPrev={() => prefetchAdjacent(-1)}
+          onHoverNext={() => prefetchAdjacent(1)}
         />
 
-        <div className={`rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10 transition-opacity ${isChanging ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10 transition-opacity ${blockTable ? 'opacity-60 pointer-events-none' : ''}`}>
+
           <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
             <div className="relative flex-1 max-w-sm min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
