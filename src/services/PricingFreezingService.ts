@@ -309,14 +309,33 @@ class PricingFreezingService {
 
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: user } = await supabase.auth.getUser();
-      
+
       if (!user?.user) return produtosIncluidos;
 
-      const produtosCongelados = [];
+      // Sanitiza etapas preservando id/nome/done (evita objetos malformados).
+      const sanitizeEtapas = (raw: any): any[] | undefined => {
+        if (!Array.isArray(raw) || raw.length === 0) return undefined;
+        return raw
+          .filter((e) => e && typeof e === 'object')
+          .map((e: any) => ({
+            id: String(e.id ?? ''),
+            nome: String(e.nome ?? ''),
+            done: !!e.done,
+          }));
+      };
+
+      const produtosCongelados: any[] = [];
 
       for (const produtoItem of produtosIncluidos) {
+        const etapas = sanitizeEtapas(produtoItem.etapas);
+        const fluxo = produtoItem.fluxo === 'custom' ? 'custom' : 'padrao';
+        // CRÍTICO: manter o `id` original do item (uuid gerado pelo modal)
+        // para que o consumidor visual case por id. `produtoId` vai como
+        // referência ao catálogo (`produtos.id`).
+        const baseId = produtoItem.id
+          || (produtoItem.produtoId ? `pi_${produtoItem.produtoId}` : `manual_${Date.now()}_${Math.random()}`);
+
         if (produtoItem.produtoId) {
-          // Buscar dados completos do produto
           const { data: produto } = await supabase
             .from('produtos')
             .select('*')
@@ -325,27 +344,33 @@ class PricingFreezingService {
             .single();
 
           if (produto) {
-            produtosCongelados.push({
-              id: produto.id,
+            const congelado: any = {
+              id: baseId,
+              produtoId: produto.id,
               nome: produto.nome,
               valorUnitario: Number(produto.preco_venda) || 0,
               quantidade: produtoItem.quantidade || 1,
               tipo: produtoItem.tipo || 'incluso',
+              fluxo,
               produzido: produtoItem.produzido || false,
-              entregue: produtoItem.entregue || false
-            });
+              entregue: produtoItem.entregue || false,
+            };
+            if (etapas) congelado.etapas = etapas;
+            produtosCongelados.push(congelado);
           }
         } else {
-          // Produto manual ou sem ID, congelar como está
-          produtosCongelados.push({
-            id: produtoItem.id || `manual_${Date.now()}_${Math.random()}`,
+          const congelado: any = {
+            id: baseId,
             nome: produtoItem.nome || produtoItem.produto || 'Produto',
             valorUnitario: Number(produtoItem.valorUnitario) || Number(produtoItem.valor) || 0,
             quantidade: produtoItem.quantidade || 1,
             tipo: produtoItem.tipo || 'manual',
+            fluxo,
             produzido: produtoItem.produzido || false,
-            entregue: produtoItem.entregue || false
-          });
+            entregue: produtoItem.entregue || false,
+          };
+          if (etapas) congelado.etapas = etapas;
+          produtosCongelados.push(congelado);
         }
       }
 

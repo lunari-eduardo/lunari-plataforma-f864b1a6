@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useWorkflowRealtime } from "@/features/workflow";
 import type { WorkflowSession } from "@/features/workflow";
+import { workflowStore } from "@/features/workflow/store/workflowStore";
 import { isOk } from "@/shared/result";
 import { useRunCapability } from "@/shared/capability";
 import {
@@ -227,11 +228,23 @@ export function useWorkflowSessionActions({
         }
 
         if (Object.keys(cacheSafeUpdates).length > 0 && !needsRefreeze) {
-          mergeUpdate({
+          const merged: WorkflowSession = {
             ...currentSession,
             ...cacheSafeUpdates,
             updated_at: new Date().toISOString(),
-          });
+          };
+          mergeUpdate(merged);
+          // Otimismo também no workflowStore quando produtos_incluidos muda —
+          // garante paridade imediata entre dock e modal (reconciliador de
+          // tarefas-espelho lê daqui). Sem isso, corrida entre `mergeUpdate`
+          // e o refetch do realtime-v2 fazia etapas piscarem.
+          if ("produtos_incluidos" in cacheSafeUpdates) {
+            try {
+              workflowStore.upsert(merged);
+            } catch (e) {
+              console.warn("[updateSession] upsert otimista falhou", e);
+            }
+          }
         }
 
         const needsLegacyPath = updatesRequireRefreeze(validUpdates);

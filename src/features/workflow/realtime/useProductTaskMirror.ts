@@ -28,6 +28,7 @@ import { useRunCapability } from "@/shared/capability";
 import { createTask, updateTask } from "@/modules/tasks";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
+import type { WorkflowSession } from "@/features/workflow/domain/session";
 import {
   buildMirrorSpec,
   buildTitle,
@@ -305,6 +306,19 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
             : entregue,
       };
       const novaLista = produtos.map((p, i) => (i === idx ? novoProduto : p));
+
+      // Otimismo no workflowStore: reconciliador (Produto → Tarefa) lê daqui.
+      // Sem isso, na próxima passada (180ms) ele veria etapas antigas e
+      // reescreveria a tarefa com o título antigo (revert visível).
+      try {
+        workflowStore.upsert({
+          ...(session as WorkflowSession),
+          produtos_incluidos: novaLista as any,
+          updated_at: new Date().toISOString(),
+        } as WorkflowSession);
+      } catch (e) {
+        console.warn("[useMirrorToggleHandler] falha no upsert otimista do store", e);
+      }
 
       // Memoriza o hash — evita eco na próxima passada do reconciliador.
       mirrorMemoStore.memorize(session.id, produtoId, etapasHash(novasEtapas));
