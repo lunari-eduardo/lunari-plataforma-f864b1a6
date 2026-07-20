@@ -249,10 +249,16 @@ export function useProductTaskMirror(): void {
       const inflightKey = existing.id;
       if (taskWriteInFlightRef.current.has(inflightKey)) return;
       taskWriteInFlightRef.current.add(inflightKey);
+
+      // Otimismo local IMEDIATO — dock/kanban refletem a nova etapa sem
+      // esperar o round-trip da capability nem o eco Realtime.
+      const optimisticPatch: Partial<Task> = {};
+      if (titleChanged) optimisticPatch.title = spec.title;
+      if (shouldReopen) optimisticPatch.status = openKey;
+      const snapshot = tasksStore.applyOptimisticPatch(existing.id, optimisticPatch);
+
       try {
-        const patch: Record<string, unknown> = {};
-        if (titleChanged) patch.title = spec.title;
-        if (shouldReopen) patch.status = openKey;
+        const patch: Record<string, unknown> = { ...optimisticPatch };
         const res = await runCapability(updateTask, {
           id: existing.id,
           patch: patch as never,
@@ -262,9 +268,15 @@ export function useProductTaskMirror(): void {
             sig: taskSignature(spec.title, false),
             at: Date.now(),
           });
+        } else if (snapshot) {
+          // Reverte otimismo em caso de falha da capability.
+          try { tasksStore.revertTo(snapshot); } catch { /* noop */ }
         }
       } catch (e) {
         console.warn("[productTaskMirror] falha ao atualizar tarefa", e);
+        if (snapshot) {
+          try { tasksStore.revertTo(snapshot); } catch { /* noop */ }
+        }
       } finally {
         setTimeout(() => taskWriteInFlightRef.current.delete(inflightKey), 500);
       }
