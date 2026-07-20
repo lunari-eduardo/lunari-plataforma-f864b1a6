@@ -46,6 +46,7 @@ import {
   retreatOne,
   isEntregue,
   etapaAtualIndex,
+  deterministicProductId,
   type ProdutoWorkflowFlow,
 } from "@/features/workflow/domain/productFlow";
 import { mirrorMemoStore } from "@/features/workflow/realtime/mirrorMemoStore";
@@ -108,8 +109,14 @@ export function useProductTaskMirror(): void {
         continue;
       }
       const specs: MirrorSpec[] = [];
-      for (const p of produtos) {
-        const hydrated = hydrateProduto(p);
+      for (let i = 0; i < produtos.length; i++) {
+        const hydrated = hydrateProduto(produtos[i]);
+        // Rede de segurança: produtos legados (venda avulsa antiga, importações)
+        // podem não ter `id` persistido. Gera id determinístico em runtime — a
+        // dedup do espelho depende disso e sem id `buildMirrorSpec` retorna null.
+        if (!hydrated.id) {
+          hydrated.id = deterministicProductId(session.id, hydrated.nome, i);
+        }
         const pid = hydrated.id;
         // Anti-eco AMPLIADO: qualquer write recente (mesmo com hash divergente)
         // congela a reconciliação para este produto. O produto no workflowStore
