@@ -297,10 +297,14 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
 
       // Otimismo: aplica na UI da tarefa imediatamente.
       try {
-        await depsRef.current.updateTaskLocal(task.id, {
-          title: novoTitulo,
-          status: entregue ? getDoneKey() : getDefaultOpenKey(),
-        } as Partial<Task>);
+        if (entregue) {
+          await depsRef.current.removeTaskLocal(task.id);
+        } else {
+          await depsRef.current.updateTaskLocal(task.id, {
+            title: novoTitulo,
+            status: getDefaultOpenKey(),
+          } as Partial<Task>);
+        }
       } catch (e) {
         console.warn("[useMirrorToggleHandler] falha ao aplicar tarefa otimista", e);
       }
