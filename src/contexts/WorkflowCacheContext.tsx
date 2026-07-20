@@ -4,6 +4,7 @@ import { indexedDBCache } from '@/services/IndexedDBCache';
 import { WorkflowSession } from '@/features/workflow';
 import { normalizeWorkflowSession, normalizeWorkflowSessions, normalizeWorkflowSessionPartial } from '@/utils/workflowNormalization';
 import { sessionsRepo } from '@/features/workflow/data';
+import { workflowStore } from '@/features/workflow/store/workflowStore';
 import { isWorkflowRealtimeV2Enabled } from '@/features/workflow/realtime';
 import { eventBus } from '@/shared/event-bus';
 import { prefetchMonthMetrics } from '@/features/workflow/data/metricsRepo';
@@ -125,12 +126,19 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     const key = getCacheKey(year, month);
     const normalized = normalizeWorkflowSessions(sessions);
     memoryCache.current.set(key, normalized);
-    
+
+    // Mantém o workflowStore global sincronizado — o dock de tarefas de produção
+    // e outros consumidores fora do mês visível dependem dele para o clique não
+    // retornar silenciosamente em "sessão não encontrada".
+    try {
+      workflowStore.upsertMany(normalized);
+    } catch { /* noop */ }
+
     if (userId) {
       indexedDBCache.set(userId, year, month, normalized);
       broadcastChannel.current?.postMessage({ type: 'cache-updated', year, month });
     }
-    
+
     notifySubscribers();
   }, [userId]);
 

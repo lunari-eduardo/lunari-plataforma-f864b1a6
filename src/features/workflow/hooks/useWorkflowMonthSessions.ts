@@ -107,6 +107,17 @@ export function useWorkflowMonthSessions() {
         return year === currentMonth.year && month === currentMonth.month;
       });
       setWorkflowSessions((prev) => {
+        const produtosSig = (s: WorkflowSession) => {
+          const arr = Array.isArray(s.produtos_incluidos) ? s.produtos_incluidos : [];
+          return arr
+            .map((p: any) => {
+              const etapas = Array.isArray(p?.etapas)
+                ? p.etapas.map((e: any) => (e?.done ? "1" : "0")).join("")
+                : "";
+              return `${p?.id ?? p?.produtoId ?? p?.nome ?? ""}:${p?.fluxo ?? ""}:${etapas}:${p?.entregue ? 1 : 0}`;
+            })
+            .join("|");
+        };
         const hasChanges =
           filtered.length !== prev.length ||
           filtered.some((s) => {
@@ -122,7 +133,7 @@ export function useWorkflowMonthSessions() {
               s.desconto !== p.desconto ||
               s.qtd_fotos_extra !== p.qtd_fotos_extra ||
               s.status !== p.status ||
-              (s.produtos_incluidos?.length || 0) !== (p.produtos_incluidos?.length || 0)
+              produtosSig(s) !== produtosSig(p)
             );
           });
         return hasChanges ? filtered : prev;
