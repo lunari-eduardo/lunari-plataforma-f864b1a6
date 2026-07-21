@@ -295,7 +295,7 @@ export function CombinedChargeModal({
         status: 'pendente',
         dados_extras: chargeOverrides,
         finalidade: 'sessao_e_extras',
-        galeria_id: galeriaId,
+        galeria_id: galeriaId ?? null,
         qtd_fotos: qtdFotosExtras,
         snapshot_fotos_incluidas: snapshotFotosIncluidas ?? null,
         valor_sessao_componente: valorSessaoComponente,
