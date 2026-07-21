@@ -10,12 +10,17 @@ import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 import { ManualPaymentModal } from "./ManualPaymentModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
-import { Lock } from "lucide-react";
+import { Lock, Camera, Plus, Package, Zap } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
+import { SectionHeader } from "./details/SectionHeader";
+import { FieldRow } from "./details/FieldRow";
+import { ProdutosSummaryBlock } from "./details/ProdutosSummaryBlock";
+import { INPUT_GHOST, VALUE_STRONG } from "./details/cardTokens";
+import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
 
