@@ -90,7 +90,14 @@ export const produtoAdvanceStage = defineCommand({
     if (nextEtapas === (before.etapas ?? [])) {
       return err(domainError("NOOP", "Produto já está entregue."));
     }
-    const nextProduto = { ...before, etapas: nextEtapas };
+    // Auto-inicia produção se ainda não estava iniciada.
+    const wasStarted = isProdutoStarted(before);
+    const nextProduto: ProdutoWorkflowFlow = {
+      ...before,
+      etapas: nextEtapas,
+      started: true,
+      startedAt: (before as any).startedAt ?? new Date().toISOString(),
+    };
     const nextArr = [...produtos];
     nextArr[idx] = nextProduto;
     const persisted = await persistProdutos({
@@ -101,6 +108,12 @@ export const produtoAdvanceStage = defineCommand({
     if (!isOk(persisted)) return persisted;
     const shaped = shapeProdutoOut(nextArr[idx]);
     const preview = `${nextProduto.nome}: avançar para "${shaped.etapaAtualNome ?? "Entregue"}".`;
+    if (!wasStarted) {
+      await ctx.emit("workflow.produto_production_started", {
+        sessionId, produtoId: nextProduto.id!,
+        startedAt: nextProduto.startedAt!, photographerId: userId,
+      });
+    }
     await ctx.emit("workflow.produto_stage_changed", {
       sessionId, produtoId: nextProduto.id!, direction: "advance",
       etapaAtual: shaped.etapaAtualNome, photographerId: userId,
