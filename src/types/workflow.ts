@@ -9,6 +9,8 @@ export interface ProdutoWorkflow {
   tipo: 'incluso' | 'manual';
   fluxo?: 'padrao' | 'custom';
   etapas?: Array<{ id: string; nome: string; done: boolean }>;
+  /** ISO YYYY-MM-DD, opcional. Prazo de entrega por produto. */
+  prazoEntrega?: string;
   produzido?: boolean;
   entregue?: boolean;
 }

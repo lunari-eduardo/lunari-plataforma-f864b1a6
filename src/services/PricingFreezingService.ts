@@ -356,6 +356,9 @@ class PricingFreezingService {
               entregue: produtoItem.entregue || false,
             };
             if (etapas) congelado.etapas = etapas;
+            if (typeof produtoItem.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(produtoItem.prazoEntrega)) {
+              congelado.prazoEntrega = produtoItem.prazoEntrega.slice(0, 10);
+            }
             produtosCongelados.push(congelado);
           }
         } else {
@@ -370,6 +373,9 @@ class PricingFreezingService {
             entregue: produtoItem.entregue || false,
           };
           if (etapas) congelado.etapas = etapas;
+          if (typeof produtoItem.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(produtoItem.prazoEntrega)) {
+            congelado.prazoEntrega = produtoItem.prazoEntrega.slice(0, 10);
+          }
           produtosCongelados.push(congelado);
         }
       }
