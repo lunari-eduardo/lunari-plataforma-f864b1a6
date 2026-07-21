@@ -243,7 +243,7 @@ export function CombinedChargeModal({
           descricao: descricao?.trim() || undefined,
           billingType: 'PIX',
           finalidade: 'sessao_e_extras',
-          galeriaId,
+          galeriaId: galeriaId ?? null,
           qtdFotos: qtdFotosExtras,
           snapshotFotosIncluidas: snapshotFotosIncluidas ?? null,
           valorSessaoComponente,
