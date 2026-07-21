@@ -53,6 +53,7 @@ export function ProducaoProdutoCard({
   onFluxoChange,
   onCustomFlowSaved,
   onPrazoChange,
+  onStartedChange,
   formatCurrency,
 }: Props) {
   const etapas = produto.etapas ?? [];
@@ -64,13 +65,16 @@ export function ProducaoProdutoCard({
   const started = isProdutoStarted(produto);
   const pending = !started && !entregue;
 
-  const handleAdvance = () => onEtapasChange(index, advanceOne(etapas));
+  const handleAdvance = () => {
+    if (!started) onStartedChange(index, true);
+    onEtapasChange(index, advanceOne(etapas));
+  };
   const handleRetreat = () => onEtapasChange(index, retreatOne(etapas));
-  const handleStart = () =>
-    // Passar as etapas inalteradas; o allowlist do realtime derivará
-    // `started=true` a partir de qualquer marcação. Para start explícito
-    // sem marcar etapa, forjamos started via callback dedicado adiante.
-    onEtapasChange(index, etapas.map((e) => ({ ...e })));
+  const handleStart = () => onStartedChange(index, true);
+  const handleReopen = () => {
+    onStartedChange(index, false);
+    onEtapasChange(index, etapas.map((e) => ({ ...e, done: false })));
+  };
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm hover:border-border transition-colors">
