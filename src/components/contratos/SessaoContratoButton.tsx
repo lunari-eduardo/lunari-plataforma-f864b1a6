@@ -17,6 +17,8 @@ interface SessaoContratoButtonProps {
   clienteId: string;
   clienteNome?: string;
   className?: string;
+  /** Variante compacta usada no bloco de Ações do card do Workflow. */
+  iconOnly?: boolean;
 }
 
 const STATUS_PRIORITY: Record<ContratoStatus, number> = {
@@ -42,6 +44,7 @@ export function SessaoContratoButton({
   clienteId,
   clienteNome,
   className,
+  iconOnly = false,
 }: SessaoContratoButtonProps) {
   const { contratos } = useContratos({ sessionId });
   const { profile } = useUserProfile();
@@ -83,31 +86,62 @@ export function SessaoContratoButton({
     <>
       <Popover open={popOpen} onOpenChange={setPopOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant={algumPendenteParaMim ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleClick}
-            className={cn('gap-2 w-full', className)}
-            aria-label="Contratos da sessão"
-          >
-            <FileSignature className="h-4 w-4" />
-            <span className="flex-1 text-center">
-              {algumPendenteParaMim ? 'Assinar contrato' : label}
-            </span>
-            {algumPendenteParaMim ? (
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+          {iconOnly ? (
+            <button
+              type="button"
+              onClick={handleClick}
+              aria-label="Contratos da sessão"
+              className={cn(
+                "h-8 w-8 flex items-center justify-center rounded-md border border-border/25 text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors relative",
+                algumPendenteParaMim && "border-amber-500/50 text-amber-600 hover:text-amber-700",
+                className,
+              )}
+            >
+              <FileSignature className="h-4 w-4" />
+              {algumPendenteParaMim ? (
+                <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              ) : (
+                statusPrincipal && (
+                  <span
+                    className={cn(
+                      "absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-background",
+                      dotColor[statusPrincipal],
+                    )}
+                    title={CONTRATO_STATUS_LABELS[statusPrincipal]}
+                  />
+                )
+              )}
+            </button>
+          ) : (
+            <Button
+              variant={algumPendenteParaMim ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleClick}
+              className={cn('gap-2 w-full', className)}
+              aria-label="Contratos da sessão"
+            >
+              <FileSignature className="h-4 w-4" />
+              <span className="flex-1 text-center">
+                {algumPendenteParaMim ? 'Assinar contrato' : label}
               </span>
-            ) : (
-              statusPrincipal && (
-                <span
-                  className={cn('h-2 w-2 rounded-full', dotColor[statusPrincipal])}
-                  title={CONTRATO_STATUS_LABELS[statusPrincipal]}
-                />
-              )
-            )}
-          </Button>
+              {algumPendenteParaMim ? (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              ) : (
+                statusPrincipal && (
+                  <span
+                    className={cn('h-2 w-2 rounded-full', dotColor[statusPrincipal])}
+                    title={CONTRATO_STATUS_LABELS[statusPrincipal]}
+                  />
+                )
+              )}
+            </Button>
+          )}
         </PopoverTrigger>
         <PopoverContent
           className="w-72 p-2"

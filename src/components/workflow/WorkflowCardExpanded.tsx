@@ -10,12 +10,17 @@ import { CombinedChargeModal } from "@/components/cobranca/CombinedChargeModal";
 import { ManualPaymentModal } from "./ManualPaymentModal";
 
 import { useGalleryExtraCalc } from "@/hooks/useGalleryExtraCalc";
-import { Lock } from "lucide-react";
+import { Lock, Camera, Plus, Package, Zap } from "lucide-react";
 import type { SessionData } from "@/types/workflow";
 import { useAppContext } from "@/contexts/AppContext";
 import { ExpandedFinancialFooter } from "./details/ExpandedFinancialFooter";
 import { OverrideExtrasDialog } from "./details/OverrideExtrasDialog";
 import { ExpandedActions } from "./details/ExpandedActions";
+import { SectionHeader } from "./details/SectionHeader";
+import { FieldRow } from "./details/FieldRow";
+import { ProdutosSummaryBlock } from "./details/ProdutosSummaryBlock";
+import { INPUT_GHOST, VALUE_STRONG } from "./details/cardTokens";
+import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
 
@@ -27,11 +32,14 @@ interface WorkflowCardExpandedProps {
   statusOptions?: string[];
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
   onStatusChange?: (id: string, newStatus: string) => void;
+  /** Abre o modal "Gerenciar Produtos" (instância única no CardCollapsedModals). */
+  onOpenProdutos?: () => void;
 }
 
 export function WorkflowCardExpanded({
   session,
   onFieldUpdate,
+  onOpenProdutos,
 }: WorkflowCardExpandedProps) {
   const { addPayment: addPaymentContext } = useAppContext();
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
@@ -256,27 +264,19 @@ export function WorkflowCardExpanded({
   }, [pendingExtraEdit]);
 
   return (
-    <div className="bg-gradient-to-br from-transparent via-gray-50/10 to-stone-50/10 dark:from-transparent dark:via-[#1f1f1f]/30 dark:to-[#1a1a1a]/30 px-4 py-5 md:px-6">
-      <div className="grid grid-cols-3 gap-6">
-        {/* BLOCO 1 - Dados da Sessão */}
-        <div className="space-y-3 border-r border-border/20 pr-6">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Dados da Sessão
-          </h4>
-
-          <div className="space-y-2.5">
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">Pacote:</span>
-              <span className="text-sm font-medium text-foreground">{pacoteNome}</span>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">Valor base:</span>
-              <span className="text-sm font-medium text-primary">{valorPacoteDisplay}</span>
-            </div>
-
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-xs text-muted-foreground">Desconto:</span>
+    <div className="bg-transparent px-4 py-5 md:px-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 divide-y md:divide-y-0 md:divide-x divide-border/20">
+        {/* BLOCO 1 — Dados da Sessão */}
+        <div className="md:pr-5 pb-4 md:pb-0">
+          <SectionHeader icon={Camera} title="Dados da Sessão" />
+          <div>
+            <FieldRow label="Pacote">
+              <span className={VALUE_STRONG}>{pacoteNome}</span>
+            </FieldRow>
+            <FieldRow label="Valor base">
+              <span className={VALUE_STRONG + " text-primary"}>{valorPacoteDisplay}</span>
+            </FieldRow>
+            <FieldRow label="Desconto">
               <Input
                 value={descontoValue}
                 onChange={(e) => setDescontoValue(e.target.value)}
@@ -284,48 +284,46 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
+                className={INPUT_GHOST + " w-24 text-right"}
               />
-            </div>
-
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                Vlr foto extra:
-                {hasDescontoProgressivo && (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex items-center justify-center h-4 px-1 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[9px] font-semibold cursor-help border border-emerald-200 dark:border-emerald-500/30">
-                          %
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-xs">
-                        <div className="font-semibold mb-1">Desconto progressivo aplicado</div>
-                        <div>Preço de tabela: {formatCurrency(precoBaseTabela)}</div>
-                        <div>
-                          Preço cobrado: <strong>{formatCurrency(precoEfetivo)}</strong>
-                        </div>
-                        <div className="mt-1 text-muted-foreground">
-                          Faixa de quantidade aplicada na galeria.
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {galeriaHasSales && (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Lock className="h-3 w-3 text-muted-foreground/60" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-xs">
-                        Sincronizado com a galeria. Editar aqui sobrescreve o valor recebido do
-                        Gallery.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </span>
+            </FieldRow>
+            <FieldRow
+              label={
+                <span className="inline-flex items-center gap-1">
+                  Vlr foto extra
+                  {hasDescontoProgressivo && (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center justify-center h-3.5 px-1 rounded bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[9px] font-semibold cursor-help border border-emerald-200/60 dark:border-emerald-500/30">
+                            %
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          <div className="font-semibold mb-1">Desconto progressivo aplicado</div>
+                          <div>Preço de tabela: {formatCurrency(precoBaseTabela)}</div>
+                          <div>
+                            Preço cobrado: <strong>{formatCurrency(precoEfetivo)}</strong>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  {galeriaHasSales && (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Lock className="h-3 w-3 text-muted-foreground/60" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          Sincronizado com a galeria. Editar aqui sobrescreve o valor recebido.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </span>
+              }
+            >
               <Input
                 value={valorFotoExtraValue}
                 onChange={(e) => setValorFotoExtraValue(e.target.value)}
@@ -333,37 +331,35 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
+                className={INPUT_GHOST + " w-24 text-right"}
               />
-            </div>
+            </FieldRow>
           </div>
         </div>
 
-        {/* BLOCO 2 - Adicionais */}
-        <div className="space-y-3 border-r border-border/20 pr-6">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Adicionais
-          </h4>
-
-          <div className="space-y-2.5">
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                Qtd fotos extras:
-                {galeriaHasSales && (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Lock className="h-3 w-3 text-muted-foreground/60" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-xs">
-                        Sincronizado com a galeria. Editar aqui sobrescreve a quantidade vinda do
-                        Gallery e recalcula o total automaticamente (útil para fotos vendidas por
-                        fora).
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </span>
+        {/* BLOCO 2 — Adicionais */}
+        <div className="md:px-5 py-4 md:py-0">
+          <SectionHeader icon={Plus} title="Adicionais" />
+          <div>
+            <FieldRow
+              label={
+                <span className="inline-flex items-center gap-1">
+                  Qtd fotos extras
+                  {galeriaHasSales && (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Lock className="h-3 w-3 text-muted-foreground/60" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs">
+                          Sincronizado com a galeria.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </span>
+              }
+            >
               <Input
                 type="number"
                 min={0}
@@ -373,88 +369,73 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="0"
-                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
+                className={INPUT_GHOST + " w-20 text-right"}
               />
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">Total fotos extras:</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">
-                  {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
-                </span>
-                {(() => {
-                  const extrasBadgeStatus = hasGaleria
-                    ? extrasTotalCanonico <= 0
-                      ? 'sem_vendas'
-                      : extrasPagoCanonico > 0 && extrasPendente > 0
-                        ? 'parcial'
-                        : extrasFullyPaid
-                          ? 'pago'
-                          : extrasPendente > 0
-                            ? 'pendente'
-                            : session.galeriaStatusPagamento
-                    : session.galeriaStatusPagamento;
-
-                  if (extrasBadgeStatus === 'parcial') {
-                    return (
-                      <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex">
-                              <FotosExtrasPaymentBadge status="parcial" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="text-xs">
-                            Pago {formatCurrency(extrasPagoCanonico)} · Pendente {formatCurrency(extrasPendente)}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    );
-                  }
-                  return <FotosExtrasPaymentBadge status={extrasBadgeStatus} />;
-                })()}
-                {session.extrasOverridden && isLinkedToGallery && (
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => onFieldUpdate(session.id, "resyncExtrasWithGallery", true)}
-                          className="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200 dark:border-amber-500/30 hover:bg-amber-200/70 dark:hover:bg-amber-950/60 transition-colors"
-                        >
-                          Manual
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs text-xs">
-                        Valores foram editados manualmente e não estão sincronizando com a galeria.
-                        Clique para re-sincronizar com os dados do Gallery.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-            </div>
-
-
+            </FieldRow>
+            <FieldRow label="Total fotos extras">
+              <span className={VALUE_STRONG}>
+                {hasGaleria && extraCalcLoading ? "…" : valorFotoExtraTotal}
+              </span>
+              {(() => {
+                const extrasBadgeStatus = hasGaleria
+                  ? extrasTotalCanonico <= 0
+                    ? "sem_vendas"
+                    : extrasPagoCanonico > 0 && extrasPendente > 0
+                      ? "parcial"
+                      : extrasFullyPaid
+                        ? "pago"
+                        : extrasPendente > 0
+                          ? "pendente"
+                          : session.galeriaStatusPagamento
+                  : session.galeriaStatusPagamento;
+                if (extrasBadgeStatus === "parcial") {
+                  return (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <FotosExtrasPaymentBadge status="parcial" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          Pago {formatCurrency(extrasPagoCanonico)} · Pendente {formatCurrency(extrasPendente)}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                return <FotosExtrasPaymentBadge status={extrasBadgeStatus} />;
+              })()}
+              {session.extrasOverridden && isLinkedToGallery && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => onFieldUpdate(session.id, "resyncExtrasWithGallery", true)}
+                        className="inline-flex items-center h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200/60 dark:border-amber-500/30 hover:bg-amber-200/70 dark:hover:bg-amber-950/60 transition-colors"
+                      >
+                        Manual
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-xs">
+                      Valores foram editados manualmente. Clique para re-sincronizar com o Gallery.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </FieldRow>
             {hasGaleria && extrasPendente > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] text-muted-foreground/80">Pendente extras:</span>
-                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <FieldRow label="Pendente extras">
+                <span className="text-[13px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                   {formatCurrency(extrasPendente)}
                 </span>
-              </div>
+              </FieldRow>
             )}
-
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-muted-foreground">Total produtos:</span>
-              <span className="text-sm font-medium text-foreground">
-                {formatCurrency(valorProdutosTotal)}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-xs text-muted-foreground">Adicional:</span>
+            <FieldRow label="Total produtos">
+              <span className={VALUE_STRONG}>{formatCurrency(valorProdutosTotal)}</span>
+            </FieldRow>
+            <FieldRow label="Adicional">
               <Input
                 value={adicionalValue}
                 onChange={(e) => setAdicionalValue(e.target.value)}
@@ -462,43 +443,94 @@ export function WorkflowCardExpanded({
                 onKeyDown={handleEnterBlur}
                 onFocus={handleValueFocus}
                 placeholder="R$ 0,00"
-                className="h-7 text-xs text-right w-24 border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80"
+                className={INPUT_GHOST + " w-24 text-right"}
               />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs text-muted-foreground">Obs:</span>
+            </FieldRow>
+            <FieldRow label="Obs" align="col">
               <Textarea
                 value={obsValue}
                 onChange={(e) => setObsValue(e.target.value)}
                 onBlur={handleObsBlur}
                 placeholder="Observações..."
-                className="text-xs min-h-[60px] border border-border/50 dark:border-border rounded bg-background/50 dark:bg-background/80 resize-none"
+                className="text-[12px] min-h-[56px] bg-transparent border-0 border-b border-border/20 focus:border-primary/40 focus-visible:ring-0 rounded-none resize-none px-0"
               />
-            </div>
+            </FieldRow>
           </div>
         </div>
 
-        {/* (Crédito do cliente movido para badge no rodapé — ver ExpandedFinancialFooter) */}
+        {/* BLOCO 3 — Produtos (resumo operacional) */}
+        <div className="md:px-5 py-4 md:py-0">
+          <SectionHeader
+            icon={Package}
+            title="Produtos"
+            action={
+              onOpenProdutos ? (
+                <button
+                  type="button"
+                  onClick={onOpenProdutos}
+                  className="text-[10px] font-medium text-primary hover:underline uppercase tracking-wide"
+                >
+                  Gerenciar
+                </button>
+              ) : null
+            }
+          />
+          <ProdutosSummaryBlock
+            produtos={session.produtosList}
+            onOpenManager={() => onOpenProdutos?.()}
+            formatCurrency={formatCurrency}
+          />
+          {(session.produtosList?.length ?? 0) > 0 && (
+            <div className="mt-2 border-t border-border/15 pt-1">
+              {(() => {
+                const info = computeProductNextAction(session.produtosList as any);
+                return (
+                  <>
+                    <FieldRow label="Produtos vendidos">
+                      <span className={VALUE_STRONG}>{info.total}</span>
+                    </FieldRow>
+                    <FieldRow label="Total produtos">
+                      <span className={VALUE_STRONG}>
+                        {formatCurrency(valorProdutosTotal)}
+                      </span>
+                    </FieldRow>
+                    <FieldRow label="Produção">
+                      <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground">
+                        <span
+                          aria-hidden
+                          className={`h-1.5 w-1.5 rounded-full ${info.dotClass}`}
+                        />
+                        {info.label || "—"}
+                      </span>
+                    </FieldRow>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
 
-        {/* BLOCO 3 - Ações */}
-        <ExpandedActions
-          session={session}
-          onCobrar={() => setShowChargeModal(true)}
-          onCobrarExtras={() => setShowExtraChargeModal(true)}
-          onCobrarTudo={
-            resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
-              ? () => setShowCombinedChargeModal(true)
-              : undefined
-          }
-          extrasPendente={extrasPendente}
-          extrasFullyPaid={extrasFullyPaid}
-          sessaoPendente={pendenteSessaoSugerido}
-          hasGaleria={hasGaleria}
-          onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
-          onRegistrarPagamento={() => setShowManualPaymentModal(true)}
-          canRegistrar={pendenteVisual > 0.001}
-        />
+        {/* BLOCO 4 — Ações */}
+        <div className="md:pl-5 pt-4 md:pt-0">
+          <SectionHeader icon={Zap} title="Ações" />
+          <ExpandedActions
+            session={session}
+            onCobrar={() => setShowChargeModal(true)}
+            onCobrarExtras={() => setShowExtraChargeModal(true)}
+            onCobrarTudo={
+              resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
+                ? () => setShowCombinedChargeModal(true)
+                : undefined
+            }
+            extrasPendente={extrasPendente}
+            extrasFullyPaid={extrasFullyPaid}
+            sessaoPendente={pendenteSessaoSugerido}
+            hasGaleria={hasGaleria}
+            onAbrirPagamentos={() => setWorkflowPaymentsOpen(true)}
+            onRegistrarPagamento={() => setShowManualPaymentModal(true)}
+            canRegistrar={pendenteVisual > 0.001}
+          />
+        </div>
       </div>
 
       <ExpandedFinancialFooter
