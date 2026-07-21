@@ -37,6 +37,7 @@ export function useNotifications(): UseNotificationsResult {
   const clients = useClientNotifications();
   const agenda = useAgendaNotifications();
   const productionReminders = useProductionReminders();
+  const productDeadlines = useProductDeadlineNotifications();
 
   const [readIds, setReadIds] = useState<string[]>([]);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
