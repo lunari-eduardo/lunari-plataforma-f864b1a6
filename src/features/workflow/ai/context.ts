@@ -19,10 +19,11 @@ import {
   selectMonthSessions,
   selectSituacaoCounts,
 } from "../store/selectors";
+import { bucketProductsByDeadline } from "../domain/productDeadlines";
 import { listWorkflowCapabilityIds } from "./permissions";
 
 export interface WorkflowPageSnapshot {
-  version: 1;
+  version: 2;
   route: "/workflow";
   currentMonth: { year: number; month: number };
   filters: {
@@ -43,6 +44,13 @@ export interface WorkflowPageSnapshot {
     previsto: number;
     recebido: number;
   };
+  produtosPendentes: {
+    atrasados: number;
+    hoje: number;
+    amanha: number;
+    semana: number;
+    totalComPrazo: number;
+  };
   permissions: {
     canWrite: boolean;
     canDelete: boolean;
@@ -51,6 +59,7 @@ export interface WorkflowPageSnapshot {
   };
   capabilities: string[];
   userTz: string;
+  notes: string[];
 }
 
 export interface BuildSnapshotInput {
