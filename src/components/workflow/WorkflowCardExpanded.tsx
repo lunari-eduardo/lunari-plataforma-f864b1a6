@@ -514,9 +514,17 @@ export function WorkflowCardExpanded({
           <ExpandedActions
             session={session}
             onCobrar={() => setShowChargeModal(true)}
-            onCobrarExtras={() => setShowExtraChargeModal(true)}
+            onCobrarExtras={() => {
+              // Com galeria: fluxo canônico Gallery (ExtraChargeModal).
+              // Sem galeria: usa CombinedChargeModal com sessão zerada.
+              if (resolvedGalleryId) {
+                setShowExtraChargeModal(true);
+              } else {
+                setShowCombinedChargeModal(true);
+              }
+            }}
             onCobrarTudo={
-              resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
+              extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
                 ? () => setShowCombinedChargeModal(true)
                 : undefined
             }
