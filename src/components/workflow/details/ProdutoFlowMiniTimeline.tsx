@@ -8,28 +8,32 @@ import {
 
 interface Props {
   etapas: EtapaProducao[];
+  /** Estado explícito — quando `false`, mostra "A produzir" como rótulo. */
+  started?: boolean;
 }
 
 /**
  * Visualização horizontal minimalista das etapas de produção de um produto.
- * Somente leitura — a interação de toggle continua no modal de Gerenciar
- * Produtos e no dock lateral.
+ * v2: respeita o estado pending — nunca sugere a "próxima" etapa quando o
+ * produto ainda não foi iniciado.
  */
-export function ProdutoFlowMiniTimeline({ etapas }: Props) {
+export function ProdutoFlowMiniTimeline({ etapas, started = true }: Props) {
   if (!etapas || etapas.length === 0) return null;
 
   const entregue = isEntregue(etapas);
   const currentIdx = etapaAtualIndex(etapas);
-  const nextLabel = entregue
+  const label = entregue
     ? "Entregue"
-    : etapas[currentIdx]?.nome ?? "Pendente";
+    : !started
+      ? "A produzir"
+      : etapas[currentIdx]?.nome ?? "Em produção";
 
   return (
     <div className="flex items-center gap-2 min-w-0">
       <div className="flex items-center gap-0.5 shrink-0">
         {etapas.map((e, i) => {
           const isDone = e.done;
-          const isCurrent = !entregue && i === currentIdx;
+          const isCurrent = started && !entregue && i === currentIdx;
           return (
             <React.Fragment key={e.id}>
               <span
@@ -40,7 +44,9 @@ export function ProdutoFlowMiniTimeline({ etapas }: Props) {
                     ? "bg-primary"
                     : isCurrent
                       ? "bg-primary/50 ring-2 ring-primary/20"
-                      : "bg-border",
+                      : !started
+                        ? "bg-border/60"
+                        : "bg-border",
                 )}
               />
               {i < etapas.length - 1 && (
@@ -59,11 +65,15 @@ export function ProdutoFlowMiniTimeline({ etapas }: Props) {
       <span
         className={cn(
           "text-[10px] truncate min-w-0",
-          entregue ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+          entregue
+            ? "text-emerald-600 dark:text-emerald-400"
+            : !started
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-muted-foreground",
         )}
-        title={nextLabel}
+        title={label}
       >
-        {nextLabel}
+        {label}
       </span>
     </div>
   );
