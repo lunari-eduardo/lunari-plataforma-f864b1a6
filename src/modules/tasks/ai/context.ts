@@ -95,6 +95,10 @@ export function buildTasksPageSnapshot(input: BuildTasksSnapshotInput): TasksPag
     },
     capabilities: listTasksCapabilityIds(),
     userTz: "America/Sao_Paulo",
+    notes: [
+      "Tarefas com tag 'workflow:produto' são espelhos automáticos do fluxo de produção — filtradas dos listings de IA.",
+      "Para avançar/regredir etapa de produto, use workflow.produto.advanceStage/retreatStage, nunca tasks.complete/tasks.update.",
+    ],
   };
 }
 
