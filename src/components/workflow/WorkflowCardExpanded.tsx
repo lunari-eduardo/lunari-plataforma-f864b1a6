@@ -423,7 +423,7 @@ export function WorkflowCardExpanded({
                 </TooltipProvider>
               )}
             </FieldRow>
-            {hasGaleria && extrasPendente > 0 && (
+            {extrasPendente > 0 && (
               <FieldRow label="Pendente extras">
                 <span className="text-[13px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                   {formatCurrency(extrasPendente)}
