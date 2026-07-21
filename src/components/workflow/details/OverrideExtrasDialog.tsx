@@ -43,9 +43,9 @@ export function OverrideExtrasDialog({ pendingExtraEdit, onConfirm, onCancel }: 
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
             <span className="block">
-              Este campo é normalmente sincronizado automaticamente com a galeria desta sessão.
-              Editar manualmente irá <strong>sobrescrever</strong> o valor recebido do Gallery e
-              pode causar divergência financeira.
+              Ao confirmar, o valor da galeria será <strong>permanentemente ignorado</strong> nesta sessão.
+              Os valores digitados manualmente passam a ser a fonte da verdade — não há re-sincronização
+              automática.
             </span>
             <span className="block">
               Novo valor:{" "}
@@ -56,7 +56,7 @@ export function OverrideExtrasDialog({ pendingExtraEdit, onConfirm, onCancel }: 
               </strong>
             </span>
             <span className="block text-xs text-muted-foreground">
-              Recomendado: corrija primeiro no Gallery — a sessão será sincronizada automaticamente.
+              Para voltar aos valores do Gallery, edite manualmente cada campo de volta ao valor desejado.
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>

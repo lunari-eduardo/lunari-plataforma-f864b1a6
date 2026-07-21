@@ -49,7 +49,8 @@ interface CombinedChargeModalProps {
   clienteNome: string;
   clienteWhatsapp?: string;
   sessionId: string;
-  galeriaId: string;
+  /** Opcional — quando ausente, cobra sessão+extras sem galeria vinculada. */
+  galeriaId?: string | null;
   valorSessaoComponente: number;
   valorExtrasComponente: number;
   qtdFotosExtras: number;
@@ -173,7 +174,7 @@ export function CombinedChargeModal({
 
   const commonBinding = {
     finalidade: 'sessao_e_extras' as const,
-    galeriaId,
+    galeriaId: galeriaId ?? null,
     qtdFotos: qtdFotosExtras,
     snapshotFotosIncluidas: snapshotFotosIncluidas ?? null,
     valorSessaoComponente,
@@ -181,7 +182,12 @@ export function CombinedChargeModal({
   };
 
   const invalid =
-    valorTotal <= 0 || valorSessaoComponente <= 0 || valorExtrasComponente <= 0;
+    valorTotal <= 0 ||
+    (valorSessaoComponente <= 0 && valorExtrasComponente <= 0) ||
+    valorSessaoComponente < 0 ||
+    valorExtrasComponente < 0;
+
+  const soExtras = valorSessaoComponente <= 0 && valorExtrasComponente > 0;
 
   async function handlePixManual() {
     if (invalid) return;
@@ -237,7 +243,7 @@ export function CombinedChargeModal({
           descricao: descricao?.trim() || undefined,
           billingType: 'PIX',
           finalidade: 'sessao_e_extras',
-          galeriaId,
+          galeriaId: galeriaId ?? null,
           qtdFotos: qtdFotosExtras,
           snapshotFotosIncluidas: snapshotFotosIncluidas ?? null,
           valorSessaoComponente,
@@ -289,7 +295,7 @@ export function CombinedChargeModal({
         status: 'pendente',
         dados_extras: chargeOverrides,
         finalidade: 'sessao_e_extras',
-        galeria_id: galeriaId,
+        galeria_id: galeriaId ?? null,
         qtd_fotos: qtdFotosExtras,
         snapshot_fotos_incluidas: snapshotFotosIncluidas ?? null,
         valor_sessao_componente: valorSessaoComponente,
@@ -360,7 +366,7 @@ export function CombinedChargeModal({
           <DialogHeader className="px-4 pt-3 pb-2 border-b border-border/50">
             <DialogTitle className="flex items-center gap-2 text-base">
               <Send className="h-4 w-4 text-primary" />
-              Cobrar tudo (link único)
+              {soExtras ? 'Cobrar fotos extras' : 'Cobrar tudo (link único)'}
               <span className="text-xs text-muted-foreground font-normal ml-1">
                 · {clienteNome}
               </span>
@@ -371,8 +377,12 @@ export function CombinedChargeModal({
             {/* Breakdown enxuto — 1 linha */}
             <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
               <div className="text-xs text-muted-foreground">
-                Sessão <strong className="text-foreground">{currency(valorSessaoComponente)}</strong>
-                <span className="mx-1.5 opacity-60">+</span>
+                {valorSessaoComponente > 0 && (
+                  <>
+                    Sessão <strong className="text-foreground">{currency(valorSessaoComponente)}</strong>
+                    <span className="mx-1.5 opacity-60">+</span>
+                  </>
+                )}
                 Extras ({qtdFotosExtras}){' '}
                 <strong className="text-foreground">{currency(valorExtrasComponente)}</strong>
               </div>

@@ -49,10 +49,11 @@ export function ExpandedActions({
   canRegistrar,
 }: Props) {
   const canCobrarSessao = sessaoPendente > 0.001;
+  // Extras cobráveis independem de galeria vinculada — basta haver pendência.
   const canCobrarExtras =
-    hasGaleria && !!onCobrarExtras && extrasPendente > 0.001 && !extrasFullyPaid;
+    !!onCobrarExtras && extrasPendente > 0.001 && !extrasFullyPaid;
   const canCobrarTudo = canCobrarSessao && canCobrarExtras && !!onCobrarTudo;
-  const showDropdown = hasGaleria && (canCobrarExtras || extrasPendente > 0);
+  const showDropdown = canCobrarExtras || extrasPendente > 0;
 
   return (
     <div className="flex flex-col gap-2 items-stretch">

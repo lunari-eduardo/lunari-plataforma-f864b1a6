@@ -250,6 +250,8 @@ export function WorkflowCardExpanded({
 
   const confirmExtraEdit = useCallback(() => {
     if (!pendingExtraEdit) return;
+    // O handler no realtime (case valorFotoExtra / qtdFotosExtra) já grava
+    // extras_overridden=true automaticamente quando o valor diverge da galeria.
     onFieldUpdate(session.id, pendingExtraEdit.field, pendingExtraEdit.nextValue);
     setPendingExtraEdit(null);
   }, [pendingExtraEdit, session.id, onFieldUpdate]);
@@ -406,26 +408,22 @@ export function WorkflowCardExpanded({
                 }
                 return <FotosExtrasPaymentBadge status={extrasBadgeStatus} />;
               })()}
-              {session.extrasOverridden && isLinkedToGallery && (
+              {session.extrasOverridden && (
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => onFieldUpdate(session.id, "resyncExtrasWithGallery", true)}
-                        className="inline-flex items-center h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200/60 dark:border-amber-500/30 hover:bg-amber-200/70 dark:hover:bg-amber-950/60 transition-colors"
-                      >
+                      <span className="inline-flex items-center h-5 px-1.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 text-[9px] font-semibold border border-amber-200/60 dark:border-amber-500/30 cursor-help">
                         Manual
-                      </button>
+                      </span>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs text-xs">
-                      Valores foram editados manualmente. Clique para re-sincronizar com o Gallery.
+                      Valores fixados manualmente. Para voltar aos valores da galeria, ajuste manualmente.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
             </FieldRow>
-            {hasGaleria && extrasPendente > 0 && (
+            {extrasPendente > 0 && (
               <FieldRow label="Pendente extras">
                 <span className="text-[13px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                   {formatCurrency(extrasPendente)}
@@ -516,9 +514,17 @@ export function WorkflowCardExpanded({
           <ExpandedActions
             session={session}
             onCobrar={() => setShowChargeModal(true)}
-            onCobrarExtras={() => setShowExtraChargeModal(true)}
+            onCobrarExtras={() => {
+              // Com galeria: fluxo canônico Gallery (ExtraChargeModal).
+              // Sem galeria: usa CombinedChargeModal com sessão zerada.
+              if (resolvedGalleryId) {
+                setShowExtraChargeModal(true);
+              } else {
+                setShowCombinedChargeModal(true);
+              }
+            }}
             onCobrarTudo={
-              resolvedGalleryId && extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
+              extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
                 ? () => setShowCombinedChargeModal(true)
                 : undefined
             }
@@ -591,7 +597,7 @@ export function WorkflowCardExpanded({
         />
       )}
 
-      {resolvedGalleryId && showCombinedChargeModal && (
+      {showCombinedChargeModal && (
         <CombinedChargeModal
           isOpen={showCombinedChargeModal}
           onClose={() => setShowCombinedChargeModal(false)}
@@ -599,8 +605,16 @@ export function WorkflowCardExpanded({
           clienteNome={session.nome || "Cliente"}
           clienteWhatsapp={session.whatsapp}
           sessionId={session.sessionId || session.id}
-          galeriaId={resolvedGalleryId}
-          valorSessaoComponente={pendenteSessaoSugerido}
+          galeriaId={resolvedGalleryId ?? null}
+          valorSessaoComponente={
+            // Quando só extras estão pendentes (ex.: sessão paga OU sem galeria mas
+            // fluxo "Cobrar extras"), zera o componente sessão.
+            pendenteSessaoSugerido > 0.001 && extrasPendente > 0.001
+              ? pendenteSessaoSugerido
+              : extrasPendente > 0.001
+                ? 0
+                : pendenteSessaoSugerido
+          }
           valorExtrasComponente={extrasPendente}
           qtdFotosExtras={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}
           snapshotFotosIncluidas={extraCalc?.included_count ?? null}
