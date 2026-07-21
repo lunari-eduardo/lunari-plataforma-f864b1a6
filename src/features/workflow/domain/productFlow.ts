@@ -26,6 +26,8 @@ export interface ProdutoWorkflowFlow {
   tipo: "incluso" | "manual";
   fluxo?: FluxoProducao;
   etapas?: EtapaProducao[];
+  /** Prazo de entrega opcional por produto (ISO YYYY-MM-DD). */
+  prazoEntrega?: string;
   // Legado — mantido como espelho derivado na escrita.
   produzido?: boolean;
   entregue?: boolean;

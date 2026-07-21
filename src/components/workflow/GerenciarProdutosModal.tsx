@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Package } from "lucide-react";
+import { Package, Plus, Info, X } from "lucide-react";
 import { useRealtimeConfiguration } from "@/hooks/useRealtimeConfiguration";
-import { ProdutoRow } from "./produtos/ProdutoRow";
 import { ProductSearchInput } from "./produtos/ProductSearchInput";
-import { ProdutosFinancialSummary } from "./produtos/ProdutosFinancialSummary";
+import { ProducaoProdutoCard } from "./produtos/ProducaoProdutoCard";
 import { useWorkflowPreferences } from "@/hooks/useWorkflowPreferences";
 import {
   buildEtapasPadrao,
@@ -43,7 +46,6 @@ const genId = () =>
 export function GerenciarProdutosModal({
   open,
   onOpenChange,
-  clienteName,
   produtos,
   productOptions,
   onSave,
@@ -51,7 +53,7 @@ export function GerenciarProdutosModal({
   const [localProdutos, setLocalProdutos] = useState<ProdutoWorkflowFlow[]>([]);
   const [resetSignal, setResetSignal] = useState(false);
   const [customFlowToPersist, setCustomFlowToPersist] = useState<string[] | null>(null);
-  // Ids de produtos com edições locais pendentes — preservados no merge.
+  const [addOpen, setAddOpen] = useState(false);
   const dirtyIdsRef = useRef<Set<string>>(new Set());
 
   const { produtos: produtosConfig } = useRealtimeConfiguration();
@@ -64,13 +66,11 @@ export function GerenciarProdutosModal({
       setResetSignal(true);
       requestAnimationFrame(() => setResetSignal(false));
       dirtyIdsRef.current = new Set();
+      setAddOpen(false);
     }
     wasOpen.current = open;
   }, [open]);
 
-  // Merge não-destrutivo: quando a prop `produtos` mudar (realtime/toggle no
-  // dock, etc.), sobrescreve apenas produtos que NÃO estão marcados como
-  // dirty pelo usuário. Também roda na abertura para hidratar o estado.
   useEffect(() => {
     if (!open) return;
     const hydratedProps = produtos.map((produto) => {
@@ -94,7 +94,6 @@ export function GerenciarProdutosModal({
     });
 
     setLocalProdutos((prev) => {
-      // Primeira hidratação: usa a prop inteira.
       if (prev.length === 0) return hydratedProps;
       const dirty = dirtyIdsRef.current;
       const prevById = new Map(prev.map((p) => [p.id ?? "", p]));
@@ -102,11 +101,10 @@ export function GerenciarProdutosModal({
         const id = incoming.id ?? "";
         if (id && dirty.has(id)) {
           const local = prevById.get(id);
-          if (local) return local; // preserva edição local não salva
+          if (local) return local;
         }
         return incoming;
       });
-      // Preserva produtos novos criados localmente que ainda não foram salvos.
       const incomingIds = new Set(hydratedProps.map((p) => p.id));
       for (const p of prev) {
         if (!incomingIds.has(p.id) && p.id && dirty.has(p.id)) merged.push(p);
@@ -125,14 +123,6 @@ export function GerenciarProdutosModal({
 
   const formatCurrency = (value: number | undefined | null) =>
     `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
-
-  const markDirtyAt = (index: number) => {
-    setLocalProdutos((prev) => {
-      const p = prev[index];
-      if (p?.id) dirtyIdsRef.current.add(p.id);
-      return prev;
-    });
-  };
 
   const patchProduto = (index: number, patch: Partial<ProdutoWorkflowFlow>) => {
     setLocalProdutos((prev) =>
@@ -165,6 +155,26 @@ export function GerenciarProdutosModal({
     });
   };
 
+  const handleDuplicar = (index: number) => {
+    setLocalProdutos((prev) => {
+      const src = prev[index];
+      if (!src) return prev;
+      const newId = genId();
+      dirtyIdsRef.current.add(newId);
+      const copy: ProdutoWorkflowFlow = {
+        ...src,
+        id: newId,
+        etapas: (src.etapas ?? buildEtapasPadrao()).map((e) => ({ ...e, done: false })),
+        produzido: false,
+        entregue: false,
+        prazoEntrega: undefined,
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, copy);
+      return next;
+    });
+  };
+
   const handleEtapasChange = (index: number, etapas: EtapaProducao[]) =>
     patchProduto(index, { etapas });
 
@@ -177,9 +187,10 @@ export function GerenciarProdutosModal({
       }),
     );
 
-  const handleCustomFlowSaved = (nomes: string[]) => {
-    setCustomFlowToPersist(nomes);
-  };
+  const handleCustomFlowSaved = (nomes: string[]) => setCustomFlowToPersist(nomes);
+
+  const handlePrazoChange = (index: number, iso: string | null) =>
+    patchProduto(index, { prazoEntrega: iso ?? undefined });
 
   const handleSelectProduct = (product: ProductOption) => {
     const productData = productOptions.find((p) => p.nome === product.nome);
@@ -193,6 +204,7 @@ export function GerenciarProdutosModal({
           return { ...p, quantidade: (p.quantidade || 0) + 1 };
         }),
       );
+      setAddOpen(false);
       return;
     }
     const valorString = productData.valor || "R$ 0,00";
@@ -215,6 +227,7 @@ export function GerenciarProdutosModal({
         entregue: false,
       },
     ]);
+    setAddOpen(false);
   };
 
   const handleSave = async () => {
@@ -228,22 +241,23 @@ export function GerenciarProdutosModal({
     );
     onSave(produtosParaSalvar);
     if (customFlowToPersist && customFlowToPersist.length > 0) {
-      // Fire-and-forget — não bloqueia o fechamento do modal.
       saveUltimoFluxoCustom(customFlowToPersist).catch(() => {});
     }
     dirtyIdsRef.current = new Set();
     onOpenChange(false);
   };
 
+  const totalProdutos = localProdutos.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[92vw] sm:max-w-2xl max-h-[90vh] flex flex-col py-[17px] px-3 sm:px-6 text-xs sm:text-sm"
+        className="max-w-[92vw] sm:max-w-[1080px] max-h-[92vh] flex flex-col p-0 gap-0"
         onPointerDownOutside={(e) => {
           const target = e.target as Element;
           if (
             target.closest("[data-radix-popover-content]") ||
+            target.closest("[data-radix-dropdown-menu-content]") ||
             target.closest("[cmdk-item]") ||
             target.closest("[data-product-dropdown]")
           ) {
@@ -251,67 +265,126 @@ export function GerenciarProdutosModal({
           }
         }}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-sm">
-            <Package className="h-5 w-5 text-primary" />
-            Gerenciar Produtos para: {clienteName}
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border/40">
+          <DialogTitle className="flex items-center gap-2.5 text-[16px]">
+            <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+              <Package className="h-4 w-4 text-primary" />
+            </div>
+            Produção da sessão
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-xs">
-            Ajuste quantidade, preço unitário e etapas de produção de cada produto.
+          <DialogDescription className="text-muted-foreground text-[12px] ml-[42px]">
+            Acompanhe o andamento dos produtos e o que ainda precisa ser feito.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-[8px] scrollbar-elegant">
-          {localProdutos.length > 0 ? (
-            <div className="space-y-3 py-0">
-              <Label className="text-sm font-normal">Produtos Associados</Label>
-              <div className="space-y-2">
-                {localProdutos.map((produto, index) => (
-                  <ProdutoRow
-                    key={produto.id ?? index}
-                    produto={produto}
-                    index={index}
-                    ultimoCustomNomes={prefs.ultimoFluxoCustom}
-                    onQuantidadeChange={handleQuantidadeChange}
-                    onValorUnitarioChange={handleValorUnitarioChange}
-                    onRemove={handleRemoverProduto}
-                    onEtapasChange={handleEtapasChange}
-                    onFluxoChange={handleFluxoChange}
-                    onCustomFlowSaved={handleCustomFlowSaved}
-                    formatCurrency={formatCurrency}
-                  />
-                ))}
+        {/* Header executivo */}
+        <div className="px-6 pt-4 pb-3">
+          <div className="rounded-xl border border-border/60 bg-muted/20 px-5 py-3.5 flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4 text-primary" />
+              </div>
+              <div className="leading-tight">
+                <div className="text-[18px] font-semibold tabular-nums text-foreground">
+                  {totalProdutos}
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {totalProdutos === 1 ? "produto" : "produtos"}
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhum produto associado a este projeto.</p>
+            <div className="h-8 w-px bg-border/40 hidden sm:block" />
+            <div className="leading-tight">
+              <div className="text-[18px] font-semibold tabular-nums text-foreground">
+                {formatCurrency(totais.geral)}
+              </div>
+              <div className="text-[11px] text-muted-foreground">valor dos produtos</div>
+            </div>
+            <div className="flex-1" />
+            <Button
+              type="button"
+              onClick={() => setAddOpen((v) => !v)}
+              className="h-9 gap-2 text-[13px]"
+              variant={addOpen ? "outline" : "default"}
+            >
+              {addOpen ? (
+                <>
+                  <X className="h-3.5 w-3.5" />
+                  Fechar
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" />
+                  Adicionar produto
+                </>
+              )}
+            </Button>
+          </div>
+
+          {addOpen && (
+            <div className="mt-3 rounded-lg border border-border/60 bg-background p-3">
+              <div className="text-[11px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">
+                Buscar produto
+              </div>
+              <ProductSearchInput
+                productOptions={productOptions}
+                onSelect={handleSelectProduct}
+                resetSignal={resetSignal}
+              />
             </div>
           )}
-
-          <div className="space-y-3 border-t pt-4">
-            <Label className="text-sm font-normal">Adicionar Novo Produto</Label>
-            <ProductSearchInput
-              productOptions={productOptions}
-              onSelect={handleSelectProduct}
-              resetSignal={resetSignal}
-            />
-          </div>
         </div>
 
-        {localProdutos.length > 0 && (
-          <ProdutosFinancialSummary totais={totais} formatCurrency={formatCurrency} />
-        )}
+        {/* Lista */}
+        <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3 scrollbar-elegant min-h-0">
+          {localProdutos.length > 0 ? (
+            localProdutos.map((produto, index) => (
+              <ProducaoProdutoCard
+                key={produto.id ?? index}
+                ordinal={index + 1}
+                produto={produto}
+                index={index}
+                onQuantidadeChange={handleQuantidadeChange}
+                onValorUnitarioChange={handleValorUnitarioChange}
+                onRemove={handleRemoverProduto}
+                onDuplicate={handleDuplicar}
+                onEtapasChange={handleEtapasChange}
+                onFluxoChange={handleFluxoChange}
+                onCustomFlowSaved={handleCustomFlowSaved}
+                onPrazoChange={handlePrazoChange}
+                formatCurrency={formatCurrency}
+              />
+            ))
+          ) : (
+            <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl">
+              <Package className="h-10 w-10 mx-auto mb-2 opacity-40" />
+              <p className="text-[13px]">Nenhum produto associado a esta sessão.</p>
+              <button
+                type="button"
+                onClick={() => setAddOpen(true)}
+                className="text-[12px] text-primary hover:underline mt-2"
+              >
+                + Adicionar o primeiro produto
+              </button>
+            </div>
+          )}
+        </div>
 
-        <DialogFooter className="py-0 my-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 text-xs">
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} className="h-9 text-xs">
-            Salvar Alterações
-          </Button>
-        </DialogFooter>
+        {/* Rodapé */}
+        <div className="px-6 py-3 border-t border-border/40 bg-muted/10 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <Info className="h-3.5 w-3.5 shrink-0" />
+            Produtos inclusos no pacote não geram valor adicional, mas são acompanhados normalmente.
+          </div>
+          <DialogFooter className="p-0 gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 text-[13px]">
+              Fechar
+            </Button>
+            <Button onClick={handleSave} className="h-9 text-[13px]">
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
