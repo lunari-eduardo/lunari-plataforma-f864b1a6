@@ -141,40 +141,82 @@ export function ProducaoProdutoCard({
 
         {/* COL 2 — Timeline + botões voltar/próxima */}
         <div className="flex flex-col gap-3 min-w-0">
-          <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80">
-            Fluxo de produção
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80">
+              Fluxo de produção
+            </div>
+            {pending && (
+              <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-amber-600 dark:text-amber-400">
+                A produzir
+              </span>
+            )}
+            {entregue && (
+              <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-emerald-600 dark:text-emerald-400">
+                Entregue
+              </span>
+            )}
           </div>
           <ProducaoTimeline
             etapas={etapas}
-            onToggle={(i) => onEtapasChange(index, toggleEtapaAt(etapas, i))}
+            started={started}
+            onToggle={(i) => {
+              if (!started) onStartedChange(index, true);
+              onEtapasChange(index, toggleEtapaAt(etapas, i));
+            }}
           />
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRetreat}
-              disabled={doneCount === 0}
-              className="h-9 text-[12px]"
-            >
-              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-              Voltar etapa
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAdvance}
-              disabled={entregue}
-              className={cn(
-                "h-9 text-[12px] border-primary/30 text-primary hover:bg-primary/5 hover:text-primary",
-                "hover:border-primary/50",
-              )}
-            >
-              Próxima etapa
-              <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-            </Button>
-          </div>
+          {pending ? (
+            <div className="pt-1">
+              <Button
+                type="button"
+                onClick={handleStart}
+                className="w-full h-9 text-[12px] gap-1.5"
+              >
+                <Play className="h-3.5 w-3.5" />
+                Iniciar produção
+              </Button>
+            </div>
+          ) : entregue ? (
+            <div className="pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleReopen}
+                className="w-full h-9 text-[12px] gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reabrir produção
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRetreat}
+                disabled={doneCount === 0}
+                className="h-9 text-[12px]"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                Voltar etapa
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAdvance}
+                disabled={entregue}
+                className={cn(
+                  "h-9 text-[12px] border-primary/30 text-primary hover:bg-primary/5 hover:text-primary",
+                  "hover:border-primary/50",
+                )}
+              >
+                Próxima etapa
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* COL 3 — Fluxo + Prazo + Menu */}
