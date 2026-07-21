@@ -17,6 +17,8 @@ interface SessaoContratoButtonProps {
   clienteId: string;
   clienteNome?: string;
   className?: string;
+  /** Variante compacta usada no bloco de Ações do card do Workflow. */
+  iconOnly?: boolean;
 }
 
 const STATUS_PRIORITY: Record<ContratoStatus, number> = {
@@ -42,6 +44,7 @@ export function SessaoContratoButton({
   clienteId,
   clienteNome,
   className,
+  iconOnly = false,
 }: SessaoContratoButtonProps) {
   const { contratos } = useContratos({ sessionId });
   const { profile } = useUserProfile();
