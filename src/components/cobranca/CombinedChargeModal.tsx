@@ -49,7 +49,8 @@ interface CombinedChargeModalProps {
   clienteNome: string;
   clienteWhatsapp?: string;
   sessionId: string;
-  galeriaId: string;
+  /** Opcional — quando ausente, cobra sessão+extras sem galeria vinculada. */
+  galeriaId?: string | null;
   valorSessaoComponente: number;
   valorExtrasComponente: number;
   qtdFotosExtras: number;
