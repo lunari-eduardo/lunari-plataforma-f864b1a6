@@ -378,7 +378,7 @@ export function WorkflowCardCollapsed({
             </div>
           </div>
 
-          {/* 8: Produtos */}
+          {/* 8: Produtos — resumo operacional (2 linhas) */}
           <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">
               Produtos
