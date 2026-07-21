@@ -20,10 +20,7 @@ import {
   deterministicProductId,
   type ProdutoWorkflowFlow,
 } from "@/features/workflow/domain/productFlow";
-import {
-  buildTitle,
-  isEntregue as _entregueDup, // eslint-disable-line @typescript-eslint/no-unused-vars
-} from "@/features/workflow/domain/productTaskMirror";
+import { buildTitle } from "@/features/workflow/domain/productTaskMirror";
 import { isEntregue, etapaAtualIndex } from "@/features/workflow/domain/productFlow";
 import { domainError, err, ok, type DomainError, type Result } from "@/shared/result";
 import type { CapabilityContext } from "@/shared/capability";
