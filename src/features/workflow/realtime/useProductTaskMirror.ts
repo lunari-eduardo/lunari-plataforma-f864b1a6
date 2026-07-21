@@ -367,11 +367,18 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
       if (novasEtapas === etapas) return; // no-op
 
       const entregue = isEntregue(novasEtapas);
+      const anyDone = novasEtapas.some((e) => e.done);
+      const startedFlag = !!(produto as any).started || anyDone;
       const proxIdx = etapaAtualIndex(novasEtapas);
       const proxNome = entregue ? null : novasEtapas[proxIdx]?.nome ?? null;
       const novoProduto: ProdutoWorkflowFlow = {
         ...produto,
         etapas: novasEtapas,
+        started: startedFlag,
+        startedAt:
+          startedFlag && !(produto as any).startedAt
+            ? new Date().toISOString()
+            : (produto as any).startedAt,
         entregue,
         produzido:
           novasEtapas.length > 1
@@ -398,6 +405,7 @@ export function useMirrorToggleHandler(deps: MirrorToggleDeps) {
         quantidade: Number(produto.quantidade) || 1,
         clienteNome,
         etapaAtualNome: proxNome,
+        isPending: !startedFlag && !entregue,
         isEntregue: entregue,
       });
 
