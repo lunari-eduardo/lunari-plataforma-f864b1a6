@@ -185,17 +185,25 @@ export function ProducaoProdutoCard({
             </div>
             <div className="pt-4">
               <ProdutoContextMenu
-                showEditCustom={fluxo === "custom"}
+                showEditCustom={false}
                 onDuplicate={() => onDuplicate(index)}
-                onEditCustom={() => {
-                  // Aciona o trigger invisível do popover abaixo.
-                  const btn = document.getElementById(`edit-custom-${produto.id ?? index}`);
-                  btn?.click();
-                }}
+                onEditCustom={() => {}}
                 onRemove={() => onRemove(index)}
               />
             </div>
           </div>
+
+          {fluxo === "custom" && (
+            <div className="-mt-1">
+              <ProdutoFlowEditPopover
+                etapas={etapas}
+                onSave={(novasEtapas, nomes) => {
+                  onEtapasChange(index, novasEtapas);
+                  onCustomFlowSaved(nomes);
+                }}
+              />
+            </div>
+          )}
 
           <div>
             <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80 mb-1">
@@ -206,21 +214,6 @@ export function ProducaoProdutoCard({
               onChange={(iso) => onPrazoChange(index, iso)}
             />
           </div>
-
-          {/* Popover de editar etapas custom — trigger invisível ativado pelo menu ⋯ */}
-          {fluxo === "custom" && (
-            <div className="hidden">
-              <span id={`edit-custom-${produto.id ?? index}`}>
-                <ProdutoFlowEditPopover
-                  etapas={etapas}
-                  onSave={(novasEtapas, nomes) => {
-                    onEtapasChange(index, novasEtapas);
-                    onCustomFlowSaved(nomes);
-                  }}
-                />
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
