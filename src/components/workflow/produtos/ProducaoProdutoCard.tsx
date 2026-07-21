@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Minus, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Plus, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,7 @@ import {
   retreatOne,
   toggleEtapaAt,
   isEntregue,
+  isProdutoStarted,
   type EtapaProducao,
   type ProdutoWorkflowFlow,
 } from "@/features/workflow/domain/productFlow";
