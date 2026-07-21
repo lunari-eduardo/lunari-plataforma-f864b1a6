@@ -250,9 +250,9 @@ export function WorkflowCardExpanded({
 
   const confirmExtraEdit = useCallback(() => {
     if (!pendingExtraEdit) return;
+    // O handler no realtime (case valorFotoExtra / qtdFotosExtra) já grava
+    // extras_overridden=true automaticamente quando o valor diverge da galeria.
     onFieldUpdate(session.id, pendingExtraEdit.field, pendingExtraEdit.nextValue);
-    // Marca override permanente — desativa sincronia com galeria para sempre.
-    onFieldUpdate(session.id, "extrasOverridden", true, true);
     setPendingExtraEdit(null);
   }, [pendingExtraEdit, session.id, onFieldUpdate]);
 
