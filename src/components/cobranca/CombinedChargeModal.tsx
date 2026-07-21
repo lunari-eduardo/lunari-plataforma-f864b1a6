@@ -174,7 +174,7 @@ export function CombinedChargeModal({
 
   const commonBinding = {
     finalidade: 'sessao_e_extras' as const,
-    galeriaId,
+    galeriaId: galeriaId ?? null,
     qtdFotos: qtdFotosExtras,
     snapshotFotosIncluidas: snapshotFotosIncluidas ?? null,
     valorSessaoComponente,
@@ -182,7 +182,12 @@ export function CombinedChargeModal({
   };
 
   const invalid =
-    valorTotal <= 0 || valorSessaoComponente <= 0 || valorExtrasComponente <= 0;
+    valorTotal <= 0 ||
+    (valorSessaoComponente <= 0 && valorExtrasComponente <= 0) ||
+    valorSessaoComponente < 0 ||
+    valorExtrasComponente < 0;
+
+  const soExtras = valorSessaoComponente <= 0 && valorExtrasComponente > 0;
 
   async function handlePixManual() {
     if (invalid) return;
