@@ -37,6 +37,7 @@ export interface TasksPageSnapshot {
   };
   capabilities: string[];
   userTz: string;
+  notes: string[];
 }
 
 export interface BuildTasksSnapshotInput {
