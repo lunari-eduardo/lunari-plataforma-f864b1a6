@@ -8,6 +8,7 @@ import { useContractNotifications } from './notifications/useContractNotificatio
 import { useClientNotifications } from './notifications/useClientNotifications';
 import { useAgendaNotifications } from './notifications/useAgendaNotifications';
 import { useProductionReminders } from './useProductionReminders';
+import { useProductDeadlineNotifications } from './notifications/useProductDeadlineNotifications';
 
 const PRIORITY_ORDER: Record<NotificationPriority, number> = {
   critica: 0,
