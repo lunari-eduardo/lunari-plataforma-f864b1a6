@@ -113,6 +113,19 @@ declare module "@/shared/event-bus" {
       nome: string;
       photographerId: string;
     };
+    /** Fotógrafo declarou início da produção (transição pending → in_progress). */
+    "workflow.produto_production_started": {
+      sessionId: string;
+      produtoId: string;
+      startedAt: string;
+      photographerId: string;
+    };
+    /** Produção reaberta — produto volta a "A produzir". */
+    "workflow.produto_production_reopened": {
+      sessionId: string;
+      produtoId: string;
+      photographerId: string;
+    };
   }
 }
 

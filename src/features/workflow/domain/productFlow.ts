@@ -1,12 +1,17 @@
 /**
  * Domínio: fluxo de produção por produto do Workflow.
  *
- * Cada produto da sessão possui uma lista de etapas (`etapas`). A "etapa
- * atual" é o primeiro item com `done === false`. Se todas estão `done`, o
- * produto está entregue.
- *
- * Retro-compat: itens legados só têm `produzido`/`entregue`. Ao ler,
- * hidratamos as `etapas` a partir desses flags.
+ * Modelo (v2 — Nov/2026):
+ *  - Cada produto tem um `estado` implícito de produção:
+ *      • pending      → nada iniciado ainda ("A produzir")
+ *      • in_progress  → alguma etapa concluída, mas ainda não entregue
+ *      • done         → todas as etapas concluídas (entregue)
+ *  - `started` (persistido) marca o momento em que o fotógrafo declara início
+ *    da produção (via CTA "Iniciar produção") mesmo sem marcar etapa alguma.
+ *  - `etapas` são passos operacionais **do processo**, NUNCA o gatilho de
+ *    início. Por isso a etapa "A produzir" foi removida do fluxo padrão.
+ *  - Retro-compat: itens legados com primeira etapa "A produzir" são
+ *    migrados no `hydrateProduto` — o done dessa etapa vira `started`.
  */
 
 export type EtapaProducao = {
@@ -16,6 +21,7 @@ export type EtapaProducao = {
 };
 
 export type FluxoProducao = "padrao" | "custom";
+export type ProductionStatus = "pending" | "in_progress" | "done";
 
 export interface ProdutoWorkflowFlow {
   id?: string;
@@ -28,13 +34,39 @@ export interface ProdutoWorkflowFlow {
   etapas?: EtapaProducao[];
   /** Prazo de entrega opcional por produto (ISO YYYY-MM-DD). */
   prazoEntrega?: string;
+  /** Flag explícita — true quando o fotógrafo iniciou a produção. */
+  started?: boolean;
+  /** Timestamp ISO do momento em que `started` virou true. */
+  startedAt?: string;
   // Legado — mantido como espelho derivado na escrita.
   produzido?: boolean;
   entregue?: boolean;
 }
 
-export const ETAPAS_PADRAO_NOMES = ["A produzir", "Em produção", "Entregue"] as const;
+/**
+ * Etapas padrão do fluxo operacional. "A produzir" NÃO faz mais parte —
+ * o estado "pending" é derivado de `started === false`.
+ */
+export const ETAPAS_PADRAO_NOMES = ["Em produção", "Entregue"] as const;
 export const CUSTOM_FLOW_DEFAULT = ["Diagramação", "Aprovação", "Laboratório", "Entrega"];
+
+/** Nome legado que precisa ser migrado ao hidratar. */
+const LEGACY_FIRST_STAGE_NAMES = new Set([
+  "a produzir",
+  "aproduzir",
+  "produzir",
+]);
+
+const isLegacyFirstStage = (nome: string | undefined | null): boolean => {
+  if (!nome) return false;
+  return LEGACY_FIRST_STAGE_NAMES.has(
+    nome
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim(),
+  );
+};
 
 const slugId = (prefix: string, nome: string, i: number) =>
   `${prefix}_${i}_${nome
@@ -73,7 +105,9 @@ export function buildEtapasPadrao(): EtapaProducao[] {
 }
 
 export function buildEtapasFromNames(nomes: string[]): EtapaProducao[] {
-  const clean = nomes.map((n) => (n || "").trim()).filter(Boolean);
+  const clean = nomes
+    .map((n) => (n || "").trim())
+    .filter((n) => n && !isLegacyFirstStage(n));
   const source = clean.length > 0 ? clean : CUSTOM_FLOW_DEFAULT;
   return source.map((nome, i) => ({
     id: slugId("cst", nome, i),
@@ -107,6 +141,25 @@ export function isEntregue(etapas: EtapaProducao[] | undefined | null): boolean 
   return etapas.every((e) => e.done);
 }
 
+/**
+ * Um produto é considerado "iniciado" quando o fotógrafo marcou explicitamente
+ * (`started === true`) OU quando existe pelo menos uma etapa concluída.
+ */
+export function isProdutoStarted(p: Pick<ProdutoWorkflowFlow, "started" | "etapas">): boolean {
+  if (p.started) return true;
+  return (p.etapas ?? []).some((e) => e.done);
+}
+
+/** Retorna o status de produção derivado. */
+export function getProductionStatus(
+  p: Pick<ProdutoWorkflowFlow, "started" | "etapas">,
+): ProductionStatus {
+  const etapas = p.etapas ?? [];
+  if (etapas.length > 0 && isEntregue(etapas)) return "done";
+  if (isProdutoStarted(p)) return "in_progress";
+  return "pending";
+}
+
 /** Avança uma etapa: marca o primeiro !done como done. No-op se tudo pronto. */
 export function advanceOne(etapas: EtapaProducao[]): EtapaProducao[] {
   const idx = etapas.findIndex((e) => !e.done);
@@ -122,30 +175,60 @@ export function retreatOne(etapas: EtapaProducao[]): EtapaProducao[] {
   return etapas.map((e, i) => (i === last ? { ...e, done: false } : e));
 }
 
-/** Hash estável do padrão done/pendente — usado para dedup do eco. */
+/** Hash estável — inclui flag started para invalidar dedup na transição pending→in_progress. */
 export function etapasHash(etapas: EtapaProducao[] | undefined | null): string {
   if (!etapas || etapas.length === 0) return "";
   return etapas.map((e) => (e.done ? "1" : "0")).join("");
 }
 
-/** Hidrata um item legado (só `produzido`/`entregue`) em um item completo. */
+/** Hidrata um item — aplica migração legada e sincroniza flags. */
 export function hydrateProduto<T extends ProdutoWorkflowFlow>(p: T): T {
   // Normaliza prazoEntrega em qualquer formato ISO para YYYY-MM-DD.
   const prazoNorm =
-    typeof p.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(p.prazoEntrega)
+    typeof p.prazoEntrega === "string" && /^\d{4}-\d{2}-\d{2}/.test(p.prazoEntrega)
       ? p.prazoEntrega.slice(0, 10)
       : undefined;
-  if (p.etapas && p.etapas.length > 0) {
-    const fluxo: FluxoProducao = p.fluxo ?? "padrao";
-    return { ...p, fluxo, prazoEntrega: prazoNorm };
+
+  const fluxo: FluxoProducao = p.fluxo ?? "padrao";
+
+  // Caminho 1 — sem etapas: cria padrão. `started` fica como veio (ou false).
+  if (!p.etapas || p.etapas.length === 0) {
+    const etapas = buildEtapasPadrao();
+    if (p.entregue) etapas.forEach((e) => (e.done = true));
+    else if (p.produzido) etapas.forEach((e, i) => (e.done = i < etapas.length - 1));
+    const started = !!p.started || etapas.some((e) => e.done);
+    return {
+      ...p,
+      fluxo,
+      etapas,
+      prazoEntrega: prazoNorm,
+      started,
+      startedAt: p.startedAt,
+    };
   }
-  const etapas = buildEtapasPadrao();
-  if (p.entregue) etapas.forEach((e) => (e.done = true));
-  else if (p.produzido) {
-    // Marca todas exceto a última.
-    etapas.forEach((e, i) => (e.done = i < etapas.length - 1));
+
+  // Caminho 2 — com etapas. Detecta e migra a etapa legada "A produzir".
+  let etapas = p.etapas;
+  let startedFromLegacy: boolean | undefined;
+  if (isLegacyFirstStage(etapas[0]?.nome)) {
+    startedFromLegacy = !!etapas[0]?.done;
+    etapas = etapas.slice(1);
+    if (etapas.length === 0) etapas = buildEtapasPadrao();
   }
-  return { ...p, fluxo: "padrao", etapas, prazoEntrega: prazoNorm };
+
+  const started =
+    !!p.started ||
+    (startedFromLegacy ?? false) ||
+    etapas.some((e) => e.done);
+
+  return {
+    ...p,
+    fluxo,
+    etapas,
+    prazoEntrega: prazoNorm,
+    started,
+    startedAt: p.startedAt,
+  };
 }
 
 /** Sincroniza os flags legados a partir das etapas. */
@@ -155,7 +238,24 @@ export function syncLegacyFlags<T extends ProdutoWorkflowFlow>(p: T): T {
   const produzido = etapas.length > 1
     ? etapas.slice(0, -1).every((e) => e.done)
     : entregue;
-  return { ...p, produzido, entregue };
+  const started = !!p.started || etapas.some((e) => e.done);
+  const startedAt = started && !p.startedAt ? new Date().toISOString() : p.startedAt;
+  return { ...p, produzido, entregue, started, startedAt };
+}
+
+/** Marca o produto como iniciado. No-op se já iniciado. */
+export function startProduction<T extends ProdutoWorkflowFlow>(p: T): T {
+  if (isProdutoStarted(p)) return p;
+  return { ...p, started: true, startedAt: p.startedAt ?? new Date().toISOString() };
+}
+
+/**
+ * Reabre a produção — volta ao estado "pending" (`started=false`, sem etapa done).
+ * Preserva a estrutura de etapas e o histórico de startedAt limpo.
+ */
+export function reopenProduction<T extends ProdutoWorkflowFlow>(p: T): T {
+  const etapas = (p.etapas ?? []).map((e) => ({ ...e, done: false }));
+  return { ...p, etapas, started: false, startedAt: undefined };
 }
 
 /** Ao trocar o modo padrão↔custom, preserva progresso por posição. */

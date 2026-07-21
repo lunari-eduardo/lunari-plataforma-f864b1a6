@@ -30,6 +30,9 @@ import {
   buildEtapasFromNames,
   hydrateProduto,
   isEntregue,
+  isProdutoStarted,
+  startProduction,
+  reopenProduction,
   type ProdutoWorkflowFlow,
 } from "@/features/workflow/domain/productFlow";
 
@@ -87,7 +90,14 @@ export const produtoAdvanceStage = defineCommand({
     if (nextEtapas === (before.etapas ?? [])) {
       return err(domainError("NOOP", "Produto já está entregue."));
     }
-    const nextProduto = { ...before, etapas: nextEtapas };
+    // Auto-inicia produção se ainda não estava iniciada.
+    const wasStarted = isProdutoStarted(before);
+    const nextProduto: ProdutoWorkflowFlow = {
+      ...before,
+      etapas: nextEtapas,
+      started: true,
+      startedAt: (before as any).startedAt ?? new Date().toISOString(),
+    };
     const nextArr = [...produtos];
     nextArr[idx] = nextProduto;
     const persisted = await persistProdutos({
@@ -98,6 +108,12 @@ export const produtoAdvanceStage = defineCommand({
     if (!isOk(persisted)) return persisted;
     const shaped = shapeProdutoOut(nextArr[idx]);
     const preview = `${nextProduto.nome}: avançar para "${shaped.etapaAtualNome ?? "Entregue"}".`;
+    if (!wasStarted) {
+      await ctx.emit("workflow.produto_production_started", {
+        sessionId, produtoId: nextProduto.id!,
+        startedAt: nextProduto.startedAt!, photographerId: userId,
+      });
+    }
     await ctx.emit("workflow.produto_stage_changed", {
       sessionId, produtoId: nextProduto.id!, direction: "advance",
       etapaAtual: shaped.etapaAtualNome, photographerId: userId,
@@ -463,5 +479,75 @@ export const produtoDuplicate = defineCommand({
       sessionId, produtoId: clone.id!, nome: clone.nome, photographerId: userId,
     });
     return ok({ sessionId, produtoId: clone.id!, produto: shaped, valorTotal: persisted.value.valorTotal, preview });
+  },
+});
+
+// -------- startProduction --------
+export const produtoStartProduction = defineCommand({
+  id: "workflow.produto.startProduction",
+  title: "Iniciar produção do produto",
+  description: "Marca `started=true` (transição pending → in_progress) sem alterar etapas.",
+  input: SessionAndProduct,
+  output: OutBase,
+  permissions: ["workflow:write"],
+  sideEffects: ["db:clientes_sessoes", "event:workflow.produto_production_started"],
+  audit: "on-success",
+  async handler({ sessionId, produtoId }, ctx) {
+    const p = await prep(sessionId, produtoId, ctx);
+    if ("err" in p) return p.err;
+    const { userId, session, produtos, idx, clienteNome } = p;
+    const before = produtos[idx];
+    if (isProdutoStarted(before)) {
+      return err(domainError("NOOP", "Produto já está em produção."));
+    }
+    const nextProduto = startProduction(before);
+    const nextArr = [...produtos];
+    nextArr[idx] = nextProduto;
+    const persisted = await persistProdutos({
+      userId, sessionId, session, produtos: nextArr,
+      touched: [{ produtoId: nextProduto.id!, clienteNome }],
+      ctx,
+    });
+    if (!isOk(persisted)) return persisted;
+    const shaped = shapeProdutoOut(nextArr[idx]);
+    const preview = `${nextProduto.nome}: iniciar produção.`;
+    await ctx.emit("workflow.produto_production_started", {
+      sessionId, produtoId: nextProduto.id!,
+      startedAt: nextProduto.startedAt!, photographerId: userId,
+    });
+    return ok({ sessionId, produtoId: nextProduto.id!, produto: shaped, valorTotal: persisted.value.valorTotal, preview });
+  },
+});
+
+// -------- reopenProduction --------
+export const produtoReopenProduction = defineCommand({
+  id: "workflow.produto.reopenProduction",
+  title: "Reabrir produção",
+  description: "Zera etapas e `started` — volta o produto para o estado 'A produzir'.",
+  input: SessionAndProduct,
+  output: OutBase,
+  permissions: ["workflow:write"],
+  sideEffects: ["db:clientes_sessoes", "event:workflow.produto_production_reopened"],
+  audit: "on-success",
+  async handler({ sessionId, produtoId }, ctx) {
+    const p = await prep(sessionId, produtoId, ctx);
+    if ("err" in p) return p.err;
+    const { userId, session, produtos, idx, clienteNome } = p;
+    const before = produtos[idx];
+    const nextProduto = reopenProduction(before);
+    const nextArr = [...produtos];
+    nextArr[idx] = nextProduto;
+    const persisted = await persistProdutos({
+      userId, sessionId, session, produtos: nextArr,
+      touched: [{ produtoId: nextProduto.id!, clienteNome }],
+      ctx,
+    });
+    if (!isOk(persisted)) return persisted;
+    const shaped = shapeProdutoOut(nextArr[idx]);
+    const preview = `${nextProduto.nome}: reabrir produção.`;
+    await ctx.emit("workflow.produto_production_reopened", {
+      sessionId, produtoId: nextProduto.id!, photographerId: userId,
+    });
+    return ok({ sessionId, produtoId: nextProduto.id!, produto: shaped, valorTotal: persisted.value.valorTotal, preview });
   },
 });

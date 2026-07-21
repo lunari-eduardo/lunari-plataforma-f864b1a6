@@ -9,16 +9,16 @@ import {
 
 interface Props {
   etapas: EtapaProducao[];
+  /**
+   * Quando `false`, nenhum passo é destacado como "atual" — o produto está
+   * em estado "A produzir" (pending). O clique em uma etapa ainda funciona
+   * e implicitamente inicia a produção via callback do pai.
+   */
+  started?: boolean;
   onToggle: (index: number) => void;
 }
 
-/**
- * Timeline horizontal executiva com labels duplos (nome + status).
- * - Nó `done`: círculo preenchido com check.
- * - Nó `atual` (primeiro !done): círculo com anel duplo (target look).
- * - Nó futuro: círculo cinza pequeno.
- */
-export function ProducaoTimeline({ etapas, onToggle }: Props) {
+export function ProducaoTimeline({ etapas, started = true, onToggle }: Props) {
   if (!etapas || etapas.length === 0) return null;
   const atualIdx = etapaAtualIndex(etapas);
   const entregue = isEntregue(etapas);
@@ -28,8 +28,14 @@ export function ProducaoTimeline({ etapas, onToggle }: Props) {
       <div className="flex items-start min-w-max px-1">
         {etapas.map((etapa, i) => {
           const done = etapa.done;
-          const isCurrent = !entregue && i === atualIdx;
-          const status = done ? "Concluída" : isCurrent ? "Atual" : "Pendente";
+          const isCurrent = started && !entregue && i === atualIdx;
+          const status = done
+            ? "Concluída"
+            : isCurrent
+              ? "Atual"
+              : !started
+                ? "Aguardando"
+                : "Pendente";
           const statusColor = done
             ? "text-emerald-600 dark:text-emerald-400"
             : isCurrent
@@ -49,6 +55,7 @@ export function ProducaoTimeline({ etapas, onToggle }: Props) {
                     isCurrent &&
                       "h-6 w-6 bg-primary text-primary-foreground ring-4 ring-primary/15",
                     !done && !isCurrent && "h-4 w-4 bg-muted border border-border/60 hover:bg-muted/80",
+                    !started && !done && "opacity-60",
                   )}
                 >
                   {done && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -63,6 +70,7 @@ export function ProducaoTimeline({ etapas, onToggle }: Props) {
                       done && "text-emerald-700 dark:text-emerald-400",
                       isCurrent && "text-primary",
                       !done && !isCurrent && "text-foreground/80",
+                      !started && !done && "text-muted-foreground",
                     )}
                     title={etapa.nome}
                   >

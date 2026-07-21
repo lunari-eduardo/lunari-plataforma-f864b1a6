@@ -121,12 +121,14 @@ export async function persistProdutos(params: {
     const p = normalized[idx];
     const etapas = p.etapas ?? [];
     const entregue = isEntregue(etapas);
+    const started = !!(p as any).started || etapas.some((e) => e.done);
     const atual = etapas[etapaAtualIndex(etapas)]?.nome ?? null;
     const expectedTitle = buildTitle({
       produtoNome: p.nome,
       quantidade: Number(p.quantidade) || 1,
       clienteNome: t.clienteNome,
       etapaAtualNome: atual,
+      isPending: !started && !entregue,
       isEntregue: entregue,
     });
     mirrorMemoStore.memorize(sessionId, t.produtoId, etapasHash(etapas), expectedTitle);

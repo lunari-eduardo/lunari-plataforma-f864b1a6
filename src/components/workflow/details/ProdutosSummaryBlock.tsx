@@ -80,7 +80,7 @@ export function ProdutosSummaryBlock({
             </div>
             {p.etapas && p.etapas.length > 0 && (
               <div className="pl-5">
-                <ProdutoFlowMiniTimeline etapas={p.etapas} />
+                <ProdutoFlowMiniTimeline etapas={p.etapas} started={!!p.started} />
               </div>
             )}
           </button>

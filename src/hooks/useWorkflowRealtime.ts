@@ -453,6 +453,14 @@ export const useWorkflowRealtime = () => {
                   ? p.prazoEntrega.slice(0, 10)
                   : undefined;
                 if (prazo) base.prazoEntrega = prazo;
+                // Estado de produção (v2): preserva `started`/`startedAt` vindo do modal.
+                const anyDone = Array.isArray(etapas) && etapas.some((e: any) => e.done);
+                const startedFlag = !!p.started || anyDone;
+                base.started = startedFlag;
+                if (startedFlag) {
+                  base.startedAt =
+                    (typeof p.startedAt === 'string' && p.startedAt) || new Date().toISOString();
+                }
                 if (etapas && etapas.length > 0) {
                   base.etapas = etapas;
                   // Reconcilia flags legados a partir das etapas para

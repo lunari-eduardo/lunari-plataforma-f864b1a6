@@ -65,7 +65,7 @@ const normalizeForSave = (list: ProdutoWorkflowFlow[]): ProdutoWorkflowFlow[] =>
   );
 
 const produtoHash = (p: ProdutoWorkflowFlow): string =>
-  `${p.id ?? ""}|${p.quantidade ?? 0}|${p.valorUnitario ?? 0}|${p.fluxo ?? "padrao"}|${etapasHash(p.etapas)}|${p.prazoEntrega ?? ""}`;
+  `${p.id ?? ""}|${p.quantidade ?? 0}|${p.valorUnitario ?? 0}|${p.fluxo ?? "padrao"}|${etapasHash(p.etapas)}|${p.prazoEntrega ?? ""}|${p.started ? "1" : "0"}`;
 
 export function GerenciarProdutosModal({
   open,
@@ -328,6 +328,20 @@ export function GerenciarProdutosModal({
   const handlePrazoChange = (index: number, iso: string | null) =>
     patchProduto(index, { prazoEntrega: iso ?? undefined });
 
+  const handleStartedChange = (index: number, started: boolean) =>
+    mutate(
+      (prev) =>
+        prev.map((p, i) => {
+          if (i !== index) return p;
+          if (p.id) dirtyIdsRef.current.add(p.id);
+          if (started) {
+            return { ...p, started: true, startedAt: p.startedAt ?? new Date().toISOString() };
+          }
+          return { ...p, started: false, startedAt: undefined };
+        }),
+      { immediate: true },
+    );
+
   const handleSelectProduct = (product: ProductOption) => {
     const productData = productOptions.find((p) => p.nome === product.nome);
     if (!productData) return;
@@ -508,6 +522,7 @@ export function GerenciarProdutosModal({
                 onFluxoChange={handleFluxoChange}
                 onCustomFlowSaved={handleCustomFlowSaved}
                 onPrazoChange={handlePrazoChange}
+                onStartedChange={handleStartedChange}
                 formatCurrency={formatCurrency}
               />
             ))
