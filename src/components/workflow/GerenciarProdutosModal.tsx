@@ -522,6 +522,7 @@ export function GerenciarProdutosModal({
                 onFluxoChange={handleFluxoChange}
                 onCustomFlowSaved={handleCustomFlowSaved}
                 onPrazoChange={handlePrazoChange}
+                onStartedChange={handleStartedChange}
                 formatCurrency={formatCurrency}
               />
             ))
