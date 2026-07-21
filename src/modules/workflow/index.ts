@@ -13,6 +13,7 @@ import "./application/commands/deleteSession";
 import "./application/commands/addPayment";
 import "./application/commands/refundPayment";
 import "./application/commands/reconcileFotosExtras";
+import "./application/commands/produtoCommands";
 
 import "./application/commands/syncFromAgenda";
 import "./application/queries/getCardBySession";
@@ -24,6 +25,7 @@ import "./application/queries/pendingPayments";
 import "./application/queries/getSessionFinancials";
 import "./application/queries/listSessionsByPaymentStatus";
 import "./application/queries/diagnoseSession";
+import "./application/queries/produtoQueries";
 
 // Re-export para uso direto via TanStack hooks ou execute()
 export { advanceCard } from "./application/commands/advanceCard";

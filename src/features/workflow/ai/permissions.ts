@@ -27,6 +27,17 @@ export type WorkflowPermission = (typeof WORKFLOW_PERMISSIONS)[number];
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "workflow.deleteSession",
   "workflow.refundPayment",
+  // Produtos — todos os commands exigem aprovação humana quando via IA.
+  "workflow.produto.advanceStage",
+  "workflow.produto.retreatStage",
+  "workflow.produto.setStages",
+  "workflow.produto.switchFluxo",
+  "workflow.produto.setDeadline",
+  "workflow.produto.setPrice",
+  "workflow.produto.setQuantity",
+  "workflow.produto.add",
+  "workflow.produto.remove",
+  "workflow.produto.duplicate",
 ]);
 
 /** Capabilities expostas à IA. Queries são sempre seguras; commands variam. */

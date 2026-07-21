@@ -66,6 +66,53 @@ declare module "@/shared/event-bus" {
       valorEstornado: number;
       photographerId: string;
     };
+
+    // ── Produtos (fluxo de produção) ────────────────────────────────────
+    "workflow.produto_stage_changed": {
+      sessionId: string;
+      produtoId: string;
+      direction: "advance" | "retreat" | "set";
+      etapaAtual: string | null;
+      photographerId: string;
+    };
+    "workflow.produto_flow_changed": {
+      sessionId: string;
+      produtoId: string;
+      fluxo: "padrao" | "custom";
+      photographerId: string;
+    };
+    "workflow.produto_deadline_changed": {
+      sessionId: string;
+      produtoId: string;
+      prazoEntrega: string | null;
+      photographerId: string;
+    };
+    "workflow.produto_price_changed": {
+      sessionId: string;
+      produtoId: string;
+      anterior: number;
+      novo: number;
+      photographerId: string;
+    };
+    "workflow.produto_qty_changed": {
+      sessionId: string;
+      produtoId: string;
+      anterior: number;
+      novo: number;
+      photographerId: string;
+    };
+    "workflow.produto_added": {
+      sessionId: string;
+      produtoId: string;
+      nome: string;
+      photographerId: string;
+    };
+    "workflow.produto_removed": {
+      sessionId: string;
+      produtoId: string;
+      nome: string;
+      photographerId: string;
+    };
   }
 }
 

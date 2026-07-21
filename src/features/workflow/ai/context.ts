@@ -19,10 +19,11 @@ import {
   selectMonthSessions,
   selectSituacaoCounts,
 } from "../store/selectors";
+import { bucketProductsByDeadline } from "../domain/productDeadlines";
 import { listWorkflowCapabilityIds } from "./permissions";
 
 export interface WorkflowPageSnapshot {
-  version: 1;
+  version: 2;
   route: "/workflow";
   currentMonth: { year: number; month: number };
   filters: {
@@ -43,6 +44,13 @@ export interface WorkflowPageSnapshot {
     previsto: number;
     recebido: number;
   };
+  produtosPendentes: {
+    atrasados: number;
+    hoje: number;
+    amanha: number;
+    semana: number;
+    totalComPrazo: number;
+  };
   permissions: {
     canWrite: boolean;
     canDelete: boolean;
@@ -51,6 +59,7 @@ export interface WorkflowPageSnapshot {
   };
   capabilities: string[];
   userTz: string;
+  notes: string[];
 }
 
 export interface BuildSnapshotInput {
@@ -76,8 +85,17 @@ export function buildWorkflowPageSnapshot(input: BuildSnapshotInput): WorkflowPa
   const metrics = selectMonthMetrics(year, month);
   const situacao = selectSituacaoCounts(year, month);
 
+  const deadlineItems = bucketProductsByDeadline(sessions as any[]);
+  const produtosPendentes = {
+    atrasados: deadlineItems.filter((i) => i.bucket === "atrasado").length,
+    hoje: deadlineItems.filter((i) => i.bucket === "hoje").length,
+    amanha: deadlineItems.filter((i) => i.bucket === "amanha").length,
+    semana: deadlineItems.filter((i) => i.bucket === "semana").length,
+    totalComPrazo: deadlineItems.length,
+  };
+
   return {
-    version: 1,
+    version: 2,
     route: "/workflow",
     currentMonth,
     filters: { ...DEFAULT_FILTERS, ...(filters ?? {}) },
@@ -92,6 +110,7 @@ export function buildWorkflowPageSnapshot(input: BuildSnapshotInput): WorkflowPa
       previsto: metrics.previsto,
       recebido: metrics.recebido,
     },
+    produtosPendentes,
     permissions: {
       canWrite: !!user,
       canDelete: !!user,
@@ -100,6 +119,11 @@ export function buildWorkflowPageSnapshot(input: BuildSnapshotInput): WorkflowPa
     },
     capabilities: listWorkflowCapabilityIds(),
     userTz: "America/Sao_Paulo",
+    notes: [
+      "Produtos têm fluxo de produção (padrao ou custom); use workflow.produto.* para etapas/preço/prazo/quantidade.",
+      "Nunca edite tarefas com tag 'workflow:produto' — são espelhos automáticos. Use workflow.produto.advanceStage/retreatStage.",
+      "Para responder 'quais produtos vencem esta semana', use workflow.produto.listPending com bucket='semana'.",
+    ],
   };
 }
 
