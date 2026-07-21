@@ -257,6 +257,205 @@ export function WorkflowCardCollapsed({
     <>
       <div className="px-3 py-3 md:px-5 md:py-4 cursor-pointer min-h-[56px]" onClick={onToggleExpand}>
         <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0 md:overflow-visible">
+          <div
+            className={cn(
+              "grid items-center gap-x-5 gap-y-2 min-w-[1180px] md:min-w-0",
+              "grid-cols-[28px_46px_minmax(140px,1.2fr)_minmax(160px,1.4fr)_minmax(210px,1.9fr)_minmax(120px,1fr)_96px_88px_minmax(110px,1fr)_minmax(140px,1.2fr)_28px]",
+            )}
+          >
+            {/* 1: Expand */}
+            <div className="h-8 w-8 flex items-center justify-center shrink-0 hover:bg-primary/10 rounded">
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4 text-primary" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+
+            {/* 2: Data */}
+            <div className="text-sm font-medium text-foreground tabular-nums min-h-8 flex items-center">
+              {formatToDayMonth(session.data)}
+            </div>
+
+            {/* 3: Nome + WhatsApp */}
+            <div className="flex items-center gap-1.5 min-w-0 min-h-8" onClick={(e) => e.stopPropagation()}>
+              {session.clienteId ? (
+                <Link
+                  to={`/app/clientes/${session.clienteId}`}
+                  className="text-sm font-medium text-primary hover:text-primary/80 hover:underline break-words leading-tight"
+                >
+                  {session.nome}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-foreground break-words leading-tight">
+                  {session.nome}
+                </span>
+              )}
+              {session.whatsapp && (
+                <a
+                  href={`https://wa.me/${session.whatsapp.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 text-green-600 hover:text-green-700" />
+                </a>
+              )}
+            </div>
+
+            {/* 4: Descrição */}
+            <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Descrição</span>
+              <Input
+                value={descriptionValue}
+                onChange={(e) => setDescriptionValue(e.target.value)}
+                onBlur={handleDescriptionBlur}
+                placeholder="Descrição..."
+                className={cn(
+                  "text-[11px] border border-border/40 rounded-md bg-transparent focus:bg-card/60 dark:focus:bg-card/10 transition-colors",
+                  isExpanded
+                    ? "min-h-8 h-auto whitespace-normal break-words py-1 px-2"
+                    : "h-8 truncate",
+                )}
+              />
+            </div>
+
+            {/* 5: Pacote */}
+            <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Pacote</span>
+              <WorkflowPackageCombobox
+                key={`package-${session.id}`}
+                value={pacoteAtual}
+                displayName={displayPackageName}
+                onValueChange={(packageData) => {
+                  if (!packageData.id && !packageData.nome) {
+                    onFieldUpdate(session.id, "pacote", "");
+                    return;
+                  }
+                  onFieldUpdate(session.id, "pacote", packageData.id || packageData.nome);
+                }}
+              />
+            </div>
+
+            {/* 6: Status */}
+            <div className="flex flex-col gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Status</span>
+              <Select value={session.status || ""} onValueChange={handleStatusChange}>
+                <SelectTrigger className="h-8 text-xs border-0 bg-transparent p-0 focus:ring-0 [&>svg]:hidden justify-center">
+                  <SelectValue placeholder="Status">
+                    {session.status ? (
+                      <ColoredStatusBadge status={session.status} showBackground={true} />
+                    ) : (
+                      <span className="text-muted-foreground italic text-xs">Sem status</span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg z-50">
+                  <SelectItem value="__CLEAR__" className="text-muted-foreground italic">
+                    Limpar status
+                  </SelectItem>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      <ColoredStatusBadge status={status} showBackground={true} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 7: Fotos extras (read-only) */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center whitespace-nowrap">
+                Fotos extras
+              </span>
+              <div className="min-h-8 flex items-center justify-center">
+                <span className="text-sm font-medium text-foreground tabular-nums">
+                  {hasGaleria && fin.isLoading
+                    ? "…"
+                    : hasGaleria && fin.qtdExtras > 0
+                      ? fin.qtdExtras
+                      : (session.qtdFotosExtra || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* 8: Produtos — resumo operacional (2 linhas) */}
+            <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide text-center">
+                Produtos
+              </span>
+              <div className="min-h-8 flex items-center justify-center">
+                <ProductStatusChip
+                  produtos={session.produtosList as any}
+                  onClick={() => setModalAberto(true)}
+                />
+              </div>
+            </div>
+
+            {/* 9: Pendente / Crédito da sessão */}
+            <CollapsedPendingCell
+              sessionId={session.sessionId || null}
+              clienteId={(session as any).clienteId || null}
+              pendente={pendente}
+              formatCurrency={formatCurrency}
+            />
+
+            {/* 10: Galerias */}
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Galerias</span>
+              <div className="min-h-8 flex items-center">
+                <CardGalleryButtons
+                  galerias={galerias}
+                  hasGalerias={hasGalerias}
+                  temSelecao={temSelecao}
+                  temEntrega={temEntrega}
+                  temTodas={temTodas}
+                  onCreateSelecao={handleCreateSelecao}
+                  onCreateEntrega={handleCreateEntrega}
+                />
+              </div>
+            </div>
+
+            {/* 11: Excluir */}
+            <div className="flex items-center justify-center min-h-8" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setDeleteModalOpen(true)}
+                className="h-7 w-7 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-destructive/10 transition-all"
+                title="Excluir sessão"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modais renderizados FORA do wrapper com onClick={onToggleExpand}.
+          Radix Dialog usa Portal (DOM no body), mas eventos React borbulham
+          pela árvore de componentes — colocar aqui como irmão do click-area
+          impede que cliques dentro do modal disparem expand/collapse do card. */}
+      <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+        <CardCollapsedModals
+          session={session}
+          productOptions={productOptions}
+          modalAberto={modalAberto}
+          setModalAberto={setModalAberto}
+          onFieldUpdate={onFieldUpdate}
+          formatCurrency={formatCurrency}
+          workflowPaymentsOpen={workflowPaymentsOpen}
+          setWorkflowPaymentsOpen={setWorkflowPaymentsOpen}
+          pendente={pendente}
+          galleryModalOpen={galleryModalOpen}
+          setGalleryModalOpen={setGalleryModalOpen}
+          deleteModalOpen={deleteModalOpen}
+          setDeleteModalOpen={setDeleteModalOpen}
+          onDeleteSession={onDeleteSession}
+        />
+      </div>
+    </>
+  );
+}
+
 
 
 /**
