@@ -69,10 +69,10 @@ export function CardCollapsedModals({
               ...p,
               valorUnitario: p.tipo === "incluso" ? 0 : p.valorUnitario,
             }));
-            // ÚNICA chamada de save: reducer central em `useWorkflowSessionActions`
-            // deriva `produto` / `qtdProduto` / `valorTotalProduto` a partir de
-            // `produtosList`. Emissões seriais causavam overwrite por closure
-            // stale (chamadas 2/3/4 restauravam produtos antigos do currentSession).
+            // Autosave: o modal chama `onSave` várias vezes (debounced) ao
+            // longo da vida. Cada chamada é um replace completo de
+            // `produtosList`; o reducer central em `useWorkflowSessionActions`
+            // deriva `produto` / `qtdProduto` / `valorTotalProduto`.
             await onFieldUpdate(session.id, "produtosList", produtosCorrigidos);
           }}
         />
