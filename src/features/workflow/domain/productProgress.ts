@@ -1,4 +1,9 @@
-import { hydrateProduto, isEntregue, etapaAtualIndex, type ProdutoWorkflowFlow } from "./productFlow";
+import {
+  hydrateProduto,
+  isEntregue,
+  isProdutoStarted,
+  type ProdutoWorkflowFlow,
+} from "./productFlow";
 
 export type ProductProgressTone = "muted" | "slate" | "blue" | "amber" | "green";
 
@@ -29,9 +34,8 @@ export function computeProductProgress(items: ProdutoWorkflowFlow[] | undefined 
   for (const p of arr) {
     const et = p.etapas ?? [];
     if (isEntregue(et)) { entregues++; continue; }
-    const idx = etapaAtualIndex(et);
-    if (idx <= 0) aProduzir++;
-    else emProducao++;
+    if (!isProdutoStarted(p)) { aProduzir++; continue; }
+    emProducao++;
   }
   const pendentes = total - entregues;
 
@@ -43,9 +47,13 @@ export function computeProductProgress(items: ProdutoWorkflowFlow[] | undefined 
     return { total, entregues, emProducao, aProduzir, pendentes,
       label: `${pendentes} pendente${pendentes > 1 ? "s" : ""}`, tone: "amber", dotClass: "bg-amber-500" };
   }
+  if (emProducao > 0 && aProduzir === 0) {
+    return { total, entregues, emProducao, aProduzir, pendentes,
+      label: "Em produção", tone: "blue", dotClass: "bg-sky-500" };
+  }
   if (emProducao > 0) {
     return { total, entregues, emProducao, aProduzir, pendentes,
-      label: "Produção", tone: "blue", dotClass: "bg-sky-500" };
+      label: `${emProducao} em produção`, tone: "blue", dotClass: "bg-sky-500" };
   }
   return { total, entregues, emProducao, aProduzir, pendentes,
     label: "A produzir", tone: "slate", dotClass: "bg-slate-400" };
