@@ -597,7 +597,7 @@ export function WorkflowCardExpanded({
         />
       )}
 
-      {resolvedGalleryId && showCombinedChargeModal && (
+      {showCombinedChargeModal && (
         <CombinedChargeModal
           isOpen={showCombinedChargeModal}
           onClose={() => setShowCombinedChargeModal(false)}
@@ -605,8 +605,16 @@ export function WorkflowCardExpanded({
           clienteNome={session.nome || "Cliente"}
           clienteWhatsapp={session.whatsapp}
           sessionId={session.sessionId || session.id}
-          galeriaId={resolvedGalleryId}
-          valorSessaoComponente={pendenteSessaoSugerido}
+          galeriaId={resolvedGalleryId ?? null}
+          valorSessaoComponente={
+            // Quando só extras estão pendentes (ex.: sessão paga OU sem galeria mas
+            // fluxo "Cobrar extras"), zera o componente sessão.
+            pendenteSessaoSugerido > 0.001 && extrasPendente > 0.001
+              ? pendenteSessaoSugerido
+              : extrasPendente > 0.001
+                ? 0
+                : pendenteSessaoSugerido
+          }
           valorExtrasComponente={extrasPendente}
           qtdFotosExtras={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}
           snapshotFotosIncluidas={extraCalc?.included_count ?? null}
