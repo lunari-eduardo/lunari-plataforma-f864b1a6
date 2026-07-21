@@ -78,6 +78,7 @@ export function useNotifications(): UseNotificationsResult {
       ...clients,
       ...agenda,
       ...productionAsNotifs,
+      ...productDeadlines,
     ].filter((n) => !dismissed.has(n.id));
 
     // Dedupe por id (caso fontes coincidam)
@@ -89,7 +90,7 @@ export function useNotifications(): UseNotificationsResult {
       if (p !== 0) return p;
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
-  }, [financial, tasks, contracts, clients, agenda, productionAsNotifs, dismissedIds]);
+  }, [financial, tasks, contracts, clients, agenda, productionAsNotifs, productDeadlines, dismissedIds]);
 
   const readSet = useMemo(() => new Set(readIds), [readIds]);
 
