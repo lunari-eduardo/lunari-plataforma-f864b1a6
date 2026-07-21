@@ -36,6 +36,8 @@ interface Props {
   onFluxoChange: (index: number, fluxo: "padrao" | "custom") => void;
   onCustomFlowSaved: (nomes: string[]) => void;
   onPrazoChange: (index: number, iso: string | null) => void;
+  /** v2: transição pending↔in_progress explícita. */
+  onStartedChange: (index: number, started: boolean) => void;
   formatCurrency: (v: number) => string;
 }
 
