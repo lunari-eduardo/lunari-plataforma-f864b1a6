@@ -251,6 +251,8 @@ export function WorkflowCardExpanded({
   const confirmExtraEdit = useCallback(() => {
     if (!pendingExtraEdit) return;
     onFieldUpdate(session.id, pendingExtraEdit.field, pendingExtraEdit.nextValue);
+    // Marca override permanente — desativa sincronia com galeria para sempre.
+    onFieldUpdate(session.id, "extrasOverridden", true, true);
     setPendingExtraEdit(null);
   }, [pendingExtraEdit, session.id, onFieldUpdate]);
 
