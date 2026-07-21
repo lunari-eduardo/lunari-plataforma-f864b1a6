@@ -8,6 +8,7 @@ import { useContractNotifications } from './notifications/useContractNotificatio
 import { useClientNotifications } from './notifications/useClientNotifications';
 import { useAgendaNotifications } from './notifications/useAgendaNotifications';
 import { useProductionReminders } from './useProductionReminders';
+import { useProductDeadlineNotifications } from './notifications/useProductDeadlineNotifications';
 
 const PRIORITY_ORDER: Record<NotificationPriority, number> = {
   critica: 0,
@@ -36,6 +37,7 @@ export function useNotifications(): UseNotificationsResult {
   const clients = useClientNotifications();
   const agenda = useAgendaNotifications();
   const productionReminders = useProductionReminders();
+  const productDeadlines = useProductDeadlineNotifications();
 
   const [readIds, setReadIds] = useState<string[]>([]);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
@@ -76,6 +78,7 @@ export function useNotifications(): UseNotificationsResult {
       ...clients,
       ...agenda,
       ...productionAsNotifs,
+      ...productDeadlines,
     ].filter((n) => !dismissed.has(n.id));
 
     // Dedupe por id (caso fontes coincidam)
@@ -87,7 +90,7 @@ export function useNotifications(): UseNotificationsResult {
       if (p !== 0) return p;
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
-  }, [financial, tasks, contracts, clients, agenda, productionAsNotifs, dismissedIds]);
+  }, [financial, tasks, contracts, clients, agenda, productionAsNotifs, productDeadlines, dismissedIds]);
 
   const readSet = useMemo(() => new Set(readIds), [readIds]);
 

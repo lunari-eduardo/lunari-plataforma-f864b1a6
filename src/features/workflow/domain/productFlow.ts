@@ -130,9 +130,14 @@ export function etapasHash(etapas: EtapaProducao[] | undefined | null): string {
 
 /** Hidrata um item legado (só `produzido`/`entregue`) em um item completo. */
 export function hydrateProduto<T extends ProdutoWorkflowFlow>(p: T): T {
+  // Normaliza prazoEntrega em qualquer formato ISO para YYYY-MM-DD.
+  const prazoNorm =
+    typeof p.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(p.prazoEntrega)
+      ? p.prazoEntrega.slice(0, 10)
+      : undefined;
   if (p.etapas && p.etapas.length > 0) {
     const fluxo: FluxoProducao = p.fluxo ?? "padrao";
-    return { ...p, fluxo };
+    return { ...p, fluxo, prazoEntrega: prazoNorm };
   }
   const etapas = buildEtapasPadrao();
   if (p.entregue) etapas.forEach((e) => (e.done = true));
@@ -140,7 +145,7 @@ export function hydrateProduto<T extends ProdutoWorkflowFlow>(p: T): T {
     // Marca todas exceto a última.
     etapas.forEach((e, i) => (e.done = i < etapas.length - 1));
   }
-  return { ...p, fluxo: "padrao", etapas };
+  return { ...p, fluxo: "padrao", etapas, prazoEntrega: prazoNorm };
 }
 
 /** Sincroniza os flags legados a partir das etapas. */

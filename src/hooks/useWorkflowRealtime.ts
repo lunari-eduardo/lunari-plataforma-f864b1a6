@@ -449,6 +449,10 @@ export const useWorkflowRealtime = () => {
                   produzido: !!p.produzido,
                   entregue: !!p.entregue,
                 };
+                const prazo = typeof p.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(p.prazoEntrega)
+                  ? p.prazoEntrega.slice(0, 10)
+                  : undefined;
+                if (prazo) base.prazoEntrega = prazo;
                 if (etapas && etapas.length > 0) {
                   base.etapas = etapas;
                   // Reconcilia flags legados a partir das etapas para
