@@ -359,6 +359,15 @@ class PricingFreezingService {
             if (typeof produtoItem.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(produtoItem.prazoEntrega)) {
               congelado.prazoEntrega = produtoItem.prazoEntrega.slice(0, 10);
             }
+            // v2: preserva estado de produção (`started`/`startedAt`).
+            const anyDone = Array.isArray(etapas) && etapas.some((e: any) => e.done);
+            const startedFlag = !!produtoItem.started || anyDone;
+            congelado.started = startedFlag;
+            if (startedFlag) {
+              congelado.startedAt =
+                (typeof produtoItem.startedAt === 'string' && produtoItem.startedAt) ||
+                new Date().toISOString();
+            }
             produtosCongelados.push(congelado);
           }
         } else {
@@ -375,6 +384,14 @@ class PricingFreezingService {
           if (etapas) congelado.etapas = etapas;
           if (typeof produtoItem.prazoEntrega === 'string' && /^\d{4}-\d{2}-\d{2}/.test(produtoItem.prazoEntrega)) {
             congelado.prazoEntrega = produtoItem.prazoEntrega.slice(0, 10);
+          }
+          const anyDone2 = Array.isArray(etapas) && etapas.some((e: any) => e.done);
+          const startedFlag2 = !!produtoItem.started || anyDone2;
+          congelado.started = startedFlag2;
+          if (startedFlag2) {
+            congelado.startedAt =
+              (typeof produtoItem.startedAt === 'string' && produtoItem.startedAt) ||
+              new Date().toISOString();
           }
           produtosCongelados.push(congelado);
         }

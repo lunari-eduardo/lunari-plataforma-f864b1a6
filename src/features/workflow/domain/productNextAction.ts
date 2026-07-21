@@ -1,14 +1,17 @@
 /**
  * Resumo operacional inteligente da coluna Produtos do Workflow.
  *
- * Responde à pergunta do fotógrafo: "existe pendência? qual a próxima ação?".
- * Nunca substitui o status da sessão — trata apenas do andamento da produção
- * dos produtos vendidos na sessão.
+ * v2 — respeita o novo estado `pending | in_progress | done`. NUNCA anuncia
+ * a "próxima" etapa: sempre mostra o estado ATUAL do produto.
+ *  - pending      → "A produzir"
+ *  - in_progress  → nome da etapa atual (primeiro !done)
+ *  - done         → "Entregue" / "Entregues"
  */
 import {
   hydrateProduto,
   isEntregue,
   etapaAtualIndex,
+  isProdutoStarted,
   type ProdutoWorkflowFlow,
 } from "./productFlow";
 
@@ -58,7 +61,7 @@ export function computeProductNextAction(
   let aProduzir = 0;
 
   const tooltip: ProductTooltipRow[] = [];
-  const proximasEtapas: string[] = [];
+  const rotulosAtuais: string[] = [];
 
   for (const p of list) {
     const et = p.etapas ?? [];
@@ -68,12 +71,17 @@ export function computeProductNextAction(
       tooltip.push({ nome: p.nome, etapa: "Entregue", entregue: true });
       continue;
     }
+    if (!isProdutoStarted(p)) {
+      aProduzir++;
+      tooltip.push({ nome: p.nome, etapa: "A produzir", entregue: false });
+      rotulosAtuais.push("A produzir");
+      continue;
+    }
     const idx = etapaAtualIndex(et);
-    const etapaAtualNome = et[idx]?.nome ?? "Pendente";
-    proximasEtapas.push(etapaAtualNome);
-    if (idx <= 0) aProduzir++;
-    else emProducao++;
+    const etapaAtualNome = et[idx]?.nome ?? "Em produção";
+    emProducao++;
     tooltip.push({ nome: p.nome, etapa: etapaAtualNome, entregue: false });
+    rotulosAtuais.push(etapaAtualNome);
   }
 
   const pendentes = total - entregues;
@@ -81,11 +89,7 @@ export function computeProductNextAction(
   // Todos entregues.
   if (entregues === total) {
     return {
-      total,
-      entregues,
-      emProducao,
-      aProduzir,
-      pendentes,
+      total, entregues, emProducao, aProduzir, pendentes,
       label: total > 1 ? "Entregues" : "Entregue",
       tone: "done",
       dotClass: "bg-emerald-500",
@@ -94,68 +98,59 @@ export function computeProductNextAction(
     };
   }
 
-  // Um único produto pendente → mostra o nome da próxima etapa dele.
+  // Único pendente → rótulo do estado atual dele.
   if (pendentes === 1) {
-    const nome = proximasEtapas[0] || "Pendente";
+    const nome = rotulosAtuais[0] || "A produzir";
+    const isPending = nome === "A produzir";
     return {
-      total,
-      entregues,
-      emProducao,
-      aProduzir,
-      pendentes,
+      total, entregues, emProducao, aProduzir, pendentes,
       label: nome,
-      tone: emProducao > 0 || entregues > 0 ? "info" : "warn",
-      dotClass: emProducao > 0 || entregues > 0 ? "bg-sky-500" : "bg-amber-500",
+      tone: isPending ? "warn" : "info",
+      dotClass: isPending ? "bg-slate-400" : "bg-sky-500",
       tooltip,
       allDone: false,
     };
   }
 
-  // Vários pendentes convergindo na mesma próxima etapa.
-  const unicaEtapa = proximasEtapas.every((n) => n === proximasEtapas[0])
-    ? proximasEtapas[0]
-    : null;
-  if (unicaEtapa) {
+  // Todos pendentes no mesmo rótulo.
+  const unico = rotulosAtuais.every((n) => n === rotulosAtuais[0]) ? rotulosAtuais[0] : null;
+  if (unico) {
+    const isPending = unico === "A produzir";
     return {
-      total,
-      entregues,
-      emProducao,
-      aProduzir,
-      pendentes,
-      label: unicaEtapa,
-      tone: "info",
-      dotClass: "bg-sky-500",
+      total, entregues, emProducao, aProduzir, pendentes,
+      label: unico,
+      tone: isPending ? "warn" : "info",
+      dotClass: isPending ? "bg-slate-400" : "bg-sky-500",
       tooltip,
       allDone: false,
     };
   }
 
-  // Divergentes: resumo agregado.
+  // Divergentes — resumo agregado, sempre descrevendo estado atual.
   if (entregues > 0) {
     return {
-      total,
-      entregues,
-      emProducao,
-      aProduzir,
-      pendentes,
-      label: `${pendentes} pendência${pendentes > 1 ? "s" : ""}`,
+      total, entregues, emProducao, aProduzir, pendentes,
+      label: `${pendentes} pendente${pendentes > 1 ? "s" : ""}`,
       tone: "warn",
       dotClass: "bg-amber-500",
       tooltip,
       allDone: false,
     };
   }
+  if (emProducao > 0 && aProduzir > 0) {
+    return {
+      total, entregues, emProducao, aProduzir, pendentes,
+      label: `${emProducao} em produção · ${aProduzir} a produzir`,
+      tone: "info",
+      dotClass: "bg-sky-500",
+      tooltip,
+      allDone: false,
+    };
+  }
   if (emProducao > 0) {
     return {
-      total,
-      entregues,
-      emProducao,
-      aProduzir,
-      pendentes,
-      label:
-        emProducao === total
-          ? "Produção"
-          : `${emProducao} em produção`,
+      total, entregues, emProducao, aProduzir, pendentes,
+      label: emProducao === total ? "Em produção" : `${emProducao} em produção`,
       tone: "info",
       dotClass: "bg-sky-500",
       tooltip,
@@ -163,11 +158,7 @@ export function computeProductNextAction(
     };
   }
   return {
-    total,
-    entregues,
-    emProducao,
-    aProduzir,
-    pendentes,
+    total, entregues, emProducao, aProduzir, pendentes,
     label: "A produzir",
     tone: "warn",
     dotClass: "bg-slate-400",

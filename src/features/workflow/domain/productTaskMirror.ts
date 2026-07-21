@@ -14,6 +14,7 @@ import {
   hydrateProduto,
   etapaAtualIndex,
   isEntregue,
+  isProdutoStarted,
   type ProdutoWorkflowFlow,
 } from "./productFlow";
 
@@ -28,6 +29,7 @@ export interface MirrorSpec {
   produtoNome: string;
   quantidade: number;
   etapaAtualNome: string | null; // null => produto entregue
+  isPending: boolean;             // true => produção ainda não iniciada
   isEntregue: boolean;
   tags: string[];
   title: string;
@@ -38,11 +40,16 @@ export function buildTitle(spec: {
   quantidade: number;
   clienteNome: string;
   etapaAtualNome: string | null;
+  isPending: boolean;
   isEntregue: boolean;
 }): string {
   const nomeProduto =
     spec.quantidade > 1 ? `${spec.produtoNome} (x${spec.quantidade})` : spec.produtoNome;
-  const acao = spec.isEntregue || !spec.etapaAtualNome ? "Concluído" : spec.etapaAtualNome;
+  const acao = spec.isEntregue
+    ? "Concluído"
+    : spec.isPending
+      ? "A produzir"
+      : spec.etapaAtualNome ?? "Em produção";
   const cliente = spec.clienteNome?.trim() || "Cliente";
   return `${acao} — ${nomeProduto} · ${cliente}`;
 }
@@ -55,6 +62,7 @@ export function buildMirrorSpec(
   const produto = hydrateProduto(produtoRaw);
   const etapas = produto.etapas ?? [];
   const entregue = isEntregue(etapas);
+  const started = isProdutoStarted(produto);
   const idx = etapaAtualIndex(etapas);
   const etapaAtualNome = entregue ? null : etapas[idx]?.nome ?? null;
   const clienteNome = session.clientes?.nome ?? "";
@@ -64,6 +72,7 @@ export function buildMirrorSpec(
     quantidade,
     clienteNome,
     etapaAtualNome,
+    isPending: !started && !entregue,
     isEntregue: entregue,
   });
   return {
@@ -74,6 +83,7 @@ export function buildMirrorSpec(
     produtoNome: produto.nome,
     quantidade,
     etapaAtualNome,
+    isPending: !started && !entregue,
     isEntregue: entregue,
     tags: [MIRROR_ROOT_TAG, productTagFor(produto.id)],
     title,

@@ -38,6 +38,8 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "workflow.produto.add",
   "workflow.produto.remove",
   "workflow.produto.duplicate",
+  "workflow.produto.startProduction",
+  "workflow.produto.reopenProduction",
 ]);
 
 /** Capabilities expostas à IA. Queries são sempre seguras; commands variam. */
