@@ -1,20 +1,20 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Package, Plus, Info, X } from "lucide-react";
+import { Package, Plus, Info, X, Loader2, Check, AlertCircle } from "lucide-react";
 import { useRealtimeConfiguration } from "@/hooks/useRealtimeConfiguration";
 import { ProductSearchInput } from "./produtos/ProductSearchInput";
 import { ProducaoProdutoCard } from "./produtos/ProducaoProdutoCard";
 import { useWorkflowPreferences } from "@/hooks/useWorkflowPreferences";
 import {
   buildEtapasPadrao,
+  etapasHash,
   hydrateProduto,
   switchFluxo,
   syncLegacyFlags,
@@ -35,13 +35,37 @@ interface GerenciarProdutosModalProps {
   clienteName: string;
   produtos: ProdutoWorkflowFlow[];
   productOptions: ProductOption[];
-  onSave: (produtos: ProdutoWorkflowFlow[]) => void;
+  /**
+   * Chamado a cada autosave (debounced). Pode ser invocado múltiplas vezes
+   * durante a vida do modal — sempre com a lista completa de produtos.
+   */
+  onSave: (produtos: ProdutoWorkflowFlow[]) => void | Promise<void>;
 }
 
 const genId = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto)
     ? crypto.randomUUID()
     : `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+const AUTOSAVE_DELAY_MS = 350;
+const SAVED_RESET_MS = 1200;
+const RETRY_MS = 1500;
+
+type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+
+const normalizeForSave = (list: ProdutoWorkflowFlow[]): ProdutoWorkflowFlow[] =>
+  list.map((p) =>
+    syncLegacyFlags({
+      ...p,
+      id: p.id ?? genId(),
+      fluxo: p.fluxo ?? "padrao",
+      etapas: p.etapas && p.etapas.length > 0 ? p.etapas : buildEtapasPadrao(),
+      valorUnitario: p.tipo === "incluso" ? 0 : p.valorUnitario,
+    }),
+  );
+
+const produtoHash = (p: ProdutoWorkflowFlow): string =>
+  `${p.id ?? ""}|${p.quantidade ?? 0}|${p.valorUnitario ?? 0}|${p.fluxo ?? "padrao"}|${etapasHash(p.etapas)}|${p.prazoEntrega ?? ""}`;
 
 export function GerenciarProdutosModal({
   open,
@@ -54,10 +78,99 @@ export function GerenciarProdutosModal({
   const [resetSignal, setResetSignal] = useState(false);
   const [customFlowToPersist, setCustomFlowToPersist] = useState<string[] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const dirtyIdsRef = useRef<Set<string>>(new Set());
+
+  const pendingCommitRef = useRef<ProdutoWorkflowFlow[] | null>(null);
+  const commitTimerRef = useRef<number | null>(null);
+  const savedResetTimerRef = useRef<number | null>(null);
+  const isFlushingRef = useRef(false);
+  const onSaveRef = useRef(onSave);
+  const customFlowRef = useRef<string[] | null>(null);
+  const saveUltimoFluxoCustomRef = useRef<((n: string[]) => Promise<void>) | null>(null);
 
   const { produtos: produtosConfig } = useRealtimeConfiguration();
   const { prefs, saveUltimoFluxoCustom } = useWorkflowPreferences();
+
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
+  useEffect(() => { customFlowRef.current = customFlowToPersist; }, [customFlowToPersist]);
+  useEffect(() => { saveUltimoFluxoCustomRef.current = saveUltimoFluxoCustom; }, [saveUltimoFluxoCustom]);
+
+  const clearCommitTimer = () => {
+    if (commitTimerRef.current !== null) {
+      window.clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    }
+  };
+  const clearSavedResetTimer = () => {
+    if (savedResetTimerRef.current !== null) {
+      window.clearTimeout(savedResetTimerRef.current);
+      savedResetTimerRef.current = null;
+    }
+  };
+
+  const flushCommit = useCallback(async () => {
+    clearCommitTimer();
+    const pending = pendingCommitRef.current;
+    if (!pending || isFlushingRef.current) return;
+
+    const payload = normalizeForSave(pending);
+    const sentHashes = new Map(payload.map((p) => [p.id ?? "", produtoHash(p)]));
+    pendingCommitRef.current = null;
+    isFlushingRef.current = true;
+    setSaveState("saving");
+
+    try {
+      await onSaveRef.current(payload);
+
+      // Limpa apenas os ids cujo hash local ainda corresponde ao enviado.
+      setLocalProdutos((prev) => {
+        const dirty = dirtyIdsRef.current;
+        for (const p of prev) {
+          const id = p.id ?? "";
+          if (id && dirty.has(id)) {
+            const sent = sentHashes.get(id);
+            if (sent && sent === produtoHash(p)) dirty.delete(id);
+          }
+        }
+        return prev;
+      });
+
+      const flow = customFlowRef.current;
+      if (flow && flow.length > 0) {
+        saveUltimoFluxoCustomRef.current?.(flow).catch(() => {});
+        setCustomFlowToPersist(null);
+      }
+
+      setSaveState(pendingCommitRef.current ? "dirty" : "saved");
+      clearSavedResetTimer();
+      savedResetTimerRef.current = window.setTimeout(() => {
+        if (!pendingCommitRef.current) setSaveState("idle");
+      }, SAVED_RESET_MS);
+    } catch (err) {
+      console.error("[GerenciarProdutosModal] autosave falhou:", err);
+      pendingCommitRef.current = pending; // preserva payload para retry
+      setSaveState("error");
+      clearCommitTimer();
+      commitTimerRef.current = window.setTimeout(() => { flushCommit(); }, RETRY_MS);
+    } finally {
+      isFlushingRef.current = false;
+    }
+  }, []);
+
+  const scheduleAutosave = useCallback(
+    (next: ProdutoWorkflowFlow[], opts?: { immediate?: boolean }) => {
+      pendingCommitRef.current = next;
+      setSaveState((s) => (s === "saving" ? s : "dirty"));
+      clearCommitTimer();
+      if (opts?.immediate) {
+        void flushCommit();
+      } else {
+        commitTimerRef.current = window.setTimeout(() => { void flushCommit(); }, AUTOSAVE_DELAY_MS);
+      }
+    },
+    [flushCommit],
+  );
 
   const wasOpen = useRef(false);
 
@@ -67,9 +180,19 @@ export function GerenciarProdutosModal({
       requestAnimationFrame(() => setResetSignal(false));
       dirtyIdsRef.current = new Set();
       setAddOpen(false);
+      setSaveState("idle");
     }
     wasOpen.current = open;
   }, [open]);
+
+  // Flush pendente ao desmontar (fechar modal).
+  useEffect(() => {
+    return () => {
+      clearCommitTimer();
+      clearSavedResetTimer();
+      if (pendingCommitRef.current) void flushCommit();
+    };
+  }, [flushCommit]);
 
   useEffect(() => {
     if (!open) return;
@@ -124,62 +247,75 @@ export function GerenciarProdutosModal({
   const formatCurrency = (value: number | undefined | null) =>
     `R$ ${(Number(value) || 0).toFixed(2).replace(".", ",")}`;
 
-  const patchProduto = (index: number, patch: Partial<ProdutoWorkflowFlow>) => {
-    setLocalProdutos((prev) =>
+  const mutate = (
+    updater: (prev: ProdutoWorkflowFlow[]) => ProdutoWorkflowFlow[],
+    opts?: { immediate?: boolean },
+  ) => {
+    setLocalProdutos((prev) => {
+      const next = updater(prev);
+      scheduleAutosave(next, opts);
+      return next;
+    });
+  };
+
+  const patchProduto = (index: number, patch: Partial<ProdutoWorkflowFlow>) =>
+    mutate((prev) =>
       prev.map((p, i) => {
         if (i !== index) return p;
         if (p.id) dirtyIdsRef.current.add(p.id);
         return { ...p, ...patch };
       }),
     );
-  };
 
   const handleQuantidadeChange = (index: number, novaQuantidade: number) =>
     patchProduto(index, { quantidade: Math.max(0, novaQuantidade) });
 
-  const handleValorUnitarioChange = (index: number, novoValor: number) => {
-    setLocalProdutos((prev) =>
+  const handleValorUnitarioChange = (index: number, novoValor: number) =>
+    mutate((prev) =>
       prev.map((p, i) => {
         if (i !== index || p.tipo !== "manual") return p;
         if (p.id) dirtyIdsRef.current.add(p.id);
         return { ...p, valorUnitario: Math.max(0, novoValor) };
       }),
     );
-  };
 
-  const handleRemoverProduto = (index: number) => {
-    setLocalProdutos((prev) => {
-      const p = prev[index];
-      if (p?.id) dirtyIdsRef.current.add(p.id);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
+  const handleRemoverProduto = (index: number) =>
+    mutate(
+      (prev) => {
+        const p = prev[index];
+        if (p?.id) dirtyIdsRef.current.add(p.id);
+        return prev.filter((_, i) => i !== index);
+      },
+      { immediate: true },
+    );
 
-  const handleDuplicar = (index: number) => {
-    setLocalProdutos((prev) => {
-      const src = prev[index];
-      if (!src) return prev;
-      const newId = genId();
-      dirtyIdsRef.current.add(newId);
-      const copy: ProdutoWorkflowFlow = {
-        ...src,
-        id: newId,
-        etapas: (src.etapas ?? buildEtapasPadrao()).map((e) => ({ ...e, done: false })),
-        produzido: false,
-        entregue: false,
-        prazoEntrega: undefined,
-      };
-      const next = [...prev];
-      next.splice(index + 1, 0, copy);
-      return next;
-    });
-  };
+  const handleDuplicar = (index: number) =>
+    mutate(
+      (prev) => {
+        const src = prev[index];
+        if (!src) return prev;
+        const newId = genId();
+        dirtyIdsRef.current.add(newId);
+        const copy: ProdutoWorkflowFlow = {
+          ...src,
+          id: newId,
+          etapas: (src.etapas ?? buildEtapasPadrao()).map((e) => ({ ...e, done: false })),
+          produzido: false,
+          entregue: false,
+          prazoEntrega: undefined,
+        };
+        const next = [...prev];
+        next.splice(index + 1, 0, copy);
+        return next;
+      },
+      { immediate: true },
+    );
 
   const handleEtapasChange = (index: number, etapas: EtapaProducao[]) =>
     patchProduto(index, { etapas });
 
   const handleFluxoChange = (index: number, fluxo: "padrao" | "custom") =>
-    setLocalProdutos((prev) =>
+    mutate((prev) =>
       prev.map((p, i) => {
         if (i !== index) return p;
         if (p.id) dirtyIdsRef.current.add(p.id);
@@ -197,12 +333,14 @@ export function GerenciarProdutosModal({
     if (!productData) return;
     const produtoExistente = localProdutos.find((p) => p.nome === product.nome);
     if (produtoExistente) {
-      setLocalProdutos((prev) =>
-        prev.map((p) => {
-          if (p.nome !== product.nome) return p;
-          if (p.id) dirtyIdsRef.current.add(p.id);
-          return { ...p, quantidade: (p.quantidade || 0) + 1 };
-        }),
+      mutate(
+        (prev) =>
+          prev.map((p) => {
+            if (p.nome !== product.nome) return p;
+            if (p.id) dirtyIdsRef.current.add(p.id);
+            return { ...p, quantidade: (p.quantidade || 0) + 1 };
+          }),
+        { immediate: true },
       );
       setAddOpen(false);
       return;
@@ -212,42 +350,60 @@ export function GerenciarProdutosModal({
       parseFloat(valorString.replace(/[^\d,]/g, "").replace(",", ".")) || 0;
     const newId = genId();
     dirtyIdsRef.current.add(newId);
-    setLocalProdutos((prev) => [
-      ...prev,
-      {
-        id: newId,
-        produtoId: productData.id,
-        nome: product.nome,
-        quantidade: 1,
-        valorUnitario,
-        tipo: "manual",
-        fluxo: "padrao",
-        etapas: buildEtapasPadrao(),
-        produzido: false,
-        entregue: false,
-      },
-    ]);
+    mutate(
+      (prev) => [
+        ...prev,
+        {
+          id: newId,
+          produtoId: productData.id,
+          nome: product.nome,
+          quantidade: 1,
+          valorUnitario,
+          tipo: "manual",
+          fluxo: "padrao",
+          etapas: buildEtapasPadrao(),
+          produzido: false,
+          entregue: false,
+        },
+      ],
+      { immediate: true },
+    );
     setAddOpen(false);
   };
 
-  const handleSave = async () => {
-    const produtosParaSalvar = localProdutos.map((p) =>
-      syncLegacyFlags({
-        ...p,
-        id: p.id ?? genId(),
-        fluxo: p.fluxo ?? "padrao",
-        etapas: p.etapas && p.etapas.length > 0 ? p.etapas : buildEtapasPadrao(),
-      }),
-    );
-    onSave(produtosParaSalvar);
-    if (customFlowToPersist && customFlowToPersist.length > 0) {
-      saveUltimoFluxoCustom(customFlowToPersist).catch(() => {});
-    }
-    dirtyIdsRef.current = new Set();
-    onOpenChange(false);
-  };
-
   const totalProdutos = localProdutos.length;
+
+  const renderSaveChip = () => {
+    if (saveState === "saving")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" /> Salvando…
+        </span>
+      );
+    if (saveState === "saved")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-600">
+          <Check className="h-3 w-3" /> Salvo
+        </span>
+      );
+    if (saveState === "dirty")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
+          <Loader2 className="h-3 w-3 animate-spin opacity-60" /> Alterações pendentes…
+        </span>
+      );
+    if (saveState === "error")
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-destructive">
+          <AlertCircle className="h-3 w-3" /> Erro ao salvar — tentando novamente
+        </span>
+      );
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+        <Check className="h-3 w-3" /> Tudo salvo
+      </span>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -370,20 +526,13 @@ export function GerenciarProdutosModal({
           )}
         </div>
 
-        {/* Rodapé */}
+        {/* Rodapé (autosave chip) */}
         <div className="px-6 py-3 border-t border-border/40 bg-muted/10 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <Info className="h-3.5 w-3.5 shrink-0" />
             Produtos inclusos no pacote não geram valor adicional, mas são acompanhados normalmente.
           </div>
-          <DialogFooter className="p-0 gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="h-9 text-[13px]">
-              Fechar
-            </Button>
-            <Button onClick={handleSave} className="h-9 text-[13px]">
-              Salvar alterações
-            </Button>
-          </DialogFooter>
+          {renderSaveChip()}
         </div>
       </DialogContent>
     </Dialog>
