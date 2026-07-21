@@ -27,11 +27,14 @@ interface WorkflowCardExpandedProps {
   statusOptions?: string[];
   onFieldUpdate: (id: string, field: string, value: any, silent?: boolean) => void;
   onStatusChange?: (id: string, newStatus: string) => void;
+  /** Abre o modal "Gerenciar Produtos" (instância única no CardCollapsedModals). */
+  onOpenProdutos?: () => void;
 }
 
 export function WorkflowCardExpanded({
   session,
   onFieldUpdate,
+  onOpenProdutos,
 }: WorkflowCardExpandedProps) {
   const { addPayment: addPaymentContext } = useAppContext();
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
