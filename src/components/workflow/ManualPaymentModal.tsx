@@ -179,14 +179,20 @@ export function ManualPaymentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Wallet className="h-4 w-4 text-primary" />
-            Registrar pagamento manual
+            {titulo}
           </DialogTitle>
           <DialogDescription className="text-xs">
             {session.nome}
             {session.pacote ? ` · ${session.pacote}` : ""}
+            {!hasGaleria && canExtras ? " · extras manuais" : ""}
           </DialogDescription>
         </DialogHeader>
 
+        {nadaPendente ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            Não há valores pendentes nessa sessão.
+          </div>
+        ) : (
         <div className="space-y-3 py-1">
           {/* Escopo */}
           <div className="space-y-1.5">
@@ -199,19 +205,16 @@ export function ManualPaymentModal({
                 <SelectItem value="sessao" disabled={!canSessao}>
                   Sessão · {formatBRL(sessaoPendente)} pendente
                 </SelectItem>
-                {hasGaleria && (
-                  <SelectItem value="fotos_extras" disabled={!canExtras}>
-                    Fotos extras · {formatBRL(extrasPendente)} pendente
-                  </SelectItem>
-                )}
-                {canTudo && (
-                  <SelectItem value="sessao_e_extras">
-                    Sessão + extras · {formatBRL(sessaoPendente + extrasPendente)}
-                  </SelectItem>
-                )}
+                <SelectItem value="fotos_extras" disabled={!canExtras}>
+                  Fotos extras · {formatBRL(extrasPendente)} pendente
+                </SelectItem>
+                <SelectItem value="sessao_e_extras" disabled={!canTudo}>
+                  Sessão + extras · {formatBRL(sessaoPendente + extrasPendente)} pendente
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
+
 
           {/* Meio */}
           <div className="space-y-1.5">
