@@ -131,16 +131,10 @@ export function ChargeLinkSection({
             Enviar via WhatsApp
           </Button>
         )}
-
-        {/* Info */}
-        <div className="bg-muted/50 border rounded-lg p-3 text-center">
-          <p className="text-sm text-muted-foreground">
-            O cliente pode pagar com cartão à vista ou parcelado
-          </p>
-        </div>
       </div>
     );
   }
+
 
   // Not generated yet
   return (
@@ -171,14 +165,9 @@ export function ChargeLinkSection({
             <Link2 className="h-5 w-5" />
             Gerar Link
           </Button>
-
-          <div className="bg-muted/50 border rounded-lg p-3 text-center">
-            <p className="text-sm text-muted-foreground">
-              Aceita cartão à vista ou parcelado
-            </p>
-          </div>
         </>
       )}
     </div>
   );
 }
+
