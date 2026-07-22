@@ -67,8 +67,12 @@ export function WorkflowCardExpanded({
   const [qtdFotosExtraValue, setQtdFotosExtraValue] = useState(String(session.qtdFotosExtra || 0));
 
   const [pendingExtraEdit, setPendingExtraEdit] = useState<
-    | { field: "valorFotoExtra"; nextValue: string; previousValue: string }
-    | { field: "qtdFotosExtra"; nextValue: string; previousValue: string }
+    | {
+        field: "valorFotoExtra" | "qtdFotosExtra";
+        nextValue: string;
+        previousValue: string;
+        source: "gallery" | "frozen_rules";
+      }
     | null
   >(null);
 
