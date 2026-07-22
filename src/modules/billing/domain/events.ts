@@ -25,6 +25,9 @@ declare module "@/shared/event-bus" {
       meio: "pix" | "dinheiro" | "transferencia" | "cartao_externo" | "outro";
       escopo: "sessao" | "fotos_extras" | "sessao_e_extras";
       photographerId: string;
+      alreadyPaid?: boolean;
+      cancelledPendingIds?: string[];
+      syncedGallery?: boolean;
     };
   }
 }

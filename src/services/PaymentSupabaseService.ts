@@ -784,7 +784,7 @@ export class PaymentSupabaseService {
         return false;
       }
 
-      // 2. Verificar duplicação por paymentId OU intentKey (idempotência)
+      // 2. Idempotência: paymentId, intentKey OU cobranca_id já lançado (manual)
       const exists = await this.paymentExists(sessionKey, paymentId, {
         binding: sessao,
         intentKey: options?.intentKey,
@@ -792,6 +792,20 @@ export class PaymentSupabaseService {
       if (exists) {
         console.log('⚠️ Pagamento já existe (paymentId/intentKey), ignorando:', paymentId, options?.intentKey);
         return true;
+      }
+
+      if (options?.cobrancaId) {
+        const { data: cobDup } = await supabase
+          .from('clientes_transacoes')
+          .select('id')
+          .eq('cobranca_id', options.cobrancaId)
+          .eq('tipo', 'pagamento')
+          .limit(1)
+          .maybeSingle();
+        if (cobDup?.id) {
+          console.log('⚠️ Já existe transação para esta cobranca_id, ignorando:', options.cobrancaId);
+          return true;
+        }
       }
 
       // 3. Buscar user_id da sessão atual (sem round-trip extra)
@@ -822,6 +836,11 @@ export class PaymentSupabaseService {
 
 
       if (insertError) {
+        // 23505 = unique_violation → outra origem (Gallery sync) já lançou a transação
+        if ((insertError as any).code === '23505') {
+          console.log('⚠️ Transação já lançada por outra origem (unique_violation), ok:', options?.cobrancaId);
+          return true;
+        }
         console.error('❌ Erro ao inserir pagamento:', insertError);
         return false;
       }

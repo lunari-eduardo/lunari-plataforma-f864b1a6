@@ -7,12 +7,15 @@ import { PaymentSupabaseService } from "@/services/PaymentSupabaseService";
 /**
  * Capability `billing.registerManualPayment`
  *
- * Registra pagamento manual (PIX externo, dinheiro, transferência, etc.)
- * vinculado a uma sessão. Fluxo espelhado do `workflow.addPayment`, mas
- * exposto no namespace `billing` com metadados de meio + escopo mais
- * amigáveis para o Assistente.
- *
- * Trigger DB atualiza `valor_pago` / `status_financeiro`.
+ * v2 (contrato oficial Gallery↔Studio):
+ *  - Escopo `sessao` OU sessão sem galeria vinculada → caminho legado
+ *    (só grava clientes_transacoes, trigger recalcula sessão).
+ *  - Escopo `fotos_extras` / `sessao_e_extras` COM galeria vinculada →
+ *    invoca edge `confirm-payment-manual`, que aplica todas as regras
+ *    (2.1..2.4 + finalize_gallery_payment + audit_log). Depois grava
+ *    clientes_transacoes ancorado no `cobrancaId` retornado (upsert
+ *    idempotente), evitando duplicidade quando Gallery/Studio confirmam
+ *    o mesmo pagamento.
  */
 const Input = z
   .object({
@@ -29,6 +32,9 @@ const Output = z.object({
   sessionId: z.string(),
   paymentId: z.string(),
   valor: z.number(),
+  alreadyPaid: z.boolean().optional(),
+  cancelledPendingIds: z.array(z.string()).optional(),
+  syncedGallery: z.boolean().optional(),
 });
 
 const MEIO_LABEL: Record<string, string> = {
@@ -39,17 +45,29 @@ const MEIO_LABEL: Record<string, string> = {
   outro: "Outro",
 };
 
+/** Mapeia meio do Studio → metodo_manual esperado pela RPC/Gallery. */
+const MEIO_TO_METODO_MANUAL: Record<string, string> = {
+  pix: "pix_externo",
+  dinheiro: "dinheiro",
+  transferencia: "transferencia",
+  cartao_externo: "cartao_externo",
+  outro: "outro",
+};
+
 export const registerManualPayment = defineCommand({
   id: "billing.registerManualPayment",
   title: "Registrar pagamento manual",
   description:
-    "Registra pagamento fora do gateway (PIX externo, dinheiro, transferência…) vinculado a uma sessão.",
+    "Registra pagamento fora do gateway (PIX externo, dinheiro, transferência…) vinculado a uma sessão. Sincroniza galeria quando aplicável.",
   input: Input,
   output: Output,
   permissions: ["financeiro:write", "workflow:write"],
   sideEffects: [
     "db:clientes_transacoes",
     "db:clientes_sessoes(trigger)",
+    "db:cobrancas",
+    "db:galerias(trigger)",
+    "external:confirm-payment-manual",
     "event:billing.manual_payment_registered",
   ],
   audit: "always",
@@ -67,25 +85,19 @@ export const registerManualPayment = defineCommand({
     }
 
     const label = MEIO_LABEL[meio];
+    const metodoManual = MEIO_TO_METODO_MANUAL[meio];
     const escopoTag = escopo === "sessao" ? "" : ` (${escopo.replace("_", " ")})`;
     const descBase = observacao?.trim() || `Pagamento ${label}${escopoTag}`;
-    const paymentId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const intentKey = `billing.manual:${binding.session_id}:${valor}:${dataPagamento}:${meio}:${escopo}`;
-    // Marcador consumido pela RPC workflow_session_financials
-    // (ILIKE '%:sessao]%' / '%:fotos_extras]%' / '%:sessao_e_extras]%').
-    // Sem ele, pagamentos manuais caem em v_pagamentos_genericos e vazam
-    // proporcionalmente entre sessão e extras.
     const intentMark = `[INTENT:${intentKey}:${escopo}]`;
-    const desc = `${descBase} ${intentMark}`;
 
-
-    // Se pagamento toca extras, resolver galeria e criar cobrança virtual
-    // para que finalize_gallery_payment propague para galerias.total_fotos_extras_vendidas.
-    let virtualCobrancaId: string | undefined;
+    // ────────────────────────────────────────────────────────────
+    // Caminho 1: extras COM galeria → edge confirm-payment-manual
+    // ────────────────────────────────────────────────────────────
     if (escopo === "fotos_extras" || escopo === "sessao_e_extras") {
       const { data: gal } = await supabase
         .from("galerias")
-        .select("id, valor_foto_extra")
+        .select("id")
         .eq("user_id", userId)
         .eq("session_id", binding.session_id)
         .order("finalized_at", { ascending: false, nullsFirst: false })
@@ -94,58 +106,88 @@ export const registerManualPayment = defineCommand({
         .maybeSingle();
 
       if (gal?.id) {
-        // Evitar duplicidade se comando rodar duas vezes com mesmo intent
-        const { data: existing } = await supabase
-          .from("cobrancas")
-          .select("id")
-          .eq("galeria_id", gal.id)
-          .ilike("descricao", `%${intentMark}%`)
-          .maybeSingle();
+        const paidAtIso = `${dataPagamento}T12:00:00Z`;
+        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke(
+          "confirm-payment-manual",
+          {
+            body: {
+              cobrancaId: null,
+              galleryId: gal.id,
+              sessionId: binding.session_id,
+              metodoManual,
+              valorManual: valor,
+              observacao: observacao?.trim() || undefined,
+              paidAt: paidAtIso,
+              finalidade: escopo === "sessao_e_extras" ? "sessao_e_extras" : "fotos_extras",
+              valorExtrasComponente: escopo === "sessao_e_extras" ? valor : undefined,
+              source: "studio_workflow",
+            },
+          },
+        );
 
-        if (existing?.id) {
-          virtualCobrancaId = existing.id;
-        } else {
-          const componente = escopo === "sessao_e_extras" ? valor : valor;
-          const { data: inserted, error: cobErr } = await supabase
-            .from("cobrancas")
-            .insert({
-              user_id: userId,
-              cliente_id: binding.cliente_id,
-              session_id: binding.session_id,
-              galeria_id: gal.id,
-              valor,
-              valor_liquido: valor,
-              valor_extras_componente: escopo === "sessao_e_extras" ? componente : null,
-              tipo_cobranca: "manual",
-              provedor: "manual",
-              finalidade: escopo,
-              status: "pendente",
-              descricao: desc,
-              metodo_manual: label,
-              obs_manual: observacao ?? null,
-            })
-            .select("id")
-            .single();
-
-          if (cobErr) {
-            ctx.log.error("Falha ao criar cobrança virtual manual", { cobErr });
-          } else if (inserted?.id) {
-            virtualCobrancaId = inserted.id;
-            // Marca como paga via finalize_gallery_payment → sincroniza galeria
-            const { error: finErr } = await supabase.rpc("finalize_gallery_payment", {
-              p_cobranca_id: virtualCobrancaId,
-              p_receipt_url: null,
-              p_paid_at: `${dataPagamento}T12:00:00Z`,
-              p_manual_method: label,
-              p_manual_obs: observacao ?? null,
-            });
-            if (finErr) {
-              ctx.log.error("finalize_gallery_payment falhou", { finErr });
-            }
-          }
+        if (edgeErr || !edgeData?.success) {
+          ctx.log.error("confirm-payment-manual failed", { edgeErr, edgeData });
+          return err(
+            domainError("EXTERNAL", "Não foi possível registrar o pagamento (galeria).", {
+              retriable: true,
+              details: { edgeErr: edgeErr?.message, edgeData },
+            }),
+          );
         }
+
+        const cobrancaId: string = edgeData.cobrancaId;
+        const alreadyPaid: boolean = Boolean(edgeData.alreadyPaid);
+        const cancelledPendingIds: string[] = edgeData.cancelledPendingIds ?? [];
+        const paymentId = `manual-${cobrancaId.slice(0, 8)}`;
+        // Marcador [MANUAL] casa com o índice único parcial (evita duplo lançamento).
+        const desc = `${descBase} ${intentMark} [MANUAL] [ID:${paymentId}] (cobranca ${cobrancaId})`;
+
+        const okSaved = await PaymentSupabaseService.saveSinglePaymentTracked(
+          binding.id,
+          paymentId,
+          {
+            valor,
+            data: dataPagamento,
+            observacoes: desc,
+            forma_pagamento: label,
+          },
+          { binding, intentKey, cobrancaId },
+        );
+
+        if (!okSaved) {
+          ctx.log.warn("clientes_transacoes upsert falhou após edge OK", { cobrancaId });
+        }
+
+        await ctx.emit("billing.manual_payment_registered", {
+          sessionId: binding.id,
+          paymentId,
+          valor,
+          meio,
+          escopo,
+          photographerId: userId,
+          alreadyPaid,
+          cancelledPendingIds,
+          syncedGallery: true,
+        });
+
+        return ok({
+          sessionId: binding.id,
+          paymentId,
+          valor,
+          alreadyPaid,
+          cancelledPendingIds,
+          syncedGallery: true,
+        });
       }
+      // Sem galeria vinculada → cai no caminho legado abaixo.
     }
+
+    // ────────────────────────────────────────────────────────────
+    // Caminho 2 (legado): só sessão (ou extras sem galeria)
+    // Grava clientes_transacoes; trigger recalcula clientes_sessoes.
+    // ────────────────────────────────────────────────────────────
+    const paymentId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const desc = `${descBase} ${intentMark}`;
 
     const okSaved = await PaymentSupabaseService.saveSinglePaymentTracked(
       binding.id,
@@ -156,9 +198,8 @@ export const registerManualPayment = defineCommand({
         observacoes: desc,
         forma_pagamento: label,
       },
-      { binding, intentKey, cobrancaId: virtualCobrancaId },
+      { binding, intentKey },
     );
-
 
     if (!okSaved) {
       return err(
@@ -173,8 +214,14 @@ export const registerManualPayment = defineCommand({
       meio,
       escopo,
       photographerId: userId,
+      syncedGallery: false,
     });
 
-    return ok({ sessionId: binding.id, paymentId, valor });
+    return ok({
+      sessionId: binding.id,
+      paymentId,
+      valor,
+      syncedGallery: false,
+    });
   },
 });
