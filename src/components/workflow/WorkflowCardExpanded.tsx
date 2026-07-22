@@ -343,15 +343,40 @@ export function WorkflowCardExpanded({
                 </span>
               }
             >
-              <Input
-                value={valorFotoExtraValue}
-                onChange={(e) => setValorFotoExtraValue(e.target.value)}
-                onBlur={handleValorFotoExtraBlur}
-                onKeyDown={handleEnterBlur}
-                onFocus={handleValueFocus}
-                placeholder="R$ 0,00"
-                className={INPUT_GHOST + " w-24 text-right"}
-              />
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={valorFotoExtraValue}
+                  onChange={(e) => setValorFotoExtraValue(e.target.value)}
+                  onBlur={handleValorFotoExtraBlur}
+                  onKeyDown={handleEnterBlur}
+                  onFocus={handleValueFocus}
+                  placeholder="R$ 0,00"
+                  className={INPUT_GHOST + " w-24 text-right"}
+                />
+                {session.extrasOverridden && hasDescontoProgressivo && !galeriaHasSales && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Restaurar valor do pacote? Isso re-vincula os extras à regra congelada do pacote.")) {
+                              onFieldUpdate(session.id, "resyncExtrasWithGallery", true);
+                            }
+                          }}
+                          className="inline-flex items-center justify-center h-5 w-5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition"
+                          aria-label="Restaurar preço do pacote"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs max-w-xs">
+                        Restaurar valor do pacote (re-vincula à regra congelada)
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
             </FieldRow>
           </div>
         </div>
