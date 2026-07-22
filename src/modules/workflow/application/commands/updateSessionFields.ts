@@ -76,8 +76,7 @@ const TOTAL_AFFECTING_KEYS = new Set([
   "valor_foto_extra",
 ]);
 
-// Campos meta permitidos junto com a edição manual de extras.
-const ALLOWED_META_KEYS = new Set(["extras_overridden", "extras_overridden_at"]);
+
 
 export const updateSessionFields = defineCommand({
   id: "workflow.updateFields",
