@@ -6,7 +6,10 @@ import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilt
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { SalesInsightsSection } from '@/components/analise-vendas/SalesInsightsSection';
 import { SalesYearComparisonBlock } from '@/components/analise-vendas/SalesYearComparisonBlock';
+import { ProductionMetricsCards } from '@/components/analise-vendas/ProductionMetricsCards';
+import { ProductionByMonthChart } from '@/components/analise-vendas/ProductionByMonthChart';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalyticsWrapper';
+import { useWorkflowPhotoProduction } from '@/hooks/useWorkflowPhotoProduction';
 
 export default function AnaliseVendas() {
   // SEO basics
