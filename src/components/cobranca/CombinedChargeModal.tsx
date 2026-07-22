@@ -129,8 +129,13 @@ export function CombinedChargeModal({
       setOverrideRepassarAntecipacao(false);
       return;
     }
-    setDescricao(`Sessão + fotos extras - ${nomeSessao || 'Sessão'}`);
-  }, [isOpen, nomeSessao]);
+    const soExtrasInit = valorSessaoComponente <= 0 && valorExtrasComponente > 0;
+    setDescricao(
+      soExtrasInit
+        ? `Fotos extras - ${nomeSessao || 'Sessão'}`
+        : `Sessão + fotos extras - ${nomeSessao || 'Sessão'}`,
+    );
+  }, [isOpen, nomeSessao, valorSessaoComponente, valorExtrasComponente]);
 
   // Fetch Asaas settings
   useEffect(() => {
