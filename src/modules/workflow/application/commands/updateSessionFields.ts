@@ -127,23 +127,43 @@ export const updateSessionFields = defineCommand({
         "qtd_fotos_extra" in fields || "valor_foto_extra" in fields;
 
       if (touchedFotoExtra) {
-        const result = recalcFotosExtras({
-          qtd: Number(next.qtd_fotos_extra) || 0,
-          valorFotoExtra: Number(next.valor_foto_extra) || 0,
-          regrasCongeladas: currentAny.regras_congeladas,
-          galeriaInfo: {
-            galeriaId: currentAny.galeria_id,
-            valorTotalVendido: currentAny.galerias?.valor_total_vendido,
-            totalFotosExtrasVendidas: currentAny.galerias?.total_fotos_extras_vendidas,
-          },
-        });
-        if (!result.respeitarBanco) {
-          fieldsToPersist.valor_total_foto_extra = result.valorTotalFotoExtra;
-          next.valor_total_foto_extra = result.valorTotalFotoExtra;
-          if (Math.abs(result.valorUnitarioEfetivo - Number(next.valor_foto_extra || 0)) > 0.001) {
-            fieldsToPersist.valor_foto_extra = result.valorUnitarioEfetivo;
-            next.valor_foto_extra = result.valorUnitarioEfetivo;
+        const qtd = Number(next.qtd_fotos_extra) || 0;
+        const unit = Number(next.valor_foto_extra) || 0;
+        const galeriaInfo = {
+          galeriaId: currentAny.galeria_id,
+          valorTotalVendido: currentAny.galerias?.valor_total_vendido,
+          totalFotosExtrasVendidas: currentAny.galerias?.total_fotos_extras_vendidas,
+        };
+        const hasGalleryConsolidated =
+          !!galeriaInfo.galeriaId &&
+          (galeriaInfo.valorTotalVendido ?? 0) > 0 &&
+          (galeriaInfo.totalFotosExtrasVendidas ?? 0) > 0 &&
+          qtd === galeriaInfo.totalFotosExtrasVendidas;
+
+        if (hasGalleryConsolidated) {
+          // Galeria consolidada: manter espelho do banco (fluxo respeitarBanco).
+          const result = recalcFotosExtras({
+            qtd,
+            valorFotoExtra: unit,
+            regrasCongeladas: currentAny.regras_congeladas,
+            galeriaInfo,
+          });
+          if (!result.respeitarBanco) {
+            fieldsToPersist.valor_total_foto_extra = result.valorTotalFotoExtra;
+            next.valor_total_foto_extra = result.valorTotalFotoExtra;
+            if (Math.abs(result.valorUnitarioEfetivo - unit) > 0.001) {
+              fieldsToPersist.valor_foto_extra = result.valorUnitarioEfetivo;
+              next.valor_foto_extra = result.valorUnitarioEfetivo;
+            }
           }
+        } else {
+          // Edição manual: respeitar literalmente qtd × unit digitados, marcar
+          // override para a trigger DB não sobrescrever pelo desconto progressivo.
+          const totalFotos = Number((qtd * unit).toFixed(2));
+          fieldsToPersist.valor_total_foto_extra = totalFotos;
+          next.valor_total_foto_extra = totalFotos;
+          fieldsToPersist.extras_overridden = true;
+          fieldsToPersist.extras_overridden_at = new Date().toISOString();
         }
       }
 
