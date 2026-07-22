@@ -6,7 +6,10 @@ import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilt
 import { LeadLossReasonsChart } from '@/components/analise-vendas/LeadLossReasonsChart';
 import { SalesInsightsSection } from '@/components/analise-vendas/SalesInsightsSection';
 import { SalesYearComparisonBlock } from '@/components/analise-vendas/SalesYearComparisonBlock';
+import { ProductionMetricsCards } from '@/components/analise-vendas/ProductionMetricsCards';
+import { ProductionByMonthChart } from '@/components/analise-vendas/ProductionByMonthChart';
 import { useSalesAnalytics } from '@/hooks/useSalesAnalyticsWrapper';
+import { useWorkflowPhotoProduction } from '@/hooks/useWorkflowPhotoProduction';
 
 export default function AnaliseVendas() {
   // SEO basics
@@ -66,6 +69,53 @@ export default function AnaliseVendas() {
   useEffect(() => {
     if (!comparisonEnabled) setComparisonLimitMonth(null);
   }, [comparisonEnabled]);
+
+  // Produção fotográfica (fotos inclusas no pacote + extras)
+  const photoProd = useWorkflowPhotoProduction({
+    year: selectedYear,
+    // selectedMonth vem 0-based (0=Jan). null => ano inteiro.
+    month: selectedMonth === null || selectedMonth === undefined ? undefined : (selectedMonth as number) + 1,
+    categoria: selectedCategory === 'all' ? null : selectedCategory,
+  });
+
+  const productionSummary = useMemo(() => {
+    const isAnnual = selectedMonth === null || selectedMonth === undefined;
+    const src: any = isAnnual ? photoProd.annual : photoProd.single;
+    const fotosTotal = src?.fotosTotal ?? 0;
+    const fotosIncluidas = src?.fotosIncluidas ?? 0;
+    const fotosExtras = src?.fotosExtras ?? 0;
+    const sessoesComPacote = src?.sessoesComPacote ?? 0;
+    const sessoesSemPacote = src?.sessoesSemPacote ?? 0;
+    const totalSessoes = sessoesComPacote + sessoesSemPacote;
+    const mediaFotosPorSessao = src?.mediaFotosPorSessao ?? (totalSessoes > 0 ? fotosTotal / totalSessoes : 0);
+    // Categoria líder: mensal traz categoriaTop direto; anual agrega a partir das mensais
+    let categoriaTop: string | null = src?.categoriaTop ?? null;
+    let fotosCategoriaTop: number = src?.fotosCategoriaTop ?? 0;
+    if (isAnnual && photoProd.monthly?.length) {
+      const acc = new Map<string, number>();
+      for (const m of photoProd.monthly) {
+        if (!m.categoriaTop) continue;
+        acc.set(m.categoriaTop, (acc.get(m.categoriaTop) ?? 0) + (m.fotosCategoriaTop ?? 0));
+      }
+      const top = [...acc.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (top) {
+        categoriaTop = top[0];
+        fotosCategoriaTop = top[1];
+      }
+    }
+    return {
+      fotosTotal,
+      fotosIncluidas,
+      fotosExtras,
+      sessoesComPacote,
+      sessoesSemPacote,
+      mediaFotosPorSessao,
+      categoriaTop,
+      fotosCategoriaTop,
+    };
+  }, [photoProd.annual, photoProd.single, photoProd.monthly, selectedMonth]);
+
+  const scopeLabel = selectedMonth === null || selectedMonth === undefined ? 'no ano' : 'no mês';
 
   return (
     <div className="min-h-screen">
@@ -135,6 +185,32 @@ export default function AnaliseVendas() {
             <SalesYearComparisonBlock comparison={comparison} baseYear={selectedYear} />
           )}
         </section>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* BLOCO 2.5: PRODUÇÃO FOTOGRÁFICA                                */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section aria-label="Produção fotográfica" className="space-y-4 animate-fade-in">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Produção fotográfica</h2>
+            <p className="text-xs text-muted-foreground">
+              Fotos previstas para entrega: inclusas no pacote + extras compradas na galeria (ou manuais).
+            </p>
+          </div>
+          <ProductionMetricsCards
+            fotosTotal={productionSummary.fotosTotal}
+            fotosIncluidas={productionSummary.fotosIncluidas}
+            fotosExtras={productionSummary.fotosExtras}
+            mediaFotosPorSessao={productionSummary.mediaFotosPorSessao}
+            categoriaTop={productionSummary.categoriaTop}
+            fotosCategoriaTop={productionSummary.fotosCategoriaTop}
+            sessoesComPacote={productionSummary.sessoesComPacote}
+            sessoesSemPacote={productionSummary.sessoesSemPacote}
+            isLoading={photoProd.isLoading}
+            scopeLabel={scopeLabel}
+          />
+          <ProductionByMonthChart monthly={photoProd.monthly} isLoading={photoProd.isLoading} />
+        </section>
+
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* BLOCO 3: DIAGNÓSTICO E OPORTUNIDADES                            */}

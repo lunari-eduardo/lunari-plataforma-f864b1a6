@@ -15,6 +15,7 @@ import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { usePricingMigration } from "@/hooks/usePricingMigration";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { useWorkflowMetricsRealtime } from "@/hooks/useWorkflowMetricsRealtime";
+import { useWorkflowPhotoProduction } from "@/hooks/useWorkflowPhotoProduction";
 
 import { useWorkflowMonthSessions } from "@/features/workflow/hooks/useWorkflowMonthSessions";
 import { useWorkflowFilters } from "@/features/workflow/hooks/useWorkflowFilters";
@@ -115,6 +116,12 @@ function WorkflowContent() {
     caixaRecebido: metrics.caixaRecebido,
   }), [metrics]);
 
+  // Métricas de produção fotográfica (fotos incluídas no pacote + extras)
+  const photoProd = useWorkflowPhotoProduction({
+    year: month.currentMonth.year,
+    month: month.currentMonth.month,
+  });
+
   // SWR: cold = sem dado exibível; revalidate = tem dado, atualizando.
   // Só bloqueamos a tabela em cold real (sem sessões visíveis).
   const isColdSessions =
@@ -177,6 +184,8 @@ function WorkflowContent() {
           financials={financials}
           sessionCount={filters.filteredSessions.length}
           isLoading={isColdMetrics}
+          photoProduction={photoProd.single}
+          isPhotoLoading={photoProd.isLoading}
         />
 
         <WorkflowMonthSwitcher

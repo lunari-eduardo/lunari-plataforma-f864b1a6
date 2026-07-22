@@ -6024,6 +6024,24 @@ export type Database = {
           valor_total: number
         }[]
       }
+      workflow_photo_production_month: {
+        Args: {
+          p_categoria?: string
+          p_end: string
+          p_start: string
+          p_user_id: string
+        }
+        Returns: {
+          categoria_top: string
+          fotos_categoria_top: number
+          fotos_extras: number
+          fotos_incluidas: number
+          fotos_total: number
+          media_fotos_por_sessao: number
+          sessoes_com_pacote: number
+          sessoes_sem_pacote: number
+        }[]
+      }
       workflow_session_financials: {
         Args: { p_session_id: string }
         Returns: {
