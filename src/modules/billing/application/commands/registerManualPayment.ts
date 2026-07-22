@@ -67,7 +67,7 @@ export const registerManualPayment = defineCommand({
     "db:clientes_sessoes(trigger)",
     "db:cobrancas",
     "db:galerias(trigger)",
-    "edge:confirm-payment-manual",
+    "external:confirm-payment-manual",
     "event:billing.manual_payment_registered",
   ],
   audit: "always",
