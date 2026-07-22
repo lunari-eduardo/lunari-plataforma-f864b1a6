@@ -60,13 +60,17 @@ export function ManualPaymentModal({
   hasGaleria,
 }: Props) {
   const runCapability = useRunCapability();
+  // Extras podem existir sem galeria vinculada (fluxo de extras manuais).
+  // O gate depende APENAS de haver pendente, nunca de `hasGaleria`.
   const canSessao = sessaoPendente > 0.001;
-  const canExtras = hasGaleria && extrasPendente > 0.001;
+  const canExtras = extrasPendente > 0.001;
   const canTudo = canSessao && canExtras;
+  const nadaPendente = !canSessao && !canExtras;
 
-  const initialEscopo: Escopo = canSessao ? "sessao" : canExtras ? "fotos_extras" : "sessao";
+  const pickInitial = (): Escopo =>
+    canTudo ? "sessao_e_extras" : canSessao ? "sessao" : canExtras ? "fotos_extras" : "sessao";
 
-  const [escopo, setEscopo] = useState<Escopo>(initialEscopo);
+  const [escopo, setEscopo] = useState<Escopo>(pickInitial());
   const [meio, setMeio] = useState<Meio>("pix");
   const [valor, setValor] = useState<number>(0);
   const [data, setData] = useState<string>(todayISO());
@@ -83,7 +87,7 @@ export function ManualPaymentModal({
   // Reset ao abrir
   useEffect(() => {
     if (!isOpen) return;
-    const inicial: Escopo = canSessao ? "sessao" : canExtras ? "fotos_extras" : "sessao";
+    const inicial = pickInitial();
     setEscopo(inicial);
     setMeio("pix");
     setData(todayISO());
