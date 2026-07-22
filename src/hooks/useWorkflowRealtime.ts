@@ -531,12 +531,19 @@ export const useWorkflowRealtime = () => {
                 valorTotalVendido: (currentSession as any)?.galerias?.valor_total_vendido,
                 totalFotosExtrasVendidas: (currentSession as any)?.galerias?.total_fotos_extras_vendidas,
               },
+              // Edição inline pelo card = override explícito. Não permitimos
+              // que regra congelada (desconto progressivo) reescreva o unitário
+              // digitado pelo fotógrafo.
+              manualOverride: true,
             });
-            sanitizedUpdates.valor_foto_extra = r.valorUnitarioEfetivo || novoUnit;
-            sanitizedUpdates.valor_total_foto_extra = r.valorTotalFotoExtra;
+            // Em override manual, mantém EXATAMENTE o valor digitado (mesmo se
+            // recalcFotosExtras resolver fallback quando novoUnit=0, o que é
+            // aceitável — mas quando novoUnit>0 respeitamos literalmente).
+            sanitizedUpdates.valor_foto_extra = novoUnit > 0 ? novoUnit : r.valorUnitarioEfetivo;
+            sanitizedUpdates.valor_total_foto_extra = Number((qtdAtual * (sanitizedUpdates.valor_foto_extra as number)).toFixed(2));
             (sanitizedUpdates as any).extras_overridden = !r.respeitarBanco;
             (sanitizedUpdates as any).extras_overridden_at = r.respeitarBanco ? null : new Date().toISOString();
-            console.log('📸 [Override] valorFotoExtra:', novoUnit, '→', r.valorTotalFotoExtra, 'qtd=', qtdAtual, 'respBanco=', r.respeitarBanco);
+            console.log('📸 [Override] valorFotoExtra:', novoUnit, '→', sanitizedUpdates.valor_total_foto_extra, 'qtd=', qtdAtual, 'respBanco=', r.respeitarBanco);
             break;
           }
           case 'qtdFotosExtra': {
@@ -552,15 +559,16 @@ export const useWorkflowRealtime = () => {
                 valorTotalVendido: (currentSession as any)?.galerias?.valor_total_vendido,
                 totalFotosExtrasVendidas: (currentSession as any)?.galerias?.total_fotos_extras_vendidas,
               },
+              // Alterar quantidade também é override manual: preserva unitário
+              // atual e não reaplica faixa de desconto progressivo.
+              manualOverride: true,
             });
             sanitizedUpdates.qtd_fotos_extra = qtd;
-            sanitizedUpdates.valor_foto_extra = r.valorUnitarioEfetivo || unitAtual;
-            sanitizedUpdates.valor_total_foto_extra = r.valorTotalFotoExtra;
-            // Quando a qtd nova bate com o total vendido da galeria, voltamos a
-            // respeitar o banco (override=false). Caso contrário marca override.
+            sanitizedUpdates.valor_foto_extra = unitAtual > 0 ? unitAtual : r.valorUnitarioEfetivo;
+            sanitizedUpdates.valor_total_foto_extra = Number((qtd * (sanitizedUpdates.valor_foto_extra as number)).toFixed(2));
             (sanitizedUpdates as any).extras_overridden = !r.respeitarBanco;
             (sanitizedUpdates as any).extras_overridden_at = r.respeitarBanco ? null : new Date().toISOString();
-            console.log('📸 [Override] qtdFotosExtra:', qtd, 'unit=', r.valorUnitarioEfetivo, 'total=', r.valorTotalFotoExtra, 'respBanco=', r.respeitarBanco);
+            console.log('📸 [Override] qtdFotosExtra:', qtd, 'unit=', sanitizedUpdates.valor_foto_extra, 'total=', sanitizedUpdates.valor_total_foto_extra, 'respBanco=', r.respeitarBanco);
             break;
           }
           case 'resyncExtrasWithGallery': {
