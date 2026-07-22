@@ -79,16 +79,30 @@ export default function AnaliseVendas() {
   });
 
   const productionSummary = useMemo(() => {
-    const src = selectedMonth === null || selectedMonth === undefined ? photoProd.annual : photoProd.single;
+    const isAnnual = selectedMonth === null || selectedMonth === undefined;
+    const src: any = isAnnual ? photoProd.annual : photoProd.single;
     const fotosTotal = src?.fotosTotal ?? 0;
     const fotosIncluidas = src?.fotosIncluidas ?? 0;
     const fotosExtras = src?.fotosExtras ?? 0;
     const sessoesComPacote = src?.sessoesComPacote ?? 0;
     const sessoesSemPacote = src?.sessoesSemPacote ?? 0;
     const totalSessoes = sessoesComPacote + sessoesSemPacote;
-    const mediaFotosPorSessao = totalSessoes > 0 ? fotosTotal / totalSessoes : 0;
-    const categorias = (src?.categorias ?? []).slice().sort((a: any, b: any) => (b.fotosTotal ?? 0) - (a.fotosTotal ?? 0));
-    const top = categorias[0];
+    const mediaFotosPorSessao = src?.mediaFotosPorSessao ?? (totalSessoes > 0 ? fotosTotal / totalSessoes : 0);
+    // Categoria líder: mensal traz categoriaTop direto; anual agrega a partir das mensais
+    let categoriaTop: string | null = src?.categoriaTop ?? null;
+    let fotosCategoriaTop: number = src?.fotosCategoriaTop ?? 0;
+    if (isAnnual && photoProd.monthly?.length) {
+      const acc = new Map<string, number>();
+      for (const m of photoProd.monthly) {
+        if (!m.categoriaTop) continue;
+        acc.set(m.categoriaTop, (acc.get(m.categoriaTop) ?? 0) + (m.fotosCategoriaTop ?? 0));
+      }
+      const top = [...acc.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (top) {
+        categoriaTop = top[0];
+        fotosCategoriaTop = top[1];
+      }
+    }
     return {
       fotosTotal,
       fotosIncluidas,
@@ -96,10 +110,10 @@ export default function AnaliseVendas() {
       sessoesComPacote,
       sessoesSemPacote,
       mediaFotosPorSessao,
-      categoriaTop: top?.categoria ?? null,
-      fotosCategoriaTop: top?.fotosTotal ?? 0,
+      categoriaTop,
+      fotosCategoriaTop,
     };
-  }, [photoProd.annual, photoProd.single, selectedMonth]);
+  }, [photoProd.annual, photoProd.single, photoProd.monthly, selectedMonth]);
 
   const scopeLabel = selectedMonth === null || selectedMonth === undefined ? 'no ano' : 'no mês';
 
