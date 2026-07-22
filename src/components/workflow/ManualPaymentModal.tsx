@@ -159,6 +159,22 @@ export function ManualPaymentModal({
         return;
       }
 
+      // Toasts informativos do contrato v2 (Gallery↔Studio)
+      const data = result.value as {
+        alreadyPaid?: boolean;
+        cancelledPendingIds?: string[];
+        syncedGallery?: boolean;
+      };
+      if (data?.alreadyPaid) {
+        toast.info("Pagamento já estava registrado — nada foi duplicado.");
+      } else if (data?.cancelledPendingIds?.length) {
+        toast.info(
+          `Cobrança${data.cancelledPendingIds.length > 1 ? "s" : ""} pendente${
+            data.cancelledPendingIds.length > 1 ? "s" : ""
+          } cancelada${data.cancelledPendingIds.length > 1 ? "s" : ""} automaticamente.`,
+        );
+      }
+
       onClose();
       // Notifica bridges que já ouvem esse evento (extrato, badges, etc.)
       window.dispatchEvent(
