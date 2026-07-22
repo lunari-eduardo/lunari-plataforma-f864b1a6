@@ -160,18 +160,18 @@ export function ManualPaymentModal({
       }
 
       // Toasts informativos do contrato v2 (Gallery↔Studio)
-      const data = result.value as {
+      const outcome = result.value as {
         alreadyPaid?: boolean;
         cancelledPendingIds?: string[];
         syncedGallery?: boolean;
       };
-      if (data?.alreadyPaid) {
+      if (outcome?.alreadyPaid) {
         toast.info("Pagamento já estava registrado — nada foi duplicado.");
-      } else if (data?.cancelledPendingIds?.length) {
+      } else if (outcome?.cancelledPendingIds?.length) {
         toast.info(
-          `Cobrança${data.cancelledPendingIds.length > 1 ? "s" : ""} pendente${
-            data.cancelledPendingIds.length > 1 ? "s" : ""
-          } cancelada${data.cancelledPendingIds.length > 1 ? "s" : ""} automaticamente.`,
+          `Cobrança${outcome.cancelledPendingIds.length > 1 ? "s" : ""} pendente${
+            outcome.cancelledPendingIds.length > 1 ? "s" : ""
+          } cancelada${outcome.cancelledPendingIds.length > 1 ? "s" : ""} automaticamente.`,
         );
       }
 
