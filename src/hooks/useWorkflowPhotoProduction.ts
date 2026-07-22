@@ -186,5 +186,5 @@ export function useWorkflowPhotoProduction(opts: Options) {
 
 /** Helper avulso — usar em contextos non-React (ex.: ferramenta da IA). */
 export async function runPhotoProductionForMonth(year: number, month: number, categoria?: string | null) {
-  return execute("workflow.photoProductionForMonth", { year, month, categoria: categoria ?? null });
+  return photoProductionForMonth.execute({ year, month, categoria: categoria ?? null });
 }
