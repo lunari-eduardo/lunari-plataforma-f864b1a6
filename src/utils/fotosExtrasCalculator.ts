@@ -22,6 +22,13 @@ export interface RecalcFotosExtrasInput {
     valorTotalVendido?: number | null;
     totalFotosExtrasVendidas?: number | null;
   };
+  /**
+   * Quando true, o fotógrafo está editando manualmente o valor/quantidade.
+   * Pula o ramo de regras congeladas (desconto progressivo) e respeita
+   * literalmente qtd × valorFotoExtra digitado. Galeria consolidada continua
+   * tendo precedência (proteção de vendas reais).
+   */
+  manualOverride?: boolean;
 }
 
 export interface RecalcFotosExtrasResult {
