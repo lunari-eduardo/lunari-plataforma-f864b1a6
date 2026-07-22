@@ -86,7 +86,9 @@ export function recalcFotosExtras(input: RecalcFotosExtrasInput): RecalcFotosExt
   }
 
   // 4. Regras congeladas com desconto progressivo → usar serviço (faixas por qtd).
-  if (pacoteCong) {
+  //    Pulado quando o usuário está sobrescrevendo manualmente: nesse caso a
+  //    fonte da verdade é literalmente o que ele digitou.
+  if (pacoteCong && !input.manualOverride) {
     try {
       const resultado = pricingFreezingService.calcularValorFotoExtraComRegrasCongeladas(
         qtd,
@@ -104,7 +106,7 @@ export function recalcFotosExtras(input: RecalcFotosExtrasInput): RecalcFotosExt
     }
   }
 
-  // 5. Cálculo padrão: qtd × valor unitário resolvido.
+  // 5. Cálculo padrão / override manual: qtd × valor unitário resolvido.
   return {
     valorUnitarioEfetivo: valorUnitResolvido,
     valorTotalFotoExtra: Number((qtd * valorUnitResolvido).toFixed(2)),
