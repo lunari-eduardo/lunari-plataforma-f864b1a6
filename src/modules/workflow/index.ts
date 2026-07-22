@@ -21,6 +21,7 @@ import "./application/queries/listSessionsByMonth";
 import "./application/queries/listStatusOptions";
 import "./application/queries/searchSessions";
 import "./application/queries/metricsForMonth";
+import "./application/queries/photoProductionForMonth";
 import "./application/queries/pendingPayments";
 import "./application/queries/getSessionFinancials";
 import "./application/queries/listSessionsByPaymentStatus";
