@@ -20,16 +20,14 @@ import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
-import {
-  assertNotAmbiguousSessionChargeClient,
-  type ExtraPaymentSnapshot,
-} from './_chargeGuards';
+import { assertNotAmbiguousSessionChargeClient } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
 import { ChargeStepBadge } from './ChargeStepBadge';
 
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
-import { AlertTriangle } from 'lucide-react';
+
+
 
 
 /** Códigos de erro do backend → mensagens pt-BR mapeadas para exibição. */
@@ -101,14 +99,7 @@ export function ChargeModal({
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
 
-  // Banner informativo de ambiguidade (fotos extras pendentes na sessão).
-  // Não altera fluxo — apenas orienta o usuário a usar o modal dedicado.
-  const [ambiguity, setAmbiguity] = useState<{
-    galeriaId: string;
-    valorSaldoExtras: number;
-    qtdSugerida: number;
-    nomeGaleria?: string;
-  } | null>(null);
+
 
 
 
@@ -171,7 +162,6 @@ export function ChargeModal({
       setOverrideRepassarTaxas(false);
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
-      setAmbiguity(null);
       setPayerEditing(false);
       // Hidratar payer a partir do cliente
       (async () => {
