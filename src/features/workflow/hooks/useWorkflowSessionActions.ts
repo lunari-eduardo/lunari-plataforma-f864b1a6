@@ -241,23 +241,42 @@ export function useWorkflowSessionActions({
             (cacheSafeUpdates as any).valor_foto_extra ?? Number(currentAny.valor_foto_extra) ?? 0;
 
           if (touchedFotoExtra) {
-            const result = recalcFotosExtras({
-              qtd,
-              valorFotoExtra: valorUnit,
-              regrasCongeladas: currentAny.regras_congeladas,
-              galeriaInfo: {
-                galeriaId: currentAny.galeria_id,
-                valorTotalVendido: currentAny.galerias?.valor_total_vendido,
-                totalFotosExtrasVendidas: currentAny.galerias?.total_fotos_extras_vendidas,
-              },
-            });
-            if (!result.respeitarBanco) {
-              (cacheSafeUpdates as any).valor_total_foto_extra = result.valorTotalFotoExtra;
-              if (Math.abs(result.valorUnitarioEfetivo - valorUnit) > 0.001) {
-                (cacheSafeUpdates as any).valor_foto_extra = result.valorUnitarioEfetivo;
+            const galeriaInfo = {
+              galeriaId: currentAny.galeria_id,
+              valorTotalVendido: currentAny.galerias?.valor_total_vendido,
+              totalFotosExtrasVendidas: currentAny.galerias?.total_fotos_extras_vendidas,
+            };
+            const hasGalleryConsolidated =
+              !!galeriaInfo.galeriaId &&
+              (galeriaInfo.valorTotalVendido ?? 0) > 0 &&
+              (galeriaInfo.totalFotosExtrasVendidas ?? 0) > 0 &&
+              qtd === galeriaInfo.totalFotosExtrasVendidas;
+
+            if (hasGalleryConsolidated) {
+              const result = recalcFotosExtras({
+                qtd,
+                valorFotoExtra: valorUnit,
+                regrasCongeladas: currentAny.regras_congeladas,
+                galeriaInfo,
+              });
+              if (!result.respeitarBanco) {
+                (cacheSafeUpdates as any).valor_total_foto_extra = result.valorTotalFotoExtra;
+                if (Math.abs(result.valorUnitarioEfetivo - valorUnit) > 0.001) {
+                  (cacheSafeUpdates as any).valor_foto_extra = result.valorUnitarioEfetivo;
+                }
               }
+            } else {
+              // Edição manual sem galeria consolidada: respeita literalmente
+              // o qtd × unit digitado; marca override para a trigger DB
+              // não sobrescrever com faixa de desconto progressivo.
+              (cacheSafeUpdates as any).valor_total_foto_extra = Number(
+                (qtd * valorUnit).toFixed(2),
+              );
+              (cacheSafeUpdates as any).extras_overridden = true;
+              (cacheSafeUpdates as any).extras_overridden_at = new Date().toISOString();
             }
           }
+
 
           const novoValorTotal = recalcSessionValorTotal({
             valorBasePacote:
