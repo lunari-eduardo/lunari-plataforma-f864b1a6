@@ -43,7 +43,7 @@ const Skeleton = ({ w = "w-16" }: { w?: string }) => (
  * Enquanto `isLoading`, valores são substituídos por skeletons — evita
  * mostrar valores do mês anterior durante a troca.
  */
-export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionCount, isLoading = false }: Props) {
+export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionCount, isLoading = false, photoProduction, isPhotoLoading = false }: Props) {
   if (!showMetrics) {
     return (
       <div className="flex items-center">
@@ -59,6 +59,11 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
       </div>
     );
   }
+
+  const fmtInt = (v: number) => new Intl.NumberFormat("pt-BR").format(Math.round(v || 0));
+  const fotosTotal = Number(photoProduction?.fotosTotal) || 0;
+  const fotosInc = Number(photoProduction?.fotosIncluidas) || 0;
+  const fotosExt = Number(photoProduction?.fotosExtras) || 0;
 
   const creditosGerados = Number(financials.creditosGerados) || 0;
   const creditosUtilizados = Number(financials.creditosUtilizados) || 0;
