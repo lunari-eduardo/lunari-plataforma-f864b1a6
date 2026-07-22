@@ -95,7 +95,6 @@ export const registerManualPayment = defineCommand({
 
       if (gal?.id) {
         // Evitar duplicidade se comando rodar duas vezes com mesmo intent
-        const intentMark = `[INTENT:${intentKey}]`;
         const { data: existing } = await supabase
           .from("cobrancas")
           .select("id")
@@ -121,7 +120,7 @@ export const registerManualPayment = defineCommand({
               provedor: "manual",
               finalidade: escopo,
               status: "pendente",
-              descricao: `${desc} ${intentMark}`,
+              descricao: desc,
               metodo_manual: label,
               obs_manual: observacao ?? null,
             })
