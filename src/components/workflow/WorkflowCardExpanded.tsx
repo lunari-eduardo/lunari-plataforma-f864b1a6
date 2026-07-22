@@ -621,13 +621,10 @@ export function WorkflowCardExpanded({
           sessionId={session.sessionId || session.id}
           galeriaId={resolvedGalleryId ?? null}
           valorSessaoComponente={
-            // Quando só extras estão pendentes (ex.: sessão paga OU sem galeria mas
-            // fluxo "Cobrar extras"), zera o componente sessão.
-            pendenteSessaoSugerido > 0.001 && extrasPendente > 0.001
-              ? pendenteSessaoSugerido
-              : extrasPendente > 0.001
-                ? 0
-                : pendenteSessaoSugerido
+            // Intenção EXPLÍCITA do clique — nunca inferir por comparação
+            // numérica. "extras_only" força sessão = 0; "sessao_e_extras"
+            // usa o pendente da sessão.
+            combinedIntent === "extras_only" ? 0 : pendenteSessaoSugerido
           }
           valorExtrasComponente={extrasPendente}
           qtdFotosExtras={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}
