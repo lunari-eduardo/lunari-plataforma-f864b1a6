@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { photoProductionCache, type CachedPhotoProduction } from "@/features/workflow/data/photoProductionCache";
 import { eventBus } from "@/shared/event-bus";
-import { execute } from "@/shared/capability";
+import { photoProductionForMonth } from "@/modules/workflow";
 import "@/modules/workflow";
 
 /**
