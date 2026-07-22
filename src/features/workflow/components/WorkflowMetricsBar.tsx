@@ -10,12 +10,20 @@ interface Financials {
   caixaRecebido?: number;
 }
 
+interface PhotoProduction {
+  fotosTotal: number;
+  fotosIncluidas: number;
+  fotosExtras: number;
+}
+
 interface Props {
   showMetrics: boolean;
   onToggle: (next: boolean) => void;
   financials: Financials;
   sessionCount: number;
   isLoading?: boolean;
+  photoProduction?: PhotoProduction | null;
+  isPhotoLoading?: boolean;
 }
 
 const formatCurrency = (value: unknown) =>
