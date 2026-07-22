@@ -60,13 +60,17 @@ export function ManualPaymentModal({
   hasGaleria,
 }: Props) {
   const runCapability = useRunCapability();
+  // Extras podem existir sem galeria vinculada (fluxo de extras manuais).
+  // O gate depende APENAS de haver pendente, nunca de `hasGaleria`.
   const canSessao = sessaoPendente > 0.001;
-  const canExtras = hasGaleria && extrasPendente > 0.001;
+  const canExtras = extrasPendente > 0.001;
   const canTudo = canSessao && canExtras;
+  const nadaPendente = !canSessao && !canExtras;
 
-  const initialEscopo: Escopo = canSessao ? "sessao" : canExtras ? "fotos_extras" : "sessao";
+  const pickInitial = (): Escopo =>
+    canTudo ? "sessao_e_extras" : canSessao ? "sessao" : canExtras ? "fotos_extras" : "sessao";
 
-  const [escopo, setEscopo] = useState<Escopo>(initialEscopo);
+  const [escopo, setEscopo] = useState<Escopo>(pickInitial());
   const [meio, setMeio] = useState<Meio>("pix");
   const [valor, setValor] = useState<number>(0);
   const [data, setData] = useState<string>(todayISO());
@@ -83,7 +87,7 @@ export function ManualPaymentModal({
   // Reset ao abrir
   useEffect(() => {
     if (!isOpen) return;
-    const inicial: Escopo = canSessao ? "sessao" : canExtras ? "fotos_extras" : "sessao";
+    const inicial = pickInitial();
     setEscopo(inicial);
     setMeio("pix");
     setData(todayISO());
@@ -117,7 +121,14 @@ export function ManualPaymentModal({
   const excedePendente = valor > pendenteEscopo + 0.001;
   const dataInvalida = !data || data > todayISO();
   const valorInvalido = !(valor > 0);
-  const podeSubmeter = !submitting && !excedePendente && !dataInvalida && !valorInvalido;
+  const podeSubmeter = !submitting && !excedePendente && !dataInvalida && !valorInvalido && !nadaPendente;
+
+  const titulo =
+    escopo === "fotos_extras"
+      ? "Registrar pagamento — Fotos extras"
+      : escopo === "sessao_e_extras"
+        ? "Registrar pagamento — Sessão + extras"
+        : "Registrar pagamento — Sessão";
 
   const handleSubmit = async () => {
     if (!podeSubmeter) return;
@@ -168,14 +179,20 @@ export function ManualPaymentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Wallet className="h-4 w-4 text-primary" />
-            Registrar pagamento manual
+            {titulo}
           </DialogTitle>
           <DialogDescription className="text-xs">
             {session.nome}
             {session.pacote ? ` · ${session.pacote}` : ""}
+            {!hasGaleria && canExtras ? " · extras manuais" : ""}
           </DialogDescription>
         </DialogHeader>
 
+        {nadaPendente ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            Não há valores pendentes nessa sessão.
+          </div>
+        ) : (
         <div className="space-y-3 py-1">
           {/* Escopo */}
           <div className="space-y-1.5">
@@ -188,19 +205,16 @@ export function ManualPaymentModal({
                 <SelectItem value="sessao" disabled={!canSessao}>
                   Sessão · {formatBRL(sessaoPendente)} pendente
                 </SelectItem>
-                {hasGaleria && (
-                  <SelectItem value="fotos_extras" disabled={!canExtras}>
-                    Fotos extras · {formatBRL(extrasPendente)} pendente
-                  </SelectItem>
-                )}
-                {canTudo && (
-                  <SelectItem value="sessao_e_extras">
-                    Sessão + extras · {formatBRL(sessaoPendente + extrasPendente)}
-                  </SelectItem>
-                )}
+                <SelectItem value="fotos_extras" disabled={!canExtras}>
+                  Fotos extras · {formatBRL(extrasPendente)} pendente
+                </SelectItem>
+                <SelectItem value="sessao_e_extras" disabled={!canTudo}>
+                  Sessão + extras · {formatBRL(sessaoPendente + extrasPendente)} pendente
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
+
 
           {/* Meio */}
           <div className="space-y-1.5">
@@ -263,6 +277,8 @@ export function ManualPaymentModal({
             </p>
           </div>
         </div>
+        )}
+
 
         <DialogFooter className="gap-2">
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
