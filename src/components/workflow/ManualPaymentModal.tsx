@@ -277,6 +277,8 @@ export function ManualPaymentModal({
             </p>
           </div>
         </div>
+        )}
+
 
         <DialogFooter className="gap-2">
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
