@@ -603,30 +603,6 @@ export function ChargeModal({
                       />
                     </div>
 
-                    {/* Banner ambiguidade — apenas informativo.
-                        Cobrança de fotos extras agora é feita SEMPRE pelo
-                        modal dedicado (botão "Cobrar extras" no card), via
-                        edge `gallery-create-payment` (respeita desconto
-                        progressivo + pagamentos anteriores). */}
-                    {ambiguity && (
-                      <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <div className="flex-1">
-                            <strong>Fotos extras pendentes nesta sessão.</strong>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Galeria "{ambiguity.nomeGaleria ?? '—'}" ·{' '}
-                              {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              })}{' '}
-                              a cobrar. Feche este modal e use o botão{' '}
-                              <strong>Cobrar extras</strong> do card para não duplicar receita.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
 
