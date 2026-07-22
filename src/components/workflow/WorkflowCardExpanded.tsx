@@ -525,16 +525,21 @@ export function WorkflowCardExpanded({
             onCobrar={() => setShowChargeModal(true)}
             onCobrarExtras={() => {
               // Com galeria: fluxo canônico Gallery (ExtraChargeModal).
-              // Sem galeria: usa CombinedChargeModal com sessão zerada.
+              // Sem galeria: usa CombinedChargeModal com intenção "só extras"
+              // — nunca soma sessão junto, mesmo se sessão estiver pendente.
               if (resolvedGalleryId) {
                 setShowExtraChargeModal(true);
               } else {
+                setCombinedIntent("extras_only");
                 setShowCombinedChargeModal(true);
               }
             }}
             onCobrarTudo={
               extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
-                ? () => setShowCombinedChargeModal(true)
+                ? () => {
+                    setCombinedIntent("sessao_e_extras");
+                    setShowCombinedChargeModal(true);
+                  }
                 : undefined
             }
             extrasPendente={extrasPendente}
