@@ -70,6 +70,39 @@ export default function AnaliseVendas() {
     if (!comparisonEnabled) setComparisonLimitMonth(null);
   }, [comparisonEnabled]);
 
+  // Produção fotográfica (fotos inclusas no pacote + extras)
+  const photoProd = useWorkflowPhotoProduction({
+    year: selectedYear,
+    // selectedMonth vem 0-based (0=Jan). null => ano inteiro.
+    month: selectedMonth === null || selectedMonth === undefined ? undefined : (selectedMonth as number) + 1,
+    categoria: selectedCategory === 'all' ? null : selectedCategory,
+  });
+
+  const productionSummary = useMemo(() => {
+    const src = selectedMonth === null || selectedMonth === undefined ? photoProd.annual : photoProd.single;
+    const fotosTotal = src?.fotosTotal ?? 0;
+    const fotosIncluidas = src?.fotosIncluidas ?? 0;
+    const fotosExtras = src?.fotosExtras ?? 0;
+    const sessoesComPacote = src?.sessoesComPacote ?? 0;
+    const sessoesSemPacote = src?.sessoesSemPacote ?? 0;
+    const totalSessoes = sessoesComPacote + sessoesSemPacote;
+    const mediaFotosPorSessao = totalSessoes > 0 ? fotosTotal / totalSessoes : 0;
+    const categorias = (src?.categorias ?? []).slice().sort((a: any, b: any) => (b.fotosTotal ?? 0) - (a.fotosTotal ?? 0));
+    const top = categorias[0];
+    return {
+      fotosTotal,
+      fotosIncluidas,
+      fotosExtras,
+      sessoesComPacote,
+      sessoesSemPacote,
+      mediaFotosPorSessao,
+      categoriaTop: top?.categoria ?? null,
+      fotosCategoriaTop: top?.fotosTotal ?? 0,
+    };
+  }, [photoProd.annual, photoProd.single, selectedMonth]);
+
+  const scopeLabel = selectedMonth === null || selectedMonth === undefined ? 'no ano' : 'no mês';
+
   return (
     <div className="min-h-screen">
       {/* Filtros Sticky - Compactos */}
