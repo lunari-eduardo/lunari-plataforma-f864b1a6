@@ -125,6 +125,30 @@ export function WorkflowMetricsBar({ showMetrics, onToggle, financials, sessionC
           ? <Skeleton w="w-8" />
           : <span className="text-sm font-bold">{sessionCount}</span>}
       </div>
+
+      <div
+        className="flex items-center gap-1.5"
+        title={
+          fotosTotal > 0
+            ? `Fotos previstas para produção: ${fmtInt(fotosInc)} inclusas no pacote + ${fmtInt(fotosExt)} extras`
+            : "Fotos previstas para produção (pacote + extras)"
+        }
+      >
+        <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+        <span className="text-[11px] text-muted-foreground">Fotos</span>
+        {isPhotoLoading
+          ? <Skeleton w="w-10" />
+          : (
+            <span className="text-sm font-bold text-sky-600 dark:text-sky-400">
+              {fmtInt(fotosTotal)}
+              {fotosTotal > 0 && (
+                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                  ({fmtInt(fotosInc)}+{fmtInt(fotosExt)})
+                </span>
+              )}
+            </span>
+          )}
+      </div>
       <Button
         variant="ghost"
         size="icon"
