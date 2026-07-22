@@ -42,6 +42,7 @@ export { listSessionsByMonth } from "./application/queries/listSessionsByMonth";
 export { listStatusOptions } from "./application/queries/listStatusOptions";
 export { searchSessions } from "./application/queries/searchSessions";
 export { metricsForMonth } from "./application/queries/metricsForMonth";
+export { photoProductionForMonth } from "./application/queries/photoProductionForMonth";
 export { pendingPayments } from "./application/queries/pendingPayments";
 export { getSessionFinancials } from "./application/queries/getSessionFinancials";
 export { listSessionsByPaymentStatus } from "./application/queries/listSessionsByPaymentStatus";
