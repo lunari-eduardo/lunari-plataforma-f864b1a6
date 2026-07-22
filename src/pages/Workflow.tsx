@@ -184,6 +184,8 @@ function WorkflowContent() {
           financials={financials}
           sessionCount={filters.filteredSessions.length}
           isLoading={isColdMetrics}
+          photoProduction={photoProd.single}
+          isPhotoLoading={photoProd.isLoading}
         />
 
         <WorkflowMonthSwitcher
