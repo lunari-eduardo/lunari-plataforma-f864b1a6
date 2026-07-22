@@ -116,6 +116,12 @@ function WorkflowContent() {
     caixaRecebido: metrics.caixaRecebido,
   }), [metrics]);
 
+  // Métricas de produção fotográfica (fotos incluídas no pacote + extras)
+  const photoProd = useWorkflowPhotoProduction({
+    year: month.currentMonth.year,
+    month: month.currentMonth.month,
+  });
+
   // SWR: cold = sem dado exibível; revalidate = tem dado, atualizando.
   // Só bloqueamos a tabela em cold real (sem sessões visíveis).
   const isColdSessions =
