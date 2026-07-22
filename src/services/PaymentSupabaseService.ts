@@ -773,6 +773,7 @@ export class PaymentSupabaseService {
     options?: {
       binding?: { id: string; session_id: string; cliente_id: string };
       intentKey?: string;
+      cobrancaId?: string;
     }
   ): Promise<boolean> {
     try {
@@ -815,8 +816,10 @@ export class PaymentSupabaseService {
           valor: payment.valor,
           data_transacao: payment.data,
           descricao: descricao,
+          cobranca_id: options?.cobrancaId ?? null,
           updated_by: userId
         });
+
 
       if (insertError) {
         console.error('❌ Erro ao inserir pagamento:', insertError);
