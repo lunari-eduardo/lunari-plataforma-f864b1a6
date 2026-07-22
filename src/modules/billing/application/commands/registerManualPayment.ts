@@ -72,6 +72,75 @@ export const registerManualPayment = defineCommand({
     const paymentId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const intentKey = `billing.manual:${binding.session_id}:${valor}:${dataPagamento}:${meio}:${escopo}`;
 
+    // Se pagamento toca extras, resolver galeria e criar cobrança virtual
+    // para que finalize_gallery_payment propague para galerias.total_fotos_extras_vendidas.
+    let virtualCobrancaId: string | undefined;
+    if (escopo === "fotos_extras" || escopo === "sessao_e_extras") {
+      const { data: gal } = await supabase
+        .from("galerias")
+        .select("id, valor_foto_extra")
+        .eq("user_id", userId)
+        .eq("session_id", binding.session_id)
+        .order("finalized_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (gal?.id) {
+        // Evitar duplicidade se comando rodar duas vezes com mesmo intent
+        const intentMark = `[INTENT:${intentKey}]`;
+        const { data: existing } = await supabase
+          .from("cobrancas")
+          .select("id")
+          .eq("galeria_id", gal.id)
+          .ilike("descricao", `%${intentMark}%`)
+          .maybeSingle();
+
+        if (existing?.id) {
+          virtualCobrancaId = existing.id;
+        } else {
+          const componente = escopo === "sessao_e_extras" ? valor : valor;
+          const { data: inserted, error: cobErr } = await supabase
+            .from("cobrancas")
+            .insert({
+              user_id: userId,
+              cliente_id: binding.cliente_id,
+              session_id: binding.session_id,
+              galeria_id: gal.id,
+              valor,
+              valor_liquido: valor,
+              valor_extras_componente: escopo === "sessao_e_extras" ? componente : null,
+              tipo_cobranca: "manual",
+              provedor: "manual",
+              finalidade: escopo,
+              status: "pendente",
+              descricao: `${desc} ${intentMark}`,
+              metodo_manual: label,
+              obs_manual: observacao ?? null,
+            })
+            .select("id")
+            .single();
+
+          if (cobErr) {
+            ctx.log.error("Falha ao criar cobrança virtual manual", { cobErr });
+          } else if (inserted?.id) {
+            virtualCobrancaId = inserted.id;
+            // Marca como paga via finalize_gallery_payment → sincroniza galeria
+            const { error: finErr } = await supabase.rpc("finalize_gallery_payment", {
+              p_cobranca_id: virtualCobrancaId,
+              p_receipt_url: null,
+              p_paid_at: `${dataPagamento}T12:00:00Z`,
+              p_manual_method: label,
+              p_manual_obs: observacao ?? null,
+            });
+            if (finErr) {
+              ctx.log.error("finalize_gallery_payment falhou", { finErr });
+            }
+          }
+        }
+      }
+    }
+
     const okSaved = await PaymentSupabaseService.saveSinglePaymentTracked(
       binding.id,
       paymentId,
@@ -81,8 +150,9 @@ export const registerManualPayment = defineCommand({
         observacoes: desc,
         forma_pagamento: label,
       },
-      { binding, intentKey },
+      { binding, intentKey, cobrancaId: virtualCobrancaId },
     );
+
 
     if (!okSaved) {
       return err(
