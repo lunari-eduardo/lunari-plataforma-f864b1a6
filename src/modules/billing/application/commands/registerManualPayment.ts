@@ -68,9 +68,16 @@ export const registerManualPayment = defineCommand({
 
     const label = MEIO_LABEL[meio];
     const escopoTag = escopo === "sessao" ? "" : ` (${escopo.replace("_", " ")})`;
-    const desc = observacao?.trim() || `Pagamento ${label}${escopoTag}`;
+    const descBase = observacao?.trim() || `Pagamento ${label}${escopoTag}`;
     const paymentId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const intentKey = `billing.manual:${binding.session_id}:${valor}:${dataPagamento}:${meio}:${escopo}`;
+    // Marcador consumido pela RPC workflow_session_financials
+    // (ILIKE '%:sessao]%' / '%:fotos_extras]%' / '%:sessao_e_extras]%').
+    // Sem ele, pagamentos manuais caem em v_pagamentos_genericos e vazam
+    // proporcionalmente entre sessão e extras.
+    const intentMark = `[INTENT:${intentKey}:${escopo}]`;
+    const desc = `${descBase} ${intentMark}`;
+
 
     // Se pagamento toca extras, resolver galeria e criar cobrança virtual
     // para que finalize_gallery_payment propague para galerias.total_fotos_extras_vendidas.
@@ -88,7 +95,6 @@ export const registerManualPayment = defineCommand({
 
       if (gal?.id) {
         // Evitar duplicidade se comando rodar duas vezes com mesmo intent
-        const intentMark = `[INTENT:${intentKey}]`;
         const { data: existing } = await supabase
           .from("cobrancas")
           .select("id")
@@ -114,7 +120,7 @@ export const registerManualPayment = defineCommand({
               provedor: "manual",
               finalidade: escopo,
               status: "pendente",
-              descricao: `${desc} ${intentMark}`,
+              descricao: desc,
               metodo_manual: label,
               obs_manual: observacao ?? null,
             })
