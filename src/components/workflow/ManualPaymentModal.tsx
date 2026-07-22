@@ -121,7 +121,14 @@ export function ManualPaymentModal({
   const excedePendente = valor > pendenteEscopo + 0.001;
   const dataInvalida = !data || data > todayISO();
   const valorInvalido = !(valor > 0);
-  const podeSubmeter = !submitting && !excedePendente && !dataInvalida && !valorInvalido;
+  const podeSubmeter = !submitting && !excedePendente && !dataInvalida && !valorInvalido && !nadaPendente;
+
+  const titulo =
+    escopo === "fotos_extras"
+      ? "Registrar pagamento — Fotos extras"
+      : escopo === "sessao_e_extras"
+        ? "Registrar pagamento — Sessão + extras"
+        : "Registrar pagamento — Sessão";
 
   const handleSubmit = async () => {
     if (!podeSubmeter) return;
