@@ -195,46 +195,7 @@ export function ChargeModal({
   // `ExtraChargeModal` (botão "Cobrar extras" do card do workflow).
 
 
-  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner
-  // informativo. Não altera "finalidade" (extras têm modal próprio).
-  useEffect(() => {
-    if (!isOpen || !sessionId) {
-      setAmbiguity(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data: galerias } = await supabase
-        .from('galerias')
-        .select('id, nome_sessao, fotos_selecionadas, fotos_incluidas, status_pagamento')
-        .eq('session_id', sessionId);
-      if (cancelled || !galerias) return;
-      for (const g of galerias) {
-        if ((g.fotos_selecionadas ?? 0) <= (g.fotos_incluidas ?? 0)) continue;
-        if (g.status_pagamento === 'pago') continue;
-        const { data: rpc } = await supabase.rpc('calculate_gallery_extra_payment', {
-          p_gallery_id: g.id,
-        });
-        const snap = (rpc ?? {}) as ExtraPaymentSnapshot;
-        const saldo = Number(snap.valor_a_cobrar ?? 0);
-        if (saldo > 0) {
-          if (cancelled) return;
-          setAmbiguity({
-            galeriaId: g.id,
-            valorSaldoExtras: saldo,
-            qtdSugerida:
-              Number(snap.extras_necessarias ?? 0) - Number(snap.extras_pagas ?? 0),
-            nomeGaleria: g.nome_sessao ?? undefined,
-          });
-          return;
-        }
-      }
-      if (!cancelled) setAmbiguity(null);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, sessionId]);
+
 
 
 
