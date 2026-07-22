@@ -237,15 +237,9 @@ export function ExtraChargeModal({
                 value={currency(calc.valor_a_cobrar)}
                 emphasis={calc.valor_a_cobrar > 0 ? 'primary' : 'muted'}
               />
-              {calc.rules_source && (
-                <Row
-                  label="Regra aplicada"
-                  value={calc.rules_source}
-                  small
-                />
-              )}
             </div>
           )}
+
 
           {calc.is_fully_paid && !isLoading && (
             <div className="flex items-start gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">

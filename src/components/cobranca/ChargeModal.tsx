@@ -20,16 +20,14 @@ import { AsaasPixModal } from './AsaasPixModal';
 import { ChargeHistory } from './ChargeHistory';
 import { ProviderSelector } from './ProviderSelector';
 import { SelectedProvider } from './ProviderRow';
-import {
-  assertNotAmbiguousSessionChargeClient,
-  type ExtraPaymentSnapshot,
-} from './_chargeGuards';
+import { assertNotAmbiguousSessionChargeClient } from './_chargeGuards';
 import { PayerFieldsBlock, type PayerFieldsValue, type PayerFieldsValidity } from './PayerFieldsBlock';
 import { ChargeStepBadge } from './ChargeStepBadge';
 
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
-import { AlertTriangle } from 'lucide-react';
+
+
 
 
 /** Códigos de erro do backend → mensagens pt-BR mapeadas para exibição. */
@@ -101,14 +99,7 @@ export function ChargeModal({
   const [overrideAntecipar, setOverrideAntecipar] = useState(false);
   const [overrideRepassarAntecipacao, setOverrideRepassarAntecipacao] = useState(false);
 
-  // Banner informativo de ambiguidade (fotos extras pendentes na sessão).
-  // Não altera fluxo — apenas orienta o usuário a usar o modal dedicado.
-  const [ambiguity, setAmbiguity] = useState<{
-    galeriaId: string;
-    valorSaldoExtras: number;
-    qtdSugerida: number;
-    nomeGaleria?: string;
-  } | null>(null);
+
 
 
 
@@ -171,7 +162,6 @@ export function ChargeModal({
       setOverrideRepassarTaxas(false);
       setOverrideAntecipar(false);
       setOverrideRepassarAntecipacao(false);
-      setAmbiguity(null);
       setPayerEditing(false);
       // Hidratar payer a partir do cliente
       (async () => {
@@ -205,46 +195,7 @@ export function ChargeModal({
   // `ExtraChargeModal` (botão "Cobrar extras" do card do workflow).
 
 
-  // Detecta ambiguidade (sessão com saldo de extras pendente) — banner
-  // informativo. Não altera "finalidade" (extras têm modal próprio).
-  useEffect(() => {
-    if (!isOpen || !sessionId) {
-      setAmbiguity(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data: galerias } = await supabase
-        .from('galerias')
-        .select('id, nome_sessao, fotos_selecionadas, fotos_incluidas, status_pagamento')
-        .eq('session_id', sessionId);
-      if (cancelled || !galerias) return;
-      for (const g of galerias) {
-        if ((g.fotos_selecionadas ?? 0) <= (g.fotos_incluidas ?? 0)) continue;
-        if (g.status_pagamento === 'pago') continue;
-        const { data: rpc } = await supabase.rpc('calculate_gallery_extra_payment', {
-          p_gallery_id: g.id,
-        });
-        const snap = (rpc ?? {}) as ExtraPaymentSnapshot;
-        const saldo = Number(snap.valor_a_cobrar ?? 0);
-        if (saldo > 0) {
-          if (cancelled) return;
-          setAmbiguity({
-            galeriaId: g.id,
-            valorSaldoExtras: saldo,
-            qtdSugerida:
-              Number(snap.extras_necessarias ?? 0) - Number(snap.extras_pagas ?? 0),
-            nomeGaleria: g.nome_sessao ?? undefined,
-          });
-          return;
-        }
-      }
-      if (!cancelled) setAmbiguity(null);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, sessionId]);
+
 
 
 
@@ -652,30 +603,6 @@ export function ChargeModal({
                       />
                     </div>
 
-                    {/* Banner ambiguidade — apenas informativo.
-                        Cobrança de fotos extras agora é feita SEMPRE pelo
-                        modal dedicado (botão "Cobrar extras" no card), via
-                        edge `gallery-create-payment` (respeita desconto
-                        progressivo + pagamentos anteriores). */}
-                    {ambiguity && (
-                      <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <div className="flex-1">
-                            <strong>Fotos extras pendentes nesta sessão.</strong>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Galeria "{ambiguity.nomeGaleria ?? '—'}" ·{' '}
-                              {ambiguity.valorSaldoExtras.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              })}{' '}
-                              a cobrar. Feche este modal e use o botão{' '}
-                              <strong>Cobrar extras</strong> do card para não duplicar receita.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
 
