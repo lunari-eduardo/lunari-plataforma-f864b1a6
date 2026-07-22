@@ -45,8 +45,17 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** "Cobrar tudo" agora abre UM único modal (link único `sessao_e_extras`). */
+  /**
+   * "Cobrar tudo" e "Cobrar extras (sem galeria)" compartilham o
+   * CombinedChargeModal, mas com breakdown DIFERENTE. O `combinedIntent`
+   * torna a intenção do clique explícita para o modal (sem inferência por
+   * comparação numérica, que somava sessão junto quando só extras foram
+   * pedidos).
+   */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
+  const [combinedIntent, setCombinedIntent] = useState<
+    "extras_only" | "sessao_e_extras"
+  >("sessao_e_extras");
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
