@@ -45,8 +45,17 @@ export function WorkflowCardExpanded({
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [showExtraChargeModal, setShowExtraChargeModal] = useState(false);
-  /** "Cobrar tudo" agora abre UM único modal (link único `sessao_e_extras`). */
+  /**
+   * "Cobrar tudo" e "Cobrar extras (sem galeria)" compartilham o
+   * CombinedChargeModal, mas com breakdown DIFERENTE. O `combinedIntent`
+   * torna a intenção do clique explícita para o modal (sem inferência por
+   * comparação numérica, que somava sessão junto quando só extras foram
+   * pedidos).
+   */
   const [showCombinedChargeModal, setShowCombinedChargeModal] = useState(false);
+  const [combinedIntent, setCombinedIntent] = useState<
+    "extras_only" | "sessao_e_extras"
+  >("sessao_e_extras");
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
   const [paymentInput, setPaymentInput] = useState("");
   
@@ -516,16 +525,21 @@ export function WorkflowCardExpanded({
             onCobrar={() => setShowChargeModal(true)}
             onCobrarExtras={() => {
               // Com galeria: fluxo canônico Gallery (ExtraChargeModal).
-              // Sem galeria: usa CombinedChargeModal com sessão zerada.
+              // Sem galeria: usa CombinedChargeModal com intenção "só extras"
+              // — nunca soma sessão junto, mesmo se sessão estiver pendente.
               if (resolvedGalleryId) {
                 setShowExtraChargeModal(true);
               } else {
+                setCombinedIntent("extras_only");
                 setShowCombinedChargeModal(true);
               }
             }}
             onCobrarTudo={
               extrasPendente > 0.001 && pendenteSessaoSugerido > 0.001
-                ? () => setShowCombinedChargeModal(true)
+                ? () => {
+                    setCombinedIntent("sessao_e_extras");
+                    setShowCombinedChargeModal(true);
+                  }
                 : undefined
             }
             extrasPendente={extrasPendente}
@@ -607,13 +621,10 @@ export function WorkflowCardExpanded({
           sessionId={session.sessionId || session.id}
           galeriaId={resolvedGalleryId ?? null}
           valorSessaoComponente={
-            // Quando só extras estão pendentes (ex.: sessão paga OU sem galeria mas
-            // fluxo "Cobrar extras"), zera o componente sessão.
-            pendenteSessaoSugerido > 0.001 && extrasPendente > 0.001
-              ? pendenteSessaoSugerido
-              : extrasPendente > 0.001
-                ? 0
-                : pendenteSessaoSugerido
+            // Intenção EXPLÍCITA do clique — nunca inferir por comparação
+            // numérica. "extras_only" força sessão = 0; "sessao_e_extras"
+            // usa o pendente da sessão.
+            combinedIntent === "extras_only" ? 0 : pendenteSessaoSugerido
           }
           valorExtrasComponente={extrasPendente}
           qtdFotosExtras={fin.qtdExtras || Number(session.qtdFotosExtra) || 0}
