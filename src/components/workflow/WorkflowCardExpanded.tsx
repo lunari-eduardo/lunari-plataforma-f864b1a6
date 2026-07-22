@@ -239,12 +239,18 @@ export function WorkflowCardExpanded({
     (field: "valorFotoExtra" | "qtdFotosExtra", nextValue: string, previousValue: string) => {
       if (nextValue === previousValue) return;
       if (galeriaHasSales) {
-        setPendingExtraEdit({ field, nextValue, previousValue });
-      } else {
-        onFieldUpdate(session.id, field, nextValue);
+        setPendingExtraEdit({ field, nextValue, previousValue, source: "gallery" });
+        return;
       }
+      // Sem galeria consolidada: se existe regra congelada com desconto
+      // progressivo E ainda não há override, confirma antes de desvincular.
+      if (hasDescontoProgressivo && !session.extrasOverridden) {
+        setPendingExtraEdit({ field, nextValue, previousValue, source: "frozen_rules" });
+        return;
+      }
+      onFieldUpdate(session.id, field, nextValue);
     },
-    [galeriaHasSales, session.id, onFieldUpdate],
+    [galeriaHasSales, hasDescontoProgressivo, session.extrasOverridden, session.id, onFieldUpdate],
   );
 
   const handleValorFotoExtraBlur = useCallback(() => {
@@ -263,8 +269,6 @@ export function WorkflowCardExpanded({
 
   const confirmExtraEdit = useCallback(() => {
     if (!pendingExtraEdit) return;
-    // O handler no realtime (case valorFotoExtra / qtdFotosExtra) já grava
-    // extras_overridden=true automaticamente quando o valor diverge da galeria.
     onFieldUpdate(session.id, pendingExtraEdit.field, pendingExtraEdit.nextValue);
     setPendingExtraEdit(null);
   }, [pendingExtraEdit, session.id, onFieldUpdate]);
