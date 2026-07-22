@@ -187,6 +187,32 @@ export default function AnaliseVendas() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* BLOCO 2.5: PRODUÇÃO FOTOGRÁFICA                                */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <section aria-label="Produção fotográfica" className="space-y-4 animate-fade-in">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Produção fotográfica</h2>
+            <p className="text-xs text-muted-foreground">
+              Fotos previstas para entrega: inclusas no pacote + extras compradas na galeria (ou manuais).
+            </p>
+          </div>
+          <ProductionMetricsCards
+            fotosTotal={productionSummary.fotosTotal}
+            fotosIncluidas={productionSummary.fotosIncluidas}
+            fotosExtras={productionSummary.fotosExtras}
+            mediaFotosPorSessao={productionSummary.mediaFotosPorSessao}
+            categoriaTop={productionSummary.categoriaTop}
+            fotosCategoriaTop={productionSummary.fotosCategoriaTop}
+            sessoesComPacote={productionSummary.sessoesComPacote}
+            sessoesSemPacote={productionSummary.sessoesSemPacote}
+            isLoading={photoProd.isLoading}
+            scopeLabel={scopeLabel}
+          />
+          <ProductionByMonthChart monthly={photoProd.monthly} isLoading={photoProd.isLoading} />
+        </section>
+
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
         {/* BLOCO 3: DIAGNÓSTICO E OPORTUNIDADES                            */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section aria-label="Diagnóstico e oportunidades" className="space-y-4 animate-fade-in">
