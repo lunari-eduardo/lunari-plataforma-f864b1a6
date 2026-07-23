@@ -298,17 +298,19 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     notifySubscribers();
 
-    // FASE 2: SEMPRE atualizar do Supabase para garantir dados frescos
-    const chunks = [monthsToPreload.slice(0, 3), monthsToPreload.slice(3)];
-    for (const chunk of chunks) {
-      await Promise.allSettled(
-        chunk.map(({ year, month }) => {
-          return fetchAndCacheMonth(year, month);
-        })
-      );
-    }
+    // FASE 2 (otimizada): TODOS os meses em paralelo. Não bloqueia UI —
+    // o cache do IDB já foi hidratado acima; o refresh vive em background.
+    Promise.allSettled(
+      monthsToPreload.map(({ year, month }) => fetchAndCacheMonth(year, month))
+    ).finally(() => {
+      // Marca cada mês como "acabou de revalidar" para o TTL evitar reruns.
+      const now = Date.now();
+      monthsToPreload.forEach(({ year, month }) => {
+        lastSilentRefreshAt.current.set(getCacheKey(year, month), now);
+      });
+    });
 
-    // Prefetch das métricas dos mesmos meses — hit síncrono ao trocar de mês.
+    // Prefetch das métricas em paralelo (fire-and-forget).
     monthsToPreload.forEach(({ year, month }) => {
       prefetchMonthMetrics(userId, year, month);
     });
