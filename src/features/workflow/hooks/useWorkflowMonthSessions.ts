@@ -34,6 +34,9 @@ export function useWorkflowMonthSessions() {
     forceRefresh,
     ensureMonthLoaded,
     isLoadingMonth,
+    getMonthStatus,
+    subscribeMonthStatus,
+    retryMonth,
   } = useWorkflowCache();
 
   const [currentMonth, setCurrentMonth] = usePersistedState<WorkflowCurrentMonth>(
@@ -45,7 +48,17 @@ export function useWorkflowMonthSessions() {
   const [loading, setLoading] = useState(false);
   /** true durante troca de mês sem cache — usado pela UI para cross-fade. */
   const [isSwitchingMonth, setIsSwitchingMonth] = useState(false);
-  const [error] = useState<string | null>(null);
+  const [monthState, setMonthStateLocal] = useState<MonthLoadState>(() =>
+    getMonthStatus(currentMonth.year, currentMonth.month),
+  );
+  const error = monthState.status === "error" ? monthState.error : null;
+
+  // Subscribe ao state machine do mês corrente.
+  useEffect(() => {
+    setMonthStateLocal(getMonthStatus(currentMonth.year, currentMonth.month));
+    const off = subscribeMonthStatus(currentMonth.year, currentMonth.month, setMonthStateLocal);
+    return off;
+  }, [currentMonth.year, currentMonth.month, getMonthStatus, subscribeMonthStatus]);
 
   // Ref sempre com o mês corrente — usada como guarda contra writes de fetches
   // antigos que resolveriam após o usuário já ter mudado de mês.
