@@ -1,24 +1,29 @@
 /**
- * Onda 3 — Realtime unificado (v2).
+ * Onda 3 — Realtime unificado (v2), com watchdog de reconexão.
  *
  * 1 canal único `workflow:user:{userId}` ouvindo `clientes_sessoes` e
- * `clientes_transacoes` filtrados por `user_id`. Fan-out alimenta o
- * `workflowStore` (que já tem anti-eco via `lastSeq`) e dispara o
- * `CustomEvent('workflow-session-updated')` para compat com listeners
- * legados (Workflow.tsx, hooks de métricas) até as Ondas seguintes.
+ * `clientes_transacoes` filtrados por `user_id`.
  *
- * Ativação: flag `VITE_WORKFLOW_REALTIME_V2 === 'true'`. Fora isso,
- * o canal legado em `WorkflowCacheContext` + `useWorkflowRealtime`
- * continua sendo a única fonte (sem mudanças de comportamento).
+ * Onda C (resiliência):
+ *  - Em `CHANNEL_ERROR` / `TIMED_OUT` / `CLOSED`: teardown + resubscribe com
+ *    backoff exponencial (1s, 3s, 10s, 30s, teto 60s). Reset ao próximo
+ *    `SUBSCRIBED`.
+ *  - Em `visibilitychange → visible`: se `Date.now() - lastEventAt > 5min`,
+ *    força resubscribe preventivo (evita canais zumbis após idle).
+ *  - Após reconectar, emite `workflow.metrics_stale` para revalidar métricas.
  */
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { sessionsRepo } from "../data/sessionsRepo";
 import { workflowStore } from "../store/workflowStore";
+import { eventBus } from "@/shared/event-bus";
 import type { WorkflowSession } from "../domain/session";
 
 type Stats = { upserts: number; removes: number; ignored: number; lastEventAt: number };
+
+const IDLE_RESUB_MS = 5 * 60 * 1000; // 5 min sem eventos → resubscribe preventivo
+const BACKOFF_MS = [1_000, 3_000, 10_000, 30_000, 60_000];
 
 function emitLegacyEvent(
   session: WorkflowSession | null,
@@ -33,7 +38,6 @@ function emitLegacyEvent(
         detail: { kind, session, sessionId: affectedId, source: "realtime-v2" },
       }),
     );
-    // Também sinaliza que os valores financeiros da sessão devem ser recomputados.
     if (affectedId) {
       window.dispatchEvent(
         new CustomEvent("workflow-session-financials-stale", {
@@ -57,8 +61,6 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
   const { user } = useAuth();
   const userId = user?.id;
   const statsRef = useRef<Stats>({ upserts: 0, removes: 0, ignored: 0, lastEventAt: 0 });
-  // Onda 3 — ligado por padrão no Preview. Para desativar explicitamente,
-  // definir VITE_WORKFLOW_REALTIME_V2="false". Qualquer outro valor (ou ausência) = habilitado.
   const flag = (import.meta.env.VITE_WORKFLOW_REALTIME_V2 ?? "").toString().toLowerCase();
   const enabled = flag !== "false" && flag !== "0";
 
@@ -66,22 +68,26 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
     if (!enabled || !userId) return;
 
     let cancelled = false;
-    // Debounce leve para UPDATE (similar ao canal legado).
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let backoffIndex = 0;
+    let currentChannel: ReturnType<typeof supabase.channel> | null = null;
     const channelName = `workflow:user:${userId}`;
+
+    const clearReconnectTimer = () => {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    };
 
     async function hydrateAndUpsert(id: string) {
       try {
         const fresh = await sessionsRepo.getById(userId!, id);
         if (cancelled) return;
-        // Sessão sumiu do filtro (deletada de fato): remover do store.
         if (!fresh) {
           workflowStore.remove(id);
           statsRef.current.removes++;
           emitLegacyEvent(null, "delete", id);
           return;
         }
-        // Soft-delete (status='historico') também sai do funil.
         if ((fresh as any).status === "historico") {
           workflowStore.remove(id);
           statsRef.current.removes++;
@@ -114,59 +120,107 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
       }
     }
 
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "clientes_sessoes", filter: `user_id=eq.${userId}` },
-        (payload) => {
-          statsRef.current.lastEventAt = Date.now();
-          if (payload.eventType === "DELETE") {
-            const oldRow = payload.old as { id?: string } | null;
-            if (oldRow?.id) {
-              workflowStore.remove(oldRow.id);
-              statsRef.current.removes++;
-              emitLegacyEvent(null, "delete", oldRow.id);
+    const scheduleReconnect = (reason: string) => {
+      if (cancelled) return;
+      clearReconnectTimer();
+      const delay = BACKOFF_MS[Math.min(backoffIndex, BACKOFF_MS.length - 1)];
+      backoffIndex++;
+      console.warn(`[realtime-v2] reconnect scheduled in ${delay}ms (reason=${reason})`);
+      reconnectTimer = setTimeout(() => {
+        if (cancelled) return;
+        teardownChannel();
+        subscribe();
+      }, delay);
+    };
+
+    const teardownChannel = () => {
+      if (currentChannel) {
+        try { supabase.removeChannel(currentChannel); } catch { /* noop */ }
+        currentChannel = null;
+      }
+    };
+
+    const subscribe = () => {
+      if (cancelled) return;
+      const channel = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "clientes_sessoes", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            statsRef.current.lastEventAt = Date.now();
+            if (payload.eventType === "DELETE") {
+              const oldRow = payload.old as { id?: string } | null;
+              if (oldRow?.id) {
+                workflowStore.remove(oldRow.id);
+                statsRef.current.removes++;
+                emitLegacyEvent(null, "delete", oldRow.id);
+              }
+              return;
             }
-            return;
+            const row = payload.new as { id?: string } | null;
+            if (!row?.id) return;
+            if (payload.eventType === "INSERT") {
+              void hydrateAndUpsert(row.id);
+            } else {
+              if (debounceTimer) clearTimeout(debounceTimer);
+              debounceTimer = setTimeout(() => void hydrateAndUpsert(row.id!), 150);
+            }
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "clientes_transacoes", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            statsRef.current.lastEventAt = Date.now();
+            const sessionIdText =
+              (payload.new as { session_id?: string } | null)?.session_id ??
+              (payload.old as { session_id?: string } | null)?.session_id;
+            if (!sessionIdText) return;
+            setTimeout(() => void hydrateBySessionText(sessionIdText), 350);
+          },
+        )
+        .subscribe((status) => {
+          if (cancelled) return;
+          if (status === "SUBSCRIBED") {
+            const wasReconnecting = backoffIndex > 0;
+            backoffIndex = 0;
+            clearReconnectTimer();
+            statsRef.current.lastEventAt = Date.now();
+            console.log(`[realtime-v2] subscribed: ${channelName}`);
+            if (wasReconnecting) {
+              // Após qualquer reconexão real, métricas podem estar stale.
+              void eventBus.emit("workflow.metrics_stale", { reason: "reconnect" });
+            }
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+            scheduleReconnect(status);
           }
-          const row = payload.new as { id?: string } | null;
-          if (!row?.id) return;
-          // INSERT processa direto; UPDATE com debounce 150ms.
-          if (payload.eventType === "INSERT") {
-            void hydrateAndUpsert(row.id);
-          } else {
-            if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => void hydrateAndUpsert(row.id!), 150);
-          }
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "clientes_transacoes", filter: `user_id=eq.${userId}` },
-        (payload) => {
-          statsRef.current.lastEventAt = Date.now();
-          const sessionIdText =
-            (payload.new as { session_id?: string } | null)?.session_id ??
-            (payload.old as { session_id?: string } | null)?.session_id;
-          if (!sessionIdText) return;
-          // Aguarda triggers DB recalcularem valor_pago.
-          setTimeout(() => void hydrateBySessionText(sessionIdText), 350);
-        },
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          // eslint-disable-next-line no-console
-          console.log(`[realtime-v2] subscribed: ${channelName}`);
-        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          console.warn(`[realtime-v2] status=${status}`);
-        }
-      });
+        });
+
+      currentChannel = channel;
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const last = statsRef.current.lastEventAt;
+      const idle = last === 0 || Date.now() - last > IDLE_RESUB_MS;
+      if (idle) {
+        console.log("[realtime-v2] visibility→visible após idle, resubscribing");
+        backoffIndex = 0;
+        teardownChannel();
+        subscribe();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    subscribe();
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
       if (debounceTimer) clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
+      clearReconnectTimer();
+      teardownChannel();
     };
   }, [enabled, userId]);
 

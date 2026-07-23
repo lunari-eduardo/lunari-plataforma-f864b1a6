@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { eventBus } from "@/shared/event-bus";
 import type { WorkflowSession } from "@/features/workflow";
+
+const HEARTBEAT_MS = 5 * 60 * 1000; // 5 min — revalidação silenciosa enquanto visível
+const PERSISTED_TTL_MS = 6 * 60 * 60 * 1000; // 6 h — invalida mês persistido "antigo"
 
 export type WorkflowCurrentMonth = { month: number; year: number };
 
@@ -48,7 +52,40 @@ export function useWorkflowMonthSessions() {
   const currentMonthRef = useRef(currentMonth);
   useEffect(() => { currentMonthRef.current = currentMonth; }, [currentMonth]);
 
-  // FASE 1 — carregar mês corrente (cache-first, sem flash de vazio)
+  // Marca quando o usuário navegou manualmente — impede o TTL de reescrever.
+  const manuallyNavigatedRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
+
+  // FASE 0 — TTL do mês persistido:
+  // Se a aba ficou fechada/idle por >6h e o mês persistido não é o atual,
+  // e o usuário ainda não navegou manualmente nesta sessão, força "hoje".
+  useEffect(() => {
+    const lastLoadStr = typeof window !== "undefined"
+      ? window.sessionStorage.getItem("workflow_current_month__lastLoadAt")
+      : null;
+    const lastLoad = lastLoadStr ? Number(lastLoadStr) : 0;
+    const now = new Date();
+    const isCurrentRealMonth =
+      currentMonth.year === now.getFullYear() && currentMonth.month === now.getMonth() + 1;
+    if (
+      !manuallyNavigatedRef.current &&
+      lastLoad > 0 &&
+      now.getTime() - lastLoad > PERSISTED_TTL_MS &&
+      !isCurrentRealMonth
+    ) {
+      console.log("[Workflow] mês persistido antigo (>6h) → resetando para hoje");
+      setCurrentMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
+    }
+    try {
+      window.sessionStorage.setItem(
+        "workflow_current_month__lastLoadAt",
+        String(Date.now()),
+      );
+    } catch { /* noop */ }
+    // Roda uma vez no mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const loadMonth = async () => {
@@ -87,16 +124,35 @@ export function useWorkflowMonthSessions() {
     return () => { cancelled = true; };
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
 
-  // FASE 2 — visibilitychange
+  // FASE 2 — visibilitychange + heartbeat de revalidação silenciosa.
   useEffect(() => {
+    const revalidateMonth = (reason: "visibility" | "heartbeat") => {
+      // SWR silencioso: nunca dispara loading state.
+      ensureMonthLoaded(currentMonth.year, currentMonth.month, false).catch(() => {});
+      // Sinaliza métricas para revalidarem também.
+      void eventBus.emit("workflow.metrics_stale", { reason });
+    };
+
     const handler = () => {
       if (document.visibilityState !== "visible") return;
-      const cached = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-      if (!cached) ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+      revalidateMonth("visibility");
     };
     document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const startHeartbeat = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        if (document.visibilityState === "visible") revalidateMonth("heartbeat");
+      }, HEARTBEAT_MS);
+    };
+    startHeartbeat();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handler);
+      if (interval) clearInterval(interval);
+    };
+  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
 
   // Subscribe ao cache (realtime) — filtra sempre pelo mês corrente (ref)
   useEffect(() => {
@@ -184,18 +240,21 @@ export function useWorkflowMonthSessions() {
   }, [currentMonth, mergeUpdate, removeSessionFromCache]);
 
   const goPrev = useCallback(() => {
+    manuallyNavigatedRef.current = true;
     setCurrentMonth((prev) =>
       prev.month === 1 ? { month: 12, year: prev.year - 1 } : { month: prev.month - 1, year: prev.year },
     );
   }, [setCurrentMonth]);
 
   const goNext = useCallback(() => {
+    manuallyNavigatedRef.current = true;
     setCurrentMonth((prev) =>
       prev.month === 12 ? { month: 1, year: prev.year + 1 } : { month: prev.month + 1, year: prev.year },
     );
   }, [setCurrentMonth]);
 
   const goToday = useCallback(() => {
+    manuallyNavigatedRef.current = true;
     setCurrentMonth({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   }, [setCurrentMonth]);
 
@@ -204,6 +263,7 @@ export function useWorkflowMonthSessions() {
    * setState → um único fetch para o mês final.
    */
   const applyDelta = useCallback((delta: number | "today") => {
+    manuallyNavigatedRef.current = true;
     if (delta === "today") {
       const now = new Date();
       setCurrentMonth({ month: now.getMonth() + 1, year: now.getFullYear() });

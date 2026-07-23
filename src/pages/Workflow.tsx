@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -76,6 +76,27 @@ function WorkflowContent() {
     "workflow_tasks_panel_open",
     true,
   );
+
+  // ── Atalhos de teclado: ← → navegam meses, T volta pra hoje ─────────
+  useEffect(() => {
+    const isEditableTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      if (el.isContentEditable) return true;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    };
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isEditableTarget(e.target)) return;
+      // Ignora se algum dialog/modal do Radix está aberto.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); month.applyDelta(-1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); month.applyDelta(1); }
+      else if (e.key === "t" || e.key === "T") { e.preventDefault(); month.applyDelta("today"); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [month.applyDelta]);
 
   // Ids das sessões do mês atual (usado pelo dock para filtrar tarefas-espelho).
   const monthSessionIds = useMemo(
