@@ -15,7 +15,6 @@ import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { usePricingMigration } from "@/hooks/usePricingMigration";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { useWorkflowMetricsRealtime } from "@/hooks/useWorkflowMetricsRealtime";
-import { useWorkflowPhotoProduction } from "@/hooks/useWorkflowPhotoProduction";
 
 import { useWorkflowMonthSessions } from "@/features/workflow/hooks/useWorkflowMonthSessions";
 import { useWorkflowFilters } from "@/features/workflow/hooks/useWorkflowFilters";
@@ -116,20 +115,17 @@ function WorkflowContent() {
     caixaRecebido: metrics.caixaRecebido,
   }), [metrics]);
 
-  // Métricas de produção fotográfica (fotos incluídas no pacote + extras)
-  const photoProd = useWorkflowPhotoProduction({
-    year: month.currentMonth.year,
-    month: month.currentMonth.month,
-  });
-
-  // SWR: cold = sem dado exibível; revalidate = tem dado, atualizando.
-  // Só bloqueamos a tabela em cold real (sem sessões visíveis).
+  // SWR: cold = primeiro load absoluto sem dado exibível.
+  // "Switching" = mudando de mês sem cache — mantém tabela visível com cross-fade.
+  const hasAnySessions = month.workflowSessions.length > 0;
   const isColdSessions =
-    (month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0;
+    (month.loading || month.isLoadingCurrentMonth) && !hasAnySessions && !month.isSwitchingMonth;
   const isColdMetrics = metrics.isColdLoading;
   const isRevalidating =
-    month.loading || month.isLoadingCurrentMonth || metrics.isRevalidating;
-  const blockTable = isColdSessions;
+    month.loading || month.isLoadingCurrentMonth || metrics.isRevalidating || month.isSwitchingMonth;
+
+  // Cross-fade: durante troca de mês, mantém a tabela visível mas atenuada.
+  const tableAttenuated = month.isSwitchingMonth && hasAnySessions;
 
   // Prefetch de meses adjacentes ao pairar sobre as setas
   const prefetchAdjacent = (delta: -1 | 1) => {
@@ -145,20 +141,6 @@ function WorkflowContent() {
       });
     });
   };
-
-  // ── Estados de loading/erro globais ────────────────────────────────
-  if ((month.loading || month.isLoadingCurrentMonth) && month.workflowSessions.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="mt-4 text-muted-foreground">
-            Carregando sessões de {getMonthName(month.currentMonth.month)} {month.currentMonth.year}...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (month.error) {
     return (
@@ -184,8 +166,6 @@ function WorkflowContent() {
           financials={financials}
           sessionCount={filters.filteredSessions.length}
           isLoading={isColdMetrics}
-          photoProduction={photoProd.single}
-          isPhotoLoading={photoProd.isLoading}
         />
 
         <WorkflowMonthSwitcher
@@ -194,85 +174,102 @@ function WorkflowContent() {
           isPreloading={month.isPreloading}
           isColdLoading={isColdSessions || isColdMetrics}
           isRevalidating={isRevalidating}
-          onPrev={month.goPrev}
-          onNext={month.goNext}
-          onToday={month.goToday}
+          onNavigate={month.applyDelta}
           onHoverPrev={() => prefetchAdjacent(-1)}
           onHoverNext={() => prefetchAdjacent(1)}
         />
 
-        <div className={`rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10 transition-opacity ${blockTable ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className="relative rounded-lg bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border border-white/50 dark:border-white/10 overflow-hidden">
+          {/* Barra fina de revalidação — não bloqueia interação */}
+          {isRevalidating && !isColdSessions && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/60 animate-pulse pointer-events-none z-10" />
+          )}
 
-          <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
-            <div className="relative flex-1 max-w-sm min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Buscar por cliente ou e-mail..."
-                value={filters.searchTerm}
-                onChange={(e) => filters.setSearchTerm(e.target.value)}
-                className="pl-10 h-9"
+          <div
+            className={`transition-opacity duration-200 ${
+              tableAttenuated ? "opacity-60" : "opacity-100"
+            }`}
+          >
+            <div className="flex items-center justify-between p-3 border-b gap-4 flex-wrap">
+              <div className="relative flex-1 max-w-sm min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por cliente ou e-mail..."
+                  value={filters.searchTerm}
+                  onChange={(e) => filters.setSearchTerm(e.target.value)}
+                  className="pl-10 h-9"
+                />
+              </div>
+
+              <WorkflowFilters
+                sortField={filters.sortField}
+                sortDirection={filters.sortDirection}
+                onSortChange={(field, dir) => {
+                  filters.setSortField(field);
+                  filters.setSortDirection(dir);
+                }}
+                categoryFilter={filters.categoryFilter}
+                onCategoryFilterChange={filters.setCategoryFilter}
+                categoryOptions={categoryOptions}
+                situacaoFilter={filters.situacaoFilter}
+                onSituacaoFilterChange={filters.setSituacaoFilter}
+                situacaoCounts={filters.situacaoCounts}
               />
             </div>
 
-            <WorkflowFilters
-              sortField={filters.sortField}
-              sortDirection={filters.sortDirection}
-              onSortChange={(field, dir) => {
-                filters.setSortField(field);
-                filters.setSortDirection(dir);
-              }}
-              categoryFilter={filters.categoryFilter}
-              onCategoryFilterChange={filters.setCategoryFilter}
-              categoryOptions={categoryOptions}
-              situacaoFilter={filters.situacaoFilter}
-              onSituacaoFilterChange={filters.setSituacaoFilter}
-              situacaoCounts={filters.situacaoCounts}
-            />
-          </div>
-
-          {filters.sortedSessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 gap-4">
-              <div className="text-muted-foreground text-center">
-                <div className="text-lg font-medium">Nenhuma sessão encontrada</div>
-                <div className="text-sm">
-                  {filters.searchTerm
-                    ? "Tente ajustar o termo de busca"
-                    : filters.situacaoFilter !== "todos"
-                      ? `Nenhuma sessão ${filters.situacaoFilter === "pago" ? "paga" : "pendente"} em ${getMonthName(month.currentMonth.month)} ${month.currentMonth.year}`
-                      : `Não há sessões para ${getMonthName(month.currentMonth.month)} ${month.currentMonth.year}`}
+            {isColdSessions ? (
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-14 rounded-md bg-muted/40 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : filters.sortedSessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <div className="text-muted-foreground text-center">
+                  <div className="text-lg font-medium">Nenhuma sessão encontrada</div>
+                  <div className="text-sm">
+                    {filters.searchTerm
+                      ? "Tente ajustar o termo de busca"
+                      : filters.situacaoFilter !== "todos"
+                        ? `Nenhuma sessão ${filters.situacaoFilter === "pago" ? "paga" : "pendente"} em ${getMonthName(month.currentMonth.month)} ${month.currentMonth.year}`
+                        : `Não há sessões para ${getMonthName(month.currentMonth.month)} ${month.currentMonth.year}`}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={month.goToday} variant="outline" size="sm">
+                    Ir para mês atual
+                  </Button>
+                  <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+                    Recarregar dados
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={month.goToday} variant="outline" size="sm">
-                  Ir para mês atual
-                </Button>
-                <Button onClick={() => window.location.reload()} variant="outline" size="sm">
-                  Recarregar dados
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <WorkflowTable
-              sessions={filters.sortedSessions}
-              statusOptions={getStatusOptions}
-              categoryOptions={categoryOptions}
-              packageOptions={packageOptions}
-              productOptions={productOptions}
-              onStatusChange={actions.handleStatusChange}
-              onEditSession={actions.handleEditSession}
-              
-              onDeleteSession={actions.handleDeleteSession}
-              onFieldUpdate={actions.handleFieldUpdate}
-              visibleColumns={columns.visibleColumns}
-              columnWidths={columns.columnWidths}
-              onColumnWidthChange={columns.handleColumnWidthChange}
-              onScrollChange={setScrollLeft}
-              sortField={filters.sortField}
-              sortDirection={filters.sortDirection}
-              onSort={filters.handleSort}
-            />
-          )}
+            ) : (
+              <WorkflowTable
+                sessions={filters.sortedSessions}
+                statusOptions={getStatusOptions}
+                categoryOptions={categoryOptions}
+                packageOptions={packageOptions}
+                productOptions={productOptions}
+                onStatusChange={actions.handleStatusChange}
+                onEditSession={actions.handleEditSession}
+
+                onDeleteSession={actions.handleDeleteSession}
+                onFieldUpdate={actions.handleFieldUpdate}
+                visibleColumns={columns.visibleColumns}
+                columnWidths={columns.columnWidths}
+                onColumnWidthChange={columns.handleColumnWidthChange}
+                onScrollChange={setScrollLeft}
+                sortField={filters.sortField}
+                sortDirection={filters.sortDirection}
+                onSort={filters.handleSort}
+              />
+            )}
+          </div>
         </div>
       </div>
 
