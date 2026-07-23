@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { USE_METRICS_EVENT_BUS } from "@/features/workflow/config";
 import { eventBus } from "@/shared/event-bus";
 import { metricsCache } from "@/features/workflow/data/metricsCache";
@@ -31,23 +32,32 @@ const EMPTY_DATA = {
   caixaRecebido: 0,
 };
 
-const initialCold: WorkflowMetrics = {
+const COLD: WorkflowMetrics = {
   ...EMPTY_DATA,
   isColdLoading: true,
   isRevalidating: false,
   isLoading: true,
 };
 
+function seedFromCache(userId: string | null, year: number, month?: number, override?: boolean): WorkflowMetrics {
+  if (override || !userId || typeof month !== "number") return COLD;
+  const hit = metricsCache.getSync(userId, year, month);
+  if (!hit) return COLD;
+  return { ...hit, isColdLoading: false, isRevalidating: true, isLoading: false };
+}
+
 /**
  * Métricas do Workflow com padrão SWR (stale-while-revalidate).
  *
- * Fluxo:
- * 1. Cache-hit síncrono → renderiza dado antigo com `isRevalidating=true`.
- *    A tabela permanece INTERATIVA (Workflow.tsx não bloqueia em revalidate).
- * 2. Cache-miss síncrono → tenta IDB assíncrono; se achar promove para hit.
- *    Caso contrário mantém `isColdLoading=true` → skeleton.
- * 3. RPC sempre é disparado (com dedup) e, ao chegar, atualiza + cache.
- * 4. Eventos de pagamento/card_updated invalidam cache e refazem SWR.
+ * Mudanças (tranche de performance):
+ *  - `userId` vem do `AuthContext` (sem `supabase.auth.getUser()` por load).
+ *    Elimina 200–800ms de round-trip em cada troca de mês.
+ *  - Seed síncrono do `metricsCache` no `useState` inicial e no reset por
+ *    troca de mês: se há cache, a UI NUNCA vai para skeleton — vai direto
+ *    para `isRevalidating` com os números do cache. Volta para skeleton só
+ *    quando não há cache mesmo.
+ *  - Removido o `setTimeout(6000)` que fingia cancelamento — o cancelamento
+ *    real vive no coordinator de meses (WorkflowCacheContext).
  */
 export function useWorkflowMetricsRealtime(
   year: number,
@@ -55,77 +65,38 @@ export function useWorkflowMetricsRealtime(
   startDateOverride?: string,
   endDateOverride?: string,
 ): WorkflowMetrics {
-  const [metrics, setMetrics] = useState<WorkflowMetrics>(initialCold);
-  const loaderRef = useRef<() => void>(() => {});
-  const userIdRef = useRef<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const usingOverride = Boolean(startDateOverride && endDateOverride);
 
-  // Reset síncrono a cada troca de mês/override: evita renderizar
-  // números do mês anterior enquanto o novo mês carrega (percebido
-  // pelo usuário como "métricas não atualizaram").
+  const [metrics, setMetrics] = useState<WorkflowMetrics>(() =>
+    seedFromCache(userId, year, month, usingOverride),
+  );
+  const loaderRef = useRef<() => void>(() => {});
+
+  // Reset por troca de mês/override/userId: seed novo do cache. Sem flash.
   useEffect(() => {
-    setMetrics((prev) => ({ ...prev, isColdLoading: true, isRevalidating: false, isLoading: true }));
-  }, [year, month, startDateOverride, endDateOverride]);
+    setMetrics(seedFromCache(userId, year, month, usingOverride));
+  }, [userId, year, month, startDateOverride, endDateOverride, usingOverride]);
 
   useEffect(() => {
     let cancelled = false;
-    const usingOverride = Boolean(startDateOverride && endDateOverride);
     const cacheableMonth = !usingOverride && typeof month === "number";
-
-    // Seed inicial: se há cache síncrono, começa em revalidate; senão cold.
-    const seedFromCacheSync = async (userId: string) => {
-      if (!cacheableMonth) {
-        setMetrics((prev) => ({ ...prev, isColdLoading: true, isRevalidating: false, isLoading: true }));
-        return;
-      }
-
-      const hit = metricsCache.getSync(userId, year, month!);
-      if (hit) {
-        setMetrics({
-          ...hit,
-          isColdLoading: false,
-          isRevalidating: true,
-          isLoading: false,
-        });
-        return;
-      }
-      // Miss síncrono → mostra cold e tenta IDB
-      setMetrics({ ...EMPTY_DATA, isColdLoading: true, isRevalidating: false, isLoading: true });
-      const persisted = await metricsCache.get(userId, year, month!);
-      if (cancelled || !persisted) return;
-      setMetrics({
-        ...persisted,
-        isColdLoading: false,
-        isRevalidating: true,
-        isLoading: false,
-      });
-    };
 
     const loadFresh = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (cancelled) return;
-        if (!user) {
+        if (!userId) {
           setMetrics({ ...EMPTY_DATA, isColdLoading: false, isRevalidating: false, isLoading: false });
           return;
         }
-        userIdRef.current = user.id;
 
-        // Se veio override de datas, mantém caminho legado (sem cache).
+        // Caminho override (dashboard): sem cache; RPC direto.
         if (usingOverride) {
-          const rpc = supabase.rpc("workflow_month_metrics", {
-            p_user_id: user.id,
+          const { data, error } = await supabase.rpc("workflow_month_metrics", {
+            p_user_id: userId,
             p_start: startDateOverride!,
             p_end: endDateOverride!,
           });
-          // AbortController: cliques rápidos entre meses cancelam RPC antiga
-          // antes de disputar conexão PG com o novo mês.
-          const controller = new AbortController();
-          const abortHandler = () => controller.abort();
-          // Nota: supabase.rpc não expõe abortSignal direto até v2.60; usamos
-          // race com um timeout defensivo de 6s para não travar a UI.
-          const timeout = setTimeout(() => abortHandler(), 6000);
-          const { data, error } = await rpc;
-          clearTimeout(timeout);
           if (cancelled) return;
           if (error) throw error;
           const row: any = Array.isArray(data) ? data[0] : data;
@@ -150,11 +121,7 @@ export function useWorkflowMetricsRealtime(
 
         if (!cacheableMonth) return;
 
-        // Semeia da cache antes de ir ao RPC.
-        await seedFromCacheSync(user.id);
-        if (cancelled) return;
-
-        const fresh = await fetchMonthMetrics(user.id, year, month!);
+        const fresh = await fetchMonthMetrics(userId, year, month!);
         if (cancelled) return;
         if (!fresh) {
           setMetrics((prev) => ({ ...prev, isColdLoading: false, isRevalidating: false, isLoading: false }));
@@ -180,12 +147,9 @@ export function useWorkflowMetricsRealtime(
     // Coalescing: eventos em rajada geram um único reload após 300ms de calmaria.
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const invalidateAndReload = () => {
-      const uid = userIdRef.current;
-      if (uid && cacheableMonth) {
-        // Invalida TTL do repo (força RPC) — cache permanece para SWR.
-        invalidateMonthMetricsTTL(uid, year, month!);
+      if (userId && cacheableMonth) {
+        invalidateMonthMetricsTTL(userId, year, month!);
       }
-      // Marca revalidação (mantém números visíveis)
       setMetrics((prev) => ({ ...prev, isRevalidating: true }));
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
@@ -226,7 +190,7 @@ export function useWorkflowMetricsRealtime(
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [year, month, startDateOverride, endDateOverride]);
+  }, [userId, year, month, startDateOverride, endDateOverride, usingOverride]);
 
   return metrics;
 }
