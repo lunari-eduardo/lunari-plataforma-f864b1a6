@@ -256,15 +256,19 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const invalidateMonth = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);
-    memoryCache.current.delete(key);
+    // NÃO limpa memoryCache aqui — invalidar cache "vazia" a UI e força
+    // skeleton mesmo quando temos dados válidos para revalidar (SWR).
     lastSilentRefreshAt.current.delete(key);
 
     if (userId) {
       metricsCache.invalidate(userId, year, month);
-      await indexedDBCache.remove(userId, year, month);
-      await fetchAndCacheMonth(year, month);
+      // Silent refresh: mantém UI interativa; força re-fetch ignorando TTL.
+      // (fire-and-forget para não bloquear callers como update de produto).
+      void silentRefreshMonth(year, month, true);
     }
-  }, [userId]);
+  }, [userId]); // silentRefreshMonth ref é estável dentro do closure do provider
+
+
 
 
   const fetchAndCacheMonth = async (year: number, month: number) => {
