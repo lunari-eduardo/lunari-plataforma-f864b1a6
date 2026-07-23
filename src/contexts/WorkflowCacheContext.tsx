@@ -253,6 +253,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const invalidateMonth = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);
     memoryCache.current.delete(key);
+    lastSilentRefreshAt.current.delete(key);
 
     if (userId) {
       metricsCache.invalidate(userId, year, month);
@@ -268,6 +269,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       // ✅ Onda 2: leitura única via repo (paridade total com query anterior).
       const sessions = await sessionsRepo.listByMonth(userId, year, month);
       setMonthData(year, month, sessions);
+      lastSilentRefreshAt.current.set(getCacheKey(year, month), Date.now());
     } catch (error) {
       console.error('Error fetching month data:', error);
     }
