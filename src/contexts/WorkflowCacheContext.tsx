@@ -22,6 +22,23 @@ const getYearMonthFromDateString = (dateString: string): { year: number; month: 
   return { year: year || new Date().getFullYear(), month: month || (new Date().getMonth() + 1) };
 };
 
+/**
+ * Tranche 2 — MonthLoadStatus state machine
+ * ------------------------------------------
+ *  - idle    : nunca solicitado
+ *  - loading : fetch cold em andamento (sem cache)
+ *  - ready   : dados válidos + sem revalidação pendente
+ *  - stale   : dados válidos + revalidação silenciosa em andamento
+ *  - error   : último fetch falhou; UI pode oferecer retry
+ */
+export type MonthLoadStatus = 'idle' | 'loading' | 'ready' | 'stale' | 'error';
+
+export interface MonthLoadState {
+  status: MonthLoadStatus;
+  error: string | null;
+  loadedAt: number | null;
+}
+
 interface WorkflowCacheContextType {
   getSessionsForMonthSync: (year: number, month: number) => WorkflowSession[] | null;
   getAllCachedSessionsSync: () => WorkflowSession[];
@@ -34,6 +51,13 @@ interface WorkflowCacheContextType {
   forceRefresh: () => Promise<void>;
   ensureMonthLoaded: (year: number, month: number, forceRefresh?: boolean) => Promise<void>;
   isLoadingMonth: (year: number, month: number) => boolean;
+  getMonthStatus: (year: number, month: number) => MonthLoadState;
+  subscribeMonthStatus: (
+    year: number,
+    month: number,
+    callback: (state: MonthLoadState) => void,
+  ) => () => void;
+  retryMonth: (year: number, month: number) => Promise<void>;
 }
 
 const WorkflowCacheContext = createContext<WorkflowCacheContextType | null>(null);
@@ -63,6 +87,43 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const monthAbortControllers = useRef<Map<string, AbortController>>(new Map());
   // Coalescing de notifySubscribers: microtask única para rajadas de setMonthData.
   const notifyPending = useRef(false);
+
+  // Tranche 2 — state machine por mês + subscribers.
+  const monthStateMap = useRef<Map<string, MonthLoadState>>(new Map());
+  const monthStateSubs = useRef<Map<string, Set<(s: MonthLoadState) => void>>>(new Map());
+  // Silent refresh in-flight (dedup independente do TTL).
+  const silentInFlight = useRef<Map<string, Promise<void>>>(new Map());
+
+  const DEFAULT_STATE: MonthLoadState = { status: 'idle', error: null, loadedAt: null };
+
+  const setMonthState = useCallback((year: number, month: number, patch: Partial<MonthLoadState>) => {
+    const key = getCacheKey(year, month);
+    const prev = monthStateMap.current.get(key) ?? DEFAULT_STATE;
+    const next: MonthLoadState = { ...prev, ...patch };
+    if (
+      next.status === prev.status &&
+      next.error === prev.error &&
+      next.loadedAt === prev.loadedAt
+    ) return;
+    monthStateMap.current.set(key, next);
+    const subs = monthStateSubs.current.get(key);
+    if (subs) subs.forEach((cb) => { try { cb(next); } catch { /* noop */ } });
+  }, []);
+
+  const getMonthStatus = useCallback((year: number, month: number): MonthLoadState => {
+    return monthStateMap.current.get(getCacheKey(year, month)) ?? DEFAULT_STATE;
+  }, []);
+
+  const subscribeMonthStatus = useCallback(
+    (year: number, month: number, cb: (s: MonthLoadState) => void) => {
+      const key = getCacheKey(year, month);
+      let set = monthStateSubs.current.get(key);
+      if (!set) { set = new Set(); monthStateSubs.current.set(key, set); }
+      set.add(cb);
+      return () => { set!.delete(cb); };
+    },
+    [],
+  );
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
@@ -145,6 +206,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       indexedDBCache.set(userId, year, month, normalized);
       broadcastChannel.current?.postMessage({ type: 'cache-updated', year, month });
     }
+
+    // Estado passa a 'ready' assim que temos dados no bucket.
+    setMonthState(year, month, { status: 'ready', error: null, loadedAt: Date.now() });
 
     notifySubscribers();
   }, [userId]);
@@ -287,6 +351,14 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error: any) {
       if (error?.name === 'AbortError' || error?.code === '20') return;
       console.error('Error fetching month data:', error);
+      // Só marca erro se ainda somos o controller vigente (não fomos abortados).
+      if (monthAbortControllers.current.get(key) === controller) {
+        const hasCache = memoryCache.current.has(key);
+        setMonthState(year, month, {
+          status: hasCache ? 'ready' : 'error',
+          error: error?.message ?? String(error),
+        });
+      }
     } finally {
       if (monthAbortControllers.current.get(key) === controller) {
         monthAbortControllers.current.delete(key);
@@ -502,62 +574,72 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!userId) return;
     const key = getCacheKey(year, month);
 
+    // Dedup real: se há refresh in-flight para este mês, reaproveita.
+    const existing = silentInFlight.current.get(key);
+    if (existing) return existing;
+
     // TTL: se acabamos de revalidar este mês, pula (a menos que force=true).
     if (!force) {
       const last = lastSilentRefreshAt.current.get(key) ?? 0;
-      if (Date.now() - last < SILENT_REFRESH_TTL_MS) {
-        return;
-      }
+      if (Date.now() - last < SILENT_REFRESH_TTL_MS) return;
     }
-    // Marca ANTES de começar para deduplicar chamadas concorrentes.
     lastSilentRefreshAt.current.set(key, Date.now());
 
-    try {
-      // Usa o repo enxuto (mesmo SELECT do fetchAndCacheMonth) — evita trafegar
-      // email/telefone/whatsapp em cada linha; contato é buscado sob demanda.
-      const sessions = await sessionsRepo.listByMonth(userId, year, month);
-      setMonthData(year, month, sessions);
-      // Atualiza timestamp após sucesso.
-      lastSilentRefreshAt.current.set(key, Date.now());
-    } catch (error) {
-      console.error('❌ [WorkflowCache] Silent refresh error:', error);
+    // Sinaliza 'stale' apenas se já temos dados; se não temos, quem chamou
+    // ensureMonthLoaded já marcou 'loading'.
+    if (memoryCache.current.has(key)) {
+      setMonthState(year, month, { status: 'stale', error: null });
     }
-  }, [userId, setMonthData]);
+
+    const promise = (async () => {
+      try {
+        const sessions = await sessionsRepo.listByMonth(userId, year, month);
+        setMonthData(year, month, sessions); // → status: ready
+        lastSilentRefreshAt.current.set(key, Date.now());
+      } catch (error: any) {
+        console.error('❌ [WorkflowCache] Silent refresh error:', error);
+        const hasCache = memoryCache.current.has(key);
+        setMonthState(year, month, {
+          status: hasCache ? 'ready' : 'error',
+          error: error?.message ?? String(error),
+        });
+      } finally {
+        silentInFlight.current.delete(key);
+      }
+    })();
+    silentInFlight.current.set(key, promise);
+    return promise;
+  }, [userId, setMonthData, setMonthState]);
 
   // Ref para armazenar promises pendentes de carregamento
   const pendingLoads = useRef<Map<string, Promise<void>>>(new Map());
 
-  // FASE 1: Método para garantir que um mês específico está carregado
-  // forceRefresh = true: ignora cache e busca do Supabase
-  // OTIMIZAÇÃO: Removido busy-wait blocking, usa Promise-based approach
   const ensureMonthLoaded = useCallback(async (year: number, month: number, forceRefresh = false) => {
     const key = getCacheKey(year, month);
-    
-    // Se já está em cache e NÃO é forceRefresh
+
+    // Cache hit → revalida silenciosamente e retorna.
     if (!forceRefresh && memoryCache.current.has(key)) {
-      const cachedSessions = memoryCache.current.get(key) || [];
-      console.log(`⚡ [WorkflowCache] Cache hit for ${key} (${cachedSessions.length} sessions)`);
-      
-      // Fazer refresh silencioso em background (fire-and-forget)
+      // Garante status ready caso este mês esteja em 'idle' (nunca marcado).
+      const cur = monthStateMap.current.get(key);
+      if (!cur || cur.status === 'idle') {
+        setMonthState(year, month, { status: 'ready', error: null, loadedAt: Date.now() });
+      }
       silentRefreshMonth(year, month);
       return;
     }
-    
-    // Se já tem uma Promise pendente para este mês, aguardar ela
+
+    // Já em andamento — reaproveita.
     if (pendingLoads.current.has(key)) {
-      console.log(`⏳ [WorkflowCache] Already loading ${key}, awaiting existing promise...`);
       await pendingLoads.current.get(key);
       return;
     }
-    
-    // Criar nova Promise de carregamento
-    console.log(`🔄 [WorkflowCache] Fetching from Supabase for ${key}`);
-    
+
+    // Cold load: marca loading antes do fetch.
+    setMonthState(year, month, { status: 'loading', error: null });
+
     const loadPromise = (async () => {
       try {
         await fetchAndCacheMonth(year, month);
-        const sessions = memoryCache.current.get(key) || [];
-        console.log(`✅ [WorkflowCache] Successfully loaded ${key} (${sessions.length} sessions from Supabase)`);
       } catch (error) {
         console.error(`❌ [WorkflowCache] Error loading ${key}:`, error);
         throw error;
@@ -565,15 +647,23 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         pendingLoads.current.delete(key);
       }
     })();
-    
+
     pendingLoads.current.set(key, loadPromise);
     await loadPromise;
-  }, [userId, silentRefreshMonth]);
+  }, [userId, silentRefreshMonth, setMonthState]);
 
   const isLoadingMonth = useCallback((year: number, month: number): boolean => {
     const key = getCacheKey(year, month);
     return pendingLoads.current.has(key);
   }, []);
+
+  const retryMonth = useCallback(async (year: number, month: number) => {
+    const key = getCacheKey(year, month);
+    silentInFlight.current.delete(key);
+    lastSilentRefreshAt.current.delete(key);
+    await ensureMonthLoaded(year, month, true);
+  }, [ensureMonthLoaded]);
+
 
   // FASE 4: Listen for custom cache merge events with client hydration
   useEffect(() => {
@@ -719,7 +809,10 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     subscribe,
     forceRefresh,
     ensureMonthLoaded,
-    isLoadingMonth
+    isLoadingMonth,
+    getMonthStatus,
+    subscribeMonthStatus,
+    retryMonth,
   };
 
   return (
