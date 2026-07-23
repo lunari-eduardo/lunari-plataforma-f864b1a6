@@ -160,13 +160,21 @@ export function useWorkflowMetricsRealtime(
     loaderRef.current = () => { void loadFresh(); };
     void loadFresh();
 
-    // Handler de invalidação: dropa cache do mês corrente e re-executa.
+    // Coalescing: eventos em rajada geram um único reload após 300ms de calmaria.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const invalidateAndReload = () => {
       const uid = userIdRef.current;
-      if (uid && cacheableMonth) metricsCache.invalidate(uid, year, month!);
+      if (uid && cacheableMonth) {
+        // Invalida TTL do repo (força RPC) — cache permanece para SWR.
+        invalidateMonthMetricsTTL(uid, year, month!);
+      }
       // Marca revalidação (mantém números visíveis)
       setMetrics((prev) => ({ ...prev, isRevalidating: true }));
-      loaderRef.current();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        loaderRef.current();
+      }, 300);
     };
 
     if (USE_METRICS_EVENT_BUS) {
@@ -182,6 +190,7 @@ export function useWorkflowMetricsRealtime(
       window.addEventListener("payment-created", invalidateAndReload);
       return () => {
         cancelled = true;
+        if (debounceTimer) clearTimeout(debounceTimer);
         offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt(); offStale();
         window.removeEventListener("workflow-session-updated", invalidateAndReload);
         window.removeEventListener("workflow-session-deleted", invalidateAndReload);
