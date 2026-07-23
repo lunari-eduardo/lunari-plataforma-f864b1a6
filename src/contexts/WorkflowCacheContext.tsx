@@ -367,49 +367,32 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const preloadMonths = async () => {
+    // Refatorado: preload agressivo (mês, -1, -2, +1) causava 8 requests
+    // paralelos no boot e saturava o pool de conexões PG. Passamos a carregar
+    // apenas o mês corrente; meses adjacentes são buscados por hover na seta
+    // (prefetchAdjacent em Workflow.tsx) — cross-fade instantâneo mesmo assim.
     if (!userId) return;
-
     setIsPreloading(true);
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const key = getCacheKey(year, month);
 
-    const monthsToPreload = [
-      { year: currentYear, month: currentMonth },
-      { year: currentMonth === 1 ? currentYear - 1 : currentYear, month: currentMonth === 1 ? 12 : currentMonth - 1 },
-      { year: currentMonth <= 2 ? currentYear - 1 : currentYear, month: currentMonth <= 2 ? currentMonth + 10 : currentMonth - 2 },
-      { year: currentMonth === 12 ? currentYear + 1 : currentYear, month: currentMonth === 12 ? 1 : currentMonth + 1 },
-    ];
+    // Reidratação síncrona do IDB (rápido).
+    const cached = await indexedDBCache.get<WorkflowSession[]>(userId, year, month);
+    if (cached) {
+      memoryCache.current.set(key, cached);
+      setMonthState(year, month, { status: 'ready', error: null, loadedAt: Date.now() });
+      notifySubscribers();
+    }
 
-    // Carregar do IndexedDB primeiro (rápido)
-    await Promise.all(
-      monthsToPreload.map(async ({ year, month }) => {
-        const cached = await indexedDBCache.get<WorkflowSession[]>(userId, year, month);
-        if (cached) {
-          const key = getCacheKey(year, month);
-          memoryCache.current.set(key, cached);
-        }
-      })
-    );
-
-    notifySubscribers();
-
-    // FASE 2 (otimizada): TODOS os meses em paralelo. Não bloqueia UI —
-    // o cache do IDB já foi hidratado acima; o refresh vive em background.
-    Promise.allSettled(
-      monthsToPreload.map(({ year, month }) => fetchAndCacheMonth(year, month))
-    ).finally(() => {
-      // Marca cada mês como "acabou de revalidar" para o TTL evitar reruns.
-      const now = Date.now();
-      monthsToPreload.forEach(({ year, month }) => {
-        lastSilentRefreshAt.current.set(getCacheKey(year, month), now);
-      });
+    // Fetch fresco em background — silent refresh, não bloqueia UI.
+    fetchAndCacheMonth(year, month).finally(() => {
+      lastSilentRefreshAt.current.set(key, Date.now());
     });
 
-    // Prefetch das métricas em paralelo (fire-and-forget).
-    monthsToPreload.forEach(({ year, month }) => {
-      prefetchMonthMetrics(userId, year, month);
-    });
+    // Métricas do mês corrente (única prefetch — adjacentes vêm por hover).
+    prefetchMonthMetrics(userId, year, month);
 
     setIsPreloading(false);
   };
