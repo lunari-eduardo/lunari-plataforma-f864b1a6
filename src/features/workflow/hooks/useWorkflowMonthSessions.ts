@@ -199,12 +199,33 @@ export function useWorkflowMonthSessions() {
     setCurrentMonth({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   }, [setCurrentMonth]);
 
+  /**
+   * Aplica um delta acumulado (após coalescing no switcher). Um único
+   * setState → um único fetch para o mês final.
+   */
+  const applyDelta = useCallback((delta: number | "today") => {
+    if (delta === "today") {
+      const now = new Date();
+      setCurrentMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
+      return;
+    }
+    if (!Number.isFinite(delta) || delta === 0) return;
+    setCurrentMonth((prev) => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      while (m < 1) { m += 12; y -= 1; }
+      while (m > 12) { m -= 12; y += 1; }
+      return { month: m, year: y };
+    });
+  }, [setCurrentMonth]);
+
   return {
     currentMonth,
     setCurrentMonth,
     workflowSessions,
     setWorkflowSessions,
     loading,
+    isSwitchingMonth,
     error,
     isPreloading,
     isLoadingCurrentMonth: isLoadingMonth(currentMonth.year, currentMonth.month),
@@ -215,5 +236,6 @@ export function useWorkflowMonthSessions() {
     goPrev,
     goNext,
     goToday,
+    applyDelta,
   };
 }
