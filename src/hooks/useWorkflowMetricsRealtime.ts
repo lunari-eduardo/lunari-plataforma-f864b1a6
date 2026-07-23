@@ -176,12 +176,13 @@ export function useWorkflowMetricsRealtime(
       const offPay = eventBus.on("workflow.payment_added", invalidateAndReload);
       const offRef = eventBus.on("workflow.payment_refunded", invalidateAndReload);
       const offAtt = eventBus.on("workflow.payment_attached", invalidateAndReload);
+      const offStale = eventBus.on("workflow.metrics_stale", invalidateAndReload);
       window.addEventListener("workflow-session-updated", invalidateAndReload);
       window.addEventListener("workflow-session-deleted", invalidateAndReload);
       window.addEventListener("payment-created", invalidateAndReload);
       return () => {
         cancelled = true;
-        offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt();
+        offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt(); offStale();
         window.removeEventListener("workflow-session-updated", invalidateAndReload);
         window.removeEventListener("workflow-session-deleted", invalidateAndReload);
         window.removeEventListener("payment-created", invalidateAndReload);
