@@ -75,8 +75,11 @@ declare global {
       current: () => Session | null;
       export: () => void;
       print: () => void;
+      arm: (name?: string) => void;
+      disarm: () => void;
     };
   }
+
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
