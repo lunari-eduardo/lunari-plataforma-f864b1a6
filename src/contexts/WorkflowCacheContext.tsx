@@ -574,62 +574,72 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!userId) return;
     const key = getCacheKey(year, month);
 
+    // Dedup real: se há refresh in-flight para este mês, reaproveita.
+    const existing = silentInFlight.current.get(key);
+    if (existing) return existing;
+
     // TTL: se acabamos de revalidar este mês, pula (a menos que force=true).
     if (!force) {
       const last = lastSilentRefreshAt.current.get(key) ?? 0;
-      if (Date.now() - last < SILENT_REFRESH_TTL_MS) {
-        return;
-      }
+      if (Date.now() - last < SILENT_REFRESH_TTL_MS) return;
     }
-    // Marca ANTES de começar para deduplicar chamadas concorrentes.
     lastSilentRefreshAt.current.set(key, Date.now());
 
-    try {
-      // Usa o repo enxuto (mesmo SELECT do fetchAndCacheMonth) — evita trafegar
-      // email/telefone/whatsapp em cada linha; contato é buscado sob demanda.
-      const sessions = await sessionsRepo.listByMonth(userId, year, month);
-      setMonthData(year, month, sessions);
-      // Atualiza timestamp após sucesso.
-      lastSilentRefreshAt.current.set(key, Date.now());
-    } catch (error) {
-      console.error('❌ [WorkflowCache] Silent refresh error:', error);
+    // Sinaliza 'stale' apenas se já temos dados; se não temos, quem chamou
+    // ensureMonthLoaded já marcou 'loading'.
+    if (memoryCache.current.has(key)) {
+      setMonthState(year, month, { status: 'stale', error: null });
     }
-  }, [userId, setMonthData]);
+
+    const promise = (async () => {
+      try {
+        const sessions = await sessionsRepo.listByMonth(userId, year, month);
+        setMonthData(year, month, sessions); // → status: ready
+        lastSilentRefreshAt.current.set(key, Date.now());
+      } catch (error: any) {
+        console.error('❌ [WorkflowCache] Silent refresh error:', error);
+        const hasCache = memoryCache.current.has(key);
+        setMonthState(year, month, {
+          status: hasCache ? 'ready' : 'error',
+          error: error?.message ?? String(error),
+        });
+      } finally {
+        silentInFlight.current.delete(key);
+      }
+    })();
+    silentInFlight.current.set(key, promise);
+    return promise;
+  }, [userId, setMonthData, setMonthState]);
 
   // Ref para armazenar promises pendentes de carregamento
   const pendingLoads = useRef<Map<string, Promise<void>>>(new Map());
 
-  // FASE 1: Método para garantir que um mês específico está carregado
-  // forceRefresh = true: ignora cache e busca do Supabase
-  // OTIMIZAÇÃO: Removido busy-wait blocking, usa Promise-based approach
   const ensureMonthLoaded = useCallback(async (year: number, month: number, forceRefresh = false) => {
     const key = getCacheKey(year, month);
-    
-    // Se já está em cache e NÃO é forceRefresh
+
+    // Cache hit → revalida silenciosamente e retorna.
     if (!forceRefresh && memoryCache.current.has(key)) {
-      const cachedSessions = memoryCache.current.get(key) || [];
-      console.log(`⚡ [WorkflowCache] Cache hit for ${key} (${cachedSessions.length} sessions)`);
-      
-      // Fazer refresh silencioso em background (fire-and-forget)
+      // Garante status ready caso este mês esteja em 'idle' (nunca marcado).
+      const cur = monthStateMap.current.get(key);
+      if (!cur || cur.status === 'idle') {
+        setMonthState(year, month, { status: 'ready', error: null, loadedAt: Date.now() });
+      }
       silentRefreshMonth(year, month);
       return;
     }
-    
-    // Se já tem uma Promise pendente para este mês, aguardar ela
+
+    // Já em andamento — reaproveita.
     if (pendingLoads.current.has(key)) {
-      console.log(`⏳ [WorkflowCache] Already loading ${key}, awaiting existing promise...`);
       await pendingLoads.current.get(key);
       return;
     }
-    
-    // Criar nova Promise de carregamento
-    console.log(`🔄 [WorkflowCache] Fetching from Supabase for ${key}`);
-    
+
+    // Cold load: marca loading antes do fetch.
+    setMonthState(year, month, { status: 'loading', error: null });
+
     const loadPromise = (async () => {
       try {
         await fetchAndCacheMonth(year, month);
-        const sessions = memoryCache.current.get(key) || [];
-        console.log(`✅ [WorkflowCache] Successfully loaded ${key} (${sessions.length} sessions from Supabase)`);
       } catch (error) {
         console.error(`❌ [WorkflowCache] Error loading ${key}:`, error);
         throw error;
@@ -637,15 +647,23 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
         pendingLoads.current.delete(key);
       }
     })();
-    
+
     pendingLoads.current.set(key, loadPromise);
     await loadPromise;
-  }, [userId, silentRefreshMonth]);
+  }, [userId, silentRefreshMonth, setMonthState]);
 
   const isLoadingMonth = useCallback((year: number, month: number): boolean => {
     const key = getCacheKey(year, month);
     return pendingLoads.current.has(key);
   }, []);
+
+  const retryMonth = useCallback(async (year: number, month: number) => {
+    const key = getCacheKey(year, month);
+    silentInFlight.current.delete(key);
+    lastSilentRefreshAt.current.delete(key);
+    await ensureMonthLoaded(year, month, true);
+  }, [ensureMonthLoaded]);
+
 
   // FASE 4: Listen for custom cache merge events with client hydration
   useEffect(() => {
