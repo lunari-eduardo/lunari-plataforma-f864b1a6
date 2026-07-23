@@ -269,13 +269,24 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchAndCacheMonth = async (year: number, month: number) => {
     if (!userId) return;
+    const key = getCacheKey(year, month);
+    // Cancela fetch anterior deste mesmo mês (troca rápida entre meses).
+    monthAbortControllers.current.get(key)?.abort();
+    const controller = new AbortController();
+    monthAbortControllers.current.set(key, controller);
     try {
-      // ✅ Onda 2: leitura única via repo (paridade total com query anterior).
-      const sessions = await sessionsRepo.listByMonth(userId, year, month);
+      const sessions = await sessionsRepo.listByMonth(userId, year, month, { signal: controller.signal });
+      // Se este controller já foi substituído, ignora o resultado (stale).
+      if (monthAbortControllers.current.get(key) !== controller) return;
       setMonthData(year, month, sessions);
-      lastSilentRefreshAt.current.set(getCacheKey(year, month), Date.now());
-    } catch (error) {
+      lastSilentRefreshAt.current.set(key, Date.now());
+    } catch (error: any) {
+      if (error?.name === 'AbortError' || error?.code === '20') return;
       console.error('Error fetching month data:', error);
+    } finally {
+      if (monthAbortControllers.current.get(key) === controller) {
+        monthAbortControllers.current.delete(key);
+      }
     }
   };
 
