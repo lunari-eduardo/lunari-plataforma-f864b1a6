@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { USE_METRICS_EVENT_BUS } from "@/features/workflow/config";
 import { eventBus } from "@/shared/event-bus";
 import { metricsCache } from "@/features/workflow/data/metricsCache";
-import { fetchMonthMetrics } from "@/features/workflow/data/metricsRepo";
+import { fetchMonthMetrics, invalidateMonthMetricsTTL } from "@/features/workflow/data/metricsRepo";
 
 export interface WorkflowMetrics {
   previsto: number;
