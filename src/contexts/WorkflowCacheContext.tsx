@@ -207,6 +207,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       broadcastChannel.current?.postMessage({ type: 'cache-updated', year, month });
     }
 
+    // Estado passa a 'ready' assim que temos dados no bucket.
+    setMonthState(year, month, { status: 'ready', error: null, loadedAt: Date.now() });
+
     notifySubscribers();
   }, [userId]);
 
