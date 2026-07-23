@@ -39,6 +39,8 @@ export function useWorkflowMonthSessions() {
 
   const [workflowSessions, setWorkflowSessions] = useState<WorkflowSession[]>([]);
   const [loading, setLoading] = useState(false);
+  /** true durante troca de mês sem cache — usado pela UI para cross-fade. */
+  const [isSwitchingMonth, setIsSwitchingMonth] = useState(false);
   const [error] = useState<string | null>(null);
 
   // Ref sempre com o mês corrente — usada como guarda contra writes de fetches
@@ -46,7 +48,7 @@ export function useWorkflowMonthSessions() {
   const currentMonthRef = useRef(currentMonth);
   useEffect(() => { currentMonthRef.current = currentMonth; }, [currentMonth]);
 
-  // FASE 1 — carregar mês corrente (cache-first)
+  // FASE 1 — carregar mês corrente (cache-first, sem flash de vazio)
   useEffect(() => {
     let cancelled = false;
     const loadMonth = async () => {
@@ -55,28 +57,30 @@ export function useWorkflowMonthSessions() {
       if (cached !== null) {
         console.log(`⚡ [Workflow] Cache hit for ${key} (${cached.length} sessions)`);
         setWorkflowSessions(cached);
-        // Silent revalidate em background
+        setIsSwitchingMonth(false);
         ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
         return;
       }
-      // Sem cache → zerar imediatamente para o gate de loading disparar,
-      // sem "vazamento" das sessões do mês anterior.
-      setWorkflowSessions([]);
+      // Sem cache → MANTER dados anteriores visíveis (cross-fade).
+      // Só sobrescreve quando o novo mês chegar.
+      setIsSwitchingMonth(true);
       setLoading(true);
       console.log(`🔄 [Workflow] No cache for ${key}, fetching from Supabase...`);
       try {
         await ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
         if (cancelled) return;
-        // Após fetch, ler do cache o mês corrente (pode ter mudado).
         const ref = currentMonthRef.current;
         if (ref.year === currentMonth.year && ref.month === currentMonth.month) {
           const fresh = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-          if (fresh) setWorkflowSessions(fresh);
+          setWorkflowSessions(fresh ?? []);
         }
       } catch (err) {
         console.error(`❌ [Workflow] Error loading month:`, err);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setIsSwitchingMonth(false);
+        }
       }
     };
     loadMonth();
@@ -195,12 +199,33 @@ export function useWorkflowMonthSessions() {
     setCurrentMonth({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   }, [setCurrentMonth]);
 
+  /**
+   * Aplica um delta acumulado (após coalescing no switcher). Um único
+   * setState → um único fetch para o mês final.
+   */
+  const applyDelta = useCallback((delta: number | "today") => {
+    if (delta === "today") {
+      const now = new Date();
+      setCurrentMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
+      return;
+    }
+    if (!Number.isFinite(delta) || delta === 0) return;
+    setCurrentMonth((prev) => {
+      let m = prev.month + delta;
+      let y = prev.year;
+      while (m < 1) { m += 12; y -= 1; }
+      while (m > 12) { m -= 12; y += 1; }
+      return { month: m, year: y };
+    });
+  }, [setCurrentMonth]);
+
   return {
     currentMonth,
     setCurrentMonth,
     workflowSessions,
     setWorkflowSessions,
     loading,
+    isSwitchingMonth,
     error,
     isPreloading,
     isLoadingCurrentMonth: isLoadingMonth(currentMonth.year, currentMonth.month),
@@ -211,5 +236,6 @@ export function useWorkflowMonthSessions() {
     goPrev,
     goNext,
     goToday,
+    applyDelta,
   };
 }
