@@ -809,7 +809,10 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     subscribe,
     forceRefresh,
     ensureMonthLoaded,
-    isLoadingMonth
+    isLoadingMonth,
+    getMonthStatus,
+    subscribeMonthStatus,
+    retryMonth,
   };
 
   return (
