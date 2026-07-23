@@ -617,6 +617,17 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    // Cross-month cancel: se estamos pedindo cold-load de X, cancela cold-load
+    // pendente de Y ≠ X. Sem isso, uma navegação rápida (Jul→Jun→Mai→Mar)
+    // enfileira 4 requests que competem por conexão PG e a UI espera a última.
+    monthAbortControllers.current.forEach((ctrl, k) => {
+      if (k !== key) {
+        try { ctrl.abort(); } catch { /* noop */ }
+        monthAbortControllers.current.delete(k);
+        pendingLoads.current.delete(k);
+      }
+    });
+
     // Cold load: marca loading antes do fetch.
     setMonthState(year, month, { status: 'loading', error: null });
 
