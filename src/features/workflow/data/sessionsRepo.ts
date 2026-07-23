@@ -66,7 +66,7 @@ export const sessionsRepo = {
     const { start, end } = monthBounds(year, month);
     let q = supabase
       .from("clientes_sessoes")
-      .select(SELECT_WITH_CLIENTE)
+      .select(SELECT_LEAN)
       .eq("user_id", userId)
       .gte("data_sessao", start)
       .lte("data_sessao", end)
@@ -80,6 +80,7 @@ export const sessionsRepo = {
 
   /** Carga inicial: últimos N meses (default 12), ordenado por data/hora. */
   async listLastMonths(userId: string, months = 12): Promise<WorkflowSession[]> {
+
     if (!userId) return [];
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - months);
