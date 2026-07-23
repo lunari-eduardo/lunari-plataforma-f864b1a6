@@ -266,7 +266,8 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       // (fire-and-forget para não bloquear callers como update de produto).
       void silentRefreshMonth(year, month, true);
     }
-  }, [userId]);
+  }, [userId]); // silentRefreshMonth ref é estável dentro do closure do provider
+
 
 
 
