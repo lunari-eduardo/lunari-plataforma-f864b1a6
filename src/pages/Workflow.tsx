@@ -156,13 +156,11 @@ function WorkflowContent() {
     const ny = delta === -1 && m === 1 ? year - 1 : delta === 1 && m === 12 ? year + 1 : year;
     const nm = delta === -1 ? (m === 1 ? 12 : m - 1) : m === 12 ? 1 : m + 1;
     month.ensureMonthLoaded(ny, nm, false).catch(() => {});
-    import("@/features/workflow/data/metricsRepo").then(({ prefetchMonthMetrics }) => {
-      import("@/integrations/supabase/client").then(({ supabase }) => {
-        supabase.auth.getUser().then(({ data }) => {
-          if (data.user) prefetchMonthMetrics(data.user.id, ny, nm);
-        });
+    if (user?.id) {
+      import("@/features/workflow/data/metricsRepo").then(({ prefetchMonthMetrics }) => {
+        prefetchMonthMetrics(user.id, ny, nm);
       });
-    });
+    }
   };
 
   if (month.error) {
