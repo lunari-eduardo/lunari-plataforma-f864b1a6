@@ -59,6 +59,13 @@ export function useWorkflowMetricsRealtime(
   const loaderRef = useRef<() => void>(() => {});
   const userIdRef = useRef<string | null>(null);
 
+  // Reset síncrono a cada troca de mês/override: evita renderizar
+  // números do mês anterior enquanto o novo mês carrega (percebido
+  // pelo usuário como "métricas não atualizaram").
+  useEffect(() => {
+    setMetrics((prev) => ({ ...prev, isColdLoading: true, isRevalidating: false, isLoading: true }));
+  }, [year, month, startDateOverride, endDateOverride]);
+
   useEffect(() => {
     let cancelled = false;
     const usingOverride = Boolean(startDateOverride && endDateOverride);
@@ -70,6 +77,7 @@ export function useWorkflowMetricsRealtime(
         setMetrics((prev) => ({ ...prev, isColdLoading: true, isRevalidating: false, isLoading: true }));
         return;
       }
+
       const hit = metricsCache.getSync(userId, year, month!);
       if (hit) {
         setMetrics({
