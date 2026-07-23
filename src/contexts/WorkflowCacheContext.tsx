@@ -124,6 +124,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [],
   );
+
+  // Inicializar BroadcastChannel para sync entre tabs
+  useEffect(() => {
     broadcastChannel.current = new BroadcastChannel('workflow-cache-sync');
     
     broadcastChannel.current.onmessage = async (event) => {
