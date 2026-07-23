@@ -56,6 +56,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
   // Ref usada por mergeUpdate para evitar ciclo de dependência com removeSession.
   const removeSessionRef = useRef<((sessionId: string) => void) | null>(null);
+  // TTL do silent refresh — evita re-fetch em cascata (heartbeat/visibility/subscribe).
+  const lastSilentRefreshAt = useRef<Map<string, number>>(new Map());
+  const SILENT_REFRESH_TTL_MS = 60_000;
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
@@ -250,6 +253,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const invalidateMonth = useCallback(async (year: number, month: number) => {
     const key = getCacheKey(year, month);
     memoryCache.current.delete(key);
+    lastSilentRefreshAt.current.delete(key);
 
     if (userId) {
       metricsCache.invalidate(userId, year, month);
@@ -265,6 +269,7 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       // ✅ Onda 2: leitura única via repo (paridade total com query anterior).
       const sessions = await sessionsRepo.listByMonth(userId, year, month);
       setMonthData(year, month, sessions);
+      lastSilentRefreshAt.current.set(getCacheKey(year, month), Date.now());
     } catch (error) {
       console.error('Error fetching month data:', error);
     }
@@ -298,17 +303,19 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     notifySubscribers();
 
-    // FASE 2: SEMPRE atualizar do Supabase para garantir dados frescos
-    const chunks = [monthsToPreload.slice(0, 3), monthsToPreload.slice(3)];
-    for (const chunk of chunks) {
-      await Promise.allSettled(
-        chunk.map(({ year, month }) => {
-          return fetchAndCacheMonth(year, month);
-        })
-      );
-    }
+    // FASE 2 (otimizada): TODOS os meses em paralelo. Não bloqueia UI —
+    // o cache do IDB já foi hidratado acima; o refresh vive em background.
+    Promise.allSettled(
+      monthsToPreload.map(({ year, month }) => fetchAndCacheMonth(year, month))
+    ).finally(() => {
+      // Marca cada mês como "acabou de revalidar" para o TTL evitar reruns.
+      const now = Date.now();
+      monthsToPreload.forEach(({ year, month }) => {
+        lastSilentRefreshAt.current.set(getCacheKey(year, month), now);
+      });
+    });
 
-    // Prefetch das métricas dos mesmos meses — hit síncrono ao trocar de mês.
+    // Prefetch das métricas em paralelo (fire-and-forget).
     monthsToPreload.forEach(({ year, month }) => {
       prefetchMonthMetrics(userId, year, month);
     });
@@ -466,39 +473,27 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // SILENT REFRESH: Atualiza dados do Supabase sem limpar cache existente (sem loading)
   // Definido ANTES de ensureMonthLoaded para evitar erro de referência
-  const silentRefreshMonth = useCallback(async (year: number, month: number) => {
+  const silentRefreshMonth = useCallback(async (year: number, month: number, force = false) => {
     if (!userId) return;
-    
-    console.log(`🔇 [WorkflowCache] Silent refresh for ${year}-${month}`);
-    
+    const key = getCacheKey(year, month);
+
+    // TTL: se acabamos de revalidar este mês, pula (a menos que force=true).
+    if (!force) {
+      const last = lastSilentRefreshAt.current.get(key) ?? 0;
+      if (Date.now() - last < SILENT_REFRESH_TTL_MS) {
+        return;
+      }
+    }
+    // Marca ANTES de começar para deduplicar chamadas concorrentes.
+    lastSilentRefreshAt.current.set(key, Date.now());
+
     try {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-
-      const { data, error } = await supabase
-        .from('clientes_sessoes')
-        .select(`
-          *,
-          clientes (
-            nome,
-            email,
-            telefone,
-            whatsapp
-          )
-        `)
-        .eq('user_id', userId)
-        .gte('data_sessao', startDate.toISOString().split('T')[0])
-        .lte('data_sessao', endDate.toISOString().split('T')[0])
-        .or('status.is.null,status.neq.historico')
-        .order('data_sessao', { ascending: true });
-
-      if (error) throw error;
-
-      const sessions = (data || []) as WorkflowSession[];
-      
-      // Atualizar cache sem notificar múltiplas vezes (setMonthData já notifica)
+      // Usa o repo enxuto (mesmo SELECT do fetchAndCacheMonth) — evita trafegar
+      // email/telefone/whatsapp em cada linha; contato é buscado sob demanda.
+      const sessions = await sessionsRepo.listByMonth(userId, year, month);
       setMonthData(year, month, sessions);
-      console.log(`✅ [WorkflowCache] Silent refresh complete: ${sessions.length} sessions`);
+      // Atualiza timestamp após sucesso.
+      lastSilentRefreshAt.current.set(key, Date.now());
     } catch (error) {
       console.error('❌ [WorkflowCache] Silent refresh error:', error);
     }

@@ -8,6 +8,8 @@ import { metricsCache, type CachedMetrics } from "./metricsCache";
  */
 
 const inflight = new Map<string, Promise<CachedMetrics | null>>();
+const lastFetchAt = new Map<string, number>();
+const FRESH_TTL_MS = 60_000;
 
 const rangeOf = (y: number, m: number) => {
   const start = `${y}-${String(m).padStart(2, "0")}-01`;
@@ -16,14 +18,28 @@ const rangeOf = (y: number, m: number) => {
   return { start, end };
 };
 
+export function invalidateMonthMetricsTTL(userId: string, year: number, month: number) {
+  lastFetchAt.delete(`${userId}:${year}-${month}`);
+}
+
 export async function fetchMonthMetrics(
   userId: string,
   year: number,
   month: number,
+  opts?: { force?: boolean },
 ): Promise<CachedMetrics | null> {
   const key = `${userId}:${year}-${month}`;
   const pending = inflight.get(key);
   if (pending) return pending;
+
+  // TTL: se a última resposta é recente e não veio `force`, devolve o cache.
+  if (!opts?.force) {
+    const last = lastFetchAt.get(key) ?? 0;
+    if (Date.now() - last < FRESH_TTL_MS) {
+      const cached = metricsCache.getSync(userId, year, month);
+      if (cached) return cached;
+    }
+  }
 
   const promise = (async () => {
     const { start, end } = rangeOf(year, month);
@@ -45,6 +61,7 @@ export async function fetchMonthMetrics(
       caixaRecebido: Number(row.caixa_recebido) || 0,
     };
     metricsCache.set(userId, year, month, parsed);
+    lastFetchAt.set(key, Date.now());
     return parsed;
   })().finally(() => {
     inflight.delete(key);
