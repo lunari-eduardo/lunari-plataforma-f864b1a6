@@ -240,18 +240,21 @@ export function useWorkflowMonthSessions() {
   }, [currentMonth, mergeUpdate, removeSessionFromCache]);
 
   const goPrev = useCallback(() => {
+    manuallyNavigatedRef.current = true;
     setCurrentMonth((prev) =>
       prev.month === 1 ? { month: 12, year: prev.year - 1 } : { month: prev.month - 1, year: prev.year },
     );
   }, [setCurrentMonth]);
 
   const goNext = useCallback(() => {
+    manuallyNavigatedRef.current = true;
     setCurrentMonth((prev) =>
       prev.month === 12 ? { month: 1, year: prev.year + 1 } : { month: prev.month + 1, year: prev.year },
     );
   }, [setCurrentMonth]);
 
   const goToday = useCallback(() => {
+    manuallyNavigatedRef.current = true;
     setCurrentMonth({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   }, [setCurrentMonth]);
 
@@ -260,6 +263,7 @@ export function useWorkflowMonthSessions() {
    * setState → um único fetch para o mês final.
    */
   const applyDelta = useCallback((delta: number | "today") => {
+    manuallyNavigatedRef.current = true;
     if (delta === "today") {
       const now = new Date();
       setCurrentMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
