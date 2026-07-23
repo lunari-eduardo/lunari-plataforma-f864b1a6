@@ -351,6 +351,14 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error: any) {
       if (error?.name === 'AbortError' || error?.code === '20') return;
       console.error('Error fetching month data:', error);
+      // Só marca erro se ainda somos o controller vigente (não fomos abortados).
+      if (monthAbortControllers.current.get(key) === controller) {
+        const hasCache = memoryCache.current.has(key);
+        setMonthState(year, month, {
+          status: hasCache ? 'ready' : 'error',
+          error: error?.message ?? String(error),
+        });
+      }
     } finally {
       if (monthAbortControllers.current.get(key) === controller) {
         monthAbortControllers.current.delete(key);
