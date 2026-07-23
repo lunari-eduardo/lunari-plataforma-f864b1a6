@@ -52,7 +52,40 @@ export function useWorkflowMonthSessions() {
   const currentMonthRef = useRef(currentMonth);
   useEffect(() => { currentMonthRef.current = currentMonth; }, [currentMonth]);
 
-  // FASE 1 — carregar mês corrente (cache-first, sem flash de vazio)
+  // Marca quando o usuário navegou manualmente — impede o TTL de reescrever.
+  const manuallyNavigatedRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
+
+  // FASE 0 — TTL do mês persistido:
+  // Se a aba ficou fechada/idle por >6h e o mês persistido não é o atual,
+  // e o usuário ainda não navegou manualmente nesta sessão, força "hoje".
+  useEffect(() => {
+    const lastLoadStr = typeof window !== "undefined"
+      ? window.sessionStorage.getItem("workflow_current_month__lastLoadAt")
+      : null;
+    const lastLoad = lastLoadStr ? Number(lastLoadStr) : 0;
+    const now = new Date();
+    const isCurrentRealMonth =
+      currentMonth.year === now.getFullYear() && currentMonth.month === now.getMonth() + 1;
+    if (
+      !manuallyNavigatedRef.current &&
+      lastLoad > 0 &&
+      now.getTime() - lastLoad > PERSISTED_TTL_MS &&
+      !isCurrentRealMonth
+    ) {
+      console.log("[Workflow] mês persistido antigo (>6h) → resetando para hoje");
+      setCurrentMonth({ month: now.getMonth() + 1, year: now.getFullYear() });
+    }
+    try {
+      window.sessionStorage.setItem(
+        "workflow_current_month__lastLoadAt",
+        String(Date.now()),
+      );
+    } catch { /* noop */ }
+    // Roda uma vez no mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const loadMonth = async () => {
