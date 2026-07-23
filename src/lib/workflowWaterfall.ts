@@ -84,6 +84,9 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
   let seq = 0;
   let pendingTag: string | undefined;
 
+  const ARM_KEY = "__wf_arm";
+
+
   const now = () => performance.now();
 
   const classify = (url: string): { kind: CallKind; label: string } => {
