@@ -75,14 +75,20 @@ declare global {
       current: () => Session | null;
       export: () => void;
       print: () => void;
+      arm: (name?: string) => void;
+      disarm: () => void;
     };
   }
+
 }
 
 if (import.meta.env.DEV && typeof window !== "undefined") {
   let session: Session | null = null;
   let seq = 0;
   let pendingTag: string | undefined;
+
+  const ARM_KEY = "__wf_arm";
+
 
   const now = () => performance.now();
 
@@ -295,7 +301,29 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
       if (!session) return;
       printTable(session);
     },
+    arm(name = "cold-load") {
+      try {
+        sessionStorage.setItem(ARM_KEY, name);
+        // eslint-disable-next-line no-console
+        console.log(`[waterfall] ARMADO: captura iniciará automaticamente no próximo load como "${name}". Faça o hard-refresh agora (Ctrl+Shift+R).`);
+      } catch { /* ignore */ }
+    },
+    disarm() {
+      try { sessionStorage.removeItem(ARM_KEY); } catch { /* ignore */ }
+      // eslint-disable-next-line no-console
+      console.log("[waterfall] desarmado");
+    },
   };
+
+  // Auto-start se foi armado antes de um refresh.
+  try {
+    const armed = sessionStorage.getItem(ARM_KEY);
+    if (armed) {
+      sessionStorage.removeItem(ARM_KEY);
+      window.__wf!.start(armed);
+    }
+  } catch { /* ignore */ }
+
 
   // eslint-disable-next-line no-console
   console.log(
