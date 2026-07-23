@@ -23,6 +23,28 @@ const SELECT_WITH_CLIENTE = `
   galerias ( id, total_fotos_extras_vendidas, valor_total_vendido )
 ` as const;
 
+/**
+ * Projeção enxuta usada pelo listado mensal do Workflow (Tranche 1 de perf).
+ * Exclui campos pesados que só o modal expandido precisa: `detalhes`,
+ * `observacoes`, `descricao`, `snapshot_extras_at_gallery_delete`,
+ * `orcamento_id`, `updated_by`, `created_at`. `regras_congeladas` e
+ * `produtos_incluidos` permanecem porque alimentam cálculos locais.
+ */
+const SELECT_LEAN = `
+  id, session_id, user_id, cliente_id,
+  data_sessao, hora_sessao, status, status_financeiro,
+  status_galeria, status_pagamento_fotos_extra,
+  categoria, pacote,
+  valor_total, valor_pago, valor_base_pacote,
+  valor_foto_extra, valor_total_foto_extra, qtd_fotos_extra,
+  valor_adicional, desconto, credito_aplicado,
+  extras_overridden, galeria_id, tipo_registro, appointment_id,
+  updated_at, produtos_incluidos, regras_congeladas,
+  clientes ( nome ),
+  galerias ( id, total_fotos_extras_vendidas, valor_total_vendido )
+` as const;
+
+
 
 /** Formato YYYY-MM-DD sem timezone, idêntico ao usado pelo Context. */
 function dateOnly(d: Date): string {
