@@ -124,16 +124,35 @@ export function useWorkflowMonthSessions() {
     return () => { cancelled = true; };
   }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
 
-  // FASE 2 — visibilitychange
+  // FASE 2 — visibilitychange + heartbeat de revalidação silenciosa.
   useEffect(() => {
+    const revalidateMonth = (reason: "visibility" | "heartbeat") => {
+      // SWR silencioso: nunca dispara loading state.
+      ensureMonthLoaded(currentMonth.year, currentMonth.month, false).catch(() => {});
+      // Sinaliza métricas para revalidarem também.
+      void eventBus.emit("workflow.metrics_stale", { reason });
+    };
+
     const handler = () => {
       if (document.visibilityState !== "visible") return;
-      const cached = getSessionsForMonthSync(currentMonth.year, currentMonth.month);
-      if (!cached) ensureMonthLoaded(currentMonth.year, currentMonth.month, true);
+      revalidateMonth("visibility");
     };
     document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded, getSessionsForMonthSync]);
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const startHeartbeat = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        if (document.visibilityState === "visible") revalidateMonth("heartbeat");
+      }, HEARTBEAT_MS);
+    };
+    startHeartbeat();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handler);
+      if (interval) clearInterval(interval);
+    };
+  }, [currentMonth.year, currentMonth.month, ensureMonthLoaded]);
 
   // Subscribe ao cache (realtime) — filtra sempre pelo mês corrente (ref)
   useEffect(() => {
