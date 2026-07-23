@@ -126,6 +126,13 @@ declare module "@/shared/event-bus" {
       produtoId: string;
       photographerId: string;
     };
+    /**
+     * Sinal de que as métricas do mês devem ser revalidadas (heartbeat,
+     * reconexão após idle, etc.). Consumido por useWorkflowMetricsRealtime.
+     */
+    "workflow.metrics_stale": {
+      reason: "heartbeat" | "visibility" | "reconnect";
+    };
   }
 }
 
