@@ -59,6 +59,10 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   // TTL do silent refresh — evita re-fetch em cascata (heartbeat/visibility/subscribe).
   const lastSilentRefreshAt = useRef<Map<string, number>>(new Map());
   const SILENT_REFRESH_TTL_MS = 60_000;
+  // AbortController por mês: troca rápida cancela fetch antigo antes de disputar conexão PG.
+  const monthAbortControllers = useRef<Map<string, AbortController>>(new Map());
+  // Coalescing de notifySubscribers: microtask única para rajadas de setMonthData.
+  const notifyPending = useRef(false);
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
