@@ -81,6 +81,7 @@ export function useWorkflowMetricsRealtime(
 
   useEffect(() => {
     let cancelled = false;
+    const abortCtrl = new AbortController();
     const cacheableMonth = !usingOverride && typeof month === "number";
 
     const loadFresh = async () => {
@@ -92,11 +93,13 @@ export function useWorkflowMetricsRealtime(
 
         // Caminho override (dashboard): sem cache; RPC direto.
         if (usingOverride) {
-          const { data, error } = await supabase.rpc("workflow_month_metrics", {
+          let q: any = supabase.rpc("workflow_month_metrics", {
             p_user_id: userId,
             p_start: startDateOverride!,
             p_end: endDateOverride!,
           });
+          q = q.abortSignal(abortCtrl.signal);
+          const { data, error } = await q;
           if (cancelled) return;
           if (error) throw error;
           const row: any = Array.isArray(data) ? data[0] : data;
@@ -121,7 +124,7 @@ export function useWorkflowMetricsRealtime(
 
         if (!cacheableMonth) return;
 
-        const fresh = await fetchMonthMetrics(userId, year, month!);
+        const fresh = await fetchMonthMetrics(userId, year, month!, { signal: abortCtrl.signal });
         if (cancelled) return;
         if (!fresh) {
           setMetrics((prev) => ({ ...prev, isColdLoading: false, isRevalidating: false, isLoading: false }));
@@ -133,7 +136,8 @@ export function useWorkflowMetricsRealtime(
           isRevalidating: false,
           isLoading: false,
         });
-      } catch (err) {
+      } catch (err: any) {
+        if (err?.name === "AbortError" || err?.code === "20" || cancelled) return;
         console.error("❌ [WorkflowMetricsRealtime]", err);
         if (!cancelled) {
           setMetrics((prev) => ({ ...prev, isColdLoading: false, isRevalidating: false, isLoading: false }));
@@ -143,6 +147,7 @@ export function useWorkflowMetricsRealtime(
 
     loaderRef.current = () => { void loadFresh(); };
     void loadFresh();
+
 
     // Coalescing: eventos em rajada geram um único reload após 300ms de calmaria.
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
