@@ -25,8 +25,11 @@ interface Entry {
   data: CachedMetrics;
 }
 
-const CACHE_VERSION = "1.0";
-const TTL_MS = 90 * 1000;
+const CACHE_VERSION = "1.1";
+// SWR: mantém dados frescos por 24h; invalidação real vem por eventos
+// (workflow.card_updated, payment_added, metrics_stale, realtime).
+const TTL_MS = 24 * 60 * 60 * 1000;
+
 
 const store = localforage.createInstance({
   name: "photoflow-app",

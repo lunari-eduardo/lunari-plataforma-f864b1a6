@@ -9,7 +9,8 @@ import { metricsCache, type CachedMetrics } from "./metricsCache";
 
 const inflight = new Map<string, Promise<CachedMetrics | null>>();
 const lastFetchAt = new Map<string, number>();
-const FRESH_TTL_MS = 60_000;
+// SWR longo (Tranche 3): confiamos em invalidação por evento em vez de TTL curto.
+const FRESH_TTL_MS = 24 * 60 * 60 * 1000;
 
 const rangeOf = (y: number, m: number) => {
   const start = `${y}-${String(m).padStart(2, "0")}-01`;
@@ -26,7 +27,7 @@ export async function fetchMonthMetrics(
   userId: string,
   year: number,
   month: number,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; signal?: AbortSignal },
 ): Promise<CachedMetrics | null> {
   const key = `${userId}:${year}-${month}`;
   const pending = inflight.get(key);
@@ -43,11 +44,13 @@ export async function fetchMonthMetrics(
 
   const promise = (async () => {
     const { start, end } = rangeOf(year, month);
-    const { data, error } = await supabase.rpc("workflow_month_metrics", {
+    let q: any = supabase.rpc("workflow_month_metrics", {
       p_user_id: userId,
       p_start: start,
       p_end: end,
     });
+    if (opts?.signal) q = q.abortSignal(opts.signal);
+    const { data, error } = await q;
     if (error) throw error;
     const row: any = Array.isArray(data) ? data[0] : data;
     if (!row) return null;
@@ -70,6 +73,7 @@ export async function fetchMonthMetrics(
   inflight.set(key, promise);
   return promise;
 }
+
 
 /** Prefetch fire-and-forget: só chama RPC se não houver cache válido. */
 export async function prefetchMonthMetrics(userId: string, year: number, month: number) {
