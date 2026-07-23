@@ -72,12 +72,26 @@ export function useProductDeadlineNotifications(): AppNotification[] {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Janela: 90 dias para trás (produtos com prazo atrasado) + 120 dias à frente
+    // (bucket "futuro" filtrado no consumidor). Corta o SELECT global que
+    // escaneava clientes_sessoes inteira do usuário (top-3 do pg_stat_statements).
+    const today = new Date();
+    const since = new Date(today);
+    since.setDate(since.getDate() - 90);
+    const until = new Date(today);
+    until.setDate(until.getDate() + 120);
+    const sinceIso = since.toISOString().split('T')[0];
+    const untilIso = until.toISOString().split('T')[0];
+
     const { data, error } = await supabase
       .from('clientes_sessoes')
       .select('id, data_sessao, produtos_incluidos, clientes(nome)')
       .eq('user_id', user.id)
       .not('produtos_incluidos', 'is', null)
-      .order('data_sessao', { ascending: true });
+      .gte('data_sessao', sinceIso)
+      .lte('data_sessao', untilIso)
+      .order('data_sessao', { ascending: true })
+      .limit(500);
 
     if (error) {
       console.error('[useProductDeadlineNotifications] fetch error:', error);
