@@ -471,39 +471,27 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // SILENT REFRESH: Atualiza dados do Supabase sem limpar cache existente (sem loading)
   // Definido ANTES de ensureMonthLoaded para evitar erro de referência
-  const silentRefreshMonth = useCallback(async (year: number, month: number) => {
+  const silentRefreshMonth = useCallback(async (year: number, month: number, force = false) => {
     if (!userId) return;
-    
-    console.log(`🔇 [WorkflowCache] Silent refresh for ${year}-${month}`);
-    
+    const key = getCacheKey(year, month);
+
+    // TTL: se acabamos de revalidar este mês, pula (a menos que force=true).
+    if (!force) {
+      const last = lastSilentRefreshAt.current.get(key) ?? 0;
+      if (Date.now() - last < SILENT_REFRESH_TTL_MS) {
+        return;
+      }
+    }
+    // Marca ANTES de começar para deduplicar chamadas concorrentes.
+    lastSilentRefreshAt.current.set(key, Date.now());
+
     try {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-
-      const { data, error } = await supabase
-        .from('clientes_sessoes')
-        .select(`
-          *,
-          clientes (
-            nome,
-            email,
-            telefone,
-            whatsapp
-          )
-        `)
-        .eq('user_id', userId)
-        .gte('data_sessao', startDate.toISOString().split('T')[0])
-        .lte('data_sessao', endDate.toISOString().split('T')[0])
-        .or('status.is.null,status.neq.historico')
-        .order('data_sessao', { ascending: true });
-
-      if (error) throw error;
-
-      const sessions = (data || []) as WorkflowSession[];
-      
-      // Atualizar cache sem notificar múltiplas vezes (setMonthData já notifica)
+      // Usa o repo enxuto (mesmo SELECT do fetchAndCacheMonth) — evita trafegar
+      // email/telefone/whatsapp em cada linha; contato é buscado sob demanda.
+      const sessions = await sessionsRepo.listByMonth(userId, year, month);
       setMonthData(year, month, sessions);
-      console.log(`✅ [WorkflowCache] Silent refresh complete: ${sessions.length} sessions`);
+      // Atualiza timestamp após sucesso.
+      lastSilentRefreshAt.current.set(key, Date.now());
     } catch (error) {
       console.error('❌ [WorkflowCache] Silent refresh error:', error);
     }
