@@ -56,6 +56,9 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
   // Ref usada por mergeUpdate para evitar ciclo de dependência com removeSession.
   const removeSessionRef = useRef<((sessionId: string) => void) | null>(null);
+  // TTL do silent refresh — evita re-fetch em cascata (heartbeat/visibility/subscribe).
+  const lastSilentRefreshAt = useRef<Map<string, number>>(new Map());
+  const SILENT_REFRESH_TTL_MS = 60_000;
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
