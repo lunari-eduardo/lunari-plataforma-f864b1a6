@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { eventBus } from "@/shared/event-bus";
 import type { WorkflowSession } from "@/features/workflow";
+
+const HEARTBEAT_MS = 5 * 60 * 1000; // 5 min — revalidação silenciosa enquanto visível
+const PERSISTED_TTL_MS = 6 * 60 * 60 * 1000; // 6 h — invalida mês persistido "antigo"
 
 export type WorkflowCurrentMonth = { month: number; year: number };
 
