@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useWorkflowCache } from "@/contexts/WorkflowCacheContext";
+import { useWorkflowCache, type MonthLoadState } from "@/contexts/WorkflowCacheContext";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { eventBus } from "@/shared/event-bus";
 import type { WorkflowSession } from "@/features/workflow";
