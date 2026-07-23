@@ -59,6 +59,10 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   // TTL do silent refresh — evita re-fetch em cascata (heartbeat/visibility/subscribe).
   const lastSilentRefreshAt = useRef<Map<string, number>>(new Map());
   const SILENT_REFRESH_TTL_MS = 60_000;
+  // AbortController por mês: troca rápida cancela fetch antigo antes de disputar conexão PG.
+  const monthAbortControllers = useRef<Map<string, AbortController>>(new Map());
+  // Coalescing de notifySubscribers: microtask única para rajadas de setMonthData.
+  const notifyPending = useRef(false);
 
   // Inicializar BroadcastChannel para sync entre tabs
   useEffect(() => {
@@ -265,13 +269,24 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchAndCacheMonth = async (year: number, month: number) => {
     if (!userId) return;
+    const key = getCacheKey(year, month);
+    // Cancela fetch anterior deste mesmo mês (troca rápida entre meses).
+    monthAbortControllers.current.get(key)?.abort();
+    const controller = new AbortController();
+    monthAbortControllers.current.set(key, controller);
     try {
-      // ✅ Onda 2: leitura única via repo (paridade total com query anterior).
-      const sessions = await sessionsRepo.listByMonth(userId, year, month);
+      const sessions = await sessionsRepo.listByMonth(userId, year, month, { signal: controller.signal });
+      // Se este controller já foi substituído, ignora o resultado (stale).
+      if (monthAbortControllers.current.get(key) !== controller) return;
       setMonthData(year, month, sessions);
-      lastSilentRefreshAt.current.set(getCacheKey(year, month), Date.now());
-    } catch (error) {
+      lastSilentRefreshAt.current.set(key, Date.now());
+    } catch (error: any) {
+      if (error?.name === 'AbortError' || error?.code === '20') return;
       console.error('Error fetching month data:', error);
+    } finally {
+      if (monthAbortControllers.current.get(key) === controller) {
+        monthAbortControllers.current.delete(key);
+      }
     }
   };
 
@@ -459,9 +474,15 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const notifySubscribers = () => {
-    const allSessions = Array.from(memoryCache.current.values()).flat();
-    console.log('📢 [WorkflowCache] Notifying subscribers:', allSessions.length, 'sessions');
-    subscribers.current.forEach(callback => callback(allSessions));
+    // Coalescing: rajadas de setMonthData (ex.: preloadMonths com 4 meses em paralelo)
+    // agora disparam UMA notificação por microtask, em vez de 4 flat() sequenciais.
+    if (notifyPending.current) return;
+    notifyPending.current = true;
+    queueMicrotask(() => {
+      notifyPending.current = false;
+      const allSessions = Array.from(memoryCache.current.values()).flat();
+      subscribers.current.forEach(callback => callback(allSessions));
+    });
   };
 
   const forceRefresh = useCallback(async () => {

@@ -39,10 +39,10 @@ function monthBounds(year: number, month: number): { start: string; end: string 
 
 export const sessionsRepo = {
   /** Lista sessões de um mês para o usuário, com JOIN clientes. */
-  async listByMonth(userId: string, year: number, month: number): Promise<WorkflowSession[]> {
+  async listByMonth(userId: string, year: number, month: number, opts?: { signal?: AbortSignal }): Promise<WorkflowSession[]> {
     if (!userId) return [];
     const { start, end } = monthBounds(year, month);
-    const { data, error } = await supabase
+    let q = supabase
       .from("clientes_sessoes")
       .select(SELECT_WITH_CLIENTE)
       .eq("user_id", userId)
@@ -50,6 +50,8 @@ export const sessionsRepo = {
       .lte("data_sessao", end)
       .or("status.is.null,status.neq.historico")
       .order("data_sessao", { ascending: true });
+    if (opts?.signal) q = q.abortSignal(opts.signal);
+    const { data, error } = await q;
     if (error) throw error;
     return (data || []) as unknown as WorkflowSession[];
   },

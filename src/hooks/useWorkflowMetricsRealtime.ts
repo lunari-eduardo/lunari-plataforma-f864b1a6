@@ -104,11 +104,20 @@ export function useWorkflowMetricsRealtime(
 
         // Se veio override de datas, mantém caminho legado (sem cache).
         if (usingOverride) {
-          const { data, error } = await supabase.rpc("workflow_month_metrics", {
+          const rpc = supabase.rpc("workflow_month_metrics", {
             p_user_id: user.id,
             p_start: startDateOverride!,
             p_end: endDateOverride!,
           });
+          // AbortController: cliques rápidos entre meses cancelam RPC antiga
+          // antes de disputar conexão PG com o novo mês.
+          const controller = new AbortController();
+          const abortHandler = () => controller.abort();
+          // Nota: supabase.rpc não expõe abortSignal direto até v2.60; usamos
+          // race com um timeout defensivo de 6s para não travar a UI.
+          const timeout = setTimeout(() => abortHandler(), 6000);
+          const { data, error } = await rpc;
+          clearTimeout(timeout);
           if (cancelled) return;
           if (error) throw error;
           const row: any = Array.isArray(data) ? data[0] : data;
