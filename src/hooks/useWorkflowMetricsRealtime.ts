@@ -176,6 +176,7 @@ export function useWorkflowMetricsRealtime(
       window.addEventListener("payment-created", invalidateAndReload);
       return () => {
         cancelled = true;
+        abortCtrl.abort();
         if (debounceTimer) clearTimeout(debounceTimer);
         offCard(); offAdv(); offDel(); offPay(); offRef(); offAtt(); offStale();
         window.removeEventListener("workflow-session-updated", invalidateAndReload);
@@ -193,8 +194,10 @@ export function useWorkflowMetricsRealtime(
 
     return () => {
       cancelled = true;
+      abortCtrl.abort();
       supabase.removeChannel(channel);
     };
+
   }, [userId, year, month, startDateOverride, endDateOverride, usingOverride]);
 
   return metrics;
