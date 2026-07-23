@@ -88,8 +88,42 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   // Coalescing de notifySubscribers: microtask única para rajadas de setMonthData.
   const notifyPending = useRef(false);
 
-  // Inicializar BroadcastChannel para sync entre tabs
-  useEffect(() => {
+  // Tranche 2 — state machine por mês + subscribers.
+  const monthStateMap = useRef<Map<string, MonthLoadState>>(new Map());
+  const monthStateSubs = useRef<Map<string, Set<(s: MonthLoadState) => void>>>(new Map());
+  // Silent refresh in-flight (dedup independente do TTL).
+  const silentInFlight = useRef<Map<string, Promise<void>>>(new Map());
+
+  const DEFAULT_STATE: MonthLoadState = { status: 'idle', error: null, loadedAt: null };
+
+  const setMonthState = useCallback((year: number, month: number, patch: Partial<MonthLoadState>) => {
+    const key = getCacheKey(year, month);
+    const prev = monthStateMap.current.get(key) ?? DEFAULT_STATE;
+    const next: MonthLoadState = { ...prev, ...patch };
+    if (
+      next.status === prev.status &&
+      next.error === prev.error &&
+      next.loadedAt === prev.loadedAt
+    ) return;
+    monthStateMap.current.set(key, next);
+    const subs = monthStateSubs.current.get(key);
+    if (subs) subs.forEach((cb) => { try { cb(next); } catch { /* noop */ } });
+  }, []);
+
+  const getMonthStatus = useCallback((year: number, month: number): MonthLoadState => {
+    return monthStateMap.current.get(getCacheKey(year, month)) ?? DEFAULT_STATE;
+  }, []);
+
+  const subscribeMonthStatus = useCallback(
+    (year: number, month: number, cb: (s: MonthLoadState) => void) => {
+      const key = getCacheKey(year, month);
+      let set = monthStateSubs.current.get(key);
+      if (!set) { set = new Set(); monthStateSubs.current.set(key, set); }
+      set.add(cb);
+      return () => { set!.delete(cb); };
+    },
+    [],
+  );
     broadcastChannel.current = new BroadcastChannel('workflow-cache-sync');
     
     broadcastChannel.current.onmessage = async (event) => {
