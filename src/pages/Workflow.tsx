@@ -15,6 +15,7 @@ import { useClientesRealtime } from "@/hooks/useClientesRealtime";
 import { usePricingMigration } from "@/hooks/usePricingMigration";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { useWorkflowMetricsRealtime } from "@/hooks/useWorkflowMetricsRealtime";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { useWorkflowMonthSessions } from "@/features/workflow/hooks/useWorkflowMonthSessions";
 import { useWorkflowFilters } from "@/features/workflow/hooks/useWorkflowFilters";
