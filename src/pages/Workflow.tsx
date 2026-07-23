@@ -41,6 +41,7 @@ export default function Workflow() {
 function WorkflowContent() {
   // ── Dados de referência ─────────────────────────────────────────────
   const { getStatusOptions } = useWorkflowStatus();
+  const { user } = useAuth();
   const { pacotes, produtos, categorias } = useOrcamentoData();
   const { convertSessionToData } = useWorkflowPackageData();
   useClientesRealtime();
