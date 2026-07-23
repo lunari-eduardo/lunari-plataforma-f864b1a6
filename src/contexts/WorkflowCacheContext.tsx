@@ -474,9 +474,15 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const notifySubscribers = () => {
-    const allSessions = Array.from(memoryCache.current.values()).flat();
-    console.log('📢 [WorkflowCache] Notifying subscribers:', allSessions.length, 'sessions');
-    subscribers.current.forEach(callback => callback(allSessions));
+    // Coalescing: rajadas de setMonthData (ex.: preloadMonths com 4 meses em paralelo)
+    // agora disparam UMA notificação por microtask, em vez de 4 flat() sequenciais.
+    if (notifyPending.current) return;
+    notifyPending.current = true;
+    queueMicrotask(() => {
+      notifyPending.current = false;
+      const allSessions = Array.from(memoryCache.current.values()).flat();
+      subscribers.current.forEach(callback => callback(allSessions));
+    });
   };
 
   const forceRefresh = useCallback(async () => {
