@@ -95,9 +95,12 @@ export function useWorkflowMonthSessions() {
         console.log(`⚡ [Workflow] Cache hit for ${key} (${cached.length} sessions)`);
         setWorkflowSessions(cached);
         setIsSwitchingMonth(false);
-        ensureMonthLoaded(currentMonth.year, currentMonth.month, false);
+        // Não dispara ensureMonthLoaded aqui — heartbeat (5min) + visibility
+        // + subscribe realtime já cobrem revalidação; extra fetch inflava
+        // conexão e concorria com métricas na mesma janela de troca.
         return;
       }
+
       // Sem cache → MANTER dados anteriores visíveis (cross-fade).
       // Só sobrescreve quando o novo mês chegar.
       setIsSwitchingMonth(true);
