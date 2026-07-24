@@ -588,7 +588,7 @@ export function WorkflowCardExpanded({
 
       <ExpandedFinancialFooter
         total={totalVisual}
-        valorPago={valorPago}
+        valorPago={fin.pagoTotal}
         pendente={pendenteVisual}
         paymentInput={paymentInput}
         setPaymentInput={setPaymentInput}
