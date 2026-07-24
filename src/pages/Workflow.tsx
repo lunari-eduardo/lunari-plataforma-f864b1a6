@@ -282,25 +282,30 @@ function WorkflowContent() {
                 </div>
               </div>
             ) : (
-              <WorkflowTable
-                sessions={filters.sortedSessions}
-                statusOptions={getStatusOptions}
-                categoryOptions={categoryOptions}
-                packageOptions={packageOptions}
-                productOptions={productOptions}
-                onStatusChange={actions.handleStatusChange}
-                onEditSession={actions.handleEditSession}
+              <WorkflowMonthDataProvider
+                sessionSlugs={monthSessionSlugs}
+                sessionUuids={monthSessionUuids}
+              >
+                <WorkflowTable
+                  sessions={filters.sortedSessions}
+                  statusOptions={getStatusOptions}
+                  categoryOptions={categoryOptions}
+                  packageOptions={packageOptions}
+                  productOptions={productOptions}
+                  onStatusChange={actions.handleStatusChange}
+                  onEditSession={actions.handleEditSession}
 
-                onDeleteSession={actions.handleDeleteSession}
-                onFieldUpdate={actions.handleFieldUpdate}
-                visibleColumns={columns.visibleColumns}
-                columnWidths={columns.columnWidths}
-                onColumnWidthChange={columns.handleColumnWidthChange}
-                onScrollChange={setScrollLeft}
-                sortField={filters.sortField}
-                sortDirection={filters.sortDirection}
-                onSort={filters.handleSort}
-              />
+                  onDeleteSession={actions.handleDeleteSession}
+                  onFieldUpdate={actions.handleFieldUpdate}
+                  visibleColumns={columns.visibleColumns}
+                  columnWidths={columns.columnWidths}
+                  onColumnWidthChange={columns.handleColumnWidthChange}
+                  onScrollChange={setScrollLeft}
+                  sortField={filters.sortField}
+                  sortDirection={filters.sortDirection}
+                  onSort={filters.handleSort}
+                />
+              </WorkflowMonthDataProvider>
             )}
           </div>
         </div>
