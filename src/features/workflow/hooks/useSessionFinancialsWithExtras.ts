@@ -20,17 +20,25 @@ export interface SessionFinancialsWithExtras {
   extrasLiquido: number;
   /** Excedente do desconto manual aplicado sobre os extras. */
   descontoAplicadoExtras: number;
-  /** Extras já pagos (soma de transações vinculadas às cobranças de extras). */
+  /**
+   * Extras "pagos" para APRESENTAÇÃO — alocação "sessão primeiro, extras depois".
+   * NÃO representa mais só cobranças de extras; inclui a sobra de qualquer pagamento
+   * após a sessão estar quitada, mais o valor reservado por cobranças de extras.
+   */
   extrasPago: number;
-  /** Extras ainda em aberto (baseado em `extras_pendente` da RPC). */
+  /** Extras ainda em aberto (após alocação sessão-primeiro). */
   extrasPend: number;
+  /** Extras pagos EXCLUSIVAMENTE via cobranças com finalidade extras (fonte crua da RPC). */
+  extrasPagoCobranca: number;
   /** Total da sessão — VEM DA RPC. */
   totalVisual: number;
   /** Total pago da sessão — VEM DA RPC. */
   pagoTotal: number;
   /** Pendente total — VEM DA RPC. */
   pendenteTot: number;
-  /** Pendente apenas da sessão (excluindo extras em aberto), para botões de cobrança. */
+  /** Pago apenas da sessão (sessão-primeiro, respeitando reserva por cobrança de extras). */
+  pagoSessao: number;
+  /** Pendente apenas da sessão (sessão-primeiro), para botões de cobrança e modal manual. */
   pendenteSess: number;
   /** True quando há galeria vinculada à sessão. */
   hasGaleria: boolean;
@@ -56,27 +64,40 @@ export function useSessionFinancialsWithExtras(
     const extrasIdeal = financials.valor_extras_com_desconto;
     const extrasLiquido = financials.extras_liquido ?? extrasIdeal;
     const descontoAplicadoExtras = financials.desconto_aplicado_extras ?? 0;
-    const extrasPago = financials.extras_pago;
-    const extrasPend = financials.extras_pendente;
+    const extrasPagoCobranca = financials.extras_pago;
     const baseSessao = Math.max(0, totalVisual - extrasLiquido);
-    const pendenteSess = Math.max(0, pendenteTot - extrasPend);
+
+    // ===== Alocação "sessão primeiro, extras depois" =====
+    // 1. Reserva do que foi pago EXPLICITAMENTE em cobranças de extras.
+    // 2. O restante do pago vai primeiro para a sessão; sobra vai para extras.
+    const reservadoExtras = Math.min(extrasPagoCobranca, extrasLiquido);
+    const pagoLivre = Math.max(0, pagoTotal - reservadoExtras);
+    const pagoSessao = Math.min(pagoLivre, baseSessao);
+    const sobraParaExtras = Math.max(0, pagoLivre - baseSessao);
+    const extrasPagoDisplay = Math.min(extrasLiquido, reservadoExtras + sobraParaExtras);
+    const extrasPendDisplay = Math.max(0, extrasLiquido - extrasPagoDisplay);
+    const pendenteSess = Math.max(0, baseSessao - pagoSessao);
     const hasGaleria = Boolean(galeriaId) || financials.qtd_extras_galeria > 0;
 
     const unit = financials.qtd_fotos_extra > 0
       ? extrasLiquido / financials.qtd_fotos_extra
       : 0;
-    const qtdExtrasPagas = unit > 0 ? Math.min(financials.qtd_fotos_extra, Math.round(extrasPago / unit)) : 0;
+    const qtdExtrasPagas = unit > 0
+      ? Math.min(financials.qtd_fotos_extra, Math.round(extrasPagoDisplay / unit))
+      : 0;
 
     return {
       baseSessao: Number(baseSessao.toFixed(2)),
       extrasIdeal: Number(extrasIdeal.toFixed(2)),
       extrasLiquido: Number(extrasLiquido.toFixed(2)),
       descontoAplicadoExtras: Number(descontoAplicadoExtras.toFixed(2)),
-      extrasPago: Number(extrasPago.toFixed(2)),
-      extrasPend: Number(extrasPend.toFixed(2)),
+      extrasPago: Number(extrasPagoDisplay.toFixed(2)),
+      extrasPend: Number(extrasPendDisplay.toFixed(2)),
+      extrasPagoCobranca: Number(extrasPagoCobranca.toFixed(2)),
       totalVisual: Number(totalVisual.toFixed(2)),
       pagoTotal: Number(pagoTotal.toFixed(2)),
       pendenteTot: Number(pendenteTot.toFixed(2)),
+      pagoSessao: Number(pagoSessao.toFixed(2)),
       pendenteSess: Number(pendenteSess.toFixed(2)),
       hasGaleria,
       resolvedGalleryId: galeriaId ?? null,

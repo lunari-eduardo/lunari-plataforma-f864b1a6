@@ -841,7 +841,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // ✅ Update otimista IMEDIATO no cache (UI atualiza em <50ms)
       optimisticTarget = binding.session_id;
       window.dispatchEvent(new CustomEvent('payment-optimistic', {
-        detail: { sessionId: optimisticTarget, delta: valor }
+        detail: { sessionId: optimisticTarget, sessionUuid: binding.id, delta: valor }
       }));
 
       const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -890,7 +890,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!success) {
         // Reverter otimista
         window.dispatchEvent(new CustomEvent('payment-optimistic', {
-          detail: { sessionId: optimisticTarget, delta: -valor }
+          detail: { sessionId: optimisticTarget, sessionUuid: binding.id, delta: -valor }
         }));
         optimisticTarget = null;
         console.error('❌ Falha ao salvar pagamento no Supabase');
@@ -910,7 +910,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Disparar evento autoritativo (busca valor_pago real do trigger)
       window.dispatchEvent(new CustomEvent('payment-created', {
-        detail: { sessionId: binding.session_id, paymentId, valor }
+        detail: { sessionId: binding.session_id, sessionUuid: binding.id, paymentId, valor }
       }));
 
       console.log('✅ Pagamento adicionado:', valor, 'sessão:', binding.session_id);

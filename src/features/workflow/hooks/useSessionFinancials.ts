@@ -171,11 +171,23 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
       const affected = detail.sessionId ?? detail.session?.id;
       if (affected === sessionId) invalidate();
     };
+    const paymentBridge = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      // Pagamento rápido despacha `sessionId` (texto workflow-*) + `sessionUuid`.
+      // Aqui só o UUID importa (RPC é chaveada por UUID).
+      if (detail.sessionUuid === sessionId || detail.sessionId === sessionId) {
+        invalidate();
+      }
+    };
     window.addEventListener('workflow-session-updated', bridgeHandler as EventListener);
+    window.addEventListener('payment-optimistic', paymentBridge as EventListener);
+    window.addEventListener('payment-created', paymentBridge as EventListener);
 
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener('workflow-session-updated', bridgeHandler as EventListener);
+      window.removeEventListener('payment-optimistic', paymentBridge as EventListener);
+      window.removeEventListener('payment-created', paymentBridge as EventListener);
     };
   }, [sessionId, queryClient]);
 
