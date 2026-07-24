@@ -163,6 +163,23 @@ export function useWorkflowMetricsRealtime(
       }, 300);
     };
 
+    // Throttle SEPARADO para `metrics_stale` (heartbeat/visibility): esses
+    // eventos são periódicos e não representam mudança real de dados. Reusam
+    // o cache SWR quando "quente" (60s) e nunca invalidam TTL.
+    let lastStaleAt = 0;
+    const STALE_THROTTLE_MS = 60_000;
+    const softRevalidate = () => {
+      const now = Date.now();
+      if (now - lastStaleAt < STALE_THROTTLE_MS) return;
+      lastStaleAt = now;
+      // Sem invalidateMonthMetricsTTL — deixa o TTL de 24h decidir se refetch.
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        loaderRef.current();
+      }, 300);
+    };
+
     if (USE_METRICS_EVENT_BUS) {
       const offCard = eventBus.on("workflow.card_updated", invalidateAndReload);
       const offAdv = eventBus.on("workflow.card_advanced", invalidateAndReload);
@@ -170,7 +187,7 @@ export function useWorkflowMetricsRealtime(
       const offPay = eventBus.on("workflow.payment_added", invalidateAndReload);
       const offRef = eventBus.on("workflow.payment_refunded", invalidateAndReload);
       const offAtt = eventBus.on("workflow.payment_attached", invalidateAndReload);
-      const offStale = eventBus.on("workflow.metrics_stale", invalidateAndReload);
+      const offStale = eventBus.on("workflow.metrics_stale", softRevalidate);
       window.addEventListener("workflow-session-updated", invalidateAndReload);
       window.addEventListener("workflow-session-deleted", invalidateAndReload);
       window.addEventListener("payment-created", invalidateAndReload);
