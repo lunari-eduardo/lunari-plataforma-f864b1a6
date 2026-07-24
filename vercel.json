@@ -4,6 +4,10 @@
       "source": "/auth/google/callback",
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/google-calendar-callback"
     },
+    {
+      "source": "/l/:cobrancaId",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/payment-link-preview?id=:cobrancaId"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
