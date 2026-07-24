@@ -180,6 +180,7 @@ export function GerenciarProdutosModal({
       setResetSignal(true);
       requestAnimationFrame(() => setResetSignal(false));
       dirtyIdsRef.current = new Set();
+      deletedIdsRef.current = new Set();
       setAddOpen(false);
       setSaveState("idle");
     }
