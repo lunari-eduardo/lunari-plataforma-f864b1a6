@@ -28,6 +28,7 @@ import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { useRunCapability } from "@/shared/capability";
 import { createTask, updateTask } from "@/modules/tasks";
 import { tasksStore } from "@/modules/tasks/presentation/store/tasksStore";
+import { supabase } from "@/integrations/supabase/client";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
 import type { WorkflowSession } from "@/features/workflow/domain/session";
@@ -211,29 +212,49 @@ export function useProductTaskMirror(): void {
         if (taskWriteInFlightRef.current.has(inflightKey)) return;
         taskWriteInFlightRef.current.add(inflightKey);
         try {
-          const res = await runCapability(createTask, {
+          // Usa RPC idempotente: `upsert_product_mirror_task` tem UNIQUE
+          // (related_session_id, mirror_product_tag) e ON CONFLICT no banco.
+          // Isso torna corridas entre abas/reconnects impossíveis de gerar
+          // linhas duplicadas — barreira definitiva vs. `createTask` cego.
+          const produtoTag = `produto:${spec.produtoId}`;
+          const payload = {
             title: spec.title,
             status: openKey,
-            priority: "medium",
-            type: "simple",
-            source: "automation",
+            priority: "media",
+            type: "workflow_produto",
+            source: "workflow",
             tags: spec.tags,
-            relatedSessionId: spec.sessionId,
-            relatedClienteId: spec.clienteId,
-          });
-          if (isOk(res)) {
-            lastWriteByTaskRef.current.set(res.value.id, {
+            related_cliente_id: spec.clienteId ?? null,
+          };
+          const { data, error } = await supabase.rpc(
+            "upsert_product_mirror_task" as never,
+            {
+              p_session_id: spec.sessionId,
+              p_product_tag: produtoTag,
+              p_payload: payload,
+            } as never,
+          );
+          if (error) throw error;
+          let row: { id?: string } | null = null;
+          if (data != null) {
+            const arr = data as unknown;
+            if (Array.isArray(arr)) row = (arr[0] as { id?: string } | undefined) ?? null;
+            else row = arr as { id?: string };
+          }
+          if (row?.id) {
+            lastWriteByTaskRef.current.set(row.id as string, {
               sig: taskSignature(spec.title, false),
               at: Date.now(),
             });
           }
         } catch (e) {
-          console.warn("[productTaskMirror] falha ao criar tarefa", e);
+          console.warn("[productTaskMirror] falha ao upsert tarefa-espelho", e);
         } finally {
           setTimeout(() => taskWriteInFlightRef.current.delete(inflightKey), 500);
         }
         return;
       }
+
 
       // Caso 2: existe. Produto entregue → APAGAR tarefa (sem histórico).
       if (spec.isEntregue) {
