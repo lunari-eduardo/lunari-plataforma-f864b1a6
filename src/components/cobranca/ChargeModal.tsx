@@ -26,6 +26,7 @@ import { ChargeStepBadge } from './ChargeStepBadge';
 
 import { computeMissingFields, type PayerProvider } from './payerRequirements';
 import { unmaskDigits } from '@/lib/validateCpfCnpj';
+import { buildPaymentShareUrl } from '@/utils/domainUtils';
 
 
 
@@ -465,7 +466,6 @@ export function ChargeModal({
 
       // URL branded para WhatsApp: /l/{id} devolve OG dinâmico com logo do
       // fotógrafo e redireciona humanos para /checkout/{id} (PublicCheckout).
-      const { buildPaymentShareUrl } = await import('@/utils/domainUtils');
       const checkoutUrl = buildPaymentShareUrl(cobranca.id);
 
       setCurrentCharge({
@@ -509,7 +509,7 @@ export function ChargeModal({
     // Para provedores tipo "link" (asaas/mercadopago/infinitepay) usamos a URL
     // branded /l/{id} — devolve OG dinâmico e redireciona ao checkout correto.
     // Fallback para o link do provedor apenas se, por qualquer motivo, id faltar.
-    const { buildPaymentShareUrl } = require('@/utils/domainUtils') as typeof import('@/utils/domainUtils');
+    // Fallback para o link do provedor apenas se, por qualquer motivo, id faltar.
     const linkUrl = cobranca.id
       ? buildPaymentShareUrl(cobranca.id)
       : (cobranca.ipCheckoutUrl || cobranca.mpPaymentLink);
