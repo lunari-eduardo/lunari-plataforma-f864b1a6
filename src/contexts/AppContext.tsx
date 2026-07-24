@@ -890,7 +890,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!success) {
         // Reverter otimista
         window.dispatchEvent(new CustomEvent('payment-optimistic', {
-          detail: { sessionId: optimisticTarget, delta: -valor }
+          detail: { sessionId: optimisticTarget, sessionUuid: binding.id, delta: -valor }
         }));
         optimisticTarget = null;
         console.error('❌ Falha ao salvar pagamento no Supabase');
