@@ -234,7 +234,10 @@ serve(async (req) => {
      * Se a `ip_checkout_url` começa com PUBLIC_SITE_URL, é intermediária.
      * Se começa com `checkout.infinitepay.io`, já foi finalizada.
      */
-    const intermediateUrl = `${PUBLIC_SITE_URL}/pay/ip/${cobranca.id}`;
+    // URL curta e branded para WhatsApp: /l/{id} → payment-link-preview
+    // devolve OG dinâmico com logo do fotógrafo e redireciona humanos para
+    // /pay/ip/{id} (InfinitePayCheckout).
+    const intermediateUrl = `${PUBLIC_SITE_URL}/l/${cobranca.id}`;
     // Handle não é validado aqui — o finalize revalida antes de chamar a API.
     // Apenas checamos existência para dar erro precoce ao fotógrafo.
     void handle;
