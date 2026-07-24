@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageCircle, ChevronDown, ChevronUp, Package, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatToDayMonth } from "@/utils/dateUtils";
-import { useAccessControl } from "@/hooks/useAccessControl";
 import { buildGalleryNewUrl, buildGalleryDeliverUrl } from "@/utils/galleryRedirect";
-import { useSessionGalerias } from "@/hooks/useSessionGalerias";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
+import {
+  useMonthAccessControl,
+  useMonthGalleriasForSession,
+} from "@/features/workflow/presentation/WorkflowMonthDataContext";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 import type { DeleteAction } from "./WorkflowDeleteConfirmModal";
@@ -51,8 +53,8 @@ export function WorkflowCardCollapsed({
   setModalAberto,
 }: WorkflowCardCollapsedProps) {
   const { addPayment, pacotes } = useAppContext();
-  const { hasGaleryAccess, accessState } = useAccessControl();
-  const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
+  const { hasGaleryAccess, accessState } = useMonthAccessControl();
+  const { galerias, hasGalerias } = useMonthGalleriasForSession(session.sessionId || session.id);
 
   const [paymentInput, setPaymentInput] = useState("");
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);

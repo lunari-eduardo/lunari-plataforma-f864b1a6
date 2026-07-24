@@ -27,6 +27,7 @@ import {
   getMonthName,
 } from "@/features/workflow/components/WorkflowMonthSwitcher";
 import { WorkflowTasksDock } from "@/features/workflow/components/WorkflowTasksDock";
+import { WorkflowMonthDataProvider } from "@/features/workflow/presentation/WorkflowMonthDataContext";
 
 import type { CategoryOption, PackageOption, ProductOption } from "@/types/workflow";
 
@@ -103,6 +104,17 @@ function WorkflowContent() {
   // Ids das sessões do mês atual (usado pelo dock para filtrar tarefas-espelho).
   const monthSessionIds = useMemo(
     () => new Set(month.workflowSessions.map((s) => s.id)),
+    [month.workflowSessions],
+  );
+
+  // Slugs textuais + uuids do mês visível — usados pelo Provider batch para
+  // buscar galerias em UMA query em vez de 1 por card.
+  const monthSessionSlugs = useMemo(
+    () => month.workflowSessions.map((s) => s.session_id).filter(Boolean) as string[],
+    [month.workflowSessions],
+  );
+  const monthSessionUuids = useMemo(
+    () => month.workflowSessions.map((s) => s.id),
     [month.workflowSessions],
   );
 
@@ -270,25 +282,30 @@ function WorkflowContent() {
                 </div>
               </div>
             ) : (
-              <WorkflowTable
-                sessions={filters.sortedSessions}
-                statusOptions={getStatusOptions}
-                categoryOptions={categoryOptions}
-                packageOptions={packageOptions}
-                productOptions={productOptions}
-                onStatusChange={actions.handleStatusChange}
-                onEditSession={actions.handleEditSession}
+              <WorkflowMonthDataProvider
+                sessionSlugs={monthSessionSlugs}
+                sessionUuids={monthSessionUuids}
+              >
+                <WorkflowTable
+                  sessions={filters.sortedSessions}
+                  statusOptions={getStatusOptions}
+                  categoryOptions={categoryOptions}
+                  packageOptions={packageOptions}
+                  productOptions={productOptions}
+                  onStatusChange={actions.handleStatusChange}
+                  onEditSession={actions.handleEditSession}
 
-                onDeleteSession={actions.handleDeleteSession}
-                onFieldUpdate={actions.handleFieldUpdate}
-                visibleColumns={columns.visibleColumns}
-                columnWidths={columns.columnWidths}
-                onColumnWidthChange={columns.handleColumnWidthChange}
-                onScrollChange={setScrollLeft}
-                sortField={filters.sortField}
-                sortDirection={filters.sortDirection}
-                onSort={filters.handleSort}
-              />
+                  onDeleteSession={actions.handleDeleteSession}
+                  onFieldUpdate={actions.handleFieldUpdate}
+                  visibleColumns={columns.visibleColumns}
+                  columnWidths={columns.columnWidths}
+                  onColumnWidthChange={columns.handleColumnWidthChange}
+                  onScrollChange={setScrollLeft}
+                  sortField={filters.sortField}
+                  sortDirection={filters.sortDirection}
+                  onSort={filters.handleSort}
+                />
+              </WorkflowMonthDataProvider>
             )}
           </div>
         </div>
