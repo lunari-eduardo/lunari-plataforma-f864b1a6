@@ -81,7 +81,12 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
   // 2) Tarefas normais: SÓ aparecem se tiverem dueDate dentro do mês corrente.
   const mirrorAll = useMemo(() => {
     const all = tasks.filter(isMirrorTask);
-    if (!monthSessionIds || monthSessionIds.size === 0) return all;
+    // Se o caller NÃO passou `monthSessionIds`, não filtra (compat).
+    // Se passou (mesmo vazio), sempre filtra — mês sem sessões = zero espelho.
+    // Antes, o Set vazio caía no early-return e mostrava tarefas de outros
+    // meses como se fossem do mês visível (bug reportado em Maio/2026).
+    if (!monthSessionIds) return all;
+    if (monthSessionIds.size === 0) return [];
     return all.filter((t) => t.relatedSessionId && monthSessionIds.has(t.relatedSessionId));
   }, [tasks, monthSessionIds]);
   const normalMonth = useMemo(() => {
