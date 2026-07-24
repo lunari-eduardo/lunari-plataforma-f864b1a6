@@ -235,7 +235,7 @@ export function useProductTaskMirror(): void {
             } as never,
           );
           if (error) throw error;
-          const row = Array.isArray(data) ? data[0] : data;
+          const row = Array.isArray(data) ? (data[0] as { id?: string } | undefined) : (data as { id?: string } | null);
           if (row?.id) {
             lastWriteByTaskRef.current.set(row.id as string, {
               sig: taskSignature(spec.title, false),
