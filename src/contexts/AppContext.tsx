@@ -841,7 +841,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // ✅ Update otimista IMEDIATO no cache (UI atualiza em <50ms)
       optimisticTarget = binding.session_id;
       window.dispatchEvent(new CustomEvent('payment-optimistic', {
-        detail: { sessionId: optimisticTarget, delta: valor }
+        detail: { sessionId: optimisticTarget, sessionUuid: binding.id, delta: valor }
       }));
 
       const paymentId = `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
