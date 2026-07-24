@@ -270,18 +270,23 @@ export const useAccessControlInternal = (opts?: { enabled?: boolean }): AccessCo
 };
 
 /**
+ * Contexto singleton. `AccessControlProvider` (em contexts/AccessControlContext.tsx)
+ * roda o hook interno UMA vez e injeta aqui. Consumidores individuais NÃO
+ * disparam RPC quando estão dentro do provider.
+ */
+export const AccessControlCtx = createContext<AccessControlValue | null>(null);
+
+/**
  * Hook público. Prefere o singleton do `AccessControlProvider` (evita
  * fan-out de RPC `get_access_state` por consumidor). Sem provider,
  * mantém o comportamento antigo — compat total.
  */
 export const useAccessControl = (): AccessControlValue => {
-  // Import lazy para evitar ciclo com o contexto (que importa este arquivo).
-  // O contexto reexporta apenas tipos e o próprio provider; consumir aqui é seguro.
-  const ctx = require("@/contexts/AccessControlContext").useAccessControlContext?.() as
-    | AccessControlValue
-    | null
-    | undefined;
-  const own = useAccessControlInternal();
+  const ctx = useContext(AccessControlCtx);
+  // `enabled: !ctx` desliga o efeito de rede quando o provider já resolveu.
+  // Ordem de hooks estável — `ctx` é fixo por posição de árvore.
+  const own = useAccessControlInternal({ enabled: !ctx });
   return ctx ?? own;
 };
+
 
