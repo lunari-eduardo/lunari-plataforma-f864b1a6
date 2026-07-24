@@ -318,7 +318,9 @@ function WorkflowContent() {
         currentMonth={month.currentMonth}
         monthSessionIds={monthSessionIds}
         onSessionProductsChange={(sessionId, novosProdutos) =>
-          actions.handleFieldUpdate(sessionId, "produtosList", novosProdutos)
+          // silent=true: dock avança etapa por clique; toast "Sessão atualizada"
+          // é ruído nesse fluxo (a UI já reflete a mudança no card + stepper).
+          actions.handleFieldUpdate(sessionId, "produtosList", novosProdutos, true)
         }
       />
 
