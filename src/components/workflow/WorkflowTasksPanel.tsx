@@ -83,11 +83,39 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
     const all = tasks.filter(isMirrorTask);
     // Se o caller NÃO passou `monthSessionIds`, não filtra (compat).
     // Se passou (mesmo vazio), sempre filtra — mês sem sessões = zero espelho.
-    // Antes, o Set vazio caía no early-return e mostrava tarefas de outros
-    // meses como se fossem do mês visível (bug reportado em Maio/2026).
-    if (!monthSessionIds) return all;
-    if (monthSessionIds.size === 0) return [];
-    return all.filter((t) => t.relatedSessionId && monthSessionIds.has(t.relatedSessionId));
+    const scoped = !monthSessionIds
+      ? all
+      : monthSessionIds.size === 0
+        ? []
+        : all.filter((t) => t.relatedSessionId && monthSessionIds.has(t.relatedSessionId));
+
+    // Dedup defensivo por (sessão + tag do produto). Existem duplicatas reais
+    // na tabela `tasks` (corridas de reconciler entre abas, id determinístico
+    // instável em produtos legados). Enquanto a Fase 2 não impõe UNIQUE no
+    // banco, colapsamos aqui mantendo a linha mais antiga como canônica.
+    const seen = new Map<string, typeof scoped[number]>();
+    for (const t of scoped) {
+      const produtoTag = t.tags?.find((tag) => tag.startsWith("produto:")) ?? "";
+      const key = `${t.relatedSessionId ?? ""}|${produtoTag}`;
+      if (!produtoTag) {
+        // Sem tag de produto: não colapsa, mantém individual por id.
+        seen.set(`__noprod__|${t.id}`, t);
+        continue;
+      }
+      const prev = seen.get(key);
+      if (!prev) {
+        seen.set(key, t);
+        continue;
+      }
+      // Escolhe a canônica: created_at mais antigo, empate por id lexicográfico.
+      const prevCreated = prev.createdAt ?? "";
+      const curCreated = t.createdAt ?? "";
+      const keepCurrent =
+        curCreated < prevCreated ||
+        (curCreated === prevCreated && t.id < prev.id);
+      seen.set(key, keepCurrent ? t : prev);
+    }
+    return Array.from(seen.values());
   }, [tasks, monthSessionIds]);
   const normalMonth = useMemo(() => {
     return tasks.filter((t) => {
