@@ -298,15 +298,22 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
             <section>
               <SectionHeader label="Produção" count={mirrorPending.length} />
               <div className="space-y-1 mt-1">
-                {mirrorPending.map((task) => (
-                  <TaskRowContent
-                    key={task.id}
-                    task={task}
-                    onToggle={() => handleToggleStatus(task)}
-                    onDelete={() => deleteTask(task.id)}
-                    isDone={pendingToggleIds.has(task.id)}
-                  />
-                ))}
+                {mirrorPending.map((task) => {
+                  const progress = readMirrorProgress(task);
+                  const isMultiStage = !!progress && progress.total > 1;
+                  // Multi-etapa nunca é "done" (some quando entregue).
+                  // Etapa única mantém o lock anti-flicker.
+                  const isDone = isMultiStage ? false : pendingToggleIds.has(task.id);
+                  return (
+                    <TaskRowContent
+                      key={task.id}
+                      task={task}
+                      onToggle={() => handleToggleStatus(task)}
+                      onDelete={() => deleteTask(task.id)}
+                      isDone={isDone}
+                    />
+                  );
+                })}
 
               </div>
             </section>
@@ -565,7 +572,7 @@ function TaskRowContent({
                 →
               </button>
               <div className="flex-1 min-w-0">
-                <span className={cn("text-sm leading-snug block truncate", isDone && "line-through text-muted-foreground")}>
+                <span className="text-sm leading-snug block truncate">
                   {title}
                 </span>
                 {subtitle && (
