@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 import { AuthProvider } from "./contexts/AuthContext";
+import { AccessControlProvider } from "./contexts/AccessControlContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
 import { CapabilityRuntimeProvider } from "@/shared/capability";
