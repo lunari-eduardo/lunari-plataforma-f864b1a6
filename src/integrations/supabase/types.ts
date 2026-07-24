@@ -231,6 +231,60 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_invocations: {
+        Row: {
+          actor: string
+          approved_at: string | null
+          approved_by: string | null
+          capability_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          input_hash: string | null
+          kind: string
+          latency_ms: number | null
+          module: string
+          needs_approval: boolean
+          output_status: string
+          ts: string
+          user_id: string
+        }
+        Insert: {
+          actor?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          capability_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_hash?: string | null
+          kind: string
+          latency_ms?: number | null
+          module: string
+          needs_approval?: boolean
+          output_status: string
+          ts?: string
+          user_id: string
+        }
+        Update: {
+          actor?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          capability_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          input_hash?: string | null
+          kind?: string
+          latency_ms?: number | null
+          module?: string
+          needs_approval?: boolean
+          output_status?: string
+          ts?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
