@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 import { AuthProvider } from "./contexts/AuthContext";
+import { AccessControlProvider } from "./contexts/AccessControlContext";
 import ThemeProvider from "./components/theme/ThemeProvider";
 import { VisualThemeProvider } from "./contexts/VisualThemeContext";
 import { CapabilityRuntimeProvider } from "@/shared/capability";
@@ -73,22 +74,24 @@ function App() {
         <ThemeProvider>
           <VisualThemeProvider>
             <AuthProvider>
-              <CapabilityRuntimeProvider>
-                <AgendaInvalidationBridge />
-                <AgendaRealtimeListener />
-                <WorkflowEventBridge />
-                <WorkflowRealtimeBridge />
-                <TasksRealtimeBridge />
-                <AttachmentsRealtimeBridge />
-                <FinanceRealtimeBridge />
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <React.Suspense fallback={<ContextFallback />}>
-                    {context === "admin" ? <AdminApp /> : <PhotographerApp />}
-                  </React.Suspense>
-                </TooltipProvider>
-              </CapabilityRuntimeProvider>
+              <AccessControlProvider>
+                <CapabilityRuntimeProvider>
+                  <AgendaInvalidationBridge />
+                  <AgendaRealtimeListener />
+                  <WorkflowEventBridge />
+                  <WorkflowRealtimeBridge />
+                  <TasksRealtimeBridge />
+                  <AttachmentsRealtimeBridge />
+                  <FinanceRealtimeBridge />
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <React.Suspense fallback={<ContextFallback />}>
+                      {context === "admin" ? <AdminApp /> : <PhotographerApp />}
+                    </React.Suspense>
+                  </TooltipProvider>
+                </CapabilityRuntimeProvider>
+              </AccessControlProvider>
             </AuthProvider>
           </VisualThemeProvider>
         </ThemeProvider>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnlineStatus } from './useOnlineStatus';
@@ -68,7 +68,23 @@ const isAuthError = (error: any): boolean => {
 // Helper para delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const useAccessControl = () => {
+export interface AccessControlValue {
+  accessState: AccessState;
+  loading: boolean;
+  hasPro: boolean;
+  hasGaleryAccess: boolean;
+  refetchAccess: () => Promise<void>;
+}
+
+/**
+ * Implementação interna — 1 RPC `get_access_state` por instância.
+ *
+ * NÃO USE diretamente em componentes. Prefira `useAccessControl` (abaixo),
+ * que consome o singleton `AccessControlProvider` quando disponível e
+ * evita fan-out de RPCs por consumidor.
+ */
+export const useAccessControlInternal = (opts?: { enabled?: boolean }): AccessControlValue => {
+  const enabled = opts?.enabled !== false;
   const { user, loading: authLoading } = useAuth();
   const { isOnline } = useOnlineStatus();
   const [accessState, setAccessState] = useState<AccessState>({ status: 'loading' });
@@ -196,8 +212,10 @@ export const useAccessControl = () => {
   }, [user, checkAccessWithRetry]);
 
   useEffect(() => {
+    if (!enabled) return;
     const checkAccess = async () => {
       if (authLoading) return;
+
 
       if (!user) {
         setAccessState({ status: 'not_authenticated' });
@@ -222,7 +240,7 @@ export const useAccessControl = () => {
     };
 
     checkAccess();
-  }, [user, authLoading, isOnline, checkAccessWithRetry]);
+  }, [user, authLoading, isOnline, checkAccessWithRetry, enabled]);
 
   // Auto-retry quando voltar online
   useEffect(() => {
@@ -248,5 +266,27 @@ export const useAccessControl = () => {
      accessState.planCode?.includes('combo') ||
      accessState.planCode?.includes('galery'));
 
-  return { accessState, loading, hasPro, hasGaleryAccess, refetchAccess };
+  return { accessState, loading, hasPro: !!hasPro, hasGaleryAccess: !!hasGaleryAccess, refetchAccess };
 };
+
+/**
+ * Contexto singleton. `AccessControlProvider` (em contexts/AccessControlContext.tsx)
+ * roda o hook interno UMA vez e injeta aqui. Consumidores individuais NÃO
+ * disparam RPC quando estão dentro do provider.
+ */
+export const AccessControlCtx = createContext<AccessControlValue | null>(null);
+
+/**
+ * Hook público. Prefere o singleton do `AccessControlProvider` (evita
+ * fan-out de RPC `get_access_state` por consumidor). Sem provider,
+ * mantém o comportamento antigo — compat total.
+ */
+export const useAccessControl = (): AccessControlValue => {
+  const ctx = useContext(AccessControlCtx);
+  // `enabled: !ctx` desliga o efeito de rede quando o provider já resolveu.
+  // Ordem de hooks estável — `ctx` é fixo por posição de árvore.
+  const own = useAccessControlInternal({ enabled: !ctx });
+  return ctx ?? own;
+};
+
+
