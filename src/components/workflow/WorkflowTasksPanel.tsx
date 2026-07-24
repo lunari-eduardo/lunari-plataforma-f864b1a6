@@ -553,6 +553,7 @@ function TaskRowContent({
 
       {(() => {
         const { title, subtitle } = deriveMirrorDisplay(task);
+        const progress = readMirrorProgress(task);
         return (
           <div className="flex-1 min-w-0">
             <span
@@ -571,6 +572,25 @@ function TaskRowContent({
             {task.dueDate && !subtitle && (
               <span className="text-[10px] text-muted-foreground">
                 {format(parseISO(task.dueDate), "dd MMM", { locale: ptBR })}
+              </span>
+            )}
+            {progress && !isDone && (
+              <span
+                className="mt-0.5 inline-flex items-center gap-0.5"
+                title={`Etapa ${progress.done}/${progress.total} — clique avança`}
+              >
+                {Array.from({ length: progress.total }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "h-1 w-3 rounded-full transition-colors",
+                      i < progress.done ? "bg-primary/70" : "bg-muted"
+                    )}
+                  />
+                ))}
+                <span className="ml-1 text-[9px] tabular-nums text-muted-foreground/80">
+                  {progress.done}/{progress.total}
+                </span>
               </span>
             )}
           </div>
