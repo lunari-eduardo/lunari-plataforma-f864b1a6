@@ -35,10 +35,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/tasks";
-import { MIRROR_ROOT_TAG } from "@/features/workflow/domain/productTaskMirror";
+import { MIRROR_ROOT_TAG, extractProdutoIdFromTask } from "@/features/workflow/domain/productTaskMirror";
 import { isMirrorTask } from "@/features/workflow/domain/taskClassification";
 import { useMirrorToggleHandler } from "@/features/workflow/realtime/useProductTaskMirror";
-import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
+import { hydrateProduto, type ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
+import { workflowStore } from "@/features/workflow/store/workflowStore";
 
 /** Deriva título/subtítulo enxuto para tarefas-espelho.
  *  Formato completo: "<Etapa> — <Produto> · <Cliente>". */
@@ -47,6 +48,22 @@ function deriveMirrorDisplay(task: Task): { title: string; subtitle?: string } {
   const [etapa, resto] = task.title.split(" — ");
   if (!resto) return { title: task.title };
   return { title: etapa.trim(), subtitle: resto.trim() };
+}
+
+/** Lê etapas atuais do produto no workflowStore para renderizar stepper `1/3`. */
+function readMirrorProgress(task: Task): { done: number; total: number } | null {
+  if (!task.tags?.includes(MIRROR_ROOT_TAG)) return null;
+  const sessionId = task.relatedSessionId;
+  const produtoId = extractProdutoIdFromTask(task);
+  if (!sessionId || !produtoId) return null;
+  const session = workflowStore.getById(sessionId);
+  const produtos = ((session as any)?.produtos_incluidos ?? []) as ProdutoWorkflowFlow[];
+  const raw = produtos.find((p: any) => p?.id === produtoId);
+  if (!raw) return null;
+  const hydrated = hydrateProduto(raw);
+  const etapas = hydrated.etapas ?? [];
+  if (etapas.length <= 1) return null;
+  return { done: etapas.filter((e) => e.done).length, total: etapas.length };
 }
 
 interface WorkflowTasksPanelProps {
@@ -201,7 +218,9 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
       try {
         await toggleMirror(task, nextIsDone);
       } finally {
-        // Libera após pequena janela pra evitar re-clique antes do realtime propagar.
+        // Janela alinhada ao mirrorMemoStore (8s) — evita a checkbox
+        // "piscar" para o valor antigo enquanto realtime propaga a
+        // atualização do produto e o reconciliador reajusta a tarefa.
         setTimeout(() => {
           setPendingToggleIds((prev) => {
             if (!prev.has(task.id)) return prev;
@@ -209,7 +228,7 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
             n.delete(task.id);
             return n;
           });
-        }, 400);
+        }, 8500);
       }
       return;
     }
@@ -534,6 +553,7 @@ function TaskRowContent({
 
       {(() => {
         const { title, subtitle } = deriveMirrorDisplay(task);
+        const progress = readMirrorProgress(task);
         return (
           <div className="flex-1 min-w-0">
             <span
@@ -552,6 +572,25 @@ function TaskRowContent({
             {task.dueDate && !subtitle && (
               <span className="text-[10px] text-muted-foreground">
                 {format(parseISO(task.dueDate), "dd MMM", { locale: ptBR })}
+              </span>
+            )}
+            {progress && !isDone && (
+              <span
+                className="mt-0.5 inline-flex items-center gap-0.5"
+                title={`Etapa ${progress.done}/${progress.total} — clique avança`}
+              >
+                {Array.from({ length: progress.total }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "h-1 w-3 rounded-full transition-colors",
+                      i < progress.done ? "bg-primary/70" : "bg-muted"
+                    )}
+                  />
+                ))}
+                <span className="ml-1 text-[9px] tabular-nums text-muted-foreground/80">
+                  {progress.done}/{progress.total}
+                </span>
               </span>
             )}
           </div>
