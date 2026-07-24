@@ -20,6 +20,28 @@ import { workflowStore } from "../store/workflowStore";
 import { eventBus } from "@/shared/event-bus";
 import type { WorkflowSession } from "../domain/session";
 
+/**
+ * Onda 1 do plano "Realtime end-to-end" — resolve `session_id` textual
+ * (slug workflow-*) para o UUID canônico via cache local, sem hop no DB.
+ * Emite apenas `workflow-session-financials-stale` (não reidrata a linha
+ * inteira da sessão, só invalida os financeiros no `useSessionFinancials`).
+ */
+function emitFinancialsStaleBySlug(sessionText: string | null | undefined) {
+  if (!sessionText || typeof window === "undefined") return;
+  const cached = workflowStore.getBySessionId(sessionText);
+  const uuid = cached?.id ?? null;
+  try {
+    window.dispatchEvent(
+      new CustomEvent("workflow-session-financials-stale", {
+        detail: { sessionId: uuid, sessionSlug: sessionText, source: "realtime-v2" },
+      }),
+    );
+  } catch {
+    /* noop */
+  }
+}
+
+
 type Stats = { upserts: number; removes: number; ignored: number; lastEventAt: number };
 
 const IDLE_RESUB_MS = 5 * 60 * 1000; // 5 min sem eventos → resubscribe preventivo
