@@ -572,7 +572,7 @@ function TaskRowContent({
                 →
               </button>
               <div className="flex-1 min-w-0">
-                <span className={cn("text-sm leading-snug block truncate", isDone && "line-through text-muted-foreground")}>
+                <span className="text-sm leading-snug block truncate">
                   {title}
                 </span>
                 {subtitle && (
