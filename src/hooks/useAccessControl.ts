@@ -263,5 +263,22 @@ export const useAccessControlInternal = (): AccessControlValue => {
      accessState.planCode?.includes('combo') ||
      accessState.planCode?.includes('galery'));
 
-  return { accessState, loading, hasPro, hasGaleryAccess, refetchAccess };
+  return { accessState, loading, hasPro: !!hasPro, hasGaleryAccess: !!hasGaleryAccess, refetchAccess };
 };
+
+/**
+ * Hook público. Prefere o singleton do `AccessControlProvider` (evita
+ * fan-out de RPC `get_access_state` por consumidor). Sem provider,
+ * mantém o comportamento antigo — compat total.
+ */
+export const useAccessControl = (): AccessControlValue => {
+  // Import lazy para evitar ciclo com o contexto (que importa este arquivo).
+  // O contexto reexporta apenas tipos e o próprio provider; consumir aqui é seguro.
+  const ctx = require("@/contexts/AccessControlContext").useAccessControlContext?.() as
+    | AccessControlValue
+    | null
+    | undefined;
+  const own = useAccessControlInternal();
+  return ctx ?? own;
+};
+
