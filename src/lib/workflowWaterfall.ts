@@ -82,7 +82,32 @@ declare global {
 
 }
 
-if (import.meta.env.DEV && typeof window !== "undefined") {
+// Gate em runtime: dev local, preview Lovable (id-preview--*), ou opt-in via ?wf=1 / sessionStorage.
+const __wfEnabled = (() => {
+  if (typeof window === "undefined") return false;
+  if (import.meta.env.DEV) return true;
+  try {
+    const host = window.location.hostname;
+    if (/(^|\.)id-preview--/.test(host)) return true;
+    if (new URLSearchParams(window.location.search).has("wf")) {
+      sessionStorage.setItem("wf:enabled", "1");
+      return true;
+    }
+    if (sessionStorage.getItem("wf:enabled") === "1") return true;
+  } catch { /* ignore */ }
+  return false;
+})();
+
+// Referências ao console capturadas via variável — esbuild `drop: ['console']`
+// só remove chamadas SINTÁTICAS a `console.*`, não acessos indiretos.
+const __c: Console | undefined = typeof window !== "undefined" ? (window as any).console : undefined;
+const __log = (...a: any[]) => __c?.log?.(...a);
+const __warn = (...a: any[]) => __c?.warn?.(...a);
+const __table = (rows: any) => __c?.table?.(rows);
+const __groupCollapsed = (label: string) => __c?.groupCollapsed?.(label);
+const __groupEnd = () => __c?.groupEnd?.();
+
+if (__wfEnabled && typeof window !== "undefined") {
   let session: Session | null = null;
   let seq = 0;
   let pendingTag: string | undefined;
