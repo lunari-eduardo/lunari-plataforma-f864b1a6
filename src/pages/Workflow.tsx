@@ -107,6 +107,17 @@ function WorkflowContent() {
     [month.workflowSessions],
   );
 
+  // Slugs textuais + uuids do mês visível — usados pelo Provider batch para
+  // buscar galerias em UMA query em vez de 1 por card.
+  const monthSessionSlugs = useMemo(
+    () => month.workflowSessions.map((s) => s.session_id).filter(Boolean) as string[],
+    [month.workflowSessions],
+  );
+  const monthSessionUuids = useMemo(
+    () => month.workflowSessions.map((s) => s.id),
+    [month.workflowSessions],
+  );
+
   // ── Mapeamento de opções ────────────────────────────────────────────
   const categoryOptions: CategoryOption[] = categorias.map((cat, i) => ({
     id: String(i + 1),
