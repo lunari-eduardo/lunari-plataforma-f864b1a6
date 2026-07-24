@@ -197,10 +197,9 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       // Normalize the response to always have both checkoutUrl and paymentLink.
       // Preferir URL branded /l/{id} (preview no WhatsApp com logo do fotógrafo)
       // quando o backend retornar cobrancaId; senão manter o link original.
+      const { buildPaymentShareUrl } = await import('@/utils/domainUtils');
       const rawUrl = result.checkoutUrl || result.paymentLink;
-      const shareUrl = (result as any).cobrancaId
-        ? `${(await import('@/utils/domainUtils')).buildPaymentShareUrl((result as any).cobrancaId)}`
-        : rawUrl;
+      const shareUrl = result.cobrancaId ? buildPaymentShareUrl(result.cobrancaId) : rawUrl;
       return {
         ...result,
         provedor,

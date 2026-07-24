@@ -58,6 +58,7 @@ export interface CreateCobrancaRequest {
 export interface CobrancaResponse {
   success: boolean;
   cobranca?: Cobranca;
+  cobrancaId?: string;
   error?: string;
   provedor?: ProvedorPagamento;
   // Pix specific (Mercado Pago only)
