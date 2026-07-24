@@ -15,8 +15,9 @@
  *
  * DESIGN
  * ------
- * - 100% guardado por `import.meta.env.DEV`. Zero impacto em produção
- *   (o bundle nem inclui o corpo — Vite dead-code-elimina o bloco).
+  * - API global sempre registrada para diagnóstico (`window.__wf`).
+  * - Interceptação de `fetch` só é instalada em dev/preview ou quando o usuário
+  *   opta explicitamente via `__wf.start()`, `__wf.arm()` ou `?wf=1`.
  * - Não altera comportamento: apenas intercepta `fetch` para medir.
  * - Não faz upload de nada. Só imprime no console e expõe helpers
  *   em `window.__wf` para inspeção manual.
@@ -107,10 +108,12 @@ const __table = (rows: any) => __c?.table?.(rows);
 const __groupCollapsed = (label: string) => __c?.groupCollapsed?.(label);
 const __groupEnd = () => __c?.groupEnd?.();
 
-if (__wfEnabled && typeof window !== "undefined") {
+if (typeof window !== "undefined") {
   let session: Session | null = null;
+  let lastSession: Session | null = null;
   let seq = 0;
   let pendingTag: string | undefined;
+  let installed = false;
 
   const ARM_KEY = "__wf_arm";
 
@@ -145,77 +148,88 @@ if (__wfEnabled && typeof window !== "undefined") {
   const relevantForCapture = (kind: CallKind) =>
     kind === "rest" || kind === "rpc" || kind === "edge" || kind === "auth";
 
-  const orig = window.fetch.bind(window);
-  window.fetch = async (input: any, init?: any) => {
-    const url = typeof input === "string" ? input : input?.url ?? "";
-    const method = (init?.method ?? (typeof input !== "string" && input?.method) ?? "GET").toUpperCase();
-    const { kind, label } = classify(url);
-
-    // Só captura se há sessão ativa E é chamada de interesse.
-    const capture = session != null && relevantForCapture(kind);
-    let rec: CallRecord | null = null;
-    if (capture && session) {
-      rec = {
-        id: ++seq,
-        kind,
-        method,
-        url: url.replace(/apikey=[^&]+/, "apikey=…"),
-        label,
-        startMs: now() - session.startedAt,
-        tag: pendingTag,
-      };
-      pendingTag = undefined;
-      session.calls.push(rec);
+  const ensureInstalled = () => {
+    if (installed) return true;
+    if (typeof window.fetch !== "function") {
+      __warn("[waterfall] fetch indisponível neste contexto");
+      return false;
     }
 
-    try {
-      const res = await orig(input, init);
-      if (rec && session) {
-        rec.endMs = now() - session.startedAt;
-        rec.durationMs = rec.endMs - rec.startMs;
-        rec.status = res.status;
-        rec.ok = res.ok;
-        // Medir payload sem consumir o body original.
-        try {
-          const clone = res.clone();
-          clone
-            .arrayBuffer()
-            .then((buf) => {
-              if (rec) rec.bytes = buf.byteLength;
-            })
-            .catch(() => void 0);
-        } catch {
-          /* ignore */
+    const orig = window.fetch.bind(window);
+    window.fetch = async (input: any, init?: any) => {
+      const url = typeof input === "string" ? input : input?.url ?? "";
+      const method = (init?.method ?? (typeof input !== "string" && input?.method) ?? "GET").toUpperCase();
+      const { kind, label } = classify(url);
+
+      // Só captura se há sessão ativa E é chamada de interesse.
+      const capture = session != null && relevantForCapture(kind);
+      let rec: CallRecord | null = null;
+      if (capture && session) {
+        rec = {
+          id: ++seq,
+          kind,
+          method,
+          url: url.replace(/apikey=[^&]+/, "apikey=…"),
+          label,
+          startMs: now() - session.startedAt,
+          tag: pendingTag,
+        };
+        pendingTag = undefined;
+        session.calls.push(rec);
+      }
+
+      try {
+        const res = await orig(input, init);
+        if (rec && session) {
+          rec.endMs = now() - session.startedAt;
+          rec.durationMs = rec.endMs - rec.startMs;
+          rec.status = res.status;
+          rec.ok = res.ok;
+          // Medir payload sem consumir o body original.
+          try {
+            const clone = res.clone();
+            clone
+              .arrayBuffer()
+              .then((buf) => {
+                if (rec) rec.bytes = buf.byteLength;
+              })
+              .catch(() => void 0);
+          } catch {
+            /* ignore */
+          }
         }
+        return res;
+      } catch (err: any) {
+        if (rec && session) {
+          rec.endMs = now() - session.startedAt;
+          rec.durationMs = rec.endMs - rec.startMs;
+          rec.error = err?.message ?? String(err);
+        }
+        throw err;
       }
-      return res;
-    } catch (err: any) {
-      if (rec && session) {
-        rec.endMs = now() - session.startedAt;
-        rec.durationMs = rec.endMs - rec.startMs;
-        rec.error = err?.message ?? String(err);
-      }
-      throw err;
-    }
-  };
+    };
 
-  // ---------- Render timing via PerformanceObserver ----------
-  try {
-    const po = new PerformanceObserver((list) => {
-      if (!session) return;
-      for (const entry of list.getEntries()) {
-        // "measure" cobre React DevTools/Profiler & manual marks.
-        session.renderCommits.push({
-          t: entry.startTime - session.startedAt,
-          durationMs: entry.duration,
-          phase: entry.name,
-        });
-      }
-    });
-    po.observe({ entryTypes: ["measure", "paint", "longtask"] as any });
-  } catch {
-    /* PerformanceObserver não disponível */
-  }
+    // ---------- Render timing via PerformanceObserver ----------
+    try {
+      const po = new PerformanceObserver((list) => {
+        if (!session) return;
+        for (const entry of list.getEntries()) {
+          // "measure" cobre React DevTools/Profiler & manual marks.
+          session.renderCommits.push({
+            t: entry.startTime - session.startedAt,
+            durationMs: entry.duration,
+            phase: entry.name,
+          });
+        }
+      });
+      po.observe({ entryTypes: ["measure", "paint", "longtask"] as any });
+    } catch {
+      /* PerformanceObserver não disponível */
+    }
+
+    installed = true;
+    return true;
+  };
 
   // ---------- API pública ----------
   const printTable = (s: Session) => {
@@ -272,8 +286,9 @@ if (__wfEnabled && typeof window !== "undefined") {
     __groupEnd();
   };
 
-  window.__wf = {
+  const api: NonNullable<Window["__wf"]> = {
     start(name = "waterfall") {
+      ensureInstalled();
       session = {
         name,
         startedAt: now(),
@@ -293,6 +308,7 @@ if (__wfEnabled && typeof window !== "undefined") {
       }
       const s = session;
       session = null;
+      lastSession = s;
       // Aguardar um tick para deixar o arrayBuffer() dos últimos fechar.
       setTimeout(() => printTable(s), 50);
       return s;
@@ -306,15 +322,15 @@ if (__wfEnabled && typeof window !== "undefined") {
       pendingTag = label;
     },
     current() {
-      return session;
+      return session ?? lastSession;
     },
     export() {
-      if (!session && !window.__wf?.current()) {
+      const s = session ?? lastSession;
+      if (!s) {
         // eslint-disable-next-line no-console
         __warn("[waterfall] nada para exportar");
         return;
       }
-      const s = session ?? window.__wf!.current()!;
       const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -323,39 +339,49 @@ if (__wfEnabled && typeof window !== "undefined") {
       URL.revokeObjectURL(a.href);
     },
     print() {
-      if (!session) return;
-      printTable(session);
+      const s = session ?? lastSession;
+      if (!s) return;
+      printTable(s);
     },
     arm(name = "cold-load") {
       try {
+        sessionStorage.setItem("wf:enabled", "1");
         sessionStorage.setItem(ARM_KEY, name);
         // eslint-disable-next-line no-console
         __log(`[waterfall] ARMADO: captura iniciará automaticamente no próximo load como "${name}". Faça o hard-refresh agora (Ctrl+Shift+R).`);
       } catch { /* ignore */ }
     },
     disarm() {
-      try { sessionStorage.removeItem(ARM_KEY); } catch { /* ignore */ }
+      try {
+        sessionStorage.removeItem(ARM_KEY);
+        sessionStorage.removeItem("wf:enabled");
+      } catch { /* ignore */ }
       // eslint-disable-next-line no-console
       __log("[waterfall] desarmado");
     },
   };
+
+  window.__wf = api;
+  (globalThis as { __wf?: Window["__wf"] }).__wf = api;
 
   // Auto-start se foi armado antes de um refresh.
   try {
     const armed = sessionStorage.getItem(ARM_KEY);
     if (armed) {
       sessionStorage.removeItem(ARM_KEY);
-      window.__wf!.start(armed);
+      api.start(armed);
     }
   } catch { /* ignore */ }
 
-
-  // eslint-disable-next-line no-console
-  __log(
-    "%c[waterfall] pronto",
-    "background:#b0632f;color:#fff;padding:2px 6px;border-radius:3px;font-weight:600",
-    "— use __wf.arm('cold-julho') e depois Ctrl+Shift+R",
-  );
+  if (__wfEnabled || sessionStorage.getItem("wf:enabled") === "1") {
+    ensureInstalled();
+    // eslint-disable-next-line no-console
+    __log(
+      "%c[waterfall] pronto",
+      "background:#b0632f;color:#fff;padding:2px 6px;border-radius:3px;font-weight:600",
+      "— use __wf.arm('cold-julho') e depois Ctrl+Shift+R",
+    );
+  }
 }
 
 export {};
