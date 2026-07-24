@@ -819,8 +819,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addPayment = useCallback(async (id: string, valor: number) => {
     console.log('💰 Adicionando pagamento rápido:', { id, valor });
 
-    // Chave de intenção: deduplica cliques duplos (janela de 2s) no mesmo valor
-    const intentKey = `quick:${id}:${valor.toFixed(2)}:${Math.floor(Date.now() / 2000)}`;
+    // Chave de intenção: deduplica cliques duplos (janela de 2s) no mesmo valor.
+    // Sufixo ":sessao" marca escopo canônico → RPC waterfall aloca à sessão primeiro.
+    const intentKey = `quick:${id}:${valor.toFixed(2)}:${Math.floor(Date.now() / 2000)}:sessao`;
     let optimisticTarget: string | null = null;
 
     try {
