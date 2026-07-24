@@ -28,6 +28,7 @@ import { useSupabaseTaskStatuses } from "@/hooks/useSupabaseTaskStatuses";
 import { useRunCapability } from "@/shared/capability";
 import { createTask, updateTask } from "@/modules/tasks";
 import { tasksStore } from "@/modules/tasks/presentation/store/tasksStore";
+import { supabase } from "@/integrations/supabase/client";
 import { isOk } from "@/shared/result";
 import type { Task } from "@/types/tasks";
 import type { WorkflowSession } from "@/features/workflow/domain/session";
