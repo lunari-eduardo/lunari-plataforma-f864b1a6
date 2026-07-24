@@ -463,9 +463,10 @@ export function ChargeModal({
 
       if (insertError || !cobranca) throw new Error('Erro ao criar cobrança');
 
-      // Generate internal checkout URL using canonical production domain
-      const { getPublicShareBaseUrl } = await import('@/utils/domainUtils');
-      const checkoutUrl = `${getPublicShareBaseUrl()}/checkout/${cobranca.id}`;
+      // URL branded para WhatsApp: /l/{id} devolve OG dinâmico com logo do
+      // fotógrafo e redireciona humanos para /checkout/{id} (PublicCheckout).
+      const { buildPaymentShareUrl } = await import('@/utils/domainUtils');
+      const checkoutUrl = buildPaymentShareUrl(cobranca.id);
 
       setCurrentCharge({
         paymentLink: checkoutUrl,
@@ -505,7 +506,13 @@ export function ChargeModal({
       setSelectedProvider('pix_manual');
     }
     
-    const linkUrl = cobranca.ipCheckoutUrl || cobranca.mpPaymentLink;
+    // Para provedores tipo "link" (asaas/mercadopago/infinitepay) usamos a URL
+    // branded /l/{id} — devolve OG dinâmico e redireciona ao checkout correto.
+    // Fallback para o link do provedor apenas se, por qualquer motivo, id faltar.
+    const { buildPaymentShareUrl } = require('@/utils/domainUtils') as typeof import('@/utils/domainUtils');
+    const linkUrl = cobranca.id
+      ? buildPaymentShareUrl(cobranca.id)
+      : (cobranca.ipCheckoutUrl || cobranca.mpPaymentLink);
     setCurrentCharge({
       qrCode: cobranca.mpQrCode,
       qrCodeBase64: cobranca.mpQrCodeBase64,
