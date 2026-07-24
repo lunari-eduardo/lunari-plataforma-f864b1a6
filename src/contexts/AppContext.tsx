@@ -918,7 +918,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Reverter otimista se ainda estava ativo
       if (optimisticTarget) {
         window.dispatchEvent(new CustomEvent('payment-optimistic', {
-          detail: { sessionId: optimisticTarget, delta: -valor }
+          detail: { sessionId: optimisticTarget, sessionUuid: binding.id, delta: -valor }
         }));
       }
       console.error('❌ Erro ao adicionar pagamento:', error);
