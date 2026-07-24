@@ -80,6 +80,7 @@ export function GerenciarProdutosModal({
   const [addOpen, setAddOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
 
   const pendingCommitRef = useRef<ProdutoWorkflowFlow[] | null>(null);
   const commitTimerRef = useRef<number | null>(null);
@@ -179,6 +180,7 @@ export function GerenciarProdutosModal({
       setResetSignal(true);
       requestAnimationFrame(() => setResetSignal(false));
       dirtyIdsRef.current = new Set();
+      deletedIdsRef.current = new Set();
       setAddOpen(false);
       setSaveState("idle");
     }
@@ -217,10 +219,17 @@ export function GerenciarProdutosModal({
     });
 
     setLocalProdutos((prev) => {
-      if (prev.length === 0) return hydratedProps;
+      const hasPending = !!pendingCommitRef.current || dirtyIdsRef.current.size > 0;
+      // Só rehidrata do zero se o local está vazio E não há nada pendente.
+      // Sem essa guarda, a última remoção reaparecia até o round-trip do parent.
+      if (prev.length === 0 && !hasPending && deletedIdsRef.current.size === 0) {
+        return hydratedProps;
+      }
       const dirty = dirtyIdsRef.current;
+      const deleted = deletedIdsRef.current;
       const prevById = new Map(prev.map((p) => [p.id ?? "", p]));
-      const merged = hydratedProps.map((incoming) => {
+      const filteredIncoming = hydratedProps.filter((p) => !(p.id && deleted.has(p.id)));
+      const merged = filteredIncoming.map((incoming) => {
         const id = incoming.id ?? "";
         if (id && dirty.has(id)) {
           const local = prevById.get(id);
@@ -228,9 +237,11 @@ export function GerenciarProdutosModal({
         }
         return incoming;
       });
-      const incomingIds = new Set(hydratedProps.map((p) => p.id));
+      const incomingIds = new Set(filteredIncoming.map((p) => p.id));
       for (const p of prev) {
-        if (!incomingIds.has(p.id) && p.id && dirty.has(p.id)) merged.push(p);
+        if (!incomingIds.has(p.id) && p.id && dirty.has(p.id) && !deleted.has(p.id)) {
+          merged.push(p);
+        }
       }
       return merged;
     });
@@ -283,7 +294,10 @@ export function GerenciarProdutosModal({
     mutate(
       (prev) => {
         const p = prev[index];
-        if (p?.id) dirtyIdsRef.current.add(p.id);
+        if (p?.id) {
+          dirtyIdsRef.current.add(p.id);
+          deletedIdsRef.current.add(p.id);
+        }
         return prev.filter((_, i) => i !== index);
       },
       { immediate: true },

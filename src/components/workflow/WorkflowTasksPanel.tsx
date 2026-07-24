@@ -545,55 +545,82 @@ function TaskRowContent({
         <span className="w-3.5" />
       )}
 
-      <Checkbox
-        checked={isDone}
-        onCheckedChange={() => onToggle()}
-        className="mt-0.5 h-3.5 w-3.5"
-      />
-
       {(() => {
         const { title, subtitle } = deriveMirrorDisplay(task);
         const progress = readMirrorProgress(task);
-        return (
-          <div className="flex-1 min-w-0">
-            <span
-              className={cn(
-                "text-sm leading-snug block truncate",
-                isDone && "line-through text-muted-foreground"
-              )}
-            >
-              {title}
-            </span>
-            {subtitle && (
-              <span className="text-[10px] text-muted-foreground block truncate">
-                {subtitle}
-              </span>
-            )}
-            {task.dueDate && !subtitle && (
-              <span className="text-[10px] text-muted-foreground">
-                {format(parseISO(task.dueDate), "dd MMM", { locale: ptBR })}
-              </span>
-            )}
-            {progress && !isDone && (
-              <span
-                className="mt-0.5 inline-flex items-center gap-0.5"
-                title={`Etapa ${progress.done}/${progress.total} — clique avança`}
+        const mirror = isMirrorTask(task);
+        const isMultiStage = mirror && progress && progress.total > 1;
+
+        if (isMultiStage) {
+          // Multi-etapa: substitui checkbox por botão "avançar" com stepper.
+          // Evita o feedback confuso (marca → desmarca) quando a tarefa
+          // permanece open porque ainda restam etapas.
+          return (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                className="mt-0.5 h-4 w-4 rounded-sm border border-primary/40 bg-primary/5 hover:bg-primary/15 flex items-center justify-center text-primary text-[9px] leading-none tabular-nums transition-colors"
+                title={`Avançar etapa (${progress!.done}/${progress!.total})`}
               >
-                {Array.from({ length: progress.total }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "h-1 w-3 rounded-full transition-colors",
-                      i < progress.done ? "bg-primary/70" : "bg-muted"
-                    )}
-                  />
-                ))}
-                <span className="ml-1 text-[9px] tabular-nums text-muted-foreground/80">
-                  {progress.done}/{progress.total}
+                →
+              </button>
+              <div className="flex-1 min-w-0">
+                <span className={cn("text-sm leading-snug block truncate", isDone && "line-through text-muted-foreground")}>
+                  {title}
                 </span>
+                {subtitle && (
+                  <span className="text-[10px] text-muted-foreground block truncate">{subtitle}</span>
+                )}
+                <span
+                  className="mt-0.5 inline-flex items-center gap-0.5"
+                  title={`Etapa ${progress!.done}/${progress!.total} — clique avança`}
+                >
+                  {Array.from({ length: progress!.total }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={cn(
+                        "h-1 w-3 rounded-full transition-colors",
+                        i < progress!.done ? "bg-primary/70" : "bg-muted"
+                      )}
+                    />
+                  ))}
+                  <span className="ml-1 text-[9px] tabular-nums text-muted-foreground/80">
+                    {progress!.done}/{progress!.total}
+                  </span>
+                </span>
+              </div>
+            </>
+          );
+        }
+
+        return (
+          <>
+            <Checkbox
+              checked={isDone}
+              onCheckedChange={() => onToggle()}
+              className="mt-0.5 h-3.5 w-3.5"
+            />
+            <div className="flex-1 min-w-0">
+              <span
+                className={cn(
+                  "text-sm leading-snug block truncate",
+                  isDone && "line-through text-muted-foreground"
+                )}
+              >
+                {title}
               </span>
-            )}
-          </div>
+              {subtitle && (
+                <span className="text-[10px] text-muted-foreground block truncate">
+                  {subtitle}
+                </span>
+              )}
+              {task.dueDate && !subtitle && (
+                <span className="text-[10px] text-muted-foreground">
+                  {format(parseISO(task.dueDate), "dd MMM", { locale: ptBR })}
+                </span>
+              )}
+            </div>
+          </>
         );
       })()}
 
