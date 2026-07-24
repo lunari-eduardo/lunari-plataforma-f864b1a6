@@ -27,6 +27,7 @@ import {
   getMonthName,
 } from "@/features/workflow/components/WorkflowMonthSwitcher";
 import { WorkflowTasksDock } from "@/features/workflow/components/WorkflowTasksDock";
+import { WorkflowMonthDataProvider } from "@/features/workflow/presentation/WorkflowMonthDataContext";
 
 import type { CategoryOption, PackageOption, ProductOption } from "@/types/workflow";
 
