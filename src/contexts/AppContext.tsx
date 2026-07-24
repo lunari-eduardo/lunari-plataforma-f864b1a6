@@ -910,7 +910,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Disparar evento autoritativo (busca valor_pago real do trigger)
       window.dispatchEvent(new CustomEvent('payment-created', {
-        detail: { sessionId: binding.session_id, paymentId, valor }
+        detail: { sessionId: binding.session_id, sessionUuid: binding.id, paymentId, valor }
       }));
 
       console.log('✅ Pagamento adicionado:', valor, 'sessão:', binding.session_id);
