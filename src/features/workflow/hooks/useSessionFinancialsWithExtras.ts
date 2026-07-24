@@ -67,15 +67,12 @@ export function useSessionFinancialsWithExtras(
     const extrasPagoCobranca = financials.extras_pago;
     const baseSessao = Math.max(0, totalVisual - extrasLiquido);
 
-    // ===== Alocação "sessão primeiro, extras depois" =====
-    // 1. Reserva do que foi pago EXPLICITAMENTE em cobranças de extras.
-    // 2. O restante do pago vai primeiro para a sessão; sobra vai para extras.
-    const reservadoExtras = Math.min(extrasPagoCobranca, extrasLiquido);
-    const pagoLivre = Math.max(0, pagoTotal - reservadoExtras);
-    const pagoSessao = Math.min(pagoLivre, baseSessao);
-    const sobraParaExtras = Math.max(0, pagoLivre - baseSessao);
-    const extrasPagoDisplay = Math.min(extrasLiquido, reservadoExtras + sobraParaExtras);
+    // Fonte única de verdade: a RPC `workflow_session_financials` já aplica o
+    // waterfall "sessão primeiro, extras depois". Não recalculamos nada aqui —
+    // qualquer matemática duplicada só mascara futuros bugs.
+    const extrasPagoDisplay = Math.min(extrasLiquido, extrasPagoCobranca);
     const extrasPendDisplay = Math.max(0, extrasLiquido - extrasPagoDisplay);
+    const pagoSessao = Math.max(0, pagoTotal - extrasPagoDisplay);
     const pendenteSess = Math.max(0, baseSessao - pagoSessao);
     const hasGaleria = Boolean(galeriaId) || financials.qtd_extras_galeria > 0;
 
@@ -85,6 +82,7 @@ export function useSessionFinancialsWithExtras(
     const qtdExtrasPagas = unit > 0
       ? Math.min(financials.qtd_fotos_extra, Math.round(extrasPagoDisplay / unit))
       : 0;
+
 
     return {
       baseSessao: Number(baseSessao.toFixed(2)),
