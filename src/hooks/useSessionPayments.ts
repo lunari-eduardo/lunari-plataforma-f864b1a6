@@ -844,6 +844,14 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       };
       setPayments(prev => [...prev, estorno]);
 
+      // Notifica card/footer para invalidar financeiros imediatamente.
+      window.dispatchEvent(new CustomEvent('payment-optimistic', {
+        detail: { sessionId, sessionUuid: sessionId },
+      }));
+      window.dispatchEvent(new CustomEvent('payment-created', {
+        detail: { sessionId, sessionUuid: sessionId },
+      }));
+
       if (keepAsCredit) {
         const { toast } = await import('sonner');
         toast.success('Estorno registrado e valor mantido como crédito do cliente');
@@ -851,6 +859,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     }
     return success;
   }, [sessionId, payments]);
+
 
   // Marcar como pago (atualiza de pendente para pago no Supabase).
   // Se o UPDATE no banco falhar, reverte o estado local e avisa o usuário.
