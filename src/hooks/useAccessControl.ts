@@ -68,7 +68,22 @@ const isAuthError = (error: any): boolean => {
 // Helper para delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const useAccessControl = () => {
+export interface AccessControlValue {
+  accessState: AccessState;
+  loading: boolean;
+  hasPro: boolean;
+  hasGaleryAccess: boolean;
+  refetchAccess: () => Promise<void>;
+}
+
+/**
+ * Implementação interna — 1 RPC `get_access_state` por instância.
+ *
+ * NÃO USE diretamente em componentes. Prefira `useAccessControl` (abaixo),
+ * que consome o singleton `AccessControlProvider` quando disponível e
+ * evita fan-out de RPCs por consumidor.
+ */
+export const useAccessControlInternal = (): AccessControlValue => {
   const { user, loading: authLoading } = useAuth();
   const { isOnline } = useOnlineStatus();
   const [accessState, setAccessState] = useState<AccessState>({ status: 'loading' });
