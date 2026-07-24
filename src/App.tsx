@@ -74,22 +74,24 @@ function App() {
         <ThemeProvider>
           <VisualThemeProvider>
             <AuthProvider>
-              <CapabilityRuntimeProvider>
-                <AgendaInvalidationBridge />
-                <AgendaRealtimeListener />
-                <WorkflowEventBridge />
-                <WorkflowRealtimeBridge />
-                <TasksRealtimeBridge />
-                <AttachmentsRealtimeBridge />
-                <FinanceRealtimeBridge />
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <React.Suspense fallback={<ContextFallback />}>
-                    {context === "admin" ? <AdminApp /> : <PhotographerApp />}
-                  </React.Suspense>
-                </TooltipProvider>
-              </CapabilityRuntimeProvider>
+              <AccessControlProvider>
+                <CapabilityRuntimeProvider>
+                  <AgendaInvalidationBridge />
+                  <AgendaRealtimeListener />
+                  <WorkflowEventBridge />
+                  <WorkflowRealtimeBridge />
+                  <TasksRealtimeBridge />
+                  <AttachmentsRealtimeBridge />
+                  <FinanceRealtimeBridge />
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <React.Suspense fallback={<ContextFallback />}>
+                      {context === "admin" ? <AdminApp /> : <PhotographerApp />}
+                    </React.Suspense>
+                  </TooltipProvider>
+                </CapabilityRuntimeProvider>
+              </AccessControlProvider>
             </AuthProvider>
           </VisualThemeProvider>
         </ThemeProvider>
