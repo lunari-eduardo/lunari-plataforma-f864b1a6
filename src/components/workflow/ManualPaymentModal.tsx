@@ -23,6 +23,7 @@ import {
 import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { isErr } from "@/shared/result";
 import { useRunCapability } from "@/shared/capability/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 
