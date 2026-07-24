@@ -294,7 +294,10 @@ export function GerenciarProdutosModal({
     mutate(
       (prev) => {
         const p = prev[index];
-        if (p?.id) dirtyIdsRef.current.add(p.id);
+        if (p?.id) {
+          dirtyIdsRef.current.add(p.id);
+          deletedIdsRef.current.add(p.id);
+        }
         return prev.filter((_, i) => i !== index);
       },
       { immediate: true },
