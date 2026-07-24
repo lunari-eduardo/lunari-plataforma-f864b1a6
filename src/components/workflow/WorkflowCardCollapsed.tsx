@@ -53,8 +53,8 @@ export function WorkflowCardCollapsed({
   setModalAberto,
 }: WorkflowCardCollapsedProps) {
   const { addPayment, pacotes } = useAppContext();
-  const { hasGaleryAccess, accessState } = useAccessControl();
-  const { galerias, hasGalerias } = useSessionGalerias(session.sessionId || session.id);
+  const { hasGaleryAccess, accessState } = useMonthAccessControl();
+  const { galerias, hasGalerias } = useMonthGalleriasForSession(session.sessionId || session.id);
 
   const [paymentInput, setPaymentInput] = useState("");
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
