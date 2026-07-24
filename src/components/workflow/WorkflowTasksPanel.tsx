@@ -35,10 +35,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task } from "@/types/tasks";
-import { MIRROR_ROOT_TAG } from "@/features/workflow/domain/productTaskMirror";
+import { MIRROR_ROOT_TAG, extractProdutoIdFromTask } from "@/features/workflow/domain/productTaskMirror";
 import { isMirrorTask } from "@/features/workflow/domain/taskClassification";
 import { useMirrorToggleHandler } from "@/features/workflow/realtime/useProductTaskMirror";
-import type { ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
+import { hydrateProduto, type ProdutoWorkflowFlow } from "@/features/workflow/domain/productFlow";
+import { workflowStore } from "@/features/workflow/store/workflowStore";
 
 /** Deriva título/subtítulo enxuto para tarefas-espelho.
  *  Formato completo: "<Etapa> — <Produto> · <Cliente>". */
@@ -47,6 +48,22 @@ function deriveMirrorDisplay(task: Task): { title: string; subtitle?: string } {
   const [etapa, resto] = task.title.split(" — ");
   if (!resto) return { title: task.title };
   return { title: etapa.trim(), subtitle: resto.trim() };
+}
+
+/** Lê etapas atuais do produto no workflowStore para renderizar stepper `1/3`. */
+function readMirrorProgress(task: Task): { done: number; total: number } | null {
+  if (!task.tags?.includes(MIRROR_ROOT_TAG)) return null;
+  const sessionId = task.relatedSessionId;
+  const produtoId = extractProdutoIdFromTask(task);
+  if (!sessionId || !produtoId) return null;
+  const session = workflowStore.getById(sessionId);
+  const produtos = ((session as any)?.produtos_incluidos ?? []) as ProdutoWorkflowFlow[];
+  const raw = produtos.find((p: any) => p?.id === produtoId);
+  if (!raw) return null;
+  const hydrated = hydrateProduto(raw);
+  const etapas = hydrated.etapas ?? [];
+  if (etapas.length <= 1) return null;
+  return { done: etapas.filter((e) => e.done).length, total: etapas.length };
 }
 
 interface WorkflowTasksPanelProps {
