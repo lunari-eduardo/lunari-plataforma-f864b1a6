@@ -240,7 +240,7 @@ export const useAccessControlInternal = (opts?: { enabled?: boolean }): AccessCo
     };
 
     checkAccess();
-  }, [user, authLoading, isOnline, checkAccessWithRetry]);
+  }, [user, authLoading, isOnline, checkAccessWithRetry, enabled]);
 
   // Auto-retry quando voltar online
   useEffect(() => {
