@@ -132,22 +132,25 @@ serve(async (req) => {
     // Fluxo padrão (Gestão e Gallery): retorna URL intermediária /pay/ip/:id
     // Cliente completa dados e página finaliza chamando pay-infinitepay-finalize.
     if (!skipPrefillPage) {
-      const intermediateUrl = `${PUBLIC_SITE_URL}/pay/ip/${cobranca.id}`;
+      // URL curta e branded para WhatsApp: /l/{id} → payment-link-preview
+      // devolve OG dinâmico com logo do fotógrafo e redireciona humanos para
+      // /pay/ip/{id} (InfinitePayCheckout).
+      const shareUrl = `${PUBLIC_SITE_URL}/l/${cobranca.id}`;
       await supabase
         .from("cobrancas")
         .update({
-          ip_checkout_url: intermediateUrl,
+          ip_checkout_url: shareUrl,
           ip_order_nsu: cobranca.id,
         })
         .eq("id", cobranca.id);
       void handle;
 
-      console.log(`[infinitepay-create-link] Intermediate URL: ${intermediateUrl}`);
+      console.log(`[infinitepay-create-link] Share URL: ${shareUrl}`);
       return new Response(
         JSON.stringify({
           success: true,
           cobrancaId: cobranca.id,
-          checkoutUrl: intermediateUrl,
+          checkoutUrl: shareUrl,
           provedor: "infinitepay",
           intermediate: true,
         }),

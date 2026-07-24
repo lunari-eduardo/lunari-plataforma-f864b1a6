@@ -21,5 +21,8 @@ Allow: /
 Disallow: /admin/
 Disallow: /auth
 Disallow: /onboarding
+Disallow: /l/
+Disallow: /pay/
+Disallow: /checkout/
 
 Sitemap: https://app.lunarihub.com/sitemap.xml

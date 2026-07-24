@@ -74,3 +74,15 @@ export function getCanonicalBaseUrl(): string {
 export function getPublicShareBaseUrl(): string {
   return CANONICAL_PRODUCTION_URL;
 }
+
+/**
+ * Retorna a URL curta e branded para preview do link de cobrança no WhatsApp,
+ * LinkedIn, Slack e outros crawlers. É servida por `payment-link-preview`
+ * (edge function via rewrite Vercel em `/l/:cobrancaId`), que devolve:
+ *   - Bot  → HTML com <head> dinâmico (logo do fotógrafo + valor + brand).
+ *   - Humano → redirect para `/pay/ip/:id` (InfinitePay) ou `/checkout/:id`.
+ * Usar sempre que o link vai para um cliente final (Copiar/WhatsApp).
+ */
+export function buildPaymentShareUrl(cobrancaId: string): string {
+  return `${CANONICAL_PRODUCTION_URL}/l/${cobrancaId}`;
+}

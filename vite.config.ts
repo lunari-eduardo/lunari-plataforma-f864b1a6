@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => ({
         navigationPreload: false,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-      navigateFallbackDenylist: [/^\/formulario\//, /^\/checkout\//],
+      navigateFallbackDenylist: [/^\/formulario\//, /^\/checkout\//, /^\/pay\//, /^\/l\//],
       runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

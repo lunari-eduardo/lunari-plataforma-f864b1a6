@@ -194,13 +194,17 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         throw new Error(result.error || 'Failed to create link');
       }
       
-      // Normalize the response to always have both checkoutUrl and paymentLink
-      const normalizedUrl = result.checkoutUrl || result.paymentLink;
+      // Normalize the response to always have both checkoutUrl and paymentLink.
+      // Preferir URL branded /l/{id} (preview no WhatsApp com logo do fotógrafo)
+      // quando o backend retornar cobrancaId; senão manter o link original.
+      const { buildPaymentShareUrl } = await import('@/utils/domainUtils');
+      const rawUrl = result.checkoutUrl || result.paymentLink;
+      const shareUrl = result.cobrancaId ? buildPaymentShareUrl(result.cobrancaId) : rawUrl;
       return {
         ...result,
         provedor,
-        checkoutUrl: normalizedUrl,
-        paymentLink: normalizedUrl,
+        checkoutUrl: shareUrl,
+        paymentLink: shareUrl,
       };
     } catch (error: any) {
       console.error('Error creating link:', error);

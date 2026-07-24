@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { useGalleryExtraCalc } from '@/hooks/useGalleryExtraCalc';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChargeStepBadge } from './ChargeStepBadge';
+import { buildPaymentShareUrl } from '@/utils/domainUtils';
 
 interface ExtraChargeModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ type GalleryPaymentResponse = {
   code?: string;
   error?: string;
   alreadyPaid?: boolean;
+  cobrancaId?: string;
   checkoutUrl?: string;
   paymentUrl?: string;
   transparentCheckout?: boolean;
@@ -179,6 +181,8 @@ export function ExtraChargeModal({
   const shareLink = useMemo(() => {
     if (!result) return null;
     if (result.transparentCheckout && result.galleryUrl) return result.galleryUrl;
+    // Preferir URL branded /l/{id} (preview no WhatsApp com logo do fotógrafo).
+    if (result.cobrancaId) return buildPaymentShareUrl(result.cobrancaId);
     return result.checkoutUrl || result.paymentUrl || null;
   }, [result]);
 
