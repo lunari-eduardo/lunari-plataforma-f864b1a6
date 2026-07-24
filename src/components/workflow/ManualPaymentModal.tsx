@@ -61,6 +61,7 @@ export function ManualPaymentModal({
   hasGaleria,
 }: Props) {
   const runCapability = useRunCapability();
+  const queryClient = useQueryClient();
   // Extras podem existir sem galeria vinculada (fluxo de extras manuais).
   // O gate depende APENAS de haver pendente, nunca de `hasGaleria`.
   const canSessao = sessaoPendente > 0.001;
