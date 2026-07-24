@@ -80,6 +80,7 @@ export function GerenciarProdutosModal({
   const [addOpen, setAddOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const dirtyIdsRef = useRef<Set<string>>(new Set());
+  const deletedIdsRef = useRef<Set<string>>(new Set());
 
   const pendingCommitRef = useRef<ProdutoWorkflowFlow[] | null>(null);
   const commitTimerRef = useRef<number | null>(null);
