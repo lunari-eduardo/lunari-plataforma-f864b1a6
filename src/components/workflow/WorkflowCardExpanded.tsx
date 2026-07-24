@@ -613,7 +613,11 @@ export function WorkflowCardExpanded({
             setWorkflowPaymentsOpen(false);
             window.dispatchEvent(
               new CustomEvent("payment-created", {
-                detail: { sessionId: session.sessionId || session.id },
+                detail: {
+                  sessionId: session.sessionId ?? null,
+                  sessionUuid: session.id,
+                  source: "workflow-payments-modal",
+                },
               }),
             );
           }}
