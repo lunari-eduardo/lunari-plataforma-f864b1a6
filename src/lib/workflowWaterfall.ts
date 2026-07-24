@@ -352,8 +352,9 @@ if (__wfEnabled && typeof window !== "undefined") {
 
   // eslint-disable-next-line no-console
   __log(
-    "%c[waterfall] instrumentação carregada. Use __wf.start('cold-load') / __wf.stop()",
-    "color:#b0632f;font-weight:600",
+    "%c[waterfall] pronto",
+    "background:#b0632f;color:#fff;padding:2px 6px;border-radius:3px;font-weight:600",
+    "— use __wf.arm('cold-julho') e depois Ctrl+Shift+R",
   );
 }
 
