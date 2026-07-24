@@ -173,9 +173,16 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     };
     const paymentBridge = (event: Event) => {
       const detail = (event as CustomEvent).detail || {};
-      // Pagamento rápido despacha `sessionId` (texto workflow-*) + `sessionUuid`.
-      // Aqui só o UUID importa (RPC é chaveada por UUID).
-      if (detail.sessionUuid === sessionId || detail.sessionId === sessionId) {
+      // Aceita qualquer campo canônico. `sessionUuid` é o preferido (RPC é chaveada por UUID),
+      // mas o modal antigo/outros emissores podem mandar apenas `sessionId` (TEXT) ou
+      // aninhar em `session.id`. Se qualquer um bater, invalida.
+      const candidates = [
+        detail.sessionUuid,
+        detail.sessionId,
+        detail.session?.id,
+        detail.session?.sessionId,
+      ].filter(Boolean);
+      if (candidates.includes(sessionId)) {
         invalidate();
       }
     };
