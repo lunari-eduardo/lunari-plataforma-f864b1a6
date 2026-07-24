@@ -117,11 +117,23 @@ export function WorkflowMonthDataProvider({
         },
       )
       .subscribe();
+
+    // Onda 1 (2.6): quando o canal v2 detecta uma sessão nova, refaz a query
+    // de galerias no mesmo tick — sem esperar o array de slugs recomputar.
+    const handleSlugAdded = (event: Event) => {
+      const slug = (event as CustomEvent).detail?.slug as string | undefined;
+      if (!slug) return;
+      galeriasQuery.refetch().catch(() => {});
+    };
+    window.addEventListener("workflow-month-slug-added", handleSlugAdded as EventListener);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("workflow-month-slug-added", handleSlugAdded as EventListener);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
 
   const value = React.useMemo<WorkflowMonthDataValue>(
     () => ({

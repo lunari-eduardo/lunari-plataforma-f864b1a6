@@ -179,16 +179,25 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
         invalidate();
       }
     };
+    const financialsStaleBridge = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      // Emitido pelo canal v2 unificado para cobrancas/parcelas/creditos.
+      // `sessionId` já vem resolvido para UUID quando a sessão está em cache.
+      if (detail.sessionId === sessionId) invalidate();
+    };
     window.addEventListener('workflow-session-updated', bridgeHandler as EventListener);
+    window.addEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
     window.addEventListener('payment-optimistic', paymentBridge as EventListener);
     window.addEventListener('payment-created', paymentBridge as EventListener);
 
     return () => {
       supabase.removeChannel(channel);
       window.removeEventListener('workflow-session-updated', bridgeHandler as EventListener);
+      window.removeEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
       window.removeEventListener('payment-optimistic', paymentBridge as EventListener);
       window.removeEventListener('payment-created', paymentBridge as EventListener);
     };
+
   }, [sessionId, queryClient]);
 
   return {
