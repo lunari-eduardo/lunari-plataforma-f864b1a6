@@ -83,7 +83,8 @@ export interface AccessControlValue {
  * que consome o singleton `AccessControlProvider` quando disponível e
  * evita fan-out de RPCs por consumidor.
  */
-export const useAccessControlInternal = (): AccessControlValue => {
+export const useAccessControlInternal = (opts?: { enabled?: boolean }): AccessControlValue => {
+  const enabled = opts?.enabled !== false;
   const { user, loading: authLoading } = useAuth();
   const { isOnline } = useOnlineStatus();
   const [accessState, setAccessState] = useState<AccessState>({ status: 'loading' });
