@@ -218,7 +218,9 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
       try {
         await toggleMirror(task, nextIsDone);
       } finally {
-        // Libera após pequena janela pra evitar re-clique antes do realtime propagar.
+        // Janela alinhada ao mirrorMemoStore (8s) — evita a checkbox
+        // "piscar" para o valor antigo enquanto realtime propaga a
+        // atualização do produto e o reconciliador reajusta a tarefa.
         setTimeout(() => {
           setPendingToggleIds((prev) => {
             if (!prev.has(task.id)) return prev;
@@ -226,7 +228,7 @@ export function WorkflowTasksPanel({ currentMonth, monthSessionIds, onSessionPro
             n.delete(task.id);
             return n;
           });
-        }, 400);
+        }, 8500);
       }
       return;
     }
