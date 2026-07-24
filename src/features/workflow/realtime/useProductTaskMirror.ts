@@ -246,6 +246,28 @@ export function useProductTaskMirror(): void {
               sig: taskSignature(spec.title, false),
               at: Date.now(),
             });
+            // Otimismo local: injeta a tarefa recém-criada no tasksStore para
+            // que o dock reflita imediatamente sem depender do round-trip do
+            // realtime (que pode demorar segundos ou perder o evento). O
+            // próximo evento realtime sobrescreve com a versão canônica.
+            try {
+              const nowIso = new Date().toISOString();
+              tasksStore.upsert({
+                id: row.id as string,
+                title: spec.title,
+                status: openKey,
+                priority: "medium",
+                type: "workflow_produto" as any,
+                source: "automation",
+                tags: spec.tags,
+                relatedClienteId: spec.clienteId,
+                relatedSessionId: spec.sessionId,
+                createdAt: nowIso,
+                updatedAt: nowIso,
+              } as Task);
+            } catch (e) {
+              console.warn("[productTaskMirror] otimismo local falhou", e);
+            }
           }
         } catch (e) {
           console.warn("[productTaskMirror] falha ao upsert tarefa-espelho", e);
