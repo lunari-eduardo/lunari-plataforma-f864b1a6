@@ -82,7 +82,32 @@ declare global {
 
 }
 
-if (import.meta.env.DEV && typeof window !== "undefined") {
+// Gate em runtime: dev local, preview Lovable (id-preview--*), ou opt-in via ?wf=1 / sessionStorage.
+const __wfEnabled = (() => {
+  if (typeof window === "undefined") return false;
+  if (import.meta.env.DEV) return true;
+  try {
+    const host = window.location.hostname;
+    if (/(^|\.)id-preview--/.test(host)) return true;
+    if (new URLSearchParams(window.location.search).has("wf")) {
+      sessionStorage.setItem("wf:enabled", "1");
+      return true;
+    }
+    if (sessionStorage.getItem("wf:enabled") === "1") return true;
+  } catch { /* ignore */ }
+  return false;
+})();
+
+// Referências ao console capturadas via variável — esbuild `drop: ['console']`
+// só remove chamadas SINTÁTICAS a `console.*`, não acessos indiretos.
+const __c: Console | undefined = typeof window !== "undefined" ? (window as any).console : undefined;
+const __log = (...a: any[]) => __c?.log?.(...a);
+const __warn = (...a: any[]) => __c?.warn?.(...a);
+const __table = (rows: any) => __c?.table?.(rows);
+const __groupCollapsed = (label: string) => __c?.groupCollapsed?.(label);
+const __groupEnd = () => __c?.groupEnd?.();
+
+if (__wfEnabled && typeof window !== "undefined") {
   let session: Session | null = null;
   let seq = 0;
   let pendingTag: string | undefined;
@@ -206,11 +231,11 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
       tag: c.tag ?? "",
     }));
     // eslint-disable-next-line no-console
-    console.groupCollapsed(
+    __groupCollapsed(
       `[waterfall] ${s.name}  ${s.calls.length} chamadas  em ${(now() - s.startedAt).toFixed(0)}ms`,
     );
     // eslint-disable-next-line no-console
-    console.table(rows);
+    __table(rows);
     // Agregações por kind
     const byKind: Record<string, { n: number; totalMs: number; kb: number }> = {};
     for (const c of s.calls) {
@@ -221,10 +246,10 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
       byKind[k].kb += (c.bytes ?? 0) / 1024;
     }
     // eslint-disable-next-line no-console
-    console.log("Agregado por tipo:", byKind);
+    __log("Agregado por tipo:", byKind);
     if (s.marks.length) {
       // eslint-disable-next-line no-console
-      console.log(
+      __log(
         "Marcas:",
         s.marks.map((m) => `${m.t.toFixed(0)}ms → ${m.label}`),
       );
@@ -242,9 +267,9 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
       if (cur > max) max = cur;
     }
     // eslint-disable-next-line no-console
-    console.log(`Concorrência máxima: ${max} chamadas simultâneas`);
+    __log(`Concorrência máxima: ${max} chamadas simultâneas`);
     // eslint-disable-next-line no-console
-    console.groupEnd();
+    __groupEnd();
   };
 
   window.__wf = {
@@ -258,12 +283,12 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
       };
       seq = 0;
       // eslint-disable-next-line no-console
-      console.log(`[waterfall] capturando "${name}" — use __wf.stop() para encerrar`);
+      __log(`[waterfall] capturando "${name}" — use __wf.stop() para encerrar`);
     },
     stop() {
       if (!session) {
         // eslint-disable-next-line no-console
-        console.warn("[waterfall] nenhuma sessão ativa");
+        __warn("[waterfall] nenhuma sessão ativa");
         return null;
       }
       const s = session;
@@ -286,7 +311,7 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
     export() {
       if (!session && !window.__wf?.current()) {
         // eslint-disable-next-line no-console
-        console.warn("[waterfall] nada para exportar");
+        __warn("[waterfall] nada para exportar");
         return;
       }
       const s = session ?? window.__wf!.current()!;
@@ -305,13 +330,13 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
       try {
         sessionStorage.setItem(ARM_KEY, name);
         // eslint-disable-next-line no-console
-        console.log(`[waterfall] ARMADO: captura iniciará automaticamente no próximo load como "${name}". Faça o hard-refresh agora (Ctrl+Shift+R).`);
+        __log(`[waterfall] ARMADO: captura iniciará automaticamente no próximo load como "${name}". Faça o hard-refresh agora (Ctrl+Shift+R).`);
       } catch { /* ignore */ }
     },
     disarm() {
       try { sessionStorage.removeItem(ARM_KEY); } catch { /* ignore */ }
       // eslint-disable-next-line no-console
-      console.log("[waterfall] desarmado");
+      __log("[waterfall] desarmado");
     },
   };
 
@@ -326,9 +351,10 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
 
 
   // eslint-disable-next-line no-console
-  console.log(
-    "%c[waterfall] instrumentação carregada. Use __wf.start('cold-load') / __wf.stop()",
-    "color:#b0632f;font-weight:600",
+  __log(
+    "%c[waterfall] pronto",
+    "background:#b0632f;color:#fff;padding:2px 6px;border-radius:3px;font-weight:600",
+    "— use __wf.arm('cold-julho') e depois Ctrl+Shift+R",
   );
 }
 
