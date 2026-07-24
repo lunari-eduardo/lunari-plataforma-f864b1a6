@@ -26,6 +26,7 @@ import ContatoPage from "@/pages/site/ContatoPage";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import PublicCheckout from "@/pages/PublicCheckout";
 import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
+import ShareLinkFallback from "@/pages/pay/ShareLinkFallback";
 
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
@@ -108,6 +109,7 @@ export default function PhotographerApp() {
               <Route path="/formulario/:token" element={<FormularioPublico />} />
               <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
               <Route path="/pay/ip/:cobrancaId" element={<InfinitePayCheckout />} />
+              <Route path="/l/:cobrancaId" element={<ShareLinkFallback />} />
 
 
               <Route path="/landing" element={<Navigate to="/" replace />} />
