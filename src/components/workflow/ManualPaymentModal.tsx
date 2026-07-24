@@ -23,6 +23,7 @@ import {
 import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { isErr } from "@/shared/result";
 import { useRunCapability } from "@/shared/capability/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { SessionData } from "@/types/workflow";
 
@@ -60,6 +61,7 @@ export function ManualPaymentModal({
   hasGaleria,
 }: Props) {
   const runCapability = useRunCapability();
+  const queryClient = useQueryClient();
   // Extras podem existir sem galeria vinculada (fluxo de extras manuais).
   // O gate depende APENAS de haver pendente, nunca de `hasGaleria`.
   const canSessao = sessaoPendente > 0.001;
@@ -133,11 +135,34 @@ export function ManualPaymentModal({
   const handleSubmit = async () => {
     if (!podeSubmeter) return;
     setSubmitting(true);
+
+    const sessionUuid = session.id;
+    const sessionText = session.sessionId ?? null;
+    const valorFinal = Number(valor.toFixed(2));
+    let optimisticApplied = false;
+
+    // Otimista imediato — mesmo padrão do input rápido (AppContext.handleAddPayment)
+    try {
+      window.dispatchEvent(
+        new CustomEvent("payment-optimistic", {
+          detail: {
+            sessionId: sessionText,
+            sessionUuid,
+            delta: valorFinal,
+            source: "manual-modal",
+          },
+        }),
+      );
+      optimisticApplied = true;
+    } catch {
+      /* noop */
+    }
+
     try {
       const { registerManualPayment } = await import("@/modules/billing");
       const result = await runCapability(registerManualPayment, {
-        sessionId: session.id,
-        valor: Number(valor.toFixed(2)),
+        sessionId: sessionUuid,
+        valor: valorFinal,
         dataPagamento: data,
         meio,
         escopo,
@@ -145,6 +170,19 @@ export function ManualPaymentModal({
       });
 
       if (isErr(result)) {
+        // Reverte otimista
+        if (optimisticApplied) {
+          window.dispatchEvent(
+            new CustomEvent("payment-optimistic", {
+              detail: {
+                sessionId: sessionText,
+                sessionUuid,
+                delta: -valorFinal,
+                source: "manual-modal:revert",
+              },
+            }),
+          );
+        }
         const code = result.error.code;
         const msg =
           code === "UNAUTHENTICATED"
@@ -175,14 +213,43 @@ export function ManualPaymentModal({
         );
       }
 
+      // Invalidação direta das chaves do card — independe do realtime do Postgres.
+      queryClient.invalidateQueries({ queryKey: ["session-financials", sessionUuid] });
+      queryClient.invalidateQueries({ queryKey: ["session-payments", sessionUuid] });
+      queryClient.invalidateQueries({ queryKey: ["session-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["session-credit-context", sessionUuid] });
+      queryClient.invalidateQueries({ queryKey: ["cliente-credito"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow"] });
+
       onClose();
-      // Notifica bridges que já ouvem esse evento (extrato, badges, etc.)
+
+      // Eventos autoritativos — payload canônico com AMBOS os IDs.
+      const detail = {
+        sessionId: sessionText,
+        sessionUuid,
+        source: "manual-modal",
+      };
+      window.dispatchEvent(new CustomEvent("payment-created", { detail }));
+      window.dispatchEvent(new CustomEvent("workflow-session-updated", { detail }));
       window.dispatchEvent(
-        new CustomEvent("payment-created", {
-          detail: { sessionId: session.sessionId || session.id },
+        new CustomEvent("workflow-session-financials-stale", {
+          detail: { sessionId: sessionUuid },
         }),
       );
     } catch (e) {
+      if (optimisticApplied) {
+        window.dispatchEvent(
+          new CustomEvent("payment-optimistic", {
+            detail: {
+              sessionId: sessionText,
+              sessionUuid,
+              delta: -valorFinal,
+              source: "manual-modal:revert",
+            },
+          }),
+        );
+      }
       console.error("❌ ManualPaymentModal.submit:", e);
       toast.error("Falha inesperada ao registrar pagamento.");
       setSubmitting(false);

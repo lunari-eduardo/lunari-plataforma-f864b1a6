@@ -782,6 +782,13 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       if (fullSession) {
         console.log('✅ [WorkflowCache] Sessão atualizada:', fullSession.id, 'valor_pago:', fullSession.valor_pago);
         mergeUpdate(fullSession as WorkflowSession);
+        // Reemite com o UUID já resolvido para acordar hooks satélites
+        // (extras/produtos/CRM) sem depender do naming correto do emissor.
+        window.dispatchEvent(
+          new CustomEvent('workflow-session-financials-stale', {
+            detail: { sessionId: (fullSession as any).id },
+          }),
+        );
       } else {
         console.warn('⚠️ [WorkflowCache] Sessão não encontrada para sessionId:', sessionId);
       }
