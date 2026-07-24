@@ -180,10 +180,21 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
               }
               return;
             }
-            const row = payload.new as { id?: string } | null;
+            const row = payload.new as { id?: string; session_id?: string } | null;
             if (!row?.id) return;
             if (payload.eventType === "INSERT") {
               void hydrateAndUpsert(row.id);
+              // Onda 1 (2.6): sinaliza slug novo para o WorkflowMonthDataProvider
+              // refetchar galerias sem esperar o array de slugs re-renderizar.
+              if (row.session_id && typeof window !== "undefined") {
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("workflow-month-slug-added", {
+                      detail: { slug: row.session_id, sessionId: row.id, source: "realtime-v2" },
+                    }),
+                  );
+                } catch { /* noop */ }
+              }
             } else {
               if (debounceTimer) clearTimeout(debounceTimer);
               debounceTimer = setTimeout(() => void hydrateAndUpsert(row.id!), 150);
@@ -199,9 +210,59 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
               (payload.new as { session_id?: string } | null)?.session_id ??
               (payload.old as { session_id?: string } | null)?.session_id;
             if (!sessionIdText) return;
+            // Invalida financeiros imediatamente (não espera o hydrate).
+            emitFinancialsStaleBySlug(sessionIdText);
             setTimeout(() => void hydrateBySessionText(sessionIdText), 350);
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "cobrancas", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            statsRef.current.lastEventAt = Date.now();
+            const sessionIdText =
+              (payload.new as { session_id?: string } | null)?.session_id ??
+              (payload.old as { session_id?: string } | null)?.session_id;
+            emitFinancialsStaleBySlug(sessionIdText);
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "cobranca_parcelas", filter: `user_id=eq.${userId}` },
+          async (payload) => {
+            statsRef.current.lastEventAt = Date.now();
+            const cobrancaId =
+              (payload.new as { cobranca_id?: string } | null)?.cobranca_id ??
+              (payload.old as { cobranca_id?: string } | null)?.cobranca_id;
+            if (!cobrancaId) return;
+            // Resolve a cobrança pai → session_id textual → UUID via store.
+            try {
+              const { data } = await supabase
+                .from("cobrancas")
+                .select("session_id")
+                .eq("id", cobrancaId)
+                .maybeSingle();
+              emitFinancialsStaleBySlug((data as { session_id?: string } | null)?.session_id);
+            } catch (err) {
+              console.warn("[realtime-v2] cobranca_parcelas resolve failed", err);
+            }
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "cliente_creditos_ledger", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            statsRef.current.lastEventAt = Date.now();
+            const nw = payload.new as { session_id_origem?: string; session_id_consumo?: string } | null;
+            const ol = payload.old as { session_id_origem?: string; session_id_consumo?: string } | null;
+            const slugs = new Set(
+              [nw?.session_id_origem, nw?.session_id_consumo, ol?.session_id_origem, ol?.session_id_consumo]
+                .filter(Boolean) as string[],
+            );
+            slugs.forEach((slug) => emitFinancialsStaleBySlug(slug));
+          },
+        )
+
         .subscribe((status) => {
           if (cancelled) return;
           if (status === "SUBSCRIBED") {
