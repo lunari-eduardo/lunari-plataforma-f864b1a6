@@ -212,8 +212,10 @@ export const useAccessControlInternal = (opts?: { enabled?: boolean }): AccessCo
   }, [user, checkAccessWithRetry]);
 
   useEffect(() => {
+    if (!enabled) return;
     const checkAccess = async () => {
       if (authLoading) return;
+
 
       if (!user) {
         setAccessState({ status: 'not_authenticated' });
