@@ -113,8 +113,24 @@ export async function persistProdutos(params: {
     desconto: Number(session.desconto) || 0,
   });
 
-  // Anti-eco Produto → Tarefa: registra hash antes do persist para o
-  // reconciliador do dock não sobrescrever a intenção durante a janela.
+  // Persist PRIMEIRO. Só memoiza (anti-eco Produto → Tarefa) depois do write
+  // OK — memoizar antes deixava o reconciliador cego enquanto o persist
+  // falhava, bloqueando updates legítimos por até 8s.
+  try {
+    await sessionsRepo.update(userId, sessionId, {
+      produtos_incluidos: normalized as any,
+      valor_total: valorTotal,
+    } as any);
+  } catch (cause) {
+    ctx.log.error("persistProdutos: falha ao atualizar sessão", { cause });
+    return err(
+      domainError("EXTERNAL", "Não foi possível atualizar os produtos.", {
+        retriable: true,
+        cause,
+      }),
+    );
+  }
+
   for (const t of touched) {
     const idx = normalized.findIndex((p) => p.id === t.produtoId);
     if (idx === -1) continue;
@@ -132,21 +148,6 @@ export async function persistProdutos(params: {
       isEntregue: entregue,
     });
     mirrorMemoStore.memorize(sessionId, t.produtoId, etapasHash(etapas), expectedTitle);
-  }
-
-  try {
-    await sessionsRepo.update(userId, sessionId, {
-      produtos_incluidos: normalized as any,
-      valor_total: valorTotal,
-    } as any);
-  } catch (cause) {
-    ctx.log.error("persistProdutos: falha ao atualizar sessão", { cause });
-    return err(
-      domainError("EXTERNAL", "Não foi possível atualizar os produtos.", {
-        retriable: true,
-        cause,
-      }),
-    );
   }
 
   return ok({ valorTotal });
