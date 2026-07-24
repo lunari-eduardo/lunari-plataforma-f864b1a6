@@ -709,9 +709,18 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
       savePaymentsToStorage(sessionId, updated);
       // Delete from Supabase (não re-salvar os restantes!)
       deletePaymentFromSupabase(sessionId, paymentId);
+      // Notifica card/footer para invalidar financeiros imediatamente
+      // (independente do canal realtime — cobre estorno/exclusão manuais).
+      window.dispatchEvent(new CustomEvent('payment-optimistic', {
+        detail: { sessionId, sessionUuid: sessionId },
+      }));
+      window.dispatchEvent(new CustomEvent('payment-created', {
+        detail: { sessionId, sessionUuid: sessionId },
+      }));
       return updated;
     });
   }, [sessionId]);
+
 
   // Estornar pagamento pago (cria registro de estorno, mantém original)
   // options.autoRefund: se true e origem for asaas/mercadopago, chama API do gateway
