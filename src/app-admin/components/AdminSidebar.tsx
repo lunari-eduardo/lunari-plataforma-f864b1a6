@@ -26,6 +26,7 @@ import {
   Settings2,
   ShieldCheck,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { APP_URL } from "@/lib/appContext";
 
@@ -53,6 +54,7 @@ const infra: Item[] = [
 ];
 
 const config: Item[] = [
+  { title: "Assistente Lu", url: "/assistente", icon: Sparkles },
   { title: "Configurações", url: "/configuracoes", icon: Settings2 },
 ];
 
