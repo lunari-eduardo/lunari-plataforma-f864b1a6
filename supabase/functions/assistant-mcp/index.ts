@@ -479,9 +479,16 @@ Deno.serve(async (req: Request) => {
     if (res) responses.push(res);
   }
 
+  // Se o handler sinalizou desafio de auth (tools/call sem token), garante WWW-Authenticate.
+  if ((auth as any).__challenge) {
+    responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
+  }
+
   if (responses.length === 0) return new Response(null, { status: 202, headers: mcpHeaders });
 
   const payload = Array.isArray(body) ? responses : responses[0];
+  // Mantém 200 (JSON-RPC body carrega o erro); WWW-Authenticate no header já dispara o fluxo OAuth
+  // em clientes MCP compatíveis com a spec 2025-06-18.
   return new Response(JSON.stringify(payload), {
     status: 200,
     headers: responseHeaders,
