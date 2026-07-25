@@ -25,6 +25,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/sistema": "Sistema",
   "/logs": "Logs",
   "/configuracoes": "Configurações",
+  "/assistente": "Assistente Lu",
 };
 
 function currentLabel(pathname: string) {
