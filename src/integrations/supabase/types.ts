@@ -334,6 +334,7 @@ export type Database = {
           actor: string
           approved_at: string | null
           approved_by: string | null
+          auth_source: string | null
           capability_id: string
           created_at: string
           error_message: string | null
@@ -351,6 +352,7 @@ export type Database = {
           actor?: string
           approved_at?: string | null
           approved_by?: string | null
+          auth_source?: string | null
           capability_id: string
           created_at?: string
           error_message?: string | null
@@ -368,6 +370,7 @@ export type Database = {
           actor?: string
           approved_at?: string | null
           approved_by?: string | null
+          auth_source?: string | null
           capability_id?: string
           created_at?: string
           error_message?: string | null
@@ -6030,24 +6033,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      assistant_mcp_token_create:
-        | {
-            Args: { _expires_at?: string; _name: string }
-            Returns: {
-              created_at: string
-              id: string
-              prefix: string
-              token: string
-            }[]
-          }
-        | {
-            Args: { _expires_at?: string; _name: string; _scopes?: string[] }
-            Returns: {
-              id: string
-              token: string
-              token_prefix: string
-            }[]
-          }
+      assistant_mcp_token_create: {
+        Args: { _expires_at?: string; _name: string; _scopes?: string[] }
+        Returns: {
+          id: string
+          token: string
+          token_prefix: string
+        }[]
+      }
       assistant_mcp_token_validate: {
         Args: { _token: string }
         Returns: {
