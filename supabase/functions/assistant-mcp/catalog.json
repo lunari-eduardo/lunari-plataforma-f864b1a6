@@ -1,0 +1,2509 @@
+{
+  "generatedAt": "2026-07-25T04:19:28.319Z",
+  "manifest": {
+    "name": "lunari-mcp",
+    "title": "Lunari",
+    "version": "0.1.0",
+    "instructions": "Ferramentas do Lunari para fotógrafos: agenda, workflow, financeiro, cobranças, clientes, galerias, formulários e contratos. Escritas destrutivas exigem aprovação humana explícita no app.",
+    "auth": {
+      "type": "oauth-supabase",
+      "acceptedAudiences": "authenticated"
+    },
+    "tools": [
+      {
+        "name": "lunari.tasks.assign",
+        "title": "tasks.assign",
+        "description": "Atribuir tarefa. Define ou remove o responsável de uma tarefa.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.attachment.add",
+        "title": "tasks.attachment.add",
+        "description": "Adicionar anexo. Faz upload de um arquivo para a tarefa (armazenado em R2 privado).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.attachment.list",
+        "title": "tasks.attachment.list",
+        "description": "Listar anexos da tarefa. Retorna todos os anexos associados a uma tarefa.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.complete",
+        "title": "tasks.complete",
+        "description": "Concluir tarefa. Marca a tarefa como concluída usando o status terminal configurado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.countsByStatus",
+        "title": "tasks.countsByStatus",
+        "description": "Contagem por status. Retorna a quantidade de tarefas em cada coluna do Kanban.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.create",
+        "title": "tasks.create",
+        "description": "Criar tarefa. Cria uma nova tarefa no quadro do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.dueOverview",
+        "title": "tasks.dueOverview",
+        "description": "Visão geral de prazos. Conta e agrupa tarefas por bucket temporal (overdue, hoje, amanhã, semana).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.getById",
+        "title": "tasks.getById",
+        "description": "Detalhar tarefa. Retorna uma tarefa pelo ID.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.list",
+        "title": "tasks.list",
+        "description": "Listar tarefas. Lista todas as tarefas do usuário, mais recentes primeiro.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.move",
+        "title": "tasks.move",
+        "description": "Mover tarefa de status. Altera o status (coluna do Kanban) da tarefa. Recalcula completed_at quando aplicável.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.people.create",
+        "title": "tasks.people.create",
+        "description": "Adicionar pessoa. Adiciona uma nova pessoa atribuível a tarefas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.people.list",
+        "title": "tasks.people.list",
+        "description": "Listar pessoas. Lista todas as pessoas atribuíveis a tarefas.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.people.reorder",
+        "title": "tasks.people.reorder",
+        "description": "Reordenar pessoas. Atualiza a ordem de exibição das pessoas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.people.update",
+        "title": "tasks.people.update",
+        "description": "Atualizar pessoa. Atualiza nome ou cor de uma pessoa.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.reopen",
+        "title": "tasks.reopen",
+        "description": "Reabrir tarefa. Reabre uma tarefa concluída, limpando completed_at.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.search",
+        "title": "tasks.search",
+        "description": "Buscar tarefas. Busca tarefas por título, descrição ou tag.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.snooze",
+        "title": "tasks.snooze",
+        "description": "Adiar tarefa. Posterga as notificações da tarefa até a data informada.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.tags.create",
+        "title": "tasks.tags.create",
+        "description": "Criar tag. Cria uma nova tag para tarefas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.tags.list",
+        "title": "tasks.tags.list",
+        "description": "Listar tags. Lista todas as tags do usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.tags.reorder",
+        "title": "tasks.tags.reorder",
+        "description": "Reordenar tags. Atualiza a ordem de exibição das tags.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.tags.update",
+        "title": "tasks.tags.update",
+        "description": "Atualizar tag. Atualiza nome ou cor de uma tag.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.tasks.update",
+        "title": "tasks.update",
+        "description": "Atualizar tarefa. Atualiza campos editáveis de uma tarefa. Status, assignee, snooze têm comandos próprios.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.appointments.confirm",
+        "title": "agenda.appointments.confirm",
+        "description": "Confirmar agendamento. Marca um agendamento como confirmado. Disparará criação da sessão de workflow e ocupação do slot.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.appointments.create",
+        "title": "agenda.appointments.create",
+        "description": "Criar agendamento. Cria um agendamento. Se o status for 'confirmado', o slot correspondente é ocupado e uma sessão do workflow é criada automaticamente pelo banco.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.appointments.get",
+        "title": "agenda.appointments.get",
+        "description": "Obter agendamento por ID. Busca um agendamento específico do usuário pelo seu ID.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.appointments.list",
+        "title": "agenda.appointments.list",
+        "description": "Listar agendamentos por período. Retorna todos os agendamentos do usuário entre duas datas (inclusive). Use para alimentar visualizações de calendário e responder perguntas como 'quais sessões tenho em julho?'.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.appointments.update",
+        "title": "agenda.appointments.update",
+        "description": "Atualizar agendamento. Aplica um patch parcial em um agendamento existente.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.availability.add",
+        "title": "agenda.availability.add",
+        "description": "Adicionar slots de disponibilidade. Cria múltiplos slots de disponibilidade em lote.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.availability.findNext",
+        "title": "agenda.availability.findNext",
+        "description": "Encontrar próximo slot livre. Procura o próximo slot de disponibilidade sem conflito com agendamentos confirmados, a partir de uma data/hora.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.availability.list",
+        "title": "agenda.availability.list",
+        "description": "Listar slots de disponibilidade. Retorna todos os slots de disponibilidade cadastrados pelo usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.agenda.slot.check",
+        "title": "agenda.slot.check",
+        "description": "Verificar disponibilidade de um slot. Verifica se um par data/hora está livre, ocupado por um agendamento confirmado, com pendentes, ou em um slot bloqueado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.addNota",
+        "title": "clientes.addNota",
+        "description": "Adicionar nota ao cliente. Anexa uma linha de observação ao histórico do cliente (campo observacoes). Não sobrescreve.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.create",
+        "title": "clientes.create",
+        "description": "Criar cliente. Cria um cliente novo. Nome obrigatório; email/telefone opcionais. Duplicado por email/telefone gera aviso, não bloqueio.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.get",
+        "title": "clientes.get",
+        "description": "Obter cliente. Retorna um cliente pelo id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.list",
+        "title": "clientes.list",
+        "description": "Listar clientes. Lista clientes do fotógrafo ordenados por nome (padrão). Suporta paginação leve.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.listSessoes",
+        "title": "clientes.listSessoes",
+        "description": "Listar sessões do cliente. Retorna sessões vinculadas ao cliente (mais recentes primeiro).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.listTransacoes",
+        "title": "clientes.listTransacoes",
+        "description": "Listar transações do cliente. Retorna transações financeiras (entradas/saídas) vinculadas ao cliente, mais recentes primeiro.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.search",
+        "title": "clientes.search",
+        "description": "Buscar clientes. Busca por nome, email, telefone ou CPF/CNPJ (contém, case-insensitive). Limite 20.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.clientes.update",
+        "title": "clientes.update",
+        "description": "Atualizar cliente. Atualiza campos do cliente. Só campos informados são alterados.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.formularios.createForm",
+        "title": "formularios.createForm",
+        "description": "Criar formulário. Cria formulário em rascunho. Aceita lista de campos (esquema Lunari).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.formularios.getForm",
+        "title": "formularios.getForm",
+        "description": "Obter formulário. Retorna o formulário completo (com campos).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.formularios.listForms",
+        "title": "formularios.listForms",
+        "description": "Listar formulários. Lista formulários do usuário; filtros opcionais por status/cliente.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.formularios.listResponses",
+        "title": "formularios.listResponses",
+        "description": "Listar respostas. Lista respostas de um formulário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.formularios.updateForm",
+        "title": "formularios.updateForm",
+        "description": "Editar formulário. Atualiza título/descrição/campos (rascunho ou publicado).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.createContrato",
+        "title": "contratos.createContrato",
+        "description": "Criar contrato. Cria contrato em rascunho para um cliente. Aceita template opcional; conteúdo é copiado do template.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.createTemplate",
+        "title": "contratos.createTemplate",
+        "description": "Criar template. Cria template de contrato (inativo por padrão até revisão).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.getContrato",
+        "title": "contratos.getContrato",
+        "description": "Obter contrato. Retorna o contrato completo (com conteúdo).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.getTemplate",
+        "title": "contratos.getTemplate",
+        "description": "Obter template. Retorna o template completo (com conteúdo).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.listContratos",
+        "title": "contratos.listContratos",
+        "description": "Listar contratos. Lista contratos com filtros por status/cliente/sessão.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.listTemplates",
+        "title": "contratos.listTemplates",
+        "description": "Listar templates de contrato. Lista templates do usuário. Filtros opcionais por categoria/ativo/busca.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.updateContrato",
+        "title": "contratos.updateContrato",
+        "description": "Editar contrato. Atualiza título/conteúdo/observações/session_id (enquanto o contrato não estiver assinado).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.contratos.updateTemplate",
+        "title": "contratos.updateTemplate",
+        "description": "Editar template. Atualiza nome/descrição/categoria/conteúdo/ativo.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.createCategoria",
+        "title": "configuracoes.createCategoria",
+        "description": "Criar categoria. Cria uma nova categoria. Falha se nome duplicado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.createEtapa",
+        "title": "configuracoes.createEtapa",
+        "description": "Criar etapa. Cria nova etapa customizada no final da lista.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.createPacote",
+        "title": "configuracoes.createPacote",
+        "description": "Criar pacote. Cria pacote em uma categoria com valores e fotos inclusas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.createProduto",
+        "title": "configuracoes.createProduto",
+        "description": "Criar produto. Cria um novo produto com custo e preço de venda.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.getCategoria",
+        "title": "configuracoes.getCategoria",
+        "description": "Obter categoria. Retorna os dados de uma categoria pelo id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.listCategorias",
+        "title": "configuracoes.listCategorias",
+        "description": "Listar categorias. Retorna todas as categorias do estúdio ordenadas por nome.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.listEtapas",
+        "title": "configuracoes.listEtapas",
+        "description": "Listar etapas. Lista etapas ordenadas.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.listPacotes",
+        "title": "configuracoes.listPacotes",
+        "description": "Listar pacotes. Lista pacotes; opcionalmente filtra por categoria.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.listProdutos",
+        "title": "configuracoes.listProdutos",
+        "description": "Listar produtos. Lista produtos; filtra por texto (nome) ou favoritos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.moveEtapa",
+        "title": "configuracoes.moveEtapa",
+        "description": "Reordenar etapa. Muda a posição da etapa (ordem absoluta).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.toggleProdutoFavorito",
+        "title": "configuracoes.toggleProdutoFavorito",
+        "description": "Favoritar/desfavoritar produto. Alterna o estado de favorito do produto.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.updateCategoria",
+        "title": "configuracoes.updateCategoria",
+        "description": "Editar categoria. Atualiza nome e/ou cor de uma categoria. Renomear é seguro para sessões congeladas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.updateEtapa",
+        "title": "configuracoes.updateEtapa",
+        "description": "Editar etapa. Renomeia / muda cor. Etapas de sistema não podem ser renomeadas.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.updatePacote",
+        "title": "configuracoes.updatePacote",
+        "description": "Editar pacote. Atualiza campos do pacote. Valores futuros; sessões congeladas mantêm o preço.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.configuracoes.updateProduto",
+        "title": "configuracoes.updateProduto",
+        "description": "Editar produto. Atualiza campos do produto.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.billing.listSessionPayments",
+        "title": "billing.listSessionPayments",
+        "description": "Listar pagamentos da sessão. Cobranças (gateway) e transações (manuais/estornos) vinculadas à sessão. Use antes de propor estorno.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.gallery.checkAccess",
+        "title": "gallery.checkAccess",
+        "description": "Verificar acesso à Gallery. Retorna se o usuário (ou o usuário autenticado, se omitido) tem permissão para usar o módulo Gallery, consultando a SOT no banco.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.gallery.listExpiring",
+        "title": "gallery.listExpiring",
+        "description": "Galerias expirando. Galerias ativas expiradas ou a expirar dentro de N dias.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.gallery.listInSelection",
+        "title": "gallery.listInSelection",
+        "description": "Galerias em seleção. Galerias ativas com seleção em andamento.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.category.create",
+        "title": "finance.category.create",
+        "description": "Criar categoria vinculada a um grupo. Cria nova categoria (subcategoria) vinculada a um grupo fixo do catálogo. Idempotente por (user, lower(nome), grupo_principal).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.category.list",
+        "title": "finance.category.list",
+        "description": "Listar categorias (subcategorias) do usuário. Lista subcategorias ativas com vínculo opcional a um grupo. Inclui categorias legadas (sem groupCode). Filtros opcionais por groupCode ou natureCode.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.credit.get",
+        "title": "finance.credit.get",
+        "description": "Consultar crédito do cliente. Saldo atual e histórico do ledger de crédito.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.credit.listClientsWithCredit",
+        "title": "finance.credit.listClientsWithCredit",
+        "description": "Clientes com crédito disponível. Lista clientes com saldo positivo no ledger de crédito.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.dashboard.kpis",
+        "title": "finance.dashboard.kpis",
+        "description": "KPIs do dashboard financeiro. Retorna receita, despesa, custo e lucro do mês informado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.extrato.list",
+        "title": "finance.extrato.list",
+        "description": "Listar extrato unificado. Pagina o extrato unificado (gestão + gallery + cobranças). Default: regime caixa, 50/página.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.extrato.summary",
+        "title": "finance.extrato.summary",
+        "description": "Resumo do extrato. Totais agregados de entradas, saídas e saldo no período/filtros informados.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.goal.list",
+        "title": "finance.goal.list",
+        "description": "Listar metas do ano. Retorna todas as metas mensais configuradas para o ano informado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.goal.progress",
+        "title": "finance.goal.progress",
+        "description": "Progresso de metas do mês. Compara realizado vs meta para o mês informado (apenas meta global '__geral__').",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.goal.set",
+        "title": "finance.goal.set",
+        "description": "Definir meta mensal. Cria ou atualiza meta de faturamento/lucro para um mês. Use categoria '__geral__' para meta global.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.group.list",
+        "title": "finance.group.list",
+        "description": "Listar grupos financeiros. Catálogo fixo de grupos. Cada grupo pertence a uma natureza. Pode filtrar por `natureCode`.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.item.create",
+        "title": "finance.item.create",
+        "description": "Criar subcategoria financeira. Cria nova subcategoria (item) em um grupo. Idempotente por (user, lower(nome), grupo).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.item.list",
+        "title": "finance.item.list",
+        "description": "Listar subcategorias. Lista subcategorias financeiras ativas, opcionalmente filtradas por grupo. Use antes de criar item por nome para desambiguar.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.nature.list",
+        "title": "finance.nature.list",
+        "description": "Listar naturezas financeiras (interno). Catálogo fixo de naturezas financeiras. Uso interno (KPI, relatórios, IA). NÃO exibir ao usuário final.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.transaction.create",
+        "title": "finance.transaction.create",
+        "description": "Criar lançamento financeiro. Cria lançamento financeiro (único, parcelado, recorrente ou cartão). Status é derivado pelo banco.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.transaction.markPaid",
+        "title": "finance.transaction.markPaid",
+        "description": "Marcar como pago. Marca um lançamento financeiro como Pago.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.transaction.markPending",
+        "title": "finance.transaction.markPending",
+        "description": "Reabrir lançamento. Reabre um lançamento marcado como pago, retornando ao status Faturado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.finance.transaction.update",
+        "title": "finance.transaction.update",
+        "description": "Atualizar lançamento. Atualiza campos editáveis. Status e valores derivados são imutáveis.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "lunari.tasks.assign",
+      "title": "tasks.assign",
+      "description": "Atribuir tarefa. Define ou remove o responsável de uma tarefa.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.assign"
+    },
+    {
+      "name": "lunari.tasks.attachment.add",
+      "title": "tasks.attachment.add",
+      "description": "Adicionar anexo. Faz upload de um arquivo para a tarefa (armazenado em R2 privado).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.attachment.add"
+    },
+    {
+      "name": "lunari.tasks.attachment.list",
+      "title": "tasks.attachment.list",
+      "description": "Listar anexos da tarefa. Retorna todos os anexos associados a uma tarefa.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.attachment.list"
+    },
+    {
+      "name": "lunari.tasks.complete",
+      "title": "tasks.complete",
+      "description": "Concluir tarefa. Marca a tarefa como concluída usando o status terminal configurado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.complete"
+    },
+    {
+      "name": "lunari.tasks.countsByStatus",
+      "title": "tasks.countsByStatus",
+      "description": "Contagem por status. Retorna a quantidade de tarefas em cada coluna do Kanban.",
+      "inputSchema": {
+        "$zod": "ZodOptional"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.countsByStatus"
+    },
+    {
+      "name": "lunari.tasks.create",
+      "title": "tasks.create",
+      "description": "Criar tarefa. Cria uma nova tarefa no quadro do usuário autenticado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.create"
+    },
+    {
+      "name": "lunari.tasks.dueOverview",
+      "title": "tasks.dueOverview",
+      "description": "Visão geral de prazos. Conta e agrupa tarefas por bucket temporal (overdue, hoje, amanhã, semana).",
+      "inputSchema": {
+        "$zod": "ZodOptional"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.dueOverview"
+    },
+    {
+      "name": "lunari.tasks.getById",
+      "title": "tasks.getById",
+      "description": "Detalhar tarefa. Retorna uma tarefa pelo ID.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.getById"
+    },
+    {
+      "name": "lunari.tasks.list",
+      "title": "tasks.list",
+      "description": "Listar tarefas. Lista todas as tarefas do usuário, mais recentes primeiro.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.list"
+    },
+    {
+      "name": "lunari.tasks.move",
+      "title": "tasks.move",
+      "description": "Mover tarefa de status. Altera o status (coluna do Kanban) da tarefa. Recalcula completed_at quando aplicável.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.move"
+    },
+    {
+      "name": "lunari.tasks.people.create",
+      "title": "tasks.people.create",
+      "description": "Adicionar pessoa. Adiciona uma nova pessoa atribuível a tarefas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.people.create"
+    },
+    {
+      "name": "lunari.tasks.people.list",
+      "title": "tasks.people.list",
+      "description": "Listar pessoas. Lista todas as pessoas atribuíveis a tarefas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.people.list"
+    },
+    {
+      "name": "lunari.tasks.people.reorder",
+      "title": "tasks.people.reorder",
+      "description": "Reordenar pessoas. Atualiza a ordem de exibição das pessoas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.people.reorder"
+    },
+    {
+      "name": "lunari.tasks.people.update",
+      "title": "tasks.people.update",
+      "description": "Atualizar pessoa. Atualiza nome ou cor de uma pessoa.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.people.update"
+    },
+    {
+      "name": "lunari.tasks.reopen",
+      "title": "tasks.reopen",
+      "description": "Reabrir tarefa. Reabre uma tarefa concluída, limpando completed_at.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.reopen"
+    },
+    {
+      "name": "lunari.tasks.search",
+      "title": "tasks.search",
+      "description": "Buscar tarefas. Busca tarefas por título, descrição ou tag.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.search"
+    },
+    {
+      "name": "lunari.tasks.snooze",
+      "title": "tasks.snooze",
+      "description": "Adiar tarefa. Posterga as notificações da tarefa até a data informada.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.snooze"
+    },
+    {
+      "name": "lunari.tasks.tags.create",
+      "title": "tasks.tags.create",
+      "description": "Criar tag. Cria uma nova tag para tarefas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.tags.create"
+    },
+    {
+      "name": "lunari.tasks.tags.list",
+      "title": "tasks.tags.list",
+      "description": "Listar tags. Lista todas as tags do usuário.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.tags.list"
+    },
+    {
+      "name": "lunari.tasks.tags.reorder",
+      "title": "tasks.tags.reorder",
+      "description": "Reordenar tags. Atualiza a ordem de exibição das tags.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.tags.reorder"
+    },
+    {
+      "name": "lunari.tasks.tags.update",
+      "title": "tasks.tags.update",
+      "description": "Atualizar tag. Atualiza nome ou cor de uma tag.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.tags.update"
+    },
+    {
+      "name": "lunari.tasks.update",
+      "title": "tasks.update",
+      "description": "Atualizar tarefa. Atualiza campos editáveis de uma tarefa. Status, assignee, snooze têm comandos próprios.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "tasks.update"
+    },
+    {
+      "name": "lunari.agenda.appointments.confirm",
+      "title": "agenda.appointments.confirm",
+      "description": "Confirmar agendamento. Marca um agendamento como confirmado. Disparará criação da sessão de workflow e ocupação do slot.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.appointments.confirm"
+    },
+    {
+      "name": "lunari.agenda.appointments.create",
+      "title": "agenda.appointments.create",
+      "description": "Criar agendamento. Cria um agendamento. Se o status for 'confirmado', o slot correspondente é ocupado e uma sessão do workflow é criada automaticamente pelo banco.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.appointments.create"
+    },
+    {
+      "name": "lunari.agenda.appointments.get",
+      "title": "agenda.appointments.get",
+      "description": "Obter agendamento por ID. Busca um agendamento específico do usuário pelo seu ID.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.appointments.get"
+    },
+    {
+      "name": "lunari.agenda.appointments.list",
+      "title": "agenda.appointments.list",
+      "description": "Listar agendamentos por período. Retorna todos os agendamentos do usuário entre duas datas (inclusive). Use para alimentar visualizações de calendário e responder perguntas como 'quais sessões tenho em julho?'.",
+      "inputSchema": {
+        "$zod": "ZodEffects"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.appointments.list"
+    },
+    {
+      "name": "lunari.agenda.appointments.update",
+      "title": "agenda.appointments.update",
+      "description": "Atualizar agendamento. Aplica um patch parcial em um agendamento existente.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.appointments.update"
+    },
+    {
+      "name": "lunari.agenda.availability.add",
+      "title": "agenda.availability.add",
+      "description": "Adicionar slots de disponibilidade. Cria múltiplos slots de disponibilidade em lote.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.availability.add"
+    },
+    {
+      "name": "lunari.agenda.availability.findNext",
+      "title": "agenda.availability.findNext",
+      "description": "Encontrar próximo slot livre. Procura o próximo slot de disponibilidade sem conflito com agendamentos confirmados, a partir de uma data/hora.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.availability.findNext"
+    },
+    {
+      "name": "lunari.agenda.availability.list",
+      "title": "agenda.availability.list",
+      "description": "Listar slots de disponibilidade. Retorna todos os slots de disponibilidade cadastrados pelo usuário.",
+      "inputSchema": {
+        "$zod": "ZodDefault"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.availability.list"
+    },
+    {
+      "name": "lunari.agenda.slot.check",
+      "title": "agenda.slot.check",
+      "description": "Verificar disponibilidade de um slot. Verifica se um par data/hora está livre, ocupado por um agendamento confirmado, com pendentes, ou em um slot bloqueado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "agenda.slot.check"
+    },
+    {
+      "name": "lunari.clientes.addNota",
+      "title": "clientes.addNota",
+      "description": "Adicionar nota ao cliente. Anexa uma linha de observação ao histórico do cliente (campo observacoes). Não sobrescreve.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.addNota"
+    },
+    {
+      "name": "lunari.clientes.create",
+      "title": "clientes.create",
+      "description": "Criar cliente. Cria um cliente novo. Nome obrigatório; email/telefone opcionais. Duplicado por email/telefone gera aviso, não bloqueio.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.create"
+    },
+    {
+      "name": "lunari.clientes.get",
+      "title": "clientes.get",
+      "description": "Obter cliente. Retorna um cliente pelo id.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.get"
+    },
+    {
+      "name": "lunari.clientes.list",
+      "title": "clientes.list",
+      "description": "Listar clientes. Lista clientes do fotógrafo ordenados por nome (padrão). Suporta paginação leve.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.list"
+    },
+    {
+      "name": "lunari.clientes.listSessoes",
+      "title": "clientes.listSessoes",
+      "description": "Listar sessões do cliente. Retorna sessões vinculadas ao cliente (mais recentes primeiro).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.listSessoes"
+    },
+    {
+      "name": "lunari.clientes.listTransacoes",
+      "title": "clientes.listTransacoes",
+      "description": "Listar transações do cliente. Retorna transações financeiras (entradas/saídas) vinculadas ao cliente, mais recentes primeiro.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.listTransacoes"
+    },
+    {
+      "name": "lunari.clientes.search",
+      "title": "clientes.search",
+      "description": "Buscar clientes. Busca por nome, email, telefone ou CPF/CNPJ (contém, case-insensitive). Limite 20.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.search"
+    },
+    {
+      "name": "lunari.clientes.update",
+      "title": "clientes.update",
+      "description": "Atualizar cliente. Atualiza campos do cliente. Só campos informados são alterados.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "clientes.update"
+    },
+    {
+      "name": "lunari.formularios.createForm",
+      "title": "formularios.createForm",
+      "description": "Criar formulário. Cria formulário em rascunho. Aceita lista de campos (esquema Lunari).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.createForm"
+    },
+    {
+      "name": "lunari.formularios.getForm",
+      "title": "formularios.getForm",
+      "description": "Obter formulário. Retorna o formulário completo (com campos).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.getForm"
+    },
+    {
+      "name": "lunari.formularios.listForms",
+      "title": "formularios.listForms",
+      "description": "Listar formulários. Lista formulários do usuário; filtros opcionais por status/cliente.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.listForms"
+    },
+    {
+      "name": "lunari.formularios.listResponses",
+      "title": "formularios.listResponses",
+      "description": "Listar respostas. Lista respostas de um formulário.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.listResponses"
+    },
+    {
+      "name": "lunari.formularios.updateForm",
+      "title": "formularios.updateForm",
+      "description": "Editar formulário. Atualiza título/descrição/campos (rascunho ou publicado).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.updateForm"
+    },
+    {
+      "name": "lunari.contratos.createContrato",
+      "title": "contratos.createContrato",
+      "description": "Criar contrato. Cria contrato em rascunho para um cliente. Aceita template opcional; conteúdo é copiado do template.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.createContrato"
+    },
+    {
+      "name": "lunari.contratos.createTemplate",
+      "title": "contratos.createTemplate",
+      "description": "Criar template. Cria template de contrato (inativo por padrão até revisão).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.createTemplate"
+    },
+    {
+      "name": "lunari.contratos.getContrato",
+      "title": "contratos.getContrato",
+      "description": "Obter contrato. Retorna o contrato completo (com conteúdo).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.getContrato"
+    },
+    {
+      "name": "lunari.contratos.getTemplate",
+      "title": "contratos.getTemplate",
+      "description": "Obter template. Retorna o template completo (com conteúdo).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.getTemplate"
+    },
+    {
+      "name": "lunari.contratos.listContratos",
+      "title": "contratos.listContratos",
+      "description": "Listar contratos. Lista contratos com filtros por status/cliente/sessão.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.listContratos"
+    },
+    {
+      "name": "lunari.contratos.listTemplates",
+      "title": "contratos.listTemplates",
+      "description": "Listar templates de contrato. Lista templates do usuário. Filtros opcionais por categoria/ativo/busca.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.listTemplates"
+    },
+    {
+      "name": "lunari.contratos.updateContrato",
+      "title": "contratos.updateContrato",
+      "description": "Editar contrato. Atualiza título/conteúdo/observações/session_id (enquanto o contrato não estiver assinado).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.updateContrato"
+    },
+    {
+      "name": "lunari.contratos.updateTemplate",
+      "title": "contratos.updateTemplate",
+      "description": "Editar template. Atualiza nome/descrição/categoria/conteúdo/ativo.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.updateTemplate"
+    },
+    {
+      "name": "lunari.configuracoes.createCategoria",
+      "title": "configuracoes.createCategoria",
+      "description": "Criar categoria. Cria uma nova categoria. Falha se nome duplicado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.createCategoria"
+    },
+    {
+      "name": "lunari.configuracoes.createEtapa",
+      "title": "configuracoes.createEtapa",
+      "description": "Criar etapa. Cria nova etapa customizada no final da lista.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.createEtapa"
+    },
+    {
+      "name": "lunari.configuracoes.createPacote",
+      "title": "configuracoes.createPacote",
+      "description": "Criar pacote. Cria pacote em uma categoria com valores e fotos inclusas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.createPacote"
+    },
+    {
+      "name": "lunari.configuracoes.createProduto",
+      "title": "configuracoes.createProduto",
+      "description": "Criar produto. Cria um novo produto com custo e preço de venda.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.createProduto"
+    },
+    {
+      "name": "lunari.configuracoes.getCategoria",
+      "title": "configuracoes.getCategoria",
+      "description": "Obter categoria. Retorna os dados de uma categoria pelo id.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.getCategoria"
+    },
+    {
+      "name": "lunari.configuracoes.listCategorias",
+      "title": "configuracoes.listCategorias",
+      "description": "Listar categorias. Retorna todas as categorias do estúdio ordenadas por nome.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.listCategorias"
+    },
+    {
+      "name": "lunari.configuracoes.listEtapas",
+      "title": "configuracoes.listEtapas",
+      "description": "Listar etapas. Lista etapas ordenadas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.listEtapas"
+    },
+    {
+      "name": "lunari.configuracoes.listPacotes",
+      "title": "configuracoes.listPacotes",
+      "description": "Listar pacotes. Lista pacotes; opcionalmente filtra por categoria.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.listPacotes"
+    },
+    {
+      "name": "lunari.configuracoes.listProdutos",
+      "title": "configuracoes.listProdutos",
+      "description": "Listar produtos. Lista produtos; filtra por texto (nome) ou favoritos.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.listProdutos"
+    },
+    {
+      "name": "lunari.configuracoes.moveEtapa",
+      "title": "configuracoes.moveEtapa",
+      "description": "Reordenar etapa. Muda a posição da etapa (ordem absoluta).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.moveEtapa"
+    },
+    {
+      "name": "lunari.configuracoes.toggleProdutoFavorito",
+      "title": "configuracoes.toggleProdutoFavorito",
+      "description": "Favoritar/desfavoritar produto. Alterna o estado de favorito do produto.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.toggleProdutoFavorito"
+    },
+    {
+      "name": "lunari.configuracoes.updateCategoria",
+      "title": "configuracoes.updateCategoria",
+      "description": "Editar categoria. Atualiza nome e/ou cor de uma categoria. Renomear é seguro para sessões congeladas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.updateCategoria"
+    },
+    {
+      "name": "lunari.configuracoes.updateEtapa",
+      "title": "configuracoes.updateEtapa",
+      "description": "Editar etapa. Renomeia / muda cor. Etapas de sistema não podem ser renomeadas.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.updateEtapa"
+    },
+    {
+      "name": "lunari.configuracoes.updatePacote",
+      "title": "configuracoes.updatePacote",
+      "description": "Editar pacote. Atualiza campos do pacote. Valores futuros; sessões congeladas mantêm o preço.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.updatePacote"
+    },
+    {
+      "name": "lunari.configuracoes.updateProduto",
+      "title": "configuracoes.updateProduto",
+      "description": "Editar produto. Atualiza campos do produto.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "configuracoes.updateProduto"
+    },
+    {
+      "name": "lunari.billing.listSessionPayments",
+      "title": "billing.listSessionPayments",
+      "description": "Listar pagamentos da sessão. Cobranças (gateway) e transações (manuais/estornos) vinculadas à sessão. Use antes de propor estorno.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "billing.listSessionPayments"
+    },
+    {
+      "name": "lunari.gallery.checkAccess",
+      "title": "gallery.checkAccess",
+      "description": "Verificar acesso à Gallery. Retorna se o usuário (ou o usuário autenticado, se omitido) tem permissão para usar o módulo Gallery, consultando a SOT no banco.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "gallery.checkAccess"
+    },
+    {
+      "name": "lunari.gallery.listExpiring",
+      "title": "gallery.listExpiring",
+      "description": "Galerias expirando. Galerias ativas expiradas ou a expirar dentro de N dias.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "gallery.listExpiring"
+    },
+    {
+      "name": "lunari.gallery.listInSelection",
+      "title": "gallery.listInSelection",
+      "description": "Galerias em seleção. Galerias ativas com seleção em andamento.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "gallery.listInSelection"
+    },
+    {
+      "name": "lunari.finance.category.create",
+      "title": "finance.category.create",
+      "description": "Criar categoria vinculada a um grupo. Cria nova categoria (subcategoria) vinculada a um grupo fixo do catálogo. Idempotente por (user, lower(nome), grupo_principal).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.category.create"
+    },
+    {
+      "name": "lunari.finance.category.list",
+      "title": "finance.category.list",
+      "description": "Listar categorias (subcategorias) do usuário. Lista subcategorias ativas com vínculo opcional a um grupo. Inclui categorias legadas (sem groupCode). Filtros opcionais por groupCode ou natureCode.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.category.list"
+    },
+    {
+      "name": "lunari.finance.credit.get",
+      "title": "finance.credit.get",
+      "description": "Consultar crédito do cliente. Saldo atual e histórico do ledger de crédito.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.credit.get"
+    },
+    {
+      "name": "lunari.finance.credit.listClientsWithCredit",
+      "title": "finance.credit.listClientsWithCredit",
+      "description": "Clientes com crédito disponível. Lista clientes com saldo positivo no ledger de crédito.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.credit.listClientsWithCredit"
+    },
+    {
+      "name": "lunari.finance.dashboard.kpis",
+      "title": "finance.dashboard.kpis",
+      "description": "KPIs do dashboard financeiro. Retorna receita, despesa, custo e lucro do mês informado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.dashboard.kpis"
+    },
+    {
+      "name": "lunari.finance.extrato.list",
+      "title": "finance.extrato.list",
+      "description": "Listar extrato unificado. Pagina o extrato unificado (gestão + gallery + cobranças). Default: regime caixa, 50/página.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.extrato.list"
+    },
+    {
+      "name": "lunari.finance.extrato.summary",
+      "title": "finance.extrato.summary",
+      "description": "Resumo do extrato. Totais agregados de entradas, saídas e saldo no período/filtros informados.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.extrato.summary"
+    },
+    {
+      "name": "lunari.finance.goal.list",
+      "title": "finance.goal.list",
+      "description": "Listar metas do ano. Retorna todas as metas mensais configuradas para o ano informado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.goal.list"
+    },
+    {
+      "name": "lunari.finance.goal.progress",
+      "title": "finance.goal.progress",
+      "description": "Progresso de metas do mês. Compara realizado vs meta para o mês informado (apenas meta global '__geral__').",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.goal.progress"
+    },
+    {
+      "name": "lunari.finance.goal.set",
+      "title": "finance.goal.set",
+      "description": "Definir meta mensal. Cria ou atualiza meta de faturamento/lucro para um mês. Use categoria '__geral__' para meta global.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.goal.set"
+    },
+    {
+      "name": "lunari.finance.group.list",
+      "title": "finance.group.list",
+      "description": "Listar grupos financeiros. Catálogo fixo de grupos. Cada grupo pertence a uma natureza. Pode filtrar por `natureCode`.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.group.list"
+    },
+    {
+      "name": "lunari.finance.item.create",
+      "title": "finance.item.create",
+      "description": "Criar subcategoria financeira. Cria nova subcategoria (item) em um grupo. Idempotente por (user, lower(nome), grupo).",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.item.create"
+    },
+    {
+      "name": "lunari.finance.item.list",
+      "title": "finance.item.list",
+      "description": "Listar subcategorias. Lista subcategorias financeiras ativas, opcionalmente filtradas por grupo. Use antes de criar item por nome para desambiguar.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.item.list"
+    },
+    {
+      "name": "lunari.finance.nature.list",
+      "title": "finance.nature.list",
+      "description": "Listar naturezas financeiras (interno). Catálogo fixo de naturezas financeiras. Uso interno (KPI, relatórios, IA). NÃO exibir ao usuário final.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.nature.list"
+    },
+    {
+      "name": "lunari.finance.transaction.create",
+      "title": "finance.transaction.create",
+      "description": "Criar lançamento financeiro. Cria lançamento financeiro (único, parcelado, recorrente ou cartão). Status é derivado pelo banco.",
+      "inputSchema": {
+        "$zod": "ZodEffects"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.transaction.create"
+    },
+    {
+      "name": "lunari.finance.transaction.markPaid",
+      "title": "finance.transaction.markPaid",
+      "description": "Marcar como pago. Marca um lançamento financeiro como Pago.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.transaction.markPaid"
+    },
+    {
+      "name": "lunari.finance.transaction.markPending",
+      "title": "finance.transaction.markPending",
+      "description": "Reabrir lançamento. Reabre um lançamento marcado como pago, retornando ao status Faturado.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.transaction.markPending"
+    },
+    {
+      "name": "lunari.finance.transaction.update",
+      "title": "finance.transaction.update",
+      "description": "Atualizar lançamento. Atualiza campos editáveis. Status e valores derivados são imutáveis.",
+      "inputSchema": {
+        "$zod": "ZodObject"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "finance.transaction.update"
+    }
+  ]
+}

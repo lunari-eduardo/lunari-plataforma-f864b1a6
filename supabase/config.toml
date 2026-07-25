@@ -142,3 +142,6 @@ verify_jwt = true
 
 [functions.admin-platform-integration-test]
 verify_jwt = true
+
+[functions.assistant-mcp]
+verify_jwt = false
