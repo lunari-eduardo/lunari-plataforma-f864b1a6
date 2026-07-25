@@ -196,8 +196,10 @@ function needsAuthResponse(name: string) {
       {
         type: "text",
         text:
-          `Autenticação necessária para executar "${name}". Gere um Personal Access Token em ` +
-          `https://lunari.app/configuracoes/assistente-mcp e envie no header Authorization: Bearer lmcp_...`,
+          `Autenticação necessária para executar "${name}". ` +
+          `Recomendado: conecte via OAuth ("Sign in with Lunari") — clientes como ChatGPT/Claude descobrem o fluxo ` +
+          `automaticamente pelo endpoint MCP. Alternativa avançada: gere um Personal Access Token em ` +
+          `https://app.lunarihub.com/app/assistente/mcp e envie no header Authorization: Bearer lmcp_...`,
       },
     ],
   };
@@ -302,6 +304,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
             status: result.isError ? "error" : "ok_approved",
             latencyMs: Date.now() - started,
             errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
+            authSource: auth.authSource,
           });
           return rpcResult(id, result);
         }
@@ -339,6 +342,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         status: result.isError ? "error" : "ok",
         latencyMs: Date.now() - started,
         errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
+        authSource: auth.authSource,
       });
       return rpcResult(id, result);
     }
