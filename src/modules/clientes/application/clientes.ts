@@ -110,8 +110,8 @@ export const listClienteSessoesCap = defineQuery({
     items: z.array(
       z.object({
         id: z.string(),
-        nome: z.string().nullable().optional(),
-        data: z.string().nullable().optional(),
+        descricao: z.string().nullable().optional(),
+        data_sessao: z.string().nullable().optional(),
         status: z.string().nullable().optional(),
         valor_total: z.number().nullable().optional(),
         valor_pago: z.number().nullable().optional(),
@@ -122,12 +122,12 @@ export const listClienteSessoesCap = defineQuery({
   handler: async ({ clienteId, limit }) => {
     const { data, error } = await supabase
       .from("clientes_sessoes")
-      .select("id, nome, data, status, valor_total, valor_pago")
+      .select("id, descricao, data_sessao, status, valor_total, valor_pago")
       .eq("cliente_id", clienteId)
-      .order("data", { ascending: false })
+      .order("data_sessao", { ascending: false })
       .limit(limit);
     if (error) return err(domainError("DB", error.message));
-    return ok({ items: data ?? [] });
+    return ok({ items: (data ?? []) as never });
   },
 });
 
@@ -146,7 +146,7 @@ export const listClienteTransacoesCap = defineQuery({
         descricao: z.string().nullable().optional(),
         valor: z.number().nullable().optional(),
         tipo: z.string().nullable().optional(),
-        data: z.string().nullable().optional(),
+        data_transacao: z.string().nullable().optional(),
       }),
     ),
   }),
@@ -154,12 +154,12 @@ export const listClienteTransacoesCap = defineQuery({
   handler: async ({ clienteId, limit }) => {
     const { data, error } = await supabase
       .from("clientes_transacoes")
-      .select("id, descricao, valor, tipo, data")
+      .select("id, descricao, valor, tipo, data_transacao")
       .eq("cliente_id", clienteId)
-      .order("data", { ascending: false })
+      .order("data_transacao", { ascending: false })
       .limit(limit);
     if (error) return err(domainError("DB", error.message));
-    return ok({ items: data ?? [] });
+    return ok({ items: (data ?? []) as never });
   },
 });
 
