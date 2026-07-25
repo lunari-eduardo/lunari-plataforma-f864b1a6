@@ -180,42 +180,98 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       });
     case "tools/call": {
       const name = (req.params?.name as string) ?? "unknown";
-      const args = (req.params?.arguments as Record<string, unknown>) ?? {};
+      const args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
       const started = Date.now();
 
       if (!auth.userId) {
-        await audit({
-          userId: null,
-          toolName: name,
-          status: "blocked_no_token",
-          latencyMs: Date.now() - started,
-        });
+        await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started });
         return rpcResult(id, needsAuthResponse(name));
       }
       if (!auth.rolloutAllowed) {
-        await audit({
-          userId: auth.userId,
-          toolName: name,
-          status: "blocked_by_rollout",
-          latencyMs: Date.now() - started,
-        });
+        await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started });
         return rpcResult(id, rolloutBlockedResponse());
       }
-      if (!isBridged(name)) {
-        await audit({
-          userId: auth.userId,
-          toolName: name,
-          status: "bridge_unsupported",
-          latencyMs: Date.now() - started,
-        });
+      const bridged = getBridged(name);
+      if (!bridged) {
+        await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started });
         return rpcResult(id, inAppFallback(name));
       }
 
+      // Escopo do PAT: por default `read`. Escrita exige `write` explícito.
+      const hasWrite = auth.scopes.includes("write") || auth.scopes.includes("admin");
+      if (bridged.scope === "write" && !hasWrite) {
+        await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started });
+        return rpcResult(id, {
+          isError: true,
+          content: [{
+            type: "text",
+            text: `Este token não possui o escopo "write". Gere um novo token com escopo de escrita em https://lunari.app/assistente/mcp.`,
+          }],
+        });
+      }
+
       const sb = admin();
-      const result = await runBridged(sb, auth.userId, name, args as any);
+
+      // Fluxo de aprovação assíncrona para tools destrutivas.
+      if (bridged.requiresApproval) {
+        const approvalToken = typeof args.approval_token === "string" ? (args.approval_token as string) : "";
+        if (approvalToken) {
+          // Tenta consumir aprovação existente para esta tool.
+          const { data: consumed, error: consumeErr } = await sb.rpc("assistant_approval_consume", {
+            _approval_token: approvalToken,
+            _user_id: auth.userId,
+            _tool_name: name,
+          });
+          if (consumeErr || !consumed || (Array.isArray(consumed) && consumed.length === 0)) {
+            await audit({ userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started });
+            return rpcResult(id, {
+              isError: true,
+              content: [{ type: "text", text: "Token de aprovação inválido, já usado ou expirado. Solicite nova aprovação no app." }],
+            });
+          }
+          const row = Array.isArray(consumed) ? consumed[0] : consumed;
+          const effectiveArgs = { ...(row?.tool_args ?? {}), ...args };
+          delete (effectiveArgs as any).approval_token;
+          const result = await runBridged(sb, auth.userId, name, effectiveArgs);
+          await audit({
+            userId: auth.userId, toolName: name,
+            status: result.isError ? "error" : "ok_approved",
+            latencyMs: Date.now() - started,
+            errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
+          });
+          return rpcResult(id, result);
+        }
+
+        // Sem token: cria pedido de aprovação e responde "pending".
+        const summary = bridged.summarize ? bridged.summarize(args) : `Executar ${name}`;
+        const { data: approvalId, error: apprErr } = await sb.rpc("assistant_approval_create", {
+          _user_id: auth.userId,
+          _token_id: auth.tokenId,
+          _tool_name: name,
+          _tool_args: args,
+          _summary: summary,
+        });
+        if (apprErr) {
+          await audit({ userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message });
+          return rpcResult(id, { isError: true, content: [{ type: "text", text: `Falha ao criar pedido de aprovação: ${apprErr.message}` }] });
+        }
+        await audit({ userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started });
+        return rpcResult(id, {
+          content: [{
+            type: "text",
+            text:
+              `Esta ação exige aprovação humana. Abri um pedido no app: "${summary}". ` +
+              `Peça ao fotógrafo aprovar em https://lunari.app/assistente/aprovacoes e reenvie esta chamada ` +
+              `incluindo o argumento "approval_token" retornado.`,
+          }],
+          structuredContent: { status: "pending_approval", approval_id: approvalId, summary },
+        });
+      }
+
+      // Escritas sem approval e leituras: executa direto.
+      const result = await runBridged(sb, auth.userId, name, args);
       await audit({
-        userId: auth.userId,
-        toolName: name,
+        userId: auth.userId, toolName: name,
         status: result.isError ? "error" : "ok",
         latencyMs: Date.now() - started,
         errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
