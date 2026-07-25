@@ -1,0 +1,204 @@
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
+import { useCallback, useMemo, useRef } from "react";
+import { useLocation } from "react-router-dom";
+
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  buildAssistantSystemPrompt,
+  listAllLunariAITools,
+} from "@/shared/ai";
+import type { AuthUser } from "@/shared/ports";
+
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  PromptInput,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTextarea,
+} from "@/components/ai-elements/prompt-input";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+
+import { executeAssistantToolCall } from "../runtime/executeToolCall";
+import { pageFromRoute } from "../runtime/pageFromRoute";
+
+const ASSISTANT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
+
+function toAuthUser(user: ReturnType<typeof useAuth>["user"]): AuthUser | null {
+  if (!user?.id) return null;
+  return { id: user.id, email: user.email ?? undefined } as AuthUser;
+}
+
+export function AssistantChat() {
+  const { user, session } = useAuth();
+  const location = useLocation();
+  const authUser = useMemo(() => toAuthUser(user), [user]);
+  const authUserRef = useRef(authUser);
+  authUserRef.current = authUser;
+
+  const page = useMemo(() => pageFromRoute(location.pathname), [location.pathname]);
+
+  // Snapshot + tool declarations rebuilt on every send (context is dynamic).
+  const buildRequestBody = useCallback(() => {
+    const u = authUserRef.current;
+    const tools = listAllLunariAITools({ user: u }).map((t) => ({
+      name: t.id.replace(/\./g, "__"),
+      description: t.description,
+      parameters: t.inputSchema ?? { type: "object", properties: {} },
+      needsApproval: t.needsApproval,
+      kind: t.kind,
+    }));
+    const { system } = buildAssistantSystemPrompt({ page, user: u });
+    return { tools, system, page };
+  }, [page]);
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: ASSISTANT_ENDPOINT,
+        headers: () => ({
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        }),
+        body: () => buildRequestBody(),
+      }),
+    [session?.access_token, buildRequestBody],
+  );
+
+  const { messages, sendMessage, status, stop, addToolResult, error } = useChat({
+    id: `lu-${authUser?.id ?? "anon"}`,
+    transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onToolCall: async ({ toolCall }) => {
+      const u = authUserRef.current;
+      if (!u) {
+        await addToolResult({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          output: { status: "error", error: "Usuário não autenticado" },
+        });
+        return;
+      }
+      // Convert namespaced name back (workflow__addPayment → workflow.addPayment).
+      const capabilityId = toolCall.toolName.replace(/__/g, ".");
+      const result = await executeAssistantToolCall({
+        toolName: capabilityId,
+        input: toolCall.input,
+        user: u,
+      });
+      await addToolResult({
+        tool: toolCall.toolName,
+        toolCallId: toolCall.toolCallId,
+        output: result,
+      });
+    },
+  });
+
+  const disabled = !authUser || !session?.access_token;
+  const isLoading = status === "submitted" || status === "streaming";
+
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <Conversation className="flex-1">
+        <ConversationContent className="space-y-3 px-4 py-4">
+          {messages.length === 0 && (
+            <div className="mx-auto max-w-sm py-10 text-center text-sm text-muted-foreground">
+              Oi, sou a <span className="font-medium text-foreground">Lu</span>.
+              Posso consultar e operar sua página <span className="font-medium">{page}</span>.
+              Peça relatório, ação ou ajuda operacional — ações sensíveis pedem sua confirmação.
+            </div>
+          )}
+
+          {messages.map((message) => (
+            <Message key={message.id} from={message.role === "user" ? "user" : "assistant"}>
+              <MessageContent>
+                {message.parts.map((part, i) => {
+                  if (part.type === "text") {
+                    return message.role === "assistant" ? (
+                      <MessageResponse key={i}>{part.text}</MessageResponse>
+                    ) : (
+                      <span key={i} className="whitespace-pre-wrap">{part.text}</span>
+                    );
+                  }
+                  if (part.type?.startsWith("tool-")) {
+                    const p = part as unknown as {
+                      type: string;
+                      state: string;
+                      input?: unknown;
+                      output?: unknown;
+                      errorText?: string;
+                    };
+                    return (
+                      <Tool key={i} defaultOpen={false}>
+                        <ToolHeader
+                          type={p.type as `tool-${string}`}
+                          state={p.state as never}
+                        />
+                        <ToolContent>
+                          {p.input !== undefined && <ToolInput input={p.input} />}
+                          <ToolOutput output={p.output} errorText={p.errorText} />
+                        </ToolContent>
+                      </Tool>
+                    );
+                  }
+                  return null;
+                })}
+              </MessageContent>
+            </Message>
+          ))}
+
+          {status === "submitted" && (
+            <div className="px-1 py-2">
+              <Shimmer>Pensando…</Shimmer>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {error.message || "Erro ao contactar a Lu."}
+            </div>
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      <div className="border-t border-border/60 p-3">
+        <PromptInput
+          onSubmit={(msg) => {
+            const text = msg.text?.trim();
+            if (!text || disabled) return;
+            void sendMessage({ text });
+          }}
+        >
+          <PromptInputTextarea
+            placeholder={disabled ? "Faça login para conversar com a Lu…" : "Peça algo à Lu…"}
+            disabled={disabled}
+            autoFocus
+          />
+          <PromptInputFooter className="justify-end">
+            <PromptInputSubmit status={status} disabled={disabled} onStop={stop} />
+          </PromptInputFooter>
+        </PromptInput>
+      </div>
+
+      {isLoading && (
+        <div className="sr-only" aria-live="polite">Lu está respondendo…</div>
+      )}
+
+      {/* keep supabase reference for tree-shaking safety */}
+      {false && <span>{supabase ? "" : ""}</span>}
+    </div>
+  );
+}
