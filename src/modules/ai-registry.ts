@@ -9,6 +9,7 @@ import "@/modules/tasks"; // registra capabilities de tasks
 import "@/modules/agenda"; // registra capabilities de agenda
 import "@/modules/clientes"; // superfície AI de clientes (sem caps ainda)
 import "@/modules/formularios"; // superfície AI de formulários (sem caps ainda)
+import "@/modules/configuracoes"; // superfície AI de configurações (sem caps ainda)
 import "./billing";
 import "./gallery";
 import "./finance";
@@ -18,6 +19,7 @@ import { listTasksAITools } from "@/modules/tasks/ai";
 import { listAgendaAITools } from "@/modules/agenda/ai";
 import { listClientesAITools } from "@/modules/clientes/ai";
 import { listFormulariosAITools } from "@/modules/formularios/ai";
+import { listConfiguracoesAITools } from "@/modules/configuracoes/ai";
 import { listBillingAITools } from "./billing/ai";
 import { listGalleryAITools } from "./gallery/ai";
 import { listFinanceAITools } from "./finance/ai";
