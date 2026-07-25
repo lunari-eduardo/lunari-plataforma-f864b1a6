@@ -13,6 +13,12 @@
 import { getCapability } from "@/shared/capability";
 import { supabase } from "@/integrations/supabase/client";
 import type { AuthUser } from "@/shared/ports";
+import type { ConfirmationChallenge } from "@/shared/capability/ai-adapter";
+import {
+  matchConfirmation,
+  confirmationFailureMessage,
+  type ConfirmationSource,
+} from "./confirmationMatcher";
 
 export type AssistantOutputStatus = "ok" | "error" | "denied" | "pending_approval";
 
@@ -22,6 +28,12 @@ export interface AssistantRunOptions {
   needsApproval?: boolean;
   /** Módulo declarado pelo caller (para auditoria). */
   module: string;
+  /** Desafio ativo — quando a tool requer confirmação texto/voz. */
+  confirmationChallenge?: ConfirmationChallenge;
+  /** Resposta do usuário ao desafio (texto digitado ou transcrição de voz). */
+  confirmationInput?: string;
+  /** Origem da confirmação — informativa, gravada na auditoria. */
+  confirmationSource?: ConfirmationSource;
 }
 
 export interface AssistantRunResult<T = unknown> {
@@ -31,6 +43,7 @@ export interface AssistantRunResult<T = unknown> {
   latencyMs: number;
   invocationId?: string;
 }
+
 
 async function hashInput(input: unknown): Promise<string | null> {
   try {
