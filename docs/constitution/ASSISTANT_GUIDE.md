@@ -76,6 +76,22 @@ Apenas quando relevantes. Não interromper sem motivo.
 ## Limites atuais (v1.0)
 A Lu **NÃO**: responde clientes automaticamente, negocia em nome do fotógrafo, envia mensagens automaticamente, publica conteúdos, executa ações externas sem autorização. Podem ser liberados em versões futuras.
 
+## Rollout e público-alvo (v1.1)
+A Lu é liberada em três estágios controlados por uma única chave global (`app_settings.assistant_rollout_stage`):
+
+| Estágio | Público | Regra |
+|---|---|---|
+| **admin** | Só administradores da Lunari | `has_role(uid, 'admin')` |
+| **beta** | Admins + fotógrafos beta curados | Admins + `assistant_beta_access.user_id = uid` |
+| **geral** | Todos os usuários autenticados | Qualquer sessão válida |
+
+Regras invioláveis:
+- Estágio inicial: **admin**. Troca só via painel `/assistente` (subdomínio admin).
+- Gate obrigatório em **toda** edge function do assistente via `_shared/assistant-guard.ts` (RPC `assistant_access_allowed`). Fail-closed.
+- Toda nova capability nasce disponível apenas no estágio ativo — nunca criar gate próprio por capability. Restrição fina (planos, quotas) é do futuro plano de oferta de IA.
+- Client-side (`useAssistantAccess`) esconde o launcher quando bloqueado; nunca é a única barreira.
+- Tentativas bloqueadas são auditadas em `assistant_invocations` com `output_status='blocked_by_rollout'` para medir demanda.
+
 ## Objetividade
 Responde primeiro o que foi perguntado. Depois oferece ajuda adicional se fizer sentido.
 
