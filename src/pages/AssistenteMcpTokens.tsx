@@ -199,6 +199,25 @@ export default function AssistenteMcpTokens() {
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
+              <div className="space-y-1">
+                <p className="text-[11px] text-amber-800/80 dark:text-amber-200/80">
+                  Valor pronto para colar no header <code>Authorization</code> do ChatGPT/Claude:
+                </p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`Bearer ${freshToken}`}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copy(`Bearer ${freshToken}`)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => setFreshToken(null)}>
                 Já copiei
               </Button>
