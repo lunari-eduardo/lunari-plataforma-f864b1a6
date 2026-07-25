@@ -8,6 +8,7 @@ import Leads from "@/pages/Leads";
 import NovaFinancas from "@/pages/NovaFinancas";
 import Precificacao from "@/pages/Precificacao";
 import Configuracoes from "@/pages/Configuracoes";
+import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
 import ClienteDetalhe from "@/pages/ClienteDetalhe";
 import Workflow from "@/pages/Workflow";
 import AnaliseVendas from "@/pages/AnaliseVendas";
@@ -150,6 +151,7 @@ export default function PhotographerApp() {
                   <PlanRestrictionGuard requiredPlan="pro"><AnaliseVendas /></PlanRestrictionGuard>
                 } />
                 <Route path="configuracoes" element={<Configuracoes />} />
+                <Route path="configuracoes/assistente-mcp" element={<AssistenteMcpTokens />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
                 <Route path="integracoes" element={<Integracoes />} />
                 <Route path="tarefas" element={
