@@ -154,7 +154,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
     // defineCommand/defineQuery expõem `execute(rawInput, overrides)` → Result.
     const result = await cap.execute(input, { user: opts.user, runtime: "client" });
     const latencyMs = Math.round(performance.now() - t0);
-    if (!result.ok) {
+    if (result.ok === false) {
       const errObj = result.error;
       const message = errObj?.message ?? "Capability error";
       const denied = errObj?.code === "UNAUTHORIZED" || errObj?.code === "FORBIDDEN";
