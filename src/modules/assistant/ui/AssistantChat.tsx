@@ -198,3 +198,127 @@ export function AssistantChat() {
     </div>
   );
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Composer com voz (Onda E.4).
+// Mantém `PromptInput` como fonte de layout e injeta um botão de microfone
+// que grava WAV via Web Audio, envia ao `assistant-transcribe` e insere o
+// texto transcrito no textarea (o usuário confirma antes de enviar).
+// ────────────────────────────────────────────────────────────────────────────
+
+interface VoicePromptInputProps {
+  disabled: boolean;
+  status: ReturnType<typeof useChat>["status"];
+  onStop: () => void;
+  onSend: (text: string) => void;
+  accessToken: string | null;
+}
+
+function VoicePromptInput({
+  disabled,
+  status,
+  onStop,
+  onSend,
+  accessToken,
+}: VoicePromptInputProps) {
+  const recorder = useVoiceRecorder();
+  const [transcribing, setTranscribing] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const handleMicClick = useCallback(async () => {
+    setVoiceError(null);
+    if (recorder.isRecording) {
+      const blob = await recorder.stop();
+      if (!blob) {
+        setVoiceError(recorder.error || "Gravação inválida.");
+        return;
+      }
+      if (!accessToken) {
+        setVoiceError("Sessão expirada. Faça login novamente.");
+        return;
+      }
+      setTranscribing(true);
+      try {
+        const text = await transcribeAudio({ accessToken, audio: blob });
+        if (text) {
+          setDraft((prev) => (prev ? `${prev} ${text}` : text));
+          // Focus textarea after transcription
+          requestAnimationFrame(() => textareaRef.current?.focus());
+        } else {
+          setVoiceError("Não entendi o áudio. Pode repetir?");
+        }
+      } catch (err) {
+        setVoiceError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setTranscribing(false);
+      }
+    } else {
+      await recorder.start();
+    }
+  }, [recorder, accessToken]);
+
+  const micBusy = transcribing;
+  const micDisabled = disabled || micBusy;
+
+  return (
+    <PromptInput
+      onSubmit={(msg) => {
+        const text = (msg.text ?? draft).trim();
+        if (!text || disabled) return;
+        setDraft("");
+        onSend(text);
+      }}
+    >
+      <PromptInputTextarea
+        ref={textareaRef as never}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder={
+          disabled
+            ? "Faça login para conversar com a Lu…"
+            : recorder.isRecording
+              ? "Gravando… clique no microfone para transcrever."
+              : transcribing
+                ? "Transcrevendo…"
+                : "Peça algo à Lu — ou clique no microfone."
+        }
+        disabled={disabled || transcribing}
+        autoFocus
+      />
+      <PromptInputFooter className="justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={recorder.isRecording ? "destructive" : "ghost"}
+            onClick={handleMicClick}
+            disabled={micDisabled}
+            aria-label={recorder.isRecording ? "Parar gravação" : "Gravar por voz"}
+            className={cn("gap-1", recorder.isRecording && "animate-pulse")}
+          >
+            {transcribing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : recorder.isRecording ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">
+              {transcribing
+                ? "Transcrevendo"
+                : recorder.isRecording
+                  ? "Parar"
+                  : "Voz"}
+            </span>
+          </Button>
+          {voiceError && (
+            <span className="text-xs text-destructive">{voiceError}</span>
+          )}
+        </div>
+        <PromptInputSubmit status={status} disabled={disabled} onStop={onStop} />
+      </PromptInputFooter>
+    </PromptInput>
+  );
+}
