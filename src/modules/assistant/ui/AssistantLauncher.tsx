@@ -6,15 +6,19 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { cn } from "@/lib/utils";
 
 import { AssistantChat } from "./AssistantChat";
+import { useAssistantAccess } from "../runtime/useAssistantAccess";
 
 /**
  * Onda E.3 — Launcher flutuante da Lu.
  *
  * Renderizado uma vez pelo Layout autenticado. Abre um Sheet lateral
- * com o chat da assistente.
+ * com o chat da assistente. Só aparece quando o rollout permite
+ * (Admin → Beta → Geral, via `assistant_access_allowed`).
  */
 export function AssistantLauncher() {
   const [open, setOpen] = useState(false);
+  const { allowed } = useAssistantAccess();
+  if (!allowed) return null;
 
   return (
     <>
