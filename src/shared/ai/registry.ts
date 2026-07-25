@@ -101,6 +101,8 @@ export function getPageSnapshot<P extends LunariPage>(
       return snapshotForClientes(user) as AllPageSnapshots[P];
     case "formularios":
       return snapshotForFormularios(user) as AllPageSnapshots[P];
+    case "configuracoes":
+      return snapshotForConfiguracoes(user) as AllPageSnapshots[P];
     case "billing":
       return null as AllPageSnapshots[P];
     default:
