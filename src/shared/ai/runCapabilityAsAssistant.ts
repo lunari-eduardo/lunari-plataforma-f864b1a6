@@ -142,26 +142,47 @@ export async function runCapabilityAsAssistant<T = unknown>(
     };
   }
 
-  // Gate de aprovação humana.
+  // Gate de aprovação humana — pode ser satisfeito por approvalToken OU por
+  // uma confirmação texto/voz válida contra o desafio da tool.
   if (opts.needsApproval && !opts.approvalToken) {
-    const latencyMs = Math.round(performance.now() - t0);
-    const invocationId = await recordInvocation({
-      userId: opts.user.id,
-      capabilityId,
-      module: opts.module,
-      kind: cap.kind,
-      inputHash,
-      outputStatus: "pending_approval",
-      latencyMs,
-      needsApproval: true,
-    });
-    return {
-      status: "pending_approval",
-      error: "human approval required",
-      latencyMs,
-      invocationId,
-    };
+    let confirmed = false;
+    let confirmationError: string | undefined;
+
+    if (opts.confirmationInput !== undefined) {
+      const match = matchConfirmation(
+        opts.confirmationChallenge,
+        opts.confirmationInput,
+        { source: opts.confirmationSource },
+      );
+      confirmed = match.ok;
+      if (!match.ok) {
+        confirmationError = confirmationFailureMessage(match, opts.confirmationChallenge);
+      }
+    }
+
+    if (!confirmed) {
+      const latencyMs = Math.round(performance.now() - t0);
+      const invocationId = await recordInvocation({
+        userId: opts.user.id,
+        capabilityId,
+        module: opts.module,
+        kind: cap.kind,
+        inputHash,
+        outputStatus: "pending_approval",
+        errorMessage: confirmationError,
+        latencyMs,
+        needsApproval: true,
+      });
+      return {
+        status: "pending_approval",
+        error: confirmationError ?? "human approval required",
+        latencyMs,
+        invocationId,
+      };
+    }
+    // Confirmação válida → segue para execução (auditoria marca approved_by).
   }
+
 
   try {
     // defineCommand/defineQuery expõem `execute(rawInput, overrides)` → Result.
