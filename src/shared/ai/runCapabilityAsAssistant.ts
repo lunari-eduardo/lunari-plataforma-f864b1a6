@@ -19,6 +19,7 @@ import {
   confirmationFailureMessage,
   type ConfirmationSource,
 } from "./confirmationMatcher";
+import { needsHumanApproval as centralNeedsApproval } from "./approvalRegistry";
 
 export type AssistantOutputStatus = "ok" | "error" | "denied" | "pending_approval";
 
@@ -144,7 +145,9 @@ export async function runCapabilityAsAssistant<T = unknown>(
 
   // Gate de aprovação humana — pode ser satisfeito por approvalToken OU por
   // uma confirmação texto/voz válida contra o desafio da tool.
-  if (opts.needsApproval && !opts.approvalToken) {
+  // D.1: cruzamos com o registry central para não depender só do caller.
+  const requiresApproval = !!opts.needsApproval || centralNeedsApproval(capabilityId);
+  if (requiresApproval && !opts.approvalToken) {
     let confirmed = false;
     let confirmationError: string | undefined;
 
