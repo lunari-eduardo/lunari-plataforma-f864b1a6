@@ -68,7 +68,7 @@ export default function AssistenteMcpTokens() {
     if (!name.trim()) return toast.error("Dê um nome ao token (ex.: 'Claude Desktop').");
     setCreating(true);
     const scopes = allowWrite ? ["read", "write"] : ["read"];
-    const { data, error } = await supabase.rpc("assistant_mcp_token_create", {
+    const { data, error } = await (supabase.rpc as any)("assistant_mcp_token_create", {
       _name: name.trim(),
       _expires_at: null,
       _scopes: scopes,
