@@ -116,9 +116,20 @@ export default function AssistenteMcpTokens() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" /> Endpoint do servidor MCP
+            {!accessLoading && (
+              <span
+                className={`ml-auto text-[10px] px-1.5 py-0.5 rounded border ${
+                  assistantAllowed
+                    ? "border-emerald-500/50 text-emerald-700 dark:text-emerald-300"
+                    : "border-amber-500/50 text-amber-700 dark:text-amber-300"
+                }`}
+              >
+                {assistantAllowed ? "Lu liberada" : "Aguardando rollout"}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           <div className="flex items-center gap-2">
             <Input readOnly value={MCP_URL} className="font-mono text-xs" />
             <Button variant="outline" size="icon" onClick={() => copy(MCP_URL)}>
@@ -126,9 +137,25 @@ export default function AssistenteMcpTokens() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            No cliente MCP, use transporte "Streamable HTTP" e adicione o header{" "}
+            No cliente MCP, use transporte "Streamable HTTP" e o header{" "}
             <code>Authorization: Bearer &lt;seu token&gt;</code>.
           </p>
+          <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+            <p className="text-xs font-medium flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" /> Conectando no ChatGPT
+            </p>
+            <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-1">
+              <li>Gere um token abaixo e copie o valor <code>lmcp_…</code>.</li>
+              <li>No ChatGPT → Settings → Connectors → Create.</li>
+              <li>
+                Escolha <strong>"API key"</strong> (não OAuth) — o Lunari usa Bearer estático.
+              </li>
+              <li>
+                URL: cole o endpoint acima. Header <code>Authorization</code> com valor{" "}
+                <code>Bearer lmcp_…</code>.
+              </li>
+            </ol>
+          </div>
         </CardContent>
       </Card>
 
