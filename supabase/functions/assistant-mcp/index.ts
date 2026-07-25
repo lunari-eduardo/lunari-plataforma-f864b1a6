@@ -64,28 +64,90 @@ interface AuthContext {
   tokenId: string | null;
   scopes: string[];
   rolloutAllowed: boolean;
+  authSource: "pat" | "oauth" | null;
+  clientId: string | null;
+}
+
+const EMPTY_AUTH: AuthContext = {
+  userId: null,
+  tokenId: null,
+  scopes: [],
+  rolloutAllowed: false,
+  authSource: null,
+  clientId: null,
+};
+
+function decodeJwtPayload(jwt: string): Record<string, any> | null {
+  try {
+    const parts = jwt.split(".");
+    if (parts.length < 2) return null;
+    // atob no Deno resolve base64url com padding manual
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const json = atob(b64 + pad);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 }
 
 async function resolveAuth(req: Request): Promise<AuthContext> {
   const raw = req.headers.get("authorization") ?? "";
   const token = raw.toLowerCase().startsWith("bearer ") ? raw.slice(7).trim() : "";
-  if (!token || !token.startsWith("lmcp_")) {
-    return { userId: null, tokenId: null, scopes: [], rolloutAllowed: false };
-  }
+  if (!token) return EMPTY_AUTH;
+
   const sb = admin();
-  const { data, error } = await sb.rpc("assistant_mcp_token_validate", { _token: token });
-  if (error || !data || (Array.isArray(data) && data.length === 0)) {
-    return { userId: null, tokenId: null, scopes: [], rolloutAllowed: false };
+
+  // === Caminho 1: Personal Access Token (PAT) ===
+  if (token.startsWith("lmcp_")) {
+    const { data, error } = await sb.rpc("assistant_mcp_token_validate", { _token: token });
+    if (error || !data || (Array.isArray(data) && data.length === 0)) return EMPTY_AUTH;
+    const row = Array.isArray(data) ? data[0] : (data as any);
+    const userId = row.user_id as string;
+    const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
+    return {
+      userId,
+      tokenId: row.token_id as string,
+      scopes: (row.scopes ?? []) as string[],
+      rolloutAllowed: allowed === true,
+      authSource: "pat",
+      clientId: null,
+    };
   }
-  const row = Array.isArray(data) ? data[0] : (data as any);
-  const userId = row.user_id as string;
-  const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
-  return {
-    userId,
-    tokenId: row.token_id as string,
-    scopes: (row.scopes ?? []) as string[],
-    rolloutAllowed: allowed === true,
-  };
+
+  // === Caminho 2: JWT do Supabase OAuth Server ===
+  // Aceitamos apenas JWTs que carreguem claim `client_id` — bloqueia tokens de
+  // sessão vindos de signInWithPassword sendo colados como Bearer.
+  if (token.startsWith("eyJ")) {
+    const claims = decodeJwtPayload(token);
+    if (!claims) return EMPTY_AUTH;
+    const clientId = (claims.client_id as string | undefined) ?? (claims.azp as string | undefined) ?? null;
+    if (!clientId) return EMPTY_AUTH;
+
+    // Verifica assinatura consultando o Auth via SDK.
+    const { data: userRes, error: userErr } = await sb.auth.getUser(token);
+    if (userErr || !userRes?.user?.id) return EMPTY_AUTH;
+    const userId = userRes.user.id;
+
+    // Escopos: claim `scope` (string separada por espaço) ou `scopes` (array).
+    let scopes: string[] = [];
+    if (typeof claims.scope === "string") scopes = claims.scope.split(/\s+/).filter(Boolean);
+    else if (Array.isArray(claims.scopes)) scopes = claims.scopes.map(String);
+    // Fallback: se OAuth Server não injetar scope, assumimos read.
+    if (scopes.length === 0) scopes = ["read"];
+
+    const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
+    return {
+      userId,
+      tokenId: null,
+      scopes,
+      rolloutAllowed: allowed === true,
+      authSource: "oauth",
+      clientId,
+    };
+  }
+
+  return EMPTY_AUTH;
 }
 
 async function audit(entry: {
@@ -94,6 +156,7 @@ async function audit(entry: {
   status: string;
   latencyMs: number;
   errorMessage?: string | null;
+  authSource?: "pat" | "oauth" | null;
 }) {
   try {
     const sb = admin();
