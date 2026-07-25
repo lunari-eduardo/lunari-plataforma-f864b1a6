@@ -27,19 +27,29 @@ export default function Auth() {
     else if (error === 'access_denied') toast.error('Acesso negado. Seu e-mail não está autorizado.');
   }, [searchParams]);
 
+  // Preserva ?next= (usado, entre outros, pelo fluxo OAuth 2.1 → /oauth/consent).
+  const nextParam = searchParams.get('next');
+  const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
+    ? nextParam
+    : null;
+
   useEffect(() => {
     if (!loading && user) {
+      if (safeNext) {
+        navigate(safeNext, { replace: true });
+        return;
+      }
       const isAdminHost = typeof window !== 'undefined' &&
         (window.location.hostname.startsWith('admin.') ||
          new URLSearchParams(window.location.search).get('context') === 'admin');
       navigate(isAdminHost ? '/' : '/app');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, safeNext]);
 
   const handleGoogleSignIn = async () => {
     setIsSigningIn(true);
     try {
-      const { error } = await signInWithGoogle();
+      const { error } = await signInWithGoogle(safeNext ?? undefined);
       if (error) {
         if (error.message?.includes('signup_not_allowed')) {
           toast.error('E-mail não autorizado. Entre em contato com o suporte para solicitar acesso.');
