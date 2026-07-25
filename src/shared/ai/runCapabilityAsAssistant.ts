@@ -13,6 +13,12 @@
 import { getCapability } from "@/shared/capability";
 import { supabase } from "@/integrations/supabase/client";
 import type { AuthUser } from "@/shared/ports";
+import type { ConfirmationChallenge } from "@/shared/capability/ai-adapter";
+import {
+  matchConfirmation,
+  confirmationFailureMessage,
+  type ConfirmationSource,
+} from "./confirmationMatcher";
 
 export type AssistantOutputStatus = "ok" | "error" | "denied" | "pending_approval";
 
@@ -22,6 +28,12 @@ export interface AssistantRunOptions {
   needsApproval?: boolean;
   /** Módulo declarado pelo caller (para auditoria). */
   module: string;
+  /** Desafio ativo — quando a tool requer confirmação texto/voz. */
+  confirmationChallenge?: ConfirmationChallenge;
+  /** Resposta do usuário ao desafio (texto digitado ou transcrição de voz). */
+  confirmationInput?: string;
+  /** Origem da confirmação — informativa, gravada na auditoria. */
+  confirmationSource?: ConfirmationSource;
 }
 
 export interface AssistantRunResult<T = unknown> {
@@ -31,6 +43,7 @@ export interface AssistantRunResult<T = unknown> {
   latencyMs: number;
   invocationId?: string;
 }
+
 
 async function hashInput(input: unknown): Promise<string | null> {
   try {
@@ -129,26 +142,47 @@ export async function runCapabilityAsAssistant<T = unknown>(
     };
   }
 
-  // Gate de aprovação humana.
+  // Gate de aprovação humana — pode ser satisfeito por approvalToken OU por
+  // uma confirmação texto/voz válida contra o desafio da tool.
   if (opts.needsApproval && !opts.approvalToken) {
-    const latencyMs = Math.round(performance.now() - t0);
-    const invocationId = await recordInvocation({
-      userId: opts.user.id,
-      capabilityId,
-      module: opts.module,
-      kind: cap.kind,
-      inputHash,
-      outputStatus: "pending_approval",
-      latencyMs,
-      needsApproval: true,
-    });
-    return {
-      status: "pending_approval",
-      error: "human approval required",
-      latencyMs,
-      invocationId,
-    };
+    let confirmed = false;
+    let confirmationError: string | undefined;
+
+    if (opts.confirmationInput !== undefined) {
+      const match = matchConfirmation(
+        opts.confirmationChallenge,
+        opts.confirmationInput,
+        { source: opts.confirmationSource },
+      );
+      confirmed = match.ok;
+      if (!match.ok) {
+        confirmationError = confirmationFailureMessage(match, opts.confirmationChallenge);
+      }
+    }
+
+    if (!confirmed) {
+      const latencyMs = Math.round(performance.now() - t0);
+      const invocationId = await recordInvocation({
+        userId: opts.user.id,
+        capabilityId,
+        module: opts.module,
+        kind: cap.kind,
+        inputHash,
+        outputStatus: "pending_approval",
+        errorMessage: confirmationError,
+        latencyMs,
+        needsApproval: true,
+      });
+      return {
+        status: "pending_approval",
+        error: confirmationError ?? "human approval required",
+        latencyMs,
+        invocationId,
+      };
+    }
+    // Confirmação válida → segue para execução (auditoria marca approved_by).
   }
+
 
   try {
     // defineCommand/defineQuery expõem `execute(rawInput, overrides)` → Result.
@@ -181,7 +215,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
       outputStatus: "ok",
       latencyMs,
       needsApproval: !!opts.needsApproval,
-      approvedBy: opts.approvalToken ? opts.user.id : null,
+      approvedBy: opts.approvalToken || opts.confirmationInput ? opts.user.id : null,
     });
     return { status: "ok", output, latencyMs, invocationId };
   } catch (err) {
