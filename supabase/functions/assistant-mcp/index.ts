@@ -357,6 +357,12 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 const MCP_RESOURCE_URL = `${SUPABASE_URL}/functions/v1/assistant-mcp`;
 // Supabase Auth serve o Authorization Server metadata em /auth/v1/.well-known/...
 const OAUTH_AS_ISSUER = `${SUPABASE_URL}/auth/v1`;
+// Proxy do /authorize hospedado nesta função. Higieniza `scope` para bloquear
+// clientes (ex.: ChatGPT) que cachearam scopes antigos ("read"/"write") e continuam
+// enviando-os apesar do metadata atual não anunciá-los. RFC 6749 §3.3 permite ao
+// AS ignorar scopes desconhecidos; fazemos isso aqui antes de encaminhar ao Supabase.
+const AUTHORIZE_PROXY_URL = `${MCP_RESOURCE_URL}/oauth/authorize`;
+const SUPABASE_SUPPORTED_SCOPES = new Set(["openid", "profile", "email", "phone", "offline_access"]);
 const WWW_AUTH_HEADER =
   `Bearer realm="Lunari MCP", ` +
   `resource_metadata="${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource", ` +
