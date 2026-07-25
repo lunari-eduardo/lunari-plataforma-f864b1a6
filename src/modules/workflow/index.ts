@@ -43,11 +43,15 @@ export { reconcileFotosExtras } from "./application/commands/reconcileFotosExtra
 export { syncFromAgenda } from "./application/commands/syncFromAgenda";
 export { getCardBySession } from "./application/queries/getCardBySession";
 export { listSessionsByMonth } from "./application/queries/listSessionsByMonth";
+export { listSessionsByRange } from "./application/queries/listSessionsByRange";
 export { listStatusOptions } from "./application/queries/listStatusOptions";
 export { searchSessions } from "./application/queries/searchSessions";
 export { metricsForMonth } from "./application/queries/metricsForMonth";
+export { metricsForRange } from "./application/queries/metricsForRange";
+export { analyticsSummary } from "./application/queries/analyticsSummary";
 export { photoProductionForMonth } from "./application/queries/photoProductionForMonth";
 export { pendingPayments } from "./application/queries/pendingPayments";
+
 export { getSessionFinancials } from "./application/queries/getSessionFinancials";
 export { listSessionsByPaymentStatus } from "./application/queries/listSessionsByPaymentStatus";
 export { diagnoseSession } from "./application/queries/diagnoseSession";
