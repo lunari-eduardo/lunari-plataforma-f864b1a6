@@ -1,9 +1,15 @@
 import type { AuthUser } from "@/shared/ports";
 import { getCapability, listCapabilities } from "@/shared/capability";
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
 
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "gallery.reopenSelection",
 ]);
+
+registerModuleApprovals({ module: "gallery", requireApproval: REQUIRES_APPROVAL });
 
 export function listGalleryCapabilityIds(): string[] {
   return listCapabilities({ module: "gallery" }).map((c) => c.id);
@@ -17,5 +23,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }
