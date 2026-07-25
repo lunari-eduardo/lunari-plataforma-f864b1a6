@@ -25,6 +25,7 @@ import { snapshotForFinance, type FinancePageSnapshot } from "@/modules/finance/
 import { snapshotForAgenda, type AgendaPageSnapshot } from "@/modules/agenda/ai";
 import { snapshotForGallery, type GalleryPageSnapshot } from "@/modules/gallery/ai";
 import { snapshotForClientes, type ClientesPageSnapshot } from "@/modules/clientes/ai";
+import { snapshotForFormularios, type FormulariosPageSnapshot } from "@/modules/formularios/ai";
 
 export type LunariPage =
   | "workflow"
@@ -33,7 +34,8 @@ export type LunariPage =
   | "finance"
   | "billing"
   | "gallery"
-  | "clientes";
+  | "clientes"
+  | "formularios";
 
 export interface AllPageSnapshots {
   workflow: WorkflowPageSnapshot;
@@ -43,6 +45,7 @@ export interface AllPageSnapshots {
   billing: null;
   gallery: GalleryPageSnapshot;
   clientes: ClientesPageSnapshot;
+  formularios: FormulariosPageSnapshot;
 }
 
 export function listAllLunariAITools(opts?: {
@@ -68,6 +71,7 @@ export function buildAllPageSnapshots(user: AuthUser | null): AllPageSnapshots {
     billing: null,
     gallery: snapshotForGallery(user),
     clientes: snapshotForClientes(user),
+    formularios: snapshotForFormularios(user),
   };
 }
 
@@ -88,6 +92,8 @@ export function getPageSnapshot<P extends LunariPage>(
       return snapshotForGallery(user) as AllPageSnapshots[P];
     case "clientes":
       return snapshotForClientes(user) as AllPageSnapshots[P];
+    case "formularios":
+      return snapshotForFormularios(user) as AllPageSnapshots[P];
     case "billing":
       return null as AllPageSnapshots[P];
     default:
