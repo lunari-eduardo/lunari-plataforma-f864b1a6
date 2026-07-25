@@ -118,13 +118,16 @@ export async function approveAuthorization(
   const ns = oauthBetaNs();
   if (ns && typeof ns.approveAuthorization === "function") {
     try {
+      console.info("[oauth][approve] via SDK beta", { authorizationId });
       const { data, error } = await ns.approveAuthorization(authorizationId);
+      console.info("[oauth][approve] SDK beta result", { data, error });
       if (error) return { data: null, error: error as Error };
       return { data: (data ?? null) as OAuthRedirectResult | null, error: null };
     } catch (e) {
       console.warn("[oauth] beta.approveAuthorization falhou, usando REST:", e);
     }
   }
+  console.info("[oauth][approve] via REST", { authorizationId });
   return restCall<OAuthRedirectResult>(`/${encodeURIComponent(authorizationId)}/approve`, {
     method: "POST",
     body: JSON.stringify({}),
