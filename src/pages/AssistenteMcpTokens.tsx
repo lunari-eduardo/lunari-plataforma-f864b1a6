@@ -41,6 +41,7 @@ export default function AssistenteMcpTokens() {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
+  const [allowWrite, setAllowWrite] = useState(false);
   const [creating, setCreating] = useState(false);
   const [freshToken, setFreshToken] = useState<string | null>(null);
 
@@ -66,9 +67,11 @@ export default function AssistenteMcpTokens() {
   async function createToken() {
     if (!name.trim()) return toast.error("Dê um nome ao token (ex.: 'Claude Desktop').");
     setCreating(true);
-    const { data, error } = await supabase.rpc("assistant_mcp_token_create", {
+    const scopes = allowWrite ? ["read", "write"] : ["read"];
+    const { data, error } = await (supabase.rpc as any)("assistant_mcp_token_create", {
       _name: name.trim(),
       _expires_at: null,
+      _scopes: scopes,
     });
     setCreating(false);
     if (error) return toast.error(error.message);
@@ -76,6 +79,7 @@ export default function AssistenteMcpTokens() {
     if (!row?.token) return toast.error("Token não retornado.");
     setFreshToken(row.token);
     setName("");
+    setAllowWrite(false);
     load();
   }
 
@@ -142,6 +146,19 @@ export default function AssistenteMcpTokens() {
               <Plus className="h-4 w-4 mr-2" /> Gerar
             </Button>
           </div>
+          <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={allowWrite}
+              onChange={(e) => setAllowWrite(e.target.checked)}
+              disabled={creating}
+            />
+            <span>
+              Permitir escrita (criar clientes, tarefas, transações). Ações destrutivas ainda exigem
+              sua aprovação individual em <a href="/assistente/aprovacoes" className="underline">/assistente/aprovacoes</a>.
+            </span>
+          </label>
           {freshToken && (
             <div className="rounded-md border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-2">
               <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
@@ -175,7 +192,12 @@ export default function AssistenteMcpTokens() {
               {tokens.map((t) => (
                 <div key={t.id} className="flex items-center justify-between py-3">
                   <div className="space-y-1">
-                    <div className="text-sm font-medium">{t.name}</div>
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      {t.name}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${t.scopes?.includes("write") ? "border-amber-500/50 text-amber-700 dark:text-amber-300" : "border-muted-foreground/30 text-muted-foreground"}`}>
+                        {t.scopes?.includes("write") ? "read + write" : "read"}
+                      </span>
+                    </div>
                     <div className="text-xs text-muted-foreground font-mono">
                       {t.token_prefix}…
                     </div>
