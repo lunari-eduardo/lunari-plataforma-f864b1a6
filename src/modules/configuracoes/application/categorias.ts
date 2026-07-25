@@ -143,13 +143,16 @@ export const deleteCategoriaCap = defineCommand({
   needsApproval: true,
   sideEffects: ["db:categorias"],
   handler: async ({ id }) => {
-    const [{ count: pacotesCount }, { count: sessoesCount }] = await Promise.all([
-      supabase.from("pacotes").select("id", { count: "exact", head: true }).eq("categoria_id", id),
-      supabase
-        .from("clientes_sessoes")
-        .select("id", { count: "exact", head: true })
-        .eq("categoria_id", id),
-    ]);
+    const pacotesRes = await supabase
+      .from("pacotes")
+      .select("id", { count: "exact", head: true })
+      .eq("categoria_id", id);
+    const sessoesRes = await supabase
+      .from("clientes_sessoes")
+      .select("id", { count: "exact", head: true })
+      .eq("categoria_id", id);
+    const pacotesCount = pacotesRes.count ?? 0;
+    const sessoesCount = sessoesRes.count ?? 0;
     if ((pacotesCount ?? 0) > 0 || (sessoesCount ?? 0) > 0) {
       return err(
         domainError(
