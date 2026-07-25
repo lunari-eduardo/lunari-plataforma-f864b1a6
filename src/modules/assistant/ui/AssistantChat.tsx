@@ -1,7 +1,8 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Loader2, Mic, MicOff } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,8 @@ import {
   listAllLunariAITools,
 } from "@/shared/ai";
 import type { AuthUser } from "@/shared/ports";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 import {
   Conversation,
@@ -34,6 +37,8 @@ import {
 
 import { executeAssistantToolCall } from "../runtime/executeToolCall";
 import { pageFromRoute } from "../runtime/pageFromRoute";
+import { useVoiceRecorder } from "../runtime/useVoiceRecorder";
+import { transcribeAudio } from "../runtime/transcribeAudio";
 
 const ASSISTANT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
 
@@ -175,22 +180,13 @@ export function AssistantChat() {
       </Conversation>
 
       <div className="border-t border-border/60 p-3">
-        <PromptInput
-          onSubmit={(msg) => {
-            const text = msg.text?.trim();
-            if (!text || disabled) return;
-            void sendMessage({ text });
-          }}
-        >
-          <PromptInputTextarea
-            placeholder={disabled ? "Faça login para conversar com a Lu…" : "Peça algo à Lu…"}
-            disabled={disabled}
-            autoFocus
-          />
-          <PromptInputFooter className="justify-end">
-            <PromptInputSubmit status={status} disabled={disabled} onStop={stop} />
-          </PromptInputFooter>
-        </PromptInput>
+        <VoicePromptInput
+          disabled={disabled}
+          status={status}
+          onStop={stop}
+          onSend={(text) => void sendMessage({ text })}
+          accessToken={session?.access_token ?? null}
+        />
       </div>
 
       {isLoading && (
@@ -199,6 +195,140 @@ export function AssistantChat() {
 
       {/* keep supabase reference for tree-shaking safety */}
       {false && <span>{supabase ? "" : ""}</span>}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Composer com voz (Onda E.4).
+// Mantém `PromptInput` como fonte de layout e injeta um botão de microfone
+// que grava WAV via Web Audio, envia ao `assistant-transcribe` e insere o
+// texto transcrito no textarea (o usuário confirma antes de enviar).
+// ────────────────────────────────────────────────────────────────────────────
+
+interface VoicePromptInputProps {
+  disabled: boolean;
+  status: ReturnType<typeof useChat>["status"];
+  onStop: () => void;
+  onSend: (text: string) => void;
+  accessToken: string | null;
+}
+
+function VoicePromptInput({
+  disabled,
+  status,
+  onStop,
+  onSend,
+  accessToken,
+}: VoicePromptInputProps) {
+  const recorder = useVoiceRecorder();
+  const [transcribing, setTranscribing] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  const insertIntoTextarea = useCallback((text: string) => {
+    const root = wrapRef.current;
+    if (!root) return;
+    const ta = root.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
+    if (!ta) return;
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    const next = ta.value ? `${ta.value} ${text}` : text;
+    setter?.call(ta, next);
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    ta.focus();
+    ta.setSelectionRange(next.length, next.length);
+  }, []);
+
+  const handleMicClick = useCallback(async () => {
+    setVoiceError(null);
+    if (recorder.isRecording) {
+      const blob = await recorder.stop();
+      if (!blob) {
+        setVoiceError(recorder.error || "Gravação inválida.");
+        return;
+      }
+      if (!accessToken) {
+        setVoiceError("Sessão expirada. Faça login novamente.");
+        return;
+      }
+      setTranscribing(true);
+      try {
+        const text = await transcribeAudio({ accessToken, audio: blob });
+        if (text) {
+          insertIntoTextarea(text);
+        } else {
+          setVoiceError("Não entendi o áudio. Pode repetir?");
+        }
+      } catch (err) {
+        setVoiceError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setTranscribing(false);
+      }
+    } else {
+      await recorder.start();
+    }
+  }, [recorder, accessToken, insertIntoTextarea]);
+
+  const micDisabled = disabled || transcribing;
+
+  return (
+    <div ref={wrapRef}>
+    <PromptInput
+      onSubmit={(msg) => {
+        const text = msg.text?.trim();
+        if (!text || disabled) return;
+        onSend(text);
+      }}
+    >
+      <PromptInputTextarea
+        placeholder={
+          disabled
+            ? "Faça login para conversar com a Lu…"
+            : recorder.isRecording
+              ? "Gravando… clique no microfone para transcrever."
+              : transcribing
+                ? "Transcrevendo…"
+                : "Peça algo à Lu — ou clique no microfone."
+        }
+        disabled={disabled || transcribing}
+        autoFocus
+      />
+      <PromptInputFooter className="justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={recorder.isRecording ? "destructive" : "ghost"}
+            onClick={handleMicClick}
+            disabled={micDisabled}
+            aria-label={recorder.isRecording ? "Parar gravação" : "Gravar por voz"}
+            className={cn("gap-1", recorder.isRecording && "animate-pulse")}
+          >
+            {transcribing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : recorder.isRecording ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">
+              {transcribing
+                ? "Transcrevendo"
+                : recorder.isRecording
+                  ? "Parar"
+                  : "Voz"}
+            </span>
+          </Button>
+          {voiceError && (
+            <span className="text-xs text-destructive">{voiceError}</span>
+          )}
+        </div>
+        <PromptInputSubmit status={status} disabled={disabled} onStop={onStop} />
+      </PromptInputFooter>
+    </PromptInput>
     </div>
   );
 }
