@@ -35,6 +35,7 @@ export interface LunariAITool extends AICapabilityTool {
     | "agenda"
     | "clientes"
     | "formularios"
+    | "contratos"
     | "configuracoes"
     | "billing"
     | "gallery"
