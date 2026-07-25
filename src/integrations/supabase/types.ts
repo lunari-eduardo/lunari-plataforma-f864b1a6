@@ -6049,6 +6049,21 @@ export type Database = {
           user_id: string
         }[]
       }
+      assistant_oauth_app_revoke: {
+        Args: { _authorization_id: string }
+        Returns: boolean
+      }
+      assistant_oauth_apps_list: {
+        Args: never
+        Returns: {
+          approved_at: string
+          client_id: string
+          client_name: string
+          id: string
+          last_used_at: string
+          scopes: string[]
+        }[]
+      }
       atomic_update_session_extras: {
         Args: {
           p_extras_increment: number
