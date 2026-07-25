@@ -357,6 +357,12 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 const MCP_RESOURCE_URL = `${SUPABASE_URL}/functions/v1/assistant-mcp`;
 // Supabase Auth serve o Authorization Server metadata em /auth/v1/.well-known/...
 const OAUTH_AS_ISSUER = `${SUPABASE_URL}/auth/v1`;
+// Proxy do /authorize hospedado nesta função. Higieniza `scope` para bloquear
+// clientes (ex.: ChatGPT) que cachearam scopes antigos ("read"/"write") e continuam
+// enviando-os apesar do metadata atual não anunciá-los. RFC 6749 §3.3 permite ao
+// AS ignorar scopes desconhecidos; fazemos isso aqui antes de encaminhar ao Supabase.
+const AUTHORIZE_PROXY_URL = `${MCP_RESOURCE_URL}/oauth/authorize`;
+const SUPABASE_SUPPORTED_SCOPES = new Set(["openid", "profile", "email", "phone", "offline_access"]);
 const WWW_AUTH_HEADER =
   `Bearer realm="Lunari MCP", ` +
   `resource_metadata="${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource", ` +
@@ -377,6 +383,38 @@ Deno.serve(async (req: Request) => {
 
   // === RFC 9728 — Protected Resource Metadata ===
   // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  // === Proxy /oauth/authorize com scope sanitization ===
+  // Corrige clientes MCP que cachearam scopes antigos (read/write) e não conseguem
+  // completar OAuth porque o Supabase rejeita com "unsupported scope".
+  if (req.method === "GET" && path.endsWith("/oauth/authorize")) {
+    const incoming = new URLSearchParams(url.search);
+    const rawScope = incoming.get("scope") ?? "";
+    const requested = rawScope.split(/\s+/).filter(Boolean);
+    const kept = requested.filter((s) => SUPABASE_SUPPORTED_SCOPES.has(s));
+    const dropped = requested.filter((s) => !SUPABASE_SUPPORTED_SCOPES.has(s));
+    // Garante openid — necessário para emissão de id_token no OIDC flow.
+    if (kept.length === 0 || !kept.includes("openid")) kept.unshift("openid");
+    console.log("[oauth-authorize-proxy]", JSON.stringify({
+      client_id: incoming.get("client_id"),
+      redirect_uri: incoming.get("redirect_uri"),
+      response_type: incoming.get("response_type"),
+      state: incoming.get("state"),
+      code_challenge_method: incoming.get("code_challenge_method"),
+      has_code_challenge: !!incoming.get("code_challenge"),
+      scope_in: rawScope,
+      scope_out: kept.join(" "),
+      dropped_scopes: dropped,
+    }));
+    incoming.set("scope", Array.from(new Set(kept)).join(" "));
+    const target = `${OAUTH_AS_ISSUER}/oauth/authorize?${incoming.toString()}`;
+    return new Response(null, {
+      status: 302,
+      headers: { ...mcpHeaders, Location: target },
+    });
+  }
+
+  // === RFC 9728 — Protected Resource Metadata ===
+  // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-protected-resource")) {
     return jsonResponse({
       resource: MCP_RESOURCE_URL,
@@ -388,29 +426,28 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // === RFC 8414 — Authorization Server Metadata (proxy amigável) ===
-  // O documento oficial é servido pelo próprio Supabase; encaminhamos pra descoberta simples.
+  // === RFC 8414 — Authorization Server Metadata ===
+  // Servimos versão modificada do doc do Supabase apontando `authorization_endpoint`
+  // para nosso proxy sanitizador. Assim scopes desconhecidos são descartados antes
+  // de chegarem ao Supabase.
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-authorization-server")) {
     try {
       const upstream = await fetch(`${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`);
-      const text = await upstream.text();
-      return new Response(text, {
-        status: upstream.status,
-        headers: {
-          ...mcpHeaders,
-          "Content-Type": upstream.headers.get("content-type") ?? "application/json",
-        },
-      });
+      const meta = await upstream.json();
+      meta.authorization_endpoint = AUTHORIZE_PROXY_URL;
+      meta.scopes_supported = ["openid", "email", "profile"];
+      return jsonResponse(meta);
     } catch {
-      // Fallback mínimo — clientes sofisticados batem no upstream direto.
       return jsonResponse({
         issuer: OAUTH_AS_ISSUER,
-        authorization_endpoint: `${OAUTH_AS_ISSUER}/oauth/authorize`,
+        authorization_endpoint: AUTHORIZE_PROXY_URL,
         token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
-        registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients`,
+        registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients/register`,
+        jwks_uri: `${OAUTH_AS_ISSUER}/.well-known/jwks.json`,
         response_types_supported: ["code"],
         grant_types_supported: ["authorization_code", "refresh_token"],
         code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
         scopes_supported: ["openid", "email", "profile"],
       });
     }
