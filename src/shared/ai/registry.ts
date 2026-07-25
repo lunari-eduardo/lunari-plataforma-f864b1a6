@@ -31,6 +31,7 @@ import {
   snapshotForConfiguracoes,
   type ConfiguracoesPageSnapshot,
 } from "@/modules/configuracoes/ai";
+import { snapshotForBilling, type BillingPageSnapshot } from "@/modules/billing/ai";
 
 export type LunariPage =
   | "workflow"
@@ -49,7 +50,7 @@ export interface AllPageSnapshots {
   tasks: TasksPageSnapshot;
   agenda: AgendaPageSnapshot;
   finance: FinancePageSnapshot;
-  billing: null;
+  billing: BillingPageSnapshot;
   gallery: GalleryPageSnapshot;
   clientes: ClientesPageSnapshot;
   formularios: FormulariosPageSnapshot;
@@ -77,7 +78,7 @@ export function buildAllPageSnapshots(user: AuthUser | null): AllPageSnapshots {
     tasks: snapshotForTasks(user),
     agenda: snapshotForAgenda(user),
     finance: snapshotForFinance(user),
-    billing: null,
+    billing: snapshotForBilling(user),
     gallery: snapshotForGallery(user),
     clientes: snapshotForClientes(user),
     formularios: snapshotForFormularios(user),
@@ -110,7 +111,7 @@ export function getPageSnapshot<P extends LunariPage>(
     case "configuracoes":
       return snapshotForConfiguracoes(user) as AllPageSnapshots[P];
     case "billing":
-      return null as AllPageSnapshots[P];
+      return snapshotForBilling(user) as AllPageSnapshots[P];
     default:
       throw new Error(`unknown page: ${page}`);
   }
