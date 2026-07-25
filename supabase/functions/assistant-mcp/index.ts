@@ -31,7 +31,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.5.0", // JSON Schema real (Zod → JSON Schema) — clients agora invocam tools
+  version: "0.6.0", // Leitura estratégica multi-mês: workflow.listRange/metricsForRange/analytics.summary + workflow.listMonth ganha includeHistorico
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
