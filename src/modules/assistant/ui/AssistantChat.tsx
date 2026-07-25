@@ -275,8 +275,8 @@ function VoicePromptInput({
   const micDisabled = disabled || transcribing;
 
   return (
+    <div ref={wrapRef}>
     <PromptInput
-      ref={formRef as never}
       onSubmit={(msg) => {
         const text = msg.text?.trim();
         if (!text || disabled) return;
