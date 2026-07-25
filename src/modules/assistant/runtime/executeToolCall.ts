@@ -39,10 +39,8 @@ export async function executeAssistantToolCall({
   }
 
   try {
-    const res = await runCapabilityAsAssistant({
-      capabilityId: tool.id,
+    const res = await runCapabilityAsAssistant(tool.id, input, {
       module: tool.module,
-      input,
       user,
       needsApproval: tool.needsApproval,
     });
