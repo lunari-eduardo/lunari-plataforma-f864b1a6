@@ -224,8 +224,26 @@ function VoicePromptInput({
   const recorder = useVoiceRecorder();
   const [transcribing, setTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  // Insere texto no textarea gerenciado pelo PromptInput sem lutar com o
+  // controller interno: setamos via setter nativo + disparamos "input" para
+  // que o React observe a mudança e o controller atualize.
+  const insertIntoTextarea = useCallback((text: string) => {
+    const form = formRef.current;
+    if (!form) return;
+    const ta = form.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
+    if (!ta) return;
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value",
+    )?.set;
+    const next = ta.value ? `${ta.value} ${text}` : text;
+    setter?.call(ta, next);
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    ta.focus();
+    ta.setSelectionRange(next.length, next.length);
+  }, []);
 
   const handleMicClick = useCallback(async () => {
     setVoiceError(null);
@@ -243,9 +261,7 @@ function VoicePromptInput({
       try {
         const text = await transcribeAudio({ accessToken, audio: blob });
         if (text) {
-          setDraft((prev) => (prev ? `${prev} ${text}` : text));
-          // Focus textarea after transcription
-          requestAnimationFrame(() => textareaRef.current?.focus());
+          insertIntoTextarea(text);
         } else {
           setVoiceError("Não entendi o áudio. Pode repetir?");
         }
@@ -257,24 +273,20 @@ function VoicePromptInput({
     } else {
       await recorder.start();
     }
-  }, [recorder, accessToken]);
+  }, [recorder, accessToken, insertIntoTextarea]);
 
-  const micBusy = transcribing;
-  const micDisabled = disabled || micBusy;
+  const micDisabled = disabled || transcribing;
 
   return (
     <PromptInput
+      ref={formRef as never}
       onSubmit={(msg) => {
-        const text = (msg.text ?? draft).trim();
+        const text = msg.text?.trim();
         if (!text || disabled) return;
-        setDraft("");
         onSend(text);
       }}
     >
       <PromptInputTextarea
-        ref={textareaRef as never}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
         placeholder={
           disabled
             ? "Faça login para conversar com a Lu…"
