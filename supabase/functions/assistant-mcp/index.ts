@@ -167,6 +167,7 @@ async function audit(entry: {
       output_status: entry.status,
       latency_ms: entry.latencyMs,
       error_message: entry.errorMessage ?? null,
+      auth_source: entry.authSource ?? null,
     });
   } catch {
     /* auditoria best-effort */
