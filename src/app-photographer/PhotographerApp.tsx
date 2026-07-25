@@ -153,6 +153,8 @@ export default function PhotographerApp() {
                 } />
                 <Route path="configuracoes" element={<Configuracoes />} />
                 <Route path="configuracoes/assistente-mcp" element={<AssistenteMcpTokens />} />
+                <Route path="assistente/mcp" element={<AssistenteMcpTokens />} />
+                <Route path="assistente/aprovacoes" element={<AssistenteAprovacoes />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
                 <Route path="integracoes" element={<Integracoes />} />
                 <Route path="tarefas" element={
