@@ -53,6 +53,7 @@ export interface AllPageSnapshots {
   gallery: GalleryPageSnapshot;
   clientes: ClientesPageSnapshot;
   formularios: FormulariosPageSnapshot;
+  contratos: ContratosPageSnapshot;
   configuracoes: ConfiguracoesPageSnapshot;
 }
 
