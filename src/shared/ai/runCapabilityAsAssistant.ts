@@ -215,7 +215,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
       outputStatus: "ok",
       latencyMs,
       needsApproval: !!opts.needsApproval,
-      approvedBy: opts.approvalToken ? opts.user.id : null,
+      approvedBy: opts.approvalToken || opts.confirmationInput ? opts.user.id : null,
     });
     return { status: "ok", output, latencyMs, invocationId };
   } catch (err) {
