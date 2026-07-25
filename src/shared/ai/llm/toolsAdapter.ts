@@ -12,13 +12,13 @@ import type { LLMToolDeclaration } from "./types";
 export function buildLLMToolsForUser(user: AuthUser | null): LLMToolDeclaration[] {
   const tools = listAllLunariAITools({ user });
   return tools.map((t) => ({
-    name: t.name,
+    name: t.id,
     description: t.description,
-    parameters: (t.parameters ?? { type: "object", properties: {} }) as Record<
+    parameters: (t.inputSchema ?? { type: "object", properties: {} }) as Record<
       string,
       unknown
     >,
-    needsApproval: t.needsApproval,
+    needsApproval: (t as { needsApproval?: boolean }).needsApproval,
     kind: t.kind,
   }));
 }
