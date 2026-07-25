@@ -9,6 +9,7 @@ import NovaFinancas from "@/pages/NovaFinancas";
 import Precificacao from "@/pages/Precificacao";
 import Configuracoes from "@/pages/Configuracoes";
 import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
+import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
 import ClienteDetalhe from "@/pages/ClienteDetalhe";
 import Workflow from "@/pages/Workflow";
 import AnaliseVendas from "@/pages/AnaliseVendas";
