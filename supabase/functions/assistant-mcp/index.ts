@@ -31,7 +31,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.4.0", // OAuth 2.1 + PAT dual auth
+  version: "0.5.0", // JSON Schema real (Zod → JSON Schema) — clients agora invocam tools
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
