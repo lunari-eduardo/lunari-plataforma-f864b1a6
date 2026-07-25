@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-07-25T04:19:18.678Z",
+  "manifest": {
+    "name": "lunari-mcp",
+    "title": "Lunari",
+    "version": "0.1.0",
+    "instructions": "Ferramentas do Lunari para fotógrafos: agenda, workflow, financeiro, cobranças, clientes, galerias, formulários e contratos. Escritas destrutivas exigem aprovação humana explícita no app.",
+    "auth": {
+      "type": "oauth-supabase",
+      "acceptedAudiences": "authenticated"
+    },
+    "tools": []
+  },
+  "tools": []
+}
