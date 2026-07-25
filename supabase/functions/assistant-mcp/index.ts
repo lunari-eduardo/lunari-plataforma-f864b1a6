@@ -248,23 +248,23 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       const started = Date.now();
 
       if (!auth.userId) {
-        await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started });
+        await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started, authSource: null });
         return rpcResult(id, needsAuthResponse(name));
       }
       if (!auth.rolloutAllowed) {
-        await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, rolloutBlockedResponse());
       }
       const bridged = getBridged(name);
       if (!bridged) {
-        await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, inAppFallback(name));
       }
 
       // Escopo do PAT: por default `read`. Escrita exige `write` explícito.
       const hasWrite = auth.scopes.includes("write") || auth.scopes.includes("admin");
       if (bridged.scope === "write" && !hasWrite) {
-        await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, {
           isError: true,
           content: [{
@@ -287,7 +287,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
             _tool_name: name,
           });
           if (consumeErr || !consumed || (Array.isArray(consumed) && consumed.length === 0)) {
-            await audit({ userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started });
+            await audit({ userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started, authSource: auth.authSource });
             return rpcResult(id, {
               isError: true,
               content: [{ type: "text", text: "Token de aprovação inválido, já usado ou expirado. Solicite nova aprovação no app." }],
@@ -316,10 +316,10 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           _summary: summary,
         });
         if (apprErr) {
-          await audit({ userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message });
+          await audit({ userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message , authSource: auth.authSource });
           return rpcResult(id, { isError: true, content: [{ type: "text", text: `Falha ao criar pedido de aprovação: ${apprErr.message}` }] });
         }
-        await audit({ userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, {
           content: [{
             type: "text",
