@@ -351,34 +351,96 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
   }
 }
 
+// Endpoint público do próprio MCP (usado como `resource` no discovery OAuth 2.1).
+const MCP_RESOURCE_URL = `${SUPABASE_URL}/functions/v1/assistant-mcp`;
+// Supabase Auth serve o Authorization Server metadata em /auth/v1/.well-known/...
+const OAUTH_AS_ISSUER = `${SUPABASE_URL}/auth/v1`;
+const WWW_AUTH_HEADER =
+  `Bearer realm="Lunari MCP", ` +
+  `resource_metadata="${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource", ` +
+  `authorization_uri="${OAUTH_AS_ISSUER}"`;
+
+function jsonResponse(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body, null, 2), {
+    ...init,
+    headers: { ...mcpHeaders, "Content-Type": "application/json", ...(init.headers ?? {}) },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: mcpHeaders });
+
+  const url = new URL(req.url);
+  const path = url.pathname;
+
+  // === RFC 9728 — Protected Resource Metadata ===
+  // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  if (req.method === "GET" && path.endsWith("/.well-known/oauth-protected-resource")) {
+    return jsonResponse({
+      resource: MCP_RESOURCE_URL,
+      authorization_servers: [OAUTH_AS_ISSUER],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["read", "write", "openid", "email", "profile"],
+      resource_documentation:
+        "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
+    });
+  }
+
+  // === RFC 8414 — Authorization Server Metadata (proxy amigável) ===
+  // O documento oficial é servido pelo próprio Supabase; encaminhamos pra descoberta simples.
+  if (req.method === "GET" && path.endsWith("/.well-known/oauth-authorization-server")) {
+    try {
+      const upstream = await fetch(`${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`);
+      const text = await upstream.text();
+      return new Response(text, {
+        status: upstream.status,
+        headers: {
+          ...mcpHeaders,
+          "Content-Type": upstream.headers.get("content-type") ?? "application/json",
+        },
+      });
+    } catch {
+      // Fallback mínimo — clientes sofisticados batem no upstream direto.
+      return jsonResponse({
+        issuer: OAUTH_AS_ISSUER,
+        authorization_endpoint: `${OAUTH_AS_ISSUER}/oauth/authorize`,
+        token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
+        registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients`,
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code", "refresh_token"],
+        code_challenge_methods_supported: ["S256"],
+        scopes_supported: ["read", "write", "openid", "email", "profile"],
+      });
+    }
+  }
 
   if (req.method === "GET") {
     const bridged = Object.entries(BRIDGED_TOOLS).map(([name, t]) => ({
       name, scope: t.scope, requiresApproval: t.requiresApproval,
     }));
-    return new Response(
-      JSON.stringify(
-        {
-          server: SERVER_INFO,
-          protocolVersion: PROTOCOL_VERSION,
-          tools: catalog.tools.length,
-          bridgedTools: bridged,
-          generatedAt: catalog.generatedAt,
-          auth: {
-            type: "bearer",
-            header: "Authorization: Bearer lmcp_...",
-            scopes: ["read", "write"],
-            approvalsUrl: "https://lunari.app/assistente/aprovacoes",
-            issue: "https://lunari.app/assistente/mcp",
-          },
-          docs: "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
+    return jsonResponse({
+      server: SERVER_INFO,
+      protocolVersion: PROTOCOL_VERSION,
+      tools: catalog.tools.length,
+      bridgedTools: bridged,
+      generatedAt: catalog.generatedAt,
+      auth: {
+        oauth2: {
+          issuer: OAUTH_AS_ISSUER,
+          protectedResourceMetadata: `${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource`,
+          authorizationServerMetadata: `${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`,
+          note: "Clientes MCP (ChatGPT, Claude) descobrem o fluxo automaticamente.",
         },
-        null, 2,
-      ),
-      { headers: { ...mcpHeaders, "Content-Type": "application/json" } },
-    );
+        pat: {
+          type: "bearer",
+          header: "Authorization: Bearer lmcp_...",
+          scopes: ["read", "write"],
+          issue: "https://app.lunarihub.com/app/assistente/mcp",
+        },
+        approvalsUrl: "https://app.lunarihub.com/app/assistente/aprovacoes",
+      },
+      docs: "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
+    });
   }
 
   if (req.method !== "POST") {
@@ -396,6 +458,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const auth = await resolveAuth(req);
+
+  // Se veio Authorization: Bearer inválido, sinaliza fluxo OAuth (RFC 9728).
+  const hasAuthHeader = (req.headers.get("authorization") ?? "").toLowerCase().startsWith("bearer ");
+  const responseHeaders: Record<string, string> = { ...mcpHeaders, "Content-Type": "application/json" };
+  if (hasAuthHeader && !auth.userId) {
+    responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
+  }
+
   const requests = Array.isArray(body) ? body : [body];
   const responses: unknown[] = [];
   for (const r of requests) {
@@ -412,6 +482,8 @@ Deno.serve(async (req: Request) => {
   const payload = Array.isArray(body) ? responses : responses[0];
   return new Response(JSON.stringify(payload), {
     status: 200,
-    headers: { ...mcpHeaders, "Content-Type": "application/json" },
+    headers: responseHeaders,
+  });
+});
   });
 });
