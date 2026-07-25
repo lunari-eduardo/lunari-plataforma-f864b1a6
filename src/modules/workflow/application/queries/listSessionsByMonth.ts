@@ -17,7 +17,9 @@ import { sessionsRepo } from "@/features/workflow/data";
 const Input = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
+  includeHistorico: z.boolean().optional().default(false),
 });
+
 
 const SessionSummary = z.object({
   id: z.string(),
@@ -48,7 +50,7 @@ export const listSessionsByMonth = defineQuery({
   input: Input,
   output: Output,
   permissions: ["workflow:read"],
-  async handler({ year, month }, ctx) {
+  async handler({ year, month, includeHistorico }, ctx) {
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id ?? ctx.user?.id;
     if (!userId) {
@@ -57,7 +59,7 @@ export const listSessionsByMonth = defineQuery({
 
     let rows;
     try {
-      rows = await sessionsRepo.listByMonth(userId, year, month);
+      rows = await sessionsRepo.listByMonth(userId, year, month, { includeHistorico });
     } catch (cause) {
       ctx.log.error("falha ao listar sessões do mês", { cause });
       return err(
@@ -67,6 +69,7 @@ export const listSessionsByMonth = defineQuery({
         }),
       );
     }
+
 
     const sessions = rows.map((s: any) => ({
       id: s.id,

@@ -6407,6 +6407,15 @@ export type Database = {
         Args: { _end: string; _start: string }
         Returns: number
       }
+      workflow_analytics_summary: {
+        Args: {
+          p_end: string
+          p_include_historico?: boolean
+          p_start: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       workflow_month_metrics: {
         Args: { p_end: string; p_start: string; p_user_id: string }
         Returns: {
@@ -6455,6 +6464,26 @@ export type Database = {
           media_fotos_por_sessao: number
           sessoes_com_pacote: number
           sessoes_sem_pacote: number
+        }[]
+      }
+      workflow_range_metrics: {
+        Args: {
+          p_end: string
+          p_granularity?: string
+          p_include_historico?: boolean
+          p_start: string
+          p_user_id: string
+        }
+        Returns: {
+          bucket_key: string
+          bucket_start: string
+          caixa_recebido: number
+          creditos_gerados: number
+          creditos_utilizados: number
+          pendente: number
+          previsto: number
+          receita: number
+          sessoes: number
         }[]
       }
       workflow_session_financials: {

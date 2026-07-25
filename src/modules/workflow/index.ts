@@ -18,15 +18,19 @@ import "./application/commands/produtoCommands";
 import "./application/commands/syncFromAgenda";
 import "./application/queries/getCardBySession";
 import "./application/queries/listSessionsByMonth";
+import "./application/queries/listSessionsByRange";
 import "./application/queries/listStatusOptions";
 import "./application/queries/searchSessions";
 import "./application/queries/metricsForMonth";
+import "./application/queries/metricsForRange";
+import "./application/queries/analyticsSummary";
 import "./application/queries/photoProductionForMonth";
 import "./application/queries/pendingPayments";
 import "./application/queries/getSessionFinancials";
 import "./application/queries/listSessionsByPaymentStatus";
 import "./application/queries/diagnoseSession";
 import "./application/queries/produtoQueries";
+
 
 // Re-export para uso direto via TanStack hooks ou execute()
 export { advanceCard } from "./application/commands/advanceCard";
@@ -39,11 +43,15 @@ export { reconcileFotosExtras } from "./application/commands/reconcileFotosExtra
 export { syncFromAgenda } from "./application/commands/syncFromAgenda";
 export { getCardBySession } from "./application/queries/getCardBySession";
 export { listSessionsByMonth } from "./application/queries/listSessionsByMonth";
+export { listSessionsByRange } from "./application/queries/listSessionsByRange";
 export { listStatusOptions } from "./application/queries/listStatusOptions";
 export { searchSessions } from "./application/queries/searchSessions";
 export { metricsForMonth } from "./application/queries/metricsForMonth";
+export { metricsForRange } from "./application/queries/metricsForRange";
+export { analyticsSummary } from "./application/queries/analyticsSummary";
 export { photoProductionForMonth } from "./application/queries/photoProductionForMonth";
 export { pendingPayments } from "./application/queries/pendingPayments";
+
 export { getSessionFinancials } from "./application/queries/getSessionFinancials";
 export { listSessionsByPaymentStatus } from "./application/queries/listSessionsByPaymentStatus";
 export { diagnoseSession } from "./application/queries/diagnoseSession";

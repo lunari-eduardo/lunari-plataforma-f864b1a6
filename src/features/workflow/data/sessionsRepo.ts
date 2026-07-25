@@ -61,7 +61,12 @@ function monthBounds(year: number, month: number): { start: string; end: string 
 
 export const sessionsRepo = {
   /** Lista sessões de um mês para o usuário, com JOIN clientes. */
-  async listByMonth(userId: string, year: number, month: number, opts?: { signal?: AbortSignal }): Promise<WorkflowSession[]> {
+  async listByMonth(
+    userId: string,
+    year: number,
+    month: number,
+    opts?: { signal?: AbortSignal; includeHistorico?: boolean },
+  ): Promise<WorkflowSession[]> {
     if (!userId) return [];
     const { start, end } = monthBounds(year, month);
     let q = supabase
@@ -70,13 +75,61 @@ export const sessionsRepo = {
       .eq("user_id", userId)
       .gte("data_sessao", start)
       .lte("data_sessao", end)
-      .or("status.is.null,status.neq.historico")
       .order("data_sessao", { ascending: true });
+    if (!opts?.includeHistorico) {
+      q = q.or("status.is.null,status.neq.historico");
+    }
     if (opts?.signal) q = q.abortSignal(opts.signal);
     const { data, error } = await q;
     if (error) throw error;
     return (data || []) as unknown as WorkflowSession[];
   },
+
+  /**
+   * Lista sessões num intervalo arbitrário (máx 400 dias). Usado por
+   * capabilities de análise multi-mês. Paginação keyset por (data_sessao, id).
+   */
+  async listByRange(
+    userId: string,
+    startDate: string,
+    endDate: string,
+    opts?: {
+      includeHistorico?: boolean;
+      categoria?: string;
+      status?: string;
+      limit?: number;
+      cursor?: { data_sessao: string; id: string } | null;
+      signal?: AbortSignal;
+    },
+  ): Promise<WorkflowSession[]> {
+    if (!userId) return [];
+    const limit = Math.min(Math.max(opts?.limit ?? 500, 1), 1000);
+    let q = supabase
+      .from("clientes_sessoes")
+      .select(SELECT_LEAN)
+      .eq("user_id", userId)
+      .gte("data_sessao", startDate)
+      .lte("data_sessao", endDate)
+      .order("data_sessao", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(limit);
+    if (!opts?.includeHistorico) {
+      q = q.or("status.is.null,status.neq.historico");
+    }
+    if (opts?.categoria) q = q.eq("categoria", opts.categoria);
+    if (opts?.status) q = q.eq("status", opts.status);
+    if (opts?.cursor) {
+      // keyset: (data_sessao > cursor.date) OR (= AND id > cursor.id)
+      q = q.or(
+        `data_sessao.gt.${opts.cursor.data_sessao},and(data_sessao.eq.${opts.cursor.data_sessao},id.gt.${opts.cursor.id})`,
+      );
+    }
+    if (opts?.signal) q = q.abortSignal(opts.signal);
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data || []) as unknown as WorkflowSession[];
+  },
+
 
   /** Carga inicial: últimos N meses (default 12), ordenado por data/hora. */
   async listLastMonths(userId: string, months = 12): Promise<WorkflowSession[]> {

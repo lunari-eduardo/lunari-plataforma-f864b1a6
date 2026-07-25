@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T20:15:14.919Z",
+  "generatedAt": "2026-07-25T20:46:07.529Z",
   "manifest": {
     "name": "lunari-mcp",
     "title": "Lunari",
@@ -10,6 +10,246 @@
       "acceptedAudiences": "authenticated"
     },
     "tools": [
+      {
+        "name": "lunari.workflow.advanceCard",
+        "title": "workflow.advanceCard",
+        "description": "Avançar card do funil. Atualiza o status de uma sessão (card do Workflow) para uma etapa específica.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.analytics.summary",
+        "title": "workflow.analytics.summary",
+        "description": "Resumo analítico do Workflow. Relatório estratégico (totais + quebras por mês/categoria/pacote/status + top 20 clientes) para um intervalo (máx 400 dias). Ideal para o assistente responder a pedidos de análise em uma única chamada.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.diagnoseSession",
+        "title": "workflow.diagnoseSession",
+        "description": "Diagnosticar inconsistências da sessão. Checa FK de galeria, divergências de extras, cobranças órfãs, crédito não-conciliado e somatório de transações.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.getCardBySession",
+        "title": "workflow.getCardBySession",
+        "description": "Obter card do funil por sessão. Lê o card (sessão) do Workflow pelo ID da sessão.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.getSessionFinancials",
+        "title": "workflow.getSessionFinancials",
+        "description": "Detalhamento financeiro da sessão. Breakdown completo da sessão vindo da RPC workflow_session_financials: base, extras, desconto, pago, pendente, crédito.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.listMonth",
+        "title": "workflow.listMonth",
+        "description": "Listar sessões do mês. Retorna as sessões do Workflow do mês solicitado (exclui histórico).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.listRange",
+        "title": "workflow.listRange",
+        "description": "Listar sessões (intervalo). Lista sessões do Workflow num intervalo arbitrário de datas (máx 400 dias). Paginado via cursor keyset.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.listSessionsByPaymentStatus",
+        "title": "workflow.listSessionsByPaymentStatus",
+        "description": "Sessões por status de pagamento. Lista sessões filtradas por status agregado (pendente, parcialmente_pago, pago).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.metricsForMonth",
+        "title": "workflow.metricsForMonth",
+        "description": "Métricas do mês (Workflow). Calcula previsto/receita/pendente/créditos/caixa a partir do RPC canônico (centavos).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.metricsForRange",
+        "title": "workflow.metricsForRange",
+        "description": "Métricas do Workflow (intervalo). Agrega métricas do Workflow num intervalo (até 400 dias) por dia/mês/trimestre/ano/total. Valores em centavos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.pendingPayments",
+        "title": "workflow.pendingPayments",
+        "description": "Pagamentos pendentes. Sessões com saldo a receber dentro da janela (default 30 dias).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.photoProductionForMonth",
+        "title": "workflow.photoProductionForMonth",
+        "description": "Produção fotográfica do mês. Total de fotos previstas para produção no mês (incluídas no pacote + extras), com quebra por categoria.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.produto.getFlowTemplate",
+        "title": "workflow.produto.getFlowTemplate",
+        "description": "Obter template de etapas do produto. Retorna as etapas atuais do produto (nome, done, atual).",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.produto.listBySession",
+        "title": "workflow.produto.listBySession",
+        "description": "Listar produtos da sessão. Retorna produtos da sessão com etapa atual e status de entrega.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.produto.listPending",
+        "title": "workflow.produto.listPending",
+        "description": "Listar produtos com prazo pendente. Agrupa produtos por prazo (atrasado/hoje/amanhã/semana/futuro). Aceita filtro opcional de janela e bucket.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.reconcileFotosExtras",
+        "title": "workflow.reconcileFotosExtras",
+        "description": "Reconciliar fotos extras. Sincroniza qtd_fotos_extra/valor_foto_extra da sessão com a auditoria da galeria (via RPC reconcile_session_extras).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.search",
+        "title": "workflow.search",
+        "description": "Buscar sessões. Busca textual + filtros sobre sessões do Workflow.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.statusOptions",
+        "title": "workflow.statusOptions",
+        "description": "Listar etapas do funil. Retorna as etapas (status) configuradas pelo fotógrafo, ordenadas.",
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.syncFromAgenda",
+        "title": "workflow.syncFromAgenda",
+        "description": "Sincronizar Agenda → Workflow. Cria (ou reaproveita) uma sessão do Workflow espelhando um agendamento confirmado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
+      {
+        "name": "lunari.workflow.updateFields",
+        "title": "workflow.updateFields",
+        "description": "Atualizar campos da sessão. Atualiza campos editáveis de uma sessão (card). Bloqueia campos computados.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "requiresApprovalHint": false
+        }
+      },
       {
         "name": "lunari.tasks.assign",
         "title": "tasks.assign",
@@ -1081,6 +1321,727 @@
     ]
   },
   "tools": [
+    {
+      "name": "lunari.workflow.advanceCard",
+      "title": "workflow.advanceCard",
+      "description": "Avançar card do funil. Atualiza o status de uma sessão (card do Workflow) para uma etapa específica.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "toStatus": {
+            "allOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "enum": [
+                      "null"
+                    ],
+                    "nullable": true
+                  }
+                ]
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  {
+                    "enum": [
+                      "null"
+                    ],
+                    "nullable": true
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "toStatus"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.advanceCard"
+    },
+    {
+      "name": "lunari.workflow.analytics.summary",
+      "title": "workflow.analytics.summary",
+      "description": "Resumo analítico do Workflow. Relatório estratégico (totais + quebras por mês/categoria/pacote/status + top 20 clientes) para um intervalo (máx 400 dias). Ideal para o assistente responder a pedidos de análise em uma única chamada.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "includeHistorico": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.analytics.summary"
+    },
+    {
+      "name": "lunari.workflow.diagnoseSession",
+      "title": "workflow.diagnoseSession",
+      "description": "Diagnosticar inconsistências da sessão. Checa FK de galeria, divergências de extras, cobranças órfãs, crédito não-conciliado e somatório de transações.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.diagnoseSession"
+    },
+    {
+      "name": "lunari.workflow.getCardBySession",
+      "title": "workflow.getCardBySession",
+      "description": "Obter card do funil por sessão. Lê o card (sessão) do Workflow pelo ID da sessão.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.getCardBySession"
+    },
+    {
+      "name": "lunari.workflow.getSessionFinancials",
+      "title": "workflow.getSessionFinancials",
+      "description": "Detalhamento financeiro da sessão. Breakdown completo da sessão vindo da RPC workflow_session_financials: base, extras, desconto, pago, pendente, crédito.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.getSessionFinancials"
+    },
+    {
+      "name": "lunari.workflow.listMonth",
+      "title": "workflow.listMonth",
+      "description": "Listar sessões do mês. Retorna as sessões do Workflow do mês solicitado (exclui histórico).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2100
+          },
+          "month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "includeHistorico": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "year",
+          "month"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.listMonth"
+    },
+    {
+      "name": "lunari.workflow.listRange",
+      "title": "workflow.listRange",
+      "description": "Listar sessões (intervalo). Lista sessões do Workflow num intervalo arbitrário de datas (máx 400 dias). Paginado via cursor keyset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "includeHistorico": {
+            "type": "boolean",
+            "default": false
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 500
+          },
+          "cursor": {
+            "type": "object",
+            "properties": {
+              "data_sessao": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "data_sessao",
+              "id"
+            ],
+            "additionalProperties": false,
+            "nullable": true
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.listRange"
+    },
+    {
+      "name": "lunari.workflow.listSessionsByPaymentStatus",
+      "title": "workflow.listSessionsByPaymentStatus",
+      "description": "Sessões por status de pagamento. Lista sessões filtradas por status agregado (pendente, parcialmente_pago, pago).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "parcialmente_pago",
+              "pago",
+              "todos"
+            ],
+            "default": "pendente"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.listSessionsByPaymentStatus"
+    },
+    {
+      "name": "lunari.workflow.metricsForMonth",
+      "title": "workflow.metricsForMonth",
+      "description": "Métricas do mês (Workflow). Calcula previsto/receita/pendente/créditos/caixa a partir do RPC canônico (centavos).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2100
+          },
+          "month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          }
+        },
+        "required": [
+          "year",
+          "month"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.metricsForMonth"
+    },
+    {
+      "name": "lunari.workflow.metricsForRange",
+      "title": "workflow.metricsForRange",
+      "description": "Métricas do Workflow (intervalo). Agrega métricas do Workflow num intervalo (até 400 dias) por dia/mês/trimestre/ano/total. Valores em centavos.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "endDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "day",
+              "month",
+              "quarter",
+              "year",
+              "total"
+            ],
+            "default": "month"
+          },
+          "includeHistorico": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.metricsForRange"
+    },
+    {
+      "name": "lunari.workflow.pendingPayments",
+      "title": "workflow.pendingPayments",
+      "description": "Pagamentos pendentes. Sessões com saldo a receber dentro da janela (default 30 dias).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "rangeDays": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "default": 30
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.pendingPayments"
+    },
+    {
+      "name": "lunari.workflow.photoProductionForMonth",
+      "title": "workflow.photoProductionForMonth",
+      "description": "Produção fotográfica do mês. Total de fotos previstas para produção no mês (incluídas no pacote + extras), com quebra por categoria.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2100
+          },
+          "month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "categoria": {
+            "type": "string",
+            "minLength": 1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "year",
+          "month"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.photoProductionForMonth"
+    },
+    {
+      "name": "lunari.workflow.produto.getFlowTemplate",
+      "title": "workflow.produto.getFlowTemplate",
+      "description": "Obter template de etapas do produto. Retorna as etapas atuais do produto (nome, done, atual).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "produtoId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "sessionId",
+          "produtoId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.produto.getFlowTemplate"
+    },
+    {
+      "name": "lunari.workflow.produto.listBySession",
+      "title": "workflow.produto.listBySession",
+      "description": "Listar produtos da sessão. Retorna produtos da sessão com etapa atual e status de entrega.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.produto.listBySession"
+    },
+    {
+      "name": "lunari.workflow.produto.listPending",
+      "title": "workflow.produto.listPending",
+      "description": "Listar produtos com prazo pendente. Agrupa produtos por prazo (atrasado/hoje/amanhã/semana/futuro). Aceita filtro opcional de janela e bucket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "atrasado",
+              "hoje",
+              "amanha",
+              "semana",
+              "futuro"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.produto.listPending"
+    },
+    {
+      "name": "lunari.workflow.reconcileFotosExtras",
+      "title": "workflow.reconcileFotosExtras",
+      "description": "Reconciliar fotos extras. Sincroniza qtd_fotos_extra/valor_foto_extra da sessão com a auditoria da galeria (via RPC reconcile_session_extras).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "qtdExtras": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "valorUnitario": {
+            "type": "number",
+            "minimum": 0
+          },
+          "destinoSobra": {
+            "type": "string",
+            "enum": [
+              "adicional",
+              "desconto_negativo",
+              "manter_credito"
+            ]
+          },
+          "valorSobra": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "sessionId",
+          "qtdExtras",
+          "valorUnitario",
+          "destinoSobra",
+          "valorSobra"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.reconcileFotosExtras"
+    },
+    {
+      "name": "lunari.workflow.search",
+      "title": "workflow.search",
+      "description": "Buscar sessões. Busca textual + filtros sobre sessões do Workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2100
+          },
+          "month": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "status": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.search"
+    },
+    {
+      "name": "lunari.workflow.statusOptions",
+      "title": "workflow.statusOptions",
+      "description": "Listar etapas do funil. Retorna as etapas (status) configuradas pelo fotógrafo, ordenadas.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.statusOptions"
+    },
+    {
+      "name": "lunari.workflow.syncFromAgenda",
+      "title": "workflow.syncFromAgenda",
+      "description": "Sincronizar Agenda → Workflow. Cria (ou reaproveita) uma sessão do Workflow espelhando um agendamento confirmado.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "appointmentId"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.syncFromAgenda"
+    },
+    {
+      "name": "lunari.workflow.updateFields",
+      "title": "workflow.updateFields",
+      "description": "Atualizar campos da sessão. Atualiza campos editáveis de uma sessão (card). Bloqueia campos computados.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "sessionId",
+          "fields"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.updateFields"
+    },
     {
       "name": "lunari.tasks.assign",
       "title": "tasks.assign",
