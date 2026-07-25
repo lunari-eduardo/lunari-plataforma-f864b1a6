@@ -382,7 +382,7 @@ Deno.serve(async (req: Request) => {
       resource: MCP_RESOURCE_URL,
       authorization_servers: [OAUTH_AS_ISSUER],
       bearer_methods_supported: ["header"],
-      scopes_supported: ["read", "write", "openid", "email", "profile"],
+      scopes_supported: ["openid", "email", "profile"],
       resource_documentation:
         "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
     });
@@ -411,7 +411,7 @@ Deno.serve(async (req: Request) => {
         response_types_supported: ["code"],
         grant_types_supported: ["authorization_code", "refresh_token"],
         code_challenge_methods_supported: ["S256"],
-        scopes_supported: ["read", "write", "openid", "email", "profile"],
+        scopes_supported: ["openid", "email", "profile"],
       });
     }
   }
