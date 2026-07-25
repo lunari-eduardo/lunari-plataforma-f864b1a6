@@ -23,6 +23,7 @@ import { snapshotForActiveMonth, type WorkflowPageSnapshot } from "@/features/wo
 import { snapshotForTasks, type TasksPageSnapshot } from "@/modules/tasks/ai";
 import { snapshotForFinance, type FinancePageSnapshot } from "@/modules/finance/ai";
 import { snapshotForAgenda, type AgendaPageSnapshot } from "@/modules/agenda/ai";
+import { snapshotForGallery, type GalleryPageSnapshot } from "@/modules/gallery/ai";
 
 export type LunariPage =
   | "workflow"
@@ -38,7 +39,7 @@ export interface AllPageSnapshots {
   agenda: AgendaPageSnapshot;
   finance: FinancePageSnapshot;
   billing: null;
-  gallery: null;
+  gallery: GalleryPageSnapshot;
 }
 
 export function listAllLunariAITools(opts?: {
@@ -62,7 +63,7 @@ export function buildAllPageSnapshots(user: AuthUser | null): AllPageSnapshots {
     agenda: snapshotForAgenda(user),
     finance: snapshotForFinance(user),
     billing: null,
-    gallery: null,
+    gallery: snapshotForGallery(user),
   };
 }
 
@@ -79,8 +80,9 @@ export function getPageSnapshot<P extends LunariPage>(
       return snapshotForAgenda(user) as AllPageSnapshots[P];
     case "finance":
       return snapshotForFinance(user) as AllPageSnapshots[P];
-    case "billing":
     case "gallery":
+      return snapshotForGallery(user) as AllPageSnapshots[P];
+    case "billing":
       return null as AllPageSnapshots[P];
     default:
       throw new Error(`unknown page: ${page}`);
