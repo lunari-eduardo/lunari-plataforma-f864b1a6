@@ -56,7 +56,7 @@ export default function AssistantRolloutPage() {
     const [{ data: settingRows }, { data: betaRows }, { data: invRows }] = await Promise.all([
       supabase.from("app_settings").select("value").eq("key", "assistant_rollout_stage").maybeSingle(),
       supabase.from("assistant_beta_access").select("user_id, granted_at, note").order("granted_at", { ascending: false }),
-      supabase.from("assistant_invocations").select("status").gte("created_at", new Date(Date.now() - 30 * 864e5).toISOString()),
+      supabase.from("assistant_invocations").select("output_status").gte("created_at", new Date(Date.now() - 30 * 864e5).toISOString()),
     ]);
 
     const raw = (settingRows as any)?.value;
@@ -75,10 +75,10 @@ export default function AssistantRolloutPage() {
     }
     setBeta(rows);
 
-    const invocations = (invRows ?? []) as { status: string | null }[];
+    const invocations = (invRows ?? []) as unknown as { output_status: string | null }[];
     setMetrics({
       total: invocations.length,
-      blocked: invocations.filter((r) => r.status === "blocked_by_rollout").length,
+      blocked: invocations.filter((r) => r.output_status === "blocked_by_rollout").length,
     });
   };
 
