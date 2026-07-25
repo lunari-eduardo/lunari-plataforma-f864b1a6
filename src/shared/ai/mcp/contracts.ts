@@ -16,7 +16,7 @@
  */
 
 import type { AuthUser } from "@/shared/ports";
-import { listAllLunariAITools } from "./registry";
+import { listAllLunariAITools } from "../registry";
 
 export type MCPToolAnnotations = {
   readOnlyHint?: boolean;
