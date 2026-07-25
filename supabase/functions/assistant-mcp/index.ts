@@ -251,6 +251,8 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 
       if (!auth.userId) {
         await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started, authSource: null });
+        // Sinaliza pro dispatcher HTTP retornar 401 + WWW-Authenticate.
+        (auth as any).__challenge = true;
         return rpcResult(id, needsAuthResponse(name));
       }
       if (!auth.rolloutAllowed) {
@@ -477,9 +479,16 @@ Deno.serve(async (req: Request) => {
     if (res) responses.push(res);
   }
 
+  // Se o handler sinalizou desafio de auth (tools/call sem token), garante WWW-Authenticate.
+  if ((auth as any).__challenge) {
+    responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
+  }
+
   if (responses.length === 0) return new Response(null, { status: 202, headers: mcpHeaders });
 
   const payload = Array.isArray(body) ? responses : responses[0];
+  // Mantém 200 (JSON-RPC body carrega o erro); WWW-Authenticate no header já dispara o fluxo OAuth
+  // em clientes MCP compatíveis com a spec 2025-06-18.
   return new Response(JSON.stringify(payload), {
     status: 200,
     headers: responseHeaders,

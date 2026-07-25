@@ -152,7 +152,14 @@ export default function OAuthConsent() {
           <div className="space-y-3 text-center">
             <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto" />
             <h1 className="text-lg font-semibold">Não deu pra prosseguir</h1>
-            <p className="text-sm text-white/70">{state.message}</p>
+            <p className="text-sm text-white/70 break-words">{state.message}</p>
+            <details className="text-left text-[11px] text-white/40 bg-white/[0.03] rounded p-2">
+              <summary className="cursor-pointer">Detalhes técnicos</summary>
+              <pre className="whitespace-pre-wrap break-all mt-1">
+authorization_id: {authorizationId || "(ausente)"}
+url: {typeof window !== "undefined" ? window.location.href : ""}
+              </pre>
+            </details>
             <Button
               variant="outline"
               className="border-white/20 bg-transparent hover:bg-white/5 text-white"
