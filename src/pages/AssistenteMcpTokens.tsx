@@ -41,6 +41,7 @@ export default function AssistenteMcpTokens() {
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
+  const [allowWrite, setAllowWrite] = useState(false);
   const [creating, setCreating] = useState(false);
   const [freshToken, setFreshToken] = useState<string | null>(null);
 
@@ -66,9 +67,11 @@ export default function AssistenteMcpTokens() {
   async function createToken() {
     if (!name.trim()) return toast.error("Dê um nome ao token (ex.: 'Claude Desktop').");
     setCreating(true);
+    const scopes = allowWrite ? ["read", "write"] : ["read"];
     const { data, error } = await supabase.rpc("assistant_mcp_token_create", {
       _name: name.trim(),
       _expires_at: null,
+      _scopes: scopes,
     });
     setCreating(false);
     if (error) return toast.error(error.message);
@@ -76,6 +79,7 @@ export default function AssistenteMcpTokens() {
     if (!row?.token) return toast.error("Token não retornado.");
     setFreshToken(row.token);
     setName("");
+    setAllowWrite(false);
     load();
   }
 
