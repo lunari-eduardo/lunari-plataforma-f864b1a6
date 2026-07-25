@@ -155,8 +155,9 @@ export async function runCapabilityAsAssistant<T = unknown>(
     const result = await cap.execute(input, { user: opts.user, runtime: "client" });
     const latencyMs = Math.round(performance.now() - t0);
     if (!result.ok) {
-      const message = result.error?.message ?? "Capability error";
-      const denied = result.error?.code === "UNAUTHORIZED" || result.error?.code === "FORBIDDEN";
+      const errObj = result.error;
+      const message = errObj?.message ?? "Capability error";
+      const denied = errObj?.code === "UNAUTHORIZED" || errObj?.code === "FORBIDDEN";
       const invocationId = await recordInvocation({
         userId: opts.user.id,
         capabilityId,
