@@ -180,22 +180,13 @@ export function AssistantChat() {
       </Conversation>
 
       <div className="border-t border-border/60 p-3">
-        <PromptInput
-          onSubmit={(msg) => {
-            const text = msg.text?.trim();
-            if (!text || disabled) return;
-            void sendMessage({ text });
-          }}
-        >
-          <PromptInputTextarea
-            placeholder={disabled ? "Faça login para conversar com a Lu…" : "Peça algo à Lu…"}
-            disabled={disabled}
-            autoFocus
-          />
-          <PromptInputFooter className="justify-end">
-            <PromptInputSubmit status={status} disabled={disabled} onStop={stop} />
-          </PromptInputFooter>
-        </PromptInput>
+        <VoicePromptInput
+          disabled={disabled}
+          status={status}
+          onStop={stop}
+          onSend={(text) => void sendMessage({ text })}
+          accessToken={session?.access_token ?? null}
+        />
       </div>
 
       {isLoading && (
