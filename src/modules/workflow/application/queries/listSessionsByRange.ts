@@ -76,7 +76,7 @@ export const listSessionsByRange = defineQuery({
         categoria,
         status,
         limit,
-        cursor: cursor ?? null,
+        cursor: (cursor ?? null) as any,
       });
     } catch (cause) {
       ctx.log.error("falha ao listar sessões do intervalo", { cause });
