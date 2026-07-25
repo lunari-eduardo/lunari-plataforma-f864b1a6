@@ -17,6 +17,7 @@ export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { refetch: refetchGoogleCalendar } = useGoogleCalendarIntegration();
   const { hasPro } = useAccessControl();
+  const { allowed: assistantAllowed } = useAssistantAccess();
 
   // Handle Google Calendar OAuth callbacks
   useEffect(() => {
