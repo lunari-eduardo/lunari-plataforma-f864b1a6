@@ -50,11 +50,14 @@ async function restCall<T>(
   path: string,
   init: RequestInit = {}
 ): Promise<{ data: T | null; error: Error | null }> {
+  const debug: any = { path, method: init.method ?? "GET" };
   try {
     if (!SUPABASE_URL) throw new Error("VITE_SUPABASE_URL não configurado.");
     const token = await accessToken();
     if (!token) throw new Error("Sessão ausente. Faça login novamente.");
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/oauth/authorizations${path}`, {
+    const url = `${SUPABASE_URL}/auth/v1/oauth/authorizations${path}`;
+    debug.url = url;
+    const res = await fetch(url, {
       ...init,
       headers: {
         "content-type": "application/json",
@@ -64,8 +67,13 @@ async function restCall<T>(
       },
     });
     const text = await res.text();
+    debug.status = res.status;
+    debug.rawBody = text;
+    debug.wwwAuthenticate = res.headers.get("www-authenticate");
     let body: any = null;
     try { body = text ? JSON.parse(text) : null; } catch { body = { raw: text }; }
+    debug.parsedBody = body;
+    console.info("[oauth][rest]", debug);
     if (!res.ok) {
       const msg =
         body?.error_description ||
@@ -73,10 +81,14 @@ async function restCall<T>(
         body?.message ||
         body?.error ||
         `HTTP ${res.status}`;
-      return { data: null, error: new Error(String(msg)) };
+      const err = new Error(String(msg));
+      (err as any).debug = debug;
+      return { data: null, error: err };
     }
     return { data: body as T, error: null };
   } catch (e) {
+    console.error("[oauth][rest][throw]", debug, e);
+    (e as any).debug = debug;
     return { data: null, error: e as Error };
   }
 }
