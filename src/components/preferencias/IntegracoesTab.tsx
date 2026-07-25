@@ -59,7 +59,7 @@ export function IntegracoesTab() {
 
       {/* Tabs */}
       <Tabs defaultValue="pagamentos" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-xl">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="pagamentos" className="gap-2">
             <CreditCard className="h-4 w-4" />
             <span className="hidden sm:inline">Pagamentos</span>
@@ -88,6 +88,10 @@ export function IntegracoesTab() {
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Calendar</span>
             {!hasPro && <Crown className="h-3.5 w-3.5 text-primary" />}
+          </TabsTrigger>
+          <TabsTrigger value="assistente" className="gap-2">
+            <Bot className="h-4 w-4" />
+            <span className="hidden sm:inline">Assistente</span>
           </TabsTrigger>
         </TabsList>
 
