@@ -9,6 +9,7 @@ import "@/modules/tasks"; // registra capabilities de tasks
 import "@/modules/agenda"; // registra capabilities de agenda
 import "@/modules/clientes"; // superfície AI de clientes (sem caps ainda)
 import "@/modules/formularios"; // superfície AI de formulários (sem caps ainda)
+import "@/modules/contratos"; // superfície AI + capabilities de contratos
 import "@/modules/configuracoes"; // superfície AI de configurações (sem caps ainda)
 import "./billing";
 import "./gallery";
@@ -19,6 +20,7 @@ import { listTasksAITools } from "@/modules/tasks/ai";
 import { listAgendaAITools } from "@/modules/agenda/ai";
 import { listClientesAITools } from "@/modules/clientes/ai";
 import { listFormulariosAITools } from "@/modules/formularios/ai";
+import { listContratosAITools } from "@/modules/contratos/ai";
 import { listConfiguracoesAITools } from "@/modules/configuracoes/ai";
 import { listBillingAITools } from "./billing/ai";
 import { listGalleryAITools } from "./gallery/ai";
@@ -33,6 +35,7 @@ export interface LunariAITool extends AICapabilityTool {
     | "agenda"
     | "clientes"
     | "formularios"
+    | "contratos"
     | "configuracoes"
     | "billing"
     | "gallery"
@@ -54,11 +57,12 @@ export function listLunariAITools(opts?: {
   const a = listAgendaAITools(opts).map((x) => ({ ...x, module: "agenda" as const }));
   const c = listClientesAITools(opts).map((x) => ({ ...x, module: "clientes" as const }));
   const fo = listFormulariosAITools(opts).map((x) => ({ ...x, module: "formularios" as const }));
+  const cn = listContratosAITools(opts).map((x) => ({ ...x, module: "contratos" as const }));
   const co = listConfiguracoesAITools(opts).map((x) => ({ ...x, module: "configuracoes" as const }));
   const b = listBillingAITools(opts).map((x) => ({ ...x, module: "billing" as const }));
   const g = listGalleryAITools(opts).map((x) => ({ ...x, module: "gallery" as const }));
   const f = listFinanceAITools(opts).map((x) => ({ ...x, module: "finance" as const }));
-  return [...w, ...t, ...a, ...c, ...fo, ...co, ...b, ...g, ...f];
+  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {
