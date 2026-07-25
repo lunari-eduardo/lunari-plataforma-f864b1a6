@@ -11,13 +11,14 @@ Contratos. A aba **Formulários** é apenas atalho — o módulo próprio é
 contábeis, integrações de pagamento) NÃO pertencem aqui — vivem em
 `modules/finance`.
 
-## Estado atual (P6.A — pilot Categorias)
+## Estado atual (P6.A tranche 2)
 
-Superfície `ai/` completa + capabilities operacionais de **Categorias**
-implementadas (list/get/create/update/delete). Delete valida vínculos em
-pacotes/sessões e requer aprovação humana com desafio `type_name`
-(`buildDeleteChallenge`). Pacotes/Produtos/Etapas/Contratos e pricing
-entram nas próximas tranches:
+Superfície `ai/` completa + capabilities operacionais implementadas para
+**Categorias**, **Pacotes**, **Produtos** e **Etapas** (CRUD + toggle
+favorito em produtos + move em etapas). Deletes exigem aprovação humana
+com desafio `type_name` via `buildDeleteChallenge`. Etapas de sistema
+protegidas contra rename/delete. Formulários e Contratos + geração IA
+entram na próxima tranche:
 
 | ID (planejado)                                | Tipo    | Aprovação | Descrição                                                        |
 | --------------------------------------------- | ------- | --------- | ---------------------------------------------------------------- |
