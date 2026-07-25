@@ -38,9 +38,9 @@ export interface AgendaPageSnapshot {
   } | null;
   availabilityToday: Array<{
     id: string;
-    startTime: string;
-    endTime: string;
-    type: string;
+    time: string;
+    duration: number;
+    label?: string;
   }>;
   conflictsHint: boolean;
   permissions: {
@@ -146,9 +146,9 @@ export function buildAgendaPageSnapshot(
     .slice(0, maxVisible)
     .map((s) => ({
       id: s.id,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      type: s.type,
+      time: s.time,
+      duration: s.duration,
+      label: s.label,
     }));
 
   // Sinaliza se algum agendamento a confirmar colide com um confirmado
