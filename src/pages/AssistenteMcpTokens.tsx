@@ -39,6 +39,7 @@ const MCP_URL =
   "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/assistant-mcp";
 
 export default function AssistenteMcpTokens() {
+  const { allowed: assistantAllowed, isLoading: accessLoading } = useAssistantAccess();
   const [tokens, setTokens] = useState<TokenRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
