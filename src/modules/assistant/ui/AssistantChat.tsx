@@ -224,15 +224,12 @@ function VoicePromptInput({
   const recorder = useVoiceRecorder();
   const [transcribing, setTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
 
-  // Insere texto no textarea gerenciado pelo PromptInput sem lutar com o
-  // controller interno: setamos via setter nativo + disparamos "input" para
-  // que o React observe a mudança e o controller atualize.
   const insertIntoTextarea = useCallback((text: string) => {
-    const form = formRef.current;
-    if (!form) return;
-    const ta = form.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
+    const root = wrapRef.current;
+    if (!root) return;
+    const ta = root.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
     if (!ta) return;
     const setter = Object.getOwnPropertyDescriptor(
       window.HTMLTextAreaElement.prototype,
