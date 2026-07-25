@@ -5,6 +5,8 @@
  * sejam registradas antes de listadas.
  */
 import "@/features/workflow"; // registra capabilities de workflow
+import "@/modules/workflow"; // side-effects: registra queries/commands do módulo workflow
+
 import "@/modules/tasks"; // registra capabilities de tasks
 import "@/modules/agenda"; // registra capabilities de agenda
 import "@/modules/clientes"; // superfície AI de clientes (sem caps ainda)
