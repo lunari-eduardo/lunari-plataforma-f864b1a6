@@ -25,6 +25,7 @@ import StoragePage from "./modules/storage/StoragePage";
 import SistemaPage from "./modules/sistema/SistemaPage";
 import LogsPage from "./modules/audit-logs/LogsPage";
 import ConfiguracoesPage from "./modules/configuracoes/ConfiguracoesPage";
+import AssistantRolloutPage from "./modules/assistant-rollout/AssistantRolloutPage";
 
 /**
  * AdminApp — entry do subdomínio admin.lunarihub.com
