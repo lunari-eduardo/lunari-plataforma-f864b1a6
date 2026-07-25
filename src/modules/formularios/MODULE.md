@@ -4,11 +4,17 @@ Motor de formulários do Lunari Studio — cobre briefings pré-sessão,
 pós-venda, capturas de lead e formulários custom. É a superfície principal
 de coleta de dados do cliente final.
 
-## Estado atual (P4)
+## Estado atual (P6.B — Formulários operacionais + IA)
 
-Wave P4 do plano de paridade AI entrega apenas a **superfície `ai/`**
-(permissions, tools, context, snapshot). Capabilities operacionais serão
-introduzidas nas próximas ondas:
+Capabilities CRUD registradas: `listForms`, `getForm`, `createForm`,
+`updateForm`, `publishForm`, `unpublishForm`, `deleteForm`,
+`listResponses`, `generateFormWithAI`. Publish/unpublish/delete exigem
+aprovação humana (desafio `type_name` via `buildFormDeleteChallenge`).
+Geração IA delegada à Edge Function `assistant-forms-generate`
+(Lovable AI Gateway, modelo `google/gemini-2.5-flash`) — devolve proposta
+para revisão, nunca escreve direto. Ondas seguintes cobrirão
+`duplicateForm`, `deleteResponse`, `reopenSubmission`,
+`generateAIBriefing`:
 
 | ID (planejado)                     | Tipo    | Descrição                                              |
 | ---------------------------------- | ------- | ------------------------------------------------------ |
