@@ -18,15 +18,19 @@ import "./application/commands/produtoCommands";
 import "./application/commands/syncFromAgenda";
 import "./application/queries/getCardBySession";
 import "./application/queries/listSessionsByMonth";
+import "./application/queries/listSessionsByRange";
 import "./application/queries/listStatusOptions";
 import "./application/queries/searchSessions";
 import "./application/queries/metricsForMonth";
+import "./application/queries/metricsForRange";
+import "./application/queries/analyticsSummary";
 import "./application/queries/photoProductionForMonth";
 import "./application/queries/pendingPayments";
 import "./application/queries/getSessionFinancials";
 import "./application/queries/listSessionsByPaymentStatus";
 import "./application/queries/diagnoseSession";
 import "./application/queries/produtoQueries";
+
 
 // Re-export para uso direto via TanStack hooks ou execute()
 export { advanceCard } from "./application/commands/advanceCard";
