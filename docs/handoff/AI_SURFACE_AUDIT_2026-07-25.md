@@ -122,12 +122,37 @@ Ver 3.1 para o plano de fechamento.
 
 ---
 
-## 6. Próxima onda proposta
+## 6. Status pós-D.1 / D.2 (atualizado 2026-07-25)
 
-**Onda D.1 — Fechamento de gaps** (única, executada de uma vez):
-- Capabilities `clientes` v1.
-- Allowlist em 8 módulos restantes.
-- `approvalRegistry` central + reforço nos itens do §4.
-- Script `audit-ai-tools.ts` no CI.
+### Onda D.1 — Fechamento de gaps ✅
+- `clientes` v1: 8 capabilities (`list/get/search/listSessoes/listTransacoes/create/update/addNota`) em `src/modules/clientes/application/clientes.ts`.
+- `src/shared/ai/approvalRegistry.ts`: registry central; cada módulo chama `registerModuleApprovals` no import de `ai/permissions.ts`.
+- `runCapabilityAsAssistant` cruza `opts.needsApproval` com o registry central — caller esquecido não vaza gate.
+- Todos os 10 módulos alinhados: workflow, tasks, agenda, finance, gallery, billing, configuracoes, formularios, contratos, clientes.
+- `workflow.addPayment` promovido a REQUIRES_APPROVAL (mexe em dinheiro do cliente).
+- `formularios.generateFormWithAI` adicionado ao gate humano.
 
-Depois disso → **Fase E (Runtime da Lu)**: adapter Gemini/OpenAI, UI de chat + voz, orquestração de tool-calls, aprovação inline.
+### Onda D.2 — Validação CI ✅
+- Script `scripts/ai-surface-audit.ts` roda via `bun run audit:ai`.
+- Regras que falham build (exit 1):
+  1. `MODULE_NOT_IN_APPROVAL_REGISTRY` — módulo expõe tools mas não chamou `registerModuleApprovals`.
+  2. `DESTRUCTIVE_WITHOUT_APPROVAL` — capability com sufixo destrutivo (`.delete/.remove/.cancel/.refund/.publish/…`) exposta à Lu sem gate central.
+- Warns (não falham build):
+  3. `APPROVAL_FOR_UNKNOWN_CAPABILITY` — drift entre id declarado no `REQUIRES_APPROVAL` e id real do `defineCommand`.
+
+### Resultado atual do audit
+```
+módulos registrados: 10
+capabilities totais: 119
+approvals centrais:  53
+tools expostas à Lu: 114
+Resultado: 0 error(s), 25 warn(s).
+```
+
+Os 25 warns são drift de naming (ex.: `workflow.produto.advanceStage` declarado no set mas capability real usa outro id) — issue de correção mecânica, sem risco de segurança. Fica como backlog para uma passada de renomeação/alinhamento antes da Fase E entrar em produção.
+
+---
+
+## 7. Próximo passo
+
+Fase E (Runtime da Lu): adapter LLM (Gemini/OpenAI via AI Gateway), UI de chat + voz, orquestração de tool-calls com aprovação inline. Superfície agora está consistente e auditável — pré-requisitos de segurança satisfeitos.

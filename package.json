@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "gen:module": "bun run scripts/generate-module.ts"
+    "gen:module": "bun run scripts/generate-module.ts",
+    "audit:ai": "bun scripts/ai-surface-audit.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
