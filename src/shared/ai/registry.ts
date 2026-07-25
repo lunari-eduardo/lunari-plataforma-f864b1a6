@@ -81,6 +81,7 @@ export function buildAllPageSnapshots(user: AuthUser | null): AllPageSnapshots {
     gallery: snapshotForGallery(user),
     clientes: snapshotForClientes(user),
     formularios: snapshotForFormularios(user),
+    contratos: snapshotForContratos(user),
     configuracoes: snapshotForConfiguracoes(user),
   };
 }
