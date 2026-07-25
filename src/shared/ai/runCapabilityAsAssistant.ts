@@ -151,10 +151,26 @@ export async function runCapabilityAsAssistant<T = unknown>(
   }
 
   try {
-    // `run` é o método padrão exposto por defineCommand/defineQuery.
-    const runner = (cap as unknown as { run: (i: unknown) => Promise<T> }).run;
-    const output = await runner(input);
+    // defineCommand/defineQuery expõem `execute(rawInput, overrides)` → Result.
+    const result = await cap.execute(input, { user: opts.user, runtime: "client" });
     const latencyMs = Math.round(performance.now() - t0);
+    if (!result.ok) {
+      const message = result.error?.message ?? "Capability error";
+      const denied = result.error?.code === "UNAUTHORIZED" || result.error?.code === "FORBIDDEN";
+      const invocationId = await recordInvocation({
+        userId: opts.user.id,
+        capabilityId,
+        module: opts.module,
+        kind: cap.kind,
+        inputHash,
+        outputStatus: denied ? "denied" : "error",
+        errorMessage: message,
+        latencyMs,
+        needsApproval: !!opts.needsApproval,
+      });
+      return { status: denied ? "denied" : "error", error: message, latencyMs, invocationId };
+    }
+    const output = result.value as T;
     const invocationId = await recordInvocation({
       userId: opts.user.id,
       capabilityId,
