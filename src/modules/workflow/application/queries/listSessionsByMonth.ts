@@ -17,7 +17,9 @@ import { sessionsRepo } from "@/features/workflow/data";
 const Input = z.object({
   year: z.number().int().min(2000).max(2100),
   month: z.number().int().min(1).max(12),
+  includeHistorico: z.boolean().optional().default(false),
 });
+
 
 const SessionSummary = z.object({
   id: z.string(),
