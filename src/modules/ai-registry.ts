@@ -6,12 +6,14 @@
  */
 import "@/features/workflow"; // registra capabilities de workflow
 import "@/modules/tasks"; // registra capabilities de tasks
+import "@/modules/agenda"; // registra capabilities de agenda
 import "./billing";
 import "./gallery";
 import "./finance";
 
 import { listWorkflowAITools } from "@/features/workflow/ai";
 import { listTasksAITools } from "@/modules/tasks/ai";
+import { listAgendaAITools } from "@/modules/agenda/ai";
 import { listBillingAITools } from "./billing/ai";
 import { listGalleryAITools } from "./gallery/ai";
 import { listFinanceAITools } from "./finance/ai";
@@ -19,7 +21,7 @@ import type { AuthUser } from "@/shared/ports";
 import type { AICapabilityTool } from "@/shared/capability";
 
 export interface LunariAITool extends AICapabilityTool {
-  module: "workflow" | "tasks" | "billing" | "gallery" | "finance";
+  module: "workflow" | "tasks" | "agenda" | "billing" | "gallery" | "finance";
   needsApproval: boolean;
   permissions: string[];
 }
@@ -34,10 +36,11 @@ export function listLunariAITools(opts?: {
 }): LunariAITool[] {
   const w = listWorkflowAITools(opts).map((t) => ({ ...t, module: "workflow" as const }));
   const t = listTasksAITools(opts).map((x) => ({ ...x, module: "tasks" as const }));
+  const a = listAgendaAITools(opts).map((x) => ({ ...x, module: "agenda" as const }));
   const b = listBillingAITools(opts).map((x) => ({ ...x, module: "billing" as const }));
   const g = listGalleryAITools(opts).map((x) => ({ ...x, module: "gallery" as const }));
   const f = listFinanceAITools(opts).map((x) => ({ ...x, module: "finance" as const }));
-  return [...w, ...t, ...b, ...g, ...f];
+  return [...w, ...t, ...a, ...b, ...g, ...f];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {
