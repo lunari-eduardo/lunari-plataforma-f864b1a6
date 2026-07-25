@@ -31,7 +31,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.2.0", // F.2
+  version: "0.3.0", // F.3 — writes + async approvals
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
