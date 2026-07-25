@@ -44,6 +44,14 @@ async function main() {
     tools,
   };
 
+  // Sanidade: nenhum schema pode ser o placeholder Zod antigo.
+  const serialized = JSON.stringify(out);
+  if (serialized.includes('"$zod"')) {
+    throw new Error(
+      "Catalog contém placeholder $zod — o conversor Zod → JSON Schema falhou. Verifique src/shared/capability/ai-adapter.ts",
+    );
+  }
+
   const path = new URL("../supabase/functions/assistant-mcp/catalog.json", import.meta.url);
   const { writeFile, mkdir } = await import("node:fs/promises");
   const { dirname } = await import("node:path");
@@ -53,6 +61,7 @@ async function main() {
   console.log(`✔ MCP catalog escrito em ${path.pathname}`);
   console.log(`  tools: ${tools.length}`);
   console.log(`  manifest: ${manifest.name}@${manifest.version}`);
+
 }
 
 main().catch((err) => {
