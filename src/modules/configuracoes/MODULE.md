@@ -11,11 +11,13 @@ Contratos. A aba **Formulários** é apenas atalho — o módulo próprio é
 contábeis, integrações de pagamento) NÃO pertencem aqui — vivem em
 `modules/finance`.
 
-## Estado atual (P5)
+## Estado atual (P6.A — pilot Categorias)
 
-Wave P5 do plano de paridade AI entrega apenas a **superfície `ai/`**
-(permissions, tools, context, snapshot). Capabilities operacionais entram
-em ondas posteriores:
+Superfície `ai/` completa + capabilities operacionais de **Categorias**
+implementadas (list/get/create/update/delete). Delete valida vínculos em
+pacotes/sessões e requer aprovação humana com desafio `type_name`
+(`buildDeleteChallenge`). Pacotes/Produtos/Etapas/Contratos e pricing
+entram nas próximas tranches:
 
 | ID (planejado)                                | Tipo    | Aprovação | Descrição                                                        |
 | --------------------------------------------- | ------- | --------- | ---------------------------------------------------------------- |

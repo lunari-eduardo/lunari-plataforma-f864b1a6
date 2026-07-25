@@ -1,9 +1,9 @@
 /**
  * Entry-point público do módulo Configurações.
  *
- * P5 — Paridade AI: superfície `ai/` apenas. Capabilities operacionais
- * (create/update/delete de categorias, pacotes, produtos, etapas, contratos,
- * setPricingModel, updateGlobalPricingTable, etc.) entram em ondas posteriores.
+ * P6.A — Capabilities de Categorias registradas por side-effect via
+ * `./application`. Pacotes/Produtos/Etapas entram nas próximas tranches.
  */
 
+import "./application";
 export * from "./ai";

@@ -6,6 +6,17 @@ import type { Capability } from "./types";
  * mínimo de Zod → JSON Schema interno para evitar dependência extra. Para
  * schemas complexos, cada módulo pode plugar um conversor mais completo.
  */
+export type ConfirmationKind = "destructive" | "send" | "publish" | "ai_generation";
+
+export interface ConfirmationChallenge {
+  /** UI decide como cobrar (input digitado, wake-word por voz, etc.). */
+  kind: ConfirmationKind;
+  /** Instrução textual curta para exibir ao usuário. */
+  prompt: string;
+  /** Desafio "type-name" opcional: usuário deve digitar exatamente `expected`. */
+  challenge?: { type: "type_name"; expected: string };
+}
+
 export interface AICapabilityTool {
   id: string;
   kind: "command" | "query";
@@ -14,6 +25,8 @@ export interface AICapabilityTool {
   outputSchema: unknown;
   costHint: string;
   examples: Array<{ nl: string; input: unknown; output?: unknown }>;
+  /** Metadados para a UI de confirmação (só em capabilities com approval). */
+  confirmation?: ConfirmationChallenge;
 }
 
 function zodToJson(schema: unknown): unknown {
