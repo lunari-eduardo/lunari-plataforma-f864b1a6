@@ -252,6 +252,62 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_approvals: {
+        Row: {
+          approval_token_hash: string | null
+          consumed_at: string | null
+          created_at: string
+          decided_at: string | null
+          expires_at: string
+          id: string
+          requested_at: string
+          status: Database["public"]["Enums"]["assistant_approval_status"]
+          summary: string | null
+          token_id: string | null
+          tool_args: Json
+          tool_name: string
+          user_id: string
+        }
+        Insert: {
+          approval_token_hash?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          decided_at?: string | null
+          expires_at?: string
+          id?: string
+          requested_at?: string
+          status?: Database["public"]["Enums"]["assistant_approval_status"]
+          summary?: string | null
+          token_id?: string | null
+          tool_args?: Json
+          tool_name: string
+          user_id: string
+        }
+        Update: {
+          approval_token_hash?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          decided_at?: string | null
+          expires_at?: string
+          id?: string
+          requested_at?: string
+          status?: Database["public"]["Enums"]["assistant_approval_status"]
+          summary?: string | null
+          token_id?: string | null
+          tool_args?: Json
+          tool_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_approvals_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_mcp_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assistant_beta_access: {
         Row: {
           granted_at: string
@@ -5933,6 +5989,47 @@ export type Database = {
         Returns: undefined
       }
       assistant_access_allowed: { Args: { _uid: string }; Returns: boolean }
+      assistant_approval_consume: {
+        Args: { _approval_token: string; _tool_name: string; _user_id: string }
+        Returns: {
+          approval_id: string
+          tool_args: Json
+        }[]
+      }
+      assistant_approval_create: {
+        Args: {
+          _summary: string
+          _token_id: string
+          _tool_args: Json
+          _tool_name: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      assistant_approval_decide: {
+        Args: { _approve: boolean; _id: string }
+        Returns: {
+          approval_token_hash: string | null
+          consumed_at: string | null
+          created_at: string
+          decided_at: string | null
+          expires_at: string
+          id: string
+          requested_at: string
+          status: Database["public"]["Enums"]["assistant_approval_status"]
+          summary: string | null
+          token_id: string | null
+          tool_args: Json
+          tool_name: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "assistant_approvals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assistant_mcp_token_create: {
         Args: { _expires_at?: string; _name: string }
         Returns: {
@@ -6373,6 +6470,12 @@ export type Database = {
       account_status: "active" | "suspended" | "canceled"
       account_type: "gallery_solo" | "starter" | "pro" | "pro_gallery"
       app_role: "admin" | "moderator" | "user"
+      assistant_approval_status:
+        | "pending"
+        | "approved"
+        | "denied"
+        | "expired"
+        | "consumed"
       email_delivery_event_type:
         | "gallery_sent"
         | "payment_confirmed"
@@ -6544,6 +6647,13 @@ export const Constants = {
       account_status: ["active", "suspended", "canceled"],
       account_type: ["gallery_solo", "starter", "pro", "pro_gallery"],
       app_role: ["admin", "moderator", "user"],
+      assistant_approval_status: [
+        "pending",
+        "approved",
+        "denied",
+        "expired",
+        "consumed",
+      ],
       email_delivery_event_type: [
         "gallery_sent",
         "payment_confirmed",
