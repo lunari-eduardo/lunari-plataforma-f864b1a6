@@ -192,7 +192,12 @@ export default function AssistenteMcpTokens() {
               {tokens.map((t) => (
                 <div key={t.id} className="flex items-center justify-between py-3">
                   <div className="space-y-1">
-                    <div className="text-sm font-medium">{t.name}</div>
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      {t.name}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${t.scopes?.includes("write") ? "border-amber-500/50 text-amber-700 dark:text-amber-300" : "border-muted-foreground/30 text-muted-foreground"}`}>
+                        {t.scopes?.includes("write") ? "read + write" : "read"}
+                      </span>
+                    </div>
                     <div className="text-xs text-muted-foreground font-mono">
                       {t.token_prefix}…
                     </div>
