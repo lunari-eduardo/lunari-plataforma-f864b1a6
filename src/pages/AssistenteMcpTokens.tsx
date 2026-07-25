@@ -146,6 +146,19 @@ export default function AssistenteMcpTokens() {
               <Plus className="h-4 w-4 mr-2" /> Gerar
             </Button>
           </div>
+          <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={allowWrite}
+              onChange={(e) => setAllowWrite(e.target.checked)}
+              disabled={creating}
+            />
+            <span>
+              Permitir escrita (criar clientes, tarefas, transações). Ações destrutivas ainda exigem
+              sua aprovação individual em <a href="/assistente/aprovacoes" className="underline">/assistente/aprovacoes</a>.
+            </span>
+          </label>
           {freshToken && (
             <div className="rounded-md border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-2">
               <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
