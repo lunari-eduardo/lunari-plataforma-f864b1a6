@@ -176,6 +176,7 @@ export default function OAuthConsent() {
               <pre className="whitespace-pre-wrap break-all mt-1">
 authorization_id: {authorizationId || "(ausente)"}
 url: {typeof window !== "undefined" ? window.location.href : ""}
+trace: {trace ? JSON.stringify(trace, null, 2) : "(sem trace)"}
               </pre>
             </details>
             <Button
