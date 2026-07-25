@@ -22,7 +22,7 @@ export const listCategoriasCap = defineQuery({
   description: "Retorna todas as categorias do estúdio ordenadas por nome.",
   input: z.object({}).strict(),
   output: z.object({ items: z.array(CategoriaSchema) }),
-  permissions: ["auth"],
+  permissions: [],
   handler: async () => {
     const { data, error } = await supabase
       .from("categorias")
@@ -39,7 +39,7 @@ export const getCategoriaCap = defineQuery({
   description: "Retorna os dados de uma categoria pelo id.",
   input: z.object({ id: z.string() }).strict(),
   output: CategoriaSchema.nullable(),
-  permissions: ["auth"],
+  permissions: [],
   handler: async ({ id }) => {
     const { data, error } = await supabase
       .from("categorias")
@@ -60,7 +60,7 @@ export const createCategoriaCap = defineCommand({
     cor: z.string().nullable().optional(),
   }).strict(),
   output: CategoriaSchema,
-  permissions: ["auth"],
+  permissions: [],
   sideEffects: ["db:categorias"],
   handler: async ({ nome, cor }, ctx) => {
     const trimmed = nome.trim();
@@ -102,7 +102,7 @@ export const updateCategoriaCap = defineCommand({
     cor: z.string().nullable().optional(),
   }).strict(),
   output: CategoriaSchema,
-  permissions: ["auth"],
+  permissions: [],
   sideEffects: ["db:categorias"],
   handler: async ({ id, nome, cor }) => {
     const patch: Record<string, unknown> = {};
@@ -139,7 +139,7 @@ export const deleteCategoriaCap = defineCommand({
     "Remove definitivamente a categoria. Bloqueado se houver pacotes ou sessões vinculados.",
   input: z.object({ id: z.string() }).strict(),
   output: z.object({ deleted: z.boolean() }),
-  permissions: ["auth"],
+  permissions: [],
   needsApproval: true,
   sideEffects: ["db:categorias"],
   handler: async ({ id }) => {
