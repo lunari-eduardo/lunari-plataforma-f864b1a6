@@ -21,8 +21,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, Plus, Trash2, KeyRound, ShieldCheck } from "lucide-react";
+import { Copy, Plus, Trash2, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useAssistantAccess } from "@/modules/assistant/runtime/useAssistantAccess";
 
 interface TokenRow {
   id: string;
