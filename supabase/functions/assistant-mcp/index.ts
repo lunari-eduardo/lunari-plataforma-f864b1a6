@@ -287,23 +287,27 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: mcpHeaders });
 
   if (req.method === "GET") {
+    const bridged = Object.entries(BRIDGED_TOOLS).map(([name, t]) => ({
+      name, scope: t.scope, requiresApproval: t.requiresApproval,
+    }));
     return new Response(
       JSON.stringify(
         {
           server: SERVER_INFO,
           protocolVersion: PROTOCOL_VERSION,
           tools: catalog.tools.length,
-          bridgedTools: Object.keys(READ_ONLY_BRIDGE),
+          bridgedTools: bridged,
           generatedAt: catalog.generatedAt,
           auth: {
             type: "bearer",
             header: "Authorization: Bearer lmcp_...",
-            issue: "https://lunari.app/configuracoes/assistente-mcp",
+            scopes: ["read", "write"],
+            approvalsUrl: "https://lunari.app/assistente/aprovacoes",
+            issue: "https://lunari.app/assistente/mcp",
           },
           docs: "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
         },
-        null,
-        2,
+        null, 2,
       ),
       { headers: { ...mcpHeaders, "Content-Type": "application/json" } },
     );
