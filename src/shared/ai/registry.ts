@@ -26,6 +26,7 @@ import { snapshotForAgenda, type AgendaPageSnapshot } from "@/modules/agenda/ai"
 import { snapshotForGallery, type GalleryPageSnapshot } from "@/modules/gallery/ai";
 import { snapshotForClientes, type ClientesPageSnapshot } from "@/modules/clientes/ai";
 import { snapshotForFormularios, type FormulariosPageSnapshot } from "@/modules/formularios/ai";
+import { snapshotForContratos, type ContratosPageSnapshot } from "@/modules/contratos/ai";
 import {
   snapshotForConfiguracoes,
   type ConfiguracoesPageSnapshot,
