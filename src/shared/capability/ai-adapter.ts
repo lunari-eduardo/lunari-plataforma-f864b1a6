@@ -1,10 +1,13 @@
+import { zodToJsonSchema } from "zod-to-json-schema";
 import type { Capability } from "./types";
 
 /**
- * Converte uma capability num descritor serializável que o módulo `ai/` de cada
- * feature adapta ao formato concreto do AI SDK em uso. Mantemos um conversor
- * mínimo de Zod → JSON Schema interno para evitar dependência extra. Para
- * schemas complexos, cada módulo pode plugar um conversor mais completo.
+ * Converte uma capability num descritor serializável para o AI SDK / MCP.
+ *
+ * O input/output das capabilities é um Zod schema. Aqui convertemos para
+ * JSON Schema (draft-07 / OpenAPI-friendly) que é o formato exigido pelos
+ * clientes MCP (ChatGPT, Claude, Cursor) e pelos providers LLM
+ * (OpenAI function calling, Gemini function declarations).
  */
 export type ConfirmationKind = "destructive" | "send" | "publish" | "ai_generation";
 
@@ -21,19 +24,46 @@ export interface AICapabilityTool {
   id: string;
   kind: "command" | "query";
   description: string;
-  inputSchema: unknown;
-  outputSchema: unknown;
+  inputSchema: Record<string, unknown>;
+  outputSchema: Record<string, unknown>;
   costHint: string;
   examples: Array<{ nl: string; input: unknown; output?: unknown }>;
   /** Metadados para a UI de confirmação (só em capabilities com approval). */
   confirmation?: ConfirmationChallenge;
 }
 
-function zodToJson(schema: unknown): unknown {
-  // Placeholder — substituir por @valibot/to-json-schema ou zod-to-json-schema
-  // quando o módulo AI for plugado. Por ora retornamos um marcador opaco.
-  const s = schema as { _def?: { typeName?: string } };
-  return { $zod: s?._def?.typeName ?? "unknown" };
+const EMPTY_OBJECT_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {},
+  additionalProperties: false,
+};
+
+function convertSchema(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== "object") return { ...EMPTY_OBJECT_SCHEMA };
+  try {
+    const json = zodToJsonSchema(schema as never, {
+      target: "openApi3",
+      $refStrategy: "none",
+    }) as Record<string, unknown>;
+
+    // Remove metadados que MCP/OpenAI/Gemini não consomem.
+    delete json.$schema;
+    delete (json as { definitions?: unknown }).definitions;
+
+    // Garante que a raiz seja um objeto — MCP e Gemini function calling exigem.
+    if (json.type !== "object") {
+      return { type: "object", properties: { value: json }, additionalProperties: false };
+    }
+    if (!("properties" in json)) {
+      (json as { properties: unknown }).properties = {};
+    }
+    if (!("additionalProperties" in json)) {
+      (json as { additionalProperties: unknown }).additionalProperties = false;
+    }
+    return json;
+  } catch {
+    return { ...EMPTY_OBJECT_SCHEMA };
+  }
 }
 
 export function capabilityToAITool(cap: Capability): AICapabilityTool {
@@ -41,9 +71,10 @@ export function capabilityToAITool(cap: Capability): AICapabilityTool {
     id: cap.id,
     kind: cap.kind,
     description: `${cap.title}. ${cap.description}`,
-    inputSchema: zodToJson(cap.input),
-    outputSchema: zodToJson(cap.output),
+    inputSchema: convertSchema(cap.input),
+    outputSchema: convertSchema(cap.output),
     costHint: cap.costHint,
     examples: cap.examples,
   };
 }
+
