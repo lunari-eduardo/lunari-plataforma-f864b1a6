@@ -327,6 +327,45 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_mcp_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          token_hash: string
+          token_prefix: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[]
+          token_hash: string
+          token_prefix: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          token_hash?: string
+          token_prefix?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -5894,6 +5933,23 @@ export type Database = {
         Returns: undefined
       }
       assistant_access_allowed: { Args: { _uid: string }; Returns: boolean }
+      assistant_mcp_token_create: {
+        Args: { _expires_at?: string; _name: string }
+        Returns: {
+          created_at: string
+          id: string
+          prefix: string
+          token: string
+        }[]
+      }
+      assistant_mcp_token_validate: {
+        Args: { _token: string }
+        Returns: {
+          scopes: string[]
+          token_id: string
+          user_id: string
+        }[]
+      }
       atomic_update_session_extras: {
         Args: {
           p_extras_increment: number
