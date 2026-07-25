@@ -92,23 +92,41 @@ export default function OAuthConsent() {
     };
   }, [authorizationId, nextPath]);
 
+  const [trace, setTrace] = useState<any>(null);
+
   async function decide(approve: boolean) {
+    const t0 = Date.now();
+    console.info("[oauth-consent] decide start", { approve, authorizationId, t0 });
     setState({ kind: "deciding" });
     const { data, error } = approve
       ? await approveAuthorization(authorizationId)
       : await denyAuthorization(authorizationId);
+    const t1 = Date.now();
+    const debug = (error as any)?.debug ?? null;
+    console.info("[oauth-consent] decide result", {
+      approve,
+      authorizationId,
+      elapsedMs: t1 - t0,
+      data,
+      errorMessage: error?.message,
+      debug,
+    });
     if (error) {
+      setTrace({ phase: "approve/deny", error: error.message, debug });
       setState({ kind: "error", message: error.message || "Falha ao registrar decisão." });
       return;
     }
     const target = data?.redirect_url ?? data?.redirect_to;
     if (!target) {
+      setTrace({ phase: "approve/deny", note: "sem redirect_url", data });
       setState({
         kind: "error",
         message: "Servidor OAuth não devolveu URL de retorno.",
       });
       return;
     }
+    console.info("[oauth-consent] redirecting to", target);
+    setTrace({ phase: "redirecting", target, data });
     setState({ kind: "redirecting" });
     window.location.replace(target);
   }
