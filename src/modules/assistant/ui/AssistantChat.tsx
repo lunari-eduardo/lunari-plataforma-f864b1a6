@@ -329,5 +329,6 @@ function VoicePromptInput({
         <PromptInputSubmit status={status} disabled={disabled} onStop={onStop} />
       </PromptInputFooter>
     </PromptInput>
+    </div>
   );
 }
