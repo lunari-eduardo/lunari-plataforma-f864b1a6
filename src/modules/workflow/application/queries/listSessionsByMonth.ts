@@ -50,7 +50,7 @@ export const listSessionsByMonth = defineQuery({
   input: Input,
   output: Output,
   permissions: ["workflow:read"],
-  async handler({ year, month }, ctx) {
+  async handler({ year, month, includeHistorico }, ctx) {
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth.user?.id ?? ctx.user?.id;
     if (!userId) {
@@ -59,7 +59,7 @@ export const listSessionsByMonth = defineQuery({
 
     let rows;
     try {
-      rows = await sessionsRepo.listByMonth(userId, year, month);
+      rows = await sessionsRepo.listByMonth(userId, year, month, { includeHistorico });
     } catch (cause) {
       ctx.log.error("falha ao listar sessões do mês", { cause });
       return err(
@@ -69,6 +69,7 @@ export const listSessionsByMonth = defineQuery({
         }),
       );
     }
+
 
     const sessions = rows.map((s: any) => ({
       id: s.id,
