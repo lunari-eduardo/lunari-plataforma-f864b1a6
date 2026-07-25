@@ -58,6 +58,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const { assertAssistantAccess } = await import("../_shared/assistant-guard.ts");
+    const denied = await assertAssistantAccess(supabase, userRes.user.id, corsHeaders);
+    if (denied) return denied;
 
     // ── Body (multipart) ──────────────────────────────────────────────────
     const contentType = req.headers.get("Content-Type") ?? "";

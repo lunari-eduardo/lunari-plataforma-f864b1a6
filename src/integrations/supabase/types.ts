@@ -127,6 +127,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           cliente_id: string | null
@@ -228,6 +249,27 @@ export type Database = {
           payload?: Json | null
           payment_id?: string | null
           processed?: boolean | null
+        }
+        Relationships: []
+      }
+      assistant_beta_access: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          note?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -5851,6 +5893,7 @@ export type Database = {
         Args: { p_gallery_id: string }
         Returns: undefined
       }
+      assistant_access_allowed: { Args: { _uid: string }; Returns: boolean }
       atomic_update_session_extras: {
         Args: {
           p_extras_increment: number

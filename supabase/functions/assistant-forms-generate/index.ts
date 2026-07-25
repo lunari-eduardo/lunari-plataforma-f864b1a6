@@ -57,6 +57,9 @@ Deno.serve(async (req) => {
   });
   const { data: userRes } = await client.auth.getUser();
   if (!userRes?.user) return json(401, { error: "unauthorized" });
+  const { assertAssistantAccess } = await import("../_shared/assistant-guard.ts");
+  const denied = await assertAssistantAccess(client, userRes.user.id, corsHeaders);
+  if (denied) return denied;
 
   let body: Body;
   try {

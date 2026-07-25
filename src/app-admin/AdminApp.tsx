@@ -25,6 +25,7 @@ import StoragePage from "./modules/storage/StoragePage";
 import SistemaPage from "./modules/sistema/SistemaPage";
 import LogsPage from "./modules/audit-logs/LogsPage";
 import ConfiguracoesPage from "./modules/configuracoes/ConfiguracoesPage";
+import AssistantRolloutPage from "./modules/assistant-rollout/AssistantRolloutPage";
 
 /**
  * AdminApp — entry do subdomínio admin.lunarihub.com
@@ -78,6 +79,7 @@ export default function AdminApp() {
         <Route path="sistema" element={<SistemaPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="configuracoes" element={<ConfiguracoesPage />} />
+        <Route path="assistente" element={<AssistantRolloutPage />} />
 
         {/* Compat: alguém colando link antigo /app/admin/... no host admin */}
         <Route path="app/admin/usuarios" element={<Navigate to="/usuarios" replace />} />

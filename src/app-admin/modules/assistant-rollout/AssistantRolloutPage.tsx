@@ -1,0 +1,249 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { toast } from "sonner";
+import { Sparkles, UserPlus, Trash2 } from "lucide-react";
+
+/**
+ * Rollout da assistente Lu (Admin → Beta autorizados → Todos).
+ *
+ * Estágio ativo lido/gravado em `app_settings.assistant_rollout_stage`.
+ * Lista de beta em `assistant_beta_access`.
+ */
+
+type Stage = "admin" | "beta" | "geral";
+
+type BetaRow = {
+  user_id: string;
+  granted_at: string;
+  note: string | null;
+  email?: string | null;
+};
+
+const STAGE_LABEL: Record<Stage, string> = {
+  admin: "Admin — só administradores da Lunari",
+  beta: "Beta autorizado — admins + lista curada",
+  geral: "Geral — todos os usuários autenticados",
+};
+
+export default function AssistantRolloutPage() {
+  const [stage, setStage] = useState<Stage>("admin");
+  const [saving, setSaving] = useState(false);
+  const [beta, setBeta] = useState<BetaRow[]>([]);
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [metrics, setMetrics] = useState<{ total: number; blocked: number } | null>(null);
+
+  const loadAll = async () => {
+    const [{ data: settingRows }, { data: betaRows }, { data: invRows }] = await Promise.all([
+      supabase.from("app_settings").select("value").eq("key", "assistant_rollout_stage").maybeSingle(),
+      supabase.from("assistant_beta_access").select("user_id, granted_at, note").order("granted_at", { ascending: false }),
+      supabase.from("assistant_invocations").select("output_status").gte("created_at", new Date(Date.now() - 30 * 864e5).toISOString()),
+    ]);
+
+    const raw = (settingRows as any)?.value;
+    const s = typeof raw === "string" ? raw : (raw as string);
+    if (s === "admin" || s === "beta" || s === "geral") setStage(s);
+
+    const rows = (betaRows ?? []) as BetaRow[];
+    if (rows.length) {
+      const ids = rows.map((r) => r.user_id);
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", ids);
+      const map = new Map<string, string | null>((profs ?? []).map((p: any) => [p.id, p.email]));
+      rows.forEach((r) => (r.email = map.get(r.user_id) ?? null));
+    }
+    setBeta(rows);
+
+    const invocations = (invRows ?? []) as unknown as { output_status: string | null }[];
+    setMetrics({
+      total: invocations.length,
+      blocked: invocations.filter((r) => r.output_status === "blocked_by_rollout").length,
+    });
+  };
+
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  const changeStage = async (next: Stage) => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key: "assistant_rollout_stage", value: next as any });
+    setSaving(false);
+    if (error) {
+      toast.error("Falha ao alterar estágio: " + error.message);
+      return;
+    }
+    setStage(next);
+  };
+
+  const addBeta = async () => {
+    if (!email.trim()) return;
+    setBusy(true);
+    const { data: prof, error: findErr } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email.trim().toLowerCase())
+      .maybeSingle();
+    if (findErr || !prof) {
+      setBusy(false);
+      toast.error("Usuário não encontrado com esse email");
+      return;
+    }
+    const { error } = await supabase
+      .from("assistant_beta_access")
+      .upsert({ user_id: (prof as any).id, note: note.trim() || null });
+    setBusy(false);
+    if (error) {
+      toast.error("Falha ao adicionar: " + error.message);
+      return;
+    }
+    setEmail("");
+    setNote("");
+    await loadAll();
+  };
+
+  const removeBeta = async (userId: string) => {
+    const { error } = await supabase.from("assistant_beta_access").delete().eq("user_id", userId);
+    if (error) return toast.error("Falha ao remover: " + error.message);
+    await loadAll();
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold">Rollout da Assistente Lu</h1>
+          <p className="text-sm text-muted-foreground">
+            Controle quem pode acessar a Lu enquanto ela está em beta.
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Estágio ativo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Select value={stage} onValueChange={(v) => changeStage(v as Stage)} disabled={saving}>
+            <SelectTrigger className="max-w-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">{STAGE_LABEL.admin}</SelectItem>
+              <SelectItem value="beta">{STAGE_LABEL.beta}</SelectItem>
+              <SelectItem value="geral">{STAGE_LABEL.geral}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            A mudança é global e vale imediatamente. Fail-closed: em qualquer erro a Lu é escondida.
+          </p>
+        </CardContent>
+      </Card>
+
+      {metrics && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Últimos 30 dias</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-3xl font-semibold">{metrics.total}</div>
+              <div className="text-xs text-muted-foreground">Invocações totais</div>
+            </div>
+            <div>
+              <div className="text-3xl font-semibold">{metrics.blocked}</div>
+              <div className="text-xs text-muted-foreground">Bloqueadas pelo rollout</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Beta autorizado</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Input
+              className="max-w-xs"
+              placeholder="email@dominio.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+            />
+            <Input
+              className="max-w-xs"
+              placeholder="Nota (opcional)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+            <Button onClick={addBeta} disabled={busy || !email}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Adicionar
+            </Button>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Nota</TableHead>
+                <TableHead>Concedido em</TableHead>
+                <TableHead className="w-16"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {beta.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground">
+                    Nenhum usuário na lista de beta.
+                  </TableCell>
+                </TableRow>
+              )}
+              {beta.map((row) => (
+                <TableRow key={row.user_id}>
+                  <TableCell>{row.email ?? row.user_id}</TableCell>
+                  <TableCell className="text-muted-foreground">{row.note ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(row.granted_at).toLocaleDateString("pt-BR")}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon-sm" onClick={() => removeBeta(row.user_id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
