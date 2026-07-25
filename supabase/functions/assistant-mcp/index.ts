@@ -485,5 +485,3 @@ Deno.serve(async (req: Request) => {
     headers: responseHeaders,
   });
 });
-  });
-});
