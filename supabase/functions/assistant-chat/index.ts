@@ -97,6 +97,11 @@ Deno.serve(async (req) => {
   }
   const userId = claimsData.claims.sub as string;
 
+  // Rollout gate (Admin → Beta → Geral)
+  const { assertAssistantAccess } = await import("../_shared/assistant-guard.ts");
+  const denied = await assertAssistantAccess(supabase, userId, corsHeaders);
+  if (denied) return denied;
+
   // --- API key ---
   const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!lovableApiKey) {
