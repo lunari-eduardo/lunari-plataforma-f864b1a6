@@ -251,6 +251,8 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 
       if (!auth.userId) {
         await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started, authSource: null });
+        // Sinaliza pro dispatcher HTTP retornar 401 + WWW-Authenticate.
+        (auth as any).__challenge = true;
         return rpcResult(id, needsAuthResponse(name));
       }
       if (!auth.rolloutAllowed) {
