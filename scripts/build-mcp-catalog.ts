@@ -31,9 +31,11 @@ async function main() {
   await import("../src/shared/ai/registry");
   const { buildMCPToolsForUser, buildMCPManifest } = await import("../src/shared/ai/mcp");
 
-  // Snapshot público: user=null → oculta commands que exigem approval.
-  // Esse é o catálogo publicado a clientes MCP externos (Claude/ChatGPT/Cursor).
-  const tools = buildMCPToolsForUser({ user: null, hideApprovalRequired: true });
+  // Passa um user stub — a lista aplica permissões por usuário; no catálogo
+  // público queremos a superfície completa, e o `hideApprovalRequired` oculta
+  // commands destrutivos por default.
+  const stubUser = { id: "mcp-catalog", email: "mcp@lunari" } as never;
+  const tools = buildMCPToolsForUser({ user: stubUser, hideApprovalRequired: true });
   const manifest = buildMCPManifest(tools);
 
   const out = {
