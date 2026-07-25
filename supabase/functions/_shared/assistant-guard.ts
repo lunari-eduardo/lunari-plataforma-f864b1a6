@@ -33,9 +33,21 @@ export async function assertAssistantAccess(
   supabase: SupabaseClient,
   userId: string,
   corsHeaders: Record<string, string>,
+  meta?: { module?: string; capability_id?: string },
 ): Promise<Response | null> {
   const allowed = await isAssistantAllowed(supabase, userId);
   if (allowed) return null;
+  // Best-effort audit — não bloqueia a resposta se falhar.
+  try {
+    await supabase.from("assistant_invocations").insert({
+      user_id: userId,
+      capability_id: meta?.capability_id ?? "assistant.access",
+      module: meta?.module ?? "assistant",
+      kind: "gate",
+      actor: "system",
+      output_status: "blocked_by_rollout",
+    });
+  } catch { /* ignore */ }
   return new Response(
     JSON.stringify({
       error: "assistant_locked",
