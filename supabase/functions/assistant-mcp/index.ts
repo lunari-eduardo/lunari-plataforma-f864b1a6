@@ -117,9 +117,9 @@ function inAppFallback(name: string) {
       {
         type: "text",
         text:
-          `A tool "${name}" ainda não está habilitada para execução remota (F.2 cobre apenas leituras curadas). ` +
-          `Ferramentas cobertas hoje: ${Object.keys(READ_ONLY_BRIDGE).join(", ")}. ` +
-          `Use a Lu dentro do app (https://lunari.app) para executar as demais.`,
+          `A tool "${name}" ainda não está habilitada para execução remota. ` +
+          `Ferramentas bridged: ${Object.keys(BRIDGED_TOOLS).join(", ")}. ` +
+          `Use a Lu dentro do app (https://lunari.app) para as demais.`,
       },
     ],
   };
