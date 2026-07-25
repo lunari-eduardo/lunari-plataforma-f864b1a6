@@ -1,14 +1,13 @@
 import type { AuthUser } from "@/shared/ports";
 import { getCapability, listCapabilities } from "@/shared/capability";
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
 
 /**
- * Permissions do módulo Contratos para o Assistente Lu.
- *
- * Ações irreversíveis / que impactam clientes externos exigem aprovação:
- *  - deleteTemplate / deleteContrato: exclusão definitiva.
- *  - markSentContrato: cliente passa a receber o contrato.
- *  - generateTemplateWithAI / generateContratoWithAI: consumo de crédito IA
- *    + conteúdo que será enviado ao cliente final.
+ * Permissions do módulo Contratos para o Assistente Lu (Onda D.1).
+ * Gate humano para exclusão, envio ao cliente e geração com IA.
  */
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "contratos.deleteTemplate",
@@ -17,6 +16,8 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "contratos.generateTemplateWithAI",
   "contratos.generateContratoWithAI",
 ]);
+
+registerModuleApprovals({ module: "contratos", requireApproval: REQUIRES_APPROVAL });
 
 export function listContratosCapabilityIds(): string[] {
   return listCapabilities({ module: "contratos" }).map((c) => c.id);
@@ -30,5 +31,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }

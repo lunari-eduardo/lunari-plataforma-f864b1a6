@@ -12,6 +12,10 @@
 
 import type { AuthUser } from "@/shared/ports";
 import { getCapability, listCapabilities } from "@/shared/capability";
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
 
 /** Conjunto canônico de permissões usadas pelo módulo workflow. */
 export const WORKFLOW_PERMISSIONS = [
@@ -27,6 +31,8 @@ export type WorkflowPermission = (typeof WORKFLOW_PERMISSIONS)[number];
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "workflow.deleteSession",
   "workflow.refundPayment",
+  // Onda D.1: pagamento manual mexe em dinheiro do cliente → gate humano.
+  "workflow.addPayment",
   // Produtos — todos os commands exigem aprovação humana quando via IA.
   "workflow.produto.advanceStage",
   "workflow.produto.retreatStage",
@@ -41,6 +47,8 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "workflow.produto.startProduction",
   "workflow.produto.reopenProduction",
 ]);
+
+registerModuleApprovals({ module: "workflow", requireApproval: REQUIRES_APPROVAL });
 
 /** Capabilities expostas à IA. Queries são sempre seguras; commands variam. */
 export function listWorkflowCapabilityIds(): string[] {
@@ -64,5 +72,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }

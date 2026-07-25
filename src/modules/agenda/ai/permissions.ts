@@ -45,6 +45,13 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "agenda.availability.deleteSlot",
 ]);
 
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
+
+registerModuleApprovals({ module: "agenda", requireApproval: REQUIRES_APPROVAL });
+
 export function listAgendaAICapabilityIds(): string[] {
   return listCapabilities({ module: "agenda" })
     .map((c) => c.id)
@@ -58,5 +65,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }

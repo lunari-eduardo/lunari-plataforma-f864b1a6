@@ -1,21 +1,28 @@
 import type { AuthUser } from "@/shared/ports";
 import { getCapability, listCapabilities } from "@/shared/capability";
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
 
 /**
- * Permissions do módulo Clientes para o Assistente Lu.
+ * Permissions do módulo Clientes para o Assistente Lu (Onda D.1).
  *
- * P3 — Paridade AI (foundation). Nenhuma capability registrada ainda:
- * a listagem virá vazia até que ondas posteriores adicionem
- * `clientes.createClient`, `clientes.updateClient`, `clientes.mergeClients`,
- * etc. O contrato de permissões já está pronto para recebê-las.
+ * Gate humano para ações irreversíveis. Capabilities v1 registradas em
+ * `application/clientes.ts` (list/get/search/listSessoes/listTransacoes,
+ * create/update/addNota). Delete/merge/adjustCredits ficam reservados —
+ * quando forem implementados, entram já como REQUIRES_APPROVAL.
  */
-
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
-  // Ações irreversíveis / sensíveis (gate humano):
-  "clientes.deleteClient",
+  "clientes.delete",
   "clientes.mergeClients",
   "clientes.adjustCredits",
 ]);
+
+registerModuleApprovals({
+  module: "clientes",
+  requireApproval: REQUIRES_APPROVAL,
+});
 
 export function listClientesCapabilityIds(): string[] {
   return listCapabilities({ module: "clientes" }).map((c) => c.id);
@@ -29,5 +36,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }

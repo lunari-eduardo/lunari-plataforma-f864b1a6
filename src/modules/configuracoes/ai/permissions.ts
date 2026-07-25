@@ -1,19 +1,14 @@
 import type { AuthUser } from "@/shared/ports";
 import { getCapability, listCapabilities } from "@/shared/capability";
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
 
 /**
- * Permissions do módulo Configurações para o Assistente Lu.
- *
- * P5 — Paridade AI (foundation). Nenhuma capability registrada ainda; o gate
- * humano já está reservado para as ações destrutivas ou de alto impacto global:
- *
- *  - delete{Categoria,Pacote,Produto,Etapa,ContratoTemplate}: remoção com
- *    cascata em sessões/orçamentos/contratos existentes.
- *  - setPricingModel / updateGlobalPricingTable / setCategoriaPricingTable:
- *    alteram regra de preço aplicada a novas sessões (respeitando
- *    congelamento das existentes).
+ * Permissions do módulo Configurações para o Assistente Lu (Onda D.1).
+ * Gate humano para ações destrutivas / de alto impacto global.
  */
-
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "configuracoes.deleteCategoria",
   "configuracoes.deletePacote",
@@ -24,6 +19,8 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "configuracoes.updateGlobalPricingTable",
   "configuracoes.setCategoriaPricingTable",
 ]);
+
+registerModuleApprovals({ module: "configuracoes", requireApproval: REQUIRES_APPROVAL });
 
 export function listConfiguracoesCapabilityIds(): string[] {
   return listCapabilities({ module: "configuracoes" }).map((c) => c.id);
@@ -37,5 +34,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }

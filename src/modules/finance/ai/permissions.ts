@@ -60,6 +60,13 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "finance.credit.apply",
 ]);
 
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
+
+registerModuleApprovals({ module: "finance", requireApproval: REQUIRES_APPROVAL });
+
 export function listFinanceAICapabilityIds(): string[] {
   return listCapabilities({ module: "finance" })
     .map((c) => c.id)
@@ -73,5 +80,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }

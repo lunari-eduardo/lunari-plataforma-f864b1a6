@@ -1,10 +1,9 @@
 /**
  * Entry-point público do módulo Clientes (CRM).
  *
- * P3 — Paridade AI: por enquanto expõe apenas a superfície de IA
- * (permissions/tools/context). Capabilities operacionais (createClient,
- * updateClient, mergeClients, listClients, etc.) serão adicionadas em
- * ondas posteriores seguindo o padrão capability-first.
+ * D.1 — Registra capabilities v1 (list/get/search/listSessoes/listTransacoes,
+ * create/update/addNota). O import da superfície `ai/` também dispara o
+ * registro central de approvals via `registerModuleApprovals`.
  */
-
 export * from "./ai";
+export * from "./application/clientes";

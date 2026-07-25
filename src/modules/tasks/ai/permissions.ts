@@ -11,6 +11,10 @@
 
 import type { AuthUser } from "@/shared/ports";
 import { getCapability, listCapabilities } from "@/shared/capability";
+import {
+  registerModuleApprovals,
+  needsHumanApproval as centralNeedsApproval,
+} from "@/shared/ai/approvalRegistry";
 
 export const TASKS_PERMISSIONS = [
   "tasks:read",
@@ -21,10 +25,6 @@ export const TASKS_PERMISSIONS = [
 
 export type TasksPermission = (typeof TASKS_PERMISSIONS)[number];
 
-/**
- * Capabilities que SEMPRE exigem aprovação humana quando invocadas pela IA.
- * Operações destrutivas, irreversíveis ou em massa.
- */
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "tasks.delete",
   "tasks.attachment.remove",
@@ -32,15 +32,12 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "tasks.people.delete",
 ]);
 
-/** Capabilities expostas à IA neste módulo. */
+registerModuleApprovals({ module: "tasks", requireApproval: REQUIRES_APPROVAL });
+
 export function listTasksCapabilityIds(): string[] {
   return listCapabilities({ module: "tasks" }).map((c) => c.id);
 }
 
-/**
- * Verifica se o usuário pode executar a capability. Camada declarativa —
- * o handler valida ownership por `user_id` no DB.
- */
 export function canUserRun(user: AuthUser | null, capabilityId: string): boolean {
   if (!user) return false;
   const cap = getCapability(capabilityId);
@@ -50,5 +47,5 @@ export function canUserRun(user: AuthUser | null, capabilityId: string): boolean
 }
 
 export function needsHumanApproval(capabilityId: string): boolean {
-  return REQUIRES_APPROVAL.has(capabilityId);
+  return centralNeedsApproval(capabilityId) || REQUIRES_APPROVAL.has(capabilityId);
 }
