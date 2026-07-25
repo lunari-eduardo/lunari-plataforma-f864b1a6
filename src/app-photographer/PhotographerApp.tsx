@@ -42,6 +42,7 @@ import ConteudoDetalhe from "@/pages/ConteudoDetalhe";
 import SitemapProxy from "@/pages/SitemapProxy";
 import CentroAjuda from "@/pages/CentroAjuda";
 import ArtigoAjuda from "@/pages/ArtigoAjuda";
+import OAuthConsent from "@/pages/OAuthConsent";
 import FormularioPublico from "@/pages/FormularioPublico";
 
 import { AppProvider } from "@/contexts/AppContext";
@@ -104,6 +105,7 @@ export default function PhotographerApp() {
 
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/oauth/consent" element={<OAuthConsent />} />
               <Route path="/conteudos" element={<Conteudos />} />
               <Route path="/conteudos/:slug" element={<ConteudoDetalhe />} />
               <Route path="/sitemap.xml" element={<SitemapProxy />} />
