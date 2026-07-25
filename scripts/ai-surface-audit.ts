@@ -20,8 +20,25 @@
  * grafo real do runtime.
  */
 
+// Node/Bun não têm localStorage; o client Supabase quebra no import top-level.
+// Shim mínimo antes de qualquer import que puxe integrations/supabase.
+const g = globalThis as unknown as { localStorage?: unknown };
+if (!g.localStorage) {
+  const store = new Map<string, string>();
+  g.localStorage = {
+    getItem: (k: string) => (store.has(k) ? (store.get(k) as string) : null),
+    setItem: (k: string, v: string) => void store.set(k, String(v)),
+    removeItem: (k: string) => void store.delete(k),
+    clear: () => store.clear(),
+    key: (i: number) => Array.from(store.keys())[i] ?? null,
+    get length() {
+      return store.size;
+    },
+  };
+}
+
 // Garante registro completo antes de auditar.
-import "../src/shared/ai/registry";
+await import("../src/shared/ai/registry");
 
 import {
   listAllApprovalRequired,
