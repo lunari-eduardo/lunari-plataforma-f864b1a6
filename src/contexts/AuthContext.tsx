@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<{ data: any; error: any }>;
+  signInWithGoogle: (nextPath?: string) => Promise<{ data: any; error: any }>;
   signInWithEmail: (email: string, password: string) => Promise<{ data: any; error: any }>;
   signUpWithEmail: (email: string, password: string, nome: string) => Promise<{ data: any; error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
@@ -98,15 +98,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(interval);
   }, [session?.expires_at]);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (nextPath?: string) => {
     const siteUrl = getAppBaseUrl();
-    
-    console.log('🔑 Iniciando login com Google, redirect para:', `${siteUrl}/app`);
-    
+    const safeNext = nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : null;
+    // Se veio ?next=, encaminha o Google callback direto ao destino final
+    // (ex.: /oauth/consent?authorization_id=...) preservando o parâmetro.
+    const redirectTo = safeNext
+      ? `${siteUrl}/auth?next=${encodeURIComponent(safeNext)}`
+      : `${siteUrl}/app`;
+
+    console.log('🔑 Iniciando login com Google, redirect para:', redirectTo);
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${siteUrl}/app`,
+        redirectTo,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',

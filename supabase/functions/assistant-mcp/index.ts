@@ -31,7 +31,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.3.0", // F.3 — writes + async approvals
+  version: "0.4.0", // OAuth 2.1 + PAT dual auth
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -64,28 +64,90 @@ interface AuthContext {
   tokenId: string | null;
   scopes: string[];
   rolloutAllowed: boolean;
+  authSource: "pat" | "oauth" | null;
+  clientId: string | null;
+}
+
+const EMPTY_AUTH: AuthContext = {
+  userId: null,
+  tokenId: null,
+  scopes: [],
+  rolloutAllowed: false,
+  authSource: null,
+  clientId: null,
+};
+
+function decodeJwtPayload(jwt: string): Record<string, any> | null {
+  try {
+    const parts = jwt.split(".");
+    if (parts.length < 2) return null;
+    // atob no Deno resolve base64url com padding manual
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    const json = atob(b64 + pad);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
 }
 
 async function resolveAuth(req: Request): Promise<AuthContext> {
   const raw = req.headers.get("authorization") ?? "";
   const token = raw.toLowerCase().startsWith("bearer ") ? raw.slice(7).trim() : "";
-  if (!token || !token.startsWith("lmcp_")) {
-    return { userId: null, tokenId: null, scopes: [], rolloutAllowed: false };
-  }
+  if (!token) return EMPTY_AUTH;
+
   const sb = admin();
-  const { data, error } = await sb.rpc("assistant_mcp_token_validate", { _token: token });
-  if (error || !data || (Array.isArray(data) && data.length === 0)) {
-    return { userId: null, tokenId: null, scopes: [], rolloutAllowed: false };
+
+  // === Caminho 1: Personal Access Token (PAT) ===
+  if (token.startsWith("lmcp_")) {
+    const { data, error } = await sb.rpc("assistant_mcp_token_validate", { _token: token });
+    if (error || !data || (Array.isArray(data) && data.length === 0)) return EMPTY_AUTH;
+    const row = Array.isArray(data) ? data[0] : (data as any);
+    const userId = row.user_id as string;
+    const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
+    return {
+      userId,
+      tokenId: row.token_id as string,
+      scopes: (row.scopes ?? []) as string[],
+      rolloutAllowed: allowed === true,
+      authSource: "pat",
+      clientId: null,
+    };
   }
-  const row = Array.isArray(data) ? data[0] : (data as any);
-  const userId = row.user_id as string;
-  const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
-  return {
-    userId,
-    tokenId: row.token_id as string,
-    scopes: (row.scopes ?? []) as string[],
-    rolloutAllowed: allowed === true,
-  };
+
+  // === Caminho 2: JWT do Supabase OAuth Server ===
+  // Aceitamos apenas JWTs que carreguem claim `client_id` — bloqueia tokens de
+  // sessão vindos de signInWithPassword sendo colados como Bearer.
+  if (token.startsWith("eyJ")) {
+    const claims = decodeJwtPayload(token);
+    if (!claims) return EMPTY_AUTH;
+    const clientId = (claims.client_id as string | undefined) ?? (claims.azp as string | undefined) ?? null;
+    if (!clientId) return EMPTY_AUTH;
+
+    // Verifica assinatura consultando o Auth via SDK.
+    const { data: userRes, error: userErr } = await sb.auth.getUser(token);
+    if (userErr || !userRes?.user?.id) return EMPTY_AUTH;
+    const userId = userRes.user.id;
+
+    // Escopos: claim `scope` (string separada por espaço) ou `scopes` (array).
+    let scopes: string[] = [];
+    if (typeof claims.scope === "string") scopes = claims.scope.split(/\s+/).filter(Boolean);
+    else if (Array.isArray(claims.scopes)) scopes = claims.scopes.map(String);
+    // Fallback: se OAuth Server não injetar scope, assumimos read.
+    if (scopes.length === 0) scopes = ["read"];
+
+    const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
+    return {
+      userId,
+      tokenId: null,
+      scopes,
+      rolloutAllowed: allowed === true,
+      authSource: "oauth",
+      clientId,
+    };
+  }
+
+  return EMPTY_AUTH;
 }
 
 async function audit(entry: {
@@ -94,6 +156,7 @@ async function audit(entry: {
   status: string;
   latencyMs: number;
   errorMessage?: string | null;
+  authSource?: "pat" | "oauth" | null;
 }) {
   try {
     const sb = admin();
@@ -104,6 +167,7 @@ async function audit(entry: {
       output_status: entry.status,
       latency_ms: entry.latencyMs,
       error_message: entry.errorMessage ?? null,
+      auth_source: entry.authSource ?? null,
     });
   } catch {
     /* auditoria best-effort */
@@ -132,8 +196,10 @@ function needsAuthResponse(name: string) {
       {
         type: "text",
         text:
-          `Autenticação necessária para executar "${name}". Gere um Personal Access Token em ` +
-          `https://lunari.app/configuracoes/assistente-mcp e envie no header Authorization: Bearer lmcp_...`,
+          `Autenticação necessária para executar "${name}". ` +
+          `Recomendado: conecte via OAuth ("Sign in with Lunari") — clientes como ChatGPT/Claude descobrem o fluxo ` +
+          `automaticamente pelo endpoint MCP. Alternativa avançada: gere um Personal Access Token em ` +
+          `https://app.lunarihub.com/app/assistente/mcp e envie no header Authorization: Bearer lmcp_...`,
       },
     ],
   };
@@ -184,23 +250,23 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       const started = Date.now();
 
       if (!auth.userId) {
-        await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started });
+        await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started, authSource: null });
         return rpcResult(id, needsAuthResponse(name));
       }
       if (!auth.rolloutAllowed) {
-        await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, rolloutBlockedResponse());
       }
       const bridged = getBridged(name);
       if (!bridged) {
-        await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, inAppFallback(name));
       }
 
       // Escopo do PAT: por default `read`. Escrita exige `write` explícito.
       const hasWrite = auth.scopes.includes("write") || auth.scopes.includes("admin");
       if (bridged.scope === "write" && !hasWrite) {
-        await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, {
           isError: true,
           content: [{
@@ -223,7 +289,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
             _tool_name: name,
           });
           if (consumeErr || !consumed || (Array.isArray(consumed) && consumed.length === 0)) {
-            await audit({ userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started });
+            await audit({ userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started, authSource: auth.authSource });
             return rpcResult(id, {
               isError: true,
               content: [{ type: "text", text: "Token de aprovação inválido, já usado ou expirado. Solicite nova aprovação no app." }],
@@ -238,6 +304,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
             status: result.isError ? "error" : "ok_approved",
             latencyMs: Date.now() - started,
             errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
+            authSource: auth.authSource,
           });
           return rpcResult(id, result);
         }
@@ -252,10 +319,10 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           _summary: summary,
         });
         if (apprErr) {
-          await audit({ userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message });
+          await audit({ userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message , authSource: auth.authSource });
           return rpcResult(id, { isError: true, content: [{ type: "text", text: `Falha ao criar pedido de aprovação: ${apprErr.message}` }] });
         }
-        await audit({ userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started });
+        await audit({ userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, {
           content: [{
             type: "text",
@@ -275,6 +342,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         status: result.isError ? "error" : "ok",
         latencyMs: Date.now() - started,
         errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
+        authSource: auth.authSource,
       });
       return rpcResult(id, result);
     }
@@ -283,34 +351,96 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
   }
 }
 
+// Endpoint público do próprio MCP (usado como `resource` no discovery OAuth 2.1).
+const MCP_RESOURCE_URL = `${SUPABASE_URL}/functions/v1/assistant-mcp`;
+// Supabase Auth serve o Authorization Server metadata em /auth/v1/.well-known/...
+const OAUTH_AS_ISSUER = `${SUPABASE_URL}/auth/v1`;
+const WWW_AUTH_HEADER =
+  `Bearer realm="Lunari MCP", ` +
+  `resource_metadata="${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource", ` +
+  `authorization_uri="${OAUTH_AS_ISSUER}"`;
+
+function jsonResponse(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body, null, 2), {
+    ...init,
+    headers: { ...mcpHeaders, "Content-Type": "application/json", ...(init.headers ?? {}) },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: mcpHeaders });
+
+  const url = new URL(req.url);
+  const path = url.pathname;
+
+  // === RFC 9728 — Protected Resource Metadata ===
+  // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  if (req.method === "GET" && path.endsWith("/.well-known/oauth-protected-resource")) {
+    return jsonResponse({
+      resource: MCP_RESOURCE_URL,
+      authorization_servers: [OAUTH_AS_ISSUER],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["read", "write", "openid", "email", "profile"],
+      resource_documentation:
+        "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
+    });
+  }
+
+  // === RFC 8414 — Authorization Server Metadata (proxy amigável) ===
+  // O documento oficial é servido pelo próprio Supabase; encaminhamos pra descoberta simples.
+  if (req.method === "GET" && path.endsWith("/.well-known/oauth-authorization-server")) {
+    try {
+      const upstream = await fetch(`${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`);
+      const text = await upstream.text();
+      return new Response(text, {
+        status: upstream.status,
+        headers: {
+          ...mcpHeaders,
+          "Content-Type": upstream.headers.get("content-type") ?? "application/json",
+        },
+      });
+    } catch {
+      // Fallback mínimo — clientes sofisticados batem no upstream direto.
+      return jsonResponse({
+        issuer: OAUTH_AS_ISSUER,
+        authorization_endpoint: `${OAUTH_AS_ISSUER}/oauth/authorize`,
+        token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
+        registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients`,
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code", "refresh_token"],
+        code_challenge_methods_supported: ["S256"],
+        scopes_supported: ["read", "write", "openid", "email", "profile"],
+      });
+    }
+  }
 
   if (req.method === "GET") {
     const bridged = Object.entries(BRIDGED_TOOLS).map(([name, t]) => ({
       name, scope: t.scope, requiresApproval: t.requiresApproval,
     }));
-    return new Response(
-      JSON.stringify(
-        {
-          server: SERVER_INFO,
-          protocolVersion: PROTOCOL_VERSION,
-          tools: catalog.tools.length,
-          bridgedTools: bridged,
-          generatedAt: catalog.generatedAt,
-          auth: {
-            type: "bearer",
-            header: "Authorization: Bearer lmcp_...",
-            scopes: ["read", "write"],
-            approvalsUrl: "https://lunari.app/assistente/aprovacoes",
-            issue: "https://lunari.app/assistente/mcp",
-          },
-          docs: "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
+    return jsonResponse({
+      server: SERVER_INFO,
+      protocolVersion: PROTOCOL_VERSION,
+      tools: catalog.tools.length,
+      bridgedTools: bridged,
+      generatedAt: catalog.generatedAt,
+      auth: {
+        oauth2: {
+          issuer: OAUTH_AS_ISSUER,
+          protectedResourceMetadata: `${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource`,
+          authorizationServerMetadata: `${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`,
+          note: "Clientes MCP (ChatGPT, Claude) descobrem o fluxo automaticamente.",
         },
-        null, 2,
-      ),
-      { headers: { ...mcpHeaders, "Content-Type": "application/json" } },
-    );
+        pat: {
+          type: "bearer",
+          header: "Authorization: Bearer lmcp_...",
+          scopes: ["read", "write"],
+          issue: "https://app.lunarihub.com/app/assistente/mcp",
+        },
+        approvalsUrl: "https://app.lunarihub.com/app/assistente/aprovacoes",
+      },
+      docs: "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
+    });
   }
 
   if (req.method !== "POST") {
@@ -328,6 +458,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const auth = await resolveAuth(req);
+
+  // Se veio Authorization: Bearer inválido, sinaliza fluxo OAuth (RFC 9728).
+  const hasAuthHeader = (req.headers.get("authorization") ?? "").toLowerCase().startsWith("bearer ");
+  const responseHeaders: Record<string, string> = { ...mcpHeaders, "Content-Type": "application/json" };
+  if (hasAuthHeader && !auth.userId) {
+    responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
+  }
+
   const requests = Array.isArray(body) ? body : [body];
   const responses: unknown[] = [];
   for (const r of requests) {
@@ -344,6 +482,6 @@ Deno.serve(async (req: Request) => {
   const payload = Array.isArray(body) ? responses : responses[0];
   return new Response(JSON.stringify(payload), {
     status: 200,
-    headers: { ...mcpHeaders, "Content-Type": "application/json" },
+    headers: responseHeaders,
   });
 });
