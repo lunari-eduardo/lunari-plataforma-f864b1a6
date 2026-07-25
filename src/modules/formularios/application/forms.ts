@@ -307,7 +307,7 @@ export const generateFormWithAICap = defineCommand({
   }),
   permissions: [],
   needsApproval: true,
-  sideEffects: ["ai:generate"],
+  sideEffects: ["external:lovable-ai"],
   handler: async (input) => {
     const { data, error } = await supabase.functions.invoke("assistant-forms-generate", {
       body: input,
