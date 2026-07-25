@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T04:19:28.319Z",
+  "generatedAt": "2026-07-25T20:15:14.919Z",
   "manifest": {
     "name": "lunari-mcp",
     "title": "Lunari",
@@ -1086,7 +1086,26 @@
       "title": "tasks.assign",
       "description": "Atribuir tarefa. Define ou remove o responsável de uma tarefa.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assigneeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "assigneeName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1102,7 +1121,22 @@
       "title": "tasks.attachment.add",
       "description": "Adicionar anexo. Faz upload de um arquivo para a tarefa (armazenado em R2 privado).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "file": {},
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "taskId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1118,7 +1152,17 @@
       "title": "tasks.attachment.list",
       "description": "Listar anexos da tarefa. Retorna todos os anexos associados a uma tarefa.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "taskId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1134,7 +1178,17 @@
       "title": "tasks.complete",
       "description": "Concluir tarefa. Marca a tarefa como concluída usando o status terminal configurado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1150,7 +1204,22 @@
       "title": "tasks.countsByStatus",
       "description": "Contagem por status. Retorna a quantidade de tarefas em cada coluna do Kanban.",
       "inputSchema": {
-        "$zod": "ZodOptional"
+        "type": "object",
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "not": {}
+              },
+              {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1166,7 +1235,116 @@
       "title": "tasks.create",
       "description": "Criar tarefa. Cria uma nova tarefa no quadro do usuário autenticado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "default": "medium"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "content",
+              "checklist",
+              "document"
+            ],
+            "default": "simple"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "assigneeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assigneeName": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "relatedClienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "relatedSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          },
+          "activeSections": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "basic",
+                "checklist",
+                "content",
+                "document"
+              ]
+            }
+          },
+          "checklistItems": {
+            "type": "array"
+          },
+          "callToAction": {
+            "type": "string"
+          },
+          "socialPlatforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "attachments": {
+            "type": "array"
+          },
+          "captions": {
+            "type": "array"
+          },
+          "textBlocks": {
+            "type": "array"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "estimatedHours": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1182,7 +1360,22 @@
       "title": "tasks.dueOverview",
       "description": "Visão geral de prazos. Conta e agrupa tarefas por bucket temporal (overdue, hoje, amanhã, semana).",
       "inputSchema": {
-        "$zod": "ZodOptional"
+        "type": "object",
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "not": {}
+              },
+              {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1198,7 +1391,17 @@
       "title": "tasks.getById",
       "description": "Detalhar tarefa. Retorna uma tarefa pelo ID.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1214,7 +1417,15 @@
       "title": "tasks.list",
       "description": "Listar tarefas. Lista todas as tarefas do usuário, mais recentes primeiro.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1230,7 +1441,22 @@
       "title": "tasks.move",
       "description": "Mover tarefa de status. Altera o status (coluna do Kanban) da tarefa. Recalcula completed_at quando aplicável.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toStatus": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "toStatus"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1246,7 +1472,21 @@
       "title": "tasks.people.create",
       "description": "Adicionar pessoa. Adiciona uma nova pessoa atribuível a tarefas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1262,7 +1502,9 @@
       "title": "tasks.people.list",
       "description": "Listar pessoas. Lista todas as pessoas atribuíveis a tarefas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1278,7 +1520,35 @@
       "title": "tasks.people.reorder",
       "description": "Reordenar pessoas. Atualiza a ordem de exibição das pessoas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1294,7 +1564,25 @@
       "title": "tasks.people.update",
       "description": "Atualizar pessoa. Atualiza nome ou cor de uma pessoa.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1310,7 +1598,20 @@
       "title": "tasks.reopen",
       "description": "Reabrir tarefa. Reabre uma tarefa concluída, limpando completed_at.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "toStatus": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1326,7 +1627,22 @@
       "title": "tasks.search",
       "description": "Buscar tarefas. Busca tarefas por título, descrição ou tag.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1342,7 +1658,22 @@
       "title": "tasks.snooze",
       "description": "Adiar tarefa. Posterga as notificações da tarefa até a data informada.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "until"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1358,7 +1689,21 @@
       "title": "tasks.tags.create",
       "description": "Criar tag. Cria uma nova tag para tarefas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1374,7 +1719,9 @@
       "title": "tasks.tags.list",
       "description": "Listar tags. Lista todas as tags do usuário.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1390,7 +1737,35 @@
       "title": "tasks.tags.reorder",
       "description": "Reordenar tags. Atualiza a ordem de exibição das tags.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "order": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1406,7 +1781,25 @@
       "title": "tasks.tags.update",
       "description": "Atualizar tag. Atualiza nome ou cor de uma tag.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "color": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1422,7 +1815,119 @@
       "title": "tasks.update",
       "description": "Atualizar tarefa. Atualiza campos editáveis de uma tarefa. Status, assignee, snooze têm comandos próprios.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patch": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "simple",
+                  "content",
+                  "checklist",
+                  "document"
+                ]
+              },
+              "status": {
+                "type": "string"
+              },
+              "dueDate": {
+                "type": "string",
+                "nullable": true
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "assigneeName": {
+                "type": "string",
+                "nullable": true
+              },
+              "notes": {
+                "type": "string"
+              },
+              "estimatedHours": {
+                "type": "number",
+                "minimum": 0
+              },
+              "callToAction": {
+                "type": "string"
+              },
+              "socialPlatforms": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "relatedClienteId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "relatedSessionId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "activeSections": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "basic",
+                    "checklist",
+                    "content",
+                    "document"
+                  ]
+                }
+              },
+              "checklistItems": {
+                "type": "array"
+              },
+              "attachments": {
+                "type": "array"
+              },
+              "captions": {
+                "type": "array"
+              },
+              "textBlocks": {
+                "type": "array"
+              },
+              "checked": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "patch"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1438,7 +1943,17 @@
       "title": "agenda.appointments.confirm",
       "description": "Confirmar agendamento. Marca um agendamento como confirmado. Disparará criação da sessão de workflow e ocupação do slot.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1454,7 +1969,112 @@
       "title": "agenda.appointments.create",
       "description": "Criar agendamento. Cria um agendamento. Se o status for 'confirmado', o slot correspondente é ocupado e uma sessão do workflow é criada automaticamente pelo banco.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "time": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "type": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmado",
+              "a confirmar"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "packageId": {
+            "type": "string"
+          },
+          "produtosIncluidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "valorUnitario": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "tipo": {
+                  "type": "string",
+                  "enum": [
+                    "incluso",
+                    "manual"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "nome",
+                "quantidade",
+                "valorUnitario",
+                "tipo"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "paidAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "email": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "type": "string"
+          },
+          "orcamentoId": {
+            "type": "string"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "agenda",
+              "orcamento"
+            ]
+          },
+          "clienteId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "date",
+          "time",
+          "type",
+          "client",
+          "status"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1470,7 +2090,17 @@
       "title": "agenda.appointments.get",
       "description": "Obter agendamento por ID. Busca um agendamento específico do usuário pelo seu ID.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1486,7 +2116,22 @@
       "title": "agenda.appointments.list",
       "description": "Listar agendamentos por período. Retorna todos os agendamentos do usuário entre duas datas (inclusive). Use para alimentar visualizações de calendário e responder perguntas como 'quais sessões tenho em julho?'.",
       "inputSchema": {
-        "$zod": "ZodEffects"
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1502,7 +2147,118 @@
       "title": "agenda.appointments.update",
       "description": "Atualizar agendamento. Aplica um patch parcial em um agendamento existente.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "patch": {
+            "type": "object",
+            "properties": {
+              "sessionId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "time": {
+                "type": "string",
+                "pattern": "^\\d{2}:\\d{2}$"
+              },
+              "type": {
+                "type": "string"
+              },
+              "client": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "confirmado",
+                  "a confirmar"
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "packageId": {
+                "type": "string"
+              },
+              "produtosIncluidos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "quantidade": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "valorUnitario": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "tipo": {
+                      "type": "string",
+                      "enum": [
+                        "incluso",
+                        "manual"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "nome",
+                    "quantidade",
+                    "valorUnitario",
+                    "tipo"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "paidAmount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "email": {
+                "type": "string"
+              },
+              "whatsapp": {
+                "type": "string"
+              },
+              "orcamentoId": {
+                "type": "string"
+              },
+              "origem": {
+                "type": "string",
+                "enum": [
+                  "agenda",
+                  "orcamento"
+                ]
+              },
+              "clienteId": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "patch"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1518,7 +2274,56 @@
       "title": "agenda.availability.add",
       "description": "Adicionar slots de disponibilidade. Cria múltiplos slots de disponibilidade em lote.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "time": {
+                  "type": "string",
+                  "pattern": "^\\d{2}:\\d{2}$"
+                },
+                "duration": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "minimum": 0
+                },
+                "typeId": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                },
+                "isFullDay": {
+                  "type": "boolean"
+                },
+                "fullDayDescription": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "date",
+                "time",
+                "duration"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "slots"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1534,7 +2339,29 @@
       "title": "agenda.availability.findNext",
       "description": "Encontrar próximo slot livre. Procura o próximo slot de disponibilidade sem conflito com agendamentos confirmados, a partir de uma data/hora.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "fromTime": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "horizonDays": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "maximum": 180,
+            "default": 30
+          }
+        },
+        "required": [
+          "fromDate",
+          "fromTime"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1550,7 +2377,23 @@
       "title": "agenda.availability.list",
       "description": "Listar slots de disponibilidade. Retorna todos os slots de disponibilidade cadastrados pelo usuário.",
       "inputSchema": {
-        "$zod": "ZodDefault"
+        "type": "object",
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "not": {}
+              },
+              {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            ],
+            "default": {}
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1566,7 +2409,25 @@
       "title": "agenda.slot.check",
       "description": "Verificar disponibilidade de um slot. Verifica se um par data/hora está livre, ocupado por um agendamento confirmado, com pendentes, ou em um slot bloqueado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "time": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$"
+          },
+          "excludeAppointmentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "time"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1582,7 +2443,20 @@
       "title": "clientes.addNota",
       "description": "Adicionar nota ao cliente. Anexa uma linha de observação ao histórico do cliente (campo observacoes). Não sobrescreve.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nota": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nota"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1598,7 +2472,48 @@
       "title": "clientes.create",
       "description": "Criar cliente. Cria um cliente novo. Nome obrigatório; email/telefone opcionais. Duplicado por email/telefone gera aviso, não bloqueio.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "telefone": {
+            "type": "string",
+            "nullable": true
+          },
+          "whatsapp": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpf_cnpj": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true
+          },
+          "origem": {
+            "type": "string",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1614,7 +2529,16 @@
       "title": "clientes.get",
       "description": "Obter cliente. Retorna um cliente pelo id.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1630,7 +2554,29 @@
       "title": "clientes.list",
       "description": "Listar clientes. Lista clientes do fotógrafo ordenados por nome (padrão). Suporta paginação leve.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "default": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "orderBy": {
+            "type": "string",
+            "enum": [
+              "nome",
+              "recent"
+            ],
+            "default": "nome"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1646,7 +2592,22 @@
       "title": "clientes.listSessoes",
       "description": "Listar sessões do cliente. Retorna sessões vinculadas ao cliente (mais recentes primeiro).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "default": 20
+          }
+        },
+        "required": [
+          "clienteId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1662,7 +2623,22 @@
       "title": "clientes.listTransacoes",
       "description": "Listar transações do cliente. Retorna transações financeiras (entradas/saídas) vinculadas ao cliente, mais recentes primeiro.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "default": 30
+          }
+        },
+        "required": [
+          "clienteId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1678,7 +2654,16 @@
       "title": "clientes.search",
       "description": "Buscar clientes. Busca por nome, email, telefone ou CPF/CNPJ (contém, case-insensitive). Limite 20.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1694,7 +2679,47 @@
       "title": "clientes.update",
       "description": "Atualizar cliente. Atualiza campos do cliente. Só campos informados são alterados.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "telefone": {
+            "type": "string",
+            "nullable": true
+          },
+          "whatsapp": {
+            "type": "string",
+            "nullable": true
+          },
+          "cpf_cnpj": {
+            "type": "string",
+            "nullable": true
+          },
+          "cidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "uf": {
+            "type": "string",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1710,7 +2735,73 @@
       "title": "formularios.createForm",
       "description": "Criar formulário. Cria formulário em rascunho. Aceita lista de campos (esquema Lunari).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "session_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "campos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "tipo": {
+                  "type": "string",
+                  "enum": [
+                    "texto_curto",
+                    "texto_longo",
+                    "data",
+                    "selecao_unica",
+                    "multipla_escolha",
+                    "upload_imagem",
+                    "upload_referencia",
+                    "selecao_cores"
+                  ]
+                },
+                "pergunta": {
+                  "type": "string"
+                },
+                "obrigatorio": {
+                  "type": "boolean"
+                },
+                "opcoes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "descricao": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "tipo",
+                "pergunta"
+              ],
+              "additionalProperties": false
+            },
+            "default": []
+          }
+        },
+        "required": [
+          "titulo"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1726,7 +2817,16 @@
       "title": "formularios.getForm",
       "description": "Obter formulário. Retorna o formulário completo (com campos).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1742,7 +2842,25 @@
       "title": "formularios.listForms",
       "description": "Listar formulários. Lista formulários do usuário; filtros opcionais por status/cliente.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1758,7 +2876,16 @@
       "title": "formularios.listResponses",
       "description": "Listar respostas. Lista respostas de um formulário.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "formId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "formId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1774,7 +2901,76 @@
       "title": "formularios.updateForm",
       "description": "Editar formulário. Atualiza título/descrição/campos (rascunho ou publicado).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "campos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "tipo": {
+                  "type": "string",
+                  "enum": [
+                    "texto_curto",
+                    "texto_longo",
+                    "data",
+                    "selecao_unica",
+                    "multipla_escolha",
+                    "upload_imagem",
+                    "upload_referencia",
+                    "selecao_cores"
+                  ]
+                },
+                "pergunta": {
+                  "type": "string"
+                },
+                "obrigatorio": {
+                  "type": "boolean"
+                },
+                "opcoes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "descricao": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "tipo",
+                "pergunta"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "cliente_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "session_id": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1790,7 +2986,35 @@
       "title": "contratos.createContrato",
       "description": "Criar contrato. Cria contrato em rascunho para um cliente. Aceita template opcional; conteúdo é copiado do template.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "template_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "titulo",
+          "cliente_id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1806,7 +3030,31 @@
       "title": "contratos.createTemplate",
       "description": "Criar template. Cria template de contrato (inativo por padrão até revisão).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoria": {
+            "type": "string",
+            "nullable": true
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nome",
+          "conteudo"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1822,7 +3070,16 @@
       "title": "contratos.getContrato",
       "description": "Obter contrato. Retorna o contrato completo (com conteúdo).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1838,7 +3095,16 @@
       "title": "contratos.getTemplate",
       "description": "Obter template. Retorna o template completo (com conteúdo).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1854,7 +3120,28 @@
       "title": "contratos.listContratos",
       "description": "Listar contratos. Lista contratos com filtros por status/cliente/sessão.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1870,7 +3157,25 @@
       "title": "contratos.listTemplates",
       "description": "Listar templates de contrato. Lista templates do usuário. Filtros opcionais por categoria/ativo/busca.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "categoria": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          },
+          "search": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "maximum": 200
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1886,7 +3191,30 @@
       "title": "contratos.updateContrato",
       "description": "Editar contrato. Atualiza título/conteúdo/observações/session_id (enquanto o contrato não estiver assinado).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "observacoes": {
+            "type": "string",
+            "nullable": true
+          },
+          "session_id": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1902,7 +3230,33 @@
       "title": "contratos.updateTemplate",
       "description": "Editar template. Atualiza nome/descrição/categoria/conteúdo/ativo.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoria": {
+            "type": "string",
+            "nullable": true
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "ativo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1918,7 +3272,20 @@
       "title": "configuracoes.createCategoria",
       "description": "Criar categoria. Cria uma nova categoria. Falha se nome duplicado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1934,7 +3301,20 @@
       "title": "configuracoes.createEtapa",
       "description": "Criar etapa. Cria nova etapa customizada no final da lista.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome",
+          "cor"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1950,7 +3330,35 @@
       "title": "configuracoes.createPacote",
       "description": "Criar pacote. Cria pacote em uma categoria com valores e fotos inclusas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "categoria_id": {
+            "type": "string"
+          },
+          "valor_base": {
+            "type": "number",
+            "minimum": 0
+          },
+          "valor_foto_extra": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "fotos_incluidas": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          }
+        },
+        "required": [
+          "nome",
+          "categoria_id",
+          "valor_base"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1966,7 +3374,29 @@
       "title": "configuracoes.createProduto",
       "description": "Criar produto. Cria um novo produto com custo e preço de venda.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string"
+          },
+          "preco_custo": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "preco_venda": {
+            "type": "number",
+            "minimum": 0,
+            "default": 0
+          },
+          "favorito": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -1982,7 +3412,16 @@
       "title": "configuracoes.getCategoria",
       "description": "Obter categoria. Retorna os dados de uma categoria pelo id.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -1998,7 +3437,9 @@
       "title": "configuracoes.listCategorias",
       "description": "Listar categorias. Retorna todas as categorias do estúdio ordenadas por nome.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2014,7 +3455,9 @@
       "title": "configuracoes.listEtapas",
       "description": "Listar etapas. Lista etapas ordenadas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2030,7 +3473,13 @@
       "title": "configuracoes.listPacotes",
       "description": "Listar pacotes. Lista pacotes; opcionalmente filtra por categoria.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "categoriaId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2046,7 +3495,16 @@
       "title": "configuracoes.listProdutos",
       "description": "Listar produtos. Lista produtos; filtra por texto (nome) ou favoritos.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string"
+          },
+          "favoritosOnly": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2062,7 +3520,21 @@
       "title": "configuracoes.moveEtapa",
       "description": "Reordenar etapa. Muda a posição da etapa (ordem absoluta).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ordem": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "ordem"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2078,7 +3550,16 @@
       "title": "configuracoes.toggleProdutoFavorito",
       "description": "Favoritar/desfavoritar produto. Alterna o estado de favorito do produto.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2094,7 +3575,23 @@
       "title": "configuracoes.updateCategoria",
       "description": "Editar categoria. Atualiza nome e/ou cor de uma categoria. Renomear é seguro para sessões congeladas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2110,7 +3607,25 @@
       "title": "configuracoes.updateEtapa",
       "description": "Editar etapa. Renomeia / muda cor. Etapas de sistema não podem ser renomeadas.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string"
+          },
+          "is_hidden_in_workflow": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2126,7 +3641,34 @@
       "title": "configuracoes.updatePacote",
       "description": "Editar pacote. Atualiza campos do pacote. Valores futuros; sessões congeladas mantêm o preço.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "categoria_id": {
+            "type": "string"
+          },
+          "valor_base": {
+            "type": "number",
+            "minimum": 0
+          },
+          "valor_foto_extra": {
+            "type": "number",
+            "minimum": 0
+          },
+          "fotos_incluidas": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2142,7 +3684,30 @@
       "title": "configuracoes.updateProduto",
       "description": "Editar produto. Atualiza campos do produto.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "preco_custo": {
+            "type": "number",
+            "minimum": 0
+          },
+          "preco_venda": {
+            "type": "number",
+            "minimum": 0
+          },
+          "favorito": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2158,7 +3723,17 @@
       "title": "billing.listSessionPayments",
       "description": "Listar pagamentos da sessão. Cobranças (gateway) e transações (manuais/estornos) vinculadas à sessão. Use antes de propor estorno.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2174,7 +3749,14 @@
       "title": "gallery.checkAccess",
       "description": "Verificar acesso à Gallery. Retorna se o usuário (ou o usuário autenticado, se omitido) tem permissão para usar o módulo Gallery, consultando a SOT no banco.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2190,7 +3772,26 @@
       "title": "gallery.listExpiring",
       "description": "Galerias expirando. Galerias ativas expiradas ou a expirar dentro de N dias.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "dias": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 60,
+            "default": 7
+          },
+          "incluirExpiradas": {
+            "type": "boolean",
+            "default": true
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2206,7 +3807,16 @@
       "title": "gallery.listInSelection",
       "description": "Galerias em seleção. Galerias ativas com seleção em andamento.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2222,7 +3832,31 @@
       "title": "finance.category.create",
       "description": "Criar categoria vinculada a um grupo. Cria nova categoria (subcategoria) vinculada a um grupo fixo do catálogo. Idempotente por (user, lower(nome), grupo_principal).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "groupCode": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "nome",
+          "groupCode"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2238,7 +3872,16 @@
       "title": "finance.category.list",
       "description": "Listar categorias (subcategorias) do usuário. Lista subcategorias ativas com vínculo opcional a um grupo. Inclui categorias legadas (sem groupCode). Filtros opcionais por groupCode ou natureCode.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "groupCode": {
+            "type": "string"
+          },
+          "natureCode": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2254,7 +3897,27 @@
       "title": "finance.credit.get",
       "description": "Consultar crédito do cliente. Saldo atual e histórico do ledger de crédito.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "incluirHistorico": {
+            "type": "boolean",
+            "default": true
+          },
+          "historicoLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          }
+        },
+        "required": [
+          "clienteId"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2270,7 +3933,20 @@
       "title": "finance.credit.listClientsWithCredit",
       "description": "Clientes com crédito disponível. Lista clientes com saldo positivo no ledger de crédito.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          },
+          "incluirExpirados": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2286,7 +3962,24 @@
       "title": "finance.dashboard.kpis",
       "description": "KPIs do dashboard financeiro. Retorna receita, despesa, custo e lucro do mês informado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "ano": {
+            "type": "integer",
+            "minimum": 2020,
+            "maximum": 2100
+          },
+          "mes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          }
+        },
+        "required": [
+          "ano",
+          "mes"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2302,7 +3995,54 @@
       "title": "finance.extrato.list",
       "description": "Listar extrato unificado. Pagina o extrato unificado (gestão + gallery + cobranças). Default: regime caixa, 50/página.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "dataInicio": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "dataFim": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          },
+          "regime": {
+            "type": "string",
+            "enum": [
+              "caixa",
+              "competencia"
+            ],
+            "default": "caixa"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "saida",
+              "todos"
+            ],
+            "default": "todos"
+          },
+          "origem": {
+            "type": "string",
+            "default": "todos"
+          },
+          "status": {
+            "type": "string",
+            "default": "todos"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2318,7 +4058,43 @@
       "title": "finance.extrato.summary",
       "description": "Resumo do extrato. Totais agregados de entradas, saídas e saldo no período/filtros informados.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "dataInicio": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "dataFim": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "regime": {
+            "type": "string",
+            "enum": [
+              "caixa",
+              "competencia"
+            ],
+            "default": "caixa"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "entrada",
+              "saida",
+              "todos"
+            ],
+            "default": "todos"
+          },
+          "origem": {
+            "type": "string",
+            "default": "todos"
+          },
+          "status": {
+            "type": "string",
+            "default": "todos"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2334,7 +4110,18 @@
       "title": "finance.goal.list",
       "description": "Listar metas do ano. Retorna todas as metas mensais configuradas para o ano informado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "ano": {
+            "type": "integer",
+            "minimum": 2020,
+            "maximum": 2100
+          }
+        },
+        "required": [
+          "ano"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2350,7 +4137,24 @@
       "title": "finance.goal.progress",
       "description": "Progresso de metas do mês. Compara realizado vs meta para o mês informado (apenas meta global '__geral__').",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "ano": {
+            "type": "integer",
+            "minimum": 2020,
+            "maximum": 2100
+          },
+          "mes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          }
+        },
+        "required": [
+          "ano",
+          "mes"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2366,7 +4170,48 @@
       "title": "finance.goal.set",
       "description": "Definir meta mensal. Cria ou atualiza meta de faturamento/lucro para um mês. Use categoria '__geral__' para meta global.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "ano": {
+            "type": "integer",
+            "minimum": 2020,
+            "maximum": 2100
+          },
+          "mes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "categoria": {
+            "type": "string",
+            "minLength": 1
+          },
+          "metaFaturamento": {
+            "type": "number",
+            "minimum": 0
+          },
+          "metaLucro": {
+            "type": "number",
+            "minimum": 0
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "ano",
+          "mes",
+          "categoria",
+          "metaFaturamento",
+          "metaLucro"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2382,7 +4227,13 @@
       "title": "finance.group.list",
       "description": "Listar grupos financeiros. Catálogo fixo de grupos. Cada grupo pertence a uma natureza. Pode filtrar por `natureCode`.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "natureCode": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2398,7 +4249,38 @@
       "title": "finance.item.create",
       "description": "Criar subcategoria financeira. Cria nova subcategoria (item) em um grupo. Idempotente por (user, lower(nome), grupo).",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "grupo": {
+            "type": "string",
+            "enum": [
+              "Despesa Fixa",
+              "Despesa Variável",
+              "Investimento",
+              "Receita Não Operacional",
+              "Receita Operacional"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "nome",
+          "grupo"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2414,7 +4296,20 @@
       "title": "finance.item.list",
       "description": "Listar subcategorias. Lista subcategorias financeiras ativas, opcionalmente filtradas por grupo. Use antes de criar item por nome para desambiguar.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "grupo": {
+            "type": "string",
+            "enum": [
+              "Despesa Fixa",
+              "Despesa Variável",
+              "Investimento",
+              "Receita Não Operacional",
+              "Receita Operacional"
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2430,7 +4325,9 @@
       "title": "finance.nature.list",
       "description": "Listar naturezas financeiras (interno). Catálogo fixo de naturezas financeiras. Uso interno (KPI, relatórios, IA). NÃO exibir ao usuário final.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": true,
@@ -2446,7 +4343,87 @@
       "title": "finance.transaction.create",
       "description": "Criar lançamento financeiro. Cria lançamento financeiro (único, parcelado, recorrente ou cartão). Status é derivado pelo banco.",
       "inputSchema": {
-        "$zod": "ZodEffects"
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valor": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0
+          },
+          "dataVencimento": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "dataCompetencia": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "observacoes": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "modo": {
+            "type": "string",
+            "enum": [
+              "unico",
+              "parcelado",
+              "recorrente",
+              "cartao"
+            ],
+            "default": "unico"
+          },
+          "formaPagamento": {
+            "type": "string",
+            "enum": [
+              "dinheiro",
+              "pix",
+              "transferencia",
+              "boleto",
+              "cartao_debito",
+              "cartao_credito"
+            ]
+          },
+          "parcelaTotal": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 60
+          },
+          "cartaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dataCompra": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "diaVencimento": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31
+          },
+          "isValorFixo": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "itemId",
+          "valor",
+          "dataVencimento"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2462,7 +4439,30 @@
       "title": "finance.transaction.markPaid",
       "description": "Marcar como pago. Marca um lançamento financeiro como Pago.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dataPagamento": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2478,7 +4478,26 @@
       "title": "finance.transaction.markPending",
       "description": "Reabrir lançamento. Reabre um lançamento marcado como pago, retornando ao status Faturado.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
@@ -2494,7 +4513,57 @@
       "title": "finance.transaction.update",
       "description": "Atualizar lançamento. Atualiza campos editáveis. Status e valores derivados são imutáveis.",
       "inputSchema": {
-        "$zod": "ZodObject"
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valor": {
+            "type": "number",
+            "exclusiveMinimum": true,
+            "minimum": 0
+          },
+          "dataVencimento": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "dataCompetencia": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "nullable": true
+          },
+          "observacoes": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true
+          },
+          "formaPagamento": {
+            "type": "string",
+            "enum": [
+              "dinheiro",
+              "pix",
+              "transferencia",
+              "boleto",
+              "cartao_debito",
+              "cartao_credito"
+            ],
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "automation",
+              "ai"
+            ],
+            "default": "user"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "readOnlyHint": false,
