@@ -19,7 +19,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
-import { isBridged, runBridged, READ_ONLY_BRIDGE } from "./executor.ts";
+import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
 
 const mcpHeaders = {
   "Access-Control-Allow-Origin": "*",
