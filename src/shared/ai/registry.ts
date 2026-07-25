@@ -41,6 +41,7 @@ export type LunariPage =
   | "gallery"
   | "clientes"
   | "formularios"
+  | "contratos"
   | "configuracoes";
 
 export interface AllPageSnapshots {
