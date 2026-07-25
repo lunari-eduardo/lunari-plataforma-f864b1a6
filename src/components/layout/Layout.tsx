@@ -9,6 +9,7 @@ import { HelpFloatingButton } from '@/components/help/HelpFloatingButton';
 import { cn } from '@/lib/utils';
 import InternalBackground from '@/components/backgrounds/InternalBackground';
 import DashboardBackground from '@/components/backgrounds/DashboardBackground';
+import { AssistantLauncher } from '@/modules/assistant';
 
 export default function Layout() {
   const isMobile = useIsMobile();
@@ -45,5 +46,8 @@ export default function Layout() {
       
       {/* Botão flutuante de ajuda contextual */}
       <HelpFloatingButton />
+
+      {/* Assistente Lu (Onda E.3) */}
+      <AssistantLauncher />
     </div>;
 }
