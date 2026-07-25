@@ -57,11 +57,12 @@ export function listLunariAITools(opts?: {
   const a = listAgendaAITools(opts).map((x) => ({ ...x, module: "agenda" as const }));
   const c = listClientesAITools(opts).map((x) => ({ ...x, module: "clientes" as const }));
   const fo = listFormulariosAITools(opts).map((x) => ({ ...x, module: "formularios" as const }));
+  const cn = listContratosAITools(opts).map((x) => ({ ...x, module: "contratos" as const }));
   const co = listConfiguracoesAITools(opts).map((x) => ({ ...x, module: "configuracoes" as const }));
   const b = listBillingAITools(opts).map((x) => ({ ...x, module: "billing" as const }));
   const g = listGalleryAITools(opts).map((x) => ({ ...x, module: "gallery" as const }));
   const f = listFinanceAITools(opts).map((x) => ({ ...x, module: "finance" as const }));
-  return [...w, ...t, ...a, ...c, ...fo, ...co, ...b, ...g, ...f];
+  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {
