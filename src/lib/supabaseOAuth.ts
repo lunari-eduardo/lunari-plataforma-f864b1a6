@@ -128,9 +128,9 @@ export async function approveAuthorization(
     }
   }
   console.info("[oauth][approve] via REST", { authorizationId });
-  return restCall<OAuthRedirectResult>(`/${encodeURIComponent(authorizationId)}/approve`, {
+  return restCall<OAuthRedirectResult>(`/${encodeURIComponent(authorizationId)}/consent`, {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ action: "approve" }),
   });
 }
 
@@ -147,11 +147,12 @@ export async function denyAuthorization(
       console.warn("[oauth] beta.denyAuthorization falhou, usando REST:", e);
     }
   }
-  return restCall<OAuthRedirectResult>(`/${encodeURIComponent(authorizationId)}/deny`, {
+  return restCall<OAuthRedirectResult>(`/${encodeURIComponent(authorizationId)}/consent`, {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ action: "deny" }),
   });
 }
+
 
 export function sanitizeNextPath(next: string | null | undefined, fallback = "/app"): string {
   if (!next) return fallback;
