@@ -1,9 +1,10 @@
 /**
  * Entry-point público do módulo Formulários (Briefings).
  *
- * P4 — Paridade AI: superfície `ai/` apenas. Capabilities operacionais
- * (createForm, updateForm, publishForm, listResponses, generateAIBriefing,
- * closeSubmission, etc.) serão adicionadas em ondas posteriores.
+ * P6.B — capabilities operacionais registradas por side-effect via
+ * `./application` (createForm/updateForm/publishForm/deleteForm/listResponses/
+ * generateFormWithAI).
  */
 
+import "./application";
 export * from "./ai";
