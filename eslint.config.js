@@ -123,7 +123,7 @@ const restrictedPaths = {
 };
 
 export default tseslint.config(
-  { ignores: ["dist", "supabase/functions/**", "scripts/**"] },
+  { ignores: ["dist", "dev-dist", "supabase/functions/**", "scripts/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
