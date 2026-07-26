@@ -41,7 +41,11 @@ export const knowledgeSearchCapability = defineQuery({
   costHint: "cheap",
   async handler(input) {
     try {
-      const results = await searchKnowledge(input);
+      const results = await searchKnowledge({
+        query: input.query,
+        source: input.source ?? null,
+        limit: input.limit,
+      });
       return ok({ results });
     } catch (e) {
       return err(
@@ -75,7 +79,13 @@ export const knowledgeEmbedCapability = defineCommand({
   costHint: "cheap",
   async handler(input) {
     try {
-      const doc = await embedDocument(input);
+      const doc = await embedDocument({
+        source: input.source,
+        externalId: input.externalId ?? null,
+        title: input.title ?? null,
+        content: input.content,
+        metadata: input.metadata,
+      });
       return ok({
         id: doc.id,
         source: doc.source,
