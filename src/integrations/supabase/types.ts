@@ -3923,6 +3923,42 @@ export type Database = {
         }
         Relationships: []
       }
+      observation_events: {
+        Row: {
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          source: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pacotes: {
         Row: {
           categoria_id: string
