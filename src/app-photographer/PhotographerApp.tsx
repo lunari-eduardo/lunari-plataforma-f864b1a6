@@ -10,6 +10,7 @@ import Precificacao from "@/pages/Precificacao";
 import Configuracoes from "@/pages/Configuracoes";
 import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
 import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
+import Hub from "@/pages/Hub";
 import ClienteDetalhe from "@/pages/ClienteDetalhe";
 import Workflow from "@/pages/Workflow";
 import AnaliseVendas from "@/pages/AnaliseVendas";
@@ -157,6 +158,8 @@ export default function PhotographerApp() {
                 <Route path="configuracoes/assistente-mcp" element={<AssistenteMcpTokens />} />
                 <Route path="assistente/mcp" element={<AssistenteMcpTokens />} />
                 <Route path="assistente/aprovacoes" element={<AssistenteAprovacoes />} />
+                <Route path="hub" element={<Hub />} />
+                <Route path="inteligencia" element={<Navigate to="/app/hub" replace />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
                 <Route path="integracoes" element={<Integracoes />} />
                 <Route path="tarefas" element={
