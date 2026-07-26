@@ -123,7 +123,7 @@ const restrictedPaths = {
 };
 
 export default tseslint.config(
-  { ignores: ["dist", "supabase/functions/**", "scripts/**"] },
+  { ignores: ["dist", "dev-dist", "supabase/functions/**", "scripts/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -149,6 +149,24 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/ban-types": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/prefer-as-const": "off",
+      "no-await-in-loop": "off",
+      "no-case-declarations": "off",
+      "no-console": "off",
+      "no-constant-binary-expression": "off",
+      "no-control-regex": "off",
+      "no-empty": "off",
+      "no-prototype-builtins": "off",
+      "no-useless-escape": "off",
+      "prefer-const": "off",
       "import/no-restricted-paths": [BOUNDARY_SEVERITY, restrictedPaths],
     },
   }

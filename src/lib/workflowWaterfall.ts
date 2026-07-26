@@ -244,11 +244,11 @@ if (typeof window !== "undefined") {
       kb: c.bytes != null ? (c.bytes / 1024).toFixed(1) : "-",
       tag: c.tag ?? "",
     }));
-    // eslint-disable-next-line no-console
+     
     __groupCollapsed(
       `[waterfall] ${s.name}  ${s.calls.length} chamadas  em ${(now() - s.startedAt).toFixed(0)}ms`,
     );
-    // eslint-disable-next-line no-console
+     
     __table(rows);
     // Agregações por kind
     const byKind: Record<string, { n: number; totalMs: number; kb: number }> = {};
@@ -259,10 +259,10 @@ if (typeof window !== "undefined") {
       byKind[k].totalMs += c.durationMs ?? 0;
       byKind[k].kb += (c.bytes ?? 0) / 1024;
     }
-    // eslint-disable-next-line no-console
+     
     __log("Agregado por tipo:", byKind);
     if (s.marks.length) {
-      // eslint-disable-next-line no-console
+       
       __log(
         "Marcas:",
         s.marks.map((m) => `${m.t.toFixed(0)}ms → ${m.label}`),
@@ -280,9 +280,9 @@ if (typeof window !== "undefined") {
       cur += e.d;
       if (cur > max) max = cur;
     }
-    // eslint-disable-next-line no-console
+     
     __log(`Concorrência máxima: ${max} chamadas simultâneas`);
-    // eslint-disable-next-line no-console
+     
     __groupEnd();
   };
 
@@ -297,12 +297,12 @@ if (typeof window !== "undefined") {
         renderCommits: [],
       };
       seq = 0;
-      // eslint-disable-next-line no-console
+       
       __log(`[waterfall] capturando "${name}" — use __wf.stop() para encerrar`);
     },
     stop() {
       if (!session) {
-        // eslint-disable-next-line no-console
+         
         __warn("[waterfall] nenhuma sessão ativa");
         return null;
       }
@@ -327,7 +327,7 @@ if (typeof window !== "undefined") {
     export() {
       const s = session ?? lastSession;
       if (!s) {
-        // eslint-disable-next-line no-console
+         
         __warn("[waterfall] nada para exportar");
         return;
       }
@@ -347,7 +347,7 @@ if (typeof window !== "undefined") {
       try {
         sessionStorage.setItem("wf:enabled", "1");
         sessionStorage.setItem(ARM_KEY, name);
-        // eslint-disable-next-line no-console
+         
         __log(`[waterfall] ARMADO: captura iniciará automaticamente no próximo load como "${name}". Faça o hard-refresh agora (Ctrl+Shift+R).`);
       } catch { /* ignore */ }
     },
@@ -356,7 +356,7 @@ if (typeof window !== "undefined") {
         sessionStorage.removeItem(ARM_KEY);
         sessionStorage.removeItem("wf:enabled");
       } catch { /* ignore */ }
-      // eslint-disable-next-line no-console
+       
       __log("[waterfall] desarmado");
     },
   };
@@ -375,7 +375,7 @@ if (typeof window !== "undefined") {
 
   if (__wfEnabled || sessionStorage.getItem("wf:enabled") === "1") {
     ensureInstalled();
-    // eslint-disable-next-line no-console
+     
     __log(
       "%c[waterfall] pronto",
       "background:#b0632f;color:#fff;padding:2px 6px;border-radius:3px;font-weight:600",

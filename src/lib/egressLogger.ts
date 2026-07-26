@@ -17,7 +17,7 @@ if (import.meta.env.DEV && typeof window !== "undefined") {
         .text()
         .then((body) => {
           if (body.length > 20_000) {
-            // eslint-disable-next-line no-console
+             
             console.warn(
               `[egress] ${(body.length / 1024).toFixed(1)}KB  ${url.replace(/apikey=[^&]+/, "apikey=…")}`,
             );

@@ -338,7 +338,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             .filter(c => c.provedor === 'asaas' && (c.total_parcelas || 1) > 1)
             .map(c => c.id);
 
-          let parcelasMap: Record<string, any[]> = {};
+          const parcelasMap: Record<string, any[]> = {};
           if (asaasCobrancaIds.length > 0) {
             const { data: parcelas } = await supabase
               .from('cobranca_parcelas')

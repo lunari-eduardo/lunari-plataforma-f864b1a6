@@ -99,7 +99,7 @@ export function fixCrmDataDefinitive(): boolean {
   
   try {
     // 1. Carregar dados
-    let clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
+    const clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
     let workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
     console.log('📊 Dados antes da correção:', {

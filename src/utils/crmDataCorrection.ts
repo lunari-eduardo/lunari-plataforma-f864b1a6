@@ -54,13 +54,13 @@ export function performCompleteDataCorrection(): CorrectionResult {
     });
     
     // Carregar dados
-    let clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
+    const clientes: Cliente[] = storage.load(STORAGE_KEYS.CLIENTS, []);
     let workflowItems: WorkflowItem[] = storage.load(STORAGE_KEYS.WORKFLOW_ITEMS, []);
-    let workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
+    const workflowSessions = JSON.parse(localStorage.getItem('workflow_sessions') || '[]');
     
     // 2. CORRIGIR CLIENTEID CORROMPIDOS
     workflowItems = workflowItems.map(item => {
-      let correctedItem = { ...item };
+      const correctedItem = { ...item };
       
       // Limpar clienteId corrompido
       if (correctedItem.clienteId && typeof correctedItem.clienteId === 'object') {
@@ -111,7 +111,7 @@ export function performCompleteDataCorrection(): CorrectionResult {
     
     // 5. CORRIGIR CÁLCULOS FINANCEIROS
     workflowItems = workflowItems.map(item => {
-      let correctedItem = { ...item };
+      const correctedItem = { ...item };
       let wasFixed = false;
       
       // Corrigir valores NaN
