@@ -88,31 +88,12 @@ export function useSupabaseLeads() {
     refetchOnReconnect: false,
   });
 
-  // Real-time subscription
+  // Real-time subscription (canal compartilhado por usuário via singleton)
   useEffect(() => {
     if (!userId) return;
-
-    const channel = supabase
-      .channel('leads-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leads',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          console.log('🔄 [Leads] Mudança detectada:', payload.eventType);
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, refetch]);
+    acquireLeadsChannel(userId, queryClient);
+    return () => releaseLeadsChannel(userId);
+  }, [userId, queryClient]);
 
   // Add lead mutation
   const addLeadMutation = useMutation({
