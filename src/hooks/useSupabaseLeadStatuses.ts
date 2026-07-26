@@ -13,6 +13,44 @@ import {
 
 const QUERY_KEY = 'lead-statuses';
 
+// Singleton Realtime channel por usuário com refcount.
+type StatusesChannelEntry = { channel: RealtimeChannel; refCount: number };
+const STATUSES_CHANNEL_REGISTRY = new Map<string, StatusesChannelEntry>();
+
+function acquireStatusesChannel(userId: string, queryClient: QueryClient) {
+  const existing = STATUSES_CHANNEL_REGISTRY.get(userId);
+  if (existing) {
+    existing.refCount += 1;
+    return;
+  }
+  const channel = supabase
+    .channel(`lead-statuses-changes:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'lead_statuses',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
+      }
+    )
+    .subscribe();
+  STATUSES_CHANNEL_REGISTRY.set(userId, { channel, refCount: 1 });
+}
+
+function releaseStatusesChannel(userId: string) {
+  const entry = STATUSES_CHANNEL_REGISTRY.get(userId);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount <= 0) {
+    supabase.removeChannel(entry.channel);
+    STATUSES_CHANNEL_REGISTRY.delete(userId);
+  }
+}
+
 export function useSupabaseLeadStatuses() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
