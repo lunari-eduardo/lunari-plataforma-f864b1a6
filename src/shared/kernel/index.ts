@@ -81,11 +81,62 @@ export function _isInsideKernelDispatch(): boolean {
   return _kernelGuardDepth > 0;
 }
 
+/**
+ * Última decisão de política avaliada — expõe para que o caller
+ * (ex.: `runCapabilityAsAssistant`) possa converter em `pending_approval`
+ * sem executar o handler. Usar apenas dentro do mesmo tick após o dispatch.
+ */
+let _lastPolicyDecision: PolicyDecision | null = null;
+
+export function _consumeLastPolicyDecision(): PolicyDecision | null {
+  const d = _lastPolicyDecision;
+  _lastPolicyDecision = null;
+  return d;
+}
+
 async function dispatch<T = unknown>(
   cap: Capability,
   input: unknown,
   actor: Actor,
 ): Promise<Result<T, DomainError>> {
+  const decision = evaluatePolicy({
+    user: actor.user,
+    channel: actor.channel,
+    runtime: actor.runtime,
+    capability: {
+      id: cap.id,
+      kind: cap.kind,
+      permissions: cap.permissions,
+      sideEffects: cap.sideEffects,
+    },
+    input,
+  });
+  _lastPolicyDecision = decision;
+
+  if (decision.effect === "deny") {
+    return err(
+      domainError("FORBIDDEN", decision.reasons[0] ?? "Ação bloqueada por política.", {
+        retriable: false,
+        details: { reasons: decision.reasons, sources: decision.sources },
+      }),
+    );
+  }
+
+  if (decision.effect === "requireApproval") {
+    // Convenção: canais agentic (assistant/mcp) tratam approval antes
+    // de dispatch (via runCapabilityAsAssistant). Se chegou aqui via
+    // canal web/system, política de approval não bloqueia — assumimos
+    // que a UI já pediu confirmação.
+    if (actor.channel === "assistant" || actor.channel === "mcp") {
+      return err(
+        domainError("APPROVAL_REQUIRED", decision.reasons[0] ?? "Aprovação humana necessária.", {
+          retriable: false,
+          details: { reasons: decision.reasons, sources: decision.sources },
+        }),
+      );
+    }
+  }
+
   _kernelBeginDispatch();
   try {
     const overrides: Partial<Pick<CapabilityContext, "user" | "runtime">> = {
