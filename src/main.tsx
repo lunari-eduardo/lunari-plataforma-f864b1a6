@@ -4,6 +4,9 @@ import App from './App.tsx'
 import './index.css'
 import './lib/egressLogger' // dev-only: loga respostas REST > 20KB
 import './lib/workflowWaterfall' // dev-only: waterfall p/ investigação de cold-load do Workflow
+import { bootstrapContext } from './shared/context/bootstrap' // Onda 4 — Context Engine v1
+
+bootstrapContext();
 
 
 // Auto-reload quando chunk fica obsoleto após deploy
