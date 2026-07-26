@@ -19,12 +19,35 @@ import type { AuthUser } from "@/shared/ports";
 import { domainError, err, type DomainError, type Result } from "@/shared/result";
 import { getCapability } from "@/shared/capability/registry";
 import type { Capability, CapabilityContext } from "@/shared/capability/types";
+import { evaluatePolicy, type PolicyDecision } from "@/shared/policy";
+import { bootstrapCorePolicies } from "@/shared/policy/core";
+
+bootstrapCorePolicies();
 
 export interface Actor {
   user: AuthUser | null;
   /** Origem da invocação — usado por Policy/Audit no futuro. */
   channel: "web" | "assistant" | "mcp" | "system" | "test";
   runtime: "client" | "server";
+}
+
+/**
+ * Resultado de política emitido pelo Kernel quando a decisão é
+ * `requireApproval`. O caller (ex.: `runCapabilityAsAssistant`) usa esse
+ * marcador para converter em `pending_approval` sem executar o handler.
+ */
+export interface KernelApprovalRequired {
+  __kernel: "approval_required";
+  reasons: string[];
+  sources: string[];
+}
+
+export function isKernelApprovalRequired(v: unknown): v is KernelApprovalRequired {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    (v as { __kernel?: string }).__kernel === "approval_required"
+  );
 }
 
 export interface KernelExecuteOptions {
@@ -58,11 +81,62 @@ export function _isInsideKernelDispatch(): boolean {
   return _kernelGuardDepth > 0;
 }
 
+/**
+ * Última decisão de política avaliada — expõe para que o caller
+ * (ex.: `runCapabilityAsAssistant`) possa converter em `pending_approval`
+ * sem executar o handler. Usar apenas dentro do mesmo tick após o dispatch.
+ */
+let _lastPolicyDecision: PolicyDecision | null = null;
+
+export function _consumeLastPolicyDecision(): PolicyDecision | null {
+  const d = _lastPolicyDecision;
+  _lastPolicyDecision = null;
+  return d;
+}
+
 async function dispatch<T = unknown>(
   cap: Capability,
   input: unknown,
   actor: Actor,
 ): Promise<Result<T, DomainError>> {
+  const decision = evaluatePolicy({
+    user: actor.user,
+    channel: actor.channel,
+    runtime: actor.runtime,
+    capability: {
+      id: cap.id,
+      kind: cap.kind,
+      permissions: cap.permissions,
+      sideEffects: cap.sideEffects,
+    },
+    input,
+  });
+  _lastPolicyDecision = decision;
+
+  if (decision.effect === "deny") {
+    return err(
+      domainError("FORBIDDEN", decision.reasons[0] ?? "Ação bloqueada por política.", {
+        retriable: false,
+        details: { reasons: decision.reasons, sources: decision.sources },
+      }),
+    );
+  }
+
+  if (decision.effect === "requireApproval") {
+    // Convenção: canais agentic (assistant/mcp) tratam approval antes
+    // de dispatch (via runCapabilityAsAssistant). Se chegou aqui via
+    // canal web/system, política de approval não bloqueia — assumimos
+    // que a UI já pediu confirmação.
+    if (actor.channel === "assistant" || actor.channel === "mcp") {
+      return err(
+        domainError("APPROVAL_REQUIRED", decision.reasons[0] ?? "Aprovação humana necessária.", {
+          retriable: false,
+          details: { reasons: decision.reasons, sources: decision.sources },
+        }),
+      );
+    }
+  }
+
   _kernelBeginDispatch();
   try {
     const overrides: Partial<Pick<CapabilityContext, "user" | "runtime">> = {
