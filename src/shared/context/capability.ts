@@ -36,11 +36,10 @@ export const contextGetCapability = defineQuery({
     facts: z.array(FactSchema),
   }),
   permissions: [],
-  audience: ["ui", "lu", "mcp"],
   examples: [
-    "Quem é o dono desta conta?",
-    "Qual estágio de rollout do assistente está ativo?",
-    "Qual a cidade cadastrada no perfil?",
+    { nl: "Quem é o dono desta conta?", input: {} },
+    { nl: "Qual estágio de rollout do assistente está ativo?", input: { keys: ["rollout.assistant_stage"] } },
+    { nl: "Qual a cidade cadastrada no perfil?", input: { keys: ["profile.cidade"] } },
   ],
   async handler({ keys }, ctx) {
     const userId = ctx.user?.id ?? "";
