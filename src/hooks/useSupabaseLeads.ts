@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import type { Lead } from '@/types/leads';
@@ -11,6 +12,46 @@ import {
 } from '@/utils/leadTransformers';
 
 const QUERY_KEY = 'leads';
+
+// Singleton Realtime channel por usuário com refcount.
+// Evita múltiplas subscriptions no mesmo topic quando vários componentes
+// consomem o hook simultaneamente (ex.: Kanban + Cards + Metrics + AnaliseVendas).
+type LeadsChannelEntry = { channel: RealtimeChannel; refCount: number };
+const LEADS_CHANNEL_REGISTRY = new Map<string, LeadsChannelEntry>();
+
+function acquireLeadsChannel(userId: string, queryClient: QueryClient) {
+  const existing = LEADS_CHANNEL_REGISTRY.get(userId);
+  if (existing) {
+    existing.refCount += 1;
+    return;
+  }
+  const channel = supabase
+    .channel(`leads-changes:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'leads',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
+      }
+    )
+    .subscribe();
+  LEADS_CHANNEL_REGISTRY.set(userId, { channel, refCount: 1 });
+}
+
+function releaseLeadsChannel(userId: string) {
+  const entry = LEADS_CHANNEL_REGISTRY.get(userId);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount <= 0) {
+    supabase.removeChannel(entry.channel);
+    LEADS_CHANNEL_REGISTRY.delete(userId);
+  }
+}
 
 export function useSupabaseLeads() {
   const { user } = useAuth();
@@ -47,31 +88,12 @@ export function useSupabaseLeads() {
     refetchOnReconnect: false,
   });
 
-  // Real-time subscription
+  // Real-time subscription (canal compartilhado por usuário via singleton)
   useEffect(() => {
     if (!userId) return;
-
-    const channel = supabase
-      .channel('leads-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leads',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          console.log('🔄 [Leads] Mudança detectada:', payload.eventType);
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, refetch]);
+    acquireLeadsChannel(userId, queryClient);
+    return () => releaseLeadsChannel(userId);
+  }, [userId, queryClient]);
 
   // Add lead mutation
   const addLeadMutation = useMutation({

@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import type { LeadStatusDef } from '@/types/leads';
@@ -11,6 +12,44 @@ import {
 } from '@/utils/leadTransformers';
 
 const QUERY_KEY = 'lead-statuses';
+
+// Singleton Realtime channel por usuário com refcount.
+type StatusesChannelEntry = { channel: RealtimeChannel; refCount: number };
+const STATUSES_CHANNEL_REGISTRY = new Map<string, StatusesChannelEntry>();
+
+function acquireStatusesChannel(userId: string, queryClient: QueryClient) {
+  const existing = STATUSES_CHANNEL_REGISTRY.get(userId);
+  if (existing) {
+    existing.refCount += 1;
+    return;
+  }
+  const channel = supabase
+    .channel(`lead-statuses-changes:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'lead_statuses',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
+      }
+    )
+    .subscribe();
+  STATUSES_CHANNEL_REGISTRY.set(userId, { channel, refCount: 1 });
+}
+
+function releaseStatusesChannel(userId: string) {
+  const entry = STATUSES_CHANNEL_REGISTRY.get(userId);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount <= 0) {
+    supabase.removeChannel(entry.channel);
+    STATUSES_CHANNEL_REGISTRY.delete(userId);
+  }
+}
 
 export function useSupabaseLeadStatuses() {
   const { user } = useAuth();
@@ -64,31 +103,12 @@ export function useSupabaseLeadStatuses() {
     refetchOnReconnect: false,
   });
 
-  // Real-time subscription
+  // Real-time subscription (canal compartilhado por usuário via singleton)
   useEffect(() => {
     if (!userId) return;
-
-    const channel = supabase
-      .channel('lead-statuses-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'lead_statuses',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          console.log('🔄 [LeadStatuses] Mudança detectada, atualizando...');
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, refetch]);
+    acquireStatusesChannel(userId, queryClient);
+    return () => releaseStatusesChannel(userId);
+  }, [userId, queryClient]);
 
   // Add status mutation
   const addStatusMutation = useMutation({
