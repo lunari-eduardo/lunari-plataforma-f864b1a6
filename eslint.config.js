@@ -166,6 +166,7 @@ export default tseslint.config(
       "no-empty": "off",
       "no-prototype-builtins": "off",
       "no-useless-escape": "off",
+      "prefer-const": "off",
       "import/no-restricted-paths": [BOUNDARY_SEVERITY, restrictedPaths],
     },
   }
