@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import type { AuthUser } from "@/shared/ports";
 import { isOk, type DomainError, type Result } from "@/shared/result";
+import { kernel, webActor } from "@/shared/kernel";
 import type { Capability } from "./types";
 import type { z, ZodTypeAny } from "zod";
 
@@ -126,7 +127,7 @@ export function useRunCapability() {
       capability: Capability<TIn, TOut>,
       input: z.infer<TIn>,
     ): Promise<Result<z.infer<TOut>, DomainError>> => {
-      return capability.execute(input, { user, runtime: "client" });
+      return kernel.run<z.infer<TOut>>(capability, input, { actor: webActor(user) });
     },
     [user],
   );
@@ -152,7 +153,8 @@ export function useCapabilityQuery<TIn extends ZodTypeAny, TOut extends ZodTypeA
   return useQuery<z.infer<TOut>, CapabilityError, z.infer<TOut>, readonly unknown[]>({
     ...options,
     enabled,
-    queryFn: async () => unwrap(await capability.execute(input, { user, runtime: "client" })),
+    queryFn: async () =>
+      unwrap(await kernel.run<z.infer<TOut>>(capability, input, { actor: webActor(user) })),
   });
 }
 
@@ -167,6 +169,6 @@ export function useCapabilityMutation<TIn extends ZodTypeAny, TOut extends ZodTy
   return useMutation<z.infer<TOut>, CapabilityError, z.infer<TIn>>({
     ...options,
     mutationFn: async (input) =>
-      unwrap(await capability.execute(input, { user, runtime: "client" })),
+      unwrap(await kernel.run<z.infer<TOut>>(capability, input, { actor: webActor(user) })),
   });
 }

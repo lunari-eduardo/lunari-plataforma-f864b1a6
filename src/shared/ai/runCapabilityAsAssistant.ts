@@ -11,6 +11,7 @@
  */
 
 import { getCapability } from "@/shared/capability";
+import { kernel, assistantActor } from "@/shared/kernel";
 import { supabase } from "@/integrations/supabase/client";
 import type { AuthUser } from "@/shared/ports";
 import type { ConfirmationChallenge } from "@/shared/capability/ai-adapter";
