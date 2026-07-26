@@ -5,6 +5,7 @@
 import { registerContextProvider } from ".";
 import { profileContextProvider } from "./providers/profile";
 import { rolloutContextProvider } from "./providers/rollout";
+import "./capability"; // registra `context.get` no registry
 
 let booted = false;
 export function bootstrapContext(): void {
