@@ -196,6 +196,23 @@ export async function runCapabilityAsAssistant<T = unknown>(
       const errObj = result.error;
       const message = errObj?.message ?? "Capability error";
       const denied = errObj?.code === "UNAUTHORIZED" || errObj?.code === "FORBIDDEN";
+      // Onda 2 — Policy Engine: Kernel devolve APPROVAL_REQUIRED quando
+      // a política pediu confirmação e nenhum token/confirmação foi
+      // provido. Convertemos em `pending_approval` idêntico ao gate legado.
+      if (errObj?.code === "APPROVAL_REQUIRED") {
+        const invocationId = await recordInvocation({
+          userId: opts.user.id,
+          capabilityId,
+          module: opts.module,
+          kind: cap.kind,
+          inputHash,
+          outputStatus: "pending_approval",
+          errorMessage: message,
+          latencyMs,
+          needsApproval: true,
+        });
+        return { status: "pending_approval", error: message, latencyMs, invocationId };
+      }
       const invocationId = await recordInvocation({
         userId: opts.user.id,
         capabilityId,
