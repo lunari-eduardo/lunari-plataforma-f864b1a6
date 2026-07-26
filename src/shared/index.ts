@@ -4,4 +4,5 @@ export * as ports from "./ports";
 export * as result from "./result";
 export * as knowledge from "./knowledge";
 export * as observation from "./observation";
+export * as memory from "./memory";
 

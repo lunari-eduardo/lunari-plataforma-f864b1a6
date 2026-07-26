@@ -18,6 +18,7 @@ import "./gallery";
 import "./finance";
 import "@/modules/knowledge"; // Onda 6 — Knowledge Engine v1
 import "@/modules/observation"; // Onda 7 — Observation Engine v1
+import "@/modules/memory"; // Onda 8 — Memory Engine v1
 
 
 import { listWorkflowAITools } from "@/features/workflow/ai";
@@ -32,6 +33,7 @@ import { listGalleryAITools } from "./gallery/ai";
 import { listFinanceAITools } from "./finance/ai";
 import { listKnowledgeAITools } from "@/modules/knowledge/ai";
 import { listObservationAITools } from "@/modules/observation/ai";
+import { listMemoryAITools } from "@/modules/memory/ai";
 import type { AuthUser } from "@/shared/ports";
 import type { AICapabilityTool } from "@/shared/capability";
 
@@ -48,7 +50,8 @@ export interface LunariAITool extends AICapabilityTool {
     | "gallery"
     | "finance"
     | "knowledge"
-    | "observation";
+    | "observation"
+    | "memory";
   needsApproval: boolean;
   permissions: string[];
 }
@@ -73,7 +76,8 @@ export function listLunariAITools(opts?: {
   const f = listFinanceAITools(opts).map((x) => ({ ...x, module: "finance" as const }));
   const k = listKnowledgeAITools(opts).map((x) => ({ ...x, module: "knowledge" as const }));
   const o = listObservationAITools(opts).map((x) => ({ ...x, module: "observation" as const }));
-  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k, ...o];
+  const m = listMemoryAITools(opts).map((x) => ({ ...x, module: "memory" as const }));
+  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k, ...o, ...m];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {
