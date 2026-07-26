@@ -13,6 +13,46 @@ import {
 
 const QUERY_KEY = 'leads';
 
+// Singleton Realtime channel por usuário com refcount.
+// Evita múltiplas subscriptions no mesmo topic quando vários componentes
+// consomem o hook simultaneamente (ex.: Kanban + Cards + Metrics + AnaliseVendas).
+type LeadsChannelEntry = { channel: RealtimeChannel; refCount: number };
+const LEADS_CHANNEL_REGISTRY = new Map<string, LeadsChannelEntry>();
+
+function acquireLeadsChannel(userId: string, queryClient: QueryClient) {
+  const existing = LEADS_CHANNEL_REGISTRY.get(userId);
+  if (existing) {
+    existing.refCount += 1;
+    return;
+  }
+  const channel = supabase
+    .channel(`leads-changes:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'leads',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
+      }
+    )
+    .subscribe();
+  LEADS_CHANNEL_REGISTRY.set(userId, { channel, refCount: 1 });
+}
+
+function releaseLeadsChannel(userId: string) {
+  const entry = LEADS_CHANNEL_REGISTRY.get(userId);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount <= 0) {
+    supabase.removeChannel(entry.channel);
+    LEADS_CHANNEL_REGISTRY.delete(userId);
+  }
+}
+
 export function useSupabaseLeads() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
