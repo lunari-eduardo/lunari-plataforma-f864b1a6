@@ -47,7 +47,7 @@ export const observationSink: ObservationSink = {
         occurred_at: entry.occurredAt ?? new Date().toISOString(),
         payload: entry.payload ?? {},
       };
-      const { error } = await supabase.from("observation_events").insert(row);
+      const { error } = await supabase.from("observation_events").insert([row]);
       if (error) console.warn("[observation] insert failed", error.message);
     } catch (e) {
       console.warn("[observation] sink threw", e);
