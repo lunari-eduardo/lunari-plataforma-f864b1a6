@@ -3630,6 +3630,48 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_documents: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string
+          external_id: string | null
+          id: string
+          metadata: Json
+          model_version: string
+          source: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json
+          model_version?: string
+          source: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json
+          model_version?: string
+          source?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       lead_follow_up_config: {
         Row: {
           ativo: boolean | null
@@ -6205,6 +6247,23 @@ export type Database = {
       is_agenda_slot_blocked: {
         Args: { p_date: string; p_time: string; p_user_id: string }
         Returns: boolean
+      }
+      knowledge_match: {
+        Args: {
+          p_limit?: number
+          p_query: string
+          p_source?: string
+          p_user_id: string
+        }
+        Returns: {
+          content: string
+          external_id: string
+          id: string
+          metadata: Json
+          similarity: number
+          source: string
+          title: string
+        }[]
       }
       prepare_gallery_share: {
         Args: { p_gallery_id: string; p_mark_as_sent?: boolean }

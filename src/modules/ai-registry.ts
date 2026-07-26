@@ -16,6 +16,8 @@ import "@/modules/configuracoes"; // superfície AI de configurações (sem caps
 import "./billing";
 import "./gallery";
 import "./finance";
+import "@/modules/knowledge"; // Onda 6 — Knowledge Engine v1
+
 
 import { listWorkflowAITools } from "@/features/workflow/ai";
 import { listTasksAITools } from "@/modules/tasks/ai";
@@ -27,6 +29,7 @@ import { listConfiguracoesAITools } from "@/modules/configuracoes/ai";
 import { listBillingAITools } from "./billing/ai";
 import { listGalleryAITools } from "./gallery/ai";
 import { listFinanceAITools } from "./finance/ai";
+import { listKnowledgeAITools } from "@/modules/knowledge/ai";
 import type { AuthUser } from "@/shared/ports";
 import type { AICapabilityTool } from "@/shared/capability";
 
@@ -41,7 +44,8 @@ export interface LunariAITool extends AICapabilityTool {
     | "configuracoes"
     | "billing"
     | "gallery"
-    | "finance";
+    | "finance"
+    | "knowledge";
   needsApproval: boolean;
   permissions: string[];
 }
@@ -64,7 +68,8 @@ export function listLunariAITools(opts?: {
   const b = listBillingAITools(opts).map((x) => ({ ...x, module: "billing" as const }));
   const g = listGalleryAITools(opts).map((x) => ({ ...x, module: "gallery" as const }));
   const f = listFinanceAITools(opts).map((x) => ({ ...x, module: "finance" as const }));
-  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f];
+  const k = listKnowledgeAITools(opts).map((x) => ({ ...x, module: "knowledge" as const }));
+  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {
