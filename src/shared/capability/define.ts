@@ -3,6 +3,7 @@ import { eventBus, type EventName, type EventPayload } from "@/shared/event-bus"
 import { domainError, err, isOk, ok, type DomainError, type Result } from "@/shared/result";
 import { authorize } from "./policies";
 import { registerCapability } from "./registry";
+import { KERNEL_STRICT_MODE, _isInsideKernelDispatch } from "@/shared/kernel";
 import type {
   Capability,
   CapabilityContext,
@@ -67,6 +68,24 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
       const user = overrides?.user ?? null;
       const runtime: "client" | "server" = overrides?.runtime ?? "client";
       const log = makeLogger(opts.id);
+
+      // ADR-0001 — Kernel único. Detecta chamadas diretas a cap.execute()
+      // que não passaram por kernel.execute() / kernel.run().
+      if (!_isInsideKernelDispatch()) {
+        if (KERNEL_STRICT_MODE) {
+          return err(
+            domainError(
+              "KERNEL_BYPASS",
+              "Capability chamada fora do Kernel. Use kernel.execute(id, input, { actor }).",
+              { retriable: false, details: { capabilityId: opts.id } },
+            ),
+          );
+        }
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[kernel] capability "${opts.id}" executada fora do Kernel — migre para kernel.execute().`,
+        );
+      }
 
       const auth = authorize(user, opts.permissions ?? []);
       if (!isOk(auth)) return auth;

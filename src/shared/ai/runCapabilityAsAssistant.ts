@@ -11,6 +11,7 @@
  */
 
 import { getCapability } from "@/shared/capability";
+import { kernel, assistantActor } from "@/shared/kernel";
 import { supabase } from "@/integrations/supabase/client";
 import type { AuthUser } from "@/shared/ports";
 import type { ConfirmationChallenge } from "@/shared/capability/ai-adapter";
@@ -189,7 +190,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
 
   try {
     // defineCommand/defineQuery expõem `execute(rawInput, overrides)` → Result.
-    const result = await cap.execute(input, { user: opts.user, runtime: "client" });
+    const result = await kernel.run(cap, input, { actor: assistantActor(opts.user) });
     const latencyMs = Math.round(performance.now() - t0);
     if (result.ok === false) {
       const errObj = result.error;
