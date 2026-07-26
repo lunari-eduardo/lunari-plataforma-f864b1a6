@@ -103,31 +103,12 @@ export function useSupabaseLeadStatuses() {
     refetchOnReconnect: false,
   });
 
-  // Real-time subscription
+  // Real-time subscription (canal compartilhado por usuário via singleton)
   useEffect(() => {
     if (!userId) return;
-
-    const channel = supabase
-      .channel('lead-statuses-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'lead_statuses',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          console.log('🔄 [LeadStatuses] Mudança detectada, atualizando...');
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, refetch]);
+    acquireStatusesChannel(userId, queryClient);
+    return () => releaseStatusesChannel(userId);
+  }, [userId, queryClient]);
 
   // Add status mutation
   const addStatusMutation = useMutation({
