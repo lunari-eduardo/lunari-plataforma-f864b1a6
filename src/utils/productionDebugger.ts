@@ -65,7 +65,7 @@ class ProductionDebugger {
     }
 
     // Check localStorage
-    let localStorageInfo = {
+    const localStorageInfo = {
       available: false,
       hasWorkflowData: false,
       hasClientData: false,
@@ -82,7 +82,7 @@ class ProductionDebugger {
       
       // Calculate approximate localStorage usage
       let totalSize = 0;
-      for (let key in localStorage) {
+      for (const key in localStorage) {
         if (localStorage.hasOwnProperty(key)) {
           totalSize += localStorage[key].length + key.length;
         }

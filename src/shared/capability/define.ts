@@ -13,7 +13,7 @@ import type {
 
 function makeLogger(capabilityId: string) {
   const fmt = (lvl: string, msg: string, ctx?: Record<string, unknown>) =>
-    // eslint-disable-next-line no-console
+     
     console[lvl as "log"](`[cap ${capabilityId}] ${msg}`, ctx ?? "");
   return {
     debug: (m: string, c?: Record<string, unknown>) => fmt("debug", m, c),
@@ -81,7 +81,7 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
             ),
           );
         }
-        // eslint-disable-next-line no-console
+         
         console.warn(
           `[kernel] capability "${opts.id}" executada fora do Kernel — migre para kernel.execute().`,
         );

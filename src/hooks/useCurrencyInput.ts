@@ -24,7 +24,7 @@ function parseBRL(formatted: string): number {
 
 function formatWhileTyping(raw: string): string {
   // Remove tudo que não é dígito ou vírgula
-  let digits = raw.replace(/[^\d]/g, '');
+  const digits = raw.replace(/[^\d]/g, '');
   if (!digits) return '';
   
   // Converte para centavos e formata

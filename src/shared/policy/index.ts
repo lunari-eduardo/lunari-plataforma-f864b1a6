@@ -81,7 +81,7 @@ export function evaluatePolicy(ctx: PolicyContext): PolicyDecision {
       m = rule(ctx);
     } catch (err) {
       // Uma rule quebrada não pode derrubar o dispatch — loga e ignora.
-      // eslint-disable-next-line no-console
+       
       console.warn("[policy] rule threw:", err);
       continue;
     }

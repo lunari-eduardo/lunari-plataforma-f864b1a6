@@ -69,7 +69,7 @@ export async function loadContext(userId: string): Promise<ContextSnapshot> {
   );
   for (const r of results) {
     if (r.status !== "fulfilled") {
-      // eslint-disable-next-line no-console
+       
       console.warn("[context] provider failed", r.reason);
       continue;
     }

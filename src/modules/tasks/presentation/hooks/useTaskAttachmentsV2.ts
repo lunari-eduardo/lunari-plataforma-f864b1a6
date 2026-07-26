@@ -35,7 +35,7 @@ export function useTaskAttachmentsV2(taskId: string | null | undefined) {
   const items = useMemo(
     () => (taskId ? attachmentsStore.byTask(taskId) : []),
     [taskId],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   );
 
   const upload = useCallback(

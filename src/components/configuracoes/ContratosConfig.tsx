@@ -79,7 +79,7 @@ export default function ContratosConfig() {
     try {
       let criados = 0;
       for (const seed of lista) {
-        // eslint-disable-next-line no-await-in-loop
+         
         await create({
           nome: seed.nome,
           descricao: seed.descricao,

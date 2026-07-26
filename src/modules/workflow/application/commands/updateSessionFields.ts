@@ -114,7 +114,7 @@ export const updateSessionFields = defineCommand({
 
     // Recálculo opcional — espelha as triggers SQL para que IA/Mobile recebam
     // o `valor_total` final no Output sem depender de round-trip.
-    let fieldsToPersist: Record<string, unknown> = { ...fields };
+    const fieldsToPersist: Record<string, unknown> = { ...fields };
     let computedTotal: number | undefined;
 
     const touchesTotal = Object.keys(fields).some((k) => TOTAL_AFFECTING_KEYS.has(k));

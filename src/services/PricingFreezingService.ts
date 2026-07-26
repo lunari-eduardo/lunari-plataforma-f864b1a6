@@ -285,7 +285,7 @@ class PricingFreezingService {
   private resolverTabelaCategoria(categoria: string) {
     try {
       // Para manter compatibilidade, usar o adaptador síncrono por enquanto
-      let tabelaCategoria = obterTabelaCategoria(categoria);
+      const tabelaCategoria = obterTabelaCategoria(categoria);
       
       if (!tabelaCategoria) {
         console.warn('⚠️ Tabela de categoria não encontrada para:', categoria);
