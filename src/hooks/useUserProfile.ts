@@ -8,6 +8,50 @@ import { UserDataService } from '@/services/UserDataService';
 import { supabase } from '@/integrations/supabase/client';
 import { isAuthError } from '@/lib/auth/isAuthError';
 
+// Singleton por usuário — evita canais duplicados de 'profile-changes'.
+// Sem isso, múltiplos consumidores de useUserProfile (ProtectedRoute, Header,
+// DashboardHeader, contratos, etc.) reutilizavam o mesmo tópico global já
+// SUBSCRIBED e o segundo .on('postgres_changes') lançava
+// "cannot add 'postgres_changes' callbacks ... after subscribe()", derrubando
+// a árvore React (tela branca no boot).
+type ProfileHandler = (row: unknown) => void;
+type ProfileChannelEntry = {
+  channel: ReturnType<typeof supabase.channel>;
+  handlers: Set<ProfileHandler>;
+  refcount: number;
+};
+const profileChannels = new Map<string, ProfileChannelEntry>();
+
+function subscribeProfileChanges(userId: string, handler: ProfileHandler): () => void {
+  let entry = profileChannels.get(userId);
+  if (!entry) {
+    const handlers = new Set<ProfileHandler>();
+    const channel = supabase
+      .channel(`profile-changes:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${userId}` },
+        (payload) => handlers.forEach((h) => h(payload.new)),
+      )
+      .subscribe();
+    entry = { channel, handlers, refcount: 0 };
+    profileChannels.set(userId, entry);
+  }
+  entry.handlers.add(handler);
+  entry.refcount += 1;
+
+  return () => {
+    const e = profileChannels.get(userId);
+    if (!e) return;
+    e.handlers.delete(handler);
+    e.refcount -= 1;
+    if (e.refcount <= 0) {
+      supabase.removeChannel(e.channel);
+      profileChannels.delete(userId);
+    }
+  };
+}
+
 export function useUserProfile() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -49,30 +93,15 @@ export function useUserProfile() {
     }
   });
 
-  // Subscription para mudanças em tempo real
+  // Subscription realtime (singleton por usuário, refcount).
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
+    const uid = user.id;
+    return subscribeProfileChanges(uid, (row) => {
+      queryClient.setQueryData(['profile', uid], row);
+    });
+  }, [user?.id, queryClient]);
 
-    const channel = supabase
-      .channel('profile-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          queryClient.setQueryData(['profile', user.id], payload.new);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient]);
 
   const uploadAvatar = async (file: File) => {
     if (!user) throw new Error('Usuário não autenticado');
