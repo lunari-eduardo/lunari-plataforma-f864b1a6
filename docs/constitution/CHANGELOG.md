@@ -1,5 +1,17 @@
 # Changelog — Constituição Lunari
 
+## v1.2 — 2026-07-26
+- **Onda 8 — Memory Engine v1** (ADR-003): nova tabela `memory_entries`
+  (jsonb ≤ 4KB, único por `user_id+scope+key`, RLS owner-scope). CHECK no
+  banco rejeita keys reservadas para conversas (`conversation.`, `message.`,
+  `turn.`, `history.`, `chat.`).
+- Novo módulo `src/modules/memory/` com capabilities `memory.recall`,
+  `memory.remember` (aprovação dinâmica quando IA grava fora do próprio
+  escopo) e `memory.forget` (aprovação sempre).
+- Port `src/shared/memory/MemoryStore` + `MODULE.md` documentando a fronteira
+  entre Context / Memory / Knowledge / Observation.
+
+
 ## v1.1 — 2026-07-25
 - `ASSISTANT_GUIDE.md`: nova seção **Rollout e público-alvo**. A Lu é liberada em 3 estágios (admin → beta → geral) controlados por `app_settings.assistant_rollout_stage`. Estágio inicial: **admin**.
 - Novas tabelas: `app_settings`, `assistant_beta_access`. Nova RPC `assistant_access_allowed(uid)` (fail-closed).
