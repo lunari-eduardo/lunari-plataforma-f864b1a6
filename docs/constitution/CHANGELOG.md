@@ -1,5 +1,15 @@
 # Changelog — Constituição Lunari
 
+## v1.4 — 2026-07-27
+- **Onda 11.1 — Feedback loop Decision↔Learning**: `decisionStore.upsertMany`
+  consulta `learning_patterns` do usuário e pula combinações `(capability_id,
+  source_kind)` com `status='muted'`. Fecha o ciclo Intelligence → Decision →
+  Learning → Decision sem exigir novas tabelas nem capabilities. Rejeições
+  pontuais continuam via `status='dismissed'` (por `source_scope_key`); mute
+  vira decisão sistêmica quando o Learning identificar padrão.
+
+
+
 ## v1.3 — 2026-07-27
 - **Onda 10 — Decision Engine v1** (ADR-004): nova tabela `decision_proposals`
   (jsonb ≤ 4KB rationale, ≤ 8KB input, único por `user_id+capability_id+source_kind+source_scope_key`,
