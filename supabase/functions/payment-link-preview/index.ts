@@ -1,12 +1,18 @@
 /**
- * payment-link-preview
+ * payment-link-preview  (v2)
  *
- * Serve HTML branded para crawlers (WhatsApp, LinkedIn, Facebook, Slack,
- * Telegram, Discord, iMessage, Google) e redireciona humanos para a página
- * real de pagamento (`/pay/ip/:id` ou `/checkout/:id`).
+ * Rota curta `/l/:cobrancaId` (via rewrite Vercel).
  *
- * Chamado via rewrite Vercel:
- *   /l/:cobrancaId → https://<sb>.functions.supabase.co/payment-link-preview?id=:cobrancaId
+ * - Crawler social (WhatsApp, Facebook, LinkedIn, Slack, Telegram, Discord,
+ *   Google, Bing, iMessage, etc.) → 200 text/html com <head> branded
+ *   (og:image = logo do fotógrafo, título/valor). SEM meta-refresh / SEM JS,
+ *   para não poluir métricas de bot.
+ * - Humano (qualquer outro UA) → HTTP 302 direto para o checkout do provedor:
+ *     • infinitepay        → /pay/ip/:id
+ *     • asaas / mercadopago / pix_manual → /checkout/:id
+ *   Cache: `private, no-store` — nunca compartilha resposta entre humanos.
+ * - Se a cobrança já está paga/cancelada/expirada → HTML branded final
+ *   (também `private, no-store`), sem redirect.
  *
  * PÚBLICO — verify_jwt = false. Nunca expõe user_id, email, telefone.
  */
@@ -19,14 +25,26 @@ const PUBLIC_SITE_URL = (Deno.env.get("VITE_SITE_URL") || Deno.env.get("SITE_URL
 const FALLBACK_OG_IMAGE = `${PUBLIC_SITE_URL}/og-fallback-cobranca.jpg`;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const BOT_UA_RE = /(whatsapp|facebookexternalhit|twitterbot|linkedinbot|slackbot|telegrambot|discordbot|skypeuripreview|googlebot|bingbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare)/i;
+const BOT_UA_RE = /(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags)/i;
 
-const HTML_HEADERS = {
+const NO_STORE_HEADERS = {
+  "Cache-Control": "private, no-store, max-age=0",
+  "Referrer-Policy": "no-referrer",
+  "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow",
+};
+
+const BOT_HTML_HEADERS = {
   "Content-Type": "text/html; charset=utf-8",
-  "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
-  "Vary": "User-Agent",
+  // Bots re-visitam raramente. Cache agressivo só no ramo bot; humano nunca.
+  "Cache-Control": "public, max-age=600, s-maxage=86400, stale-while-revalidate=86400",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
+};
+
+const HUMAN_HTML_HEADERS = {
+  "Content-Type": "text/html; charset=utf-8",
+  ...NO_STORE_HEADERS,
 };
 
 function escapeHtml(v: string): string {
@@ -58,26 +76,24 @@ function formatBRL(valor: number): string {
   }
 }
 
-interface Ctx {
+interface BrandedCtx {
   title: string;
   desc: string;
   brandName: string;
   ogImageUrl: string;
   canonicalUrl: string;
-  targetPath: string | null; // null = não redireciona (pago/cancelado/inválido)
-  isBot: boolean;
   bodyMessage: string;
+  linkHref?: string; // Se presente, renderiza "continuar para o pagamento".
 }
 
-function renderHtml(c: Ctx): string {
-  const redirectHead = c.targetPath
-    ? `<meta http-equiv="refresh" content="0; url=${escapeHtml(c.targetPath)}"/>`
-    : "";
-  const redirectScript = c.targetPath && !c.isBot
-    ? `<script>window.location.replace(${JSON.stringify(c.targetPath)});</script>`
-    : "";
-  const linkBack = c.targetPath
-    ? `<a href="${escapeHtml(c.targetPath)}" style="color:#a78bfa;text-decoration:underline">continuar para o pagamento</a>`
+/**
+ * HTML branded — usado para crawlers e para estados finais (pago/cancelado).
+ * SEM meta-refresh e SEM JS de redirect: crawlers não devem seguir e humanos
+ * já foram redirecionados via HTTP 302 antes de chegar aqui.
+ */
+function renderBrandedHtml(c: BrandedCtx): string {
+  const linkBack = c.linkHref
+    ? `<p><a href="${escapeHtml(c.linkHref)}" style="color:#a78bfa;text-decoration:underline">continuar para o pagamento</a></p>`
     : "";
 
   return `<!doctype html>
@@ -106,8 +122,6 @@ function renderHtml(c: Ctx): string {
 <meta name="twitter:description" content="${escapeHtml(c.desc)}"/>
 <meta name="twitter:image" content="${escapeHtml(c.ogImageUrl)}"/>
 
-${redirectHead}
-${redirectScript}
 <style>
   html,body{margin:0;padding:0;background:#0b0b0f;color:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
   .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -121,24 +135,26 @@ ${redirectScript}
 <div class="wrap"><div class="card">
   <div class="brand">${escapeHtml(c.brandName)}</div>
   <h1>${escapeHtml(c.bodyMessage)}</h1>
-  <p>${linkBack}</p>
+  ${linkBack}
 </div></div>
 </body>
 </html>`;
 }
 
 function renderInvalid(canonicalUrl: string, brandName = "Lunari"): Response {
-  const html = renderHtml({
+  const html = renderBrandedHtml({
     title: "Link de pagamento não disponível",
     desc: "Este link de pagamento não foi encontrado ou já não está mais ativo.",
     brandName,
     ogImageUrl: FALLBACK_OG_IMAGE,
     canonicalUrl,
-    targetPath: null,
-    isBot: false,
     bodyMessage: "Link de pagamento não disponível",
   });
-  return new Response(html, { status: 200, headers: HTML_HEADERS });
+  return new Response(html, { status: 404, headers: HUMAN_HTML_HEADERS });
+}
+
+function targetPathFor(provedor: string | null | undefined, id: string): string {
+  return provedor === "infinitepay" ? `/pay/ip/${id}` : `/checkout/${id}`;
 }
 
 serve(async (req) => {
@@ -146,7 +162,11 @@ serve(async (req) => {
   const id = (url.searchParams.get("id") || "").trim().toLowerCase();
   const canonicalUrl = `${PUBLIC_SITE_URL}/l/${id}`;
   const userAgent = req.headers.get("user-agent") || "";
+  const accept = req.headers.get("accept") || "";
   const isBot = BOT_UA_RE.test(userAgent);
+  // Alguns crawlers (ex: fetch de og:image) mandam Accept: image/*. Tratar como bot também.
+  const wantsHtml = accept.includes("text/html") || accept.includes("*/*") || accept === "";
+  const treatAsBot = isBot || !wantsHtml;
 
   if (!id || !UUID_RE.test(id)) {
     return renderInvalid(canonicalUrl);
@@ -166,6 +186,27 @@ serve(async (req) => {
       return renderInvalid(canonicalUrl);
     }
 
+    const targetPath = targetPathFor(cobranca.provedor, cobranca.id);
+    const absoluteTarget = `${PUBLIC_SITE_URL}${targetPath}`;
+    const status = cobranca.status;
+    const isFinalState = status === "pago" || status === "cancelado" || status === "expirado";
+
+    // ─────────────────────────────────────────────────────────────
+    // Ramo HUMANO — cobrança pagável → 302 imediato
+    // ─────────────────────────────────────────────────────────────
+    if (!treatAsBot && !isFinalState) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          ...NO_STORE_HEADERS,
+          Location: absoluteTarget,
+        },
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Ramo HUMANO em estado final OU ramo BOT — HTML branded
+    // ─────────────────────────────────────────────────────────────
     const [{ data: profile }, { data: cliente }] = await Promise.all([
       supabase.from("profiles").select("nome, empresa, logo_url").eq("user_id", cobranca.user_id).maybeSingle(),
       cobranca.cliente_id
@@ -179,46 +220,42 @@ serve(async (req) => {
     const primeiroNome = firstName(cliente?.nome);
     const descRaw = (cobranca.descricao || "").toString().trim();
 
-    // Mapa provedor → rota real do checkout
-    const targetPath = cobranca.provedor === "infinitepay"
-      ? `/pay/ip/${cobranca.id}`
-      : `/checkout/${cobranca.id}`;
-
     let title: string;
     let desc: string;
     let bodyMessage: string;
-    let redirectTarget: string | null = targetPath;
+    let linkHref: string | undefined;
 
-    if (cobranca.status === "pago") {
+    if (status === "pago") {
       title = `Pagamento concluído — ${brandName}`;
       desc = `Cobrança de ${valorFmt} paga com sucesso.`;
       bodyMessage = "Pagamento concluído";
-      redirectTarget = null;
-    } else if (cobranca.status === "cancelado" || cobranca.status === "expirado") {
+    } else if (status === "cancelado" || status === "expirado") {
       title = `Link não disponível — ${brandName}`;
       desc = "Este link de pagamento não está mais ativo.";
       bodyMessage = "Link de pagamento não disponível";
-      redirectTarget = null;
     } else {
+      // Bot em cobrança ativa: mostra o card de preview e mantém o link textual
       const saudacao = primeiroNome ? `Olá, ${primeiroNome}! ` : "";
       const descSuffix = descRaw ? ` — ${truncate(descRaw, 90)}` : "";
       title = `Pagamento para ${brandName} — ${valorFmt}`;
       desc = `${saudacao}Sua cobrança de ${valorFmt}${descSuffix}. Pague com PIX, cartão ou boleto em ambiente seguro.`;
-      bodyMessage = `Redirecionando para o pagamento de ${valorFmt}…`;
+      bodyMessage = `Pagamento de ${valorFmt}`;
+      linkHref = absoluteTarget;
     }
 
-    const html = renderHtml({
+    const html = renderBrandedHtml({
       title,
       desc,
       brandName,
       ogImageUrl,
       canonicalUrl,
-      targetPath: redirectTarget,
-      isBot,
       bodyMessage,
+      linkHref,
     });
 
-    return new Response(html, { status: 200, headers: HTML_HEADERS });
+    // Estado final é `no-store` (dado sensível/mutável); ramo bot ativo pode cachear.
+    const headers = isFinalState ? HUMAN_HTML_HEADERS : BOT_HTML_HEADERS;
+    return new Response(html, { status: 200, headers });
   } catch (err) {
     console.error("[payment-link-preview] erro", err);
     return renderInvalid(canonicalUrl);
