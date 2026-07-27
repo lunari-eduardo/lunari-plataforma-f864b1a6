@@ -3929,6 +3929,104 @@ export type Database = {
           },
         ]
       }
+      learning_patches: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          id: string
+          patch_kind: string
+          pattern_id: string
+          payload: Json
+          rationale: string[]
+          status: string
+          target: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          id?: string
+          patch_kind: string
+          pattern_id: string
+          payload?: Json
+          rationale?: string[]
+          status?: string
+          target: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          id?: string
+          patch_kind?: string
+          pattern_id?: string
+          payload?: Json
+          rationale?: string[]
+          status?: string
+          target?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_patches_pattern_id_fkey"
+            columns: ["pattern_id"]
+            isOneToOne: false
+            referencedRelation: "learning_patterns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_patterns: {
+        Row: {
+          acceptance_rate: number
+          accepted_count: number
+          capability_id: string
+          created_at: string
+          dismissed_count: number
+          id: string
+          last_computed_at: string
+          sample_size: number
+          signal_strength: number
+          source_kind: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acceptance_rate?: number
+          accepted_count?: number
+          capability_id: string
+          created_at?: string
+          dismissed_count?: number
+          id?: string
+          last_computed_at?: string
+          sample_size?: number
+          signal_strength?: number
+          source_kind: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acceptance_rate?: number
+          accepted_count?: number
+          capability_id?: string
+          created_at?: string
+          dismissed_count?: number
+          id?: string
+          last_computed_at?: string
+          sample_size?: number
+          signal_strength?: number
+          source_kind?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       memory_entries: {
         Row: {
           confidence: number
