@@ -87,21 +87,40 @@ export const decisionStore: DecisionStore = {
       source_scope_key: p.sourceScopeKey,
     }));
     const capIds = Array.from(new Set(keys.map((k) => k.capability_id)));
-    const { data: existing, error: exErr } = await supabase
-      .from("decision_proposals")
-      .select("capability_id, source_kind, source_scope_key, status")
-      .eq("user_id", userId)
-      .in("capability_id", capIds);
-    if (exErr) throw exErr;
+    const srcKinds = Array.from(new Set(keys.map((k) => k.source_kind)));
+
+    const [existingRes, mutedRes] = await Promise.all([
+      supabase
+        .from("decision_proposals")
+        .select("capability_id, source_kind, source_scope_key, status")
+        .eq("user_id", userId)
+        .in("capability_id", capIds),
+      // Onda 11.1 — feedback loop Decision↔Learning: pular combinações muted.
+      supabase
+        .from("learning_patterns")
+        .select("capability_id, source_kind")
+        .eq("user_id", userId)
+        .eq("status", "muted")
+        .in("capability_id", capIds)
+        .in("source_kind", srcKinds),
+    ]);
+    if (existingRes.error) throw existingRes.error;
+    if (mutedRes.error) throw mutedRes.error;
+
     const dismissed = new Set(
-      (existing ?? [])
+      (existingRes.data ?? [])
         .filter((r) => r.status === "dismissed")
         .map((r) => `${r.capability_id}|${r.source_kind}|${r.source_scope_key}`),
+    );
+    const muted = new Set(
+      (mutedRes.data ?? []).map((r) => `${r.capability_id}|${r.source_kind}`),
     );
 
     const rows = proposals
       .filter(
-        (p) => !dismissed.has(`${p.capabilityId}|${p.sourceKind}|${p.sourceScopeKey}`),
+        (p) =>
+          !dismissed.has(`${p.capabilityId}|${p.sourceKind}|${p.sourceScopeKey}`) &&
+          !muted.has(`${p.capabilityId}|${p.sourceKind}`),
       )
       .map((p) => {
         ensureSizes(p.rationale, p.input);
@@ -128,6 +147,7 @@ export const decisionStore: DecisionStore = {
     if (error) throw error;
     return (data ?? []) as unknown as DecisionProposal[];
   },
+
 
   async setStatus(userId, id, status) {
     const { data, error } = await supabase
