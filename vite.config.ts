@@ -15,13 +15,18 @@ const BUILD_COMMIT =
   'local-dev';
 const BUILD_TIME = new Date().toISOString();
 
-// Plugin: escreve dist/version.json ao final do build com { commit, time }.
-// Substitui o public/version.json congelado, permitindo `curl /version.json`
-// em produção retornar o SHA real do deploy.
+// Plugin: escreve dist/version.json ao final do build com { commit, time }
+// e substitui os placeholders __BUILD_COMMIT__ / __BUILD_TIME__ dentro do
+// index.html (o `define` do Vite só afeta código JS, não HTML).
 function writeVersionJsonPlugin(): Plugin {
   return {
     name: 'lunari-write-version-json',
     apply: 'build',
+    transformIndexHtml(html) {
+      return html
+        .replaceAll('__BUILD_COMMIT__', BUILD_COMMIT)
+        .replaceAll('__BUILD_TIME__', BUILD_TIME);
+    },
     closeBundle() {
       const outDir = path.resolve(__dirname, 'dist');
       try {
