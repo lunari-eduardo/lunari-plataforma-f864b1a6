@@ -41,6 +41,7 @@ import { listMemoryAITools } from "@/modules/memory/ai";
 import { listIntelligenceAITools } from "@/modules/intelligence/ai";
 import { listDecisionAITools } from "@/modules/decision/ai";
 import { listLearningAITools } from "@/modules/learning/ai";
+import { listAutomationAITools } from "@/modules/automation/ai";
 import type { AuthUser } from "@/shared/ports";
 import type { AICapabilityTool } from "@/shared/capability";
 
