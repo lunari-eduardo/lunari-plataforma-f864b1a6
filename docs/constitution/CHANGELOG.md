@@ -1,5 +1,17 @@
 # Changelog — Constituição Lunari
 
+## v1.3 — 2026-07-27
+- **Onda 10 — Decision Engine v1** (ADR-004): nova tabela `decision_proposals`
+  (jsonb ≤ 4KB rationale, ≤ 8KB input, único por `user_id+capability_id+source_kind+source_scope_key`,
+  RLS owner-scope, CHECKs de `status`/`severity`).
+- Novo módulo `src/modules/decision/` com capabilities `decision.list`,
+  `decision.propose` (idempotente; respeita `dismissed`), `decision.dismiss`
+  e `decision.accept` (ambas exigem aprovação humana no canal IA).
+- Port `src/shared/decision/DecisionStore` + `MODULE.md` documentando a
+  fronteira entre Intelligence / Decision / Automation.
+- Decision NUNCA executa: apenas propõe `capability_id + input + rationale`;
+  execução real segue via Kernel disparada por humano (Automation na Onda 12).
+
 ## v1.2 — 2026-07-26
 - **Onda 8 — Memory Engine v1** (ADR-003): nova tabela `memory_entries`
   (jsonb ≤ 4KB, único por `user_id+scope+key`, RLS owner-scope). CHECK no
