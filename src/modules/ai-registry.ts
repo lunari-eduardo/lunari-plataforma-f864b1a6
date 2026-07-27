@@ -88,7 +88,8 @@ export function listLunariAITools(opts?: {
   const m = listMemoryAITools(opts).map((x) => ({ ...x, module: "memory" as const }));
   const i = listIntelligenceAITools(opts).map((x) => ({ ...x, module: "intelligence" as const }));
   const d = listDecisionAITools(opts).map((x) => ({ ...x, module: "decision" as const }));
-  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k, ...o, ...m, ...i, ...d];
+  const l = listLearningAITools(opts).map((x) => ({ ...x, module: "learning" as const }));
+  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k, ...o, ...m, ...i, ...d, ...l];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {
