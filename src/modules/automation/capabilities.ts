@@ -100,7 +100,7 @@ export const automationRulesUpsertCapability = defineCommand({
     if (!ctx.user?.id)
       return err(domainError("UNAUTHORIZED", "Sessão necessária.", { retriable: false }));
     try {
-      const rule = await automationStore.upsertRule(ctx.user.id, input);
+      const rule = await automationStore.upsertRule(ctx.user.id, input as Parameters<typeof automationStore.upsertRule>[1]);
       return ok({ rule: rule as never });
     } catch (e) {
       return err(
