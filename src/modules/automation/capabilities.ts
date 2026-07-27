@@ -190,7 +190,7 @@ export const automationTickCapability = defineCommand({
   }),
   permissions: ["automation:execute"],
   costHint: "medium",
-  sideEffects: ["db:automation_runs.write", "kernel:dispatch"],
+  sideEffects: ["db:automation_runs.write", "event:kernel.dispatch"],
   idempotencyKey: () => "automation.tick",
   async handler(input, ctx) {
     if (!ctx.user?.id)
