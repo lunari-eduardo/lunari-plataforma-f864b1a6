@@ -6,4 +6,5 @@ export * as knowledge from "./knowledge";
 export * as observation from "./observation";
 export * as memory from "./memory";
 export * as intelligence from "./intelligence";
+export * as decision from "./decision";
 

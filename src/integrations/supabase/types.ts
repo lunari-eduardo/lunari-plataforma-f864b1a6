@@ -2112,6 +2112,57 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_proposals: {
+        Row: {
+          capability_id: string
+          computed_at: string
+          created_at: string
+          expires_at: string
+          id: string
+          input: Json
+          rationale: Json
+          score: number
+          severity: string
+          source_kind: string
+          source_scope_key: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capability_id: string
+          computed_at?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          input?: Json
+          rationale?: Json
+          score?: number
+          severity?: string
+          source_kind: string
+          source_scope_key: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capability_id?: string
+          computed_at?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          input?: Json
+          rationale?: Json
+          score?: number
+          severity?: string
+          source_kind?: string
+          source_scope_key?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_delivery_logs: {
         Row: {
           cliente_email: string | null
