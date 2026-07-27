@@ -1,8 +1,49 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from 'vite-plugin-pwa';
+
+// Marcador de build injetado em produção. Fonte de verdade: SHA do commit
+// que a Vercel está compilando (VERCEL_GIT_COMMIT_SHA). Localmente cai para
+// 'local-dev'. Usado para provar qual commit está sendo servido pelo domínio.
+const BUILD_COMMIT =
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.COMMIT_SHA ||
+  process.env.GITHUB_SHA ||
+  'local-dev';
+const BUILD_TIME = new Date().toISOString();
+
+// Plugin: escreve dist/version.json ao final do build com { commit, time }
+// e substitui os placeholders __BUILD_COMMIT__ / __BUILD_TIME__ dentro do
+// index.html (o `define` do Vite só afeta código JS, não HTML).
+function writeVersionJsonPlugin(): Plugin {
+  return {
+    name: 'lunari-write-version-json',
+    apply: 'build',
+    transformIndexHtml(html) {
+      return html
+        .replaceAll('__BUILD_COMMIT__', BUILD_COMMIT)
+        .replaceAll('__BUILD_TIME__', BUILD_TIME);
+    },
+    closeBundle() {
+      const outDir = path.resolve(__dirname, 'dist');
+      try {
+        if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+        const payload = JSON.stringify({
+          commit: BUILD_COMMIT,
+          time: BUILD_TIME,
+          // Mantém o campo "version" legado para não quebrar leitores antigos.
+          version: BUILD_COMMIT.slice(0, 12),
+        });
+        fs.writeFileSync(path.join(outDir, 'version.json'), payload, 'utf-8');
+      } catch (err) {
+        console.warn('[lunari-write-version-json] falhou:', err);
+      }
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -71,7 +112,8 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       }
-    })
+    }),
+    writeVersionJsonPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {
@@ -81,6 +123,8 @@ export default defineConfig(({ mode }) => ({
   define: {
     global: "globalThis",
     VITE_APP_VERSION: JSON.stringify(process.env.npm_package_version || '1.0.0'),
+    __BUILD_COMMIT__: JSON.stringify(BUILD_COMMIT),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
   },
   esbuild: {
     drop: mode === 'production' ? ['console', 'debugger'] : [],

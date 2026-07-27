@@ -1,5 +1,11 @@
 /// <reference types="vite/client" />
 
+// Marcadores injetados pelo build (vite.config.ts → define). Em dev caem
+// para 'local-dev' / timestamp do boot.
+declare const __BUILD_COMMIT__: string;
+declare const __BUILD_TIME__: string;
+
+
 // Types para virtual:pwa-register do vite-plugin-pwa
 declare module 'virtual:pwa-register' {
   export interface RegisterSWOptions {
