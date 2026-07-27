@@ -27,7 +27,7 @@ bootstrapCorePolicies();
 export interface Actor {
   user: AuthUser | null;
   /** Origem da invocação — usado por Policy/Audit no futuro. */
-  channel: "web" | "assistant" | "mcp" | "system" | "test";
+  channel: "web" | "assistant" | "mcp" | "system" | "automation" | "test";
   runtime: "client" | "server";
 }
 
