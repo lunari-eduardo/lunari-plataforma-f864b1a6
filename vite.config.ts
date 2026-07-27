@@ -107,7 +107,8 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       }
-    })
+    }),
+    writeVersionJsonPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {
@@ -117,6 +118,8 @@ export default defineConfig(({ mode }) => ({
   define: {
     global: "globalThis",
     VITE_APP_VERSION: JSON.stringify(process.env.npm_package_version || '1.0.0'),
+    __BUILD_COMMIT__: JSON.stringify(BUILD_COMMIT),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
   },
   esbuild: {
     drop: mode === 'production' ? ['console', 'debugger'] : [],
