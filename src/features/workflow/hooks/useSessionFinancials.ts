@@ -3,70 +3,24 @@
  * de Pagamentos / CRM). Consome a RPC `workflow_session_financials`, que
  * é a mesma fonte usada em batch por `useMonthSessionFinancials`.
  *
- * - Realtime: ouve `clientes_sessoes`, `clientes_transacoes` e
- *   `cliente_creditos_ledger` para invalidar a query.
- * - Tipos: SEMPRE `number` (nunca strings BR formatadas).
- * - Sem staleTime: valores financeiros devem refletir o DB o quanto antes.
+ * Arquitetura (Onda "Workflow liso"):
+ *  - Este hook NÃO cria canais Supabase. Cada card do Workflow monta
+ *    Collapsed + Expanded simultaneamente; abrir/fechar não pode gerar
+ *    nem alterar subscriptions realtime — isso causava o erro
+ *    "cannot add postgres_changes callbacks ... after subscribe()".
+ *  - Realtime centralizado: `useWorkflowRealtimeV2` mantém 1 canal por
+ *    usuário (`workflow:user:{userId}`) escutando `clientes_sessoes`,
+ *    `clientes_transacoes`, `cobrancas`, `cobranca_parcelas` e
+ *    `cliente_creditos_ledger`. Para cada evento ele emite
+ *    `workflow-session-financials-stale` com o UUID e/ou slug afetado.
+ *  - Este hook apenas escuta esses eventos internos + optimistic bridge
+ *    e invalida a query TanStack.
+ *  - Tipos: SEMPRE `number` (nunca strings BR formatadas).
+ *  - Sem staleTime: valores financeiros devem refletir o DB o quanto antes.
  */
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { acquireChannel, releaseChannel } from '@/shared/realtime/channelRegistry';
-
-/**
- * Chave estável do canal por sessionId. O registry vive em `globalThis`
- * (ver `shared/realtime/channelRegistry`) — sobrevive a code-splitting e
- * garante que Collapsed + Expanded + Modal usem o MESMO canal, sem
- * anexar callbacks depois de `subscribe()`.
- */
-function financialsKey(sessionId: string) {
-  return `workflow:session-financials:${sessionId}`;
-}
-
-function createFinancialsChannel(sessionId: string, invalidate: () => void) {
-  return supabase
-    .channel(`session-financials-${sessionId}`)
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'clientes_sessoes', filter: `id=eq.${sessionId}` },
-      invalidate,
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'clientes_transacoes' },
-      (payload) => {
-        const n = (payload.new as any)?.session_id;
-        const o = (payload.old as any)?.session_id;
-        if (n === sessionId || o === sessionId) invalidate();
-      },
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'cliente_creditos_ledger' },
-      (payload) => {
-        const n1 = (payload.new as any)?.session_id_origem;
-        const n2 = (payload.new as any)?.session_id_consumo;
-        const o1 = (payload.old as any)?.session_id_origem;
-        const o2 = (payload.old as any)?.session_id_consumo;
-        if ([n1, n2, o1, o2].includes(sessionId)) invalidate();
-      },
-    )
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'cobrancas' },
-      (payload) => {
-        const n = (payload.new as any)?.session_id;
-        const o = (payload.old as any)?.session_id;
-        if (n === sessionId || o === sessionId) invalidate();
-      },
-    )
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'galerias' },
-      () => invalidate(),
-    )
-    .subscribe();
-}
 
 export interface SessionFinancials {
   session_id: string;
@@ -170,11 +124,10 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: ['session-financials', sessionId] });
 
-    // Canal Realtime compartilhado por sessionId via registry global
-    // (sobrevive a code-splitting). Callbacks são anexados apenas na criação.
-    const key = financialsKey(sessionId);
-    acquireChannel(key, () => createFinancialsChannel(sessionId, invalidate));
-
+    // Nenhum canal Supabase é criado aqui: `useWorkflowRealtimeV2` já mantém
+    // um canal único por usuário e emite `workflow-session-financials-stale`
+    // para toda mudança relevante (transações, cobranças, parcelas, ledger,
+    // sessão, galeria). Este hook apenas escuta esses eventos internos.
     const bridgeHandler = (event: Event) => {
       const detail = (event as CustomEvent).detail || {};
       const affected = detail.sessionId ?? detail.session?.id;
@@ -192,7 +145,10 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     };
     const financialsStaleBridge = (event: Event) => {
       const detail = (event as CustomEvent).detail || {};
-      if (detail.sessionId === sessionId) invalidate();
+      // Realtime v2 emite `sessionId` (UUID) e às vezes só `sessionSlug`
+      // (quando o slug ainda não está no store). Aceitamos ambos.
+      const ids = [detail.sessionId, detail.sessionUuid, detail.sessionSlug].filter(Boolean);
+      if (ids.includes(sessionId)) invalidate();
     };
     window.addEventListener('workflow-session-updated', bridgeHandler as EventListener);
     window.addEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
@@ -200,13 +156,13 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     window.addEventListener('payment-created', paymentBridge as EventListener);
 
     return () => {
-      releaseChannel(key);
       window.removeEventListener('workflow-session-updated', bridgeHandler as EventListener);
       window.removeEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
       window.removeEventListener('payment-optimistic', paymentBridge as EventListener);
       window.removeEventListener('payment-created', paymentBridge as EventListener);
     };
   }, [sessionId, queryClient]);
+
 
   return {
     financials: query.data ?? { session_id: sessionId ?? '', ...ZERO },

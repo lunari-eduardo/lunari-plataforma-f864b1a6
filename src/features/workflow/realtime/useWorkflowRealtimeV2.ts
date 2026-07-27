@@ -262,6 +262,19 @@ export function useWorkflowRealtimeV2(): { enabled: boolean; stats: Stats } {
             slugs.forEach((slug) => emitFinancialsStaleBySlug(slug));
           },
         )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "galerias", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            statsRef.current.lastEventAt = Date.now();
+            const slug =
+              (payload.new as { session_id?: string } | null)?.session_id ??
+              (payload.old as { session_id?: string } | null)?.session_id;
+            emitFinancialsStaleBySlug(slug);
+          },
+        )
+
+
 
         .subscribe((status) => {
           if (cancelled) return;

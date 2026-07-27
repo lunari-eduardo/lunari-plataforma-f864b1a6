@@ -80,25 +80,22 @@ export function useSessionCreditContext(sessionId?: string | null) {
 
   useEffect(() => {
     if (!sessionId) return;
-    const channel = supabase
-      .channel(`session-credit-${sessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cliente_creditos_ledger",
-          filter: `session_id_origem=eq.${sessionId}`,
-        },
-        () => {
-          qc.invalidateQueries({ queryKey: ["session-credit-context", sessionId] });
-        },
-      )
-      .subscribe();
+    // Sem canal Supabase por sessão: `useWorkflowRealtimeV2` já escuta
+    // `cliente_creditos_ledger` no canal único do usuário e emite
+    // `workflow-session-financials-stale` com o UUID/slug afetado.
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      const ids = [detail.sessionId, detail.sessionUuid, detail.sessionSlug].filter(Boolean);
+      if (ids.includes(sessionId)) {
+        qc.invalidateQueries({ queryKey: ["session-credit-context", sessionId] });
+      }
+    };
+    window.addEventListener("workflow-session-financials-stale", handler as EventListener);
     return () => {
-      supabase.removeChannel(channel);
+      window.removeEventListener("workflow-session-financials-stale", handler as EventListener);
     };
   }, [sessionId, qc]);
+
 
   return query;
 }
