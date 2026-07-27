@@ -22,6 +22,7 @@ import "@/modules/memory"; // Onda 8 — Memory Engine v1
 import "@/modules/intelligence"; // Onda 9 — Intelligence Engine v1
 import "@/modules/decision"; // Onda 10 — Decision Engine v1
 import "@/modules/learning"; // Onda 11 — Learning Engine v1
+import "@/modules/automation"; // Onda 12 — Automation Engine v1
 
 
 import { listWorkflowAITools } from "@/features/workflow/ai";
@@ -40,6 +41,7 @@ import { listMemoryAITools } from "@/modules/memory/ai";
 import { listIntelligenceAITools } from "@/modules/intelligence/ai";
 import { listDecisionAITools } from "@/modules/decision/ai";
 import { listLearningAITools } from "@/modules/learning/ai";
+import { listAutomationAITools } from "@/modules/automation/ai";
 import type { AuthUser } from "@/shared/ports";
 import type { AICapabilityTool } from "@/shared/capability";
 
@@ -60,7 +62,8 @@ export interface LunariAITool extends AICapabilityTool {
     | "memory"
     | "intelligence"
     | "decision"
-    | "learning";
+    | "learning"
+    | "automation";
   needsApproval: boolean;
   permissions: string[];
 }
@@ -89,7 +92,8 @@ export function listLunariAITools(opts?: {
   const i = listIntelligenceAITools(opts).map((x) => ({ ...x, module: "intelligence" as const }));
   const d = listDecisionAITools(opts).map((x) => ({ ...x, module: "decision" as const }));
   const l = listLearningAITools(opts).map((x) => ({ ...x, module: "learning" as const }));
-  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k, ...o, ...m, ...i, ...d, ...l];
+  const au = listAutomationAITools(opts).map((x) => ({ ...x, module: "automation" as const }));
+  return [...w, ...t, ...a, ...c, ...fo, ...cn, ...co, ...b, ...g, ...f, ...k, ...o, ...m, ...i, ...d, ...l, ...au];
 }
 
 export function lunariAIToolMap(opts?: Parameters<typeof listLunariAITools>[0]) {

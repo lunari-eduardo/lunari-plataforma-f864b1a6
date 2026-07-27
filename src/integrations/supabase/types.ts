@@ -482,6 +482,92 @@ export type Database = {
           },
         ]
       }
+      automation_rules: {
+        Row: {
+          capability_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          notes: string | null
+          severity_max: string
+          source_kind: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capability_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          notes?: string | null
+          severity_max?: string
+          source_kind?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capability_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          notes?: string | null
+          severity_max?: string
+          source_kind?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      automation_runs: {
+        Row: {
+          actor: string
+          capability_id: string
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          proposal_id: string | null
+          result: Json | null
+          rule_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          actor: string
+          capability_id: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          proposal_id?: string | null
+          result?: Json | null
+          rule_id?: string | null
+          status: string
+          user_id: string
+        }
+        Update: {
+          actor?: string
+          capability_id?: string
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          proposal_id?: string | null
+          result?: Json | null
+          rule_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       availability_slots: {
         Row: {
           color: string | null

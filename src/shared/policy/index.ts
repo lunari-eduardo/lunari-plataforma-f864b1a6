@@ -25,7 +25,7 @@
 import type { AuthUser } from "@/shared/ports";
 import type { Capability } from "@/shared/capability/types";
 
-export type PolicyChannel = "web" | "assistant" | "mcp" | "system" | "test";
+export type PolicyChannel = "web" | "assistant" | "mcp" | "system" | "automation" | "test";
 
 export interface PolicyContext {
   user: AuthUser | null;

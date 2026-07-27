@@ -27,7 +27,7 @@ bootstrapCorePolicies();
 export interface Actor {
   user: AuthUser | null;
   /** Origem da invocação — usado por Policy/Audit no futuro. */
-  channel: "web" | "assistant" | "mcp" | "system" | "test";
+  channel: "web" | "assistant" | "mcp" | "system" | "automation" | "test";
   runtime: "client" | "server";
 }
 
@@ -200,4 +200,9 @@ export function assistantActor(user: AuthUser | null): Actor {
 
 export function systemActor(): Actor {
   return { user: null, channel: "system", runtime: "server" };
+}
+
+/** Onda 12 — Actor de execução automática. Sempre carrega o user dono da regra. */
+export function automationActor(user: AuthUser | null): Actor {
+  return { user, channel: "automation", runtime: "client" };
 }
