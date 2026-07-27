@@ -4,65 +4,52 @@ import type { IntelligenceUpsert } from "@/shared/intelligence";
 /**
  * Analyzer `finance.anomaly.month`.
  *
- * Compara total de transações do mês corrente vs média dos 3 meses
- * anteriores. Desvio > 40% (para mais ou menos) emite anomalia.
- * Escopo: 1 sinal por mês (`scope_key = YYYY-MM`).
+ * Soma `valor` por mês (data_competencia) do mês corrente e compara com
+ * a média dos 3 meses anteriores. Desvio absoluto ≥ 40% → anomalia.
+ * Escopo: 1 sinal por mês corrente (`scope_key = YYYY-MM`).
  */
 export async function analyzeFinanceAnomaly(userId: string): Promise<IntelligenceUpsert[]> {
   const now = new Date();
   const startWindow = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString();
   const { data, error } = await supabase
     .from("fin_transactions")
-    .select("valor, direction, data_efetiva")
+    .select("valor, data_competencia")
     .eq("user_id", userId)
-    .gte("data_efetiva", startWindow);
+    .gte("data_competencia", startWindow);
   if (error) return [];
 
-  const bucket = new Map<string, { in: number; out: number }>();
+  const bucket = new Map<string, number>();
   for (const row of data ?? []) {
-    const iso = String(row.data_efetiva ?? "");
+    const iso = String(row.data_competencia ?? "");
     if (!iso) continue;
     const ym = iso.slice(0, 7);
-    const cur = bucket.get(ym) ?? { in: 0, out: 0 };
-    const v = Number(row.valor ?? 0);
-    if (String(row.direction) === "in") cur.in += v;
-    else cur.out += v;
-    bucket.set(ym, cur);
+    bucket.set(ym, (bucket.get(ym) ?? 0) + Number(row.valor ?? 0));
   }
 
   const currentYm = now.toISOString().slice(0, 7);
-  const past: Array<{ in: number; out: number }> = [];
+  const past: number[] = [];
   for (let i = 1; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const ym = d.toISOString().slice(0, 7);
-    past.push(bucket.get(ym) ?? { in: 0, out: 0 });
+    past.push(bucket.get(ym) ?? 0);
   }
-  const cur = bucket.get(currentYm) ?? { in: 0, out: 0 };
-  const avgIn = past.reduce((a, b) => a + b.in, 0) / Math.max(1, past.length);
-  const avgOut = past.reduce((a, b) => a + b.out, 0) / Math.max(1, past.length);
+  const cur = bucket.get(currentYm) ?? 0;
+  const avg = past.reduce((a, b) => a + b, 0) / Math.max(1, past.length);
 
   const reasons: string[] = [];
   let severity: "info" | "warn" | "crit" = "info";
   let score = 0;
 
-  const devIn = avgIn > 0 ? (cur.in - avgIn) / avgIn : 0;
-  const devOut = avgOut > 0 ? (cur.out - avgOut) / avgOut : 0;
-
-  if (Math.abs(devIn) >= 0.4) {
+  const dev = avg > 0 ? (cur - avg) / avg : 0;
+  if (Math.abs(dev) >= 0.4) {
     reasons.push(
-      `Receita ${devIn > 0 ? "acima" : "abaixo"} da média em ${(Math.abs(devIn) * 100).toFixed(0)}%.`,
+      `Movimento ${dev > 0 ? "acima" : "abaixo"} da média em ${(Math.abs(dev) * 100).toFixed(0)}%.`,
     );
-    severity = devIn < 0 ? "warn" : "info";
-    score = Math.min(1, Math.abs(devIn));
+    severity = dev < 0 ? "warn" : "info";
+    score = Math.min(1, Math.abs(dev));
+  } else {
+    reasons.push("Mês dentro da normalidade.");
   }
-  if (Math.abs(devOut) >= 0.4) {
-    reasons.push(
-      `Despesa ${devOut > 0 ? "acima" : "abaixo"} da média em ${(Math.abs(devOut) * 100).toFixed(0)}%.`,
-    );
-    if (devOut > 0) severity = "warn";
-    score = Math.max(score, Math.min(1, Math.abs(devOut)));
-  }
-  if (reasons.length === 0) reasons.push("Mês dentro da normalidade.");
 
   return [
     {
@@ -72,7 +59,7 @@ export async function analyzeFinanceAnomaly(userId: string): Promise<Intelligenc
       severity,
       score,
       reasons,
-      inputsHash: `fa:${currentYm}:${cur.in.toFixed(0)}:${cur.out.toFixed(0)}`,
+      inputsHash: `fa:${currentYm}:${cur.toFixed(0)}:${avg.toFixed(0)}`,
     },
   ];
 }

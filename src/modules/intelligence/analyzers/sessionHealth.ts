@@ -2,16 +2,15 @@ import { supabase } from "@/integrations/supabase/client";
 import type { IntelligenceUpsert } from "@/shared/intelligence";
 
 /**
- * Analyzer puro-ish: lê sessões ativas e produz sinais `session.health`.
- * Heurística v1 (sem LLM):
+ * Analyzer `session.health` — heurística v1 sem LLM.
  *  - pagamento pendente > 0 → warn.
- *  - data da sessão ≤ 7 dias e pagamento pendente → crit.
- *  - status "cancelado" → info (score 0, encerra sinal).
+ *  - sessão em ≤ 7 dias com pendência → crit.
+ *  - status contém "cancel" → info (score 0).
  */
 export async function analyzeSessionHealth(userId: string): Promise<IntelligenceUpsert[]> {
   const { data, error } = await supabase
     .from("clientes_sessoes")
-    .select("id, data, status, valor_total, valor_pago, cliente_nome")
+    .select("id, data_sessao, status, valor_total, valor_pago")
     .eq("user_id", userId)
     .limit(500);
   if (error) throw error;
@@ -27,7 +26,7 @@ export async function analyzeSessionHealth(userId: string): Promise<Intelligence
     let severity: "info" | "warn" | "crit" = "info";
     let score = 0;
 
-    const dt = s.data ? new Date(s.data as string).getTime() : null;
+    const dt = s.data_sessao ? new Date(s.data_sessao as string).getTime() : null;
     const daysUntil = dt ? Math.round((dt - now) / (1000 * 60 * 60 * 24)) : null;
 
     if (String(s.status ?? "").toLowerCase().includes("cancel")) {

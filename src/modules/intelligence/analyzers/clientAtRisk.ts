@@ -14,9 +14,9 @@ export async function analyzeClientAtRisk(userId: string): Promise<IntelligenceU
 
   const { data: sessions, error: sErr } = await supabase
     .from("clientes_sessoes")
-    .select("cliente_id, data")
+    .select("cliente_id, data_sessao")
     .eq("user_id", userId)
-    .gte("data", nowIso)
+    .gte("data_sessao", nowIso)
     .not("cliente_id", "is", null)
     .limit(500);
   if (sErr) return [];

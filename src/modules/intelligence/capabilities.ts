@@ -85,8 +85,8 @@ export const intelligenceRefreshCapability = defineCommand({
     signals: z.array(SignalSchema),
   }),
   permissions: ["intelligence:write"],
-  costHint: "moderate",
-  sideEffects: ["db.intelligence_signals.write"],
+  costHint: "medium",
+  sideEffects: ["db:intelligence_signals.write"],
   idempotencyKey: (input) => `intelligence.refresh:${input.kind}`,
   async handler(input, ctx) {
     if (!ctx.user?.id) {
