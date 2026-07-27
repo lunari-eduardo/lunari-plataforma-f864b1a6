@@ -124,11 +124,10 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: ['session-financials', sessionId] });
 
-    // Canal Realtime compartilhado por sessionId via registry global
-    // (sobrevive a code-splitting). Callbacks são anexados apenas na criação.
-    const key = financialsKey(sessionId);
-    acquireChannel(key, () => createFinancialsChannel(sessionId, invalidate));
-
+    // Nenhum canal Supabase é criado aqui: `useWorkflowRealtimeV2` já mantém
+    // um canal único por usuário e emite `workflow-session-financials-stale`
+    // para toda mudança relevante (transações, cobranças, parcelas, ledger,
+    // sessão, galeria). Este hook apenas escuta esses eventos internos.
     const bridgeHandler = (event: Event) => {
       const detail = (event as CustomEvent).detail || {};
       const affected = detail.sessionId ?? detail.session?.id;
@@ -146,7 +145,10 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     };
     const financialsStaleBridge = (event: Event) => {
       const detail = (event as CustomEvent).detail || {};
-      if (detail.sessionId === sessionId) invalidate();
+      // Realtime v2 emite `sessionId` (UUID) e às vezes só `sessionSlug`
+      // (quando o slug ainda não está no store). Aceitamos ambos.
+      const ids = [detail.sessionId, detail.sessionUuid, detail.sessionSlug].filter(Boolean);
+      if (ids.includes(sessionId)) invalidate();
     };
     window.addEventListener('workflow-session-updated', bridgeHandler as EventListener);
     window.addEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
@@ -154,13 +156,13 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     window.addEventListener('payment-created', paymentBridge as EventListener);
 
     return () => {
-      releaseChannel(key);
       window.removeEventListener('workflow-session-updated', bridgeHandler as EventListener);
       window.removeEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
       window.removeEventListener('payment-optimistic', paymentBridge as EventListener);
       window.removeEventListener('payment-created', paymentBridge as EventListener);
     };
   }, [sessionId, queryClient]);
+
 
   return {
     financials: query.data ?? { session_id: sessionId ?? '', ...ZERO },
