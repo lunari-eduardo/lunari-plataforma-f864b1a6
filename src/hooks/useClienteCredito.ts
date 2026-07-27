@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRunCapability, CapabilityError } from "@/shared/capability/react";
 import { isOk } from "@/shared/result";
+import { acquireChannel, releaseChannel } from "@/shared/realtime/channelRegistry";
 import {
   getClientCredit,
   applyClientCredit,
@@ -55,23 +56,26 @@ export function useClienteCredito(clienteId?: string | null, incluirHistorico = 
 
   useEffect(() => {
     if (!clienteId) return;
-    const channel = supabase
-      .channel(`credit-${clienteId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cliente_creditos_ledger",
-          filter: `cliente_id=eq.${clienteId}`,
-        },
-        () => {
-          qc.invalidateQueries({ queryKey: ["cliente-credito", clienteId] });
-        },
-      )
-      .subscribe();
+    const channelKey = `credit-${clienteId}`;
+    acquireChannel(channelKey, () =>
+      supabase
+        .channel(channelKey)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "cliente_creditos_ledger",
+            filter: `cliente_id=eq.${clienteId}`,
+          },
+          () => {
+            qc.invalidateQueries({ queryKey: ["cliente-credito", clienteId] });
+          },
+        )
+        .subscribe()
+    );
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(channelKey);
     };
   }, [clienteId, qc]);
 

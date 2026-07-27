@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import type { Contrato, ContratoCreateInput, ContratoStatus } from '@/types/contrato';
+import { acquireChannel, releaseChannel } from '@/shared/realtime/channelRegistry';
 
 const QK = 'contratos';
 
@@ -40,17 +41,20 @@ export function useContratos(opts: UseContratosOpts = {}) {
 
   // Realtime: ouve mudanças em contratos do usuário (atualizado por webhook/sync)
   useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`contratos-rt-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'contratos', filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: [QK] })
-      )
-      .subscribe();
+    if (!user?.id) return;
+    const channelKey = `contratos-rt-${user.id}`;
+    acquireChannel(channelKey, () =>
+      supabase
+        .channel(channelKey)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'contratos', filter: `user_id=eq.${user.id}` },
+          () => qc.invalidateQueries({ queryKey: [QK] })
+        )
+        .subscribe()
+    );
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(channelKey);
     };
   }, [user?.id, qc]);
 

@@ -19,6 +19,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { acquireChannel, releaseChannel } from '@/shared/realtime/channelRegistry';
 
 export interface GalleryExtraCalcSnapshot {
   success?: boolean;
@@ -151,21 +152,24 @@ export function useGalleryExtraCalc(
   // Realtime: invalida em UPDATE de galerias/cobrancas dessa galeria.
   useEffect(() => {
     if (!resolvedGalleryId) return;
-    const channel = supabase
-      .channel(`gallery-sync-${resolvedGalleryId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'galerias', filter: `id=eq.${resolvedGalleryId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['gallery-extra-calc', resolvedGalleryId] }),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'cobrancas', filter: `galeria_id=eq.${resolvedGalleryId}` },
-        () => queryClient.invalidateQueries({ queryKey: ['gallery-extra-calc', resolvedGalleryId] }),
-      )
-      .subscribe();
+    const channelKey = `gallery-sync-${resolvedGalleryId}`;
+    acquireChannel(channelKey, () =>
+      supabase
+        .channel(channelKey)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'galerias', filter: `id=eq.${resolvedGalleryId}` },
+          () => queryClient.invalidateQueries({ queryKey: ['gallery-extra-calc', resolvedGalleryId] }),
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'cobrancas', filter: `galeria_id=eq.${resolvedGalleryId}` },
+          () => queryClient.invalidateQueries({ queryKey: ['gallery-extra-calc', resolvedGalleryId] }),
+        )
+        .subscribe()
+    );
     return () => {
-      supabase.removeChannel(channel);
+      releaseChannel(channelKey);
     };
   }, [resolvedGalleryId, queryClient]);
 
