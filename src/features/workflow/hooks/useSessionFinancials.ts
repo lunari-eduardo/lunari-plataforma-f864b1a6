@@ -9,35 +9,22 @@
  * - Sem staleTime: valores financeiros devem refletir o DB o quanto antes.
  */
 import { useEffect } from 'react';
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { acquireChannel, releaseChannel } from '@/shared/realtime/channelRegistry';
 
 /**
- * Registry singleton por sessionId. Evita anexar `.on(postgres_changes)`
- * a um canal já `subscribe()`-ado quando dois consumidores (Collapsed +
- * Expanded, por exemplo) montam o hook para a mesma sessão.
+ * Chave estável do canal por sessionId. O registry vive em `globalThis`
+ * (ver `shared/realtime/channelRegistry`) — sobrevive a code-splitting e
+ * garante que Collapsed + Expanded + Modal usem o MESMO canal, sem
+ * anexar callbacks depois de `subscribe()`.
  */
-interface FinancialsChannelEntry {
-  channel: RealtimeChannel;
-  refCount: number;
-  queryClient: QueryClient;
+function financialsKey(sessionId: string) {
+  return `workflow:session-financials:${sessionId}`;
 }
-const financialsChannels = new Map<string, FinancialsChannelEntry>();
 
-function acquireFinancialsChannel(sessionId: string, queryClient: QueryClient): FinancialsChannelEntry {
-  const existing = financialsChannels.get(sessionId);
-  if (existing) {
-    existing.refCount++;
-    return existing;
-  }
-
-  const invalidate = () => {
-    const entry = financialsChannels.get(sessionId);
-    entry?.queryClient.invalidateQueries({ queryKey: ['session-financials', sessionId] });
-  };
-
-  const channel = supabase
+function createFinancialsChannel(sessionId: string, invalidate: () => void) {
+  return supabase
     .channel(`session-financials-${sessionId}`)
     .on(
       'postgres_changes',
@@ -76,26 +63,9 @@ function acquireFinancialsChannel(sessionId: string, queryClient: QueryClient): 
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'galerias' },
-      (payload) => {
-        const g: any = payload.new || payload.old;
-        if (!g) return;
-        invalidate();
-      },
+      () => invalidate(),
     )
     .subscribe();
-
-  const entry: FinancialsChannelEntry = { channel, refCount: 1, queryClient };
-  financialsChannels.set(sessionId, entry);
-  return entry;
-}
-
-function releaseFinancialsChannel(sessionId: string) {
-  const entry = financialsChannels.get(sessionId);
-  if (!entry) return;
-  if (--entry.refCount <= 0) {
-    supabase.removeChannel(entry.channel);
-    financialsChannels.delete(sessionId);
-  }
 }
 
 export interface SessionFinancials {
@@ -200,9 +170,10 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: ['session-financials', sessionId] });
 
-    // Canal Realtime compartilhado por sessionId (evita duplicar `.on()` em
-    // canal já subscrito quando Collapsed + Expanded montam simultaneamente).
-    acquireFinancialsChannel(sessionId, queryClient);
+    // Canal Realtime compartilhado por sessionId via registry global
+    // (sobrevive a code-splitting). Callbacks são anexados apenas na criação.
+    const key = financialsKey(sessionId);
+    acquireChannel(key, () => createFinancialsChannel(sessionId, invalidate));
 
     const bridgeHandler = (event: Event) => {
       const detail = (event as CustomEvent).detail || {};

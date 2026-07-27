@@ -134,23 +134,16 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Vendors estáveis
+          // Apenas vendors estáveis externos. NÃO agrupar código da aplicação
+          // aqui: fazer isso já causou ciclo `workflow-shared -> vendor ->
+          // workflow-shared` e TDZ em produção. Singletons de runtime (canais
+          // realtime, registries) devem viver em `globalThis`, não no chunk.
           if (id.includes('node_modules')) {
             if (id.includes('react-dom') || id.match(/[\\/]react[\\/]/)) return 'vendor';
             if (id.includes('react-router')) return 'router';
             if (id.includes('@radix-ui/react-dialog') ||
                 id.includes('@radix-ui/react-popover') ||
                 id.includes('@radix-ui/react-select')) return 'ui';
-          }
-          // Singletons compartilhados por múltiplos consumidores (Collapsed +
-          // Expanded + Modal). Se o code-splitting duplicar esses módulos,
-          // registries baseados em Map no escopo do módulo deixam de ser
-          // singleton — quebra realtime e causa "cannot add postgres_changes
-          // callbacks ... after subscribe()".
-          if (id.includes('/src/features/workflow/hooks/') ||
-              id.includes('/src/features/workflow/realtime/') ||
-              id.includes('/src/integrations/supabase/')) {
-            return 'workflow-shared';
           }
         }
       }
