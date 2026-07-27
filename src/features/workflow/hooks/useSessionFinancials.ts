@@ -9,8 +9,94 @@
  * - Sem staleTime: valores financeiros devem refletir o DB o quanto antes.
  */
 import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+/**
+ * Registry singleton por sessionId. Evita anexar `.on(postgres_changes)`
+ * a um canal já `subscribe()`-ado quando dois consumidores (Collapsed +
+ * Expanded, por exemplo) montam o hook para a mesma sessão.
+ */
+interface FinancialsChannelEntry {
+  channel: RealtimeChannel;
+  refCount: number;
+  queryClient: QueryClient;
+}
+const financialsChannels = new Map<string, FinancialsChannelEntry>();
+
+function acquireFinancialsChannel(sessionId: string, queryClient: QueryClient): FinancialsChannelEntry {
+  const existing = financialsChannels.get(sessionId);
+  if (existing) {
+    existing.refCount++;
+    return existing;
+  }
+
+  const invalidate = () => {
+    const entry = financialsChannels.get(sessionId);
+    entry?.queryClient.invalidateQueries({ queryKey: ['session-financials', sessionId] });
+  };
+
+  const channel = supabase
+    .channel(`session-financials-${sessionId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'clientes_sessoes', filter: `id=eq.${sessionId}` },
+      invalidate,
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'clientes_transacoes' },
+      (payload) => {
+        const n = (payload.new as any)?.session_id;
+        const o = (payload.old as any)?.session_id;
+        if (n === sessionId || o === sessionId) invalidate();
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'cliente_creditos_ledger' },
+      (payload) => {
+        const n1 = (payload.new as any)?.session_id_origem;
+        const n2 = (payload.new as any)?.session_id_consumo;
+        const o1 = (payload.old as any)?.session_id_origem;
+        const o2 = (payload.old as any)?.session_id_consumo;
+        if ([n1, n2, o1, o2].includes(sessionId)) invalidate();
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'cobrancas' },
+      (payload) => {
+        const n = (payload.new as any)?.session_id;
+        const o = (payload.old as any)?.session_id;
+        if (n === sessionId || o === sessionId) invalidate();
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'galerias' },
+      (payload) => {
+        const g: any = payload.new || payload.old;
+        if (!g) return;
+        invalidate();
+      },
+    )
+    .subscribe();
+
+  const entry: FinancialsChannelEntry = { channel, refCount: 1, queryClient };
+  financialsChannels.set(sessionId, entry);
+  return entry;
+}
+
+function releaseFinancialsChannel(sessionId: string) {
+  const entry = financialsChannels.get(sessionId);
+  if (!entry) return;
+  if (--entry.refCount <= 0) {
+    supabase.removeChannel(entry.channel);
+    financialsChannels.delete(sessionId);
+  }
+}
 
 export interface SessionFinancials {
   session_id: string;
