@@ -200,7 +200,7 @@ export function useSessionFinancials(sessionId: string | null | undefined) {
     window.addEventListener('payment-created', paymentBridge as EventListener);
 
     return () => {
-      releaseFinancialsChannel(sessionId);
+      releaseChannel(key);
       window.removeEventListener('workflow-session-updated', bridgeHandler as EventListener);
       window.removeEventListener('workflow-session-financials-stale', financialsStaleBridge as EventListener);
       window.removeEventListener('payment-optimistic', paymentBridge as EventListener);
