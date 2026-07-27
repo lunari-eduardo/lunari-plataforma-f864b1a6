@@ -59,7 +59,8 @@ export interface LunariAITool extends AICapabilityTool {
     | "observation"
     | "memory"
     | "intelligence"
-    | "decision";
+    | "decision"
+    | "learning";
   needsApproval: boolean;
   permissions: string[];
 }
