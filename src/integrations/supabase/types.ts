@@ -3630,6 +3630,45 @@ export type Database = {
         }
         Relationships: []
       }
+      intelligence_signals: {
+        Row: {
+          computed_at: string
+          expires_at: string
+          id: string
+          inputs_hash: string | null
+          kind: string
+          reasons: Json
+          scope_key: string
+          score: number
+          severity: string
+          user_id: string
+        }
+        Insert: {
+          computed_at?: string
+          expires_at?: string
+          id?: string
+          inputs_hash?: string | null
+          kind: string
+          reasons?: Json
+          scope_key: string
+          score?: number
+          severity?: string
+          user_id: string
+        }
+        Update: {
+          computed_at?: string
+          expires_at?: string
+          id?: string
+          inputs_hash?: string | null
+          kind?: string
+          reasons?: Json
+          scope_key?: string
+          score?: number
+          severity?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       knowledge_documents: {
         Row: {
           content: string
