@@ -1,5 +1,24 @@
 # Changelog — Constituição Lunari
 
+## v1.5 — 2026-07-27
+- **Onda 12 — Automation Engine v1** (ADR-006): única engine autorizada a
+  chamar `Kernel.execute` autonomamente. Novas tabelas `automation_rules`
+  (regras declaradas pelo fotógrafo, default `enabled=false`) e
+  `automation_runs` (append-only, auditoria total: `ok | failed | skipped |
+  denied | approval_required`). Idempotência garantida por unique index em
+  `(user_id, proposal_id) WHERE status='ok'`.
+- Kill-switch global via `app_settings.automation_enabled` (default: off).
+- Novo módulo `src/modules/automation/` com capabilities `automation.rules.list`,
+  `automation.rules.upsert`, `automation.rules.delete`, `automation.runs.list`
+  e `automation.tick`. Todas as escritas + `tick` exigem aprovação humana no
+  canal IA.
+- Kernel/Policy: novo canal `automation` + helper `automationActor(user)`.
+- Automation respeita Policy: se a capability alvo exige aprovação, registra
+  `approval_required` e não bypassa. Nunca modifica Intelligence, Decision
+  nem Learning — apenas consome `decision_proposals` `accepted`.
+
+
+
 ## v1.4 — 2026-07-27
 - **Onda 11.1 — Feedback loop Decision↔Learning**: `decisionStore.upsertMany`
   consulta `learning_patterns` do usuário e pula combinações `(capability_id,
