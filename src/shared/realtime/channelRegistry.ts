@@ -16,11 +16,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface Entry {
   channel: RealtimeChannel;
   refCount: number;
+  disposeTimer?: ReturnType<typeof setTimeout> | null;
 }
 
 const KEY = '__lunari_realtime_registry_v1__';
 const g = globalThis as unknown as Record<string, { channels: Map<string, Entry> } | undefined>;
 const store = (g[KEY] ??= { channels: new Map<string, Entry>() });
+const DISPOSE_GRACE_MS = 5_000;
 
 /**
  * Adquire (ou cria) um canal singleton por `key`.
@@ -33,11 +35,15 @@ export function acquireChannel(
 ): RealtimeChannel {
   const existing = store.channels.get(key);
   if (existing) {
+    if (existing.disposeTimer) {
+      clearTimeout(existing.disposeTimer);
+      existing.disposeTimer = null;
+    }
     existing.refCount++;
     return existing.channel;
   }
   const channel = factory();
-  store.channels.set(key, { channel, refCount: 1 });
+  store.channels.set(key, { channel, refCount: 1, disposeTimer: null });
   return channel;
 }
 
@@ -48,12 +54,23 @@ export function acquireChannel(
 export function releaseChannel(key: string): void {
   const entry = store.channels.get(key);
   if (!entry) return;
-  if (--entry.refCount <= 0) {
+  if (entry.refCount <= 0) return;
+  entry.refCount--;
+  if (entry.refCount === 0 && !entry.disposeTimer) {
+    // React StrictMode, chunk hydration and fast card expand/collapse can
+    // remount the same hook while Supabase is still removing the old topic.
+    // Keep the subscribed channel warm briefly so the next acquire reuses it
+    // instead of calling `.on()` on a channel Supabase still considers active.
+    entry.disposeTimer = setTimeout(() => {
+      const latest = store.channels.get(key);
+      if (!latest || latest !== entry || latest.refCount > 0) return;
+      latest.disposeTimer = null;
     try {
-      supabase.removeChannel(entry.channel);
+        supabase.removeChannel(latest.channel);
     } catch {
       /* noop */
     }
     store.channels.delete(key);
+    }, DISPOSE_GRACE_MS);
   }
 }
