@@ -21,6 +21,7 @@ import "@/modules/observation"; // Onda 7 — Observation Engine v1
 import "@/modules/memory"; // Onda 8 — Memory Engine v1
 import "@/modules/intelligence"; // Onda 9 — Intelligence Engine v1
 import "@/modules/decision"; // Onda 10 — Decision Engine v1
+import "@/modules/learning"; // Onda 11 — Learning Engine v1
 
 
 import { listWorkflowAITools } from "@/features/workflow/ai";
