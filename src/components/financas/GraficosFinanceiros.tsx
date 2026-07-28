@@ -77,7 +77,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
             <CardContent>
               <div className="h-64 flex flex-col items-center justify-center space-y-4">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-chart-primary mb-2">
+                  <div className="text-4xl font-bold text-foreground mb-2">
                     {roiData.roi.toFixed(1)}%
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">Retorno sobre Investimento</p>
@@ -89,15 +89,15 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Retorno Calculado:</span>
-                    <span className="font-medium text-chart-primary">
+                    <span className="font-medium text-foreground">
                       {formatCurrency(roiData.totalInvestimento * (roiData.roi / 100))}
                     </span>
                   </div>
                 </div>
-                {/* Indicador Visual do ROI */}
+                {/* Indicador Visual do ROI — barra monocromática */}
                 <div className="w-full bg-muted rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-chart-primary to-chart-secondary h-3 rounded-full transition-all duration-500"
+                  <div
+                    className="bg-foreground/85 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, Math.max(5, roiData.roi))}%` }}
                   />
                 </div>
