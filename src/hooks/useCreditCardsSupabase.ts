@@ -55,7 +55,6 @@ export function useCreditCardsSupabase() {
       return supabase
         .channel(CREDIT_CARDS_CHANNEL_KEY)
         .on(
-          // @ts-expect-error - supabase-js typing for postgres_changes is narrow
           'postgres_changes',
           { event: '*', schema: 'public', table: 'fin_credit_cards' },
           () => {
