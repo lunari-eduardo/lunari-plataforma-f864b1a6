@@ -371,19 +371,19 @@ export function useDashboardFinanceiro() {
 
   // ============= CÁLCULOS DE MÉTRICAS (KPIs DINÂMICOS) =============
   
-  const kpisData = useMemo((): KPIsData => {
-    // FONTE: Workflow em tempo real (filtrado por período)
-    const receitaOperacional = workflowMetrics.receita;
-    const valorPrevisto = workflowMetrics.previsto;
-    const aReceber = workflowMetrics.aReceber;
+  const kpisData = useMemo((): KPIsData & { receitaOperacional: number; receitaNaoOperacional: number } => {
+    // FONTE: Workflow (realtime para mês / agregado anual para "ano-completo")
+    const receitaOperacional = workflowPeriod.receita;
+    const valorPrevisto = workflowPeriod.previsto;
+    const aReceber = workflowPeriod.aReceber;
     
     // RECEITAS NÃO OPERACIONAIS (filtradas pelo período)
-    const receitasExtras = transacoesFiltradasPorPeriodo
+    const receitaNaoOperacional = transacoesFiltradasPorPeriodo
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
     // TOTAL DE RECEITAS
-    const totalReceita = receitaOperacional + receitasExtras;
+    const totalReceita = receitaOperacional + receitaNaoOperacional;
 
     // DESPESAS (filtradas pelo período)
     const totalDespesas = transacoesFiltradasPorPeriodo
@@ -394,23 +394,17 @@ export function useDashboardFinanceiro() {
     const totalLucro = totalReceita - totalDespesas;
     const saldoTotal = totalLucro;
 
-    console.log(`📊 KPIs (${anoSelecionado}/${mesSelecionado}):`, {
-      receitaOperacional: receitaOperacional.toFixed(2),
-      receitasExtras: receitasExtras.toFixed(2), 
-      totalReceita: totalReceita.toFixed(2),
-      totalDespesas: totalDespesas.toFixed(2),
-      fonte: 'supabase-realtime + query-anual'
-    });
-
     return {
       totalReceita,
       valorPrevisto,
       aReceber,
       totalDespesas,
       totalLucro,
-      saldoTotal
+      saldoTotal,
+      receitaOperacional,
+      receitaNaoOperacional,
     };
-  }, [workflowMetrics, transacoesFiltradasPorPeriodo, anoSelecionado, mesSelecionado]);
+  }, [workflowPeriod, transacoesFiltradasPorPeriodo]);
 
   // ============= ROI (SEMPRE DADOS ANUAIS) =============
   
