@@ -32,7 +32,7 @@ function BarraResultado({ mes, receita, lucro, maxAbs }: DadoMes & { maxAbs: num
       </div>
       <div className="text-right text-xs tabular-nums text-muted-foreground">
         <div className="text-foreground">{formatCurrency(receita)}</div>
-        <div className={lucroPositivo ? 'text-success' : 'text-destructive'}>{formatCurrency(lucro)}</div>
+        <div style={{ color: lucroPositivo ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))' }}>{formatCurrency(lucro)}</div>
       </div>
     </div>
   );
