@@ -4,21 +4,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-// Paleta para gráficos de barras/linhas (apenas cor principal)
-const BAR_LINE_COLORS = ['hsl(var(--chart-primary))'];
-
-// Paleta personalizada para gráficos de pizza/donut (10 cores sequenciais)
+// Paleta monocromática oficial (DNA Grafite) — cinza→preto.
+// Dourado (--chart-10 = --accent-gold) fica reservado a hover/tooltip.
 const PIE_COLORS = [
-  'hsl(var(--chart-primary))',
-  'hsl(var(--chart-secondary))',
-  'hsl(var(--chart-tertiary))',
-  'hsl(var(--chart-quaternary))',
-  'hsl(var(--chart-quinary))',
-  'hsl(var(--chart-senary))',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--chart-6))',
   'hsl(var(--chart-7))',
   'hsl(var(--chart-8))',
   'hsl(var(--chart-9))',
-  'hsl(var(--chart-10))'
 ];
 
 interface GraficosFinanceirosProps {
