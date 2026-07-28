@@ -486,7 +486,7 @@ export function useDashboardFinanceiro() {
       variacaoLucro: calcularVariacao(kpisData.totalLucro, lucroAnterior),
       variacaoDespesas: calcularVariacao(kpisData.totalDespesas, despesasAnterior)
     };
-  }, [anoSelecionado, mesSelecionado, kpisData, transacoesDoAno, workflowMetricsAnterior, periodoAnterior]);
+  }, [anoSelecionado, mesSelecionado, kpisData, transacoesDoAno, workflowMetricsAnterior, workflowMetricsByYearAnterior, isYearMode, periodoAnterior]);
 
   // ============= METAS (sempre da precificação no dashboard) =============
   
