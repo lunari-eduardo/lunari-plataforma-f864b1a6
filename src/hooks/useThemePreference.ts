@@ -59,7 +59,7 @@ export function useRemoteThemeSync(
         .from('user_theme_preferences')
         .upsert({
           user_id: user.id,
-          preset_id: theme.presetId,
+          preset_id: 'graphite',
           mode: theme.mode,
         }, { onConflict: 'user_id' });
       if (!error) lastSavedRef.current = serialized;
