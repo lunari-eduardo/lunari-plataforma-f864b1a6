@@ -255,6 +255,14 @@
     --accent-gold-hover:  40 45% 60%;
     --accent-gold-soft:   40 30% 22%;
 
+    /* Finance semantic (dark) */
+    --finance-positive:      145 28% 55%;
+    --finance-positive-soft: 145 25% 18%;
+    --finance-negative:      8 55% 55%;
+    --finance-negative-soft: 8 30% 20%;
+    --finance-warning:       36 65% 58%;
+    --finance-warning-soft:  36 40% 20%;
+
     /* surfaces dark — grafite puro */
     --surface-0: 0 0% 5%;    /* #0E0E0E fundo app */
     --surface-1: 0 0% 8%;
