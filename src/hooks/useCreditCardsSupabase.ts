@@ -48,29 +48,26 @@ export function useCreditCardsSupabase() {
     refetchOnReconnect: false,
   });
 
-  // ============= REALTIME SUBSCRIPTION (COM DEBOUNCE) =============
+  // ============= REALTIME SUBSCRIPTION (singleton via registry) =============
   useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout>;
-    
-    const channel = supabase
-      .channel('credit-cards-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'fin_credit_cards'
-      }, () => {
-        // Debounce de 500ms para evitar múltiplas invalidações em cascata
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
-        }, 500);
-      })
-      .subscribe();
-
-    return () => {
-      clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
-    };
+    acquireChannel(CREDIT_CARDS_CHANNEL_KEY, () => {
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      return supabase
+        .channel(CREDIT_CARDS_CHANNEL_KEY)
+        .on(
+          // @ts-expect-error - supabase-js typing for postgres_changes is narrow
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'fin_credit_cards' },
+          () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+            }, 500);
+          },
+        )
+        .subscribe();
+    });
+    return () => releaseChannel(CREDIT_CARDS_CHANNEL_KEY);
   }, [queryClient]);
 
   // ============= CRIAR CARTÃO =============
