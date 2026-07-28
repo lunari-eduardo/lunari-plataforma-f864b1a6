@@ -102,7 +102,10 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                         {dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : `em ${dias} dias`}
                       </div>
                     </div>
-                    <div className={`text-sm font-medium tabular-nums ${receita ? 'text-success' : 'text-foreground'}`}>
+                    <div
+                      className="text-sm font-medium tabular-nums"
+                      style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--foreground))' }}
+                    >
                       {receita ? '+' : '−'} {formatCurrency(t.valor)}
                     </div>
                   </li>
