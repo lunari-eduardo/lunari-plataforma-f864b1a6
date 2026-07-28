@@ -8,6 +8,9 @@ import {
   ConfiguracoesView,
 } from '@/modules/finance/presentation/components';
 import FluxoFinanceiroView from '@/modules/finance/presentation/fluxo/FluxoFinanceiroView';
+import FinanceHeader from '@/modules/finance/presentation/shell/FinanceHeader';
+import ModalNovoLancamentoRefatorado from '@/components/financas/ModalNovoLancamentoRefatorado';
+import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 
 type FinanceTab = 'visao-geral' | 'fluxo-financeiro' | 'gerenciar';
 
@@ -34,14 +37,19 @@ function resolveInitialTab(): FinanceTab {
 const NovaFinancas = memo(function NovaFinancas() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<FinanceTab>(resolveInitialTab);
+  const [novoAberto, setNovoAberto] = useState(false);
+  const financas = useNovoFinancas();
 
   const triggerClass =
-    'relative px-1 sm:px-3 py-3 text-sm font-medium bg-transparent rounded-none text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:content-[""] data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary flex items-center justify-center gap-2';
+    'relative px-1 sm:px-3 py-3 text-sm font-medium bg-transparent rounded-none text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:content-[""] data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-[2px] data-[state=active]:after:bg-accent-gold flex items-center justify-center gap-2';
 
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-background pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 py-0 my-0">
+          {/* Header global do módulo — botão fixo no canto superior direito */}
+          <FinanceHeader onNovoLancamento={() => setNovoAberto(true)} />
+
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FinanceTab)}>
             <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none justify-start gap-2 sm:gap-6">
               <TabsTrigger value="visao-geral" className={triggerClass}>
@@ -66,11 +74,19 @@ const NovaFinancas = memo(function NovaFinancas() {
               <FluxoFinanceiroView />
             </TabsContent>
 
-
             <TabsContent value="gerenciar" className="mt-6">
               <ConfiguracoesView />
             </TabsContent>
           </Tabs>
+
+          {/* Modal global — compartilhado por todas as abas via o botão do header */}
+          <ModalNovoLancamentoRefatorado
+            aberto={novoAberto}
+            onFechar={() => setNovoAberto(false)}
+            createTransactionEngine={financas.createTransactionEngine}
+            tipoLancamento="despesa"
+            scope="despesa"
+          />
         </div>
       </div>
     </ScrollArea>

@@ -7,7 +7,7 @@
  * + useNovoFinancas (mutations existentes) exatamente como já estavam.
  */
 import { memo, useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Plus } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
@@ -23,7 +23,6 @@ import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
-import ModalNovoLancamentoRefatorado from '@/components/financas/ModalNovoLancamentoRefatorado';
 
 type Chip = 'todos' | 'receitas' | 'despesas' | 'a_receber' | 'a_pagar';
 
@@ -46,7 +45,6 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailLinha, setDetailLinha] = useState<LinhaExtrato | null>(null);
-  const [novoAberto, setNovoAberto] = useState(false);
   const [valorMin, setValorMin] = useState('');
   const [valorMax, setValorMax] = useState('');
 
@@ -156,19 +154,14 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
 
   return (
     <div className="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Fluxo Financeiro</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gerencie todas as entradas e saídas do seu estúdio.
-          </p>
-        </div>
-        <Button size="sm" onClick={() => setNovoAberto(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" strokeWidth={1.75} />
-          Novo lançamento
-        </Button>
+      {/* Subtítulo da aba — o botão "Novo lançamento" vive no FinanceHeader global */}
+      <header className="pb-6">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">Fluxo Financeiro</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Gerencie todas as entradas e saídas do seu estúdio.
+        </p>
       </header>
+
 
       {/* Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 pb-4">
@@ -291,14 +284,6 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onDelete={handleBulkDelete}
       />
 
-      {/* Novo lançamento — reaproveita fluxo existente (modal) para preservar toda a lógica */}
-      <ModalNovoLancamentoRefatorado
-        aberto={novoAberto}
-        onFechar={() => setNovoAberto(false)}
-        createTransactionEngine={financas.createTransactionEngine}
-        tipoLancamento="despesa"
-        scope="despesa"
-      />
     </div>
   );
 });
