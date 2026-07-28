@@ -286,7 +286,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
 
         {/* 4 KPIs — Receita, Despesas, A Receber, A Pagar */}
         <MetricCard
-          label="Receita"
+          label="Receita operacional"
           value={kpis.totalReceita}
           delta={comparison.variacaoReceita}
           deltaLabel={comparison.labelComparacao}
