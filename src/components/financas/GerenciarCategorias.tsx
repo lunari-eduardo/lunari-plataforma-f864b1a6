@@ -13,14 +13,16 @@ interface GerenciarCategoriasProps {
   onRemoverCategoria: (categoriaId: string) => void;
 }
 
+// Escala monocromática neutra (DNA Grafite) — sem cores literais.
+// A distinção entre grupos é feita apenas pela variação de luminosidade.
 const tiposCategoria: { valor: TipoCategoria; label: string; cor: string }[] = [
-  { valor: 'despesa_fixa', label: 'Despesas Fixas', cor: '#ef4444' },
-  { valor: 'despesa_variavel', label: 'Despesas Variáveis', cor: '#f59e0b' },
-  { valor: 'investimento', label: 'Investimentos', cor: '#8b5cf6' },
-  { valor: 'receita_nao_operacional', label: 'Receitas Não Operacionais', cor: '#10b981' },
-  { valor: 'equipamento', label: 'Equipamentos', cor: '#6b7280' },
-  { valor: 'marketing', label: 'Marketing', cor: '#ec4899' },
-  { valor: 'acervo', label: 'Acervo', cor: '#14b8a6' }
+  { valor: 'despesa_fixa', label: 'Despesas Fixas', cor: 'hsl(var(--chart-2))' },
+  { valor: 'despesa_variavel', label: 'Despesas Variáveis', cor: 'hsl(var(--chart-3))' },
+  { valor: 'investimento', label: 'Investimentos', cor: 'hsl(var(--chart-4))' },
+  { valor: 'receita_nao_operacional', label: 'Receitas Não Operacionais', cor: 'hsl(var(--chart-1))' },
+  { valor: 'equipamento', label: 'Equipamentos', cor: 'hsl(var(--chart-5))' },
+  { valor: 'marketing', label: 'Marketing', cor: 'hsl(var(--chart-6))' },
+  { valor: 'acervo', label: 'Acervo', cor: 'hsl(var(--chart-7))' }
 ];
 
 export default function GerenciarCategorias({ 
@@ -31,7 +33,7 @@ export default function GerenciarCategorias({
   const [novaCategoria, setNovaCategoria] = useState({
     nome: '',
     tipo: 'despesa_fixa' as TipoCategoria,
-    cor: '#ef4444'
+    cor: 'hsl(var(--chart-2))'
   });
   const [adicionandoSubcategoria, setAdicionandoSubcategoria] = useState<string | null>(null);
   const [nomeSubcategoria, setNomeSubcategoria] = useState('');
@@ -50,7 +52,7 @@ export default function GerenciarCategorias({
     setNovaCategoria({
       nome: '',
       tipo: 'despesa_fixa',
-      cor: '#ef4444'
+      cor: 'hsl(var(--chart-2))'
     });
   };
 

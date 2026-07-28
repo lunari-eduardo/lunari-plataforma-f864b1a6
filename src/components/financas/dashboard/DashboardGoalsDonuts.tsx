@@ -40,7 +40,7 @@ export function DashboardGoalsDonuts({ metasData }: GoalsDonutsProps) {
                     strokeWidth={2} 
                     stroke="hsl(var(--card))"
                   >
-                    <Cell fill="hsl(var(--chart-revenue))" />
+                    <Cell fill="hsl(var(--chart-1))" />
                     <Cell fill="hsl(var(--muted))" opacity={0.3} />
                   </Pie>
                   <text 
@@ -97,7 +97,7 @@ export function DashboardGoalsDonuts({ metasData }: GoalsDonutsProps) {
                     strokeWidth={2} 
                     stroke="hsl(var(--card))"
                   >
-                    <Cell fill="hsl(var(--chart-secondary))" />
+                    <Cell fill="hsl(var(--chart-2))" />
                     <Cell fill="hsl(var(--muted))" opacity={0.3} />
                   </Pie>
                   <text 
@@ -154,7 +154,7 @@ export function DashboardGoalsDonuts({ metasData }: GoalsDonutsProps) {
                     strokeWidth={2} 
                     stroke="hsl(var(--card))"
                   >
-                    <Cell fill="hsl(var(--chart-primary))" />
+                    <Cell fill="hsl(var(--chart-1))" />
                     <Cell fill="hsl(var(--muted))" opacity={0.3} />
                   </Pie>
                   <text 

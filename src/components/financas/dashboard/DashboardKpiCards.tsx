@@ -95,7 +95,7 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
                   <Landmark className="h-4 w-4 text-primary" />
                 </div>
               </div>
-              <div className="text-xl font-bold text-chart-primary mt-2">
+              <div className="text-xl font-bold text-foreground mt-2">
                 {formatCurrency(kpisData.saldoTotal)}
               </div>
             </div>

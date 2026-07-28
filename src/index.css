@@ -163,15 +163,16 @@
     --shadow-md: var(--shadow-2);
     --shadow-lg: var(--shadow-3);
 
-    /* sidebar (light) — grafite claro, sem dourado de fundo */
-    --sidebar-bg: 0 0% 100%;
-    --sidebar-fg: var(--text-primary);
-    --sidebar-accent: 0 0% 9%;
-    --sidebar-accent-fg: 0 0% 98%;
-    --sidebar-muted: 40 6% 96%;
-    --sidebar-muted-fg: var(--text-primary);
-    --sidebar-border: 40 8% 92%;
-    --sidebar-ring: 0 0% 9%;
+    /* sidebar (light) — travada em grafite profundo, igual ao dark.
+       Sidebar NÃO acompanha o tema; é assinatura da marca. */
+    --sidebar-bg: 0 0% 9%;               /* #171717 */
+    --sidebar-fg: 40 12% 94%;
+    --sidebar-accent: 0 0% 100% / 0.06;  /* fundo do item ativo */
+    --sidebar-accent-fg: 40 12% 98%;
+    --sidebar-muted: 0 0% 12%;
+    --sidebar-muted-fg: 40 12% 94%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 40 25% 90%;
 
 
     /* Landing (keep as historical aliases) */
@@ -180,8 +181,9 @@
     --landing-accent: var(--brand-h) var(--brand-s) var(--brand-l);
     --landing-brand:  var(--brand-h) var(--brand-s) var(--brand-l);
 
-    --brand: 27 96% 61%;
-    --brand-foreground: 31 97% 72%;
+    /* `brand` alias — sempre resolve para o grafite oficial (sem laranja legado) */
+    --brand: var(--brand-h) var(--brand-s) var(--brand-l);
+    --brand-foreground: var(--text-inverse);
 
     --task-priority-high: 0 100% 67%;
     --task-priority-medium: 48 100% 75%;
