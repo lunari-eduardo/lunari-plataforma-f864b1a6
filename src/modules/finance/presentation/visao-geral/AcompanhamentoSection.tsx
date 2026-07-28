@@ -157,27 +157,40 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                 const dias = Math.abs(diasAte(t.dataVencimento));
                 const receita = isReceita(t);
                 return (
-                  <li key={t.id} className="py-3 flex items-center gap-4">
-                    <div
-                      className="w-14 text-xs uppercase tabular-nums"
-                      style={{ color: 'hsl(var(--finance-warning))' }}
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openFluxoAndFocus({
+                          transacaoId: t.id,
+                          dataVencimento: t.dataVencimento,
+                          tipo: receita ? 'entrada' : 'saida',
+                        })
+                      }
+                      className="group w-full py-3 flex items-center gap-4 rounded-lg -mx-2 px-2 hover:bg-muted/40 transition-colors text-left"
                     >
-                      {formatDataCurta(t.dataVencimento)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-foreground truncate">
-                        {t.observacoes || t.item?.nome || 'Lançamento'}
+                      <div
+                        className="w-14 text-xs uppercase tabular-nums"
+                        style={{ color: 'hsl(var(--finance-warning))' }}
+                      >
+                        {formatDataCurta(t.dataVencimento)}
                       </div>
-                      <div className="text-xs" style={{ color: 'hsl(var(--finance-warning))' }}>
-                        {dias === 1 ? 'vence há 1 dia' : `vence há ${dias} dias`}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-foreground truncate">
+                          {t.observacoes || t.item?.nome || 'Lançamento'}
+                        </div>
+                        <div className="text-xs" style={{ color: 'hsl(var(--finance-warning))' }}>
+                          {dias === 1 ? 'vence há 1 dia' : `vence há ${dias} dias`}
+                        </div>
                       </div>
-                    </div>
-                    <div
-                      className="text-sm font-medium tabular-nums"
-                      style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))' }}
-                    >
-                      {receita ? '+' : '−'} {formatCurrency(t.valor)}
-                    </div>
+                      <div
+                        className="text-sm font-medium tabular-nums"
+                        style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))' }}
+                      >
+                        {receita ? '+' : '−'} {formatCurrency(t.valor)}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
                   </li>
                 );
               })}
