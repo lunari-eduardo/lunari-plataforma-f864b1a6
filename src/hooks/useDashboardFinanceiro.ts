@@ -11,6 +11,8 @@ import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
 import { EQUIPMENT_SYNC_EVENT, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
+import { calcularPeriodoEfetivo, dividirRealVsFuturo } from '@/modules/finance/domain/periodoEfetivo';
+import { preverMeses } from '@/modules/finance/domain/forecast';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
