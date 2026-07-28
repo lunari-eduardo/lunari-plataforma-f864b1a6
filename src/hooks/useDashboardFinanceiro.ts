@@ -13,6 +13,7 @@ import { pricingFinancialIntegrationService } from '@/services/PricingFinancialI
 import { EQUIPMENT_SYNC_EVENT, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
 import { calcularPeriodoEfetivo, dividirRealVsFuturo } from '@/modules/finance/domain/periodoEfetivo';
 import { preverMeses } from '@/modules/finance/domain/forecast';
+import { useOpeningBalance } from '@/hooks/useOpeningBalance';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
