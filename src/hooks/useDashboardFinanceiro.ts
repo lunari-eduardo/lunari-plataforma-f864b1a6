@@ -490,33 +490,52 @@ export function useDashboardFinanceiro() {
 
   // ============= METAS (sempre da precificação no dashboard) =============
   
-  const metasData = useMemo((): MetasData => {
+  const metasData = useMemo((): MetasData & { metaReceitaProporcional: number; metaLucroProporcional: number } => {
     // Dashboard financeiro SEMPRE usa metas da precificação (referência de saúde do negócio)
-    let metaReceita = 0;
-    let metaLucro = 0;
-    
+    let metaReceitaAnual = 0;
+    let metaLucroAnual = 0;
+
     try {
       const goalsData = GoalsIntegrationService.getAnnualGoals();
-      metaReceita = goalsData.revenue;
-      metaLucro = goalsData.profit;
+      metaReceitaAnual = goalsData.revenue;
+      metaLucroAnual = goalsData.profit;
     } catch (error) {
       console.warn('Erro ao carregar metas da precificação:', error);
     }
-    
-    // Ajustar metas se filtro de mês específico (dividir por 12)
+
+    let metaReceita = metaReceitaAnual;
+    let metaLucro = metaLucroAnual;
+    let metaReceitaProporcional = metaReceitaAnual;
+    let metaLucroProporcional = metaLucroAnual;
+
+    const hoje = new Date();
+    const anoCorrente = hoje.getFullYear();
+    const mesCorrente = hoje.getMonth() + 1;
+
     if (mesSelecionado && mesSelecionado !== 'ano-completo' && mesSelecionado !== 'personalizado') {
-      metaReceita = metaReceita / 12;
-      metaLucro = metaLucro / 12;
+      // Modo mensal: meta do mês = anual/12
+      metaReceita = metaReceitaAnual / 12;
+      metaLucro = metaLucroAnual / 12;
+      metaReceitaProporcional = metaReceita;
+      metaLucroProporcional = metaLucro;
+    } else if (mesSelecionado === 'ano-completo') {
+      // Meta proporcional aos meses decorridos
+      let mesesDecorridos = 12;
+      if (ano > anoCorrente) mesesDecorridos = 0;
+      else if (ano === anoCorrente) mesesDecorridos = mesCorrente;
+      metaReceitaProporcional = (metaReceitaAnual * mesesDecorridos) / 12;
+      metaLucroProporcional = (metaLucroAnual * mesesDecorridos) / 12;
     }
-    // Para período personalizado: manter meta anual fixa (não dividir)
-    
+
     return {
       metaReceita,
       metaLucro,
+      metaReceitaProporcional,
+      metaLucroProporcional,
       receitaAtual: kpisData.totalReceita,
       lucroAtual: kpisData.totalLucro
     };
-  }, [kpisData, mesSelecionado]);
+  }, [kpisData, mesSelecionado, ano]);
 
   // ============= DADOS PARA GRÁFICOS (SEMPRE ANUAIS) =============
   
