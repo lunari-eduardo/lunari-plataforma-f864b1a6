@@ -232,22 +232,35 @@
   }
 
   .dark {
-    /* surfaces dark — também derivadas de surface-hue/sat */
-    --surface-0: var(--surface-hue) calc(var(--surface-sat) * 0.5) 6%;
-    --surface-1: var(--surface-hue) calc(var(--surface-sat) * 0.4) 10%;
-    --surface-2: var(--surface-hue) calc(var(--surface-sat) * 0.35) 13%;
-    --surface-3: var(--surface-hue) calc(var(--surface-sat) * 0.30) 17%;
-    --surface-4: var(--surface-hue) calc(var(--surface-sat) * 0.30) 15%;
-    --surface-5: 30 15% 95%;
+    /* ── 1. BRAND OVERRIDE (dark) ──────────────────────────
+       Botão primário no dark = dourado bem suave, quase branco.
+       Texto do botão vira grafite (contraste alto). */
+    --brand-h: 40;
+    --brand-s: 25%;
+    --brand-l: 90%;         /* #EDE7DA quase branco morno */
+    --brand-hover-l: 84%;
+    --brand-glow-l: 96%;
 
-    --text-primary:   30 15% 95%;
-    --text-secondary: 30 12% 80%;
-    --text-muted:     30 10% 55%;
-    --text-inverse:   20 15% 6%;
+    --accent-gold:        40 45% 66%;   /* #D4B57C — ícones IA/badges */
+    --accent-gold-hover:  40 45% 60%;
+    --accent-gold-soft:   40 30% 22%;
 
-    --border-subtle:  20 15% 18%;
-    --border-default: 20 15% 22%;
-    --border-strong:  20 15% 30%;
+    /* surfaces dark — grafite puro */
+    --surface-0: 0 0% 5%;    /* #0E0E0E fundo app */
+    --surface-1: 0 0% 8%;
+    --surface-2: 0 0% 9%;    /* #171717 card */
+    --surface-3: 0 0% 12%;   /* #1F1F1F elevado */
+    --surface-4: 0 0% 15%;
+    --surface-5: 0 0% 96%;
+
+    --text-primary:   40 12% 94%;   /* #F2F2EE */
+    --text-secondary: 40 6%  73%;
+    --text-muted:     0  0%  48%;
+    --text-inverse:   0  0%  5%;    /* usado como texto sobre CTA claro */
+
+    --border-subtle:  0 0% 14%;
+    --border-default: 0 0% 18%;
+    --border-strong:  0 0% 28%;
 
     --glass-tint:         0 0% 100%;
     --glass-alpha-light:  0.03;
@@ -263,31 +276,29 @@
     --shadow-3: 0 6px 16px rgba(0, 0, 0, 0.30);
     --shadow-4: 0 12px 28px rgba(0, 0, 0, 0.40);
     --shadow-5: 0 24px 48px rgba(0, 0, 0, 0.50);
-    --shadow-glow: 0 0 30px hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.10);
+    --shadow-glow: 0 0 30px hsl(0 0% 100% / 0.05);
 
-    --state-hover-alpha:  0.10;
-    --state-active-alpha: 0.16;
+    --state-hover-alpha:  0.08;
+    --state-active-alpha: 0.14;
+    --state-focus-ring:   40 25% 90%;
 
-    --success: 150 53% 55%;
-    --warning: 42 80% 60%;
-    --error:   0 72% 55%;
-    --info:    210 85% 60%;
+    /* Semantic dark — mais luminoso */
+    --success: 152 38% 52%;
+    --warning: 42 55% 62%;
+    --error:   4 58% 60%;
+    --info:    210 42% 62%;
 
-    /* Brand colors override */
-    --brand: 31 97% 72%;
-    --brand-foreground: 27 96% 61%;
-
-    /* Charts dark — também derivados, com lightness elevado p/ contraste */
-    --chart-1:  var(--brand-h) var(--brand-s) calc(var(--brand-l) + 8%);
-    --chart-2:  var(--brand-h) calc(var(--brand-s) * 0.85) calc(var(--brand-l) + 18%);
-    --chart-3:  var(--brand-h) calc(var(--brand-s) * 0.70) calc(var(--brand-l) - 5%);
-    --chart-4:  calc(var(--brand-h) + 18) calc(var(--brand-s) * 0.80) calc(var(--brand-l) + 20%);
-    --chart-5:  calc(var(--brand-h) - 12) calc(var(--brand-s) * 0.60) calc(var(--brand-l) + 25%);
-    --chart-6:  var(--brand-h) calc(var(--brand-s) * 0.55) calc(var(--brand-l) + 12%);
-    --chart-7:  calc(var(--brand-h) + 30) calc(var(--brand-s) * 0.50) calc(var(--brand-l) + 30%);
-    --chart-8:  calc(var(--brand-h) - 20) calc(var(--brand-s) * 0.45) calc(var(--brand-l) + 35%);
-    --chart-9:  var(--brand-h) calc(var(--brand-s) * 0.30) calc(var(--brand-l) + 40%);
-    --chart-10: var(--brand-h) calc(var(--brand-s) * 0.20) calc(var(--brand-l) + 45%);
+    /* Charts dark — monocromático em escala clara */
+    --chart-1:  0 0% 92%;
+    --chart-2:  0 0% 78%;
+    --chart-3:  0 0% 64%;
+    --chart-4:  0 0% 52%;
+    --chart-5:  0 0% 42%;
+    --chart-6:  0 0% 34%;
+    --chart-7:  0 0% 28%;
+    --chart-8:  0 0% 22%;
+    --chart-9:  0 0% 18%;
+    --chart-10: var(--accent-gold);
 
     /* Event tokens — dark variants with elevated lightness */
     --event-confirmed: 217 91% 65%;
@@ -304,26 +315,27 @@
     --event-blocked-bg: 0 60% 25%;
     --event-available: 152 60% 55%;
 
-    /* sidebar dark */
-    --sidebar-bg: 20 12% 9%;
-    --sidebar-fg: var(--text-primary);
-    --sidebar-accent: var(--brand-h) var(--brand-s) var(--brand-l);
-    --sidebar-accent-fg: var(--text-inverse);
-    --sidebar-muted: 20 10% 14%;
-    --sidebar-muted-fg: var(--text-primary);
-    --sidebar-border: 20 15% 18%;
-    --sidebar-ring: var(--brand-h) var(--brand-s) var(--brand-l);
+    /* sidebar dark — grafite profundo, item ativo com ícone dourado */
+    --sidebar-bg: 0 0% 9%;              /* #171717 */
+    --sidebar-fg: 40 12% 94%;
+    --sidebar-accent: 0 0% 100% / 0.06; /* fundo do item ativo */
+    --sidebar-accent-fg: 40 12% 98%;
+    --sidebar-muted: 0 0% 12%;
+    --sidebar-muted-fg: 40 12% 94%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 40 25% 90%;
 
-    /* terra dark — manter ligeiramente diferentes para gradientes */
-    --terra-50: 20 15% 14%;
-    --terra-100: 20 18% 18%;
+    /* terra dark — legacy */
+    --terra-50: 0 0% 12%;
+    --terra-100: 0 0% 16%;
 
-    /* Gradientes modernos (dark) */
-    --gradient-brand: linear-gradient(135deg, hsl(var(--brand-h) var(--brand-s) var(--brand-l)), hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.8));
+    /* Gradientes modernos (dark) — neutros */
+    --gradient-brand: linear-gradient(135deg, hsl(0 0% 96%), hsl(0 0% 88%));
     --gradient-card: linear-gradient(135deg, hsl(var(--surface-2)), hsl(var(--surface-1)));
     --gradient-subtle: linear-gradient(180deg, hsl(var(--surface-2) / 0.5), transparent);
   }
 }
+
 
 @layer base {
   * { @apply border-border; }
