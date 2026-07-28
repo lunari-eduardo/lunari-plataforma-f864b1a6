@@ -599,6 +599,25 @@ export function useDashboardFinanceiro() {
     });
   }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano]);
 
+  // ============= PERÍODO EFETIVO + PREVISÃO =============
+
+  const periodoEfetivo = useMemo(() => {
+    const modo: 'mensal' | 'anual' | 'personalizado' =
+      mesSelecionado === 'ano-completo' ? 'anual'
+      : mesSelecionado === 'personalizado' ? 'personalizado'
+      : 'mensal';
+    return calcularPeriodoEfetivo(ano, modo, dadosMensais);
+  }, [ano, mesSelecionado, dadosMensais]);
+
+  const { dadosMensaisReais, previsaoMensais } = useMemo(() => {
+    if (periodoEfetivo.modo !== 'anual') {
+      return { dadosMensaisReais: dadosMensais, previsaoMensais: [] as any[] };
+    }
+    const { reais } = dividirRealVsFuturo(dadosMensais, periodoEfetivo);
+    const previsao = preverMeses(dadosMensais, periodoEfetivo.ultimoMesComDados);
+    return { dadosMensaisReais: reais, previsaoMensais: previsao };
+  }, [dadosMensais, periodoEfetivo]);
+
   // ============= COMPOSIÇÃO DE DESPESAS (SEMPRE ANUAL) =============
   
   const composicaoDespesas = useMemo((): ComposicaoDespesas[] => {
