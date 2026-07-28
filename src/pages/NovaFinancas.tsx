@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LayoutDashboard, ArrowLeftRight, SlidersHorizontal } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,6 +11,7 @@ import FluxoFinanceiroView from '@/modules/finance/presentation/fluxo/FluxoFinan
 import FinanceHeader from '@/modules/finance/presentation/shell/FinanceHeader';
 import ModalNovoLancamentoRefatorado from '@/components/financas/ModalNovoLancamentoRefatorado';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import { FINANCE_SWITCH_TAB_EVENT, type FinanceTabName } from '@/modules/finance/presentation/navigation';
 
 type FinanceTab = 'visao-geral' | 'fluxo-financeiro' | 'gerenciar';
 
@@ -39,6 +40,17 @@ const NovaFinancas = memo(function NovaFinancas() {
   const [activeTab, setActiveTab] = useState<FinanceTab>(resolveInitialTab);
   const [novoAberto, setNovoAberto] = useState(false);
   const financas = useNovoFinancas();
+
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent<FinanceTabName>).detail;
+      if (detail === 'visao-geral' || detail === 'fluxo-financeiro' || detail === 'gerenciar') {
+        setActiveTab(detail);
+      }
+    };
+    window.addEventListener(FINANCE_SWITCH_TAB_EVENT, handler as EventListener);
+    return () => window.removeEventListener(FINANCE_SWITCH_TAB_EVENT, handler as EventListener);
+  }, []);
 
   const triggerClass =
     'relative px-1 sm:px-3 py-3 text-sm font-medium bg-transparent rounded-none text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:content-[""] data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-[2px] data-[state=active]:after:bg-accent-gold flex items-center justify-center gap-2';
