@@ -55,15 +55,16 @@
 
 
     /* ── 3. TEXT ──────────────────────────────────────────── */
-    --text-primary:   20 20% 12%;
-    --text-secondary: 20 15% 25%;
-    --text-muted:     20 10% 45%;
-    --text-inverse:   30 30% 98%;
+    --text-primary:   0 0% 9%;      /* #171717 */
+    --text-secondary: 0 0% 29%;     /* #4A4A4A */
+    --text-muted:     0 0% 54%;     /* #8A8A8A */
+    --text-inverse:   0 0% 98%;     /* branco puro */
 
     /* ── 4. BORDERS ───────────────────────────────────────── */
-    --border-subtle:  30 30% 88%;
-    --border-default: 30 30% 80%;
-    --border-strong:  30 25% 70%;
+    --border-subtle:  40 8% 92%;    /* #EAEAE6 */
+    --border-default: 40 5% 85%;    /* #D8D8D2 */
+    --border-strong:  40 4% 72%;
+
 
     /* ── 5. GLASS ─────────────────────────────────────────── */
     --glass-tint:         0 0% 100%;  /* base color of the glass */
