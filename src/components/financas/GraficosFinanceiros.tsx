@@ -156,21 +156,21 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                 }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorFluxoCaixa" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.1} />
+                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
                     </linearGradient>
                    </defs>
                    <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
-                  <Tooltip 
-                    formatter={(value: any) => [formatCurrency(value), 'Saldo Acumulado']} 
+                  <Tooltip
+                    formatter={(value: any) => [formatCurrency(value), 'Saldo Acumulado']}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px'
-                    }} 
+                    }}
                   />
-                  <Area type="monotone" dataKey="saldoAcumulado" stroke="hsl(var(--chart-tertiary))" fillOpacity={1} fill="url(#colorFluxoCaixa)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="saldoAcumulado" stroke="hsl(var(--chart-1))" fillOpacity={1} fill="url(#colorFluxoCaixa)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
