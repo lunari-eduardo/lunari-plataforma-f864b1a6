@@ -141,7 +141,7 @@ export function useWorkflowMetricsByYear(year: number): WorkflowMetricsByYear {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [year]);
+  }, [year, userId]);
 
   // Calcular totais anuais
   const totalAnual = metricsPorMes.reduce(
