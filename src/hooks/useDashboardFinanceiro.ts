@@ -265,13 +265,13 @@ export function useDashboardFinanceiro() {
     return { startDate: `${ano}-01-01`, endDate: `${ano}-12-31` };
   }, [ano, mesSelecionado, dataInicio, dataFim]);
 
+  const dashUserId = useCurrentUserId();
+
   // Query dedicada para transações do período selecionado
   const { data: transacoesDoAno = [] } = useQuery({
-    queryKey: ['dashboard-transactions-period', startDate, endDate],
+    queryKey: ['dashboard-transactions-period', dashUserId, startDate, endDate],
+    enabled: !!dashUserId,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      
       const { data, error } = await supabase
         .from('fin_transactions')
         .select(`
@@ -287,16 +287,16 @@ export function useDashboardFinanceiro() {
             grupo_principal
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', dashUserId!)
         .gte('data_vencimento', startDate)
         .lte('data_vencimento', endDate)
         .order('data_vencimento', { ascending: true });
-      
+
       if (error) {
         console.error('Erro ao buscar transações do período:', error);
         return [];
       }
-      
+
       // Transformar para formato interno
       return (data || []).map((t: any) => ({
         id: t.id,
