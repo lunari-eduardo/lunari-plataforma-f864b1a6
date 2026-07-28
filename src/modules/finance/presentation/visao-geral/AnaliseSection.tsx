@@ -1,14 +1,16 @@
 /**
  * Seção 3 — Análise Financeira.
- * Fluxo de caixa (Receita · Despesas · Saldo Acumulado) em largura total.
- * O bloco "Resultado mês a mês" foi removido — a informação está integrada na linha do saldo.
+ * Fluxo de caixa com dados reais + previsão pontilhada opcional.
  */
 import { memo } from 'react';
 import FluxoCaixaChart, { type FluxoCaixaPonto } from './FluxoCaixaChart';
 
-interface Props { dadosMensais: FluxoCaixaPonto[]; }
+interface Props {
+  dadosMensais: FluxoCaixaPonto[];
+  previsao?: FluxoCaixaPonto[];
+}
 
-export const AnaliseSection = memo(function AnaliseSection({ dadosMensais }: Props) {
+export const AnaliseSection = memo(function AnaliseSection({ dadosMensais, previsao }: Props) {
   return (
     <section aria-labelledby="secao-analise" className="space-y-4">
       <header>
@@ -29,7 +31,7 @@ export const AnaliseSection = memo(function AnaliseSection({ dadosMensais }: Pro
             </p>
           </div>
         </div>
-        <FluxoCaixaChart dados={dadosMensais} height={260} />
+        <FluxoCaixaChart dados={dadosMensais} previsao={previsao} height={260} />
       </div>
     </section>
   );

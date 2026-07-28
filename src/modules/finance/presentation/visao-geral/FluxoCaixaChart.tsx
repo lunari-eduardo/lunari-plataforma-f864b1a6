@@ -17,6 +17,7 @@ export interface FluxoCaixaPonto {
 
 interface Props {
   dados: FluxoCaixaPonto[];
+  previsao?: FluxoCaixaPonto[];
   height?: number;
 }
 
@@ -44,7 +45,7 @@ function catmullRom2bezier(points: { x: number; y: number }[]): string {
   return d.join(' ');
 }
 
-export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, height = 240 }: Props) {
+export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, previsao = [], height = 240 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -64,20 +65,23 @@ export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, height = 2
     return () => ro.disconnect();
   }, []);
 
+  const allPoints = useMemo(() => [...dados, ...previsao], [dados, previsao]);
+  const nReal = dados.length;
+
   const layout = useMemo(() => {
     const width = Math.max(1, containerWidth ?? 0);
     const padding = { top: 20, right: 24, bottom: 30, left: 12 };
     const w = Math.max(1, width - padding.left - padding.right);
     const h = height - padding.top - padding.bottom;
 
-    const vals = dados.flatMap((d) => [d.receita, d.despesas, d.saldoAcumulado]);
+    const vals = allPoints.flatMap((d) => [d.receita, d.despesas, d.saldoAcumulado]);
     const rawMax = Math.max(...vals, 0);
     const rawMin = Math.min(...vals, 0);
     const pad = (rawMax - rawMin) * 0.1 || 1;
     const max = rawMax + pad;
     const min = rawMin - pad;
     const range = max - min || 1;
-    const stepX = dados.length > 1 ? w / (dados.length - 1) : 0;
+    const stepX = allPoints.length > 1 ? w / (allPoints.length - 1) : 0;
 
     const project = (v: number, i: number) => ({
       x: padding.left + i * stepX,
@@ -86,41 +90,47 @@ export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, height = 2
 
     const zeroY = padding.top + h - ((0 - min) / range) * h;
 
-    const series = SERIES.map((s) => ({
-      ...s,
-      points: dados.map((d, i) => project((d as any)[s.key], i)),
-    }));
-
-    const gridLines = Array.from({ length: 4 }, (_, i) => {
-      const yy = padding.top + (h / 3) * i;
-      return { y: yy };
+    const series = SERIES.map((s) => {
+      const pts = allPoints.map((d, i) => project((d as any)[s.key], i));
+      return {
+        ...s,
+        pointsReal: pts.slice(0, nReal),
+        // Inclui último ponto real para conectar continuamente com a previsão
+        pointsForecast: nReal > 0 && previsao.length > 0
+          ? pts.slice(nReal - 1)
+          : pts.slice(nReal),
+        allPoints: pts,
+      };
     });
 
+    const gridLines = Array.from({ length: 4 }, (_, i) => ({ y: padding.top + (h / 3) * i }));
+
     return { width, height, padding, w, h, stepX, zeroY, series, gridLines, min, max };
-  }, [dados, height, containerWidth]);
+  }, [allPoints, nReal, previsao.length, height, containerWidth]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       const svg = svgRef.current;
       if (!svg) return;
-      if (dados.length === 0) return;
-      if (dados.length === 1) { setHoverIdx(0); return; }
+      if (allPoints.length === 0) return;
+      if (allPoints.length === 1) { setHoverIdx(0); return; }
       const rect = svg.getBoundingClientRect();
       const cssX = e.clientX - rect.left;
       const { padding, w, stepX } = layout;
       const clamped = Math.max(padding.left, Math.min(padding.left + w, cssX));
       const idx = Math.round((clamped - padding.left) / stepX);
-      setHoverIdx(Math.max(0, Math.min(dados.length - 1, idx)));
+      setHoverIdx(Math.max(0, Math.min(allPoints.length - 1, idx)));
     },
-    [dados.length, layout],
+    [allPoints.length, layout],
   );
 
   const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
 
-  if (!dados.length) return null;
+  if (!allPoints.length) return null;
 
   const ready = containerWidth != null && containerWidth > 0;
-  const hover = hoverIdx != null ? dados[hoverIdx] : null;
+  const hover = hoverIdx != null ? allPoints[hoverIdx] : null;
+  const hoverIsPrevisao = hoverIdx != null && hoverIdx >= nReal;
   const hoverX = hoverIdx != null ? layout.padding.left + hoverIdx * layout.stepX : 0;
 
   return (
@@ -135,130 +145,116 @@ export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, height = 2
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
-          {/* Grid horizontal */}
           {layout.gridLines.map((g, i) => (
-            <line
-              key={i}
-              x1={layout.padding.left}
-              x2={layout.padding.left + layout.w}
-              y1={g.y}
-              y2={g.y}
-              className="stroke-border/40"
-              strokeWidth={1}
-            />
+            <line key={i} x1={layout.padding.left} x2={layout.padding.left + layout.w}
+              y1={g.y} y2={g.y} className="stroke-border/40" strokeWidth={1} />
           ))}
 
-          {/* Linha zero */}
-          <line
-            x1={layout.padding.left}
-            x2={layout.padding.left + layout.w}
-            y1={layout.zeroY}
-            y2={layout.zeroY}
-            className="stroke-border/70"
-            strokeDasharray="2 4"
-            strokeWidth={1}
-          />
+          <line x1={layout.padding.left} x2={layout.padding.left + layout.w}
+            y1={layout.zeroY} y2={layout.zeroY} className="stroke-border/70"
+            strokeDasharray="2 4" strokeWidth={1} />
 
-          {/* Séries */}
+          {/* Separador visual entre real e previsão */}
+          {previsao.length > 0 && nReal > 0 && (
+            <line
+              x1={layout.padding.left + (nReal - 1) * layout.stepX}
+              x2={layout.padding.left + (nReal - 1) * layout.stepX}
+              y1={layout.padding.top}
+              y2={layout.padding.top + layout.h}
+              className="stroke-border/50"
+              strokeDasharray="1 3"
+              strokeWidth={1}
+            />
+          )}
+
           {layout.series.map((s) => (
             <g key={s.key}>
-              <path
-                d={catmullRom2bezier(s.points)}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={1.75}
-                strokeDasharray={s.dash}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {s.points.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={p.x}
-                  cy={p.y}
-                  r={hoverIdx === i ? 4 : 2.5}
-                  fill={s.color}
-                  className="transition-all"
-                />
-              ))}
+              {/* Linha REAL — contínua */}
+              <path d={catmullRom2bezier(s.pointsReal)} fill="none" stroke={s.color}
+                strokeWidth={1.75} strokeDasharray={s.dash} strokeLinecap="round" strokeLinejoin="round" />
+              {/* Linha PREVISÃO — pontilhada, opacidade reduzida */}
+              {s.pointsForecast.length > 1 && (
+                <path d={catmullRom2bezier(s.pointsForecast)} fill="none" stroke={s.color}
+                  strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.55}
+                  strokeLinecap="round" strokeLinejoin="round" />
+              )}
+              {s.allPoints.map((p, i) => {
+                const isForecast = i >= nReal;
+                return (
+                  <circle key={i} cx={p.x} cy={p.y}
+                    r={hoverIdx === i ? 4 : 2.5}
+                    fill={s.color}
+                    fillOpacity={isForecast ? 0.55 : 1}
+                    stroke={isForecast ? s.color : 'none'}
+                    strokeOpacity={isForecast ? 0.55 : 0}
+                    strokeWidth={isForecast ? 0.5 : 0} />
+                );
+              })}
             </g>
           ))}
 
-          {/* Rótulos meses */}
-          {dados.map((d, i) => (
-            <text
-              key={d.mes + i}
-              x={layout.padding.left + i * layout.stepX}
-              y={layout.height - 8}
-              textAnchor="middle"
+          {allPoints.map((d, i) => (
+            <text key={d.mes + i} x={layout.padding.left + i * layout.stepX}
+              y={layout.height - 8} textAnchor="middle"
               className="fill-muted-foreground text-[10px] uppercase tracking-wider"
               style={{
                 fontWeight: hoverIdx === i ? 600 : 400,
                 fill: hoverIdx === i ? 'hsl(var(--foreground))' : undefined,
-              }}
-            >
+                opacity: i >= nReal ? 0.6 : 1,
+              }}>
               {d.mes}
             </text>
           ))}
 
-          {/* Crosshair */}
           {hover && (
-            <line
-              x1={hoverX}
-              x2={hoverX}
-              y1={layout.padding.top}
-              y2={layout.padding.top + layout.h}
-              className="stroke-foreground/25"
-              strokeWidth={1}
-              strokeDasharray="2 3"
-            />
+            <line x1={hoverX} x2={hoverX} y1={layout.padding.top}
+              y2={layout.padding.top + layout.h} className="stroke-foreground/25"
+              strokeWidth={1} strokeDasharray="2 3" />
           )}
         </svg>
       )}
 
-      {/* Legenda */}
       {ready && (
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] text-muted-foreground">
           {SERIES.map((s) => (
             <div key={s.key} className="flex items-center gap-1.5">
-              <span
-                className="inline-block h-[2px] w-4 rounded-full"
+              <span className="inline-block h-[2px] w-4 rounded-full"
                 style={{
-                  background: s.color,
-                  boxShadow: s.dash ? 'none' : undefined,
+                  background: s.color, boxShadow: s.dash ? 'none' : undefined,
                   borderTop: s.dash ? `2px dashed ${s.color}` : undefined,
                   height: s.dash ? 0 : 2,
-                }}
-              />
+                }} />
               <span>{s.label}</span>
             </div>
           ))}
+          {previsao.length > 0 && (
+            <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-border/50">
+              <span className="inline-block w-4" style={{ borderTop: '2px dashed hsl(var(--muted-foreground))', opacity: 0.7 }} />
+              <span>Previsão</span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Tooltip */}
       {ready && hover && (
-        <div
-          className="pointer-events-none absolute top-2 rounded-lg border border-border/70 bg-card/95 backdrop-blur px-3 py-2 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.15)] text-xs min-w-[180px]"
-          style={{
-            left: hoverX + 8,
-            transform: hoverX > layout.width * 0.7 ? 'translateX(-105%)' : undefined,
-          }}
-        >
-          <div className="mb-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
-            {hover.mes}
+        <div className="pointer-events-none absolute top-2 rounded-lg border border-border/70 bg-card/95 backdrop-blur px-3 py-2 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.15)] text-xs min-w-[180px]"
+          style={{ left: hoverX + 8, transform: hoverX > layout.width * 0.7 ? 'translateX(-105%)' : undefined }}>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{hover.mes}</div>
+            {hoverIsPrevisao && (
+              <span className="text-[9.5px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                Previsão
+              </span>
+            )}
           </div>
           <div className="space-y-1">
             {SERIES.map((s) => (
               <div key={s.key} className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-1.5">
-                  <span
-                    className="inline-block h-[6px] w-[6px] rounded-full"
-                    style={{ background: s.color }}
-                  />
+                  <span className="inline-block h-[6px] w-[6px] rounded-full" style={{ background: s.color, opacity: hoverIsPrevisao ? 0.6 : 1 }} />
                   <span className="text-foreground/80">{s.label}</span>
                 </div>
-                <span className="tabular-nums font-medium text-foreground">
+                <span className="tabular-nums font-medium text-foreground" style={{ opacity: hoverIsPrevisao ? 0.85 : 1 }}>
                   {formatCurrency((hover as any)[s.key])}
                 </span>
               </div>
@@ -271,3 +267,4 @@ export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, height = 2
 });
 
 export default FluxoCaixaChart;
+

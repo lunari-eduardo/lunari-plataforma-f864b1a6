@@ -11,6 +11,8 @@ import { storage, STORAGE_KEYS } from '@/utils/localStorage';
 import { GoalsIntegrationService } from '@/services/GoalsIntegrationService';
 import { pricingFinancialIntegrationService } from '@/services/PricingFinancialIntegrationService';
 import { EQUIPMENT_SYNC_EVENT, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
+import { calcularPeriodoEfetivo, dividirRealVsFuturo } from '@/modules/finance/domain/periodoEfetivo';
+import { preverMeses } from '@/modules/finance/domain/forecast';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
@@ -490,33 +492,52 @@ export function useDashboardFinanceiro() {
 
   // ============= METAS (sempre da precificação no dashboard) =============
   
-  const metasData = useMemo((): MetasData => {
+  const metasData = useMemo((): MetasData & { metaReceitaProporcional: number; metaLucroProporcional: number } => {
     // Dashboard financeiro SEMPRE usa metas da precificação (referência de saúde do negócio)
-    let metaReceita = 0;
-    let metaLucro = 0;
-    
+    let metaReceitaAnual = 0;
+    let metaLucroAnual = 0;
+
     try {
       const goalsData = GoalsIntegrationService.getAnnualGoals();
-      metaReceita = goalsData.revenue;
-      metaLucro = goalsData.profit;
+      metaReceitaAnual = goalsData.revenue;
+      metaLucroAnual = goalsData.profit;
     } catch (error) {
       console.warn('Erro ao carregar metas da precificação:', error);
     }
-    
-    // Ajustar metas se filtro de mês específico (dividir por 12)
+
+    let metaReceita = metaReceitaAnual;
+    let metaLucro = metaLucroAnual;
+    let metaReceitaProporcional = metaReceitaAnual;
+    let metaLucroProporcional = metaLucroAnual;
+
+    const hoje = new Date();
+    const anoCorrente = hoje.getFullYear();
+    const mesCorrente = hoje.getMonth() + 1;
+
     if (mesSelecionado && mesSelecionado !== 'ano-completo' && mesSelecionado !== 'personalizado') {
-      metaReceita = metaReceita / 12;
-      metaLucro = metaLucro / 12;
+      // Modo mensal: meta do mês = anual/12
+      metaReceita = metaReceitaAnual / 12;
+      metaLucro = metaLucroAnual / 12;
+      metaReceitaProporcional = metaReceita;
+      metaLucroProporcional = metaLucro;
+    } else if (mesSelecionado === 'ano-completo') {
+      // Meta proporcional aos meses decorridos
+      let mesesDecorridos = 12;
+      if (ano > anoCorrente) mesesDecorridos = 0;
+      else if (ano === anoCorrente) mesesDecorridos = mesCorrente;
+      metaReceitaProporcional = (metaReceitaAnual * mesesDecorridos) / 12;
+      metaLucroProporcional = (metaLucroAnual * mesesDecorridos) / 12;
     }
-    // Para período personalizado: manter meta anual fixa (não dividir)
-    
+
     return {
       metaReceita,
       metaLucro,
+      metaReceitaProporcional,
+      metaLucroProporcional,
       receitaAtual: kpisData.totalReceita,
       lucroAtual: kpisData.totalLucro
     };
-  }, [kpisData, mesSelecionado]);
+  }, [kpisData, mesSelecionado, ano]);
 
   // ============= DADOS PARA GRÁFICOS (SEMPRE ANUAIS) =============
   
@@ -577,6 +598,25 @@ export function useDashboardFinanceiro() {
       };
     });
   }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano]);
+
+  // ============= PERÍODO EFETIVO + PREVISÃO =============
+
+  const periodoEfetivo = useMemo(() => {
+    const modo: 'mensal' | 'anual' | 'personalizado' =
+      mesSelecionado === 'ano-completo' ? 'anual'
+      : mesSelecionado === 'personalizado' ? 'personalizado'
+      : 'mensal';
+    return calcularPeriodoEfetivo(ano, modo, dadosMensais);
+  }, [ano, mesSelecionado, dadosMensais]);
+
+  const { dadosMensaisReais, previsaoMensais } = useMemo(() => {
+    if (periodoEfetivo.modo !== 'anual') {
+      return { dadosMensaisReais: dadosMensais, previsaoMensais: [] as any[] };
+    }
+    const { reais } = dividirRealVsFuturo(dadosMensais, periodoEfetivo);
+    const previsao = preverMeses(dadosMensais, periodoEfetivo.ultimoMesComDados);
+    return { dadosMensaisReais: reais, previsaoMensais: previsao };
+  }, [dadosMensais, periodoEfetivo]);
 
   // ============= COMPOSIÇÃO DE DESPESAS (SEMPRE ANUAL) =============
   
@@ -733,6 +773,9 @@ export function useDashboardFinanceiro() {
     kpisData,
     metasData,
     dadosMensais,
+    dadosMensaisReais,
+    previsaoMensais,
+    periodoEfetivo,
     evolucaoCategoria,
     composicaoDespesas,
     roiData,
