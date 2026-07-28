@@ -92,24 +92,37 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                 const dias = diasAte(t.dataVencimento);
                 const receita = isReceita(t);
                 return (
-                  <li key={t.id} className="py-3 flex items-center gap-4">
-                    <div className="w-14 text-xs uppercase text-muted-foreground tabular-nums">
-                      {formatDataCurta(t.dataVencimento)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-foreground truncate">
-                        {t.observacoes || t.item?.nome || 'Lançamento'}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : `em ${dias} dias`}
-                      </div>
-                    </div>
-                    <div
-                      className="text-sm font-medium tabular-nums"
-                      style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--foreground))' }}
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openFluxoAndFocus({
+                          transacaoId: t.id,
+                          dataVencimento: t.dataVencimento,
+                          tipo: receita ? 'entrada' : 'saida',
+                        })
+                      }
+                      className="group w-full py-3 flex items-center gap-4 rounded-lg -mx-2 px-2 hover:bg-muted/40 transition-colors text-left"
                     >
-                      {receita ? '+' : '−'} {formatCurrency(t.valor)}
-                    </div>
+                      <div className="w-14 text-xs uppercase text-muted-foreground tabular-nums">
+                        {formatDataCurta(t.dataVencimento)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-foreground truncate">
+                          {t.observacoes || t.item?.nome || 'Lançamento'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : `em ${dias} dias`}
+                        </div>
+                      </div>
+                      <div
+                        className="text-sm font-medium tabular-nums"
+                        style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--foreground))' }}
+                      >
+                        {receita ? '+' : '−'} {formatCurrency(t.valor)}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
                   </li>
                 );
               })}
