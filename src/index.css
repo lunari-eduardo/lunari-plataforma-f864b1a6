@@ -163,15 +163,16 @@
     --shadow-md: var(--shadow-2);
     --shadow-lg: var(--shadow-3);
 
-    /* sidebar (tokenized — light) */
-    --sidebar-bg: 30 25% 97%;
+    /* sidebar (light) — grafite claro, sem dourado de fundo */
+    --sidebar-bg: 0 0% 100%;
     --sidebar-fg: var(--text-primary);
-    --sidebar-accent: 30 18% 70%;
-    --sidebar-accent-fg: var(--text-primary);
-    --sidebar-muted: 30 20% 94%;
+    --sidebar-accent: 0 0% 9%;
+    --sidebar-accent-fg: 0 0% 98%;
+    --sidebar-muted: 40 6% 96%;
     --sidebar-muted-fg: var(--text-primary);
-    --sidebar-border: 30 12% 90%;
-    --sidebar-ring: 30 18% 70%;
+    --sidebar-border: 40 8% 92%;
+    --sidebar-ring: 0 0% 9%;
+
 
     /* Landing (keep as historical aliases) */
     --landing-bg: 34 24% 95%;
