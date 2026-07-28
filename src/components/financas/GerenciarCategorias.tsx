@@ -61,7 +61,7 @@ export default function GerenciarCategorias({
     setNovaCategoria({
       ...novaCategoria,
       tipo,
-      cor: tipoInfo?.cor || '#ef4444'
+      cor: tipoInfo?.cor || 'hsl(var(--chart-2))'
     });
   };
 
