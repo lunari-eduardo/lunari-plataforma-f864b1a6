@@ -97,6 +97,10 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
       <AnaliseSection
         dadosMensais={(dash as any).dadosMensaisReais ?? dash.dadosMensais}
         previsao={(dash as any).previsaoMensais ?? []}
+        ano={dash.anoSelecionado ? parseInt(dash.anoSelecionado) : new Date().getFullYear()}
+        openingBalance={(dash as any).openingBalance ?? 0}
+        openingBalanceOrigem={(dash as any).openingBalanceOrigem ?? 'zero'}
+        openingBalanceAnoBase={(dash as any).openingBalanceAnoBase ?? (new Date().getFullYear() - 1)}
       />
 
 

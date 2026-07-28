@@ -13,6 +13,7 @@ import { pricingFinancialIntegrationService } from '@/services/PricingFinancialI
 import { EQUIPMENT_SYNC_EVENT, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEquipmentSync';
 import { calcularPeriodoEfetivo, dividirRealVsFuturo } from '@/modules/finance/domain/periodoEfetivo';
 import { preverMeses } from '@/modules/finance/domain/forecast';
+import { useOpeningBalance } from '@/hooks/useOpeningBalance';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
@@ -245,6 +246,9 @@ export function useDashboardFinanceiro() {
   const mesNumero = mesSelecionado !== 'ano-completo' && mesSelecionado !== 'personalizado' 
     ? parseInt(mesSelecionado) 
     : undefined;
+
+  // Saldo inicial do ano (RPC com cascata manual → rollover → zero)
+  const { data: openingBalanceData } = useOpeningBalance(ano);
 
   // Calcular datas de filtro baseado no período selecionado
   const { startDate, endDate } = useMemo(() => {
@@ -567,21 +571,10 @@ export function useDashboardFinanceiro() {
       }
     });
 
-    // Opening balance: saldo acumulado até 31/dez do ano anterior
-    // Aproximação a partir de transacoesFinanceiras (não inclui receita operacional
-    // do workflow de anos anteriores — trade-off aceito para manter continuidade visual).
-    const startOfYear = `${ano}-01-01`;
-    let openingBalance = 0;
-    (transacoesFinanceiras || []).forEach((t: any) => {
-      if (t?.status !== 'Pago') return;
-      const dv: string | undefined = t.dataVencimento;
-      if (!dv || dv >= startOfYear) return;
-      const grupo = t.item?.grupo_principal;
-      if (grupo === 'Receita Não Operacional') openingBalance += Number(t.valor) || 0;
-      else if (['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(grupo)) {
-        openingBalance -= Number(t.valor) || 0;
-      }
-    });
+    // Opening balance: buscado via RPC finance_get_opening_balance
+    // (cascata manual override → rollover automático → zero).
+    const openingBalance = openingBalanceData?.valor ?? 0;
+
 
     // Se mês específico selecionado, ainda mostrar todos os meses para contexto
     let acumulado = openingBalance;
@@ -597,7 +590,7 @@ export function useDashboardFinanceiro() {
         saldoAcumulado: acumulado,
       };
     });
-  }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano]);
+  }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano, openingBalanceData?.valor]);
 
   // ============= PERÍODO EFETIVO + PREVISÃO =============
 
@@ -775,6 +768,9 @@ export function useDashboardFinanceiro() {
     dadosMensais,
     dadosMensaisReais,
     previsaoMensais,
+    openingBalance: openingBalanceData?.valor ?? 0,
+    openingBalanceOrigem: openingBalanceData?.origem ?? 'zero',
+    openingBalanceAnoBase: openingBalanceData?.anoBase ?? ano - 1,
     periodoEfetivo,
     evolucaoCategoria,
     composicaoDespesas,
