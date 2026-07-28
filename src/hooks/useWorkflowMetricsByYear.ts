@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { USE_METRICS_EVENT_BUS } from '@/features/workflow/config';
 import { eventBus } from '@/shared/event-bus';
+import { useCurrentUserId } from '@/hooks/useCurrentUserId';
 
 interface MonthlyWorkflowMetrics {
   mes: number;
@@ -25,23 +26,24 @@ interface WorkflowMetricsByYear {
 /**
  * Hook para métricas do Workflow agrupadas por mês
  * Retorna dados mensais para gráficos anuais do dashboard
- * 
+ *
  * @param year - Ano para buscar métricas
  * @returns Métricas agrupadas por mês e totais anuais
  */
 export function useWorkflowMetricsByYear(year: number): WorkflowMetricsByYear {
+  const userId = useCurrentUserId();
   const [metricsPorMes, setMetricsPorMes] = useState<MonthlyWorkflowMetrics[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!userId) {
+      // Aguarda AuthContext hidratar; mantém loading=true para não mostrar
+      // "0 forever" em rotas acessadas diretamente no cold-boot.
+      return;
+    }
     const loadMetrics = async () => {
       try {
         setIsLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.warn('⚠️ [WorkflowMetricsByYear] User not authenticated');
-          return;
-        }
 
         // Buscar todas as sessões do ano
         const { data, error } = await supabase
