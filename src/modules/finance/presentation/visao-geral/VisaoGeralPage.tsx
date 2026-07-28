@@ -73,7 +73,6 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
       <EstadoFinanceiroSection
         kpis={{
           ...dash.kpisData,
-          // "Receita" no card = operacional; margem/lucro/saúde continuam com total
           totalReceita: (dash.kpisData as any).receitaOperacional ?? dash.kpisData.totalReceita,
           totalLucro: dash.kpisData.totalLucro,
           totalDespesas: dash.kpisData.totalDespesas,
@@ -81,9 +80,11 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
           valorPrevisto: dash.kpisData.valorPrevisto,
         }}
         metaReceita={dash.metasData.metaReceita}
-        comparison={dash.comparisonData}
-        dadosMensais={dash.dadosMensais}
+        metaReceitaProporcional={(dash.metasData as any).metaReceitaProporcional ?? dash.metasData.metaReceita}
+        periodoEfetivo={(dash as any).periodoEfetivo}
         contasAPagar={contasAPagar}
+        comparison={dash.comparisonData}
+        dadosMensais={(dash as any).dadosMensaisReais ?? dash.dadosMensais}
         qtdAReceber={qtdAReceber}
         qtdAPagar={qtdAPagar}
         aReceberMensal={aReceberMensal}
@@ -93,7 +94,11 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
 
       <AcompanhamentoSection transacoes={dash.transacoesFiltradas as any} />
 
-      <AnaliseSection dadosMensais={dash.dadosMensais} />
+      <AnaliseSection
+        dadosMensais={(dash as any).dadosMensaisReais ?? dash.dadosMensais}
+        previsao={(dash as any).previsaoMensais ?? []}
+      />
+
 
       <CustosSection
         receita={dash.kpisData.totalReceita}
