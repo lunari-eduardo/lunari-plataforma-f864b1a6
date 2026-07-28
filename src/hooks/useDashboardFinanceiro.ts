@@ -590,7 +590,7 @@ export function useDashboardFinanceiro() {
         saldoAcumulado: acumulado,
       };
     });
-  }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano]);
+  }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano, openingBalanceData?.valor]);
 
   // ============= PERÍODO EFETIVO + PREVISÃO =============
 
