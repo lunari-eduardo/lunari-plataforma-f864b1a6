@@ -203,10 +203,22 @@ export default function ExtratoTable({
                             {formatCurrency((linha as any).saldoAcumulado)}
                           </TableCell>
                           
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => onAbrirOrigem(linha)}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
+                          <TableCell className="text-right">
+                            <div className="inline-flex items-center gap-1 justify-end">
+                              {linha.origem === 'financeiro' && linha.status !== 'Pago' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Marcar como pago"
+                                  onClick={() => handleMarcarPago(linha.id)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => onAbrirOrigem(linha)}>
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
