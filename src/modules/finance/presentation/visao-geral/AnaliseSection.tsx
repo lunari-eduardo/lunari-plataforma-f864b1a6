@@ -76,7 +76,15 @@ function FluxoLinha({ dados }: { dados: DadoMes[] }) {
       {pontos.map((v, i) => {
         const { x, y } = coord(v, i);
         const positive = v >= 0;
-        return <circle key={i} cx={x} cy={y} r={2.5} className={positive ? 'fill-success' : 'fill-destructive'} />;
+        return (
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={2.5}
+            fill={positive ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))'}
+          />
+        );
       })}
       {dados.map((d, i) => (
         <text
