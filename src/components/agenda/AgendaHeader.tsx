@@ -41,9 +41,9 @@ export default function AgendaHeader({
       variant={view === viewKey ? "default" : "ghost"}
       size="sm"
       onClick={() => onViewChange(viewKey)}
-      className={view === viewKey 
-        ? "bg-lunar-accent text-lunar-text hover:bg-lunar-accentHover" 
-        : "text-lunar-textSecondary hover:text-lunar-text hover:bg-lunar-bg/50"
+      className={view === viewKey
+        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+        : "text-muted-foreground hover:text-foreground hover:bg-accent-gold/20"
       }
     >
       {label}
