@@ -7,7 +7,7 @@
  * + useNovoFinancas (mutations existentes) exatamente como já estavam.
  */
 import { memo, useMemo, useState } from 'react';
-import { Search, SlidersHorizontal, Plus } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
@@ -23,7 +23,6 @@ import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
-import ModalNovoLancamentoRefatorado from '@/components/financas/ModalNovoLancamentoRefatorado';
 
 type Chip = 'todos' | 'receitas' | 'despesas' | 'a_receber' | 'a_pagar';
 
@@ -46,7 +45,6 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailLinha, setDetailLinha] = useState<LinhaExtrato | null>(null);
-  const [novoAberto, setNovoAberto] = useState(false);
   const [valorMin, setValorMin] = useState('');
   const [valorMax, setValorMax] = useState('');
 
@@ -291,14 +289,6 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onDelete={handleBulkDelete}
       />
 
-      {/* Novo lançamento — reaproveita fluxo existente (modal) para preservar toda a lógica */}
-      <ModalNovoLancamentoRefatorado
-        aberto={novoAberto}
-        onFechar={() => setNovoAberto(false)}
-        createTransactionEngine={financas.createTransactionEngine}
-        tipoLancamento="despesa"
-        scope="despesa"
-      />
     </div>
   );
 });

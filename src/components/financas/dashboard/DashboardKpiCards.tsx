@@ -3,6 +3,9 @@ import { DollarSign, Calendar, HandCoins, ArrowDown, TrendingUp, Landmark } from
 import { formatCurrency } from '@/utils/financialUtils';
 import type { KpiCardsProps } from './types';
 
+const iconWrap = 'p-2 rounded-lg bg-accent-gold/12 ring-1 ring-accent-gold/20';
+const iconCls = 'h-4 w-4 text-accent-gold';
+
 export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
   return (
     <section aria-label="Métricas Financeiras" className="animate-fade-in">
@@ -16,8 +19,8 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             <div className="interactive-surface relative p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Receita</span>
-                <div className="p-2 rounded-lg bg-primary/15">
-                  <DollarSign className="h-4 w-4 text-primary" />
+                <div className={iconWrap}>
+                  <DollarSign className={iconCls} strokeWidth={1.75} />
                 </div>
               </div>
               <div className="text-xl font-bold text-lunar-success mt-2">
@@ -34,11 +37,11 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             <div className="interactive-surface relative p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Previsto</span>
-                <div className="p-2 rounded-lg bg-primary/15">
-                  <Calendar className="h-4 w-4 text-primary" />
+                <div className={iconWrap}>
+                  <Calendar className={iconCls} strokeWidth={1.75} />
                 </div>
               </div>
-              <div className="text-xl font-bold text-primary mt-2">
+              <div className="text-xl font-bold text-foreground mt-2">
                 {formatCurrency(kpisData.valorPrevisto)}
               </div>
             </div>
@@ -47,8 +50,8 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             <div className="interactive-surface relative p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">A Receber</span>
-                <div className="p-2 rounded-lg bg-primary/15">
-                  <HandCoins className="h-4 w-4 text-primary" />
+                <div className={iconWrap}>
+                  <HandCoins className={iconCls} strokeWidth={1.75} />
                 </div>
               </div>
               <div className="text-xl font-bold text-foreground mt-2">
@@ -60,8 +63,8 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             <div className="interactive-surface relative p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Despesas</span>
-                <div className="p-2 rounded-lg bg-primary/15">
-                  <ArrowDown className="h-4 w-4 text-primary" />
+                <div className={iconWrap}>
+                  <ArrowDown className={iconCls} strokeWidth={1.75} />
                 </div>
               </div>
               <div className="text-xl font-bold text-destructive mt-2">
@@ -73,8 +76,8 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             <div className="interactive-surface relative p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Lucro</span>
-                <div className="p-2 rounded-lg bg-primary/15">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+                <div className={iconWrap}>
+                  <TrendingUp className={iconCls} strokeWidth={1.75} />
                 </div>
               </div>
               <div className="text-xl font-bold text-lunar-success mt-2">
@@ -91,8 +94,8 @@ export function DashboardKpiCards({ kpisData, comparisonData }: KpiCardsProps) {
             <div className="interactive-surface relative p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-lunar-textSecondary font-medium">Saldo</span>
-                <div className="p-2 rounded-lg bg-primary/15">
-                  <Landmark className="h-4 w-4 text-primary" />
+                <div className={iconWrap}>
+                  <Landmark className={iconCls} strokeWidth={1.75} />
                 </div>
               </div>
               <div className="text-xl font-bold text-foreground mt-2">
