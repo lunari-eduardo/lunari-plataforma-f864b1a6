@@ -86,34 +86,35 @@
     --shadow-3: 0 6px 16px hsl(20 20% 12% / 0.06);
     --shadow-4: 0 12px 28px hsl(20 20% 12% / 0.10);
     --shadow-5: 0 24px 48px hsl(20 20% 12% / 0.14);
-    --shadow-glow: 0 0 30px hsl(var(--brand-h) var(--brand-s) var(--brand-l) / 0.15);
+    --shadow-glow: 0 0 30px hsl(0 0% 0% / 0.10);
 
     /* ── 8. INTERACTION STATES ────────────────────────────── */
-    --state-hover-alpha:  0.08;
-    --state-active-alpha: 0.12;
-    --state-focus-ring:   var(--brand-h) var(--brand-s) var(--brand-l);
+    --state-hover-alpha:  0.06;
+    --state-active-alpha: 0.10;
+    --state-focus-ring:   0 0% 9%;
 
-    /* ── 9. SEMANTIC ──────────────────────────────────────── */
-    --success: 142 71% 45%;
+    /* ── 9. SEMANTIC (monocromático premium) ─────────────── */
+    --success: 152 40% 34%;         /* #2E7D5B */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 20 20% 12%;
-    --error:   0 84% 60%;
+    --warning: 42 60% 43%;          /* #B08B2E — âmbar, não dourado */
+    --warning-foreground: 0 0% 100%;
+    --error:   4 62% 43%;           /* #B4322A bordô */
     --error-foreground: 0 0% 100%;
-    --info:    210 90% 56%;
+    --info:    210 40% 40%;
     --info-foreground: 0 0% 100%;
 
-    /* ── 10. CHARTS (10 slots, all derived from brand) ──── */
-    --chart-1:  var(--brand-h) var(--brand-s) var(--brand-l);
-    --chart-2:  var(--brand-h) calc(var(--brand-s) * 0.85) calc(var(--brand-l) - 10%);
-    --chart-3:  var(--brand-h) calc(var(--brand-s) * 0.70) calc(var(--brand-l) + 15%);
-    --chart-4:  calc(var(--brand-h) + 18) calc(var(--brand-s) * 0.80) calc(var(--brand-l) + 8%);
-    --chart-5:  calc(var(--brand-h) - 12) calc(var(--brand-s) * 0.60) calc(var(--brand-l) + 20%);
-    --chart-6:  var(--brand-h) calc(var(--brand-s) * 0.55) calc(var(--brand-l) - 5%);
-    --chart-7:  calc(var(--brand-h) + 30) calc(var(--brand-s) * 0.50) calc(var(--brand-l) + 25%);
-    --chart-8:  calc(var(--brand-h) - 20) calc(var(--brand-s) * 0.45) calc(var(--brand-l) + 30%);
-    --chart-9:  var(--brand-h) calc(var(--brand-s) * 0.30) calc(var(--brand-l) + 35%);
-    --chart-10: var(--brand-h) calc(var(--brand-s) * 0.20) calc(var(--brand-l) + 40%);
+    /* ── 10. CHARTS — Monocromático + 1 accent dourado ────── */
+    --chart-1:  0 0% 15%;   /* grafite (série ativa) */
+    --chart-2:  0 0% 30%;
+    --chart-3:  0 0% 45%;
+    --chart-4:  0 0% 58%;
+    --chart-5:  0 0% 70%;
+    --chart-6:  0 0% 78%;
+    --chart-7:  0 0% 84%;
+    --chart-8:  0 0% 88%;
+    --chart-9:  0 0% 92%;
+    --chart-10: var(--accent-gold);   /* reservado a hover/ponto */
+
 
     /* ── 11. SHADCN ALIASES ──────────────────────────────── */
     --background: var(--surface-0);
