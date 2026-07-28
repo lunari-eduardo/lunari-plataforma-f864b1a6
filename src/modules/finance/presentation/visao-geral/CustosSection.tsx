@@ -14,11 +14,19 @@ interface Props {
 }
 
 function LinhaDRE({ label, valor, tone, strong }: { label: string; valor: number; tone?: 'success' | 'destructive' | 'muted'; strong?: boolean }) {
-  const cls = tone === 'success' ? 'text-success' : tone === 'destructive' ? 'text-destructive' : 'text-foreground';
+  const color =
+    tone === 'success'
+      ? 'hsl(var(--finance-positive))'
+      : tone === 'destructive'
+      ? 'hsl(var(--finance-negative))'
+      : 'hsl(var(--foreground))';
   return (
     <div className={`flex items-baseline justify-between py-3 ${strong ? 'border-t border-border/60 pt-4 mt-1' : ''}`}>
-      <span className={`text-sm ${strong ? 'font-medium' : 'text-muted-foreground'}`}>{label}</span>
-      <span className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'text-sm'} ${cls}`}>
+      <span className={`text-sm ${strong ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{label}</span>
+      <span
+        className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'text-sm'}`}
+        style={{ color }}
+      >
         {formatCurrency(valor)}
       </span>
     </div>
