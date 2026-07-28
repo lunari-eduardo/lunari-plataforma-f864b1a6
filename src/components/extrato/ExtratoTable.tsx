@@ -111,15 +111,15 @@ export default function ExtratoTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead>Categoria/Cliente</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead className="text-left min-w-[110px]">Data</TableHead>
+                    <TableHead className="text-left min-w-[90px]">Tipo</TableHead>
+                    <TableHead className="text-left min-w-[220px]">Descrição</TableHead>
+                    <TableHead className="text-left min-w-[110px]">Origem</TableHead>
+                    <TableHead className="text-left min-w-[160px]">Categoria/Cliente</TableHead>
+                    <TableHead className="text-right min-w-[110px]">Valor</TableHead>
+                    <TableHead className="text-left min-w-[110px]">Status</TableHead>
+                    <TableHead className="text-right min-w-[110px]">Saldo</TableHead>
+                    <TableHead className="text-right w-[90px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
