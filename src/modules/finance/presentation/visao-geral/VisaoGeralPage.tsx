@@ -71,7 +71,15 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
       />
 
       <EstadoFinanceiroSection
-        kpis={dash.kpisData}
+        kpis={{
+          ...dash.kpisData,
+          // "Receita" no card = operacional; margem/lucro/saúde continuam com total
+          totalReceita: (dash.kpisData as any).receitaOperacional ?? dash.kpisData.totalReceita,
+          totalLucro: dash.kpisData.totalLucro,
+          totalDespesas: dash.kpisData.totalDespesas,
+          aReceber: dash.kpisData.aReceber,
+          valorPrevisto: dash.kpisData.valorPrevisto,
+        }}
         metaReceita={dash.metasData.metaReceita}
         comparison={dash.comparisonData}
         dadosMensais={dash.dadosMensais}
@@ -92,6 +100,8 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
         despesas={dash.kpisData.totalDespesas}
         lucro={dash.kpisData.totalLucro}
         composicao={dash.composicaoDespesas}
+        receitaOperacional={(dash.kpisData as any).receitaOperacional}
+        receitaNaoOperacional={(dash.kpisData as any).receitaNaoOperacional}
       />
     </div>
   );
