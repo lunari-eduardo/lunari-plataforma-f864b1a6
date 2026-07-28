@@ -116,14 +116,19 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
         </div>
 
         {/* Pendências */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--finance-warning-soft))' }}>
+                <AlertTriangle className="h-[16px] w-[16px]" style={{ color: 'hsl(var(--finance-warning))' }} />
+              </div>
               <h3 className="text-sm font-medium text-foreground">Pendências</h3>
             </div>
             {totalPendente > 0 && (
-              <span className="text-xs text-warning tabular-nums">
+              <span
+                className="text-[11px] font-medium tabular-nums px-2 py-0.5 rounded-md"
+                style={{ color: 'hsl(var(--finance-warning))', background: 'hsl(var(--finance-warning-soft))' }}
+              >
                 {formatCurrency(totalPendente)} em atraso
               </span>
             )}
