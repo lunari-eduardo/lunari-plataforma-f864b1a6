@@ -126,7 +126,21 @@ export const FluxoCaixaChart = memo(function FluxoCaixaChart({ dados, previsao =
 
   const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
 
-  if (!allPoints.length) return null;
+  if (!allPoints.length) {
+    return (
+      <div
+        ref={containerRef}
+        className="relative w-full flex items-center justify-center text-xs text-muted-foreground"
+        style={{ minHeight: height + 28 }}
+      >
+        <div className="flex items-center gap-2 opacity-70">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+          Carregando fluxo de caixa…
+        </div>
+      </div>
+    );
+  }
+
 
   const ready = containerWidth != null && containerWidth > 0;
   const hover = hoverIdx != null ? allPoints[hoverIdx] : null;
