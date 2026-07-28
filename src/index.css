@@ -43,6 +43,14 @@
     --accent-gold-hover:  36 32% 51%;   /* #B08F55 */
     --accent-gold-soft:   39 40% 90%;
 
+    /* Finance semantic — sálvia / vinho queimado / âmbar queimado */
+    --finance-positive:      145 22% 40%;
+    --finance-positive-soft: 145 28% 92%;
+    --finance-negative:      8 52% 42%;
+    --finance-negative-soft: 8 45% 94%;
+    --finance-warning:       36 62% 46%;
+    --finance-warning-soft:  36 65% 93%;
+
     /* ── 2. SURFACE SCALE (light) — neutros grafite ──────── */
     --surface-hue: 40;
     --surface-sat: 6%;
