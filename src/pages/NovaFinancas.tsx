@@ -62,11 +62,10 @@ const NovaFinancas = memo(function NovaFinancas() {
               <DashboardView />
             </TabsContent>
 
-            <TabsContent value="fluxo-financeiro" className="mt-6 space-y-10">
-              <LancamentosView />
-              <ExtratoView />
-              <MetasView />
+            <TabsContent value="fluxo-financeiro" className="mt-6">
+              <FluxoFinanceiroView />
             </TabsContent>
+
 
             <TabsContent value="gerenciar" className="mt-6">
               <ConfiguracoesView />
