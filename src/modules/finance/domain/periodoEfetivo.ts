@@ -20,11 +20,19 @@ export interface PontoMensal {
   saldoAcumulado?: number;
 }
 
+export interface PeriodoEfetivoOptions {
+  /** Saldo inicial do ano — quando != 0 o gráfico deve renderizar mesmo sem movimentos. */
+  openingBalance?: number;
+  /** true enquanto qualquer fonte (workflow/transações) ainda está hidratando. */
+  loading?: boolean;
+}
+
 export function calcularPeriodoEfetivo(
   ano: number,
   modo: 'mensal' | 'anual' | 'personalizado',
   dadosMensais: PontoMensal[],
   hoje: Date = new Date(),
+  options: PeriodoEfetivoOptions = {},
 ): PeriodoEfetivo {
   const anoCorrente = hoje.getFullYear();
   const mesCorrente = hoje.getMonth() + 1;
@@ -43,6 +51,17 @@ export function calcularPeriodoEfetivo(
     }
   }
 
+  // Fallback: se ainda não há movimento no ano mas existe saldo inicial OU as fontes
+  // ainda estão carregando, estende para todos os meses decorridos. Assim o gráfico
+  // renderiza a linha do saldo acumulado (não some), evitando o bug de "card vazio
+  // até navegar pelo Workflow e voltar".
+  if (ultimoMesComDados === 0 && mesesDecorridos > 0) {
+    const opening = Number(options.openingBalance ?? 0);
+    if (opening !== 0 || options.loading) {
+      ultimoMesComDados = mesesDecorridos;
+    }
+  }
+
   return {
     modo,
     ano,
@@ -52,6 +71,7 @@ export function calcularPeriodoEfetivo(
     temHistoricoSuficiente: ultimoMesComDados >= 3,
   };
 }
+
 
 /**
  * Divide dadosMensais em pontos reais (até ultimoMesComDados) e slots futuros.
