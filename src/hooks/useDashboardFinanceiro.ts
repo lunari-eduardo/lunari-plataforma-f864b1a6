@@ -446,7 +446,9 @@ export function useDashboardFinanceiro() {
       labelComparacao = 'em comparação ao ano anterior';
     }
     
-    let receitaAnterior = workflowMetricsAnterior.receita;
+    let receitaAnterior = isYearMode
+      ? (workflowMetricsByYearAnterior.totalAnual.receita || 0)
+      : workflowMetricsAnterior.receita;
     let despesasAnterior = 0;
     
     // Transações do período anterior (buscar da query de transações do ano)
