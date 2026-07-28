@@ -143,18 +143,24 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                 const receita = isReceita(t);
                 return (
                   <li key={t.id} className="py-3 flex items-center gap-4">
-                    <div className="w-14 text-xs uppercase text-warning tabular-nums">
+                    <div
+                      className="w-14 text-xs uppercase tabular-nums"
+                      style={{ color: 'hsl(var(--finance-warning))' }}
+                    >
                       {formatDataCurta(t.dataVencimento)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-foreground truncate">
                         {t.observacoes || t.item?.nome || 'Lançamento'}
                       </div>
-                      <div className="text-xs text-warning">
+                      <div className="text-xs" style={{ color: 'hsl(var(--finance-warning))' }}>
                         {dias === 1 ? 'vence há 1 dia' : `vence há ${dias} dias`}
                       </div>
                     </div>
-                    <div className={`text-sm font-medium tabular-nums ${receita ? 'text-success' : 'text-destructive'}`}>
+                    <div
+                      className="text-sm font-medium tabular-nums"
+                      style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))' }}
+                    >
                       {receita ? '+' : '−'} {formatCurrency(t.valor)}
                     </div>
                   </li>
