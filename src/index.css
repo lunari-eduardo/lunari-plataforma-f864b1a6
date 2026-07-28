@@ -778,3 +778,17 @@
 }
 
 /* Sidebar tablet drawer aberto — bloqueia scroll e interação do conteúdo */
+
+/* Finance — Saúde heartbeat */
+@keyframes finance-heartbeat {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+.animate-finance-heartbeat {
+  animation: finance-heartbeat 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+.animate-finance-heartbeat-fast {
+  animation: finance-heartbeat 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
