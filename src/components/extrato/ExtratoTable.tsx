@@ -50,6 +50,14 @@ export default function ExtratoTable({
   isLoading,
   regime = 'caixa'
 }: ExtratoTableProps) {
+  const { marcarComoPago } = useNovoFinancas();
+  const handleMarcarPago = async (id: string) => {
+    try {
+      await marcarComoPago(id);
+    } catch (e) {
+      toast.error('Não foi possível marcar como pago.');
+    }
+  };
   const rangeInicio = paginacao ? ((paginacao.page - 1) * paginacao.pageSize) + 1 : 1;
   const rangeFim = paginacao 
     ? Math.min(paginacao.page * paginacao.pageSize, paginacao.totalCount) 
