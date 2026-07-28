@@ -5,7 +5,7 @@
 import { memo, useMemo } from 'react';
 import {
   Heart, HeartCrack,
-  TrendingUp, Wallet, ArrowDownToLine, ArrowUpFromLine,
+  TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine,
   ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
@@ -27,11 +27,14 @@ interface Props {
   kpis: KPIs;
   metaReceita: number;
   comparison: Comparison;
-  dadosMensais: Array<{ mes: string; receita: number; lucro: number }>;
+  dadosMensais: Array<{ mes: string; receita: number; lucro: number; despesas?: number }>;
   contasAPagar: number;
+  qtdAReceber: number;
+  qtdAPagar: number;
   aReceberMensal: number[];
   aPagarMensal: number[];
 }
+
 
 type Status = 'saudavel' | 'atencao' | 'critico';
 
