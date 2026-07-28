@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlusSquare, BarChart3, List, Settings, Target } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, SlidersHorizontal } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -11,46 +11,68 @@ import {
   ConfiguracoesView,
 } from '@/modules/finance/presentation/components';
 
+type FinanceTab = 'visao-geral' | 'fluxo-financeiro' | 'gerenciar';
+
+function resolveInitialTab(): FinanceTab {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('tab');
+  switch (raw) {
+    case 'visao-geral':
+    case 'dashboard':
+      return 'visao-geral';
+    case 'fluxo-financeiro':
+    case 'lancamentos':
+    case 'extrato':
+    case 'metas':
+      return 'fluxo-financeiro';
+    case 'gerenciar':
+    case 'configuracoes':
+      return 'gerenciar';
+    default:
+      return 'visao-geral';
+  }
+}
+
 const NovaFinancas = memo(function NovaFinancas() {
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('tab') || 'lancamentos';
-  });
+  const [activeTab, setActiveTab] = useState<FinanceTab>(resolveInitialTab);
+
+  const triggerClass =
+    'relative px-1 sm:px-3 py-3 text-sm font-medium bg-transparent rounded-none text-muted-foreground data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:content-[""] data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-[2px] data-[state=active]:after:bg-primary flex items-center justify-center gap-2';
 
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="min-h-screen pr-4">
-        <div className="p-2 sm:p-4 lg:p-6 space-y-1 sm:space-y-6 py-0 my-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full h-10 p-1 text-sm bg-card border border-border py-0 grid-cols-5">
-              <TabsTrigger value="lancamentos" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
-                <PlusSquare className="h-4 w-4" />
-                {!isMobile && 'Lançamentos'}
+      <div className="min-h-screen bg-background pr-4">
+        <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 py-0 my-0">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FinanceTab)}>
+            <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none justify-start gap-2 sm:gap-6">
+              <TabsTrigger value="visao-geral" className={triggerClass}>
+                <LayoutDashboard className="h-4 w-4" />
+                {!isMobile && 'Visão Geral'}
               </TabsTrigger>
-              <TabsTrigger value="dashboard" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                {!isMobile && 'Dashboard'}
+              <TabsTrigger value="fluxo-financeiro" className={triggerClass}>
+                <ArrowLeftRight className="h-4 w-4" />
+                {!isMobile && 'Fluxo Financeiro'}
               </TabsTrigger>
-              <TabsTrigger value="extrato" className="text-sm py-2 data-[state=active]:bg-primary/10 text-foreground flex items-center gap-2">
-                <List className="h-4 w-4" />
-                {!isMobile && 'Extrato'}
-              </TabsTrigger>
-              <TabsTrigger value="metas" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                {!isMobile && 'Metas'}
-              </TabsTrigger>
-              <TabsTrigger value="configuracoes" className="text-sm py-2 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                {!isMobile && 'Configurações'}
+              <TabsTrigger value="gerenciar" className={triggerClass}>
+                <SlidersHorizontal className="h-4 w-4" />
+                {!isMobile && 'Gerenciar'}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="lancamentos" className="mt-6"><LancamentosView /></TabsContent>
-            <TabsContent value="dashboard" className="mt-6"><DashboardView /></TabsContent>
-            <TabsContent value="extrato" className="mt-6"><ExtratoView /></TabsContent>
-            <TabsContent value="metas" className="mt-6"><MetasView /></TabsContent>
-            <TabsContent value="configuracoes" className="mt-6"><ConfiguracoesView /></TabsContent>
+            <TabsContent value="visao-geral" className="mt-6">
+              <DashboardView />
+            </TabsContent>
+
+            <TabsContent value="fluxo-financeiro" className="mt-6 space-y-10">
+              <LancamentosView />
+              <ExtratoView />
+              <MetasView />
+            </TabsContent>
+
+            <TabsContent value="gerenciar" className="mt-6">
+              <ConfiguracoesView />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
