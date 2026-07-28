@@ -4,12 +4,10 @@ import { LayoutDashboard, ArrowLeftRight, SlidersHorizontal } from 'lucide-react
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
-  LancamentosView,
   DashboardView,
-  ExtratoView,
-  MetasView,
   ConfiguracoesView,
 } from '@/modules/finance/presentation/components';
+import FluxoFinanceiroView from '@/modules/finance/presentation/fluxo/FluxoFinanceiroView';
 
 type FinanceTab = 'visao-geral' | 'fluxo-financeiro' | 'gerenciar';
 
@@ -64,11 +62,10 @@ const NovaFinancas = memo(function NovaFinancas() {
               <DashboardView />
             </TabsContent>
 
-            <TabsContent value="fluxo-financeiro" className="mt-6 space-y-10">
-              <LancamentosView />
-              <ExtratoView />
-              <MetasView />
+            <TabsContent value="fluxo-financeiro" className="mt-6">
+              <FluxoFinanceiroView />
             </TabsContent>
+
 
             <TabsContent value="gerenciar" className="mt-6">
               <ConfiguracoesView />
