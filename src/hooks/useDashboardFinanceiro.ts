@@ -320,6 +320,25 @@ export function useDashboardFinanceiro() {
   const customEnd = mesSelecionado === 'personalizado' && dataFim ? dataFim : undefined;
   const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero, customStart, customEnd);
 
+  // Fonte de receita operacional/aReceber/previsto conforme período:
+  //  - "ano-completo": agrega os 12 meses via useWorkflowMetricsByYear (senão fica 0)
+  //  - mês específico ou "personalizado": usa a versão realtime
+  const isYearMode = mesSelecionado === 'ano-completo';
+  const workflowPeriod = useMemo(() => {
+    if (isYearMode) {
+      return {
+        receita: workflowMetricsByYear.totalAnual.receita || 0,
+        previsto: workflowMetricsByYear.totalAnual.previsto || 0,
+        aReceber: workflowMetricsByYear.totalAnual.aReceber || 0,
+      };
+    }
+    return {
+      receita: workflowMetrics.receita,
+      previsto: workflowMetrics.previsto,
+      aReceber: workflowMetrics.aReceber,
+    };
+  }, [isYearMode, workflowMetricsByYear, workflowMetrics]);
+
   // Calcular período anterior para comparação
   const periodoAnterior = useMemo(() => {
     if (mesSelecionado === 'personalizado') {
