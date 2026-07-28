@@ -22,17 +22,25 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
   const RECEITA_GROUPS = ['Receita Não Operacional', 'Receita Operacional'];
   const DESPESA_GROUPS = ['Despesa Fixa', 'Despesa Variável', 'Investimento'];
 
-  const contasAPagar = useMemo(() => {
-    const hoje = new Date().toISOString().slice(0, 10);
-    return dash.transacoesFiltradas
-      .filter(t =>
-        t.status !== 'Pago' &&
-        t.status !== 'Cancelado' &&
-        t.item &&
-        DESPESA_GROUPS.includes(t.item.grupo_principal)
-      )
-      .reduce((s, t) => s + t.valor, 0);
+  const { contasAPagar, qtdAReceber, qtdAPagar } = useMemo(() => {
+    const abertas = dash.transacoesFiltradas.filter(
+      t => t.status !== 'Pago' && t.status !== 'Cancelado' && t.item
+    );
+    let contasAPagar = 0;
+    let qtdAReceber = 0;
+    let qtdAPagar = 0;
+    for (const t of abertas) {
+      const grupo = t.item!.grupo_principal;
+      if (DESPESA_GROUPS.includes(grupo)) {
+        contasAPagar += t.valor;
+        qtdAPagar += 1;
+      } else if (RECEITA_GROUPS.includes(grupo)) {
+        qtdAReceber += 1;
+      }
+    }
+    return { contasAPagar, qtdAReceber, qtdAPagar };
   }, [dash.transacoesFiltradas]);
+
 
   // Séries mensais reais para sparklines (A Receber / A Pagar) — status ≠ Pago/Cancelado
   const { aReceberMensal, aPagarMensal } = useMemo(() => {
