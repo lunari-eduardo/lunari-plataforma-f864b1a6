@@ -247,6 +247,9 @@ export function useDashboardFinanceiro() {
     ? parseInt(mesSelecionado) 
     : undefined;
 
+  // Saldo inicial do ano (RPC com cascata manual → rollover → zero)
+  const { data: openingBalanceData } = useOpeningBalance(ano);
+
   // Calcular datas de filtro baseado no período selecionado
   const { startDate, endDate } = useMemo(() => {
     if (mesSelecionado === 'personalizado' && dataInicio && dataFim) {
