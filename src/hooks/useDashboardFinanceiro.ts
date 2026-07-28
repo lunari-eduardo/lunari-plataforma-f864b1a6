@@ -14,6 +14,7 @@ import { EQUIPMENT_SYNC_EVENT, EQUIPMENT_FORCE_SCAN_EVENT } from '@/hooks/useEqu
 import { calcularPeriodoEfetivo, dividirRealVsFuturo } from '@/modules/finance/domain/periodoEfetivo';
 import { preverMeses } from '@/modules/finance/domain/forecast';
 import { useOpeningBalance } from '@/hooks/useOpeningBalance';
+import { useCurrentUserId } from '@/hooks/useCurrentUserId';
 
 // Interfaces específicas para o Dashboard
 interface KPIsData {
