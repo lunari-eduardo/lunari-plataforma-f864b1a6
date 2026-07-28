@@ -20,9 +20,9 @@ export default {
 		},
 	extend: {
 			fontFamily: {
-				sans: ['Inter', 'sans-serif'],
+				sans: ['Manrope', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
 				serif: ['Playfair Display', 'Georgia', 'serif'],
-				body: ['Source Sans 3', 'Inter', 'sans-serif'],
+				body: ['Manrope', 'Inter', 'sans-serif'],
 			},
 			fontSize: {
 				'2xs': ['0.625rem', { lineHeight: '0.75rem' }],

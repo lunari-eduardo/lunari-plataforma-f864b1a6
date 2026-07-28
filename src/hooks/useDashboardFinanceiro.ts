@@ -32,7 +32,9 @@ interface MetasData {
 interface DadosMensais {
   mes: string;
   receita: number;
+  despesas: number;
   lucro: number;
+  saldoAcumulado: number;
 }
 
 interface CategoriaGasto {
@@ -528,17 +530,37 @@ export function useDashboardFinanceiro() {
       }
     });
 
+    // Opening balance: saldo acumulado até 31/dez do ano anterior
+    // Aproximação a partir de transacoesFinanceiras (não inclui receita operacional
+    // do workflow de anos anteriores — trade-off aceito para manter continuidade visual).
+    const startOfYear = `${ano}-01-01`;
+    let openingBalance = 0;
+    (transacoesFinanceiras || []).forEach((t: any) => {
+      if (t?.status !== 'Pago') return;
+      const dv: string | undefined = t.dataVencimento;
+      if (!dv || dv >= startOfYear) return;
+      const grupo = t.item?.grupo_principal;
+      if (grupo === 'Receita Não Operacional') openingBalance += Number(t.valor) || 0;
+      else if (['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(grupo)) {
+        openingBalance -= Number(t.valor) || 0;
+      }
+    });
+
     // Se mês específico selecionado, ainda mostrar todos os meses para contexto
-    // mas destacar o mês selecionado no componente de gráfico
+    let acumulado = openingBalance;
     return meses.map((nome, index) => {
       const dadosMes = dadosPorMes[index + 1];
+      const lucro = dadosMes.receita - dadosMes.despesas;
+      acumulado += lucro;
       return {
         mes: nome,
         receita: dadosMes.receita,
-        lucro: dadosMes.receita - dadosMes.despesas
+        despesas: dadosMes.despesas,
+        lucro,
+        saldoAcumulado: acumulado,
       };
     });
-  }, [workflowMetricsByYear, transacoesDoAno]);
+  }, [workflowMetricsByYear, transacoesDoAno, transacoesFinanceiras, ano]);
 
   // ============= COMPOSIÇÃO DE DESPESAS (SEMPRE ANUAL) =============
   
