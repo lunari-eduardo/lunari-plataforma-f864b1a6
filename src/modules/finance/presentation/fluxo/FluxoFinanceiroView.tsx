@@ -6,7 +6,7 @@
  * Regra crítica: NADA de lógica de negócio nova. Consome useExtrato (leitura unificada)
  * + useNovoFinancas (mutations existentes) exatamente como já estavam.
  */
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,10 @@ import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
+import {
+  FINANCE_FOCUS_FLUXO_EVENT,
+  type FluxoFocusPayload,
+} from '@/modules/finance/presentation/navigation';
 
 type Chip = 'todos' | 'receitas' | 'despesas' | 'a_receber' | 'a_pagar';
 
@@ -47,6 +51,30 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const [detailLinha, setDetailLinha] = useState<LinhaExtrato | null>(null);
   const [valorMin, setValorMin] = useState('');
   const [valorMax, setValorMax] = useState('');
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Foco vindo da Visão Geral (Agenda / Pendências)
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent<FluxoFocusPayload>).detail;
+      if (!detail) return;
+      const [yStr, mStr] = detail.dataVencimento.split('-');
+      const ano = Number(yStr);
+      const mes = Number(mStr);
+      if (ano && mes) {
+        setFiltroMesAno({ mes, ano });
+      }
+      const nextChip: Chip = detail.tipo === 'entrada' ? 'receitas' : 'despesas';
+      applyChip(nextChip);
+      setBusca('');
+      setHighlightId(detail.transacaoId);
+      const t = window.setTimeout(() => setHighlightId(null), 3500);
+      return () => window.clearTimeout(t);
+    };
+    window.addEventListener(FINANCE_FOCUS_FLUXO_EVENT, handler as EventListener);
+    return () => window.removeEventListener(FINANCE_FOCUS_FLUXO_EVENT, handler as EventListener);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync competência (mês/ano) do Fluxo com o range de datas do useExtrato
   const filtroMesAno = financas.filtroMesAno;
