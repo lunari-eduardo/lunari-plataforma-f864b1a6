@@ -43,9 +43,10 @@ export function VisualThemeProvider({ children }: { children: React.ReactNode })
   // Sincroniza com Supabase (quando logado)
   useRemoteThemeSync(theme, setThemeState);
 
-  const setPreset = useCallback((id: ThemePresetId) => {
-    setThemeState((prev) => ({ ...prev, presetId: id }));
+  const setPreset = useCallback((_id: ThemePresetId) => {
+    // Preset único a partir de v3 — mantido como no-op para compat.
   }, []);
+
 
   const setMode = useCallback((mode: VisualThemeMode) => {
     setThemeState((prev) => ({ ...prev, mode }));
