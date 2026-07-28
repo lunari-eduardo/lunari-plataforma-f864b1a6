@@ -15,7 +15,7 @@ export interface PeriodoEfetivo {
 export interface PontoMensal {
   mes: string;
   receita: number;
-  despesas: number;
+  despesas?: number;
   lucro?: number;
   saldoAcumulado?: number;
 }
