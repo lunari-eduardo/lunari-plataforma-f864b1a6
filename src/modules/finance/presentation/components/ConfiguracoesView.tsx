@@ -1,27 +1,13 @@
 /**
- * ConfiguracoesView — wrapper da aba Configurações financeiras.
- * Encapsula o data-fetching de itens financeiros.
+ * ConfiguracoesView — wrapper legacy da aba "Configurações", agora renderiza
+ * o novo Hub "Gerenciar" do módulo Financeiro. Mantido apenas para preservar
+ * o roteamento de imports existente.
  */
-import { memo } from "react";
-import { useNovoFinancas } from "@/hooks/useNovoFinancas";
-import ConfiguracoesFinanceirasTab from "@/components/financas/ConfiguracoesFinanceirasTab";
+import { memo } from 'react';
+import GerenciarView from '@/components/financas/gerenciar/GerenciarView';
 
 export const ConfiguracoesView = memo(function ConfiguracoesView() {
-  const {
-    itensFinanceiros,
-    adicionarItemFinanceiro,
-    removerItemFinanceiro,
-    atualizarItemFinanceiro,
-  } = useNovoFinancas();
-
-  return (
-    <ConfiguracoesFinanceirasTab
-      itensFinanceiros={itensFinanceiros}
-      adicionarItemFinanceiro={adicionarItemFinanceiro}
-      removerItemFinanceiro={removerItemFinanceiro}
-      atualizarItemFinanceiro={atualizarItemFinanceiro}
-    />
-  );
+  return <GerenciarView />;
 });
 
 export default ConfiguracoesView;
