@@ -4,21 +4,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatCurrency } from '@/utils/financialUtils';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-// Paleta para gráficos de barras/linhas (apenas cor principal)
-const BAR_LINE_COLORS = ['hsl(var(--chart-primary))'];
-
-// Paleta personalizada para gráficos de pizza/donut (10 cores sequenciais)
+// Paleta monocromática oficial (DNA Grafite) — cinza→preto.
+// Dourado (--chart-10 = --accent-gold) fica reservado a hover/tooltip.
 const PIE_COLORS = [
-  'hsl(var(--chart-primary))',
-  'hsl(var(--chart-secondary))',
-  'hsl(var(--chart-tertiary))',
-  'hsl(var(--chart-quaternary))',
-  'hsl(var(--chart-quinary))',
-  'hsl(var(--chart-senary))',
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--chart-6))',
   'hsl(var(--chart-7))',
   'hsl(var(--chart-8))',
   'hsl(var(--chart-9))',
-  'hsl(var(--chart-10))'
 ];
 
 interface GraficosFinanceirosProps {
@@ -61,7 +58,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                     }} 
                   />
                    <Bar dataKey="receita" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} name="Receita" />
-                   <Bar dataKey="lucro" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Lucro" />
+                   <Bar dataKey="lucro" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} name="Lucro" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -80,7 +77,7 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
             <CardContent>
               <div className="h-64 flex flex-col items-center justify-center space-y-4">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-chart-primary mb-2">
+                  <div className="text-4xl font-bold text-foreground mb-2">
                     {roiData.roi.toFixed(1)}%
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">Retorno sobre Investimento</p>
@@ -92,15 +89,15 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Retorno Calculado:</span>
-                    <span className="font-medium text-chart-primary">
+                    <span className="font-medium text-foreground">
                       {formatCurrency(roiData.totalInvestimento * (roiData.roi / 100))}
                     </span>
                   </div>
                 </div>
-                {/* Indicador Visual do ROI */}
+                {/* Indicador Visual do ROI — barra monocromática */}
                 <div className="w-full bg-muted rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-chart-primary to-chart-secondary h-3 rounded-full transition-all duration-500"
+                  <div
+                    className="bg-foreground/85 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, Math.max(5, roiData.roi))}%` }}
                   />
                 </div>
@@ -159,21 +156,21 @@ const GraficosFinanceiros = memo(function GraficosFinanceiros({
                 }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorFluxoCaixa" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-tertiary))" stopOpacity={0.1} />
+                      <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
                     </linearGradient>
                    </defs>
                    <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(value) => formatCurrency(value)} />
-                  <Tooltip 
-                    formatter={(value: any) => [formatCurrency(value), 'Saldo Acumulado']} 
+                  <Tooltip
+                    formatter={(value: any) => [formatCurrency(value), 'Saldo Acumulado']}
                     contentStyle={{
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px'
-                    }} 
+                    }}
                   />
-                  <Area type="monotone" dataKey="saldoAcumulado" stroke="hsl(var(--chart-tertiary))" fillOpacity={1} fill="url(#colorFluxoCaixa)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="saldoAcumulado" stroke="hsl(var(--chart-1))" fillOpacity={1} fill="url(#colorFluxoCaixa)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

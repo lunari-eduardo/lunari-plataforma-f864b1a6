@@ -153,9 +153,9 @@ export default function PopoverOpcoesAvancadas({
 
           {/* Informações contextuais */}
           {opcoes.formaPagamento === 'cartao_credito' && opcoes.cartaoCreditoId && (
-            <div className="p-2 bg-purple-50 rounded border border-purple-200">
-              <p className="text-xs text-purple-700">
-                <strong>Cartão:</strong> Vencimento calculado automaticamente
+            <div className="p-2 bg-muted rounded border border-border">
+              <p className="text-xs text-muted-foreground">
+                <strong className="text-foreground">Cartão:</strong> Vencimento calculado automaticamente
               </p>
             </div>
           )}
