@@ -45,7 +45,7 @@ export const CustosSection = memo(function CustosSection({ receita, despesas, lu
         <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Custos e Resultado
         </div>
-        <h2 id="secao-custos" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+        <h2 id="secao-custos" className="mt-1 text-lg font-semibold tracking-tight text-foreground">
           Para onde o dinheiro está indo
         </h2>
       </header>

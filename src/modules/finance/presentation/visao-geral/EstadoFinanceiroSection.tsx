@@ -201,7 +201,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
         <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Estado Financeiro
         </div>
-        <h2 id="secao-estado" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+        <h2 id="secao-estado" className="mt-1 text-lg font-semibold tracking-tight text-foreground">
           Como está o negócio agora
         </h2>
       </header>
@@ -226,7 +226,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
 
           <div className="mt-4 space-y-2">
             <div
-              className="text-3xl font-serif tracking-tight leading-tight"
+              className="text-3xl font-semibold tracking-tight leading-tight"
               style={{ color: theme.color }}
             >
               {label}

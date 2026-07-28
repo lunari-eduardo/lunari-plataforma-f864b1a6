@@ -1,10 +1,12 @@
 /**
  * Seção 2 — Acompanhamento.
  * Agenda financeira (próximos vencimentos) + Pendências (vencidos / a receber vencido).
+ * Clique em qualquer item → abre a aba "Fluxo Financeiro" no mês do lançamento e destaca a linha.
  */
 import { memo, useMemo } from 'react';
-import { Calendar, AlertTriangle } from 'lucide-react';
+import { Calendar, AlertTriangle, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
+import { openFluxoAndFocus } from '@/modules/finance/presentation/navigation';
 
 interface Tx {
   id: string;
@@ -64,7 +66,7 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
         <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Acompanhamento
         </div>
-        <h2 id="secao-acompanhamento" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+        <h2 id="secao-acompanhamento" className="mt-1 text-lg font-semibold tracking-tight text-foreground">
           O que precisa da sua atenção
         </h2>
       </header>
