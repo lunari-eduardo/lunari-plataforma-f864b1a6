@@ -29,22 +29,30 @@
   html { font-size: 90%; }
 
   :root {
-    /* ── 1. BRAND ─────────────────────────────────────────── */
-    --brand-h: 19;
-    --brand-s: 49%;
-    --brand-l: 45%;
-    --brand-hover-l: 38%;
-    --brand-glow-l: 60%;
+    /* ── 1. BRAND — LUNARI GRAFITE (light) ────────────────
+       Único preset oficial. Botão primário = grafite sólido.
+       Dourado NUNCA é fundo de botão no modo light. */
+    --brand-h: 0;
+    --brand-s: 0%;
+    --brand-l: 9%;          /* #171717 grafite */
+    --brand-hover-l: 4%;    /* quase preto */
+    --brand-glow-l: 20%;
 
-    /* ── 2. SURFACE SCALE (light) — hue/sat configurable ─── */
-    --surface-hue: 30;
-    --surface-sat: 30%;
-    --surface-0: var(--surface-hue) var(--surface-sat) 96%;
-    --surface-1: var(--surface-hue) calc(var(--surface-sat) * 0.7) 98%;
-    --surface-2: 0 0% 100%;
-    --surface-3: var(--surface-hue) calc(var(--surface-sat) * 0.6) 92%;
-    --surface-4: var(--surface-hue) calc(var(--surface-sat) * 0.5) 90%;
-    --surface-5: 20 12% 10%;
+    /* Accent dourado institucional — apenas ícones/micro-interações */
+    --accent-gold:        39 35% 60%;   /* #C6A36A */
+    --accent-gold-hover:  36 32% 51%;   /* #B08F55 */
+    --accent-gold-soft:   39 40% 90%;
+
+    /* ── 2. SURFACE SCALE (light) — neutros grafite ──────── */
+    --surface-hue: 40;
+    --surface-sat: 6%;
+    --surface-0: 40 10% 97%;   /* #F7F7F5 fundo app */
+    --surface-1: 0  0% 99%;
+    --surface-2: 0  0% 100%;
+    --surface-3: 40 6% 94%;
+    --surface-4: 40 5% 90%;
+    --surface-5: 0  0% 9%;
+
 
     /* ── 3. TEXT ──────────────────────────────────────────── */
     --text-primary:   20 20% 12%;
