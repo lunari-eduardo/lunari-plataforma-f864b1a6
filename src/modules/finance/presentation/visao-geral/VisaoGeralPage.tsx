@@ -76,9 +76,12 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
         comparison={dash.comparisonData}
         dadosMensais={dash.dadosMensais}
         contasAPagar={contasAPagar}
+        qtdAReceber={qtdAReceber}
+        qtdAPagar={qtdAPagar}
         aReceberMensal={aReceberMensal}
         aPagarMensal={aPagarMensal}
       />
+
 
       <AcompanhamentoSection transacoes={dash.transacoesFiltradas as any} />
 
