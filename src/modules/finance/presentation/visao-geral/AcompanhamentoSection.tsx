@@ -59,22 +59,27 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
   const totalPendente = pendencias.reduce((s, t) => s + t.valor, 0);
 
   return (
-    <section aria-labelledby="secao-acompanhamento" className="space-y-5">
-      <header className="flex items-baseline justify-between">
-        <h2 id="secao-acompanhamento" className="text-sm uppercase tracking-[0.14em] text-muted-foreground font-medium">
+    <section aria-labelledby="secao-acompanhamento" className="space-y-4">
+      <header>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Acompanhamento
+        </div>
+        <h2 id="secao-acompanhamento" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+          O que precisa da sua atenção
         </h2>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Agenda Financeira */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
+                <Calendar className="h-[16px] w-[16px]" style={{ color: 'hsl(var(--accent-gold))' }} />
+              </div>
               <h3 className="text-sm font-medium text-foreground">Agenda Financeira</h3>
             </div>
-            <span className="text-xs text-muted-foreground">Próximos vencimentos</span>
+            <span className="text-[11px] text-muted-foreground">Próximos vencimentos</span>
           </div>
 
           {proximosVencimentos.length === 0 ? (
