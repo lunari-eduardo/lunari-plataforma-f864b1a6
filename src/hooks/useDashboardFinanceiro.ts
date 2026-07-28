@@ -568,21 +568,10 @@ export function useDashboardFinanceiro() {
       }
     });
 
-    // Opening balance: saldo acumulado até 31/dez do ano anterior
-    // Aproximação a partir de transacoesFinanceiras (não inclui receita operacional
-    // do workflow de anos anteriores — trade-off aceito para manter continuidade visual).
-    const startOfYear = `${ano}-01-01`;
-    let openingBalance = 0;
-    (transacoesFinanceiras || []).forEach((t: any) => {
-      if (t?.status !== 'Pago') return;
-      const dv: string | undefined = t.dataVencimento;
-      if (!dv || dv >= startOfYear) return;
-      const grupo = t.item?.grupo_principal;
-      if (grupo === 'Receita Não Operacional') openingBalance += Number(t.valor) || 0;
-      else if (['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(grupo)) {
-        openingBalance -= Number(t.valor) || 0;
-      }
-    });
+    // Opening balance: buscado via RPC finance_get_opening_balance
+    // (cascata manual override → rollover automático → zero).
+    const openingBalance = openingBalanceData?.valor ?? 0;
+
 
     // Se mês específico selecionado, ainda mostrar todos os meses para contexto
     let acumulado = openingBalance;
