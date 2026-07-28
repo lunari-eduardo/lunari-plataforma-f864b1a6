@@ -7,7 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, CheckCircle, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Info } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Info, Check } from 'lucide-react';
+import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import { toast } from 'sonner';
 import { LinhaExtrato, ExtratoPaginacao } from '@/types/extrato';
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
@@ -48,6 +50,14 @@ export default function ExtratoTable({
   isLoading,
   regime = 'caixa'
 }: ExtratoTableProps) {
+  const { marcarComoPago } = useNovoFinancas();
+  const handleMarcarPago = async (id: string) => {
+    try {
+      await marcarComoPago(id);
+    } catch (e) {
+      toast.error('Não foi possível marcar como pago.');
+    }
+  };
   const rangeInicio = paginacao ? ((paginacao.page - 1) * paginacao.pageSize) + 1 : 1;
   const rangeFim = paginacao 
     ? Math.min(paginacao.page * paginacao.pageSize, paginacao.totalCount) 
@@ -101,15 +111,15 @@ export default function ExtratoTable({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead>Categoria/Cliente</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead className="text-left min-w-[110px]">Data</TableHead>
+                    <TableHead className="text-left min-w-[90px]">Tipo</TableHead>
+                    <TableHead className="text-left min-w-[220px]">Descrição</TableHead>
+                    <TableHead className="text-left min-w-[110px]">Origem</TableHead>
+                    <TableHead className="text-left min-w-[160px]">Categoria/Cliente</TableHead>
+                    <TableHead className="text-right min-w-[110px]">Valor</TableHead>
+                    <TableHead className="text-left min-w-[110px]">Status</TableHead>
+                    <TableHead className="text-right min-w-[110px]">Saldo</TableHead>
+                    <TableHead className="text-right w-[90px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -193,10 +203,22 @@ export default function ExtratoTable({
                             {formatCurrency((linha as any).saldoAcumulado)}
                           </TableCell>
                           
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => onAbrirOrigem(linha)}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
+                          <TableCell className="text-right">
+                            <div className="inline-flex items-center gap-1 justify-end">
+                              {linha.origem === 'financeiro' && linha.status !== 'Pago' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Marcar como pago"
+                                  onClick={() => handleMarcarPago(linha.id)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => onAbrirOrigem(linha)}>
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

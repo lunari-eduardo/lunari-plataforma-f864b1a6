@@ -11,9 +11,11 @@ interface Props {
   despesas: number;
   lucro: number;
   composicao: Comp[];
+  receitaOperacional?: number;
+  receitaNaoOperacional?: number;
 }
 
-function LinhaDRE({ label, valor, tone, strong }: { label: string; valor: number; tone?: 'success' | 'destructive' | 'muted'; strong?: boolean }) {
+function LinhaDRE({ label, valor, tone, strong, sub }: { label: string; valor: number; tone?: 'success' | 'destructive' | 'muted'; strong?: boolean; sub?: boolean }) {
   const color =
     tone === 'success'
       ? 'hsl(var(--finance-positive))'
@@ -21,10 +23,10 @@ function LinhaDRE({ label, valor, tone, strong }: { label: string; valor: number
       ? 'hsl(var(--finance-negative))'
       : 'hsl(var(--foreground))';
   return (
-    <div className={`flex items-baseline justify-between py-3 ${strong ? 'border-t border-border/60 pt-4 mt-1' : ''}`}>
-      <span className={`text-sm ${strong ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{label}</span>
+    <div className={`flex items-baseline justify-between ${sub ? 'py-1.5 pl-4' : 'py-3'} ${strong ? 'border-t border-border/60 pt-4 mt-1' : ''}`}>
+      <span className={`${sub ? 'text-xs' : 'text-sm'} ${strong ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{label}</span>
       <span
-        className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'text-sm'}`}
+        className={`tabular-nums ${strong ? 'text-lg font-semibold' : sub ? 'text-xs' : 'text-sm'}`}
         style={{ color }}
       >
         {formatCurrency(valor)}
@@ -33,11 +35,13 @@ function LinhaDRE({ label, valor, tone, strong }: { label: string; valor: number
   );
 }
 
-export const CustosSection = memo(function CustosSection({ receita, despesas, lucro, composicao }: Props) {
+export const CustosSection = memo(function CustosSection({ receita, despesas, lucro, composicao, receitaOperacional, receitaNaoOperacional }: Props) {
   const totalDespesas = useMemo(
     () => composicao.reduce((s, c) => s + c.valor, 0),
     [composicao],
   );
+
+  const hasSplit = receitaOperacional !== undefined && receitaNaoOperacional !== undefined;
 
   return (
     <section aria-labelledby="secao-custos" className="space-y-4">
@@ -55,7 +59,15 @@ export const CustosSection = memo(function CustosSection({ receita, despesas, lu
         <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <h3 className="text-sm font-medium text-foreground mb-2">Demonstrativo simplificado</h3>
           <div>
-            <LinhaDRE label="Receita" valor={receita} tone="success" />
+            {hasSplit ? (
+              <>
+                <LinhaDRE label="Receita operacional" valor={receitaOperacional!} sub tone="success" />
+                <LinhaDRE label="Receita não operacional" valor={receitaNaoOperacional!} sub tone="success" />
+                <LinhaDRE label="Receita total" valor={receita} tone="success" />
+              </>
+            ) : (
+              <LinhaDRE label="Receita" valor={receita} tone="success" />
+            )}
             <LinhaDRE label="(−) Despesas" valor={-despesas} tone="destructive" />
             <LinhaDRE
               label="Resultado"
@@ -65,6 +77,7 @@ export const CustosSection = memo(function CustosSection({ receita, despesas, lu
             />
           </div>
         </div>
+
 
         {/* Composição de despesas */}
         <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">

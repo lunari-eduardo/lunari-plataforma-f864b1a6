@@ -320,6 +320,25 @@ export function useDashboardFinanceiro() {
   const customEnd = mesSelecionado === 'personalizado' && dataFim ? dataFim : undefined;
   const workflowMetrics = useWorkflowMetricsRealtime(ano, mesNumero, customStart, customEnd);
 
+  // Fonte de receita operacional/aReceber/previsto conforme período:
+  //  - "ano-completo": agrega os 12 meses via useWorkflowMetricsByYear (senão fica 0)
+  //  - mês específico ou "personalizado": usa a versão realtime
+  const isYearMode = mesSelecionado === 'ano-completo';
+  const workflowPeriod = useMemo(() => {
+    if (isYearMode) {
+      return {
+        receita: workflowMetricsByYear.totalAnual.receita || 0,
+        previsto: workflowMetricsByYear.totalAnual.previsto || 0,
+        aReceber: workflowMetricsByYear.totalAnual.aReceber || 0,
+      };
+    }
+    return {
+      receita: workflowMetrics.receita,
+      previsto: workflowMetrics.previsto,
+      aReceber: workflowMetrics.aReceber,
+    };
+  }, [isYearMode, workflowMetricsByYear, workflowMetrics]);
+
   // Calcular período anterior para comparação
   const periodoAnterior = useMemo(() => {
     if (mesSelecionado === 'personalizado') {
@@ -341,6 +360,7 @@ export function useDashboardFinanceiro() {
     periodoAnterior.ano, 
     periodoAnterior.mes
   );
+  const workflowMetricsByYearAnterior = useWorkflowMetricsByYear(periodoAnterior.ano);
 
   // ============= FILTROS POR PERÍODO (PARA KPIs DINÂMICOS) =============
 
@@ -352,19 +372,19 @@ export function useDashboardFinanceiro() {
 
   // ============= CÁLCULOS DE MÉTRICAS (KPIs DINÂMICOS) =============
   
-  const kpisData = useMemo((): KPIsData => {
-    // FONTE: Workflow em tempo real (filtrado por período)
-    const receitaOperacional = workflowMetrics.receita;
-    const valorPrevisto = workflowMetrics.previsto;
-    const aReceber = workflowMetrics.aReceber;
+  const kpisData = useMemo((): KPIsData & { receitaOperacional: number; receitaNaoOperacional: number } => {
+    // FONTE: Workflow (realtime para mês / agregado anual para "ano-completo")
+    const receitaOperacional = workflowPeriod.receita;
+    const valorPrevisto = workflowPeriod.previsto;
+    const aReceber = workflowPeriod.aReceber;
     
     // RECEITAS NÃO OPERACIONAIS (filtradas pelo período)
-    const receitasExtras = transacoesFiltradasPorPeriodo
+    const receitaNaoOperacional = transacoesFiltradasPorPeriodo
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
     // TOTAL DE RECEITAS
-    const totalReceita = receitaOperacional + receitasExtras;
+    const totalReceita = receitaOperacional + receitaNaoOperacional;
 
     // DESPESAS (filtradas pelo período)
     const totalDespesas = transacoesFiltradasPorPeriodo
@@ -375,23 +395,17 @@ export function useDashboardFinanceiro() {
     const totalLucro = totalReceita - totalDespesas;
     const saldoTotal = totalLucro;
 
-    console.log(`📊 KPIs (${anoSelecionado}/${mesSelecionado}):`, {
-      receitaOperacional: receitaOperacional.toFixed(2),
-      receitasExtras: receitasExtras.toFixed(2), 
-      totalReceita: totalReceita.toFixed(2),
-      totalDespesas: totalDespesas.toFixed(2),
-      fonte: 'supabase-realtime + query-anual'
-    });
-
     return {
       totalReceita,
       valorPrevisto,
       aReceber,
       totalDespesas,
       totalLucro,
-      saldoTotal
+      saldoTotal,
+      receitaOperacional,
+      receitaNaoOperacional,
     };
-  }, [workflowMetrics, transacoesFiltradasPorPeriodo, anoSelecionado, mesSelecionado]);
+  }, [workflowPeriod, transacoesFiltradasPorPeriodo]);
 
   // ============= ROI (SEMPRE DADOS ANUAIS) =============
   
@@ -432,7 +446,9 @@ export function useDashboardFinanceiro() {
       labelComparacao = 'em comparação ao ano anterior';
     }
     
-    let receitaAnterior = workflowMetricsAnterior.receita;
+    let receitaAnterior = isYearMode
+      ? (workflowMetricsByYearAnterior.totalAnual.receita || 0)
+      : workflowMetricsAnterior.receita;
     let despesasAnterior = 0;
     
     // Transações do período anterior (buscar da query de transações do ano)
@@ -470,7 +486,7 @@ export function useDashboardFinanceiro() {
       variacaoLucro: calcularVariacao(kpisData.totalLucro, lucroAnterior),
       variacaoDespesas: calcularVariacao(kpisData.totalDespesas, despesasAnterior)
     };
-  }, [anoSelecionado, mesSelecionado, kpisData, transacoesDoAno, workflowMetricsAnterior, periodoAnterior]);
+  }, [anoSelecionado, mesSelecionado, kpisData, transacoesDoAno, workflowMetricsAnterior, workflowMetricsByYearAnterior, isYearMode, periodoAnterior]);
 
   // ============= METAS (sempre da precificação no dashboard) =============
   
