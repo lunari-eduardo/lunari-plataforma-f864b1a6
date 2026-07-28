@@ -17,6 +17,7 @@ export interface FluxoCaixaPonto {
 
 interface Props {
   dados: FluxoCaixaPonto[];
+  previsao?: FluxoCaixaPonto[];
   height?: number;
 }
 
