@@ -5,7 +5,7 @@
 import { memo, useMemo } from 'react';
 import {
   Heart, HeartCrack,
-  TrendingUp, Wallet, ArrowDownToLine, ArrowUpFromLine,
+  TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine,
   ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
@@ -27,11 +27,14 @@ interface Props {
   kpis: KPIs;
   metaReceita: number;
   comparison: Comparison;
-  dadosMensais: Array<{ mes: string; receita: number; lucro: number }>;
+  dadosMensais: Array<{ mes: string; receita: number; lucro: number; despesas?: number }>;
   contasAPagar: number;
+  qtdAReceber: number;
+  qtdAPagar: number;
   aReceberMensal: number[];
   aPagarMensal: number[];
 }
+
 
 type Status = 'saudavel' | 'atencao' | 'critico';
 
@@ -182,7 +185,7 @@ function MetricCard({ label, value, delta, deltaLabel, spark, tone = 'neutral', 
 }
 
 export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
-  kpis, metaReceita, comparison, dadosMensais, contasAPagar, aReceberMensal, aPagarMensal,
+  kpis, metaReceita, comparison, dadosMensais, contasAPagar, qtdAReceber, qtdAPagar, aReceberMensal, aPagarMensal,
 }: Props) {
   const { status, label, hint } = useMemo(() => computeStatus(kpis, metaReceita), [kpis, metaReceita]);
   const theme = statusTheme[status];
@@ -191,9 +194,20 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
   const margem = kpis.totalReceita > 0 ? (kpis.totalLucro / kpis.totalReceita) * 100 : 0;
 
   const receitaSpark = dadosMensais.map(d => d.receita);
-  const lucroSpark = dadosMensais.map(d => d.lucro);
+  const despesasSpark = dadosMensais.map(d => d.despesas ?? 0);
 
   const HeartIcon = theme.icon === 'crack' ? HeartCrack : Heart;
+
+  const lucroPositivo = kpis.totalLucro >= 0;
+  const lucroColor = lucroPositivo ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))';
+
+  const hintReceber = (() => {
+    const base = `${qtdAReceber} ${qtdAReceber === 1 ? 'recebimento pendente' : 'recebimentos pendentes'}`;
+    return kpis.valorPrevisto > 0
+      ? `Previsto ${formatCurrency(kpis.valorPrevisto)} · ${base}`
+      : base;
+  })();
+  const hintPagar = `${qtdAPagar} ${qtdAPagar === 1 ? 'vencimento em aberto' : 'vencimentos em aberto'}`;
 
   return (
     <section aria-labelledby="secao-estado" className="space-y-4">
@@ -209,7 +223,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-4 auto-rows-fr">
         {/* Saúde — 2 col × 2 row */}
         <div
-          className="sm:col-span-2 lg:col-span-2 lg:row-span-2 relative rounded-2xl border border-border/60 bg-card p-7 overflow-hidden flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.12)]"
+          className="sm:col-span-2 lg:col-span-2 lg:row-span-2 relative rounded-2xl border border-border/60 bg-card p-6 overflow-hidden flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.12)]"
           style={{
             backgroundImage: `linear-gradient(135deg, ${theme.softBg} 0%, transparent 55%)`,
           }}
@@ -234,7 +248,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
             <p className="text-sm text-muted-foreground max-w-[38ch]">{hint}</p>
           </div>
 
-          <div className="mt-auto pt-6 border-t border-border/40 grid grid-cols-2 divide-x divide-border/40">
+          <div className="mt-auto pt-6 border-t border-border/40 grid grid-cols-3 divide-x divide-border/40">
             <div className="pr-4">
               <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">
                 Margem
@@ -243,6 +257,18 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
                 {margem.toFixed(1).replace('.', ',')}%
               </div>
               <div className="mt-0.5 text-[11px] text-muted-foreground/80">Lucro / Receita</div>
+            </div>
+            <div className="px-4">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">
+                Lucro do período
+              </div>
+              <div
+                className="mt-1.5 text-xl font-semibold tabular-nums"
+                style={{ color: lucroColor }}
+              >
+                {formatCurrency(kpis.totalLucro)}
+              </div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground/80">Receita − Despesas</div>
             </div>
             <div className="pl-4">
               <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">
@@ -258,7 +284,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
           </div>
         </div>
 
-        {/* 4 KPIs */}
+        {/* 4 KPIs — Receita, Despesas, A Receber, A Pagar */}
         <MetricCard
           label="Receita"
           value={kpis.totalReceita}
@@ -269,19 +295,19 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
           Icon={TrendingUp}
         />
         <MetricCard
-          label="Lucro"
-          value={kpis.totalLucro}
-          delta={comparison.variacaoLucro}
+          label="Despesas"
+          value={kpis.totalDespesas}
+          delta={comparison.variacaoDespesas}
           deltaLabel={comparison.labelComparacao}
-          spark={lucroSpark}
-          tone={kpis.totalLucro >= 0 ? 'positive' : 'negative'}
-          Icon={Wallet}
+          spark={despesasSpark}
+          tone="negative"
+          Icon={TrendingDown}
         />
         <MetricCard
           label="A Receber"
           value={kpis.aReceber}
           spark={aReceberMensal}
-          hint={kpis.valorPrevisto > 0 ? `Previsto: ${formatCurrency(kpis.valorPrevisto)}` : 'Vencimentos futuros'}
+          hint={hintReceber}
           tone="warning"
           Icon={ArrowDownToLine}
         />
@@ -289,7 +315,7 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
           label="A Pagar"
           value={contasAPagar}
           spark={aPagarMensal}
-          hint="Despesas em aberto"
+          hint={hintPagar}
           tone="negative"
           Icon={ArrowUpFromLine}
         />
@@ -297,5 +323,6 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
     </section>
   );
 });
+
 
 export default EstadoFinanceiroSection;
