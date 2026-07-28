@@ -601,8 +601,14 @@ export function useDashboardFinanceiro() {
       mesSelecionado === 'ano-completo' ? 'anual'
       : mesSelecionado === 'personalizado' ? 'personalizado'
       : 'mensal';
-    return calcularPeriodoEfetivo(ano, modo, dadosMensais);
-  }, [ano, mesSelecionado, dadosMensais]);
+    const opening = openingBalanceData?.valor ?? 0;
+    const loading = workflowMetricsByYear.isLoading || transacoesDoAnoLoading;
+    return calcularPeriodoEfetivo(ano, modo, dadosMensais, new Date(), {
+      openingBalance: opening,
+      loading,
+    });
+  }, [ano, mesSelecionado, dadosMensais, openingBalanceData?.valor, workflowMetricsByYear.isLoading, transacoesDoAnoLoading]);
+
 
   const { dadosMensaisReais, previsaoMensais } = useMemo(() => {
     if (periodoEfetivo.modo !== 'anual') {
