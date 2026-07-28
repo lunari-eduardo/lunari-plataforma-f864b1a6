@@ -268,7 +268,7 @@ export function useDashboardFinanceiro() {
   const dashUserId = useCurrentUserId();
 
   // Query dedicada para transações do período selecionado
-  const { data: transacoesDoAno = [] } = useQuery({
+  const { data: transacoesDoAno = [], isLoading: transacoesDoAnoLoading } = useQuery({
     queryKey: ['dashboard-transactions-period', dashUserId, startDate, endDate],
     enabled: !!dashUserId,
     queryFn: async () => {
@@ -315,6 +315,7 @@ export function useDashboardFinanceiro() {
     staleTime: 1000 * 60 * 5, // 5 minutos
     refetchOnWindowFocus: false
   });
+
 
   // ============= MÉTRICAS EM TEMPO REAL DO WORKFLOW =============
   
