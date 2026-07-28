@@ -22,8 +22,11 @@ function BarraResultado({ mes, receita, lucro, maxAbs }: DadoMes & { maxAbs: num
         </div>
         <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
           <div
-            className={`h-full rounded-full ${lucroPositivo ? 'bg-success/70' : 'bg-destructive/70'}`}
-            style={{ width: `${lucroPct}%` }}
+            className="h-full rounded-full"
+            style={{
+              width: `${lucroPct}%`,
+              background: lucroPositivo ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))',
+            }}
           />
         </div>
       </div>
