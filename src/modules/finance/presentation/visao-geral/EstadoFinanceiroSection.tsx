@@ -146,7 +146,7 @@ interface MetricCardProps {
   spark: number[];
   tone?: Tone;
   hint?: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
 function MetricCard({ label, value, delta, deltaLabel, spark, tone = 'neutral', hint, Icon }: MetricCardProps) {
   return (
