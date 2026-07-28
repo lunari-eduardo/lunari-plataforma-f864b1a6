@@ -360,6 +360,7 @@ export function useDashboardFinanceiro() {
     periodoAnterior.ano, 
     periodoAnterior.mes
   );
+  const workflowMetricsByYearAnterior = useWorkflowMetricsByYear(periodoAnterior.ano);
 
   // ============= FILTROS POR PERÍODO (PARA KPIs DINÂMICOS) =============
 
