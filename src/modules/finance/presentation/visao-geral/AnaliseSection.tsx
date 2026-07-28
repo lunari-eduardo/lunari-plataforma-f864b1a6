@@ -108,16 +108,19 @@ export const AnaliseSection = memo(function AnaliseSection({ dadosMensais }: Pro
   }, [dadosMensais]);
 
   return (
-    <section aria-labelledby="secao-analise" className="space-y-5">
-      <header className="flex items-baseline justify-between">
-        <h2 id="secao-analise" className="text-sm uppercase tracking-[0.14em] text-muted-foreground font-medium">
+    <section aria-labelledby="secao-analise" className="space-y-4">
+      <header>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Análise Financeira
+        </div>
+        <h2 id="secao-analise" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+          Qual a tendência do negócio
         </h2>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Resultado mensal — 3/5 */}
-        <div className="lg:col-span-3 rounded-2xl border border-border/60 bg-card p-6">
+        <div className="lg:col-span-3 rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="mb-4">
             <h3 className="text-sm font-medium text-foreground">Resultado mês a mês</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Receita (barra superior) e Lucro (barra inferior)</p>
@@ -130,7 +133,7 @@ export const AnaliseSection = memo(function AnaliseSection({ dadosMensais }: Pro
         </div>
 
         {/* Fluxo de caixa — 2/5 */}
-        <div className="lg:col-span-2 rounded-2xl border border-border/60 bg-card p-6 flex flex-col">
+        <div className="lg:col-span-2 rounded-2xl border border-border/60 bg-card p-6 flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="mb-4">
             <h3 className="text-sm font-medium text-foreground">Fluxo de caixa acumulado</h3>
             <p className="text-xs text-muted-foreground mt-0.5">Soma progressiva do lucro no ano</p>
