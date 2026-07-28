@@ -112,6 +112,9 @@ export default {
 
 				brand: 'hsl(var(--brand) / <alpha-value>)',
 				'brand-foreground': 'hsl(var(--brand-foreground) / <alpha-value>)',
+				'accent-gold': 'hsl(var(--accent-gold) / <alpha-value>)',
+				'accent-gold-hover': 'hsl(var(--accent-gold-hover) / <alpha-value>)',
+				'accent-gold-soft': 'hsl(var(--accent-gold-soft) / <alpha-value>)',
 
 				tasks: {
 					priority: {
