@@ -49,7 +49,7 @@ export function useWorkflowMetricsByYear(year: number): WorkflowMetricsByYear {
         const { data, error } = await supabase
           .from('clientes_sessoes')
           .select('data_sessao, valor_total, valor_pago, tipo_registro')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .or('status.is.null,status.neq.historico')
           .gte('data_sessao', `${year}-01-01`)
           .lte('data_sessao', `${year}-12-31`);
