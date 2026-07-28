@@ -1,52 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useVisualTheme } from '@/contexts/VisualThemeContext';
 
-type Theme = 'light' | 'dark' | 'system';
-
+/**
+ * useTheme — shim compatível com API antiga.
+ * Encaminha para VisualThemeContext (fonte única de verdade).
+ */
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('system');
+  const { theme, setMode } = useVisualTheme();
 
-  useEffect(() => {
-    // Load saved theme preference or default to system
-    const savedTheme = localStorage.getItem('theme') as Theme || 'system';
-    setTheme(savedTheme);
-    
-    // Apply theme immediately
-    applyTheme(savedTheme);
-  }, []);
-
-  const applyTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-    
-    if (newTheme === 'system') {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', systemPrefersDark);
-    } else {
-      root.classList.toggle('dark', newTheme === 'dark');
-    }
-  };
-
-  const setThemeAndSave = (newTheme: Theme) => {
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    applyTheme(newTheme);
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setThemeAndSave(newTheme);
-  };
-
-  const getCurrentTheme = () => {
-    if (theme === 'system') {
+  const currentTheme: 'light' | 'dark' = (() => {
+    if (theme.mode === 'system') {
+      if (typeof window === 'undefined') return 'light';
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    return theme;
-  };
+    return theme.mode;
+  })();
 
   return {
-    theme,
-    setTheme: setThemeAndSave,
-    toggleTheme,
-    currentTheme: getCurrentTheme()
+    theme: theme.mode,
+    setTheme: setMode,
+    toggleTheme: () => setMode(currentTheme === 'dark' ? 'light' : 'dark'),
+    currentTheme,
   };
 }

@@ -27,13 +27,15 @@ export function useRemoteThemeSync(
         .eq('user_id', user.id)
         .maybeSingle();
       if (cancelled || error || !data) { hydratedRef.current = true; return; }
+      // v3: preset_id remoto é ignorado — sempre 'graphite'.
       const next: VisualThemeConfig = {
-        presetId: data.preset_id as ThemePresetId,
-        mode: data.mode as VisualThemeMode,
+        presetId: 'graphite' as ThemePresetId,
+        mode: (data.mode as VisualThemeMode) || 'system',
       };
       lastSavedRef.current = JSON.stringify(next);
       hydratedRef.current = true;
       applyRemote(next);
+
     };
     hydrate();
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -57,7 +59,7 @@ export function useRemoteThemeSync(
         .from('user_theme_preferences')
         .upsert({
           user_id: user.id,
-          preset_id: theme.presetId,
+          preset_id: 'graphite',
           mode: theme.mode,
         }, { onConflict: 'user_id' });
       if (!error) lastSavedRef.current = serialized;
