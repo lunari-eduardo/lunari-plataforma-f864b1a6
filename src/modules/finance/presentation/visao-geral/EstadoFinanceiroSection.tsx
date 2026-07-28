@@ -5,7 +5,7 @@
  */
 import { memo, useMemo } from 'react';
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
-import { formatCurrency } from '@/utils/currency';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 interface KPIs {
   totalReceita: number;
