@@ -43,6 +43,14 @@
     --accent-gold-hover:  36 32% 51%;   /* #B08F55 */
     --accent-gold-soft:   39 40% 90%;
 
+    /* Finance semantic — sálvia / vinho queimado / âmbar queimado */
+    --finance-positive:      145 22% 40%;
+    --finance-positive-soft: 145 28% 92%;
+    --finance-negative:      8 52% 42%;
+    --finance-negative-soft: 8 45% 94%;
+    --finance-warning:       36 62% 46%;
+    --finance-warning-soft:  36 65% 93%;
+
     /* ── 2. SURFACE SCALE (light) — neutros grafite ──────── */
     --surface-hue: 40;
     --surface-sat: 6%;
@@ -246,6 +254,14 @@
     --accent-gold:        40 45% 66%;   /* #D4B57C — ícones IA/badges */
     --accent-gold-hover:  40 45% 60%;
     --accent-gold-soft:   40 30% 22%;
+
+    /* Finance semantic (dark) */
+    --finance-positive:      145 28% 55%;
+    --finance-positive-soft: 145 25% 18%;
+    --finance-negative:      8 55% 55%;
+    --finance-negative-soft: 8 30% 20%;
+    --finance-warning:       36 65% 58%;
+    --finance-warning-soft:  36 40% 20%;
 
     /* surfaces dark — grafite puro */
     --surface-0: 0 0% 5%;    /* #0E0E0E fundo app */
@@ -762,3 +778,17 @@
 }
 
 /* Sidebar tablet drawer aberto — bloqueia scroll e interação do conteúdo */
+
+/* Finance — Saúde heartbeat */
+@keyframes finance-heartbeat {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+.animate-finance-heartbeat {
+  animation: finance-heartbeat 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+.animate-finance-heartbeat-fast {
+  animation: finance-heartbeat 1.6s ease-in-out infinite;
+  transform-origin: center;
+}

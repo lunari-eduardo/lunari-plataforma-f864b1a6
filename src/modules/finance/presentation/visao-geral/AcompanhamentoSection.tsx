@@ -59,22 +59,27 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
   const totalPendente = pendencias.reduce((s, t) => s + t.valor, 0);
 
   return (
-    <section aria-labelledby="secao-acompanhamento" className="space-y-5">
-      <header className="flex items-baseline justify-between">
-        <h2 id="secao-acompanhamento" className="text-sm uppercase tracking-[0.14em] text-muted-foreground font-medium">
+    <section aria-labelledby="secao-acompanhamento" className="space-y-4">
+      <header>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Acompanhamento
+        </div>
+        <h2 id="secao-acompanhamento" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+          O que precisa da sua atenção
         </h2>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Agenda Financeira */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
+                <Calendar className="h-[16px] w-[16px]" style={{ color: 'hsl(var(--accent-gold))' }} />
+              </div>
               <h3 className="text-sm font-medium text-foreground">Agenda Financeira</h3>
             </div>
-            <span className="text-xs text-muted-foreground">Próximos vencimentos</span>
+            <span className="text-[11px] text-muted-foreground">Próximos vencimentos</span>
           </div>
 
           {proximosVencimentos.length === 0 ? (
@@ -97,7 +102,10 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                         {dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : `em ${dias} dias`}
                       </div>
                     </div>
-                    <div className={`text-sm font-medium tabular-nums ${receita ? 'text-success' : 'text-foreground'}`}>
+                    <div
+                      className="text-sm font-medium tabular-nums"
+                      style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--foreground))' }}
+                    >
                       {receita ? '+' : '−'} {formatCurrency(t.valor)}
                     </div>
                   </li>
@@ -108,14 +116,19 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
         </div>
 
         {/* Pendências */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--finance-warning-soft))' }}>
+                <AlertTriangle className="h-[16px] w-[16px]" style={{ color: 'hsl(var(--finance-warning))' }} />
+              </div>
               <h3 className="text-sm font-medium text-foreground">Pendências</h3>
             </div>
             {totalPendente > 0 && (
-              <span className="text-xs text-warning tabular-nums">
+              <span
+                className="text-[11px] font-medium tabular-nums px-2 py-0.5 rounded-md"
+                style={{ color: 'hsl(var(--finance-warning))', background: 'hsl(var(--finance-warning-soft))' }}
+              >
                 {formatCurrency(totalPendente)} em atraso
               </span>
             )}
@@ -130,18 +143,24 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                 const receita = isReceita(t);
                 return (
                   <li key={t.id} className="py-3 flex items-center gap-4">
-                    <div className="w-14 text-xs uppercase text-warning tabular-nums">
+                    <div
+                      className="w-14 text-xs uppercase tabular-nums"
+                      style={{ color: 'hsl(var(--finance-warning))' }}
+                    >
                       {formatDataCurta(t.dataVencimento)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-foreground truncate">
                         {t.observacoes || t.item?.nome || 'Lançamento'}
                       </div>
-                      <div className="text-xs text-warning">
+                      <div className="text-xs" style={{ color: 'hsl(var(--finance-warning))' }}>
                         {dias === 1 ? 'vence há 1 dia' : `vence há ${dias} dias`}
                       </div>
                     </div>
-                    <div className={`text-sm font-medium tabular-nums ${receita ? 'text-success' : 'text-destructive'}`}>
+                    <div
+                      className="text-sm font-medium tabular-nums"
+                      style={{ color: receita ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))' }}
+                    >
                       {receita ? '+' : '−'} {formatCurrency(t.valor)}
                     </div>
                   </li>

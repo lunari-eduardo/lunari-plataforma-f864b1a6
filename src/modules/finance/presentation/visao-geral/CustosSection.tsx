@@ -14,11 +14,19 @@ interface Props {
 }
 
 function LinhaDRE({ label, valor, tone, strong }: { label: string; valor: number; tone?: 'success' | 'destructive' | 'muted'; strong?: boolean }) {
-  const cls = tone === 'success' ? 'text-success' : tone === 'destructive' ? 'text-destructive' : 'text-foreground';
+  const color =
+    tone === 'success'
+      ? 'hsl(var(--finance-positive))'
+      : tone === 'destructive'
+      ? 'hsl(var(--finance-negative))'
+      : 'hsl(var(--foreground))';
   return (
     <div className={`flex items-baseline justify-between py-3 ${strong ? 'border-t border-border/60 pt-4 mt-1' : ''}`}>
-      <span className={`text-sm ${strong ? 'font-medium' : 'text-muted-foreground'}`}>{label}</span>
-      <span className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'text-sm'} ${cls}`}>
+      <span className={`text-sm ${strong ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>{label}</span>
+      <span
+        className={`tabular-nums ${strong ? 'text-lg font-semibold' : 'text-sm'}`}
+        style={{ color }}
+      >
         {formatCurrency(valor)}
       </span>
     </div>
@@ -32,19 +40,22 @@ export const CustosSection = memo(function CustosSection({ receita, despesas, lu
   );
 
   return (
-    <section aria-labelledby="secao-custos" className="space-y-5">
-      <header className="flex items-baseline justify-between">
-        <h2 id="secao-custos" className="text-sm uppercase tracking-[0.14em] text-muted-foreground font-medium">
+    <section aria-labelledby="secao-custos" className="space-y-4">
+      <header>
+        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">
           Custos e Resultado
+        </div>
+        <h2 id="secao-custos" className="mt-1 text-lg font-serif tracking-tight text-foreground">
+          Para onde o dinheiro está indo
         </h2>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Mini DRE */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <h3 className="text-sm font-medium text-foreground mb-2">Demonstrativo simplificado</h3>
           <div>
-            <LinhaDRE label="Receita" valor={receita} />
+            <LinhaDRE label="Receita" valor={receita} tone="success" />
             <LinhaDRE label="(−) Despesas" valor={-despesas} tone="destructive" />
             <LinhaDRE
               label="Resultado"
@@ -56,7 +67,7 @@ export const CustosSection = memo(function CustosSection({ receita, despesas, lu
         </div>
 
         {/* Composição de despesas */}
-        <div className="rounded-2xl border border-border/60 bg-card p-6">
+        <div className="rounded-2xl border border-border/60 bg-card p-6 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.1)]">
           <div className="mb-4 flex items-baseline justify-between">
             <h3 className="text-sm font-medium text-foreground">Composição de despesas</h3>
             <span className="text-xs text-muted-foreground tabular-nums">
