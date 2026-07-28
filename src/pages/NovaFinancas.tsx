@@ -4,12 +4,10 @@ import { LayoutDashboard, ArrowLeftRight, SlidersHorizontal } from 'lucide-react
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
-  LancamentosView,
   DashboardView,
-  ExtratoView,
-  MetasView,
   ConfiguracoesView,
 } from '@/modules/finance/presentation/components';
+import FluxoFinanceiroView from '@/modules/finance/presentation/fluxo/FluxoFinanceiroView';
 
 type FinanceTab = 'visao-geral' | 'fluxo-financeiro' | 'gerenciar';
 
