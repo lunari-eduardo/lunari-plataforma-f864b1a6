@@ -8,6 +8,9 @@ import { useEffect } from 'react';
 import { SupabaseCreditCardsAdapter, CreditCardDB } from '@/adapters/SupabaseCreditCardsAdapter';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { acquireChannel, releaseChannel } from '@/shared/realtime/channelRegistry';
+
+const CREDIT_CARDS_CHANNEL_KEY = 'credit-cards-changes';
 
 export interface CartaoCredito {
   id: string;
