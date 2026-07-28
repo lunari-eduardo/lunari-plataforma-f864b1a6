@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { LinhaExtrato } from '@/types/extrato';
 import { groupByTimeline } from './utils/groupByTimeline';
 import FluxoTimelineRow from './FluxoTimelineRow';
@@ -9,6 +9,7 @@ interface FluxoTimelineProps {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onOpen: (linha: LinhaExtrato) => void;
+  highlightId?: string | null;
 }
 
 const FluxoTimeline = memo(function FluxoTimeline({
@@ -17,9 +18,16 @@ const FluxoTimeline = memo(function FluxoTimeline({
   selectedIds,
   onToggleSelect,
   onOpen,
+  highlightId,
 }: FluxoTimelineProps) {
   const groups = groupByTimeline(linhas);
   const anySelected = selectedIds.size > 0;
+  const highlightRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!highlightId || !highlightRef.current) return;
+    highlightRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [highlightId]);
 
   if (isLoading) {
     return (
@@ -51,16 +59,28 @@ const FluxoTimeline = memo(function FluxoTimeline({
             )}
           </header>
           <div className="space-y-0.5">
-            {group.linhas.map((linha) => (
-              <FluxoTimelineRow
-                key={linha.id}
-                linha={linha}
-                selected={selectedIds.has(linha.id)}
-                onToggleSelect={onToggleSelect}
-                onOpen={onOpen}
-                anySelected={anySelected}
-              />
-            ))}
+            {group.linhas.map((linha) => {
+              const isHighlighted = highlightId === linha.id;
+              return (
+                <div
+                  key={linha.id}
+                  ref={isHighlighted ? highlightRef : undefined}
+                  className={
+                    isHighlighted
+                      ? 'rounded-md ring-1 ring-[hsl(var(--accent-gold))]/50 bg-[hsl(var(--accent-gold)/0.08)] transition-all duration-500'
+                      : 'transition-all duration-500'
+                  }
+                >
+                  <FluxoTimelineRow
+                    linha={linha}
+                    selected={selectedIds.has(linha.id)}
+                    onToggleSelect={onToggleSelect}
+                    onOpen={onOpen}
+                    anySelected={anySelected}
+                  />
+                </div>
+              );
+            })}
           </div>
         </section>
       ))}

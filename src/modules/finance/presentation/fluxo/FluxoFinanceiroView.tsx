@@ -267,6 +267,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onOpen={setDetailLinha}
+          highlightId={highlightId}
         />
       </div>
 
