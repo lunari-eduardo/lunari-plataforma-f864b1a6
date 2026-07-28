@@ -6,7 +6,7 @@
 
 ---
 
-## Filosofia
+## 1. Filosofia
 
 O Lunari deve transmitir a sensação de um software profissional, sofisticado e extremamente organizado, sem parecer complexo.
 
@@ -26,12 +26,21 @@ Nunca quantidade de informações.
 
 ---
 
-## Linguagem visual
+## 2. Filosofia cromática
 
-A linguagem do Lunari não é baseada em dashboards financeiros.
-Também não é baseada em ferramentas para designers.
+A identidade da Lunari transmite **luxo silencioso**.
 
-Ela se aproxima muito mais de:
+- O **preto grafite** representa estabilidade e tecnologia.
+- Os **neutros** representam clareza.
+- O **dourado** representa inteligência, qualidade e atenção aos detalhes.
+
+O dourado nunca compete com o conteúdo. Ele existe apenas para criar momentos de percepção premium.
+
+---
+
+## 3. Linguagem visual
+
+A linguagem do Lunari não é baseada em dashboards financeiros. Também não é baseada em ferramentas para designers. Ela se aproxima muito mais de:
 
 - Linear
 - Notion Calendar
@@ -39,65 +48,251 @@ Ela se aproxima muito mais de:
 - Arc Browser
 - Stripe Dashboard
 
-Ou seja: interfaces extremamente limpas, modernas e silenciosas.
+Interfaces extremamente limpas, modernas e silenciosas.
 
 ---
 
-## Hierarquia
+## 4. Hierarquia
 
 Toda tela deve possuir exatamente três níveis visuais.
 
 ### Nível 1 — Informações críticas
-Exemplo: cliente, valor pendente, status, ação principal.
-Sempre possuem maior contraste.
+Cliente, valor pendente, status, ação principal. Sempre com maior contraste.
 
 ### Nível 2 — Informações de contexto
-Exemplo: pacote, descrição, quantidade, data.
-Nunca competem com o nível 1.
+Pacote, descrição, quantidade, data. Nunca competem com o nível 1.
 
 ### Nível 3 — Informações auxiliares
-Exemplo: observações, subtítulos, ajuda, textos explicativos.
-Sempre discretas.
+Observações, subtítulos, ajuda, textos explicativos. Sempre discretas.
 
 ---
 
-## Componentes
+## 5. Distribuição da identidade
 
-Todos os componentes devem seguir a mesma linguagem.
-Nunca criar componentes exclusivos para uma página.
+**85% Neutros · 12% Preto Grafite · 3% Dourado.**
 
-Se existe um Card de Sessão, o mesmo conceito deve aparecer em:
+A ordem de percepção do usuário deve ser:
 
-- Workflow
-- Galerias
-- Financeiro
-- CRM
+Conteúdo → Dados → Navegação → Identidade.
 
-Mudando apenas o conteúdo. Nunca a linguagem.
+Somente depois de ler o conteúdo o usuário percebe a marca. Se a identidade aparece antes, a proporção está errada.
 
 ---
 
-## Cards
+## 6. Paleta oficial
 
-Todos os cards do Lunari devem transmitir três características.
+### 6.1 Preto Grafite (assinatura da marca)
 
-### Muito respiro
-Nunca elementos grudados. Muito espaço interno.
+| Superfície | Valor |
+|---|---|
+| Sidebar | `#171717` |
+| Hover Sidebar | `#202020` |
+| Menu ativo | `#242424` |
+| Divisórias | `#2E2E2E` |
 
-### Agrupamento claro
-Tudo que pertence ao mesmo contexto permanece junto.
-Sem linhas excessivas. O próprio espaçamento cria os grupos.
+### 6.2 Neutros — Light Mode
 
-### Cantos suaves
-Nenhum elemento agressivo. Tudo deve parecer leve.
+| Superfície | Valor |
+|---|---|
+| Background | `#F7F6F3` |
+| Background secundário | `#F3F1ED` |
+| Cards | `#FFFFFF` |
+| Cards elevados | `#FCFBF9` |
+| Border | `#E9E5DE` |
+| Linha fina | `#ECE8E2` |
+| Texto principal | `#1E1E1E` |
+| Texto secundário | `#6F6F6F` |
+| Placeholder | `#A7A7A7` |
+
+### 6.3 Neutros — Dark Mode
+
+| Superfície | Valor |
+|---|---|
+| Background | `#111111` |
+| Background secundário | `#151515` |
+| Cards | `#181818` |
+| Cards elevados | `#1D1D1D` |
+| Border | `#2A2A2A` |
+| Texto | `#F3F3F3` |
+| Texto secundário | `#A2A2A2` |
+| Placeholder | `#6D6D6D` |
+
+### 6.4 Dourado Institucional
+
+Única cor de identidade da marca.
+
+| Estado | Valor |
+|---|---|
+| Base | `#C6A36A` |
+| Hover | `#D2B07B` |
+| Pressed | `#AF8E59` |
+
+Proibido:
+- gradientes com dourado;
+- efeitos metálicos ou brilho;
+- preenchimento de grandes áreas.
+
+### 6.5 Cores funcionais
+
+| Estado | Valor |
+|---|---|
+| Sucesso | `#37B26C` |
+| Erro | `#D94A4A` |
+| Alerta | `#D89B2C` |
+| Informação | `#4E88E5` |
+
+Essas cores **nunca** são substituídas pelo dourado.
 
 ---
 
-## Ações
+## 7. Uso do dourado
 
-Toda tela deve responder claramente: **"O que o fotógrafo faz aqui?"**
+| Pode usar dourado em… | Nunca usar dourado em… |
+|---|---|
+| Ícone ativo da sidebar | Fundo da sidebar |
+| Ícone dos cards de KPI | Valor numérico do KPI |
+| Ícone e cursor do Assistente IA | Botão primário padrão |
+| CTA Premium (upgrade/créditos/assinatura/demo) | Botões de ação comum |
+| Contorno do "hoje" no calendário | Preenchimento de dia selecionado |
+| Hover de ponto em gráfico de linha | Cor de série em gráfico |
+| Logo | Foco de input |
+| Loading pequeno / tooltip premium | Header, tabela, badge, switch, checkbox marcado |
+| Conquistas e badges especiais | Grandes áreas de preenchimento |
 
-Existe apenas uma ação principal.
+Qualquer novo uso do dourado exige atualização deste documento **antes** de ir para o código.
+
+---
+
+## 8. Componentes
+
+Todos os componentes seguem a mesma linguagem. Nunca criar componente exclusivo de uma página.
+
+Se existe um Card de Sessão, o mesmo conceito aparece em Workflow, Galerias, Financeiro e CRM — mudando apenas o conteúdo, nunca a linguagem.
+
+### Cards
+
+- Muito respiro interno.
+- Agrupamento por espaçamento (não por linhas).
+- Cantos suaves.
+- Background branco em light, `#181818` em dark.
+- `radius: 20px`, border `#E9E5DE` (light) / `#2A2A2A` (dark).
+- Sombra `0 8px 24px rgba(0,0,0,.03)` em light; quase inexistente em dark.
+
+---
+
+## 9. Regras por componente
+
+### 9.1 Sidebar (permanente)
+
+- Fundo `#171717` **em light e dark**. Nunca muda com o tema.
+- Logo branca. Sem alteração em hover.
+- Ícones inativos `rgba(255,255,255,.55)`; hover `#FFFFFF`.
+- Item ativo: ícone `#C6A36A`, texto `#FFFFFF`, background `rgba(255,255,255,.06)`. **Nunca** dourado atrás do item.
+
+### 9.2 Header
+
+- Acompanha o tema: branco em light, `#111111` em dark.
+- Sem sombra pesada — apenas `border-bottom`.
+
+### 9.3 Cards
+
+Ver seção 8.
+
+### 9.4 Botões
+
+**Primário** — fundo preto `#171717`, texto branco, hover `#2B2B2B`.
+
+**CTA Premium** — fundo `#C6A36A`, texto `#171717`. Uso reservado a:
+- Upgrade
+- Comprar créditos
+- Solicitar demonstração
+- Assinatura
+
+Não deve existir em excesso. Se aparece em qualquer outro contexto, é violação.
+
+**Secundário** — branco, borda `#D8D4CE`, hover `#F5F3EF`.
+
+### 9.5 Inputs
+
+- Background branco.
+- Border `#DDD8D1`.
+- Focus: border `#171717`, glow `rgba(0,0,0,.04)`.
+- **Nunca** dourado em foco ou borda.
+
+### 9.6 Tabelas
+
+- Header `#F8F6F3`.
+- Hover linha `rgba(0,0,0,.025)`.
+- Linha selecionada `rgba(0,0,0,.05)`.
+- **Nunca** dourado.
+
+### 9.7 KPIs
+
+- Ícone: dourado.
+- Título: cinza.
+- Valor: preto.
+- Comparativo: verde ou vermelho.
+- Valor numérico **jamais** dourado.
+
+### 9.8 Gráficos
+
+Uma das maiores mudanças. Gráficos deixam de usar a cor institucional — a identidade fica mais sofisticada com escala monocromática.
+
+- **Barras** — cinza médio `#6D6D6D`; barra atual `#171717`. Sem dourado.
+- **Linha** — preta. Hover do ponto: dourado.
+- **Área** — cinza claro. Hover: pequena iluminação dourada.
+- **Pizza** — cinzas. Apenas um setor preto. **Nunca** dourado.
+
+### 9.9 Badges
+
+- Cinzas por padrão.
+- Status usa apenas verde / vermelho / azul / laranja.
+- Nunca dourado.
+
+### 9.10 Switch / Checkbox / Calendário
+
+- **Switch** — off cinza, on preto. Não dourado.
+- **Checkbox** — vazio cinza, marcado preto, hover com borda dourada.
+- **Calendário** — eventos cinza; "hoje" com contorno dourado; dia selecionado preto.
+
+---
+
+## 10. Assistente IA — exceção cromática
+
+É o único módulo que pode usar dourado de forma consistente.
+
+- Ícone: dourado.
+- Cursor: dourado.
+- Estado online: ponto dourado.
+- Animações: douradas.
+
+Isso cria uma associação subconsciente entre "inteligência" e a identidade da Lunari.
+
+---
+
+## 11. Microinterações douradas (lista fechada)
+
+O dourado aparece apenas nos seguintes momentos:
+
+1. Ícone ativo na sidebar.
+2. Hover dos ícones de ação.
+3. Ícone dos cards KPI.
+4. Indicador da IA (ícone, cursor, ponto online, animações).
+5. CTA Upgrade Premium.
+6. Logo.
+7. Pequenos detalhes de loading.
+8. Tooltips premium.
+9. Conquistas e badges especiais.
+
+Qualquer uso fora desta lista exige atualização deste documento antes do código.
+
+---
+
+## 12. Ações
+
+Toda tela deve responder: **"O que o fotógrafo faz aqui?"**
+
+Existe apenas uma ação principal por tela.
 
 - Workflow → Cobrar sessão
 - Gallery → Nova galeria
@@ -107,68 +302,23 @@ As demais ações ficam secundárias.
 
 ---
 
-## Botões
-
-Existem apenas três tipos.
-
-- **Primário** — Ação principal.
-- **Secundário** — Ações importantes.
-- **Terciário** — Links e pequenas ações.
-
-Nunca inventar novos estilos.
-
----
-
-## Inputs
-
-Os inputs devem desaparecer. O fotógrafo não deve sentir que está preenchendo campos.
-
-Sempre que possível utilizar:
-
-- dropdown elegante
-- chips
-- cards
-- seletores
-
-Ao invés de grandes formulários.
-
----
-
-## Modais
-
-Os modais do Lunari nunca são formulários. Eles são pequenos painéis operacionais.
-
-Sempre responder:
-
-1. o que existe
-2. em que estado está
-3. o que falta fazer
-
-Depois vêm as edições. Nunca o contrário.
-
----
-
-## Densidade
+## 13. Densidade
 
 Baixa. Muito espaço. Poucos elementos. Poucas linhas. Poucos ícones.
 
-Quando existir dúvida entre mostrar ou esconder: **preferir esconder**.
+Na dúvida entre mostrar ou esconder: **esconder**.
 
 ---
 
-## Informações
+## 14. Informações
 
-Nunca repetir informação.
-
-Se o Workflow já informa "Produto — A produzir", o modal não precisa repetir isso três vezes.
-
-Cada informação aparece apenas onde faz sentido.
+Nunca repetir informação. Se o Workflow já informa "Produto — A produzir", o modal não repete isso três vezes. Cada informação aparece apenas onde faz sentido.
 
 ---
 
-## Cores
+## 15. Cores (regra transversal)
 
-As cores nunca devem carregar significado sozinhas. Sempre existir:
+Cor nunca carrega significado sozinha. Sempre acompanhada de:
 
 - texto
 - ícone
@@ -178,32 +328,31 @@ Nunca depender apenas de verde/vermelho/laranja. O usuário deve compreender mes
 
 ---
 
-## Ícones
+## 16. Ícones
 
-Poucos. Sempre do mesmo peso visual. Nunca decorar.
-Ícones apenas ajudam leitura. Nunca são protagonistas.
+Poucos. Sempre do mesmo peso visual. Nunca decorar. Ícones ajudam leitura — nunca são protagonistas.
 
 ---
 
-## Espaçamento
+## 17. Espaçamento
 
-A sensação geral do Lunari deve ser: **"Existe menos interface do que realmente existe."**
+A sensação geral deve ser: **"Existe menos interface do que realmente existe."**
 
 Isso acontece graças ao espaçamento. O espaço vazio faz parte do layout.
 
 ---
 
-## Animações
+## 18. Animações
 
 Curtas. Discretas. Sempre funcionais. Nunca decorativas.
 
 Exemplos válidos: expandir sessão, concluir etapa, abrir modal, mover tarefa.
 
-Jamais utilizar animações chamativas.
+Nunca animações chamativas.
 
 ---
 
-## Linguagem de UX
+## 19. Linguagem de UX
 
 O Lunari não pergunta. O Lunari conduz.
 
@@ -217,7 +366,7 @@ Sempre linguagem operacional.
 
 ---
 
-## Sensação geral
+## 20. Sensação geral
 
 Se uma tela nova for criada, ela deve transmitir imediatamente:
 
@@ -234,3 +383,17 @@ Nunca deve transmitir:
 - excesso de informação
 - aparência técnica
 - aparência de sistema administrativo
+
+---
+
+## Débito de implementação
+
+Este DNA é a fonte de verdade a partir de agora. Os itens abaixo ainda seguem a paleta antiga (terracota) e precisam ser migrados em ondas separadas, sem alterar o DNA:
+
+1. `src/index.css` — tokens `--brand-*`, gradientes e sombras antigas.
+2. `src/styles/lunari-design-rules.md` — descreve paleta terracota; reescrever com paleta grafite/dourado.
+3. `tailwind.config.ts` — tokens de cor e sombra apontam para valores antigos.
+4. `src/lib/visualTheme.ts` (`VisualThemeProvider`, `THEME_PRESETS`) — preset padrão migra para grafite/dourado sem quebrar temas alternativos.
+5. Componentes com cor hardcoded (KPI cards, gráficos com `chart-primary`, hovers laranja/roxo).
+6. Sidebar — hoje pode variar com o tema; travar em `#171717` para light e dark.
+7. Recharts / módulo de gráficos — migrar séries para escala monocromática (cinza + preto).
