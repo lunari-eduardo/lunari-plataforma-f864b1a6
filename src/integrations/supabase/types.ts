@@ -6568,9 +6568,24 @@ export type Database = {
         }
         Returns: Json
       }
+      finance_apply_saldo_ajuste: {
+        Args: { _data: string; _observacoes?: string; _saldo_desejado: number }
+        Returns: {
+          acao: string
+          transaction_id: string
+          valor_delta: number
+        }[]
+      }
       finance_clear_opening_balance: {
         Args: { _ano: number }
         Returns: undefined
+      }
+      finance_ensure_ajuste_items: {
+        Args: never
+        Returns: {
+          item_entrada: string
+          item_saida: string
+        }[]
       }
       finance_get_opening_balance: {
         Args: { _ano: number }
@@ -6580,6 +6595,7 @@ export type Database = {
           valor: number
         }[]
       }
+      finance_get_saldo_ate: { Args: { _data: string }; Returns: number }
       finance_set_opening_balance: {
         Args: { _ano: number; _observacoes?: string; _valor: number }
         Returns: {
