@@ -116,6 +116,22 @@ export function useVendaAvulsa() {
         }
       }
 
+      // Faz o card aparecer no Workflow na hora (sem depender do realtime nem
+      // de recarregar): merge no cache + invalidação do mês da venda.
+      try {
+        const [ano, mes] = input.data.split('-').map(Number);
+        window.dispatchEvent(
+          new CustomEvent('workflow-cache-merge', { detail: { session: sessao } }),
+        );
+        window.dispatchEvent(
+          new CustomEvent('workflow-cache-silent-refresh', {
+            detail: { year: ano, month: mes },
+          }),
+        );
+      } catch {
+        /* noop */
+      }
+
       toast.success('Venda avulsa registrada com sucesso!');
       return sessao;
     } catch (err) {
