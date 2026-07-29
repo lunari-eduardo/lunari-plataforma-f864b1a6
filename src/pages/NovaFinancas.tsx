@@ -60,7 +60,8 @@ const NovaFinancas = memo(function NovaFinancas() {
       <div className="min-h-screen bg-background pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 py-0 my-0">
           {/* Header global do módulo — botão fixo no canto superior direito */}
-          <FinanceHeader onNovoLancamento={() => setNovoAberto(true)} />
+          <FinanceHeader onSelectTipo={() => setNovoAberto(true)} />
+
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FinanceTab)}>
             <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none justify-start gap-2 sm:gap-6">
