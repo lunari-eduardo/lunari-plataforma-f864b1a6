@@ -19,6 +19,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { cn } from '@/lib/utils';
 
 export type SidePanelWidth = 'sm' | 'md' | 'lg' | 'xl';
@@ -130,8 +131,12 @@ interface SidePanelFooterProps {
 }
 
 function SidePanelFooter({ left, right, className }: SidePanelFooterProps) {
+  const keyboardInset = useKeyboardInset();
   const style: CSSProperties = {
-    paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+    paddingBottom: keyboardInset
+      ? `${keyboardInset + 12}px`
+      : 'max(1rem, env(safe-area-inset-bottom))',
+    transition: 'padding-bottom 160ms ease-out',
   };
   return (
     <div
