@@ -556,12 +556,17 @@ export function SessionPaymentsManager({
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                              {payment.tipo}
-                            </div>
+                            {/* Só exibe o "tipo" quando ele acrescenta informação além do badge */}
+                            {String(payment.tipo || '').toLowerCase() !==
+                              String(payment.statusPagamento || '').toLowerCase() && (
+                              <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                                {payment.tipo}
+                              </div>
+                            )}
                             {getStatusBadge(payment)}
                           </div>
                         </TableCell>
+
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {getOriginIcon(payment.origem, payment.observacoes)}
