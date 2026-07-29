@@ -1,264 +1,208 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { History, Calendar, DollarSign, Package, RefreshCcw } from "lucide-react";
+import { History, Calendar, DollarSign, Package, FileText } from "lucide-react";
 import { formatCurrency } from '@/utils/financialUtils';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { ClienteCompleto } from '@/types/cliente-supabase';
 import { SessionPaymentHistory } from './SessionPaymentHistory';
 import { useClientSessionsRealtime } from '@/hooks/useClientSessionsRealtime';
 import { useWorkflowRealtime } from '@/features/workflow';
-import { migrateValorBasePacoteForClient } from '@/utils/migrateValorBasePacote';
-import { useState } from 'react';
-import { toast } from 'sonner';
+import { SECTION_TITLE } from '@/lib/dialogTokens';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface WorkflowHistoryTableProps {
   cliente: ClienteCompleto;
 }
 
+/** Badge de status neutro (Silent Luxury) — sem cores cruas. */
+function StatusChip({ status }: { status: string }) {
+  const isHistorico = status === 'historico';
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize',
+        isHistorico
+          ? 'border-border/20 bg-transparent text-muted-foreground'
+          : 'border-border/20 bg-muted/40 text-foreground'
+      )}
+    >
+      {isHistorico ? 'Apenas histórico' : status.replace('_', ' ')}
+    </span>
+  );
+}
+
 export function WorkflowHistoryTable({ cliente }: WorkflowHistoryTableProps) {
-  // Buscar sessões diretamente do Supabase
-  const { sessions, loading, refetch } = useClientSessionsRealtime(cliente.id);
+  const { sessions, loading } = useClientSessionsRealtime(cliente.id);
   const { updateSession } = useWorkflowRealtime();
-  const [isMigrating, setIsMigrating] = useState(false);
-  
-  // FASE 5: Handler for valor_base_pacote migration
-  const handleMigrateValores = async () => {
-    try {
-      setIsMigrating(true);
-      console.log('🔧 Starting migration for client:', cliente.id);
-      
-      const corrected = await migrateValorBasePacoteForClient(cliente.id);
-      
-      if (corrected > 0) {
-        toast.success(`${corrected} sessão(ões) corrigida(s) com sucesso!`);
-        // Reload sessions to show corrected values
-        refetch();
-      } else {
-        toast.info('Nenhuma sessão precisou ser corrigida');
-      }
-    } catch (error) {
-      console.error('Erro ao corrigir valores:', error);
-      toast.error('Erro ao corrigir valores do histórico');
-    } finally {
-      setIsMigrating(false);
-    }
-  };
-  
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      'agendado': 'bg-blue-100 text-blue-800',
-      'concluido': 'bg-green-100 text-green-800',
-      'cancelado': 'bg-red-100 text-red-800',
-      'em_andamento': 'bg-yellow-100 text-yellow-800',
-      'historico': 'bg-muted/40 text-muted-foreground border border-border'
-    };
-    return colors[status as keyof typeof colors] || 'bg-muted text-foreground';
-  };
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Carregando histórico...</p>
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-md" />
+        ))}
       </div>
     );
   }
 
   if (sessions.length === 0) {
-    return <div className="text-center py-8">
-        <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">Nenhum histórico encontrado</h3>
-        <p className="text-muted-foreground">
+    return (
+      <div className="py-10 text-center">
+        <p className="text-sm text-muted-foreground">Nenhum histórico encontrado.</p>
+        <p className="mt-1 text-xs text-muted-foreground/70">
           Este cliente ainda não possui trabalhos registrados no workflow.
         </p>
-      </div>;
+      </div>
+    );
   }
-  return (
-    <div className="space-y-4">
-      {/* Migration button hidden - no longer needed for daily use */}
-      
-      <Accordion type="single" collapsible className="w-full">
-        {sessions.map((item) => (
-          <AccordionItem 
-            key={item.id} 
-            value={item.id} 
-            className="border border-lunar-border rounded-lg mb-4 bg-lunar-surface shadow-lunar-sm hover:shadow-lunar-md transition-all duration-200"
-          >
-            <AccordionTrigger className="px-3 md:px-6 hover:no-underline py-3 bg-lunar-accent/5 rounded-lg">
-              <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-3 md:gap-4">
-                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3 md:h-4 md:w-4 text-lunar-textSecondary" />
-                    <span className="font-medium text-xs md:text-sm text-lunar-text">
-                      {formatDateForDisplay(item.data)}
-                    </span>
-                  </div>
-                  {item.status && (
-                    <div className="flex flex-col gap-1">
-                      <Badge className={`text-[11px] md:text-xs ${getStatusBadge(item.status)}`}>
-                        {item.status}
-                      </Badge>
-                      {item.status === 'historico' && (
-                        <span className="text-[10px] text-muted-foreground italic">
-                          📋 Apenas histórico
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Informações do Pacote - Responsivo */}
-                <div className="flex-1 md:mx-8">
-                  <div className="text-left space-y-1">
-                    <div className="font-medium text-xs md:text-sm text-lunar-text break-words">
-                      {item.pacote || 'Pacote não especificado'}
-                    </div>
-                    <div className="text-[11px] md:text-xs text-lunar-textSecondary break-words text-ellipsis overflow-hidden">
-                      {item.categoria || ''} {item.categoria && item.descricao && '•'} {item.descricao || ''}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Métricas Financeiras - Grid responsivo para tablets */}
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 text-center md:text-right">
-                  <div className="flex flex-col items-center md:items-end">
-                    <span className="text-[11px] md:text-xs text-lunar-textSecondary uppercase tracking-wide">Total</span>
-                    <span className="font-bold text-chart-blue-1 text-[11px] md:text-xs">{formatCurrency(item.total || 0)}</span>
+  return (
+    <Accordion type="single" collapsible className="w-full">
+      {sessions.map((item) => (
+        <AccordionItem
+          key={item.id}
+          value={item.id}
+          className="border-b border-border/20 last:border-b-0 data-[state=open]:bg-muted/20 rounded-md transition-colors"
+        >
+          <AccordionTrigger className="px-2 py-2.5 hover:no-underline hover:bg-muted/30 rounded-md">
+            <div className="flex w-full flex-col gap-2 md:flex-row md:items-center md:gap-4">
+              {/* Data + status */}
+              <div className="flex items-center gap-2 md:w-[210px] md:shrink-0">
+                <Calendar className="h-3.5 w-3.5 text-accent-gold" />
+                <span className="text-xs font-medium text-foreground tabular-nums">
+                  {formatDateForDisplay(item.data)}
+                </span>
+                {item.status && <StatusChip status={item.status} />}
+              </div>
+
+              {/* Pacote */}
+              <div className="min-w-0 flex-1 text-left">
+                <div className="truncate text-xs font-medium text-foreground md:text-[13px]">
+                  {item.pacote || 'Pacote não especificado'}
+                </div>
+                {(item.categoria || item.descricao) && (
+                  <div className="truncate text-[11px] text-muted-foreground">
+                    {[item.categoria, item.descricao].filter(Boolean).join(' • ')}
                   </div>
-                  
-                  <div className="flex flex-col items-center md:items-end">
-                    <span className="text-[11px] md:text-xs text-lunar-textSecondary">Pago</span>
-                    <span className="font-semibold text-chart-green-1 text-[11px] md:text-xs text-green-600">{formatCurrency(item.valorPago || 0)}</span>
-                  </div>
-                  
-                  <div className="flex flex-col items-center md:items-end">
-                    <span className="text-[11px] md:text-xs text-lunar-textSecondary">Agendado</span>
-                    <span className="font-semibold text-chart-orange-1 text-[11px] md:text-xs text-orange-400">{formatCurrency(item.totalAgendado || 0)}</span>
-                  </div>
-                  
-                  <div className="flex flex-col items-center md:items-end">
-                    <span className="text-[11px] md:text-xs text-lunar-textSecondary">Pendente</span>
-                    <span className="font-semibold text-chart-yellow-1 text-[11px] md:text-xs text-red-500">{formatCurrency(item.restante || 0)}</span>
-                  </div>
+                )}
+              </div>
+
+              {/* Métricas essenciais */}
+              <div className="flex items-center gap-5 md:shrink-0 md:justify-end">
+                <div className="flex flex-col items-start md:items-end">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Total</span>
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    {formatCurrency(item.total || 0)}
+                  </span>
+                </div>
+                <div className="flex flex-col items-start md:items-end">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Pendente</span>
+                  <span
+                    className={cn(
+                      'text-xs font-semibold tabular-nums',
+                      (item.restante || 0) > 0 ? 'text-accent-gold' : 'text-muted-foreground'
+                    )}
+                  >
+                    {formatCurrency(item.restante || 0)}
+                  </span>
                 </div>
               </div>
-            </AccordionTrigger>
-            
-            <AccordionContent className="px-4 md:px-6 pb-6">
-              <SessionPaymentHistory 
-                sessionData={item} 
+            </div>
+          </AccordionTrigger>
+
+          <AccordionContent className="px-2 pb-5">
+            <div className="space-y-4">
+              <SessionPaymentHistory
+                sessionData={item}
                 onPaymentUpdate={async (sessionId, totalPaid, fullPaymentsArray) => {
-                  // Atualizar sessão no Supabase via useWorkflowRealtime
                   try {
-                    await updateSession(sessionId, {
-                      valorPago: totalPaid,
-                      pagamentos: fullPaymentsArray
-                    }, true); // silent update
+                    await updateSession(
+                      sessionId,
+                      { valorPago: totalPaid, pagamentos: fullPaymentsArray },
+                      true
+                    );
                   } catch (error) {
                     console.error('Erro ao atualizar pagamento:', error);
                   }
-                }} 
+                }}
               />
 
-              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8">
-                {/* COMPOSIÇÃO DO VALOR */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <DollarSign className="h-4 w-4 text-lunar-accent" />
-                    <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
-                      Composição do Valor
-                    </h3>
+              {/* Composição do valor */}
+              <div className="border-t border-border/20 pt-3">
+                <h4 className={SECTION_TITLE}>
+                  <DollarSign className="h-3.5 w-3.5 text-accent-gold" />
+                  Composição do valor
+                </h4>
+                <dl className="mt-2 space-y-1.5">
+                  {[
+                    ['Base do pacote', item.valorPacote || 0],
+                    ['Fotos extras', item.valorTotalFotoExtra || 0],
+                    ['Produtos', item.valorTotalProduto || 0],
+                    ['Adicional', item.valorAdicional || 0],
+                  ].map(([label, valor]) => (
+                    <div key={label as string} className="flex items-center justify-between">
+                      <dt className="text-xs text-muted-foreground">{label}</dt>
+                      <dd className="text-xs font-medium tabular-nums text-foreground">
+                        {formatCurrency(valor as number)}
+                      </dd>
+                    </div>
+                  ))}
+                  {item.desconto > 0 && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-xs text-muted-foreground">Desconto</dt>
+                      <dd className="text-xs font-medium tabular-nums text-destructive">
+                        -{formatCurrency(item.desconto || 0)}
+                      </dd>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-border/20 pt-2">
+                    <dt className="text-xs font-semibold text-foreground">Total</dt>
+                    <dd className="text-xs font-semibold tabular-nums text-foreground">
+                      {formatCurrency(item.total || 0)}
+                    </dd>
                   </div>
-                  
-                  <div className="space-y-3 rounded-lg p-4 bg-muted py-[6px]">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-lunar-textSecondary">Base do Pacote</span>
-                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorPacote || 0)}</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-lunar-textSecondary">Fotos Extras</span>
-                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorTotalFotoExtra || 0)}</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-lunar-textSecondary">Produtos</span>
-                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorTotalProduto || 0)}</span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-lunar-textSecondary">Adicional</span>
-                      <span className="font-semibold text-lunar-text text-xs">{formatCurrency(item.valorAdicional || 0)}</span>
-                    </div>
-                    
-                    {item.desconto > 0 && <div className="flex justify-between items-center">
-                        <span className="text-xs text-lunar-textSecondary">Desconto</span>
-                        <span className="font-semibold text-sm text-error">-{formatCurrency(item.desconto || 0)}</span>
-                      </div>}
-                    
-                    <div className="border-t border-lunar-border/50 pt-3 mt-4">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-sm text-lunar-text">Total</span>
-                        <span className="font-bold text-sm text-lunar-text">
-                          {formatCurrency(item.total || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                </dl>
               </div>
 
-                {item.produtosList && item.produtosList.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-lunar-border/30">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Package className="h-4 w-4 text-lunar-accent" />
-                      <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
-                        Produtos Incluídos
-                      </h3>
-                    </div>
-                    <div className="rounded-lg p-4 space-y-3 bg-muted">
-                      {item.produtosList.map((p: any, index: number) => (
-                        <div 
-                          key={index} 
-                          className="flex justify-between items-center py-2 border-b border-lunar-border/20 last:border-0"
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium text-sm text-lunar-text">{p.nome}</span>
-                            {p.quantidade > 1 && (
-                              <span className="text-xs text-lunar-textSecondary">
-                                Quantidade: {p.quantidade}x
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-semibold text-sm text-lunar-text">
-                            {p.tipo === 'manual' 
-                              ? formatCurrency(p.valorUnitario * p.quantidade) 
-                              : formatCurrency(0)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+              {/* Produtos */}
+              {item.produtosList && item.produtosList.length > 0 && (
+                <div className="border-t border-border/20 pt-3">
+                  <h4 className={SECTION_TITLE}>
+                    <Package className="h-3.5 w-3.5 text-accent-gold" />
+                    Produtos incluídos
+                  </h4>
+                  <div className="mt-2 space-y-1.5">
+                    {item.produtosList.map((p: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {p.nome}
+                          {p.quantidade > 1 && ` · ${p.quantidade}x`}
+                        </span>
+                        <span className="text-xs font-medium tabular-nums text-foreground">
+                          {p.tipo === 'manual'
+                            ? formatCurrency(p.valorUnitario * p.quantidade)
+                            : formatCurrency(0)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {item.detalhes && (
-                  <div className="mt-6 pt-6 border-t border-lunar-border/30">
-                    <div className="flex items-center gap-2 mb-3">
-                      <History className="h-4 w-4 text-lunar-accent" />
-                      <h3 className="font-semibold text-sm text-lunar-text uppercase tracking-wide">
-                        Observações
-                      </h3>
-                    </div>
-                    <div className="bg-lunar-accent/5 rounded-lg p-4">
-                      <p className="text-sm text-lunar-text leading-relaxed">{item.detalhes}</p>
-                    </div>
-                  </div>
-                )}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    </div>
+              {/* Observações */}
+              {item.detalhes && (
+                <div className="border-t border-border/20 pt-3">
+                  <h4 className={SECTION_TITLE}>
+                    <FileText className="h-3.5 w-3.5 text-accent-gold" />
+                    Observações
+                  </h4>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{item.detalhes}</p>
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }

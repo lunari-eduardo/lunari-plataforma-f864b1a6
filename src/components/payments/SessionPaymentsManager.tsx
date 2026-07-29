@@ -173,37 +173,45 @@ export function SessionPaymentsManager({
     };
   }, [displayMode, isOpen, sessionData?.id, sessionData?.sessionId]);
 
+  // Badges neutros (Silent Luxury): superfície discreta + tipografia semântica.
+  const BADGE_BASE = 'border-border/20 bg-muted/40 font-medium';
+  const BADGE_OK = `${BADGE_BASE} text-emerald-600 dark:text-emerald-500`;
+  const BADGE_WARN = `${BADGE_BASE} text-accent-gold`;
+  const BADGE_DANGER = `${BADGE_BASE} text-destructive`;
+  const BADGE_NEUTRAL = `${BADGE_BASE} text-muted-foreground`;
+
   const getStatusBadge = (payment: SessionPaymentExtended) => {
     // Se tem statusRecebimento (parcela Asaas), usar esse status
     if (payment.statusRecebimento) {
       switch (payment.statusRecebimento) {
         case 'confirmado':
-          return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Confirmado</Badge>;
+          return <Badge className={BADGE_WARN}>Confirmado</Badge>;
         case 'recebido':
-          return <Badge className="bg-green-100 text-green-800 border-green-200">Recebido</Badge>;
+          return <Badge className={BADGE_OK}>Recebido</Badge>;
         case 'antecipado':
-          return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Antecipado</Badge>;
+          return <Badge className={BADGE_NEUTRAL}>Antecipado</Badge>;
         case 'pendente':
-          return <Badge className="bg-muted/40 text-foreground border-border">Pendente</Badge>;
+          return <Badge className={BADGE_NEUTRAL}>Pendente</Badge>;
       }
     }
 
     const { statusPagamento } = payment;
     if (statusPagamento === 'estornado') {
-      return <Badge className="bg-red-100 text-red-800 border-red-200">Estornado</Badge>;
+      return <Badge className={BADGE_DANGER}>Estornado</Badge>;
     }
     if (statusPagamento === 'pago') {
-      return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
+      return <Badge className={BADGE_OK}>Pago</Badge>;
     }
     if (statusPagamento === 'pendente') {
       const isOverdue = payment.dataVencimento && new Date(payment.dataVencimento) < new Date();
       if (isOverdue) {
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Atrasado</Badge>;
+        return <Badge className={BADGE_DANGER}>Atrasado</Badge>;
       }
-      return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendente</Badge>;
+      return <Badge className={BADGE_WARN}>Pendente</Badge>;
     }
     return <Badge variant="outline">{statusPagamento}</Badge>;
   };
+
 
   const getOriginIcon = (origem: string, observacoes?: string) => {
     // Crédito do cliente
@@ -294,7 +302,22 @@ export function SessionPaymentsManager({
   const valorRestanteSessao = fin.totalVisual > 0 ? fin.pendenteSess : valorRestante;
 
   const showExtrasChip = fin.hasGaleria && fin.extrasIdeal > 0;
-  const gridCols = showExtrasChip ? 'grid-cols-2 lg:grid-cols-7' : 'grid-cols-2 lg:grid-cols-5';
+  // Modo card (perfil do cliente): Total/Cobrado já aparecem no cabeçalho da linha.
+  const isCard = displayMode === 'card';
+  const showTotalChip = !isCard;
+  const showCobradoChip = !isCard || Math.abs(totalPago - totalRecebido) > 0.001;
+  const GRID_BY_COUNT: Record<number, string> = {
+    3: 'grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-2 lg:grid-cols-4',
+    5: 'grid-cols-2 lg:grid-cols-5',
+    6: 'grid-cols-2 lg:grid-cols-6',
+    7: 'grid-cols-2 lg:grid-cols-7',
+  };
+  const chipCount =
+    (showTotalChip ? 1 : 0) + (showExtrasChip ? 2 : 0) + (showCobradoChip ? 1 : 0) + 3;
+  const gridCols = GRID_BY_COUNT[chipCount] ?? 'grid-cols-2 lg:grid-cols-5';
+
+
 
   const canCobrarSessao = valorRestanteSessao > 0.001;
   const canCobrarExtras = fin.hasGaleria && fin.extrasPend > 0.001;
@@ -309,13 +332,15 @@ export function SessionPaymentsManager({
   const content = (
     <>
       {/* Financial Summary */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
+      <Card className={isCard ? 'mb-3 border-0 bg-transparent shadow-none' : 'mb-6'}>
+        <CardContent className={isCard ? 'p-0 pb-3 border-b border-border/20' : 'pt-6'}>
           <div className={`grid ${gridCols} gap-2 sm:gap-3 lg:gap-4 text-center`}>
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
-              <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
-            </div>
+            {showTotalChip && (
+              <div>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
+              </div>
+            )}
             {showExtrasChip && (
               <>
                 <div>
@@ -324,7 +349,7 @@ export function SessionPaymentsManager({
                 </div>
                 <div>
                   <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Extras</p>
-                  <p className="font-semibold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+                  <p className="font-semibold text-accent-gold text-xs sm:text-sm">
                     {formatCurrency(fin.extrasIdeal)}
                   </p>
                   <p className="text-2xs text-muted-foreground">
@@ -333,15 +358,17 @@ export function SessionPaymentsManager({
                 </div>
               </>
             )}
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
-              <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
-            </div>
+            {showCobradoChip && (
+              <div>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-500 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
+              </div>
+            )}
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Recebido</p>
-              <p className="font-bold text-emerald-700 text-xs sm:text-sm">{formatCurrency(totalRecebido)}</p>
+              <p className="font-bold text-emerald-700 dark:text-emerald-500 text-xs sm:text-sm">{formatCurrency(totalRecebido)}</p>
               {totalTaxas > 0 && (
-                <p className="text-2xs text-red-500">Taxas: -{formatCurrency(totalTaxas)}</p>
+                <p className="text-2xs text-destructive">Taxas: -{formatCurrency(totalTaxas)}</p>
               )}
             </div>
             <div>
@@ -350,20 +377,22 @@ export function SessionPaymentsManager({
             </div>
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
-              <p className="font-bold text-red-600 text-xs sm:text-sm">{formatCurrency(valorRestante)}</p>
+              <p className={`font-bold text-xs sm:text-sm ${valorRestante > 0.001 ? 'text-accent-gold' : 'text-muted-foreground'}`}>{formatCurrency(valorRestante)}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
+
       {/* Payment History */}
-      <Card>
-        <CardHeader>
+      <Card className={isCard ? 'border-0 bg-transparent shadow-none' : undefined}>
+        <CardHeader className={isCard ? 'px-0 pt-0 pb-2' : undefined}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <CardTitle className="text-sm md:text-lg font-semibold flex items-center gap-2">
-              <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+            <CardTitle className={isCard ? 'text-xs font-semibold flex items-center gap-2' : 'text-sm md:text-lg font-semibold flex items-center gap-2'}>
+              <CreditCard className={isCard ? 'h-3.5 w-3.5 text-accent-gold' : 'h-4 w-4 md:h-5 md:w-5 text-primary'} />
               Histórico de Movimentações
             </CardTitle>
+
             <div className="flex gap-2 w-full sm:w-auto">
               {fin.hasGaleria ? (
                 <DropdownMenu>
@@ -439,7 +468,7 @@ export function SessionPaymentsManager({
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isCard ? 'px-0 pb-0' : undefined}>
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
               <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
@@ -535,12 +564,17 @@ export function SessionPaymentsManager({
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                              {payment.tipo}
-                            </div>
+                            {/* Só exibe o "tipo" quando ele acrescenta informação além do badge */}
+                            {String(payment.tipo || '').toLowerCase() !==
+                              String(payment.statusPagamento || '').toLowerCase() && (
+                              <div className="text-xs text-muted-foreground uppercase tracking-wide">
+                                {payment.tipo}
+                              </div>
+                            )}
                             {getStatusBadge(payment)}
                           </div>
                         </TableCell>
+
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {getOriginIcon(payment.origem, payment.observacoes)}
