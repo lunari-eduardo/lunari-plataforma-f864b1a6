@@ -33,25 +33,26 @@ export default function TimeSlotOptionsMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">
-        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onAvailable(); }}>
-          <Clock className="h-4 w-4 mr-2 text-emerald-500" />
+        <DropdownMenuItem className="text-xs h-8" onClick={(e) => { e.stopPropagation(); onAvailable(); }}>
+          <Clock className="h-3.5 w-3.5 mr-2 text-lunar-success" />
           Disponível
         </DropdownMenuItem>
         {isBlocked && onUnblock ? (
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onUnblock(); }}>
-            <Unlock className="h-4 w-4 mr-2 text-blue-500" />
+          <DropdownMenuItem className="text-xs h-8" onClick={(e) => { e.stopPropagation(); onUnblock(); }}>
+            <Unlock className="h-3.5 w-3.5 mr-2 text-primary" />
             Desbloquear
           </DropdownMenuItem>
         ) : (
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onBlock(); }}>
-            <Ban className="h-4 w-4 mr-2 text-destructive" />
+          <DropdownMenuItem className="text-xs h-8" onClick={(e) => { e.stopPropagation(); onBlock(); }}>
+            <Ban className="h-3.5 w-3.5 mr-2 text-destructive" />
             Bloquear
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-destructive focus:text-destructive">
-          <Trash2 className="h-4 w-4 mr-2" />
+        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-xs h-8 text-destructive focus:text-destructive">
+          <Trash2 className="h-3.5 w-3.5 mr-2" />
           Excluir horário
         </DropdownMenuItem>
+
       </DropdownMenuContent>
     </DropdownMenu>
   );
