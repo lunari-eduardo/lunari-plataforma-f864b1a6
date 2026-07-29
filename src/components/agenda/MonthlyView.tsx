@@ -78,7 +78,7 @@ export default function MonthlyView({
   };
   return (
     <div className="w-full h-full">
-      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-card/15 dark:bg-card/[0.03]">
+      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-muted/20">
         {/* Weekday headers */}
         {weekDays.map((day) => (
           <div 

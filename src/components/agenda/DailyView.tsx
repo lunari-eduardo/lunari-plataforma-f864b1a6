@@ -355,7 +355,7 @@ export default function DailyView({
                     onCreateSlot({ date, time });
                   }
                 }} 
-                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-card/40 dark:bg-card/[0.05]'}`}
+                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-card/60'}`}
               >
                 {events.length > 0 ? (
                   <div className="space-y-2">
