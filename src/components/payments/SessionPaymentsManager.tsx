@@ -298,9 +298,17 @@ export function SessionPaymentsManager({
   const isCard = displayMode === 'card';
   const showTotalChip = !isCard;
   const showCobradoChip = !isCard || Math.abs(totalPago - totalRecebido) > 0.001;
+  const GRID_BY_COUNT: Record<number, string> = {
+    3: 'grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-2 lg:grid-cols-4',
+    5: 'grid-cols-2 lg:grid-cols-5',
+    6: 'grid-cols-2 lg:grid-cols-6',
+    7: 'grid-cols-2 lg:grid-cols-7',
+  };
   const chipCount =
     (showTotalChip ? 1 : 0) + (showExtrasChip ? 2 : 0) + (showCobradoChip ? 1 : 0) + 3;
-  const gridCols = `grid-cols-2 lg:grid-cols-${chipCount}`;
+  const gridCols = GRID_BY_COUNT[chipCount] ?? 'grid-cols-2 lg:grid-cols-5';
+
 
 
   const canCobrarSessao = valorRestanteSessao > 0.001;
