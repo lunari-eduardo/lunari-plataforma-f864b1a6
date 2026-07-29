@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { useAccessControl } from '@/hooks/useAccessControl';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 import Categorias from '@/components/configuracoes/Categorias';
 import Pacotes from '@/components/configuracoes/Pacotes';
@@ -126,7 +128,7 @@ export default function Configuracoes() {
             </Tabs>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     </ScrollArea>
   );
 }
