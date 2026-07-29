@@ -98,7 +98,7 @@ interface Props {
 }
 
 
-export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false }: Props) {
+export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false, onSelectVendaAvulsa }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
   const { toast } = useToast();
   const {
