@@ -36,11 +36,10 @@ function resolveInitialTab(): FinanceTab {
   }
 }
 
-const NovaFinancas = memo(function NovaFinancas() {
+const NovaFinancasInner = memo(function NovaFinancasInner() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<FinanceTab>(resolveInitialTab);
-  const [novoAberto, setNovoAberto] = useState(false);
-  const financas = useNovoFinancas();
+  const drawer = useLancamentoDrawer();
 
   useEffect(() => {
     const handler = (ev: Event) => {
@@ -61,8 +60,7 @@ const NovaFinancas = memo(function NovaFinancas() {
       <div className="min-h-screen bg-background pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 py-0 my-0">
           {/* Header global do módulo — botão fixo no canto superior direito */}
-          <FinanceHeader onSelectTipo={() => setNovoAberto(true)} />
-
+          <FinanceHeader onSelectTipo={(tipo) => drawer.open({ tipo })} />
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FinanceTab)}>
             <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none justify-start gap-2 sm:gap-6">
@@ -92,18 +90,17 @@ const NovaFinancas = memo(function NovaFinancas() {
               <ConfiguracoesView />
             </TabsContent>
           </Tabs>
-
-          {/* Modal global — compartilhado por todas as abas via o botão do header */}
-          <ModalNovoLancamentoRefatorado
-            aberto={novoAberto}
-            onFechar={() => setNovoAberto(false)}
-            createTransactionEngine={financas.createTransactionEngine}
-            tipoLancamento="despesa"
-            scope="despesa"
-          />
         </div>
       </div>
     </ScrollArea>
+  );
+});
+
+const NovaFinancas = memo(function NovaFinancas() {
+  return (
+    <LancamentoDrawerProvider>
+      <NovaFinancasInner />
+    </LancamentoDrawerProvider>
   );
 });
 
