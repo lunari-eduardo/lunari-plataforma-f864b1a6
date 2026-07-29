@@ -73,7 +73,7 @@ export default function AssistenteAprovacoes() {
   const other = rows.filter((r) => r.status !== "pending");
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 md:px-6 py-4 space-y-6">
+    <div className="max-w-[79rem] mx-auto w-full px-4 md:px-6 py-4 space-y-6">
       <header className="flex items-start justify-between gap-4 pb-4">
         <div className="min-w-0 flex items-center gap-2">
           <ShieldAlert className="h-4 w-4 text-muted-foreground" />
