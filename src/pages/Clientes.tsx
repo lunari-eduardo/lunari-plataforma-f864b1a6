@@ -746,9 +746,9 @@ export default function Clientes() {
             </DialogHeader>
             
             
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome *</Label>
+            <div className={cn(DIALOG_BODY, 'space-y-4 pr-1')}>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="nome" className={FIELD_LABEL}>Nome *</Label>
                 <Input 
                   id="nome" 
                   value={formData.nome} 
@@ -775,24 +775,24 @@ export default function Clientes() {
                 )}
               </div>
               
-              <div>
-                <Label htmlFor="email">E-mail</Label>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="email" className={FIELD_LABEL}>E-mail</Label>
                 <Input id="email" type="email" value={formData.email} onChange={e => setFormData(prev => ({
                 ...prev,
                 email: e.target.value
               }))} placeholder="email@exemplo.com" />
               </div>
               
-              <div>
-                <Label htmlFor="telefone">Telefone</Label>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="telefone" className={FIELD_LABEL}>Telefone</Label>
                 <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({
                 ...prev,
                 telefone: e.target.value
               }))} placeholder="(Opcional) +55 (DDD) 00000-0000" />
               </div>
               
-              <div>
-                <Label htmlFor="origem">Origem</Label>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="origem" className={FIELD_LABEL}>Origem</Label>
                 <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
                 ...prev,
                 origem: value
@@ -812,25 +812,27 @@ export default function Clientes() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowClientForm(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSaveClient}
-                  disabled={!editingClient && !forceCreate && duplicateCheck.isDuplicata}
-                >
-                  {editingClient ? 'Atualizar' : 'Adicionar'}
-                </Button>
-              </div>
-              
+
               {/* Aviso de duplicata bloqueada */}
               {!editingClient && !forceCreate && duplicateCheck.isDuplicata && (
-                <p className="text-sm text-destructive text-center mt-2">
+                <p className="text-center text-xs text-destructive">
                   Cliente com este nome já existe. Clique em "Adicionar" para ver opções.
                 </p>
               )}
+            </div>
+
+            <div className={cn(DIALOG_FOOTER, 'flex justify-end gap-2')}>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowClientForm(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleSaveClient}
+                disabled={!editingClient && !forceCreate && duplicateCheck.isDuplicata}
+              >
+                {editingClient ? 'Atualizar' : 'Adicionar'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -850,5 +852,5 @@ export default function Clientes() {
         {/* Confirm Dialog */}
         <ConfirmDialog state={dialogState} onConfirm={handleConfirm} onCancel={handleCancel} onClose={handleClose} />
       </div>
-    </ScrollArea>;
+    </PageContainer>;
 }
