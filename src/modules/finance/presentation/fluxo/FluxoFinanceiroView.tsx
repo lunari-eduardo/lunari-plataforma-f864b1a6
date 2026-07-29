@@ -27,6 +27,9 @@ import {
   FINANCE_FOCUS_FLUXO_EVENT,
   type FluxoFocusPayload,
 } from '@/modules/finance/presentation/navigation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+
 
 type Chip = 'todos' | 'receitas' | 'despesas' | 'a_receber' | 'a_pagar';
 
