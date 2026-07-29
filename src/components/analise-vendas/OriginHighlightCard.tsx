@@ -15,7 +15,7 @@ export function OriginHighlightCard({ originData }: OriginHighlightCardProps) {
       <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-3">
-            <Globe className="h-3.5 w-3.5 text-lunar-textSecondary" />
+            <Globe className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
             <h3 className="text-xs font-medium text-lunar-text">Distribuição por Origem</h3>
           </div>
           <div className="flex flex-col items-center justify-center h-[140px]">
