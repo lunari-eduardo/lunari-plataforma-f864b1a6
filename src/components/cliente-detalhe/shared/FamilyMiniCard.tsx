@@ -59,7 +59,7 @@ export function FamilyMiniCard({
   const bgColor = tipo === 'conjuge' 
     ? 'bg-rose-100 dark:bg-rose-900/30' 
     : 'bg-blue-100 dark:bg-blue-900/30';
-  const iconColor = tipo === 'conjuge' ? 'text-rose-600' : 'text-blue-600';
+  const iconColor = "text-accent-gold";
 
   useEffect(() => {
     if (!editingField) {

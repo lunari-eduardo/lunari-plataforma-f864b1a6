@@ -1,9 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { User } from "lucide-react";
+import { User, History, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { History, FileText } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT } from '@/components/layout/PageTabs';
 import { useClientDetails } from '@/components/cliente-detalhe/hooks/useClientDetails';
 import { ClientHeader } from '@/components/cliente-detalhe/shared/ClientHeader';
 import { ClientMetricsGrid } from '@/components/cliente-detalhe/shared/ClientMetricsGrid';
@@ -18,68 +19,80 @@ export default function ClienteDetalhe() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground mt-2">Carregando cliente...</p>
-      </div>
+      <PageContainer className="py-4">
+        <div className="flex items-center gap-3 pb-4">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-[74px] rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="mt-5 h-64 w-full rounded-xl" />
+      </PageContainer>
     );
   }
 
   if (!cliente) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <User className="h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Cliente não encontrado</h2>
-        <p className="text-muted-foreground mb-4">O cliente solicitado não existe ou foi removido.</p>
-        <Button onClick={() => navigate('/app/clientes')} variant="outline">
-          Voltar para Clientes
-        </Button>
-      </div>
+      <PageContainer className="py-4">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/40 p-12 text-center">
+          <User className="mb-3 h-10 w-10 text-accent-gold" />
+          <h2 className="text-[15px] font-semibold text-foreground">Cliente não encontrado</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            O cliente solicitado não existe ou foi removido.
+          </p>
+          <Button
+            onClick={() => navigate('/app/clientes')}
+            variant="outline"
+            size="sm"
+            className="mt-4 h-8 text-xs"
+          >
+            Voltar para Clientes
+          </Button>
+        </div>
+      </PageContainer>
     );
   }
 
   return (
-    <ScrollArea className="min-h-[calc(100vh-100px)] md:h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-4 md:space-y-6">
-        {/* Header - Mobile First Layout */}
-        <ClientHeader cliente={cliente} onBack={() => navigate('/app/clientes')} />
+    <PageContainer className="py-4">
+      <ClientHeader cliente={cliente} onBack={() => navigate('/app/clientes')} />
 
-        {/* Métricas Rápidas - Grid 2x2 em mobile */}
-        <ClientMetricsGrid metrics={metricas} />
+      <ClientMetricsGrid metrics={metricas} />
 
-        {/* Tabs - Responsivo com scroll em mobile */}
-        <Tabs defaultValue="historico" className="w-full">
-          <TabsList className="overflow-x-auto whitespace-nowrap px-1 gap-2 sm:grid sm:grid-cols-3 w-full">
-            <TabsTrigger value="historico" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <History className="h-3 w-3 md:h-4 md:w-4" />
-              Histórico
-            </TabsTrigger>
-            <TabsTrigger value="contacto" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <User className="h-3 w-3 md:h-4 md:w-4" />
-              Contacto
-            </TabsTrigger>
-            <TabsTrigger value="documentos" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <FileText className="h-3 w-3 md:h-4 md:w-4" />
-              Documentos
-            </TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="historico" className="mt-5 w-full">
+        <TabsList className={PAGE_TABS_LIST}>
+          <TabsTrigger value="historico" className={PAGE_TABS_TRIGGER}>
+            <History className="h-3.5 w-3.5" />
+            Histórico
+          </TabsTrigger>
+          <TabsTrigger value="contacto" className={PAGE_TABS_TRIGGER}>
+            <User className="h-3.5 w-3.5" />
+            Contacto
+          </TabsTrigger>
+          <TabsTrigger value="documentos" className={PAGE_TABS_TRIGGER}>
+            <FileText className="h-3.5 w-3.5" />
+            Documentos
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Aba 1: Histórico & Projetos (Principal) */}
-          <TabsContent value="historico" className="space-y-6">
-            <HistoricoTab cliente={cliente} />
-          </TabsContent>
+        <TabsContent value="historico" className={PAGE_TABS_CONTENT}>
+          <HistoricoTab cliente={cliente} />
+        </TabsContent>
 
-          {/* Aba 2: Dados de Contacto */}
-          <TabsContent value="contacto" className="space-y-6">
-            <ContactoTab cliente={cliente} onUpdate={atualizarCliente} />
-          </TabsContent>
+        <TabsContent value="contacto" className={PAGE_TABS_CONTENT}>
+          <ContactoTab cliente={cliente} onUpdate={atualizarCliente} />
+        </TabsContent>
 
-          {/* Aba 3: Documentos */}
-          <TabsContent value="documentos" className="space-y-6">
-            <DocumentosTab cliente={cliente} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </ScrollArea>
+        <TabsContent value="documentos" className={PAGE_TABS_CONTENT}>
+          <DocumentosTab cliente={cliente} />
+        </TabsContent>
+      </Tabs>
+    </PageContainer>
   );
 }

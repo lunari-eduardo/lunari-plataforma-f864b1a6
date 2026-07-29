@@ -10,7 +10,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, useDialogDropdownCont
 import { Label } from "@/components/ui/label";
 import { SelectModal as Select, SelectModalContent as SelectContent, SelectModalItem as SelectItem, SelectModalTrigger as SelectTrigger, SelectModalValue as SelectValue } from '@/components/ui/select-in-modal';
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake, LayoutGrid, List, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from '@/lib/utils';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  dialogSize,
+  DIALOG_SHELL,
+  DIALOG_BODY,
+  DIALOG_FOOTER,
+  DIALOG_TITLE_CLS,
+  FIELD_GROUP,
+  FIELD_LABEL,
+} from '@/lib/dialogTokens';
+import {
+  CLIENT_CARD,
+  CLIENT_ROW,
+  CLIENT_NAME,
+  CLIENT_METRIC_LABEL,
+  CLIENT_METRIC_VALUE,
+  CLIENT_METRIC_PAID,
+  CLIENT_METRIC_DUE,
+  STATUS_BADGE_ACTIVE,
+  STATUS_BADGE_NEW,
+  CLIENT_ICON_ACTION,
+  CLIENT_ICON_ACTION_DANGER,
+} from '@/components/clientes/clienteTokens';
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
@@ -529,96 +553,89 @@ export default function Clientes() {
       categoria: 'todas'
     });
   };
-  return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 py-px">
-        {/* Migration Helper */}
-        
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            
-            <p className="text-muted-foreground">
-              {isLoadingSupabase ? 'Carregando...' : `${clientesSupabase.length} cliente(s) cadastrado(s)`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Toggle de visualização */}
-            <div className="flex items-center border border-lunar-border rounded-lg overflow-hidden">
-              <Button variant={viewMode === 'cards' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('cards')} className={viewMode === 'cards' ? "rounded-none" : "rounded-none"}>
-                <LayoutGrid className="h-4 w-4" />
+  return <PageContainer className="py-4">
+      <PageHeader
+        title="Clientes"
+        description={isLoadingSupabase ? 'Carregando…' : `${clientesSupabase.length} cliente(s) cadastrado(s)`}
+        action={
+          <>
+            <div className="flex items-center overflow-hidden rounded-lg border border-border/20">
+              <Button variant={viewMode === 'cards' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('cards')} className="h-8 rounded-none px-2.5">
+                <LayoutGrid className="h-3.5 w-3.5" />
               </Button>
-              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className={viewMode === 'list' ? "rounded-none" : "rounded-none"}>
-                <List className="h-4 w-4" />
+              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8 rounded-none px-2.5">
+                <List className="h-3.5 w-3.5" />
               </Button>
             </div>
 
-            <Button variant="outline" onClick={() => setShowAniversariantesModal(true)} className="flex items-center gap-2">
-              <Cake className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={() => setShowAniversariantesModal(true)} className="h-8 gap-1.5 text-xs">
+              <Cake className="h-3.5 w-3.5 text-accent-gold" />
               Aniversariantes
             </Button>
-            <Button onClick={handleAddClient} className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
+            <Button size="sm" onClick={handleAddClient} className="h-8 gap-1.5 text-xs">
+              <UserPlus className="h-3.5 w-3.5" />
               Novo Cliente
             </Button>
-          </div>
-        </div>
-        
+          </>
+        }
+      />
+
+      <div className="space-y-5">
         {/* Filtros */}
         <ClientFiltersBar filters={filters} onFiltersChange={setFilters} totalClients={clientMetrics.length} filteredClients={clientesFiltrados.length} />
 
         {/* Visualização em Lista */}
-        {viewMode === 'list' && <div className="border rounded-lg overflow-hidden">
+        {viewMode === 'list' && <div className="overflow-hidden rounded-xl border border-border/20">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className={CLIENT_ROW}>
                   <SortableHeader label="Nome" sortKey="nome" />
                   <SortableHeader label="Total" sortKey="totalFaturado" />
                   <SortableHeader label="Pago" sortKey="totalPago" />
                   <SortableHeader label="A Receber" sortKey="aReceber" />
                   <SortableHeader label="Sessões" sortKey="sessoes" />
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-xs text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right text-xs text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientesPaginados.map(cliente => <TableRow key={cliente.id}>
+                {clientesPaginados.map(cliente => <TableRow key={cliente.id} className={CLIENT_ROW}>
                     <TableCell>
-                      <Link to={`/app/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
+                      <Link to={`/app/clientes/${cliente.id}`} className={CLIENT_NAME}>
                         {cliente.nome}
                       </Link>
                       {(cliente as any).origem && <div className="mt-1">
                           <OriginBadge originId={(cliente as any).origem} />
                         </div>}
                     </TableCell>
-                    <TableCell className="font-semibold text-primary">
+                    <TableCell className={CLIENT_METRIC_VALUE}>
                       {formatCurrency(cliente.totalFaturado)}
                     </TableCell>
-                    <TableCell className="font-semibold text-green-600">
+                    <TableCell className={CLIENT_METRIC_PAID}>
                       {formatCurrency(cliente.totalPago)}
                     </TableCell>
-                    <TableCell className="font-semibold text-orange-600">
+                    <TableCell className={CLIENT_METRIC_DUE}>
                       {formatCurrency(cliente.aReceber)}
                     </TableCell>
                     <TableCell>
-                      <span className="text-muted-foreground">
+                      <span className="text-xs tabular-nums text-muted-foreground">
                         {cliente.sessoes}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-muted/40 text-muted-foreground'}`}>
+                      <span className={cliente.totalFaturado > 0 ? STATUS_BADGE_ACTIVE : STATUS_BADGE_NEW}>
                         {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className={CLIENT_ICON_ACTION}>
                           <MessageCircle className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className={CLIENT_ICON_ACTION}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className={CLIENT_ICON_ACTION_DANGER}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -629,61 +646,51 @@ export default function Clientes() {
           </div>}
 
         {/* Grid de Clientes - Cards */}
-        {viewMode === 'cards' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clientesPaginados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
+        {viewMode === 'cards' && <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {clientesPaginados.map(cliente => <Card key={cliente.id} className={`${CLIENT_CARD} overflow-hidden shadow-none`}>
               <CardContent className="p-4">
                 {/* Header do Card */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <Link to={`/app/clientes/${cliente.id}`} className="text-lg font-semibold text-primary hover:text-primary/80 block">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/app/clientes/${cliente.id}`} className={`${CLIENT_NAME} block truncate`}>
                       {cliente.nome}
                     </Link>
-                    
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
+                  <div className="flex shrink-0 gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className={CLIENT_ICON_ACTION}>
                       <MessageCircle className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className={CLIENT_ICON_ACTION}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className={CLIENT_ICON_ACTION_DANGER}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
-                {/* Informações de Contato */}
-                
-
                 {/* Métricas Financeiras */}
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Total</p>
-                    <p className="text-sm font-semibold text-primary">
-                      {formatCurrency(cliente.totalFaturado)}
-                    </p>
+                    <p className={`${CLIENT_METRIC_LABEL} mb-1`}>Total</p>
+                    <p className={CLIENT_METRIC_VALUE}>{formatCurrency(cliente.totalFaturado)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Pago</p>
-                    <p className="text-sm font-semibold text-green-600">
-                      {formatCurrency(cliente.totalPago)}
-                    </p>
+                    <p className={`${CLIENT_METRIC_LABEL} mb-1`}>Pago</p>
+                    <p className={CLIENT_METRIC_PAID}>{formatCurrency(cliente.totalPago)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">A Receber</p>
-                    <p className="text-sm font-semibold text-orange-600">
-                      {formatCurrency(cliente.aReceber)}
-                    </p>
+                    <p className={`${CLIENT_METRIC_LABEL} mb-1`}>A Receber</p>
+                    <p className={CLIENT_METRIC_DUE}>{formatCurrency(cliente.aReceber)}</p>
                   </div>
                 </div>
 
                 {/* Status Badge */}
-                <div className="mt-3 pt-3 border-t flex items-center justify-between py-[3px]">
-                  <span className="text-xs text-muted-foreground">
+                <div className="mt-3 flex items-center justify-between border-t border-border/20 pt-3">
+                  <span className="text-[11px] text-muted-foreground">
                     {cliente.sessoes} sessões
                   </span>
-                  <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-muted/40 text-muted-foreground'}`}>
+                  <span className={cliente.totalFaturado > 0 ? STATUS_BADGE_ACTIVE : STATUS_BADGE_NEW}>
                     {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                   </span>
                 </div>
@@ -694,7 +701,7 @@ export default function Clientes() {
         {/* Paginação */}
         {totalPages > 1 && clientesFiltrados.length > 0 && (
           <div className="flex flex-col items-center gap-3 py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, clientesOrdenados.length)} de {clientesOrdenados.length} clientes
             </p>
             <div className="flex items-center gap-1">
@@ -703,9 +710,9 @@ export default function Clientes() {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="gap-1"
+                className="h-8 gap-1 text-xs"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3.5 w-3.5" />
                 Anterior
               </Button>
               
@@ -718,7 +725,7 @@ export default function Clientes() {
                     variant={currentPage === page ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 text-xs"
                   >
                     {page}
                   </Button>
@@ -730,41 +737,42 @@ export default function Clientes() {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="gap-1"
+                className="h-8 gap-1 text-xs"
               >
                 Próximo
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
         )}
 
-        {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
-            <User className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
-            <p className="text-sm text-muted-foreground mb-4 text-center">
+        {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/40 p-12 text-center">
+            <User className="mb-3 h-10 w-10 text-accent-gold" />
+            <h3 className="text-[15px] font-semibold text-foreground">Nenhum cliente encontrado</h3>
+            <p className="mb-4 mt-1 text-xs text-muted-foreground">
               {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? <Button onClick={limparFiltros} variant="outline">
+            {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? <Button onClick={limparFiltros} variant="outline" size="sm" className="h-8 text-xs">
                 Limpar filtros
-              </Button> : <Button onClick={handleAddClient} className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
+              </Button> : <Button onClick={handleAddClient} size="sm" className="h-8 gap-1.5 text-xs">
+                <UserPlus className="h-3.5 w-3.5" />
                 Adicionar Cliente
               </Button>}
           </div>}
 
         {/* Modal do Formulário de Cliente */}
         <Dialog open={showClientForm} onOpenChange={handleModalClose}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className={DIALOG_TITLE_CLS}>
                 {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
               </DialogTitle>
             </DialogHeader>
             
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome *</Label>
+            
+            <div className={cn(DIALOG_BODY, 'space-y-4 pr-1')}>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="nome" className={FIELD_LABEL}>Nome *</Label>
                 <Input 
                   id="nome" 
                   value={formData.nome} 
@@ -791,24 +799,24 @@ export default function Clientes() {
                 )}
               </div>
               
-              <div>
-                <Label htmlFor="email">E-mail</Label>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="email" className={FIELD_LABEL}>E-mail</Label>
                 <Input id="email" type="email" value={formData.email} onChange={e => setFormData(prev => ({
                 ...prev,
                 email: e.target.value
               }))} placeholder="email@exemplo.com" />
               </div>
               
-              <div>
-                <Label htmlFor="telefone">Telefone</Label>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="telefone" className={FIELD_LABEL}>Telefone</Label>
                 <Input id="telefone" value={formData.telefone} onChange={e => setFormData(prev => ({
                 ...prev,
                 telefone: e.target.value
               }))} placeholder="(Opcional) +55 (DDD) 00000-0000" />
               </div>
               
-              <div>
-                <Label htmlFor="origem">Origem</Label>
+              <div className={FIELD_GROUP}>
+                <Label htmlFor="origem" className={FIELD_LABEL}>Origem</Label>
                 <Select value={formData.origem} onValueChange={value => setFormData(prev => ({
                 ...prev,
                 origem: value
@@ -828,25 +836,27 @@ export default function Clientes() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowClientForm(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSaveClient}
-                  disabled={!editingClient && !forceCreate && duplicateCheck.isDuplicata}
-                >
-                  {editingClient ? 'Atualizar' : 'Adicionar'}
-                </Button>
-              </div>
-              
+
               {/* Aviso de duplicata bloqueada */}
               {!editingClient && !forceCreate && duplicateCheck.isDuplicata && (
-                <p className="text-sm text-destructive text-center mt-2">
+                <p className="text-center text-xs text-destructive">
                   Cliente com este nome já existe. Clique em "Adicionar" para ver opções.
                 </p>
               )}
+            </div>
+
+            <div className={cn(DIALOG_FOOTER, 'flex justify-end gap-2')}>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowClientForm(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleSaveClient}
+                disabled={!editingClient && !forceCreate && duplicateCheck.isDuplicata}
+              >
+                {editingClient ? 'Atualizar' : 'Adicionar'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -866,5 +876,5 @@ export default function Clientes() {
         {/* Confirm Dialog */}
         <ConfirmDialog state={dialogState} onConfirm={handleConfirm} onCancel={handleCancel} onClose={handleClose} />
       </div>
-    </ScrollArea>;
+    </PageContainer>;
 }

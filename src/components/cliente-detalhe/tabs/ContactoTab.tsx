@@ -151,26 +151,28 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Card Principal com Avatar */}
-      <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-background shadow-md">
-              <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
-                {cliente.nome ? getInitials(cliente.nome) : <User className="h-6 w-6" />}
+      {/* Bloco principal com Avatar */}
+      <Card className="overflow-hidden rounded-xl border-border/20 bg-card shadow-none">
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarFallback className="text-sm font-semibold">
+                {cliente.nome ? getInitials(cliente.nome) : <User className="h-5 w-5" />}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-semibold truncate">{cliente.nome || 'Nome não informado'}</h2>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <h2 className="truncate text-[15px] font-semibold tracking-tight text-foreground">
+                {cliente.nome || 'Nome não informado'}
+              </h2>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 {cliente.data_nascimento && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Calendar className="h-3 w-3 mr-1" />
+                  <Badge variant="secondary" className="text-[11px]">
+                    <Calendar className="mr-1 h-3 w-3" />
                     {formatAge(cliente.data_nascimento)}
                   </Badge>
                 )}
                 {cliente.origem && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[11px]">
                     {cliente.origem}
                   </Badge>
                 )}
@@ -187,11 +189,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
         className="space-y-2"
       >
         {/* SEÇÃO 1: Identificação */}
-        <AccordionItem value="identificacao" className="border rounded-lg px-4 bg-card">
-          <AccordionTrigger className="hover:no-underline py-4">
+        <AccordionItem value="identificacao" className="rounded-lg border border-border/20 bg-card/60 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--accent-gold-soft))] flex items-center justify-center">
+                <User className="h-4 w-4 text-accent-gold" />
               </div>
               <div className="text-left">
                 <span className="font-medium">Identificação</span>
@@ -206,7 +208,7 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
           <AccordionContent className="pb-4 space-y-3">
             <div className="grid gap-4">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Nome completo</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome completo</label>
                 <InlineEditField
                   value={cliente.nome}
                   onSave={async (v) => handleSaveField('nome', v)}
@@ -215,7 +217,7 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Data de nascimento</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Data de nascimento</label>
                 <InlineEditField
                   value={cliente.data_nascimento || ''}
                   onSave={async (v) => handleSaveField('dataNascimento', v)}
@@ -229,11 +231,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
         </AccordionItem>
 
         {/* SEÇÃO 2: Contato */}
-        <AccordionItem value="contato" className="border rounded-lg px-4 bg-card">
-          <AccordionTrigger className="hover:no-underline py-4">
+        <AccordionItem value="contato" className="rounded-lg border border-border/20 bg-card/60 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Phone className="h-4 w-4 text-green-600" />
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--accent-gold-soft))] flex items-center justify-center">
+                <Phone className="h-4 w-4 text-accent-gold" />
               </div>
               <div className="text-left">
                 <span className="font-medium">Contato</span>
@@ -246,7 +248,7 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
           <AccordionContent className="pb-4 space-y-4">
             {/* WhatsApp — canal único (grava em whatsapp + telefone para compat) */}
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">WhatsApp</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">WhatsApp</label>
               <PhoneInputSmart
                 value={(cliente as any).whatsapp || cliente.telefone || ''}
                 onSave={async (v) => onUpdate(cliente.id, { whatsapp: v, telefone: v })}
@@ -256,7 +258,7 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
 
             {/* Email */}
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">E-mail</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
               <InlineEditField
                 value={cliente.email || ''}
                 onSave={async (v) => handleSaveField('email', v)}
@@ -289,11 +291,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
         </AccordionItem>
 
         {/* SEÇÃO 2b: Documentação fiscal */}
-        <AccordionItem value="fiscal" className="border rounded-lg px-4 bg-card">
-          <AccordionTrigger className="hover:no-underline py-4">
+        <AccordionItem value="fiscal" className="rounded-lg border border-border/20 bg-card/60 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <IdCard className="h-4 w-4 text-blue-600" />
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--accent-gold-soft))] flex items-center justify-center">
+                <IdCard className="h-4 w-4 text-accent-gold" />
               </div>
               <div className="text-left">
                 <span className="font-medium">Documentação fiscal</span>
@@ -305,7 +307,7 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
           </AccordionTrigger>
           <AccordionContent className="pb-4 space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">CPF ou CNPJ</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">CPF ou CNPJ</label>
               <CpfCnpjInlineField
                 value={(cliente as any).cpf_cnpj || ''}
                 onSave={async (digits) => handleSaveField('cpf_cnpj', digits || null)}
@@ -321,11 +323,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
 
 
         {/* SEÇÃO 3: Como conheceu */}
-        <AccordionItem value="origem" className="border rounded-lg px-4 bg-card">
-          <AccordionTrigger className="hover:no-underline py-4">
+        <AccordionItem value="origem" className="rounded-lg border border-border/20 bg-card/60 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <Users className="h-4 w-4 text-purple-600" />
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--accent-gold-soft))] flex items-center justify-center">
+                <Users className="h-4 w-4 text-accent-gold" />
               </div>
               <div className="text-left">
                 <span className="font-medium">Como conheceu?</span>
@@ -344,11 +346,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
         </AccordionItem>
 
         {/* SEÇÃO 4: Família */}
-        <AccordionItem value="familia" className="border rounded-lg px-4 bg-card">
-          <AccordionTrigger className="hover:no-underline py-4">
+        <AccordionItem value="familia" className="rounded-lg border border-border/20 bg-card/60 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center">
-                <Heart className="h-4 w-4 text-rose-600" />
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--accent-gold-soft))] flex items-center justify-center">
+                <Heart className="h-4 w-4 text-accent-gold" />
               </div>
               <div className="text-left flex items-center gap-2">
                 <span className="font-medium">Família</span>
@@ -424,11 +426,11 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
         </AccordionItem>
 
         {/* SEÇÃO 5: Observações */}
-        <AccordionItem value="observacoes" className="border rounded-lg px-4 bg-card">
-          <AccordionTrigger className="hover:no-underline py-4">
+        <AccordionItem value="observacoes" className="rounded-lg border border-border/20 bg-card/60 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <MessageSquare className="h-4 w-4 text-amber-600" />
+              <div className="w-7 h-7 rounded-lg bg-[hsl(var(--accent-gold-soft))] flex items-center justify-center">
+                <MessageSquare className="h-4 w-4 text-accent-gold" />
               </div>
               <div className="text-left">
                 <span className="font-medium">Observações</span>
