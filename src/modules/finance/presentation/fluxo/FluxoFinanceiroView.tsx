@@ -27,6 +27,9 @@ import {
   FINANCE_FOCUS_FLUXO_EVENT,
   type FluxoFocusPayload,
 } from '@/modules/finance/presentation/navigation';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+
 
 type Chip = 'todos' | 'receitas' | 'despesas' | 'a_receber' | 'a_pagar';
 
@@ -42,6 +45,8 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const isMobile = useIsMobile();
   const extrato = useExtrato();
   const financas = useNovoFinancas();
+  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
+
 
   // Estado local (view-state)
   const [chip, setChip] = useState<Chip>('todos');
@@ -164,13 +169,21 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Excluir ${selectedFinanceLinhas.length} lançamento(s)?`)) return;
+    const ok = await confirm({
+      title: 'Excluir lançamentos',
+      description: `Tem certeza que deseja excluir ${selectedFinanceLinhas.length} lançamento(s)? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (!ok) return;
     for (const l of selectedFinanceLinhas) {
       // eslint-disable-next-line no-await-in-loop
       await financas.removerTransacao(l.referenciaId);
     }
     clearSelection();
   };
+
 
   // Filtros aplicados totalizados
   const filtrosAtivos =
@@ -295,10 +308,18 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
           await financas.atualizarTransacao(id, patch);
         }}
         onDelete={async (id) => {
-          if (!confirm('Excluir este lançamento?')) return;
+          const ok = await confirm({
+            title: 'Excluir lançamento',
+            description: 'Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            variant: 'destructive',
+          });
+          if (!ok) return;
           await financas.removerTransacao(id);
           setDetailLinha(null);
         }}
+
         onMarkPaid={async (id) => {
           await financas.marcarComoPago(id);
           setDetailLinha(null);
@@ -313,7 +334,14 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onDelete={handleBulkDelete}
       />
 
+      <ConfirmDialog
+        state={dialogState}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onClose={handleClose}
+      />
     </div>
+
   );
 });
 
