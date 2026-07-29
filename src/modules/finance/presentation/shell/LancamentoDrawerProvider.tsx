@@ -33,6 +33,7 @@ import {
 import LancamentoForm from './LancamentoForm';
 import VendaAvulsaPanel from '@/modules/finance/presentation/vendaAvulsa/VendaAvulsaPanel';
 import { useQueryClient } from '@tanstack/react-query';
+import { invalidateFinanceAll } from '@/modules/finance/infrastructure/realtime/invalidateFinanceAll';
 
 // ─────────────────────────────────────────────────────────────
 // Contexto
