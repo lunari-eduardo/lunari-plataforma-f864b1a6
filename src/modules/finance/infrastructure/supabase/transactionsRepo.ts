@@ -122,12 +122,14 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
   },
 
   async markPaid(id, dataPagamento) {
-    const row = await SupabaseFinancialTransactionsAdapter.updateTransaction(id, {
-      status: "Pago" as any,
-      ...(dataPagamento ? { data_pagamento: dataPagamento } as any : {}),
-    });
+    const patch: Record<string, unknown> = { status: "Pago" };
+    // `fin_transactions` não possui coluna `data_pagamento`; usamos `data_competencia`
+    // como data efetiva contábil quando o chamador informa uma data explícita.
+    if (dataPagamento) patch.data_competencia = dataPagamento;
+    const row = await SupabaseFinancialTransactionsAdapter.updateTransaction(id, patch as any);
     return rowToTransacao(row);
   },
+
 
   async markPending(id) {
     const row = await SupabaseFinancialTransactionsAdapter.updateTransaction(id, {
