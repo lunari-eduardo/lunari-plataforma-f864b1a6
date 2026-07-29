@@ -48,7 +48,7 @@ export default function ArtigoAjuda() {
   const otherArticles = allArticles?.filter(a => a.id !== article.id) || [];
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-[79rem] mx-auto">
       <SEOHead title={`${article.title} | Ajuda Lunari`} noindex />
 
       <div className="flex gap-8">

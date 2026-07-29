@@ -12,7 +12,7 @@ interface Props {
 }
 
 export const FinancePageContainer = memo(function FinancePageContainer({ children, className }: Props) {
-  return <div className={cn('max-w-6xl mx-auto w-full', className)}>{children}</div>;
+  return <div className={cn('max-w-[79rem] mx-auto w-full', className)}>{children}</div>;
 });
 
 export default FinancePageContainer;

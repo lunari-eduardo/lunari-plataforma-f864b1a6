@@ -40,7 +40,7 @@ export default function Hub() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 space-y-4 max-w-[79rem] mx-auto">
       <header className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

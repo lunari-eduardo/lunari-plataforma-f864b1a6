@@ -20,7 +20,7 @@ interface Props {
 }
 
 const WIDTHS: Record<Variant, string> = {
-  default: 'max-w-6xl',
+  default: 'max-w-[79rem]',
   wide: 'max-w-7xl',
   narrow: 'max-w-4xl',
   full: '',
