@@ -47,16 +47,16 @@ function hexToRgb(hex: string): string {
 }
 
 const priorityDot: Record<TaskPriority, string> = {
-  high: 'bg-red-500',
-  medium: 'bg-yellow-500',
+  high: 'bg-lunar-error',
+  medium: 'bg-lunar-warning',
   low: 'bg-muted-foreground/40',
 };
 
 const dueToneClass: Record<'overdue' | 'urgent' | 'soon' | 'normal', string> = {
-  overdue: 'text-red-500',
-  urgent: 'text-amber-500',
-  soon: 'text-lunar-accent',
-  normal: 'text-lunar-textSecondary',
+  overdue: 'text-lunar-error',
+  urgent: 'text-lunar-warning',
+  soon: 'text-muted-foreground',
+  normal: 'text-muted-foreground',
 };
 
 export default function TaskCard({
@@ -107,8 +107,8 @@ export default function TaskCard({
 
   return (
     <li
-      className={`group glass-task-card relative overflow-hidden p-3 cursor-grab active:cursor-grabbing select-none touch-pan-x touch-pan-y transform-gpu ${
-        isDragging ? 'glass-task-card-placeholder' : ''
+      className={`group task-card relative overflow-hidden p-3 cursor-grab active:cursor-grabbing select-none touch-pan-x touch-pan-y transform-gpu ${
+        isDragging ? 'task-card-placeholder' : ''
       } ${isDone ? 'opacity-70' : ''}`}
       ref={dndRef as any}
       style={{
@@ -145,8 +145,8 @@ export default function TaskCard({
           title={`Prioridade: ${t.priority}`}
         />
         <h3
-          className={`flex-1 text-sm font-medium leading-snug line-clamp-2 ${
-            isDone ? 'line-through text-lunar-textSecondary' : 'text-lunar-text'
+          className={`flex-1 text-[13px] font-medium leading-snug line-clamp-2 ${
+            isDone ? 'line-through text-muted-foreground' : 'text-foreground'
           }`}
         >
           {t.title}
@@ -160,13 +160,13 @@ export default function TaskCard({
             <Badge
               key={tag}
               variant="outline"
-              className="text-2xs px-1.5 py-0 h-5 border-lunar-border/60 bg-transparent text-lunar-textSecondary"
+              className="text-2xs px-1.5 py-0 h-5 border-border/60 bg-transparent text-muted-foreground"
             >
               {tag}
             </Badge>
           ))}
           {extraTags > 0 && (
-            <span className="text-2xs text-lunar-textSecondary opacity-70">+{extraTags}</span>
+            <span className="text-2xs text-muted-foreground opacity-70">+{extraTags}</span>
           )}
         </div>
       )}
@@ -184,7 +184,7 @@ export default function TaskCard({
           {hasChecklist && (
             <span
               className={`flex items-center gap-1 ${
-                checklistComplete ? 'text-green-500' : 'text-lunar-textSecondary'
+                checklistComplete ? 'text-lunar-success' : 'text-muted-foreground'
               }`}
             >
               <CheckSquare className="w-3 h-3" />
@@ -193,7 +193,7 @@ export default function TaskCard({
           )}
 
           {hasAttachments && (
-            <span className="flex items-center gap-1 text-lunar-textSecondary">
+            <span className="flex items-center gap-1 text-muted-foreground">
               <Paperclip className="w-3 h-3" />
               {t.attachments!.length}
             </span>
@@ -202,7 +202,7 @@ export default function TaskCard({
           {/* Push avatar to the right */}
           {t.assigneeName && (
             <span
-              className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-lunar-accent/15 text-lunar-accent text-[10px] font-semibold"
+              className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-accent-gold-soft text-accent-gold text-[10px] font-semibold"
               title={t.assigneeName}
             >
               {getInitials(t.assigneeName)}
@@ -215,11 +215,12 @@ export default function TaskCard({
       <button
         type="button"
         data-no-drag="true"
+        aria-label={isDone ? 'Reabrir tarefa' : 'Concluir tarefa'}
         onClick={(e) => {
           e.stopPropagation();
           isDone ? onReopen() : onComplete();
         }}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity text-2xs px-2 py-0.5 rounded-md bg-foreground/5 hover:bg-foreground/10 text-lunar-textSecondary hover:text-lunar-text"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 hover:opacity-100 focus-visible:opacity-100 transition-opacity text-2xs px-2 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground"
       >
         {isDone ? 'Reabrir' : 'Concluir'}
       </button>
