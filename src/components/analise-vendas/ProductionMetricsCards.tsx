@@ -60,7 +60,7 @@ export function ProductionMetricsCards(props: Props) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       <Card
-        icon={<Camera className="h-3.5 w-3.5" />}
+        icon={Camera}
         label={`Fotos ${props.scopeLabel}`}
         primary={fmtInt(props.fotosTotal)}
         secondary={
@@ -71,14 +71,14 @@ export function ProductionMetricsCards(props: Props) {
         isLoading={props.isLoading}
       />
       <Card
-        icon={<TrendingUp className="h-3.5 w-3.5" />}
+        icon={TrendingUp}
         label="Média por sessão"
         primary={`${fmtDec(props.mediaFotosPorSessao)}`}
         secondary={totalSessoes > 0 ? `sobre ${fmtInt(totalSessoes)} sessões` : "sem sessões no período"}
         isLoading={props.isLoading}
       />
       <Card
-        icon={<Layers className="h-3.5 w-3.5" />}
+        icon={Layers}
         label="Categoria líder"
         primary={props.categoriaTop ?? "—"}
         secondary={
