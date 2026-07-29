@@ -15,6 +15,8 @@ import { UserProfile } from '@/services/ProfileService';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 // Sync with retry configuration
 const MAX_RETRIES = 3;
@@ -177,7 +179,7 @@ export default function MinhaConta() {
               </Tabs>
             </CardContent>
           </Card>
-        </div>
+        </PageContainer>
       </ScrollArea>
     </div>
   );

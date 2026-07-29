@@ -11,18 +11,22 @@ export default function CentroAjuda() {
   const { data: articles, isLoading } = useHelpArticles();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto w-full px-4 md:px-6 py-4 space-y-6">
       <SEOHead title="Centro de Ajuda | Lunari" noindex />
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <HelpCircle className="h-7 w-7 text-primary" />
-          <h1 className="text-2xl font-bold font-sans text-foreground">Centro de Ajuda</h1>
+      <header className="flex items-start justify-between gap-4 pb-4">
+        <div className="min-w-0 flex items-center gap-2">
+          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <div>
+            <h1 className="font-heading text-[15px] font-semibold tracking-tight text-foreground">
+              Centro de Ajuda
+            </h1>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Tutoriais e guias para usar o Lunari
+            </p>
+          </div>
         </div>
-        <p className="text-muted-foreground text-sm">
-          Tutoriais e guias para usar o Lunari
-        </p>
-      </div>
+      </header>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
