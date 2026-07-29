@@ -136,7 +136,7 @@ export function PhoneInputSmart({
             <span className={cn(
               "text-xs px-2 py-0.5 rounded-full",
               celular 
-                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                ? "bg-muted/40 text-emerald-600 dark:text-emerald-500" 
                 : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
             )}>
               {celular ? 'Celular' : 'Fixo'}
