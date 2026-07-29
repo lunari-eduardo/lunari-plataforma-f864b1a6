@@ -92,9 +92,10 @@ interface Props {
   tipo: LancamentoTipo;
   onClose: () => void;
   onCreated?: () => void;
+  isMobile?: boolean;
 }
 
-export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated }: Props) {
+export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
   const { toast } = useToast();
   const {
