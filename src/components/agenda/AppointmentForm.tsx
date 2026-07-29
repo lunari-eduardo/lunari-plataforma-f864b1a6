@@ -434,10 +434,10 @@ export default function AppointmentForm({
 
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {isFromBudgetAppointment && (
-        <div className="p-4 rounded-lg border border-border/20 bg-card/60">
-          <p className="text-sm font-medium text-foreground mb-1">📋 Agendamento de Orçamento</p>
+        <div className={SECTION_SURFACE}>
+          <p className={cn(SECTION_TITLE, "mb-1")}>📋 Agendamento de Orçamento</p>
           <p className="text-xs text-muted-foreground">
             Este agendamento foi criado automaticamente a partir de um orçamento fechado. 
             Apenas data e horário podem ser editados aqui.
@@ -445,19 +445,19 @@ export default function AppointmentForm({
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* ========== SEÇÃO 1: CLIENTE (CRM / Novo) ========== */}
         {!isFromBudgetAppointment && (
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-foreground">Cliente</Label>
+          <div className={cn(SECTION_SURFACE, FORM_SECTION)}>
+            <Label className={SECTION_TITLE}>Cliente</Label>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="existing" className="text-sm">Cliente do CRM</TabsTrigger>
-                <TabsTrigger value="new" className="text-sm">Novo Cliente</TabsTrigger>
+                <TabsTrigger value="existing" className="text-xs">Cliente do CRM</TabsTrigger>
+                <TabsTrigger value="new" className="text-xs">Novo Cliente</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="existing" className="mt-3 space-y-3">
+              <TabsContent value="existing" className="mt-2.5 space-y-2.5">
                 <ClientSearchCombobox 
                   value={formData.clientId} 
                   onSelect={handleClientSelect} 
@@ -468,8 +468,8 @@ export default function AppointmentForm({
                 </p>
               </TabsContent>
               
-              <TabsContent value="new" className="mt-3 space-y-3">
-                <div className="space-y-3">
+              <TabsContent value="new" className="mt-2.5 space-y-2.5">
+                <div className={FORM_SECTION}>
                   <div className="space-y-1.5">
                     <Label htmlFor="new-client-name" className={FIELD_LABEL}>Nome *</Label>
                     <Input 
@@ -541,8 +541,8 @@ export default function AppointmentForm({
         
         {/* ========== SEÇÃO 2: PACOTE ========== */}
         {!isFromBudgetAppointment && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
+          <div className={cn(SECTION_SURFACE, FORM_SECTION)}>
+            <div className={FIELD_GROUP}>
               <Label className={FIELD_LABEL}>Categoria (Opcional)</Label>
               <CategorySelector 
                 categorias={categorias} 
@@ -552,7 +552,7 @@ export default function AppointmentForm({
               />
             </div>
             
-            <div className="space-y-1.5">
+            <div className={FIELD_GROUP}>
               <Label htmlFor="package-search-input" className={FIELD_LABEL}>Pacote</Label>
               <PackageSearchCombobox 
                 value={formData.packageId} 
@@ -563,11 +563,11 @@ export default function AppointmentForm({
             </div>
             
             {formData.packageId && getIncludedProducts().length > 0 && (
-              <div className="p-3 rounded-lg border border-border/20 bg-card/60">
-                <h4 className="text-sm font-medium text-foreground mb-2">📦 Produtos Incluídos</h4>
+              <div className="rounded-lg border border-border/20 bg-muted/30 p-3">
+                <h4 className={cn(SECTION_TITLE, "mb-2")}>📦 Produtos Incluídos</h4>
                 <div className="space-y-1">
                   {getIncludedProducts().map((produto, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm">
+                    <div key={index} className="flex justify-between items-center text-xs">
                       <span className="text-foreground">{produto.nome}</span>
                       <span className="font-medium text-muted-foreground">Qtd: {produto.quantidade}</span>
                     </div>
@@ -580,7 +580,7 @@ export default function AppointmentForm({
         
         {/* ========== SEÇÃO 3: VALOR DO PACOTE (com animação) ========== */}
         {!isFromBudgetAppointment && (
-          <div className="space-y-1.5">
+          <div className={cn(SECTION_SURFACE, FIELD_GROUP)}>
             <Label htmlFor="valor-pacote" className={FIELD_LABEL}>Valor do pacote</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
@@ -595,7 +595,7 @@ export default function AppointmentForm({
                 onFocus={valorPacoteInput.handleFocus}
                 className={cn(
                   "pl-9 transition-all duration-300",
-                  valorPacoteAnimating && "ring-2 ring-green-500/50 bg-green-50 dark:bg-green-950/20"
+                  valorPacoteAnimating && "ring-2 ring-lunar-success/50"
                 )}
                 placeholder="0,00"
               />
@@ -608,7 +608,7 @@ export default function AppointmentForm({
         
         {/* ========== SEÇÃO 4: STATUS DO AGENDAMENTO (toggle segmentado full-width) ========== */}
         {!isFromBudgetAppointment && (
-          <div className="space-y-2">
+          <div className={cn(SECTION_SURFACE, "space-y-2")}>
             <Label className={FIELD_LABEL}>Status do Agendamento</Label>
             <div className="grid grid-cols-2 w-full">
               {availableStatus.map((status, index) => (
@@ -618,16 +618,16 @@ export default function AppointmentForm({
                   variant={formData.status === status.value ? "default" : "outline"} 
                   onClick={() => handleStatusSelect(status.value)} 
                   className={cn(
-                    "text-sm h-11",
+                    "text-xs h-10",
                     index === 0 && "rounded-r-none border-r-0",
                     index === 1 && "rounded-l-none",
                     formData.status === status.value 
                       ? status.value === 'a confirmar' 
-                        ? 'bg-amber-500 hover:bg-amber-600 text-primary-foreground border-amber-500' 
-                        : 'bg-green-600 hover:bg-green-700 text-primary-foreground border-green-600'
+                        ? 'bg-lunar-warning hover:bg-lunar-warning/90 text-primary-foreground border-lunar-warning' 
+                        : 'bg-lunar-success hover:bg-lunar-success/90 text-primary-foreground border-lunar-success'
                       : status.value === 'a confirmar' 
-                        ? 'border-amber-400 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20' 
-                        : 'border-success text-success hover:bg-success/10'
+                        ? 'border-lunar-warning/40 text-lunar-warning hover:bg-lunar-warning/10' 
+                        : 'border-lunar-success/40 text-lunar-success hover:bg-lunar-success/10'
                   )}
                 >
                   {status.emoji} {status.label}
@@ -644,7 +644,7 @@ export default function AppointmentForm({
               <CollapsibleTrigger asChild>
                 <button 
                   type="button"
-                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <DollarSign className="h-4 w-4" />
@@ -652,7 +652,7 @@ export default function AppointmentForm({
                 </button>
               </CollapsibleTrigger>
             ) : (
-              <div className="space-y-1.5">
+              <div className={cn(SECTION_SURFACE, FIELD_GROUP)}>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="appointment-paid-amount" className={FIELD_LABEL}>Valor pago (sinal)</Label>
                   <button 
@@ -695,7 +695,7 @@ export default function AppointmentForm({
               <CollapsibleTrigger asChild>
                 <button 
                   type="button"
-                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <FileText className="h-4 w-4" />
@@ -703,7 +703,7 @@ export default function AppointmentForm({
                 </button>
               </CollapsibleTrigger>
             ) : (
-              <div className="space-y-1.5">
+              <div className={cn(SECTION_SURFACE, FIELD_GROUP)}>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="appointment-description" className={FIELD_LABEL}>Descrição</Label>
                   <button 
@@ -724,7 +724,7 @@ export default function AppointmentForm({
                     value={formData.description} 
                     onChange={handleChange} 
                     placeholder="Detalhes da sessão..." 
-                    className="min-h-[100px] resize-none" 
+                    className="min-h-[90px] resize-none text-sm" 
                   />
                 </CollapsibleContent>
               </div>
@@ -733,7 +733,7 @@ export default function AppointmentForm({
         )}
         
         {/* ========== BOTÕES DE AÇÃO ========== */}
-        <div className="flex justify-end gap-2 pt-4 border-t border-border">
+        <div className="flex justify-end gap-2 pt-4 border-t border-border/20">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancelar
           </Button>
