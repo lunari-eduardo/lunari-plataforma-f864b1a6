@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, FolderTree, Target, CreditCard } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useMetasPersonalizadas } from '@/hooks/useMetasPersonalizadas';
 import { useCreditCardsSupabase } from '@/hooks/useCreditCardsSupabase';
 import MetasConfigTab from '@/components/financas/MetasConfigTab';
 import ConfiguracaoCartoes from '@/components/financas/ConfiguracaoCartoes';
 import CategoriasPanel from './CategoriasPanel';
+import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 
 type PanelKey = 'metas' | 'cartoes' | null;
 type View = 'hub' | 'categorias';
@@ -106,28 +106,28 @@ export default function GerenciarView() {
       </div>
 
       {/* Metas sheet */}
-      <Sheet open={panel === 'metas'} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle className="text-lg font-semibold">Metas financeiras</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-4 -mx-2 px-2">
-            <MetasConfigTab />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SidePanel
+        open={panel === 'metas'}
+        onOpenChange={(v) => !v && setPanel(null)}
+        icone={Target}
+        titulo="Metas financeiras"
+        subtitulo="Defina suas metas mensais e acompanhe o progresso."
+        width="lg"
+      >
+        <MetasConfigTab />
+      </SidePanel>
 
       {/* Cartões sheet */}
-      <Sheet open={panel === 'cartoes'} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle className="text-lg font-semibold">Cartões de crédito</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-4 -mx-2 px-2">
-            <ConfiguracaoCartoes />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SidePanel
+        open={panel === 'cartoes'}
+        onOpenChange={(v) => !v && setPanel(null)}
+        icone={CreditCard}
+        titulo="Cartões de crédito"
+        subtitulo="Gerencie cartões e datas de fechamento."
+        width="lg"
+      >
+        <ConfiguracaoCartoes />
+      </SidePanel>
     </div>
   );
 }

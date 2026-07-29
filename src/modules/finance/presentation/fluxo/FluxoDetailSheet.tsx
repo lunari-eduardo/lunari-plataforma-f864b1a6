@@ -1,5 +1,4 @@
 import { memo, useEffect, useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +7,8 @@ import type { LinhaExtrato } from '@/types/extrato';
 import { formatCurrency } from '@/utils/financialUtils';
 import { parseFinancialInput } from '@/utils/financialPrecision';
 import { cn } from '@/lib/utils';
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ExternalLink, Trash2 } from 'lucide-react';
+import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 
 interface FluxoDetailSheetProps {
   linha: LinhaExtrato | null;
@@ -59,131 +59,144 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
     }
   };
 
-  return (
-    <Sheet open={!!linha} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
-        <SheetHeader className="px-6 py-5 border-b border-border space-y-2">
-          <SheetTitle className="text-base font-semibold truncate">
-            {linha.cliente || linha.descricao}
-          </SheetTitle>
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                'inline-flex items-center h-6 px-2 rounded-full border text-[11px]',
-                isReceita
-                  ? 'border-lunar-success/30 text-lunar-success bg-lunar-success/10'
-                  : 'border-destructive/30 text-destructive bg-destructive/10',
-              )}
-            >
-              {isReceita ? 'Entrada' : 'Saída'}
-            </span>
-            <span className="inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground">
-              {linha.status}
-            </span>
-            <span className="inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground capitalize">
-              {linha.origem}
-            </span>
-          </div>
-        </SheetHeader>
+  const headerExtra = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span
+        className={cn(
+          'inline-flex items-center h-6 px-2 rounded-full border text-[11px]',
+          isReceita
+            ? 'border-lunar-success/30 text-lunar-success bg-lunar-success/10'
+            : 'border-destructive/30 text-destructive bg-destructive/10',
+        )}
+      >
+        {isReceita ? 'Entrada' : 'Saída'}
+      </span>
+      <span className="inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground">
+        {linha.status}
+      </span>
+      <span className="inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground capitalize">
+        {linha.origem}
+      </span>
+    </div>
+  );
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {!editable && (
-            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              Este lançamento foi criado no <strong className="capitalize">{linha.origem}</strong>. Para preservar a
-              integridade, edite na origem.
-              {onOpenOrigin && (
-                <button
-                  type="button"
-                  onClick={() => onOpenOrigin(linha)}
-                  className="ml-2 inline-flex items-center gap-1 text-primary hover:underline"
-                >
-                  Abrir origem <ExternalLink className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          )}
-
-          <section className="space-y-3">
-            <h4 className="text-xs uppercase tracking-wider text-muted-foreground">Informações gerais</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <ReadOnlyField label="Cliente" value={linha.cliente ?? '—'} />
-              <ReadOnlyField label="Categoria" value={linha.categoria ?? '—'} />
-              <ReadOnlyField label="Forma de pagamento" value={linha.meioPagamento ?? linha.cartao ?? '—'} />
-              <ReadOnlyField label="Projeto" value={linha.projeto ?? '—'} />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Valor</Label>
-              <Input
-                inputMode="decimal"
-                value={editable ? valor : formatCurrency(linha.valor)}
-                onChange={(e) => setValor(e.target.value)}
-                disabled={!editable}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Data</Label>
-              <Input
-                type="date"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                disabled={!editable}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Descrição / observação</Label>
-              <Textarea
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={3}
-                placeholder="Notas internas…"
-              />
-            </div>
-          </section>
-
-          <section className="space-y-2">
-            <h4 className="text-xs uppercase tracking-wider text-muted-foreground">Histórico</h4>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              {linha.dataCompetencia && <li>Competência: {linha.dataCompetencia}</li>}
-              {linha.dataCaixa && <li>Caixa: {linha.dataCaixa}</li>}
-              {linha.parcela && (
-                <li>Parcela {linha.parcela.atual} de {linha.parcela.total}</li>
-              )}
-            </ul>
-          </section>
-        </div>
-
-        <div className="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
-          {editable ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(linha.referenciaId)}
-              className="text-destructive hover:text-destructive gap-1.5"
-            >
-              <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-              Excluir
+  const footer = (
+    <SidePanel.Footer
+      left={
+        editable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(linha.referenciaId)}
+            className="text-destructive hover:text-destructive gap-1.5"
+          >
+            <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+            Excluir
+          </Button>
+        ) : null
+      }
+      right={
+        <>
+          {linha.status !== 'Pago' && editable && (
+            <Button variant="outline" size="sm" onClick={() => onMarkPaid(linha.referenciaId)}>
+              Marcar pago
             </Button>
-          ) : (
-            <span />
           )}
-          <div className="flex items-center gap-2">
-            {linha.status !== 'Pago' && editable && (
-              <Button variant="outline" size="sm" onClick={() => onMarkPaid(linha.referenciaId)}>
-                Marcar pago
-              </Button>
-            )}
-            {editable && (
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                Salvar
-              </Button>
+          {editable && (
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              Salvar
+            </Button>
+          )}
+        </>
+      }
+    />
+  );
+
+  return (
+    <SidePanel
+      open={!!linha}
+      onOpenChange={(v) => !v && onClose()}
+      icone={isReceita ? ArrowDownLeft : ArrowUpRight}
+      titulo={linha.cliente || linha.descricao}
+      subtitulo={formatCurrency(linha.valor)}
+      headerExtra={headerExtra}
+      width="md"
+      footer={footer}
+    >
+      <div className="space-y-5">
+        {!editable && (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Este lançamento foi criado no <strong className="capitalize">{linha.origem}</strong>. Para preservar a
+            integridade, edite na origem.
+            {onOpenOrigin && (
+              <button
+                type="button"
+                onClick={() => onOpenOrigin(linha)}
+                className="ml-2 inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                Abrir origem <ExternalLink className="h-3 w-3" />
+              </button>
             )}
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        )}
+
+        <section className="space-y-3">
+          <h4 className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+            Informações gerais
+          </h4>
+          <div className="grid grid-cols-2 gap-3">
+            <ReadOnlyField label="Cliente" value={linha.cliente ?? '—'} />
+            <ReadOnlyField label="Categoria" value={linha.categoria ?? '—'} />
+            <ReadOnlyField label="Forma de pagamento" value={linha.meioPagamento ?? linha.cartao ?? '—'} />
+            <ReadOnlyField label="Projeto" value={linha.projeto ?? '—'} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Valor</Label>
+            <Input
+              inputMode="decimal"
+              value={editable ? valor : formatCurrency(linha.valor)}
+              onChange={(e) => setValor(e.target.value)}
+              disabled={!editable}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Data</Label>
+            <Input
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              disabled={!editable}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Descrição / observação</Label>
+            <Textarea
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              rows={3}
+              placeholder="Notas internas…"
+              disabled={!editable}
+            />
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <h4 className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+            Histórico
+          </h4>
+          <ul className="text-xs text-muted-foreground space-y-1">
+            {linha.dataCompetencia && <li>Competência: {linha.dataCompetencia}</li>}
+            {linha.dataCaixa && <li>Caixa: {linha.dataCaixa}</li>}
+            {linha.parcela && (
+              <li>Parcela {linha.parcela.atual} de {linha.parcela.total}</li>
+            )}
+          </ul>
+        </section>
+      </div>
+    </SidePanel>
   );
 });
 
