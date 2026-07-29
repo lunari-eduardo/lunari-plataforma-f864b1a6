@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toTitleCase } from '@/hooks/useTitleCase';
+import { FIELD_LABEL, FIELD_GROUP, FORM_SECTION, SECTION_SURFACE, SECTION_TITLE } from '@/lib/dialogTokens';
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
