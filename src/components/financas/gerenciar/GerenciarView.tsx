@@ -106,28 +106,28 @@ export default function GerenciarView() {
       </div>
 
       {/* Metas sheet */}
-      <Sheet open={panel === 'metas'} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle className="text-lg font-semibold">Metas financeiras</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-4 -mx-2 px-2">
-            <MetasConfigTab />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SidePanel
+        open={panel === 'metas'}
+        onOpenChange={(v) => !v && setPanel(null)}
+        icone={Target}
+        titulo="Metas financeiras"
+        subtitulo="Defina suas metas mensais e acompanhe o progresso."
+        width="lg"
+      >
+        <MetasConfigTab />
+      </SidePanel>
 
       {/* Cartões sheet */}
-      <Sheet open={panel === 'cartoes'} onOpenChange={(v) => !v && setPanel(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col">
-          <SheetHeader className="text-left">
-            <SheetTitle className="text-lg font-semibold">Cartões de crédito</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto py-4 -mx-2 px-2">
-            <ConfiguracaoCartoes />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SidePanel
+        open={panel === 'cartoes'}
+        onOpenChange={(v) => !v && setPanel(null)}
+        icone={CreditCard}
+        titulo="Cartões de crédito"
+        subtitulo="Gerencie cartões e datas de fechamento."
+        width="lg"
+      >
+        <ConfiguracaoCartoes />
+      </SidePanel>
     </div>
   );
 }
