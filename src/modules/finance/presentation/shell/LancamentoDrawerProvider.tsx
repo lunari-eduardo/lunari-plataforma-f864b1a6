@@ -30,6 +30,7 @@ import {
   getLancamentoTipoMeta,
   type LancamentoTipo,
 } from '@/modules/finance/domain/lancamentoTipos';
+import LancamentoForm from './LancamentoForm';
 
 // ─────────────────────────────────────────────────────────────
 // Contexto
@@ -124,36 +125,12 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
                 </div>
               </header>
 
-              {/* Placeholder até Etapa 5 — mantém o Sheet operacional para navegação */}
-              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
-                <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 p-6 text-center">
-                  <p className="text-[13px] font-medium text-foreground">
-                    Formulário contextual em construção
-                  </p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                    Este painel receberá o formulário específico de{' '}
-                    <span className="text-foreground/80">{meta.label}</span> na próxima etapa
-                    (biblioteca de campos + layouts contextuais).
-                  </p>
-                </div>
-              </div>
-
-              <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
-                <button
-                  type="button"
-                  onClick={close}
-                  className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-md bg-accent-gold/90 px-3 py-1.5 text-[12px] font-medium text-background opacity-50 cursor-not-allowed"
-                >
-                  Salvar
-                </button>
-              </footer>
+              <LancamentoForm
+                key={tipo ?? 'none'}
+                tipo={tipo!}
+                onClose={close}
+                onCreated={onCreated ?? undefined}
+              />
             </>
           ) : null}
         </SheetContent>
