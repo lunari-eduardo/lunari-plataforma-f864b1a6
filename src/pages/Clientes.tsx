@@ -529,41 +529,34 @@ export default function Clientes() {
       categoria: 'todas'
     });
   };
-  return <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 py-px">
-        {/* Migration Helper */}
-        
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            
-            <p className="text-muted-foreground">
-              {isLoadingSupabase ? 'Carregando...' : `${clientesSupabase.length} cliente(s) cadastrado(s)`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Toggle de visualização */}
-            <div className="flex items-center border border-lunar-border rounded-lg overflow-hidden">
-              <Button variant={viewMode === 'cards' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('cards')} className={viewMode === 'cards' ? "rounded-none" : "rounded-none"}>
-                <LayoutGrid className="h-4 w-4" />
+  return <PageContainer className="py-4">
+      <PageHeader
+        title="Clientes"
+        description={isLoadingSupabase ? 'Carregando…' : `${clientesSupabase.length} cliente(s) cadastrado(s)`}
+        action={
+          <>
+            <div className="flex items-center overflow-hidden rounded-lg border border-border/20">
+              <Button variant={viewMode === 'cards' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('cards')} className="h-8 rounded-none px-2.5">
+                <LayoutGrid className="h-3.5 w-3.5" />
               </Button>
-              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className={viewMode === 'list' ? "rounded-none" : "rounded-none"}>
-                <List className="h-4 w-4" />
+              <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8 rounded-none px-2.5">
+                <List className="h-3.5 w-3.5" />
               </Button>
             </div>
 
-            <Button variant="outline" onClick={() => setShowAniversariantesModal(true)} className="flex items-center gap-2">
-              <Cake className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={() => setShowAniversariantesModal(true)} className="h-8 gap-1.5 text-xs">
+              <Cake className="h-3.5 w-3.5 text-accent-gold" />
               Aniversariantes
             </Button>
-            <Button onClick={handleAddClient} className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
+            <Button size="sm" onClick={handleAddClient} className="h-8 gap-1.5 text-xs">
+              <UserPlus className="h-3.5 w-3.5" />
               Novo Cliente
             </Button>
-          </div>
-        </div>
-        
+          </>
+        }
+      />
+
+      <div className="space-y-5">
         {/* Filtros */}
         <ClientFiltersBar filters={filters} onFiltersChange={setFilters} totalClients={clientMetrics.length} filteredClients={clientesFiltrados.length} />
 
