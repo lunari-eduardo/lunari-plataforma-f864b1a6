@@ -1,6 +1,12 @@
 /**
  * VendaAvulsaPanel — painel lateral (SidePanel) para registrar vendas avulsas.
- * Mesma lógica do antigo ModalVendaAvulsa, agora no padrão visual dos demais paineis de Finanças.
+ *
+ * Regras oficiais (Lunari):
+ *  - Venda avulsa é SEMPRE venda de produto. Não existe venda avulsa de pacote
+ *    (pacote/agendamento é fluxo exclusivo da Agenda) — evita duplicidade de
+ *    fontes de agendamento e receita fantasma.
+ *  - Sem categoria e sem etapa: a receita pertence ao produto e o registro
+ *    entra no Workflow apenas para acompanhamento de produção/entrega.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
@@ -12,7 +18,6 @@ import { ShoppingBag, Loader2, X, UserPlus, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
 import ProductSearchCombobox, { type ProductComboboxItem } from '@/components/agenda/ProductSearchCombobox';
-
 import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
@@ -46,10 +51,6 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
   });
-  const [pacoteId, setPacoteId] = useState('');
-  const [pacoteNome, setPacoteNome] = useState('');
-  const [valorBasePacote, setValorBasePacote] = useState(0);
-  const [pacoteCategoria, setPacoteCategoria] = useState('');
   const [produtos, setProdutos] = useState<ProdutoSelecionado[]>([]);
   const [valorTotal, setValorTotal] = useState('');
   const [valorManualEditado, setValorManualEditado] = useState(false);
@@ -58,10 +59,10 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
   const [observacoes, setObservacoes] = useState('');
   const [registrarPagamento, setRegistrarPagamento] = useState(true);
 
-  const valorCalculado = useMemo(() => {
-    const totalProdutos = produtos.reduce((sum, p) => sum + p.valorVenda * p.quantidade, 0);
-    return valorBasePacote + totalProdutos;
-  }, [valorBasePacote, produtos]);
+  const valorCalculado = useMemo(
+    () => produtos.reduce((sum, p) => sum + p.valorVenda * p.quantidade, 0),
+    [produtos],
+  );
 
   useEffect(() => {
     if (!valorManualEditado && valorCalculado > 0) {
@@ -76,13 +77,10 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
   }, [valorTotal, desconto]);
 
   const descricaoAutomatica = useMemo(() => {
-    const partes: string[] = [];
-    if (pacoteNome) partes.push(pacoteNome);
-    produtos.forEach((p) => {
-      partes.push(p.quantidade > 1 ? `${p.nome} (x${p.quantidade})` : p.nome);
-    });
-    return partes.length > 0 ? partes.join(' + ') : '';
-  }, [pacoteNome, produtos]);
+    return produtos
+      .map((p) => (p.quantidade > 1 ? `${p.nome} (x${p.quantidade})` : p.nome))
+      .join(' + ');
+  }, [produtos]);
 
   const descricaoFinal = useMemo(() => {
     const parts: string[] = [];
@@ -93,10 +91,6 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
 
   const resetForm = () => {
     setClienteId('');
-    setPacoteId('');
-    setPacoteNome('');
-    setValorBasePacote(0);
-    setPacoteCategoria('');
     setProdutos([]);
     setValorTotal('');
     setValorManualEditado(false);
@@ -104,20 +98,6 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
     setDescricaoExtra('');
     setObservacoes('');
     setRegistrarPagamento(true);
-  };
-
-  const handlePacoteSelect = (id: string, pacoteData?: any) => {
-    setPacoteId(id);
-    if (pacoteData) {
-      setPacoteNome(pacoteData.nome || '');
-      setValorBasePacote(pacoteData.valor_base || 0);
-      setPacoteCategoria(pacoteData.categoria_id || '');
-      setValorManualEditado(false);
-    } else {
-      setPacoteNome('');
-      setValorBasePacote(0);
-      setPacoteCategoria('');
-    }
   };
 
   const handleProdutoSelect = (product: ProductComboboxItem | null) => {
@@ -148,15 +128,15 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
 
   const handleSubmit = async () => {
     if (!clienteId || valorFinal <= 0) return;
-    const categoria = pacoteCategoria || 'Venda Avulsa';
 
     try {
       await criarVendaAvulsa({
         clienteId,
         data,
-        categoria,
-        pacote: pacoteNome || undefined,
-        valorBasePacote: valorBasePacote || undefined,
+        // Venda avulsa nunca inventa categoria nem pacote — a receita é do produto.
+        categoria: '',
+        pacote: undefined,
+        valorBasePacote: 0,
         valorTotal: valorFinal,
         desconto: parseFloat(desconto) || 0,
         descricao: descricaoFinal,
@@ -178,7 +158,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
   };
 
   const isValid = clienteId && (parseFloat(valorTotal) > 0 || valorCalculado > 0);
-  const maisOpcoesFilled = (observacoes.trim() ? 1 : 0) + (registrarPagamento ? 0 : 1);
+  const maisOpcoesFilled = observacoes.trim() ? 1 : 0;
 
   return (
     <SidePanel
@@ -186,7 +166,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
       onOpenChange={(v) => !v && onFechar()}
       icone={ShoppingBag}
       titulo="Nova venda avulsa"
-      subtitulo="Registre uma venda de produtos ou pacotes fora do workflow."
+      subtitulo="Registre uma venda de produtos fora do workflow."
       width="md"
       footer={
         <SidePanel.Footer
@@ -196,21 +176,34 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
             </Button>
           }
           right={
-            <Button
-              size="sm"
-              onClick={handleSubmit}
-              disabled={!isValid || loading}
-              className="shadow-[0_8px_20px_-8px_hsl(var(--accent-gold)/0.5)]"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  Salvando…
-                </>
-              ) : (
-                'Registrar venda'
-              )}
-            </Button>
+            <div className="flex items-center gap-3">
+              <label
+                htmlFor="registrar-pagamento"
+                className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none"
+              >
+                <Checkbox
+                  id="registrar-pagamento"
+                  checked={registrarPagamento}
+                  onCheckedChange={(checked) => setRegistrarPagamento(!!checked)}
+                />
+                Pagamento imediato
+              </label>
+              <Button
+                size="sm"
+                onClick={handleSubmit}
+                disabled={!isValid || loading}
+                className="shadow-[0_8px_20px_-8px_hsl(var(--accent-gold)/0.5)]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    Salvando…
+                  </>
+                ) : (
+                  'Registrar venda'
+                )}
+              </Button>
+            </div>
           }
         />
       }
@@ -318,26 +311,11 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
 
         {/* Itens da venda */}
         <section className="space-y-3">
-          <SectionHeader label="Itens da venda" />
+          <SectionHeader label="Produtos" />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Pacote</Label>
-              <PackageSearchCombobox
-                value={pacoteId}
-                onSelect={handlePacoteSelect}
-                placeholder="Buscar pacote…"
-              />
-              {pacoteId && valorBasePacote > 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  Valor base: R$ {valorBasePacote.toFixed(2)}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Produtos</Label>
-              <ProductSearchCombobox onSelect={handleProdutoSelect} placeholder="Buscar produto…" />
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Adicionar produto</Label>
+            <ProductSearchCombobox onSelect={handleProdutoSelect} placeholder="Buscar produto…" />
           </div>
 
           {produtos.length > 0 && (
@@ -448,17 +426,6 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
                 rows={2}
                 className="resize-none"
               />
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <Checkbox
-                id="registrar-pagamento"
-                checked={registrarPagamento}
-                onCheckedChange={(checked) => setRegistrarPagamento(!!checked)}
-              />
-              <Label htmlFor="registrar-pagamento" className="text-sm cursor-pointer">
-                Registrar pagamento imediato
-              </Label>
             </div>
           </div>
         </DisclosureSection>
