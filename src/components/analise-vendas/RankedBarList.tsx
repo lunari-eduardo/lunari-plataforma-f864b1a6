@@ -154,12 +154,12 @@ function RankedBarItem({
       {/* Bar */}
       <div className="flex items-center gap-2">
         <div className="w-4 shrink-0" /> {/* Spacer for rank alignment */}
-        <div className="flex-1 h-1.5 bg-lunar-border/30 rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-border/40 rounded-full overflow-hidden">
           <div 
-            className={cn("h-full rounded-full transition-all duration-300", colorClass)}
+            className={cn("h-full rounded-full transition-all duration-300", rank === 1 && !isOthers ? "bg-[hsl(var(--accent-gold))]" : "bg-muted-foreground/50")}
             style={{ 
               width: `${barWidth}%`,
-              opacity 
+              opacity: rank === 1 && !isOthers ? 1 : opacity 
             }}
           />
         </div>
