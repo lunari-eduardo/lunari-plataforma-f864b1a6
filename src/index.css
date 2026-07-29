@@ -181,6 +181,10 @@
     --sidebar-muted-fg: 40 12% 94%;
     --sidebar-border: 0 0% 14%;
     --sidebar-ring: 40 25% 90%;
+    --sidebar-icon: 40 12% 94%;                 /* off-white padrão (expandido) */
+    --sidebar-icon-collapsed: 42 55% 78%;       /* dourado claro Lunari (colapsado) */
+    --sidebar-icon-collapsed-hover: 42 70% 85%;
+    --sidebar-active-fg: 40 12% 98%;            /* off-white puro item ativo */
 
 
     /* Landing (keep as historical aliases) */
