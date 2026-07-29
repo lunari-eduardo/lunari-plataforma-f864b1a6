@@ -423,10 +423,13 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     transacoesPorGrupo: gruposCompletos,
     isLoading,
     criarTransacao: criarTransacaoMutation.mutate,
+    criarTransacaoAsync: criarTransacaoMutation.mutateAsync,
     atualizarTransacao: (id: string, updates: Partial<NovaTransacaoFinanceira>) =>
       atualizarTransacaoMutation.mutate({ id, updates }),
     removerTransacao: removerTransacaoMutation.mutate,
     marcarComoPago: marcarComoPagoMutation.mutate,
+    marcarComoPagoAsync: marcarComoPagoMutation.mutateAsync,
     calcularMetricasPorGrupo,
   };
 }
+
