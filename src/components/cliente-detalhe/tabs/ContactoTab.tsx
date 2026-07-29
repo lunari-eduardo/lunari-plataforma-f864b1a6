@@ -151,26 +151,28 @@ export function ContactoTab({ cliente, onUpdate }: ContactoTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Card Principal com Avatar */}
-      <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 border-2 border-background shadow-md">
-              <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
-                {cliente.nome ? getInitials(cliente.nome) : <User className="h-6 w-6" />}
+      {/* Bloco principal com Avatar */}
+      <Card className="overflow-hidden rounded-xl border-border/20 bg-card shadow-none">
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarFallback className="text-sm font-semibold">
+                {cliente.nome ? getInitials(cliente.nome) : <User className="h-5 w-5" />}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-semibold truncate">{cliente.nome || 'Nome não informado'}</h2>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <h2 className="truncate text-[15px] font-semibold tracking-tight text-foreground">
+                {cliente.nome || 'Nome não informado'}
+              </h2>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 {cliente.data_nascimento && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Calendar className="h-3 w-3 mr-1" />
+                  <Badge variant="secondary" className="text-[11px]">
+                    <Calendar className="mr-1 h-3 w-3" />
                     {formatAge(cliente.data_nascimento)}
                   </Badge>
                 )}
                 {cliente.origem && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[11px]">
                     {cliente.origem}
                   </Badge>
                 )}
