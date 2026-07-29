@@ -244,7 +244,7 @@ export default function AdminUsuarios() {
   const userInfo = selectedUser ? { id: selectedUser.id, email: selectedUser.email, nome: selectedUser.nome } : null;
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
+    <div className="max-w-[79rem] mx-auto w-full p-4 md:p-6 space-y-6">
 
 
       <div className="space-y-6">
