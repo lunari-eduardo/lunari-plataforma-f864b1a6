@@ -86,7 +86,7 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
             )}
           >
             <div className="flex items-center gap-1.5 text-lunar-textSecondary mb-1.5">
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
               <span className="text-xs font-medium truncate">{metric.title}</span>
             </div>
             <p className="text-2xl font-bold text-lunar-text tracking-tight">
