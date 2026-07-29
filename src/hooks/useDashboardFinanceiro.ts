@@ -490,8 +490,13 @@ export function useDashboardFinanceiro() {
     const receitasExtrasAnterior = transacoesAnterior
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
-    
-    receitaAnterior += receitasExtrasAnterior;
+
+    const receitaOpManualAnterior = transacoesAnterior
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Operacional')
+      .reduce((sum, t) => sum + t.valor, 0);
+
+    receitaAnterior += receitasExtrasAnterior + receitaOpManualAnterior;
+
     
     despesasAnterior = transacoesAnterior
       .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
