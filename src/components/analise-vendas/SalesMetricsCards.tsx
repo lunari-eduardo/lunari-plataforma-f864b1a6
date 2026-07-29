@@ -47,7 +47,7 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     {
       title: 'Receita Total',
       value: formatCurrency(metrics.totalRevenue),
-      icon: DollarSign,
+      icon: TrendingUp,
       subtitle: undefined as string | undefined,
       comparison: comparison?.metrics.totalRevenue,
     },
