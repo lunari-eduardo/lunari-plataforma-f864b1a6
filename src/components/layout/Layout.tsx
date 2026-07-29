@@ -31,14 +31,18 @@ export default function Layout() {
         <TrialBanner />
         <Header />
         
-        <main className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden p-1 md:p-2 px-[8px] scrollbar-elegant py-0 my-0 relative z-10",
-          isMobile && "pb-20"
-        )}>
+        <main
+          className={cn(
+            "flex-1 overflow-y-auto overflow-x-hidden p-1 md:p-2 px-[8px] scrollbar-elegant py-0 my-0 relative z-10",
+            isMobile && "pb-20"
+          )}
+          style={isMobile ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' } : undefined}
+        >
           <div className="animate-lunar">
             <Outlet />
           </div>
         </main>
+
       </div>
       
       {/* Equipment sync notifications */}
