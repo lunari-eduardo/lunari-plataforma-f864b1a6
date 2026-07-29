@@ -172,10 +172,10 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
         <h2 id="secao-estado" className="mt-1 text-lg font-semibold tracking-tight text-foreground">Como está o negócio agora</h2>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-4 auto-rows-fr">
+      <div className="grid grid-cols-2 min-[380px]:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-2.5 sm:gap-4 auto-rows-fr">
         {/* Saúde */}
         <div
-          className="sm:col-span-2 lg:col-span-2 lg:row-span-2 relative rounded-2xl border border-border/60 bg-card p-6 overflow-hidden flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.12)]"
+          className="col-span-2 sm:col-span-2 lg:col-span-2 lg:row-span-2 relative rounded-2xl border border-border/60 bg-card p-4 sm:p-6 overflow-hidden flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.12)]"
           style={{ backgroundImage: `linear-gradient(135deg, ${theme.softBg} 0%, transparent 55%)` }}
         >
           <div className="flex items-center justify-between gap-2.5">
