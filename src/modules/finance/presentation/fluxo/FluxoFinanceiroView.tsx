@@ -10,7 +10,6 @@ import { memo, useMemo, useState, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useExtrato } from '@/hooks/useExtrato';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
@@ -23,6 +22,8 @@ import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
+import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import {
   FINANCE_FOCUS_FLUXO_EVENT,
   type FluxoFocusPayload,
@@ -45,6 +46,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const isMobile = useIsMobile();
   const extrato = useExtrato();
   const financas = useNovoFinancas();
+  const drawer = useLancamentoDrawer();
   const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
 
 
@@ -191,22 +193,21 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
 
   return (
     <div className="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6">
-      {/* Subtítulo da aba — o botão "Novo lançamento" vive no FinanceHeader global */}
-      <header className="pb-6">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">Fluxo Financeiro</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gerencie todas as entradas e saídas do seu estúdio.
-        </p>
-      </header>
-
+      <PeriodActionBar
+        ano={String(filtroMesAno.ano)}
+        setAno={(v) => setFiltroMesAno({ mes: filtroMesAno.mes, ano: parseInt(v, 10) })}
+        mes={String(filtroMesAno.mes)}
+        setMes={(v) => setFiltroMesAno({ mes: parseInt(v, 10), ano: filtroMesAno.ano })}
+        anosDisponiveis={(() => {
+          const y = new Date().getFullYear();
+          return [y - 2, y - 1, y, y + 1];
+        })()}
+        onSelectTipo={(tipo) => drawer.open({ tipo })}
+      />
 
       {/* Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 pb-4">
-        <MonthYearNavigator
-          filtroMesAno={filtroMesAno}
-          setFiltroMesAno={setFiltroMesAno}
-          size={isMobile ? 'sm' : 'md'}
-        />
+
 
         <div className="flex items-center gap-1 overflow-x-auto -mx-1 px-1">
           {CHIPS.map((c) => {

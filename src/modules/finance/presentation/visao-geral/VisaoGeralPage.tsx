@@ -10,7 +10,8 @@
  */
 import { memo, useMemo } from 'react';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
-import PeriodBar from './PeriodBar';
+import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import EstadoFinanceiroSection from './EstadoFinanceiroSection';
 import AcompanhamentoSection from './AcompanhamentoSection';
 import AnaliseSection from './AnaliseSection';
@@ -18,6 +19,7 @@ import CustosSection from './CustosSection';
 
 export const VisaoGeralPage = memo(function VisaoGeralPage() {
   const dash = useDashboardFinanceiro();
+  const drawer = useLancamentoDrawer();
 
   const RECEITA_GROUPS = ['Receita Não Operacional', 'Receita Operacional'];
   const DESPESA_GROUPS = ['Despesa Fixa', 'Despesa Variável', 'Investimento'];
@@ -62,12 +64,14 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      <PeriodBar
+      <PeriodActionBar
         ano={dash.anoSelecionado}
         setAno={dash.setAnoSelecionado}
         mes={dash.mesSelecionado}
         setMes={dash.setMesSelecionado}
         anosDisponiveis={dash.anosDisponiveis}
+        showAnoTodo
+        onSelectTipo={(tipo) => drawer.open({ tipo })}
       />
 
       <EstadoFinanceiroSection
