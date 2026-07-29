@@ -221,15 +221,15 @@ export default function Sidebar() {
 
         {/* Mobile side menu */}
         <div className={cn("fixed inset-0 bg-black/20 backdrop-blur-sm z-50 transition-opacity duration-200", isOpen ? "opacity-100" : "opacity-0 pointer-events-none")} onClick={toggleSidebar}>
-          <div className={cn("absolute right-0 top-0 bottom-0 w-64 bg-background shadow-lunar-md transition-transform transform duration-200", isOpen ? "translate-x-0" : "translate-x-full")} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-border/50">
+          <div className={cn("absolute right-0 top-0 bottom-0 w-64 bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] shadow-lunar-md transition-transform transform duration-200", isOpen ? "translate-x-0" : "translate-x-full")} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-[hsl(var(--sidebar-border))]">
               <div className="flex items-center">
-                <span className="font-semibold text-sm text-foreground">Lunari</span>
-                <span className="ml-2 text-2xs text-muted-foreground">
+                <span className="font-semibold text-sm">Lunari</span>
+                <span className="ml-2 text-2xs opacity-70">
                   Seu negócio em perfeita órbita
                 </span>
               </div>
-              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8">
+              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8 text-[hsl(var(--sidebar-fg))] hover:bg-white/10 hover:text-[hsl(var(--sidebar-fg))]">
                 <X size={14} />
               </Button>
             </div>
