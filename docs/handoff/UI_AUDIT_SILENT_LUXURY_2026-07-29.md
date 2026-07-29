@@ -220,3 +220,15 @@ Novo `src/components/layout/PageTabs.tsx`: `PAGE_TABS_LIST`, `PAGE_TABS_TRIGGER`
   densidade de `PaymentSettings` (`CardHeader pb-3`, `CardContent pt-0 space-y-3`,
   título `text-sm font-semibold`, texto de apoio `text-xs`).
 - Nenhuma alteração em hooks, queries, OAuth do Google, gating Pro ou tokens MCP.
+
+## Onda 4 — Clientes + Perfil (concluída)
+
+- Novo `src/components/clientes/clienteTokens.ts` (superfícies sólidas, badges de status e paleta financeira semântica).
+- `Clientes.tsx`: `ScrollArea`/`max-w-7xl` removidos → `PageContainer` (79rem) + `PageHeader`; toggle de visualização sem `lunar-border`; tabela e cards com bordas `/20`, tipografia `text-[15px]`, ações neutras (destrutivo só no hover); paginação e empty state padronizados; modal de cliente com `dialogSize('md')`, `DIALOG_SHELL/BODY/FOOTER` e `FIELD_LABEL`.
+- `ClienteDetalhe.tsx`: `PageContainer` + `PageTabs`; skeletons de carregamento; estado "não encontrado" padronizado.
+- `ClientHeader`: linha única, nome `text-[17px]`, ações com ícone dourado.
+- `ClientMetricsGrid`: migrado para `MetricIconBadge` (gold-soft) + valores `text-[20px]`.
+- `HistoricoTab`/`DocumentosTab`: `SECTION_SURFACE`/`SECTION_TITLE` no lugar de `Card` legado e `Separator`.
+- `ContactoTab`: header sólido (sem gradiente), accordions `border-border/20 bg-card/60`, ícones de seção em badge dourado.
+- Cores cruas eliminadas em `FamilyMiniCard` e `PhoneInputSmart`.
+- Código morto removido: `cliente-detalhe/forms/*`, `useClientForm`, `useClientValidation`.
