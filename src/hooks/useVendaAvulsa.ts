@@ -34,7 +34,10 @@ export function useVendaAvulsa() {
       if (!user) throw new Error('Usuário não autenticado');
 
       const sessionId = `VA-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const categoria = input.categoria || 'Venda Avulsa';
+      // Venda avulsa NÃO inventa categoria. A receita é do produto.
+      // Só há categoria quando o usuário registrou a venda com um pacote de
+      // uma categoria real já cadastrada. Coluna é NOT NULL → string vazia.
+      const categoria = input.categoria?.trim() || '';
 
       // Convert products to produtos_incluidos JSONB format
       // Hidrata cada produto com id estável, fluxo e etapas — condição
@@ -79,7 +82,9 @@ export function useVendaAvulsa() {
           observacoes: input.observacoes || null,
           produtos_incluidos: produtosIncluidos,
           valor_pago: input.registrarPagamento ? input.valorTotal : 0,
-          status: input.registrarPagamento ? 'concluido' : 'agendado',
+          // Sem etapa: venda avulsa entra no funil sem status, o fotógrafo
+          // escolhe a etapa se quiser acompanhar produção.
+          status: null,
           tipo_registro: 'venda_avulsa',
         })
         .select()
@@ -98,7 +103,7 @@ export function useVendaAvulsa() {
             tipo: 'pagamento',
             valor: input.valorTotal,
             valor_liquido: input.valorTotal,
-            descricao: `Venda avulsa - ${input.descricao || categoria}`,
+            descricao: `Venda avulsa - ${input.descricao || categoria || 'produto'}`,
             data_transacao: input.data,
             taxa_gateway: 0,
             taxa_antecipacao: 0,
@@ -109,6 +114,22 @@ export function useVendaAvulsa() {
           toast.warning('Venda registrada, mas houve um erro ao registrar o pagamento');
           return sessao;
         }
+      }
+
+      // Faz o card aparecer no Workflow na hora (sem depender do realtime nem
+      // de recarregar): merge no cache + invalidação do mês da venda.
+      try {
+        const [ano, mes] = input.data.split('-').map(Number);
+        window.dispatchEvent(
+          new CustomEvent('workflow-cache-merge', { detail: { session: sessao } }),
+        );
+        window.dispatchEvent(
+          new CustomEvent('workflow-cache-silent-refresh', {
+            detail: { year: ano, month: mes },
+          }),
+        );
+      } catch {
+        /* noop */
       }
 
       toast.success('Venda avulsa registrada com sucesso!');

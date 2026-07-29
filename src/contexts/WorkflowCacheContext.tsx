@@ -281,11 +281,18 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
       currentSessions = memoryCache.current.get(foundKey) || [];
       index = foundIdx;
     } else if ((normalized as any).data_sessao) {
-      // Sessão nova com data conhecida → inserir no bucket correto
+      // Sessão nova com data conhecida → inserir SOMENTE se o mês já estiver
+      // carregado. Criar um bucket para um mês nunca carregado faria a UI
+      // pensar que aquele mês só tem essa sessão (cache envenenado).
       const ym = getYearMonthFromDateString((normalized as any).data_sessao);
       year = ym.year;
       month = ym.month;
-      currentSessions = memoryCache.current.get(getCacheKey(year, month)) || [];
+      const bucketKey = getCacheKey(year, month);
+      if (!memoryCache.current.has(bucketKey)) {
+        console.log('ℹ️ [WorkflowCache] mergeUpdate ignorado: mês ainda não carregado', bucketKey);
+        return;
+      }
+      currentSessions = memoryCache.current.get(bucketKey) || [];
       index = -1;
     } else {
       // Payload parcial sem bucket conhecido e sem data → ignorar para não criar "registro lixo"
