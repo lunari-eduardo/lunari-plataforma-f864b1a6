@@ -103,7 +103,7 @@ export function useVendaAvulsa() {
             tipo: 'pagamento',
             valor: input.valorTotal,
             valor_liquido: input.valorTotal,
-            descricao: `Venda avulsa - ${input.descricao || categoria}`,
+            descricao: `Venda avulsa - ${input.descricao || categoria || 'produto'}`,
             data_transacao: input.data,
             taxa_gateway: 0,
             taxa_antecipacao: 0,
