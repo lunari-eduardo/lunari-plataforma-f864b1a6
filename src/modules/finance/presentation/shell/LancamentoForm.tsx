@@ -205,7 +205,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           className="contents"
         >
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+          <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-5' : 'px-6 py-6'}`}>
             <p className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
               {ctx.label}
             </p>
