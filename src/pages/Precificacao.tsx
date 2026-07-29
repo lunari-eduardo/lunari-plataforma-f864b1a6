@@ -120,17 +120,20 @@ export default function Precificacao() {
           </TabsContent>
         </Tabs>
 
-        {/*
-          A etapa de custos precisa continuar montada em background para que
-          `custosFixosTotal` (usado pela faixa de resumo e pelas outras abas)
-          permaneça correto ao trocar de aba.
-        */}
-        {etapa !== 'custos' && (
-          <div className="hidden" aria-hidden>
-            <EtapaCustosFixos onTotalChange={handleCustosFixosChange} />
-          </div>
-        )}
+        {/* Mantém o total de custos fixos sincronizado mesmo fora da aba "Custos". */}
+        <TotalCustosBridge onTotalChange={handleCustosFixosChange} />
       </PageContainer>
     </PricingProvider>
   );
+}
+
+/** Ponte leve: espelha `totalCustosFixos` do contexto para o estado da página. */
+function TotalCustosBridge({ onTotalChange }: { onTotalChange: (total: number) => void }) {
+  const { totalCustosFixos } = usePricing();
+
+  useEffect(() => {
+    onTotalChange(totalCustosFixos);
+  }, [totalCustosFixos, onTotalChange]);
+
+  return null;
 }
