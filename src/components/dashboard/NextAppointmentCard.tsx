@@ -58,7 +58,7 @@ export function NextAppointmentCard() {
             </>
           )}
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold">
           <Calendar className="h-5 w-5" />
         </div>
       </Card>

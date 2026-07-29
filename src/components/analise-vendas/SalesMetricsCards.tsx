@@ -1,7 +1,9 @@
-import { DollarSign, Camera, TrendingUp, Wallet, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Camera, TrendingUp, Wallet, Receipt, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { SalesMetrics } from '@/hooks/useSalesAnalytics';
 import { cn } from '@/lib/utils';
+import { MetricIconBadge } from '@/components/ui/metric-icon';
 import { ComparativeMetrics, ComparisonValue, formatVariation } from '@/domain/sales/comparisonUtils';
+
 
 interface SalesMetricsCardsProps {
   metrics: SalesMetrics;
@@ -17,13 +19,14 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map(i => (
-          <div 
-            key={i} 
-            className="bg-lunar-surface/80 rounded-xl p-4 border border-lunar-border/30 animate-pulse"
+          <div
+            key={i}
+            className="rounded-2xl border border-border/60 bg-card p-3 sm:p-5 animate-pulse"
           >
-            <div className="h-3.5 w-20 bg-lunar-border/30 rounded mb-2" />
-            <div className="h-7 w-28 bg-lunar-border/30 rounded" />
+            <div className="h-3 w-20 bg-muted/60 rounded mb-3" />
+            <div className="h-6 w-28 bg-muted/60 rounded" />
           </div>
+
         ))}
       </div>
     );
@@ -45,7 +48,7 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     {
       title: 'Receita Total',
       value: formatCurrency(metrics.totalRevenue),
-      icon: DollarSign,
+      icon: TrendingUp,
       subtitle: undefined as string | undefined,
       comparison: comparison?.metrics.totalRevenue,
     },
@@ -66,7 +69,8 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     {
       title: 'Ticket Médio',
       value: formatCurrency(metrics.averageTicket),
-      icon: TrendingUp,
+      icon: Receipt,
+
       subtitle: undefined,
       comparison: comparison?.metrics.averageTicket,
     }
@@ -77,28 +81,32 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
       {metricsCards.map((metric, index) => {
         const Icon = metric.icon;
         return (
-          <div 
-            key={index} 
+          <div
+            key={index}
             className={cn(
-              "bg-lunar-surface/80 rounded-xl p-4",
-              "border border-lunar-border/30",
-              "transition-all duration-200"
+              "group relative rounded-2xl border border-border/60 bg-card p-3 sm:p-5",
+              "transition-all duration-200 hover:border-border hover:-translate-y-0.5",
+              "hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]"
             )}
           >
-            <div className="flex items-center gap-1.5 text-lunar-textSecondary mb-1.5">
-              <Icon className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
-              <span className="text-xs font-medium truncate">{metric.title}</span>
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
+              <div className="min-w-0">
+                <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground truncate">
+                  {metric.title}
+                </div>
+                <p className="mt-1.5 sm:mt-2 text-[18px] sm:text-[26px] leading-tight font-semibold tracking-tight tabular-nums text-foreground">
+                  {metric.value}
+                </p>
+              </div>
+              <MetricIconBadge Icon={Icon} />
             </div>
-            <p className="text-2xl font-bold text-lunar-text tracking-tight">
-              {metric.value}
-            </p>
             {metric.comparison && comparison ? (
               <ComparisonBadge
                 comp={metric.comparison}
                 comparisonYear={comparison.comparisonYear}
               />
             ) : metric.subtitle ? (
-              <p className="text-xs text-lunar-textSecondary mt-1 truncate">
+              <p className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 mt-2 truncate">
                 {metric.subtitle}
               </p>
             ) : null}
@@ -109,24 +117,33 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
   );
 }
 
+
 function ComparisonBadge({ comp, comparisonYear }: { comp: ComparisonValue; comparisonYear: number }) {
   const label = formatVariation(comp);
   const isPositive = comp.isNew || (comp.diffPercentage !== null && comp.diffPercentage > 0);
   const isNegative = comp.diffPercentage !== null && comp.diffPercentage < 0;
-  const isNeutral = !isPositive && !isNegative;
 
   const Icon = isPositive ? ArrowUp : isNegative ? ArrowDown : Minus;
-  const colorClass = isPositive
-    ? 'text-emerald-500'
+  const style = isPositive
+    ? { color: 'hsl(var(--finance-positive))', background: 'hsl(var(--finance-positive-soft))' }
     : isNegative
-      ? 'text-rose-500'
-      : 'text-lunar-textSecondary';
+      ? { color: 'hsl(var(--finance-negative))', background: 'hsl(var(--finance-negative-soft))' }
+      : undefined;
 
   return (
-    <div className={cn('mt-1 flex items-center gap-1 text-xs font-medium truncate', colorClass)}>
-      <Icon className="h-3 w-3 shrink-0" />
-      <span>{label}</span>
-      <span className="text-lunar-textSecondary font-normal">vs {comparisonYear}</span>
+    <div className="mt-2 flex items-center gap-2 min-w-0">
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium tabular-nums',
+          !style && 'bg-muted text-muted-foreground'
+        )}
+        style={style}
+      >
+        <Icon className="h-3 w-3 shrink-0" />
+        {label}
+      </span>
+      <span className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">vs {comparisonYear}</span>
     </div>
   );
 }
+

@@ -58,7 +58,7 @@ export function ContasAPagarCard() {
     <Card className="rounded-2xl border-border/60 bg-card shadow-card-subtle transition-shadow duration-300 hover:shadow-card-elevated">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold">
             <Wallet className="h-4 w-4" />
           </div>
           <CardTitle className="text-base font-semibold text-foreground">
@@ -75,7 +75,7 @@ export function ContasAPagarCard() {
       <CardContent className="pt-0">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold">
               <CheckCircle2 className="h-6 w-6" />
             </div>
             <p className="text-sm font-medium text-foreground">

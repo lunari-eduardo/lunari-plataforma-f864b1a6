@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 // Sparklines removidos dos KPIs para reduzir ruído visual.
 import { formatCurrency } from '@/utils/currencyUtils';
+import { MetricIconBadge } from '@/components/ui/metric-icon';
+
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { computeHealth, type Health } from '@/modules/finance/domain/healthScore';
 import type { PeriodoEfetivo } from '@/modules/finance/domain/periodoEfetivo';
@@ -109,9 +111,8 @@ function MetricCard({ label, value, delta, deltaLabel, hint, Icon }: MetricCardP
             {formatCurrency(value)}
           </div>
         </div>
-        <div className="shrink-0 h-7 w-7 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
-          <Icon className="h-[14px] w-[14px] sm:h-[18px] sm:w-[18px]" style={{ color: 'hsl(var(--accent-gold))' }} />
-        </div>
+        <MetricIconBadge Icon={Icon} />
+
       </div>
       <div className="mt-2 sm:mt-3 flex items-center gap-2 min-h-0 sm:min-h-[22px]">
         {delta !== undefined && <DeltaBadge value={delta ?? null} />}
