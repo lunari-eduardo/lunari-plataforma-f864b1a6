@@ -1,18 +1,17 @@
 /**
  * FinanceHeader — cabeçalho global do módulo Financeiro.
- * Contém apenas o título e o botão "Novo lançamento" fixo no canto superior direito.
- * Este botão NÃO pertence ao conteúdo da página: sua posição é imutável entre
- * Visão Geral, Fluxo Financeiro e Gerenciar (padrão de UX definitivo).
+ * Hospeda o botão único "+ Novo lançamento" + menu contextual (Etapa 2).
+ * Posição imutável entre Visão Geral, Fluxo Financeiro e Gerenciar.
  */
 import { memo } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import NovoLancamentoMenu from './NovoLancamentoMenu';
+import type { LancamentoTipo } from '@/modules/finance/domain/lancamentoTipos';
 
 interface FinanceHeaderProps {
-  onNovoLancamento: () => void;
+  onSelectTipo: (tipo: LancamentoTipo) => void;
 }
 
-export const FinanceHeader = memo(function FinanceHeader({ onNovoLancamento }: FinanceHeaderProps) {
+export const FinanceHeader = memo(function FinanceHeader({ onSelectTipo }: FinanceHeaderProps) {
   return (
     <header className="flex items-center justify-between gap-4 pb-4">
       <div className="flex items-center gap-3">
@@ -21,14 +20,7 @@ export const FinanceHeader = memo(function FinanceHeader({ onNovoLancamento }: F
         </h1>
       </div>
 
-      <Button
-        onClick={onNovoLancamento}
-        size="sm"
-        className="gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-      >
-        <Plus className="h-4 w-4" strokeWidth={2} />
-        Novo lançamento
-      </Button>
+      <NovoLancamentoMenu onSelectTipo={onSelectTipo} />
     </header>
   );
 });
