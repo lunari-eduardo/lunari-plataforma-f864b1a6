@@ -221,15 +221,15 @@ export default function Sidebar() {
 
         {/* Mobile side menu */}
         <div className={cn("fixed inset-0 bg-black/20 backdrop-blur-sm z-50 transition-opacity duration-200", isOpen ? "opacity-100" : "opacity-0 pointer-events-none")} onClick={toggleSidebar}>
-          <div className={cn("absolute right-0 top-0 bottom-0 w-64 bg-background shadow-lunar-md transition-transform transform duration-200", isOpen ? "translate-x-0" : "translate-x-full")} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-border/50">
+          <div className={cn("absolute right-0 top-0 bottom-0 w-64 bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] shadow-lunar-md transition-transform transform duration-200", isOpen ? "translate-x-0" : "translate-x-full")} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-4 border-b border-[hsl(var(--sidebar-border))]">
               <div className="flex items-center">
-                <span className="font-semibold text-sm text-foreground">Lunari</span>
-                <span className="ml-2 text-2xs text-muted-foreground">
+                <span className="font-semibold text-sm">Lunari</span>
+                <span className="ml-2 text-2xs opacity-70">
                   Seu negócio em perfeita órbita
                 </span>
               </div>
-              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8">
+              <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8 text-[hsl(var(--sidebar-fg))] hover:bg-white/10 hover:text-[hsl(var(--sidebar-fg))]">
                 <X size={14} />
               </Button>
             </div>
@@ -247,12 +247,12 @@ export default function Sidebar() {
       <div className="w-16 shrink-0 h-screen relative z-40">
         <aside
           aria-label="Navegação principal"
-          className="absolute inset-y-0 left-0 w-16 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden"
+          className="absolute inset-y-0 left-0 w-16 flex flex-col p-2 bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] border-r border-[hsl(var(--sidebar-border))] overflow-hidden"
         >
           {/* Logo (apenas ícone) */}
           <div className="h-10 flex items-center justify-center mb-2">
             <img
-              src={isDark ? logoIconWhite : logoIconBlack}
+              src={logoIconWhite}
               alt="Lunari"
               className="h-7 w-7 object-contain"
             />
@@ -292,14 +292,14 @@ export default function Sidebar() {
             willChange: 'width',
           }}
           className={cn(
-            "absolute inset-y-0 left-0 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden",
+            "absolute inset-y-0 left-0 flex flex-col p-2 bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] border-r border-[hsl(var(--sidebar-border))] overflow-hidden",
             isHovered && "shadow-lunar-md"
           )}
         >
           {/* Logo */}
           <div className="h-10 flex items-center px-2 mb-2 overflow-hidden relative">
             <img
-              src={isDark ? logoIconWhite : logoIconBlack}
+              src={logoIconWhite}
               alt="Lunari"
               className={cn(
                 "absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 object-contain transition-opacity duration-150 ease-out",
@@ -307,7 +307,7 @@ export default function Sidebar() {
               )}
             />
             <img
-              src={isDark ? logoFullWhite : logoFullBlack}
+              src={logoFullWhite}
               alt="Lunari"
               className={cn(
                 "absolute left-3 top-1/2 -translate-y-1/2 h-6 object-contain object-left transition-opacity duration-150 ease-out",
