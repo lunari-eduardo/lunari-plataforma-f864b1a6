@@ -391,7 +391,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         {/* Quando */}
         <SectionHeader label="Quando" />
         {showRecebimento && (
-          <FieldRow label="Recebimento" required>
+          <FieldRow label={state.pago ? 'Recebido em' : 'Recebimento'} required>
             <DateField
               value={state.recebimento}
               onChange={(v) => setField('recebimento', v)}
@@ -399,13 +399,14 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
         {showVencimento && (
-          <FieldRow label="Vencimento" required>
+          <FieldRow label={state.pago ? 'Pago em' : 'Vencimento'} required>
             <DateField
               value={state.vencimento}
               onChange={(v) => setField('vencimento', v)}
             />
           </FieldRow>
         )}
+
 
         {/* Origem / pagamento */}
         <SectionHeader label="Pagamento" />
