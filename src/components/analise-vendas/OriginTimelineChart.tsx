@@ -26,12 +26,12 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
   const originsList = Array.from(activeOrigins);
 
   const monochromaticColors = [
-    'hsl(var(--chart-primary))',
-    'hsl(var(--chart-secondary))',
-    'hsl(var(--chart-tertiary))',
-    'hsl(var(--chart-quaternary))',
-    'hsl(var(--chart-quinary))',
-    'hsl(var(--chart-senary))'
+    'hsl(var(--accent-gold))',
+    'hsl(var(--muted-foreground) / 0.85)',
+    'hsl(var(--muted-foreground) / 0.65)',
+    'hsl(var(--muted-foreground) / 0.5)',
+    'hsl(var(--muted-foreground) / 0.4)',
+    'hsl(var(--muted-foreground) / 0.3)'
   ];
 
   const chartConfig = originsList.reduce((config, originId, index) => {
