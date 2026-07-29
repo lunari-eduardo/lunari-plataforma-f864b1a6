@@ -307,12 +307,26 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       className="flex flex-col min-h-0 flex-1"
     >
       <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-4' : 'px-6 py-5'}`}>
-        {/* Valor — protagonista */}
-        <CurrencyField
-          value={state.valor}
-          onChange={(v) => setField('valor', v)}
-          autoFocus
-        />
+        {/* Valor — protagonista, com toggle "Pago" ao lado */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <CurrencyField
+              value={state.valor}
+              onChange={(v) => setField('valor', v)}
+              autoFocus
+            />
+          </div>
+          <div className="pt-3">
+            <PaidToggle
+              checked={state.pago}
+              onChange={(v) => setField('pago', v)}
+              label={meta.natureza === 'entrada' ? 'Recebido' : 'Pago'}
+              labelInactive={meta.natureza === 'entrada' ? 'A receber' : 'A pagar'}
+            />
+          </div>
+        </div>
+
+
 
 
 
