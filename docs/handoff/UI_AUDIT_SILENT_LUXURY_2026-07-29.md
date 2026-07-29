@@ -1,6 +1,6 @@
 # Auditoria de UI — 6 páginas · Padronização "Silent Luxury"
 
-> Data: 2026-07-29 · Status: **Ondas 0, 1 e 2 implementadas**, ondas 3-7 pendentes.
+> Data: 2026-07-29 · Status: **Ondas 0, 1, 2 e 6 implementadas**, ondas 3-5 e 7 pendentes.
 > Fonte de verdade visual: `docs/constitution/DESIGN_DNA.md` + `src/styles/lunari-design-rules.md`.
 
 ## Referência do padrão (o que é "certo" hoje)
@@ -183,3 +183,23 @@ Já usa `PageContainer variant="wide"` + `PageHeader`. Desvios:
 - **Onda 5 — Precificação:** `PricingHeader` → `PageHeader` + stepper neutro reordenado, `EtapaColapsavel` redesenhado, container/pb.
 - **Onda 6 — Segunda passagem:** sub-abas de Configurações e internos de Precificação (tokens, escala, ícones).
 - **Onda 7 — QA visual:** light/dark, 375/570/768/1280/1600px, iOS Safari, foco em contraste de textos secundários.
+
+
+## Onda 6 — Densidade interna e micro-superfícies (Agenda) · ✅ CONCLUÍDA
+
+Tokens novos em `src/lib/dialogTokens.ts`: `FIELD_LABEL`, `FIELD_GROUP`, `FORM_SECTION`,
+`SECTION_SURFACE`, `SECTION_TITLE`, `DROPDOWN_PANEL`, `DROPDOWN_ITEM`.
+
+- **AppointmentForm**: root/form `space-y-5` → `space-y-4`; blocos Cliente / Pacote / Valor /
+  Status / colapsáveis em `SECTION_SURFACE`; labels em `FIELD_LABEL`; status sem amber/green
+  hardcoded (agora `lunar-warning` / `lunar-success`); botões de status `h-10 text-xs`.
+- **AppointmentDetails**: tokens `lunar-surface`/`lunar-border`/`lunar-text`/`lunar-muted`
+  substituídos por semânticos; blocos `p-4` → `p-3`; títulos em `SECTION_TITLE`; ícones de
+  seção em `text-accent-gold`; título do header em `text-[15px]`; inputs inline `h-8`.
+- **AvailabilityConfigModal**: corpo `space-y-6` → `space-y-4`; labels em `FIELD_LABEL`;
+  segmented control `py-1.5 text-xs`; opções de rádio `text-[13px]`.
+- **Comboboxes (Client/Package/Product)**: painel e item unificados via `DROPDOWN_PANEL` /
+  `DROPDOWN_ITEM`; z-index único `z-[70]` (era `9999` vs `50`); `text-green-600` → `text-lunar-success`;
+  favorito em `accent-gold`.
+- **TimeSlotOptionsMenu**: itens `h-8 text-xs`; ícones em `lunar-success` / `primary` / `destructive`.
+- **DayPreviewPopover**: bordas `/40` → `/20`.
