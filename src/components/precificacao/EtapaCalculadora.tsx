@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -86,56 +85,53 @@ export function EtapaCalculadora({
       descricao="O principal resultado de toda sua precificação"
       defaultOpen={false}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Card: Tempo do Projeto */}
-        <Card className="border bg-card">
-          <CardHeader className="pb-3 bg-muted/30">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              Tempo do Projeto
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-lg border border-border/20 bg-card/60 p-3">
+          <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-3">
+            <Clock className="h-4 w-4" style={{ color: 'hsl(var(--accent-gold))' }} />
+            Tempo do projeto
+          </h3>
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <Label className="text-sm">Horas/dia</Label>
-                <Input type="number" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} onFocus={e => e.target.select()} className="h-12 text-lg font-medium text-center" />
+                <Label className="text-xs font-medium text-muted-foreground">Horas/dia</Label>
+                <Input type="number" value={horasDisponiveis} onChange={e => setHorasDisponiveis(Number(e.target.value))} onFocus={e => e.target.select()} className="h-9 mt-1 text-sm text-center tabular-nums" />
               </div>
               <div>
-                <Label className="text-sm">Dias/semana</Label>
-                <Input type="number" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} onFocus={e => e.target.select()} className="h-12 text-lg font-medium text-center" />
+                <Label className="text-xs font-medium text-muted-foreground">Dias/semana</Label>
+                <Input type="number" value={diasTrabalhados} onChange={e => setDiasTrabalhados(Number(e.target.value))} onFocus={e => e.target.select()} className="h-9 mt-1 text-sm text-center tabular-nums" />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-muted-foreground">Horas do serviço</Label>
+                <Input type="number" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} onFocus={e => e.target.select()} className="h-9 mt-1 text-sm text-center font-semibold tabular-nums" />
               </div>
             </div>
-            <div>
-              <Label className="text-sm font-medium">Horas estimadas para este serviço</Label>
-              <Input type="number" value={horasEstimadas} onChange={e => setHorasEstimadas(Number(e.target.value))} onFocus={e => e.target.select()} className="h-14 text-xl font-bold text-center mt-2" />
+            <div className="flex justify-between items-center border-t border-border/20 pt-2.5 text-xs">
+              <span className="text-muted-foreground">Custo da sua hora</span>
+              <span className="text-[15px] font-semibold text-foreground tabular-nums">{formatCurrency(custoHora)}</span>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3">
-              <div className="flex justify-between text-sm">
-                <span>Custo da sua hora:</span>
-                <span className="font-bold text-foreground">{formatCurrency(custoHora)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Card: Produtos */}
-        <Card className="border bg-card">
-          <CardHeader className="pb-3 bg-muted/30">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="h-5 w-5 text-muted-foreground" />
-              Produtos Adicionais
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
+        <div className="rounded-lg border border-border/20 bg-card/60 p-3">
+          <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-3">
+            <Package className="h-4 w-4" style={{ color: 'hsl(var(--accent-gold))' }} />
+            Produtos adicionais
+          </h3>
+          <div>
             <SimpleProductSelector value="" onSelect={(product: NormalizedProduct | null) => {
               if (product) {
                 setProdutos([...produtos, { id: Date.now().toString(), nome: product.nome, custo: product.custo || 0, valorVenda: product.valorVenda || 0, quantidade: 1 }]);
               }
             }} />
-            <div className="space-y-2 mt-3 max-h-32 overflow-y-auto">
+            {produtos.length === 0 && (
+              <p className="text-[11px] text-muted-foreground mt-2">Nenhum produto adicionado.</p>
+            )}
+            <div className="space-y-1.5 mt-2 max-h-40 overflow-y-auto">
               {produtos.map(p => (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
+                <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-border/20 last:border-0">
                   <span className="flex-1 text-sm truncate">{p.nome}</span>
                   <Input type="number" value={p.quantidade} onChange={e => atualizarProduto(p.id, 'quantidade', parseInt(e.target.value) || 1)} onFocus={e => e.target.select()} className="w-16 h-8 text-sm text-center" min="1" />
                   <span className="text-sm font-medium w-20 text-right">{formatCurrency(p.valorVenda * p.quantidade)}</span>
@@ -143,19 +139,17 @@ export function EtapaCalculadora({
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Card: Custos Extras */}
-        <Card className="border bg-card">
-          <CardHeader className="pb-3 bg-muted/30">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <PlusCircle className="h-5 w-5 text-muted-foreground" />
-              Custos Adicionais
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="w-full mb-3"><Plus className="h-4 w-4 mr-1" />Adicionar Custo</Button>
+        <div className="rounded-lg border border-border/20 bg-card/60 p-3">
+          <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-3">
+            <PlusCircle className="h-4 w-4" style={{ color: 'hsl(var(--accent-gold))' }} />
+            Custos adicionais
+          </h3>
+          <div>
+            <Button onClick={adicionarCustoExtra} size="sm" variant="outline" className="w-full h-8 mb-2"><Plus className="h-4 w-4 mr-1" />Adicionar Custo</Button>
             {custosExtras.length > 0 && (
               <div className="flex items-center gap-2 px-2 mb-2 text-xs text-muted-foreground">
                 <span className="flex-1">Descrição</span>
@@ -163,58 +157,58 @@ export function EtapaCalculadora({
                 <span className="w-8"></span>
               </div>
             )}
-            <div className="space-y-2 max-h-32 overflow-y-auto">
+            <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {custosExtras.map(c => (
-                <div key={c.id} className="flex items-center gap-2 p-2 rounded border bg-muted/20">
+                <div key={c.id} className="flex items-center gap-2 py-1.5 border-b border-border/20 last:border-0">
                   <Input value={c.descricao} onChange={e => atualizarCustoExtra(c.id, 'descricao', e.target.value)} placeholder="Ex: Deslocamento" className="flex-1 h-8 text-sm" />
                   <Input type="number" value={c.valorUnitario} onChange={e => atualizarCustoExtra(c.id, 'valorUnitario', parseFloat(e.target.value) || 0)} onFocus={e => e.target.select()} placeholder="0,00" className="w-24 h-8 text-sm" min="0" step="0.01" />
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removerCustoExtra(c.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Card: Resultado Final - Único destaque com borda primary */}
-        <Card className="border-2 border-primary bg-card">
-          <CardHeader className="pb-3 bg-muted/30">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Calculator className="h-5 w-5 text-primary" />
-              Resultado Final
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-4">
+        {/* Resultado final */}
+        <div className="rounded-lg border border-border/30 bg-card p-3">
+          <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-3">
+            <Calculator className="h-4 w-4" style={{ color: 'hsl(var(--accent-gold))' }} />
+            Resultado final
+          </h3>
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Markup:</Label>
-              <div className="flex items-center gap-2">
-                <Input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} onFocus={e => e.target.select()} className="w-20 h-10 text-lg font-bold text-center" min="1" step="0.1" />
-                <span className="text-lg">x</span>
+              <Label className="text-xs font-medium text-muted-foreground">Markup</Label>
+              <div className="flex items-center gap-1.5">
+                <Input type="number" value={markup} onChange={e => setMarkup(Number(e.target.value) || 1)} onFocus={e => e.target.select()} className="w-16 h-8 text-sm font-semibold text-center tabular-nums" min="1" step="0.1" />
+                <span className="text-xs text-muted-foreground">x</span>
               </div>
             </div>
 
-            <div className="text-center py-4 border-t border-border">
-              <p className="text-sm text-muted-foreground mb-1">Preço Final do Serviço</p>
-              <p className="text-4xl font-black text-primary">{formatCurrency(precoFinal)}</p>
+            <div className="border-t border-border/20 pt-3">
+              <p className="text-[11px] text-muted-foreground">Preço final do serviço</p>
+              <p className="text-[30px] font-semibold leading-tight tabular-nums" style={{ color: 'hsl(var(--accent-gold))' }}>
+                {formatCurrency(precoFinal)}
+              </p>
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Lucro Líquido:</span>
-                <span className="text-xl font-bold text-foreground">{formatCurrency(lucroLiquido)}</span>
+            <div className="flex items-center justify-between border-t border-border/20 pt-2.5">
+              <div>
+                <p className="text-[11px] text-muted-foreground">Lucro líquido</p>
+                <p className="text-[15px] font-semibold text-foreground tabular-nums">{formatCurrency(lucroLiquido)}</p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Lucratividade:</span>
-                <span className="font-medium text-foreground">{lucratividade.toFixed(1)}%</span>
+              <div className="text-right">
+                <p className="text-[11px] text-muted-foreground">Lucratividade</p>
+                <p className="text-[15px] font-semibold text-foreground tabular-nums">{lucratividade.toFixed(1)}%</p>
               </div>
             </div>
 
             <FeedbackContextual precoFinal={precoFinal} metaMensal={metaFaturamentoMensal} lucratividade={lucratividade} custoHora={custoHora} />
 
-            <Button className="w-full" size="lg" onClick={() => setSalvarPacoteModalOpen(true)} disabled={precoFinal <= 0}>
-              Salvar como Pacote
+            <Button className="w-full h-9" onClick={() => setSalvarPacoteModalOpen(true)} disabled={precoFinal <= 0}>
+              Salvar como pacote
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <SalvarPacoteModal isOpen={salvarPacoteModalOpen} onClose={() => setSalvarPacoteModalOpen(false)} precoFinal={precoFinal} produtos={produtos} horasEstimadas={horasEstimadas} markup={markup} />
