@@ -77,28 +77,32 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
       {metricsCards.map((metric, index) => {
         const Icon = metric.icon;
         return (
-          <div 
-            key={index} 
+          <div
+            key={index}
             className={cn(
-              "bg-lunar-surface/80 rounded-xl p-4",
-              "border border-lunar-border/30",
-              "transition-all duration-200"
+              "group relative rounded-2xl border border-border/60 bg-card p-3 sm:p-5",
+              "transition-all duration-200 hover:border-border hover:-translate-y-0.5",
+              "hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]"
             )}
           >
-            <div className="flex items-center gap-1.5 text-lunar-textSecondary mb-1.5">
-              <Icon className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
-              <span className="text-xs font-medium truncate">{metric.title}</span>
+            <div className="flex items-start justify-between gap-2 sm:gap-3">
+              <div className="min-w-0">
+                <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground truncate">
+                  {metric.title}
+                </div>
+                <p className="mt-1.5 sm:mt-2 text-[18px] sm:text-[26px] leading-tight font-semibold tracking-tight tabular-nums text-foreground">
+                  {metric.value}
+                </p>
+              </div>
+              <MetricIconBadge Icon={Icon} />
             </div>
-            <p className="text-2xl font-bold text-lunar-text tracking-tight">
-              {metric.value}
-            </p>
             {metric.comparison && comparison ? (
               <ComparisonBadge
                 comp={metric.comparison}
                 comparisonYear={comparison.comparisonYear}
               />
             ) : metric.subtitle ? (
-              <p className="text-xs text-lunar-textSecondary mt-1 truncate">
+              <p className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 mt-2 truncate">
                 {metric.subtitle}
               </p>
             ) : null}
@@ -108,6 +112,7 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     </div>
   );
 }
+
 
 function ComparisonBadge({ comp, comparisonYear }: { comp: ComparisonValue; comparisonYear: number }) {
   const label = formatVariation(comp);
