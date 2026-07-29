@@ -215,23 +215,23 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
             <div className="grid gap-2">
               {ctx.opcoes.map((op, i) => {
                 const Icon = op.icone;
-                const disabled = op.id !== 'outro';
                 return (
                   <motion.button
                     key={op.id}
                     type="button"
-                    disabled={disabled}
-                    onClick={() => setOrigem(op.id)}
+                    onClick={() => {
+                      if (op.id === 'venda_avulsa') {
+                        onSelectVendaAvulsa?.();
+                        return;
+                      }
+                      setOrigem(op.id);
+                    }}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22, delay: 0.04 * i, ease: 'easeOut' }}
-                    whileHover={disabled ? undefined : { y: -1 }}
-                    whileTap={disabled ? undefined : { scale: 0.985 }}
-                    className={`group flex items-start gap-3 rounded-xl border border-border/60 bg-background p-3 text-left transition-colors ${
-                      disabled
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:border-accent-gold/60 hover:bg-accent-gold/5'
-                    }`}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.985 }}
+                    className="group flex items-start gap-3 rounded-xl border border-border/60 bg-background p-3 text-left transition-colors hover:border-accent-gold/60 hover:bg-accent-gold/5"
                   >
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold shrink-0">
                       <Icon className="h-3.5 w-3.5" />
@@ -240,12 +240,12 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
                       <div className="text-[13px] font-medium text-foreground">{op.label}</div>
                       <div className="text-[11.5px] text-muted-foreground leading-snug">
                         {op.descricao}
-                        {disabled ? ' · Use o Workflow / Vendas avulsas' : ''}
                       </div>
                     </div>
                   </motion.button>
                 );
               })}
+
             </div>
           </div>
           <footer
