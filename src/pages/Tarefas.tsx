@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTasks } from '@/modules/tasks/presentation/hooks/useTasks';
+import PageHeader from '@/components/layout/PageHeader';
 import { tasksStore } from '@/modules/tasks/presentation/store/tasksStore';
 import { useSupabaseTaskPeople } from '@/hooks/useSupabaseTaskPeople';
 
@@ -294,9 +295,13 @@ export default function Tarefas() {
   };
 
   return (
-    <div className="page-tarefas-modern h-[calc(100vh-4rem)] flex flex-col transition-colors duration-300">
-      <div className="flex-shrink-0 px-2 pt-3 space-y-3">
-        <header className="flex items-center justify-between flex-wrap gap-2">
+    <div className="page-tarefas-modern h-[calc(100dvh-4rem)] flex flex-col">
+      <div className="flex-shrink-0 px-4 md:px-6 pt-3 space-y-2.5">
+        <PageHeader
+          title="Tarefas"
+          description="Kanban e lista operacional do estúdio"
+          className="pb-0"
+          action={
           <div className="flex items-center gap-1 md:gap-2 flex-wrap">
             <Select value={view} onValueChange={v => { setView(v as any); localStorage.setItem('lunari_tasks_view', v); }}>
               <SelectTrigger className="h-8 w-[100px] md:w-[120px] text-xs md:text-sm">
@@ -312,11 +317,12 @@ export default function Tarefas() {
               <span className="md:hidden">Config</span>
             </Button>
             <UndoButton entries={undo.entries} onUndo={undo.performUndo} />
-            <Button size="sm" onClick={() => openCreate()} className="glass-btn-primary text-xs md:text-sm">
+            <Button size="sm" onClick={() => openCreate()} className="text-xs md:text-sm">
               Nova tarefa
             </Button>
           </div>
-        </header>
+          }
+        />
 
         <QuickCaptureBar
           onCapture={async (title) => {
@@ -328,7 +334,7 @@ export default function Tarefas() {
         <PriorityLegend />
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden px-2 md:px-4">
         {view === 'kanban' ? (
           <div className="flex flex-col h-full">
             <DndContext

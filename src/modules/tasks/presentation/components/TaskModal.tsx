@@ -10,6 +10,8 @@
  *
  * Substitui `TaskQuickModal` e `UnifiedTaskModal`.
  */
+import { cn } from "@/lib/utils";
+import { dialogSize, DIALOG_TITLE_CLS, DIALOG_DESCRIPTION_CLS } from "@/lib/dialogTokens";
 
 import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { tasksStore } from "../store/tasksStore";
@@ -288,8 +290,8 @@ export default function TaskModal({
         <DialogContent
           className={
             viewMode === "view"
-              ? "glass-modal sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0"
-              : "glass-modal sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+              ? cn(dialogSize("lg"), "max-h-[85dvh] overflow-y-auto p-0")
+              : cn(dialogSize("lg"), "max-h-[85dvh] overflow-y-auto")
           }
         >
           {viewMode === "view" ? (
@@ -318,10 +320,10 @@ export default function TaskModal({
             // ════════════════════════════════ EDIT MODE ════════════════════════════════
             <>
               <DialogHeader className="space-y-1">
-                <DialogTitle className="text-lg font-bold text-lunar-text">
+                <DialogTitle className={DIALOG_TITLE_CLS}>
                   {isCreate ? "Nova tarefa" : "Editar tarefa"}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-lunar-textSecondary">
+                <DialogDescription className={DIALOG_DESCRIPTION_CLS}>
                   {isCreate ? "Preencha os dados da tarefa." : "Atualize os dados da tarefa."}
                 </DialogDescription>
               </DialogHeader>

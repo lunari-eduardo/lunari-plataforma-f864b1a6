@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/card';
 import CleanTaskCard from '@/modules/tasks/presentation/components/cards/CleanTaskCard';
 import ChecklistPanel from '@/modules/tasks/presentation/components/ChecklistPanel';
 import type { Task } from '@/types/tasks';
@@ -30,22 +29,20 @@ export default function TasksListView({
         defaultOpenKey={defaultOpenKey}
         variant="section"
       />
-      <Card className="p-2 bg-card/30 dark:bg-card/[0.04] backdrop-blur-xl border-white/35 dark:border-white/[0.08]">
-        <div className="grid gap-2">
-          {filtered.map(t => (
-            <CleanTaskCard
-              key={t.id}
-              task={t}
-              onComplete={() => onComplete(t.id)}
-              onView={() => onView(t)}
-              isDone={t.status === doneKey as any}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <div className="py-8 text-center text-sm text-lunar-textSecondary">Nenhuma tarefa encontrada.</div>
-          )}
-        </div>
-      </Card>
+      <div className="grid gap-2">
+        {filtered.map(t => (
+          <CleanTaskCard
+            key={t.id}
+            task={t}
+            onComplete={() => onComplete(t.id)}
+            onView={() => onView(t)}
+            isDone={t.status === doneKey as any}
+          />
+        ))}
+        {filtered.length === 0 && (
+          <div className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa encontrada.</div>
+        )}
+      </div>
     </div>
   );
 }
