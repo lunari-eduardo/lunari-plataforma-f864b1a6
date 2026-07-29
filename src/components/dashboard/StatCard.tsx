@@ -30,14 +30,10 @@ export function StatCard({
   const content = (
     <Card
       className={cn(
-        "group relative flex items-center gap-4 rounded-2xl border-border/20 bg-card/60 p-4 shadow-sm transition-colors duration-200",
-        href && "cursor-pointer hover:bg-card/80 hover:border-border/40"
+        "group relative flex items-start gap-4 rounded-2xl border-border/60 bg-card p-4 shadow-sm transition-all duration-200",
+        href && "cursor-pointer hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]"
       )}
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/40 text-muted-foreground transition-colors group-hover:text-foreground">
-        <Icon className="h-4 w-4" />
-      </div>
-
       <div className="min-w-0 flex-1">
         <div className="text-2xl font-semibold leading-none tracking-tight text-foreground tabular-nums">
           {value}
@@ -46,17 +42,20 @@ export function StatCard({
           {label}
         </div>
         {subtitle && (
-          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          <div className="mt-0.5 truncate pr-6 text-[11px] text-muted-foreground">
             {subtitle}
           </div>
         )}
       </div>
+
+      <MetricIconBadge Icon={Icon} />
 
       {href && (
         <ArrowRight className="absolute bottom-3 right-3 h-3.5 w-3.5 text-muted-foreground/50 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-foreground" />
       )}
     </Card>
   );
+
 
   if (href) {
     return (
