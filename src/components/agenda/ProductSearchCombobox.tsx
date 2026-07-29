@@ -4,6 +4,8 @@ import { ChevronDown, ShoppingBag, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { sortProdutos } from '@/utils/produtoSort';
 import { cn } from '@/lib/utils';
+import { DROPDOWN_PANEL, DROPDOWN_ITEM } from '@/lib/dialogTokens';
+
 
 const normalizeText = (text: string): string => {
   return text
