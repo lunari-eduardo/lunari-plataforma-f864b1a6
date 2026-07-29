@@ -210,10 +210,10 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 type="monotone"
                 dataKey="averageTicket"
                 name={`${baseYear}`}
-                stroke="hsl(var(--chart-tertiary))"
-                strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-tertiary))', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, stroke: 'hsl(var(--chart-tertiary))', strokeWidth: 2 }}
+                stroke="hsl(var(--accent-gold))"
+                strokeWidth={2.5}
+                dot={{ fill: 'hsl(var(--accent-gold))', strokeWidth: 0, r: 3 }}
+                activeDot={{ r: 5, stroke: 'hsl(var(--accent-gold))', strokeWidth: 2, fill: 'hsl(var(--background))' }}
               />
             </LineChart>
           </ChartContainer>
