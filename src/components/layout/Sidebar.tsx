@@ -69,12 +69,19 @@ const DesktopNavItem = ({
       end={end}
       className={({ isActive }) =>
         cn(
-          "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden",
-          isActive && "active bg-lunar-surface text-lunar-accent"
+          "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
+          isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
         )
       }
     >
-      <span className="flex items-center justify-center w-12 h-10 flex-shrink-0 relative">
+      <span
+        className={cn(
+          "flex items-center justify-center w-12 h-10 flex-shrink-0 relative transition-colors duration-200",
+          expanded
+            ? "text-[hsl(var(--sidebar-icon))]"
+            : "text-[hsl(var(--sidebar-icon-collapsed))] group-hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]"
+        )}
+      >
         {icon}
         {isPro && showProBadge && (
           <span className="absolute top-1.5 right-1.5">
