@@ -166,7 +166,7 @@ export function ClientEditModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className={cn(dialogSize('sm'), DIALOG_SHELL)}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
               <AlertCircle className="h-5 w-5 text-lunar-warning" />
               Cliente não vinculado
             </DialogTitle>
@@ -190,7 +190,7 @@ export function ClientEditModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className={cn(dialogSize('sm'), DIALOG_SHELL)}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
               <AlertCircle className="h-5 w-5 text-lunar-error" />
               Cliente não encontrado
             </DialogTitle>
@@ -213,8 +213,8 @@ export function ClientEditModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-lunar-accent" />
+          <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
+            <User className="h-4 w-4 text-muted-foreground" />
             Editar Cliente
           </DialogTitle>
         </DialogHeader>

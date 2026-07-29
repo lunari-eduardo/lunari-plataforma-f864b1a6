@@ -227,7 +227,7 @@ export default function ShareAvailabilityModal({
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
             <Share2 className="h-5 w-5 text-primary" />
             Compartilhar Horários
           </DialogTitle>

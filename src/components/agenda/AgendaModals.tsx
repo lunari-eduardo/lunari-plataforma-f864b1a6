@@ -84,13 +84,15 @@ export default function AgendaModals({
             </DialogTitle>
           </DialogHeader>
 
-          <AppointmentForm
-            initialDate={selectedSlot?.date || editingAppointment?.date}
-            initialTime={selectedSlot?.time || editingAppointment?.time}
-            appointment={editingAppointment}
-            onSave={onSaveAppointment}
-            onCancel={() => setIsAppointmentDialogOpen(false)}
-          />
+          <div className={cn(DIALOG_BODY, 'pr-1')}>
+            <AppointmentForm
+              initialDate={selectedSlot?.date || editingAppointment?.date}
+              initialTime={selectedSlot?.time || editingAppointment?.time}
+              appointment={editingAppointment}
+              onSave={onSaveAppointment}
+              onCancel={() => setIsAppointmentDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -98,6 +100,7 @@ export default function AgendaModals({
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
           {viewingAppointment && (
+            <div className={cn(DIALOG_BODY, 'pr-1')}>
             <AppointmentDetails
               appointment={viewingAppointment}
               onSave={onSaveAppointment}
@@ -105,6 +108,7 @@ export default function AgendaModals({
               onCancel={() => setIsDetailsOpen(false)}
               onDelete={onDeleteAppointment}
             />
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -113,6 +117,7 @@ export default function AgendaModals({
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
         <DialogContent className={cn(dialogSize('lg'), DIALOG_SHELL)}>
           {selectedBudgetAppointment && (
+            <div className={cn(DIALOG_BODY, 'pr-1')}>
             <BudgetAppointmentDetails
               appointment={selectedBudgetAppointment.appointment}
               budget={selectedBudgetAppointment.budget}
@@ -121,6 +126,7 @@ export default function AgendaModals({
               onViewFullBudget={onViewFullBudget}
               onDelete={onDeleteAppointment}
             />
+            </div>
           )}
         </DialogContent>
       </Dialog>
