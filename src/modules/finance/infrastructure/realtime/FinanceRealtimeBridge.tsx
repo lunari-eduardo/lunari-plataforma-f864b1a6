@@ -18,6 +18,7 @@ import { supabaseItemsRepo } from "../supabase/itemsRepo";
 import { transactionsStore } from "../../presentation/store/transactionsStore";
 import { itemsStore } from "../../presentation/store/itemsStore";
 import { financeRealtime } from "./financeRealtimeChannel";
+import { invalidateFinanceAll } from "./invalidateFinanceAll";
 
 const VISIBILITY_REHYDRATE_AFTER_MS = 30_000;
 const BACKOFF_MS = [1_000, 3_000, 10_000];
