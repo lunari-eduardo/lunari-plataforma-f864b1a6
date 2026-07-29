@@ -44,7 +44,7 @@ export function ProximosAgendamentosCard() {
     <Card className="h-full rounded-2xl border-border/60 bg-card shadow-card-subtle transition-shadow duration-300 hover:shadow-card-elevated">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold">
             <Calendar className="h-4 w-4" />
           </div>
           <CardTitle className="text-base font-semibold text-foreground">
