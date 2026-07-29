@@ -10,7 +10,8 @@
  */
 import { memo, useMemo } from 'react';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
-import PeriodBar from './PeriodBar';
+import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import EstadoFinanceiroSection from './EstadoFinanceiroSection';
 import AcompanhamentoSection from './AcompanhamentoSection';
 import AnaliseSection from './AnaliseSection';
