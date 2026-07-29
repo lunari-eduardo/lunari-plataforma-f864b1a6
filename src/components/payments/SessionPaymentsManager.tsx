@@ -173,37 +173,45 @@ export function SessionPaymentsManager({
     };
   }, [displayMode, isOpen, sessionData?.id, sessionData?.sessionId]);
 
+  // Badges neutros (Silent Luxury): superfície discreta + tipografia semântica.
+  const BADGE_BASE = 'border-border/20 bg-muted/40 font-medium';
+  const BADGE_OK = `${BADGE_BASE} text-emerald-600 dark:text-emerald-500`;
+  const BADGE_WARN = `${BADGE_BASE} text-accent-gold`;
+  const BADGE_DANGER = `${BADGE_BASE} text-destructive`;
+  const BADGE_NEUTRAL = `${BADGE_BASE} text-muted-foreground`;
+
   const getStatusBadge = (payment: SessionPaymentExtended) => {
     // Se tem statusRecebimento (parcela Asaas), usar esse status
     if (payment.statusRecebimento) {
       switch (payment.statusRecebimento) {
         case 'confirmado':
-          return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Confirmado</Badge>;
+          return <Badge className={BADGE_WARN}>Confirmado</Badge>;
         case 'recebido':
-          return <Badge className="bg-green-100 text-green-800 border-green-200">Recebido</Badge>;
+          return <Badge className={BADGE_OK}>Recebido</Badge>;
         case 'antecipado':
-          return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Antecipado</Badge>;
+          return <Badge className={BADGE_NEUTRAL}>Antecipado</Badge>;
         case 'pendente':
-          return <Badge className="bg-muted/40 text-foreground border-border">Pendente</Badge>;
+          return <Badge className={BADGE_NEUTRAL}>Pendente</Badge>;
       }
     }
 
     const { statusPagamento } = payment;
     if (statusPagamento === 'estornado') {
-      return <Badge className="bg-red-100 text-red-800 border-red-200">Estornado</Badge>;
+      return <Badge className={BADGE_DANGER}>Estornado</Badge>;
     }
     if (statusPagamento === 'pago') {
-      return <Badge className="bg-green-100 text-green-800 border-green-200">Pago</Badge>;
+      return <Badge className={BADGE_OK}>Pago</Badge>;
     }
     if (statusPagamento === 'pendente') {
       const isOverdue = payment.dataVencimento && new Date(payment.dataVencimento) < new Date();
       if (isOverdue) {
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Atrasado</Badge>;
+        return <Badge className={BADGE_DANGER}>Atrasado</Badge>;
       }
-      return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendente</Badge>;
+      return <Badge className={BADGE_WARN}>Pendente</Badge>;
     }
     return <Badge variant="outline">{statusPagamento}</Badge>;
   };
+
 
   const getOriginIcon = (origem: string, observacoes?: string) => {
     // Crédito do cliente
