@@ -346,6 +346,10 @@
     --sidebar-muted-fg: 40 12% 94%;
     --sidebar-border: 0 0% 14%;
     --sidebar-ring: 40 25% 90%;
+    --sidebar-icon: 40 12% 94%;
+    --sidebar-icon-collapsed: 42 55% 78%;
+    --sidebar-icon-collapsed-hover: 42 70% 85%;
+    --sidebar-active-fg: 40 12% 98%;
 
     /* terra dark — legacy */
     --terra-50: 0 0% 12%;
