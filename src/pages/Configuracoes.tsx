@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import { Package, Box, Workflow, Shapes, DollarSign, ClipboardList, FileSignature } from 'lucide-react';
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT, PAGE_SCROLL_SHELL } from '@/components/layout/PageTabs';
+import { cn } from '@/lib/utils';
 
 import Categorias from '@/components/configuracoes/Categorias';
 import Pacotes from '@/components/configuracoes/Pacotes';
@@ -23,8 +23,8 @@ export default function Configuracoes() {
   const [tabAtiva, setTabAtiva] = useState('categorias');
   
   return (
-    <ScrollArea className="h-[calc(100vh-120px)]">
-      <PageContainer variant="wide" className="py-4">
+    <div className={PAGE_SCROLL_SHELL}>
+      <PageContainer className="py-4 pb-10">
         <PageHeader
           title="Configurações"
           description="Configure os parâmetros principais do seu sistema."
@@ -39,43 +39,40 @@ export default function Configuracoes() {
         />
 
 
-        {/* Card com Tabs */}
-        <Card className="border-border/20 bg-card/60 shadow-sm">
-          <CardContent className="p-6">
-            <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
-              <TabsList className="w-full justify-start border-b border-border/20 mb-4 bg-transparent">
+        <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
+              <TabsList className={PAGE_TABS_LIST}>
 
-                <TabsTrigger value="categorias" className="flex items-center gap-2">
+                <TabsTrigger value="categorias" className={PAGE_TABS_TRIGGER} title="Categorias">
                   <Shapes className="h-4 w-4" />
                   <span className="hidden sm:inline">Categorias</span>
                 </TabsTrigger>
-                <TabsTrigger value="precificacao" className="flex items-center gap-2">
+                <TabsTrigger value="precificacao" className={PAGE_TABS_TRIGGER} title="Modelos de preço">
                   <DollarSign className="h-4 w-4" />
                   <span className="hidden sm:inline">Modelos de preço</span>
                 </TabsTrigger>
-                <TabsTrigger value="pacotes" className="flex items-center gap-2">
+                <TabsTrigger value="pacotes" className={PAGE_TABS_TRIGGER} title="Pacotes">
                   <Package className="h-4 w-4" />
                   <span className="hidden sm:inline">Pacotes</span>
                 </TabsTrigger>
-                <TabsTrigger value="produtos" className="flex items-center gap-2">
+                <TabsTrigger value="produtos" className={PAGE_TABS_TRIGGER} title="Produtos">
                   <Box className="h-4 w-4" />
                   <span className="hidden sm:inline">Produtos</span>
                 </TabsTrigger>
-                <TabsTrigger value="fluxo" className="flex items-center gap-2">
+                <TabsTrigger value="fluxo" className={PAGE_TABS_TRIGGER} title="Etapas">
                   <Workflow className="h-4 w-4" />
                   <span className="hidden sm:inline">Etapas</span>
                 </TabsTrigger>
-                <TabsTrigger value="formularios" className="flex items-center gap-2">
+                <TabsTrigger value="formularios" className={PAGE_TABS_TRIGGER} title="Formulários">
                   <ClipboardList className="h-4 w-4" />
                   <span className="hidden sm:inline">Formulários</span>
                 </TabsTrigger>
-                <TabsTrigger value="contratos" className="flex items-center gap-2">
+                <TabsTrigger value="contratos" className={PAGE_TABS_TRIGGER} title="Contratos">
                   <FileSignature className="h-4 w-4" />
                   <span className="hidden sm:inline">Contratos</span>
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="categorias">
+              <TabsContent value="categorias" className={PAGE_TABS_CONTENT}>
                 <Categorias 
                   categorias={configuration.categorias}
                   onAdd={configuration.adicionarCategoria}
@@ -85,7 +82,7 @@ export default function Configuracoes() {
                 />
               </TabsContent>
               
-              <TabsContent value="pacotes">
+              <TabsContent value="pacotes" className={PAGE_TABS_CONTENT}>
                 <Pacotes 
                   pacotes={configuration.pacotes}
                   onAdd={configuration.adicionarPacote}
@@ -97,17 +94,17 @@ export default function Configuracoes() {
                 />
               </TabsContent>
               
-              <TabsContent value="produtos">
+              <TabsContent value="produtos" className={PAGE_TABS_CONTENT}>
                 <Produtos 
                   pacotes={configuration.pacotes}
                 />
               </TabsContent>
               
-              <TabsContent value="precificacao">
+              <TabsContent value="precificacao" className={PAGE_TABS_CONTENT}>
                 <PrecificacaoFotos categorias={configuration.categorias} />
               </TabsContent>
               
-              <TabsContent value="fluxo">
+              <TabsContent value="fluxo" className={PAGE_TABS_CONTENT}>
                 <FluxoTrabalho 
                   etapas={configuration.etapas}
                   onAdd={configuration.adicionarEtapa}
@@ -118,17 +115,15 @@ export default function Configuracoes() {
                 />
               </TabsContent>
               
-              <TabsContent value="formularios">
+              <TabsContent value="formularios" className={PAGE_TABS_CONTENT}>
                 <FormulariosConfig />
               </TabsContent>
               
-              <TabsContent value="contratos">
+              <TabsContent value="contratos" className={PAGE_TABS_CONTENT}>
                 <ContratosConfig />
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
       </PageContainer>
-    </ScrollArea>
+    </div>
   );
 }
