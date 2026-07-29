@@ -68,7 +68,8 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     {
       title: 'Ticket Médio',
       value: formatCurrency(metrics.averageTicket),
-      icon: TrendingUp,
+      icon: Receipt,
+
       subtitle: undefined,
       comparison: comparison?.metrics.averageTicket,
     }
