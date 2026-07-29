@@ -120,8 +120,8 @@ const RailNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps
     aria-label={label}
     className={({ isActive }) =>
       cn(
-        "nav-item-lunar mb-1 flex items-center h-11 rounded-lg transition-colors duration-200 overflow-hidden",
-        isActive && "active bg-lunar-surface text-lunar-accent"
+        "nav-item-lunar mb-1 flex items-center h-11 rounded-lg transition-colors duration-200 overflow-hidden text-[hsl(var(--sidebar-icon-collapsed))] hover:bg-white/5 hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]",
+        isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
       )
     }
   >
