@@ -30,6 +30,7 @@ import {
   getLancamentoTipoMeta,
   type LancamentoTipo,
 } from '@/modules/finance/domain/lancamentoTipos';
+import LancamentoForm from './LancamentoForm';
 
 // ─────────────────────────────────────────────────────────────
 // Contexto
