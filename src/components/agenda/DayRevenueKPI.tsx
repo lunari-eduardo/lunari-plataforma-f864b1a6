@@ -30,7 +30,7 @@ export default function DayRevenueKPI({ date, unifiedEvents, range }: DayRevenue
       : format(date, "EEEE, d 'de' MMMM", { locale: ptBR });
 
   return (
-    <div className="rounded-lg border border-white/30 dark:border-white/10 bg-card/40 dark:bg-card/[0.05] backdrop-blur-sm p-3 space-y-2">
+    <div className="rounded-xl border border-border/20 bg-card/60 shadow-sm p-3 space-y-2">
       <div>
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
           <TrendingUp className="h-3 w-3" />

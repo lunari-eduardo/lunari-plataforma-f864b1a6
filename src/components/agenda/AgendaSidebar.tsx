@@ -26,7 +26,7 @@ export default function AgendaSidebar({
 
   return (
     <aside className="space-y-3">
-      <div className="rounded-lg border border-white/30 dark:border-white/10 bg-card/40 dark:bg-card/[0.05] backdrop-blur-sm p-3">
+      <div className="rounded-xl border border-border/20 bg-card/60 shadow-sm p-3">
         <MiniMonthCalendar
           selectedDate={date}
           unifiedEvents={unifiedEvents}
