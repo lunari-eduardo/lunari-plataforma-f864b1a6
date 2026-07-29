@@ -397,12 +397,15 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       </div>
 
       {/* Footer */}
-      <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
+      <footer
+        className={`flex items-center gap-2 border-t border-border/40 shrink-0 ${isMobile ? 'justify-stretch px-5 py-3' : 'justify-end px-6 py-4'}`}
+        style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' } : undefined}
+      >
         <button
           type="button"
           onClick={onClose}
           disabled={submitting}
-          className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          className={`rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50 ${isMobile ? 'flex-1 px-4 py-2.5 text-[13px]' : 'px-3 py-1.5 text-[12px]'}`}
         >
           Cancelar
         </button>
@@ -413,7 +416,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           whileHover={canSubmit ? { y: -1 } : undefined}
           whileTap={canSubmit ? { scale: 0.97 } : undefined}
           transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent-gold px-3.5 py-1.5 text-[12px] font-semibold text-background shadow-[0_4px_14px_-4px_rgba(198,163,106,0.45)] hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          className={`inline-flex items-center justify-center gap-1.5 rounded-md bg-accent-gold font-semibold text-background shadow-[0_4px_14px_-4px_rgba(198,163,106,0.45)] hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${isMobile ? 'flex-[2] px-4 py-2.5 text-[13px]' : 'px-3.5 py-1.5 text-[12px]'}`}
         >
           <AnimatePresence mode="wait" initial={false}>
             {submitting ? (
