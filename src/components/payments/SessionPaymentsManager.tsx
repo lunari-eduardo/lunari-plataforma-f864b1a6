@@ -377,13 +377,14 @@ export function SessionPaymentsManager({
 
 
       {/* Payment History */}
-      <Card>
-        <CardHeader>
+      <Card className={isCard ? 'border-0 bg-transparent shadow-none' : undefined}>
+        <CardHeader className={isCard ? 'px-0 pt-0 pb-2' : undefined}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <CardTitle className="text-sm md:text-lg font-semibold flex items-center gap-2">
-              <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+            <CardTitle className={isCard ? 'text-xs font-semibold flex items-center gap-2' : 'text-sm md:text-lg font-semibold flex items-center gap-2'}>
+              <CreditCard className={isCard ? 'h-3.5 w-3.5 text-accent-gold' : 'h-4 w-4 md:h-5 md:w-5 text-primary'} />
               Histórico de Movimentações
             </CardTitle>
+
             <div className="flex gap-2 w-full sm:w-auto">
               {fin.hasGaleria ? (
                 <DropdownMenu>
