@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 // Sparklines removidos dos KPIs para reduzir ruído visual.
 import { formatCurrency } from '@/utils/currencyUtils';
+import { MetricIconBadge } from '@/components/ui/metric-icon';
+
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { computeHealth, type Health } from '@/modules/finance/domain/healthScore';
 import type { PeriodoEfetivo } from '@/modules/finance/domain/periodoEfetivo';
