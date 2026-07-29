@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -11,7 +11,7 @@ import { EtapaCustosFixos } from '@/components/precificacao/EtapaCustosFixos';
 import { EtapaEquipamentos } from '@/components/precificacao/EtapaEquipamentos';
 import { EtapaMetas } from '@/components/precificacao/EtapaMetas';
 import { EtapaCalculadora } from '@/components/precificacao/EtapaCalculadora';
-import { PricingProvider } from '@/contexts/PricingContext';
+import { PricingProvider, usePricing } from '@/contexts/PricingContext';
 
 const ETAPAS = [
   { value: 'custos', label: 'Custos' },
@@ -39,9 +39,9 @@ export default function Precificacao() {
   const metaFaturamentoAnual = faturamentoMinimoAnual / (1 - margemLucroDesejada / 100);
   const metaFaturamentoMensal = metaFaturamentoAnual / 12;
 
-  const handleCustosFixosChange = (total: number) => {
+  const handleCustosFixosChange = useCallback((total: number) => {
     setCustosFixosTotal(total);
-  };
+  }, []);
 
   const handleEtapaChange = (value: string) => {
     setEtapa(value as EtapaValue);
