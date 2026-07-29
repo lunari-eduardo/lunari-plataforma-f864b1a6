@@ -47,6 +47,12 @@ import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 
 
+/** Shell de largura: ano usa 1600px (grade de 12 meses), demais views usam o padrão. */
+function AgendaShell({ full, children }: { full: boolean; children: React.ReactNode }) {
+  if (full) return <div className="w-full">{children}</div>;
+  return <PageContainer variant="wide">{children}</PageContainer>;
+}
+
 export default function Agenda() {
   const { addAppointment, updateAppointment, deleteAppointment } = useAppointmentMutations();
   const { availability } = useAvailability();
@@ -315,13 +321,10 @@ export default function Agenda() {
   const sidebarApplicable = view !== 'year' && view !== 'month';
   const showSidebar = !isMobile && !isTablet && sidebarApplicable;
   const isYearView = view === 'year';
-  const Wrapper = isYearView
-    ? ({ children }: { children: React.ReactNode }) => <div className="w-full">{children}</div>
-    : ({ children }: { children: React.ReactNode }) => <PageContainer variant="wide">{children}</PageContainer>;
 
   return (
     <div className={`w-full mx-auto ${isYearView ? 'max-w-[1600px] px-4 md:px-6' : ''} pb-20 md:pb-10`}>
-      <Wrapper>
+      <AgendaShell full={isYearView}>
         <PageHeader
           title="Agenda"
           description="Agendamentos, disponibilidade e tarefas do dia"
@@ -397,7 +400,7 @@ export default function Agenda() {
             </details>
           </div>
         </div>
-      </Wrapper>
+      </AgendaShell>
 
 
 
