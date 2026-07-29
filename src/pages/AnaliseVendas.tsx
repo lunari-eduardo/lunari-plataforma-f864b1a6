@@ -145,7 +145,8 @@ export default function AnaliseVendas() {
       />
 
       {/* Main Content - 3 Blocos Visuais */}
-      <main className="px-5 md:px-7 py-5 space-y-9 text-[1.05rem]">
+      <PageContainer>
+        <main className="py-5 space-y-9 text-[1.05rem]">
         
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* BLOCO 1: VISÃO EXECUTIVA                                        */}
