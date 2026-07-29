@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDateForStorage } from '@/utils/dateUtils';
 import { useAvailability } from '@/hooks/useAvailability';
 import { toast } from 'sonner';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 interface ActionChoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -77,7 +78,7 @@ export default function ActionChoiceModal({
     }
   };
   return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn(dialogSize('sm'))}>
         <DialogHeader>
           <div>
               

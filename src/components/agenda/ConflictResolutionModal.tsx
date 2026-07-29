@@ -9,6 +9,7 @@ import { useConflictResolution, type NextAvailableSlot } from '@/hooks/useConfli
 import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/modules/agenda/presentation';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 interface ConflictResolutionModalProps {
   open: boolean;
@@ -107,7 +108,7 @@ export default function ConflictResolutionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className={cn(dialogSize('lg'), DIALOG_SHELL)}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />

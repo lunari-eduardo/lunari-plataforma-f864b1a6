@@ -10,6 +10,7 @@ import { formatDateForStorage } from '@/utils/dateUtils';
 import { useAvailability } from '@/hooks/useAvailability';
 import { Share2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 interface ShareAvailabilityModalProps {
   isOpen: boolean;
@@ -201,7 +202,7 @@ export default function ShareAvailabilityModal({
   if (availableTypes.length === 0) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
           <DialogHeader>
             <DialogTitle>Compartilhar Horários</DialogTitle>
             <DialogDescription>
@@ -223,7 +224,7 @@ export default function ShareAvailabilityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Share2 className="h-5 w-5 text-primary" />

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { Plus, X, Clock, Settings } from 'lucide-react';
 import { formatDateForInput } from '@/utils/dateUtils';
 import type { DateRange } from 'react-day-picker';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 type Action = 'liberar' | 'bloquear';
 type WeekdayMode = 'all' | 'specific';
@@ -318,9 +319,9 @@ export default function AvailabilityConfigModal({
   // === Render ===
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Configurar disponibilidade</DialogTitle>
+          <DialogTitle className={DIALOG_TITLE_CLS}>Configurar disponibilidade</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 pt-2">
