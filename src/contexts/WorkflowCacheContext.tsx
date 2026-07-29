@@ -223,8 +223,16 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (userId) {
       indexedDBCache.set(userId, year, month, normalized);
-      broadcastChannel.current?.postMessage({ type: 'cache-updated', year, month });
+      const msg = { type: 'cache-updated' as const, year, month };
+      try { broadcastChannel.current?.postMessage(msg); } catch { /* noop */ }
+      // Fallback storage-event: ping efêmero para abas sem BroadcastChannel.
+      try {
+        const key = '__lunari_bc_workflow_cache_sync__';
+        window.localStorage.setItem(key, JSON.stringify({ ...msg, t: Date.now() }));
+        window.localStorage.removeItem(key);
+      } catch { /* Safari private mode */ }
     }
+
 
     // Estado passa a 'ready' assim que temos dados no bucket.
     setMonthState(year, month, { status: 'ready', error: null, loadedAt: Date.now() });
