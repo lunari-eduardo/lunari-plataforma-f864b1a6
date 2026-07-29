@@ -193,7 +193,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
     (valorMax ? 1 : 0);
 
   return (
-    <div className="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6">
+    <FinancePageContainer>
       <PeriodActionBar
         ano={String(filtroMesAno.ano)}
         setAno={(v) => setFiltroMesAno({ mes: filtroMesAno.mes, ano: parseInt(v, 10) })}
