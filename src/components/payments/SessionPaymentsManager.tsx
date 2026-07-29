@@ -324,13 +324,15 @@ export function SessionPaymentsManager({
   const content = (
     <>
       {/* Financial Summary */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
+      <Card className={isCard ? 'mb-3 border-0 bg-transparent shadow-none' : 'mb-6'}>
+        <CardContent className={isCard ? 'p-0 pb-3 border-b border-border/20' : 'pt-6'}>
           <div className={`grid ${gridCols} gap-2 sm:gap-3 lg:gap-4 text-center`}>
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
-              <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
-            </div>
+            {showTotalChip && (
+              <div>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                <p className="font-bold text-primary text-xs sm:text-sm">{formatCurrency(valorTotal)}</p>
+              </div>
+            )}
             {showExtrasChip && (
               <>
                 <div>
@@ -339,7 +341,7 @@ export function SessionPaymentsManager({
                 </div>
                 <div>
                   <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Extras</p>
-                  <p className="font-semibold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+                  <p className="font-semibold text-accent-gold text-xs sm:text-sm">
                     {formatCurrency(fin.extrasIdeal)}
                   </p>
                   <p className="text-2xs text-muted-foreground">
@@ -348,15 +350,17 @@ export function SessionPaymentsManager({
                 </div>
               </>
             )}
-            <div>
-              <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
-              <p className="font-bold text-green-600 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
-            </div>
+            {showCobradoChip && (
+              <div>
+                <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Cobrado</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-500 text-xs sm:text-sm">{formatCurrency(totalPago)}</p>
+              </div>
+            )}
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Recebido</p>
-              <p className="font-bold text-emerald-700 text-xs sm:text-sm">{formatCurrency(totalRecebido)}</p>
+              <p className="font-bold text-emerald-700 dark:text-emerald-500 text-xs sm:text-sm">{formatCurrency(totalRecebido)}</p>
               {totalTaxas > 0 && (
-                <p className="text-2xs text-red-500">Taxas: -{formatCurrency(totalTaxas)}</p>
+                <p className="text-2xs text-destructive">Taxas: -{formatCurrency(totalTaxas)}</p>
               )}
             </div>
             <div>
@@ -365,11 +369,12 @@ export function SessionPaymentsManager({
             </div>
             <div>
               <p className="text-2xs sm:text-xs text-muted-foreground uppercase tracking-wide">Pendente</p>
-              <p className="font-bold text-red-600 text-xs sm:text-sm">{formatCurrency(valorRestante)}</p>
+              <p className={`font-bold text-xs sm:text-sm ${valorRestante > 0.001 ? 'text-accent-gold' : 'text-muted-foreground'}`}>{formatCurrency(valorRestante)}</p>
             </div>
           </div>
         </CardContent>
       </Card>
+
 
       {/* Payment History */}
       <Card>
