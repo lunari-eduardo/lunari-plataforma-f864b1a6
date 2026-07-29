@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesGoalsCard } from '@/components/analise-vendas/SalesGoalsCard';
 import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilter';
@@ -144,7 +145,8 @@ export default function AnaliseVendas() {
       />
 
       {/* Main Content - 3 Blocos Visuais */}
-      <main className="px-5 md:px-7 py-5 space-y-9 text-[1.05rem]">
+      <PageContainer>
+        <main className="py-5 space-y-9 text-[1.05rem]">
         
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* BLOCO 1: VISÃO EXECUTIVA                                        */}
@@ -226,7 +228,8 @@ export default function AnaliseVendas() {
           {/* Leads Perdidos */}
           <LeadLossReasonsChart />
         </section>
-      </main>
+        </main>
+      </PageContainer>
     </div>
   );
 }

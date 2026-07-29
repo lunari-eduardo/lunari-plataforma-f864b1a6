@@ -49,11 +49,11 @@ export function RankedBarList({
   const maxValue = Math.max(...sortedData.map(d => d.value), 1);
 
   return (
-    <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
+    <Card className="border border-border/60 bg-card shadow-none">
       <CardContent className="p-3">
         <div className="flex items-center gap-2 mb-3">
-          <Icon className="h-3.5 w-3.5 text-lunar-textSecondary" />
-          <h3 className="text-xs font-medium text-lunar-text">{title}</h3>
+          <Icon className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
+          <h3 className="text-xs font-medium text-foreground">{title}</h3>
         </div>
         
         {hasData ? (
@@ -154,12 +154,12 @@ function RankedBarItem({
       {/* Bar */}
       <div className="flex items-center gap-2">
         <div className="w-4 shrink-0" /> {/* Spacer for rank alignment */}
-        <div className="flex-1 h-1.5 bg-lunar-border/30 rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-border/40 rounded-full overflow-hidden">
           <div 
-            className={cn("h-full rounded-full transition-all duration-300", colorClass)}
+            className={cn("h-full rounded-full transition-all duration-300", rank === 1 && !isOthers ? "bg-[hsl(var(--accent-gold))]" : "bg-muted-foreground/50")}
             style={{ 
               width: `${barWidth}%`,
-              opacity 
+              opacity: rank === 1 && !isOthers ? 1 : opacity 
             }}
           />
         </div>

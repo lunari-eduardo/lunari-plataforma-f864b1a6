@@ -26,12 +26,12 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
   const originsList = Array.from(activeOrigins);
 
   const monochromaticColors = [
-    'hsl(var(--chart-primary))',
-    'hsl(var(--chart-secondary))',
-    'hsl(var(--chart-tertiary))',
-    'hsl(var(--chart-quaternary))',
-    'hsl(var(--chart-quinary))',
-    'hsl(var(--chart-senary))'
+    'hsl(var(--accent-gold))',
+    'hsl(var(--muted-foreground) / 0.85)',
+    'hsl(var(--muted-foreground) / 0.65)',
+    'hsl(var(--muted-foreground) / 0.5)',
+    'hsl(var(--muted-foreground) / 0.4)',
+    'hsl(var(--muted-foreground) / 0.3)'
   ];
 
   const chartConfig = originsList.reduce((config, originId, index) => {
@@ -78,7 +78,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
       <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-3.5 w-3.5 text-lunar-textSecondary" />
+            <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
             <h3 className="text-xs font-medium text-lunar-text">Timeline por Origem</h3>
           </div>
           <div className="flex flex-col items-center justify-center h-[200px]">
@@ -94,7 +94,7 @@ export function OriginTimelineChart({ monthlyOriginData }: OriginTimelineChartPr
     <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
       <CardContent className="p-3">
         <div className="flex items-center gap-2 mb-2">
-          <TrendingUp className="h-3.5 w-3.5 text-lunar-textSecondary" />
+          <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
           <h3 className="text-xs font-medium text-lunar-text">Timeline por Origem</h3>
         </div>
         

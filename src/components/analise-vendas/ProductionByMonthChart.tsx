@@ -22,7 +22,7 @@ export function ProductionByMonthChart({ monthly, isLoading }: Props) {
   );
 
   return (
-    <div className="rounded-lg bg-card/30 backdrop-blur-lg dark:bg-card/[0.04] border border-white/50 dark:border-white/10 p-4">
+    <div className="rounded-xl border border-border/60 bg-card p-4 shadow-none">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Fotos por mês</h3>
@@ -35,7 +35,7 @@ export function ProductionByMonthChart({ monthly, isLoading }: Props) {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.25} />
               <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip
@@ -49,8 +49,8 @@ export function ProductionByMonthChart({ monthly, isLoading }: Props) {
                 formatter={(v: number, name: string) => [new Intl.NumberFormat("pt-BR").format(v), name]}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Inclusas" stackId="fotos" fill="hsl(210 90% 55%)" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="Extras" stackId="fotos" fill="hsl(200 80% 70%)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Inclusas" stackId="fotos" fill="hsl(var(--accent-gold))" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="Extras" stackId="fotos" fill="hsl(var(--accent-gold) / 0.45)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

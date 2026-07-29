@@ -12,7 +12,7 @@ export function LeadLossReasonsChart() {
       <Card className="border-0 shadow-lg bg-lunar-surface">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <TrendingDown className="h-4 w-4 text-red-500" />
+            <TrendingDown className="h-4 w-4 text-[hsl(var(--accent-gold))]" />
             Motivos de Leads Perdidos
           </CardTitle>
         </CardHeader>
@@ -41,9 +41,9 @@ export function LeadLossReasonsChart() {
   return (
     <Card className="border-0 shadow-lg bg-lunar-surface">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-          <TrendingDown className="h-4 w-4 text-red-500" />
-          Motivos de Leads Perdidos
+          <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
+            <TrendingDown className="h-4 w-4 text-[hsl(var(--accent-gold))]" />
+            Motivos de Leads Perdidos
           <Badge variant="outline" className="text-2xs ml-auto">
             {totalLostLeads} perdidos
           </Badge>
@@ -90,7 +90,7 @@ export function LeadLossReasonsChart() {
                     <div className="w-4 shrink-0" />
                     <div className="flex-1 h-1.5 bg-lunar-border/30 rounded-full overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-destructive transition-all duration-300"
+                        className="h-full rounded-full bg-[hsl(var(--accent-gold))] transition-all duration-300"
                         style={{ 
                           width: `${barWidth}%`,
                           opacity: Math.max(opacity, 0.4)

@@ -15,7 +15,7 @@ export function OriginHighlightCard({ originData }: OriginHighlightCardProps) {
       <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-3">
-            <Globe className="h-3.5 w-3.5 text-lunar-textSecondary" />
+            <Globe className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
             <h3 className="text-xs font-medium text-lunar-text">Distribuição por Origem</h3>
           </div>
           <div className="flex flex-col items-center justify-center h-[140px]">
@@ -53,20 +53,20 @@ export function OriginHighlightCard({ originData }: OriginHighlightCardProps) {
       <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-3">
-            <Globe className="h-3.5 w-3.5 text-lunar-textSecondary" />
+            <Globe className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
             <h3 className="text-xs font-medium text-lunar-text">Origem Principal</h3>
           </div>
           
           {/* Highlight Section */}
           <div className="flex flex-col items-center py-4 px-2">
             <div className="flex items-center gap-2 mb-2">
-              <MapPin className="h-5 w-5 text-chart-primary" />
+              <MapPin className="h-5 w-5 text-[hsl(var(--accent-gold))]" />
               <span className="text-base font-semibold text-lunar-text">
                 {topOrigin.name}
               </span>
             </div>
             
-            <div className="text-2xl font-bold text-chart-primary mb-1">
+            <div className="text-2xl font-bold text-[hsl(var(--accent-gold))] mb-1">
               {topOrigin.percentage.toFixed(0)}%
             </div>
             

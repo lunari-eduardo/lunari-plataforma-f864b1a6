@@ -91,8 +91,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             <BarChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.5" />
+                  <stop offset="0%" stopColor="hsl(var(--accent-gold))" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="hsl(var(--accent-gold))" stopOpacity="0.55" />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
@@ -210,10 +210,10 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
                 type="monotone"
                 dataKey="averageTicket"
                 name={`${baseYear}`}
-                stroke="hsl(var(--chart-tertiary))"
-                strokeWidth={2}
-                dot={{ fill: 'hsl(var(--chart-tertiary))', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5, stroke: 'hsl(var(--chart-tertiary))', strokeWidth: 2 }}
+                stroke="hsl(var(--accent-gold))"
+                strokeWidth={2.5}
+                dot={{ fill: 'hsl(var(--accent-gold))', strokeWidth: 0, r: 3 }}
+                activeDot={{ r: 5, stroke: 'hsl(var(--accent-gold))', strokeWidth: 2, fill: 'hsl(var(--background))' }}
               />
             </LineChart>
           </ChartContainer>
@@ -325,11 +325,11 @@ interface ChartCardProps {
 
 function ChartCard({ icon: Icon, title, hasData, children }: ChartCardProps) {
   return (
-    <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
+    <Card className="border border-border/60 bg-card shadow-none">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2.5">
-          <Icon className="h-4 w-4 text-lunar-textSecondary" />
-          <h3 className="text-sm font-medium text-lunar-text">{title}</h3>
+          <Icon className="h-4 w-4 text-[hsl(var(--accent-gold))]" />
+          <h3 className="text-sm font-medium text-foreground">{title}</h3>
         </div>
         
         {hasData ? (
