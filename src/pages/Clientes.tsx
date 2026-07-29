@@ -622,61 +622,51 @@ export default function Clientes() {
           </div>}
 
         {/* Grid de Clientes - Cards */}
-        {viewMode === 'cards' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clientesPaginados.map(cliente => <Card key={cliente.id} className="overflow-hidden hover:shadow-md transition-shadow">
+        {viewMode === 'cards' && <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {clientesPaginados.map(cliente => <Card key={cliente.id} className={`${CLIENT_CARD} overflow-hidden shadow-none`}>
               <CardContent className="p-4">
                 {/* Header do Card */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <Link to={`/app/clientes/${cliente.id}`} className="text-lg font-semibold text-primary hover:text-primary/80 block">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/app/clientes/${cliente.id}`} className={`${CLIENT_NAME} block truncate`}>
                       {cliente.nome}
                     </Link>
-                    
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
+                  <div className="flex shrink-0 gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className={CLIENT_ICON_ACTION}>
                       <MessageCircle className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className={CLIENT_ICON_ACTION}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className={CLIENT_ICON_ACTION_DANGER}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
-                {/* Informações de Contato */}
-                
-
                 {/* Métricas Financeiras */}
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Total</p>
-                    <p className="text-sm font-semibold text-primary">
-                      {formatCurrency(cliente.totalFaturado)}
-                    </p>
+                    <p className={`${CLIENT_METRIC_LABEL} mb-1`}>Total</p>
+                    <p className={CLIENT_METRIC_VALUE}>{formatCurrency(cliente.totalFaturado)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Pago</p>
-                    <p className="text-sm font-semibold text-green-600">
-                      {formatCurrency(cliente.totalPago)}
-                    </p>
+                    <p className={`${CLIENT_METRIC_LABEL} mb-1`}>Pago</p>
+                    <p className={CLIENT_METRIC_PAID}>{formatCurrency(cliente.totalPago)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">A Receber</p>
-                    <p className="text-sm font-semibold text-orange-600">
-                      {formatCurrency(cliente.aReceber)}
-                    </p>
+                    <p className={`${CLIENT_METRIC_LABEL} mb-1`}>A Receber</p>
+                    <p className={CLIENT_METRIC_DUE}>{formatCurrency(cliente.aReceber)}</p>
                   </div>
                 </div>
 
                 {/* Status Badge */}
-                <div className="mt-3 pt-3 border-t flex items-center justify-between py-[3px]">
-                  <span className="text-xs text-muted-foreground">
+                <div className="mt-3 flex items-center justify-between border-t border-border/20 pt-3">
+                  <span className="text-[11px] text-muted-foreground">
                     {cliente.sessoes} sessões
                   </span>
-                  <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-muted/40 text-muted-foreground'}`}>
+                  <span className={cliente.totalFaturado > 0 ? STATUS_BADGE_ACTIVE : STATUS_BADGE_NEW}>
                     {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                   </span>
                 </div>
