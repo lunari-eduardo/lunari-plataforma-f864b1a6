@@ -7,7 +7,7 @@ import { GRUPOS_CONFIG, getInfoPorGrupo } from '@/utils/financialGroupUtils';
 import TabelaLancamentos from './TabelaLancamentos';
 import TabelaLancamentosMobile from './TabelaLancamentosMobile';
 import ModalNovoLancamentoRefatorado from './ModalNovoLancamentoRefatorado';
-import ModalVendaAvulsa from './ModalVendaAvulsa';
+import VendaAvulsaPanel from '@/modules/finance/presentation/vendaAvulsa/VendaAvulsaPanel';
 import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { CreateTransactionInput } from '@/hooks/useFinancialTransactionsSupabase';
@@ -264,7 +264,7 @@ const LancamentosTab = memo(function LancamentosTab({
         scope={modalScope}
       />
 
-      <ModalVendaAvulsa
+      <VendaAvulsaPanel
         aberto={modalVendaAvulsa}
         onFechar={() => setModalVendaAvulsa(false)}
       />

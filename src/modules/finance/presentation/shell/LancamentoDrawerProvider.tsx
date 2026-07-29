@@ -31,7 +31,7 @@ import {
   type LancamentoTipo,
 } from '@/modules/finance/domain/lancamentoTipos';
 import LancamentoForm from './LancamentoForm';
-import ModalVendaAvulsa from '@/components/financas/ModalVendaAvulsa';
+import VendaAvulsaPanel from '@/modules/finance/presentation/vendaAvulsa/VendaAvulsaPanel';
 import { useQueryClient } from '@tanstack/react-query';
 
 // ─────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
         </SheetContent>
       </Sheet>
 
-      <ModalVendaAvulsa
+      <VendaAvulsaPanel
         aberto={vendaAvulsaOpen}
         onFechar={() => setVendaAvulsaOpen(false)}
         onSucesso={handleVendaSucesso}

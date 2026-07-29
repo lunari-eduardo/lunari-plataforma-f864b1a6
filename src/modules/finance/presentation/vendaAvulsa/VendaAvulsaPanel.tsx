@@ -1,19 +1,25 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+/**
+ * VendaAvulsaPanel — painel lateral (SidePanel) para registrar vendas avulsas.
+ * Mesma lógica do antigo ModalVendaAvulsa, agora no padrão visual dos demais paineis de Finanças.
+ */
+import { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
-import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { ShoppingBag, Loader2, X, UserPlus, Plus, Minus } from 'lucide-react';
+import { toast } from 'sonner';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
 import PackageSearchCombobox from '@/components/agenda/PackageSearchCombobox';
 import ProductSearchCombobox, { type ProductComboboxItem } from '@/components/agenda/ProductSearchCombobox';
-import { toast } from 'sonner';
+import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
+import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
+import { SectionHeader } from '@/modules/finance/presentation/shell/fields/SectionHeader';
+import { DisclosureSection } from '@/modules/finance/presentation/shell/fields/DisclosureSection';
 
-interface ModalVendaAvulsaProps {
+interface VendaAvulsaPanelProps {
   aberto: boolean;
   onFechar: () => void;
   onSucesso?: () => void;
@@ -26,7 +32,7 @@ interface ProdutoSelecionado {
   quantidade: number;
 }
 
-export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalVendaAvulsaProps) {
+export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaAvulsaPanelProps) {
   const { criarVendaAvulsa, loading } = useVendaAvulsa();
   const { adicionarCliente } = useClientesRealtime();
 
@@ -52,13 +58,11 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
   const [observacoes, setObservacoes] = useState('');
   const [registrarPagamento, setRegistrarPagamento] = useState(true);
 
-  // Auto-calc valor total
   const valorCalculado = useMemo(() => {
     const totalProdutos = produtos.reduce((sum, p) => sum + p.valorVenda * p.quantidade, 0);
     return valorBasePacote + totalProdutos;
   }, [valorBasePacote, produtos]);
 
-  // Update valor total when auto-calc changes (unless manually edited)
   useEffect(() => {
     if (!valorManualEditado && valorCalculado > 0) {
       setValorTotal(valorCalculado.toFixed(2));
@@ -71,11 +75,10 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
     return Math.max(0, total - desc);
   }, [valorTotal, desconto]);
 
-  // Auto-generate description
   const descricaoAutomatica = useMemo(() => {
     const partes: string[] = [];
     if (pacoteNome) partes.push(pacoteNome);
-    produtos.forEach(p => {
+    produtos.forEach((p) => {
       partes.push(p.quantidade > 1 ? `${p.nome} (x${p.quantidade})` : p.nome);
     });
     return partes.length > 0 ? partes.join(' + ') : '';
@@ -119,9 +122,9 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
 
   const handleProdutoSelect = (product: ProductComboboxItem | null) => {
     if (!product) return;
-    const existing = produtos.find(p => p.id === product.id);
+    const existing = produtos.find((p) => p.id === product.id);
     if (existing) {
-      setProdutos(produtos.map(p => p.id === product.id ? { ...p, quantidade: p.quantidade + 1 } : p));
+      setProdutos(produtos.map((p) => (p.id === product.id ? { ...p, quantidade: p.quantidade + 1 } : p)));
     } else {
       setProdutos([...produtos, { id: product.id, nome: product.nome, valorVenda: product.valorVenda, quantidade: 1 }]);
     }
@@ -129,22 +132,22 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
   };
 
   const updateQuantidade = (id: string, delta: number) => {
-    setProdutos(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      const novaQtd = Math.max(1, p.quantidade + delta);
-      return { ...p, quantidade: novaQtd };
-    }));
+    setProdutos((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        return { ...p, quantidade: Math.max(1, p.quantidade + delta) };
+      }),
+    );
     setValorManualEditado(false);
   };
 
   const removeProduto = (id: string) => {
-    setProdutos(produtos.filter(p => p.id !== id));
+    setProdutos(produtos.filter((p) => p.id !== id));
     setValorManualEditado(false);
   };
 
   const handleSubmit = async () => {
     if (!clienteId || valorFinal <= 0) return;
-
     const categoria = pacoteCategoria || 'Venda Avulsa';
 
     try {
@@ -159,7 +162,7 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
         descricao: descricaoFinal,
         observacoes: observacoes || undefined,
         registrarPagamento,
-        produtos: produtos.map(p => ({
+        produtos: produtos.map((p) => ({
           nome: p.nome,
           quantidade: p.quantidade,
           valorUnitario: p.valorVenda,
@@ -170,41 +173,74 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
       onSucesso?.();
       onFechar();
     } catch {
-      // Error handled in hook
+      // Erro tratado no hook
     }
   };
 
   const isValid = clienteId && (parseFloat(valorTotal) > 0 || valorCalculado > 0);
+  const maisOpcoesFilled = (observacoes.trim() ? 1 : 0) + (registrarPagamento ? 0 : 1);
 
   return (
-    <Dialog open={aberto} onOpenChange={(open) => { if (!open) onFechar(); }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-primary" />
-            Nova Venda Avulsa
-          </DialogTitle>
-        </DialogHeader>
+    <SidePanel
+      open={aberto}
+      onOpenChange={(v) => !v && onFechar()}
+      icone={ShoppingBag}
+      titulo="Nova venda avulsa"
+      subtitulo="Registre uma venda de produtos ou pacotes fora do workflow."
+      width="md"
+      footer={
+        <SidePanel.Footer
+          left={
+            <Button variant="ghost" size="sm" onClick={onFechar} disabled={loading}>
+              Cancelar
+            </Button>
+          }
+          right={
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={!isValid || loading}
+              className="shadow-[0_8px_20px_-8px_hsl(var(--accent-gold)/0.5)]"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  Salvando…
+                </>
+              ) : (
+                'Registrar venda'
+              )}
+            </Button>
+          }
+        />
+      }
+    >
+      <div className="space-y-5">
+        {/* Essencial */}
+        <section className="space-y-3">
+          <SectionHeader label="Essencial" />
 
-        <div className="space-y-4 pt-2">
-          {/* Cliente */}
           <div className="space-y-1.5">
-            <Label className="text-sm">Cliente *</Label>
+            <Label className="text-xs text-muted-foreground">Cliente *</Label>
             {!showNovoCliente ? (
               <ClientSearchCombobox
                 value={clienteId}
                 onSelect={setClienteId}
-                placeholder="Buscar cliente por nome, email ou telefone..."
+                placeholder="Buscar cliente por nome, email ou telefone…"
                 onAddNew={() => setShowNovoCliente(true)}
               />
             ) : (
               <div className="space-y-2 p-3 border border-border rounded-lg bg-muted/30">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium flex items-center gap-1.5">
-                    <UserPlus className="h-3.5 w-3.5 text-primary" />
-                    Novo Cliente
+                    <UserPlus className="h-3.5 w-3.5 text-accent-gold" />
+                    Novo cliente
                   </span>
-                  <button type="button" onClick={() => setShowNovoCliente(false)} className="text-muted-foreground hover:text-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setShowNovoCliente(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -232,7 +268,12 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setShowNovoCliente(false)} className="text-xs h-7">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowNovoCliente(false)}
+                    className="text-xs h-7"
+                  >
                     Cancelar
                   </Button>
                   <Button
@@ -256,7 +297,7 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
                         setNovoClienteTelefone('');
                         setNovoClienteEmail('');
                       } catch {
-                        // error handled in hook
+                        // erro tratado no hook
                       } finally {
                         setSalvandoCliente(false);
                       }
@@ -269,20 +310,23 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
             )}
           </div>
 
-          {/* Data */}
           <div className="space-y-1.5">
-            <Label className="text-sm">Data *</Label>
+            <Label className="text-xs text-muted-foreground">Data *</Label>
             <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
           </div>
+        </section>
 
-          {/* Pacote + Produtos em 2 colunas */}
-          <div className="grid grid-cols-2 gap-3">
+        {/* Itens da venda */}
+        <section className="space-y-3">
+          <SectionHeader label="Itens da venda" />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-sm">Pacote</Label>
+              <Label className="text-xs text-muted-foreground">Pacote</Label>
               <PackageSearchCombobox
                 value={pacoteId}
                 onSelect={handlePacoteSelect}
-                placeholder="Buscar pacote..."
+                placeholder="Buscar pacote…"
               />
               {pacoteId && valorBasePacote > 0 && (
                 <p className="text-[11px] text-muted-foreground">
@@ -291,21 +335,17 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm">Produtos</Label>
-              <ProductSearchCombobox
-                onSelect={handleProdutoSelect}
-                placeholder="Buscar produto..."
-              />
+              <Label className="text-xs text-muted-foreground">Produtos</Label>
+              <ProductSearchCombobox onSelect={handleProdutoSelect} placeholder="Buscar produto…" />
             </div>
           </div>
 
-          {/* Produtos selecionados com controles de quantidade */}
           {produtos.length > 0 && (
             <div className="space-y-1.5">
-              {produtos.map(p => (
+              {produtos.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between bg-muted text-foreground text-xs px-2.5 py-1.5 rounded-md"
+                  className="flex items-center justify-between bg-muted/60 text-foreground text-xs px-2.5 py-1.5 rounded-md"
                 >
                   <span className="flex-1 truncate">{p.nome}</span>
                   <div className="flex items-center gap-1.5 ml-2">
@@ -340,17 +380,18 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
             </div>
           )}
 
-          {/* Descrição automática preview */}
           {descricaoAutomatica && (
-            <div className="text-[11px] text-muted-foreground px-1">
-              📋 {descricaoAutomatica}
-            </div>
+            <div className="text-[11px] text-muted-foreground px-1">📋 {descricaoAutomatica}</div>
           )}
+        </section>
 
-          {/* Valor + Desconto */}
+        {/* Valores */}
+        <section className="space-y-3">
+          <SectionHeader label="Valores" />
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-sm">Valor Total *</Label>
+              <Label className="text-xs text-muted-foreground">Valor total *</Label>
               <Input
                 type="number"
                 min="0"
@@ -364,7 +405,7 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-sm">Desconto</Label>
+              <Label className="text-xs text-muted-foreground">Desconto</Label>
               <Input
                 type="number"
                 min="0"
@@ -376,55 +417,52 @@ export default function ModalVendaAvulsa({ aberto, onFechar, onSucesso }: ModalV
             </div>
           </div>
 
-          {/* Valor final */}
           {(parseFloat(desconto) || 0) > 0 && (
             <div className="text-sm text-muted-foreground px-1">
-              Valor final: <span className="font-semibold text-foreground">R$ {valorFinal.toFixed(2)}</span>
+              Valor final:{' '}
+              <span className="font-semibold text-foreground">R$ {valorFinal.toFixed(2)}</span>
             </div>
           )}
+        </section>
 
-          {/* Descrição complementar */}
-          <div className="space-y-1.5">
-            <Label className="text-sm">Observações adicionais</Label>
-            <Textarea
-              placeholder="Detalhes extras da venda..."
-              value={descricaoExtra}
-              onChange={(e) => setDescricaoExtra(e.target.value)}
-              rows={2}
-              className="resize-none"
-            />
-          </div>
+        {/* Mais opções */}
+        <DisclosureSection title="Mais opções" filledCount={maisOpcoesFilled}>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Observações adicionais</Label>
+              <Textarea
+                placeholder="Detalhes extras da venda…"
+                value={descricaoExtra}
+                onChange={(e) => setDescricaoExtra(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
 
-          {/* Registrar pagamento */}
-          <div className="flex items-center gap-2 pt-1">
-            <Checkbox
-              id="registrar-pagamento"
-              checked={registrarPagamento}
-              onCheckedChange={(checked) => setRegistrarPagamento(!!checked)}
-            />
-            <Label htmlFor="registrar-pagamento" className="text-sm cursor-pointer">
-              Registrar pagamento imediato
-            </Label>
-          </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Notas internas</Label>
+              <Textarea
+                placeholder="Notas privadas…"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+            </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={onFechar} disabled={loading}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={!isValid || loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Registrar Venda'
-              )}
-            </Button>
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="registrar-pagamento"
+                checked={registrarPagamento}
+                onCheckedChange={(checked) => setRegistrarPagamento(!!checked)}
+              />
+              <Label htmlFor="registrar-pagamento" className="text-sm cursor-pointer">
+                Registrar pagamento imediato
+              </Label>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DisclosureSection>
+      </div>
+    </SidePanel>
   );
 }
