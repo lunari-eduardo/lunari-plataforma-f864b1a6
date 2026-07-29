@@ -121,7 +121,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
   const [state, setState] = useState<FormState>(() => initialState(tipo));
   const [submitting, setSubmitting] = useState(false);
-  const runCapability = useRunCapability();
+  
 
   useEffect(() => {
     // reset quando muda o tipo
