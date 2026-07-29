@@ -187,7 +187,7 @@ function WorkflowContent() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 pl-2 md:pl-4">
       <div
         className={`flex-1 min-w-0 space-y-4 transition-all duration-300 ${
           isTasksPanelOpen ? "lg:pr-[340px]" : "lg:pr-12"
