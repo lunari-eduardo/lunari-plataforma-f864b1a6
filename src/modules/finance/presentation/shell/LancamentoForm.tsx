@@ -185,12 +185,28 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
     setSubmitting(true);
     try {
-      await createTransactionEngine({
+      const result = await createTransactionEngine({
         itemId: state.itemId,
         valorTotal: state.valor,
         dataPrimeiraOcorrencia: dataPrimeira,
         observacoes,
       });
+      // Se o usuário marcou como pago no toggle, marca a transação recém-criada.
+      if (state.pago && result?.ids?.[0]) {
+        try {
+          await runCapability(markTransactionPaid, {
+            id: result.ids[0],
+            dataPagamento: dataPrimeira,
+            source: 'user',
+          } as any);
+        } catch (payErr: any) {
+          toast({
+            title: 'Lançamento criado, mas não foi marcado como pago',
+            description: payErr?.message ?? 'Você pode marcar manualmente no extrato.',
+            variant: 'destructive',
+          });
+        }
+      }
       onCreated?.();
       onClose();
     } catch (e: any) {
@@ -203,6 +219,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       setSubmitting(false);
     }
   }
+
 
   // ─────────────────────────────────────────────────────────
   // Pré-form: Origem da receita operacional
