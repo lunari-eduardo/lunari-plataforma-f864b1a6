@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, User, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
+import { DROPDOWN_PANEL, DROPDOWN_ITEM } from '@/lib/dialogTokens';
+
 
 // Função para normalizar texto (remover acentos e caracteres especiais)
 const normalizeText = (text: string): string => {
