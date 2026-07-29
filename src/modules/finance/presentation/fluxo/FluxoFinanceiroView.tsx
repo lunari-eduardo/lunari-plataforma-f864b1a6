@@ -23,6 +23,7 @@ import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
 import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import FinancePageContainer from '@/modules/finance/presentation/shell/FinancePageContainer';
 import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import {
   FINANCE_FOCUS_FLUXO_EVENT,
