@@ -338,7 +338,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onCancel={handleCancel}
         onClose={handleClose}
       />
-    </div>
+    </FinancePageContainer>
 
   );
 });
