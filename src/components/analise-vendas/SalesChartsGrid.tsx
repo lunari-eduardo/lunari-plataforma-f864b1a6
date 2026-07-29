@@ -91,8 +91,8 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
             <BarChart data={mergedMonthly} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="hsl(var(--chart-primary))" stopOpacity="0.5" />
+                  <stop offset="0%" stopColor="hsl(var(--accent-gold))" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="hsl(var(--accent-gold))" stopOpacity="0.55" />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="4 8" stroke="hsl(var(--border))" opacity={0.15} vertical={false} />
