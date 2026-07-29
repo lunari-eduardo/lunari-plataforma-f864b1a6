@@ -334,7 +334,14 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onDelete={handleBulkDelete}
       />
 
+      <ConfirmDialog
+        state={dialogState}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onClose={handleClose}
+      />
     </div>
+
   );
 });
 
