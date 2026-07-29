@@ -302,6 +302,14 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     invalidateFinanceAll(queryClient);
   }
 
+  function unwrapOrThrow<T>(
+    result: Awaited<ReturnType<typeof runCapability>>,
+  ): T {
+    if (result.ok) return result.value as T;
+    throw new CapabilityError((result as { ok: false; error: any }).error);
+  }
+
+
   /**
    * Snapshot + patch de todas as queries `['financial-transactions', ...]` no cache.
    * Retorna função de rollback.
