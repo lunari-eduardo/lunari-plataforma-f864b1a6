@@ -1,7 +1,9 @@
-import { DollarSign, Camera, TrendingUp, Wallet, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Camera, TrendingUp, Wallet, Receipt, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { SalesMetrics } from '@/hooks/useSalesAnalytics';
 import { cn } from '@/lib/utils';
+import { MetricIconBadge } from '@/components/ui/metric-icon';
 import { ComparativeMetrics, ComparisonValue, formatVariation } from '@/domain/sales/comparisonUtils';
+
 
 interface SalesMetricsCardsProps {
   metrics: SalesMetrics;
