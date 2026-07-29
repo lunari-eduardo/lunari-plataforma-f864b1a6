@@ -28,17 +28,12 @@ export function DashboardHeader() {
       className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
     >
       <div className="min-w-0">
-        <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          <span>
-            {greeting}
-            {name ? `, ${name}!` : "!"}
-          </span>
-          <span className="text-2xl sm:text-3xl" aria-hidden>
-            👋
-          </span>
+        <h1 className="font-heading text-xl font-medium tracking-tight text-foreground sm:text-2xl">
+          {greeting}
+          {name ? `, ${name}` : ""}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          <span className="capitalize">{weekday}</span>, {dayMonth} • Vamos fazer um dia incrível!
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          <span className="capitalize">{weekday}</span>, {dayMonth}
         </p>
       </div>
 
