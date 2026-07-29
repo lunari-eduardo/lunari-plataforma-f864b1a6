@@ -282,7 +282,7 @@ export default function AppointmentDetails({
     <>
     <div className={cn("space-y-4 transition-all duration-200", (sendBriefingOpen || viewRespostas || showChargeModal) && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
-      <div className="border-b border-lunar-border/30 pb-4">
+      <div className="border-b border-border/20 pb-4">
         <div className="flex items-center gap-2">
           <h2 
             className="text-xl font-semibold text-foreground cursor-pointer hover:text-lunar-accent transition-colors"
@@ -319,7 +319,7 @@ export default function AppointmentDetails({
       {/* BLOCO 1: Sessão */}
       <div className="rounded-lg border border-border/20 bg-card/60 p-3 space-y-2.5">
         <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-lunar-accent" /> Sessão
+          <Calendar className="h-4 w-4 text-accent-gold" /> Sessão
         </h3>
         
         <div className="grid grid-cols-2 gap-3">
@@ -392,7 +392,7 @@ export default function AppointmentDetails({
       {/* BLOCO 2: Financeiro */}
       <div className="rounded-lg border border-border/20 bg-card/60 p-3 space-y-2.5">
         <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-lunar-accent" /> Financeiro
+          <DollarSign className="h-4 w-4 text-accent-gold" /> Financeiro
         </h3>
         
         <div className="flex justify-between items-center text-sm">
@@ -507,7 +507,7 @@ export default function AppointmentDetails({
       {/* BLOCO 3: Observações */}
       <div className="rounded-lg border border-border/20 bg-card/60 p-3">
         <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
-          <FileText className="h-4 w-4 text-lunar-accent" /> Observações
+          <FileText className="h-4 w-4 text-accent-gold" /> Observações
         </h3>
         <Textarea 
           id="description" 
@@ -523,7 +523,7 @@ export default function AppointmentDetails({
       <div className="rounded-lg border border-border/20 bg-card/60 p-3">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-lunar-accent" /> Briefing
+            <ClipboardList className="h-4 w-4 text-accent-gold" /> Briefing
           </h3>
           <Button
             variant="outline"
@@ -577,7 +577,7 @@ export default function AppointmentDetails({
       <Collapsible open={historyOpen} onOpenChange={handleHistoryToggle}>
         <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-3 text-xs font-semibold text-foreground rounded-lg border border-border/20 bg-card/60 hover:bg-accent/40 transition-colors">
           <ChevronRight className={`h-4 w-4 transition-transform ${historyOpen ? 'rotate-90' : ''}`} />
-          <History className="h-4 w-4 text-lunar-accent" />
+          <History className="h-4 w-4 text-accent-gold" />
           Histórico da Sessão
           {!workflowInfo.hasSession && (
             <span className="ml-auto text-xs text-muted-foreground">(não confirmado)</span>
@@ -640,7 +640,7 @@ export default function AppointmentDetails({
                   </div>
                 )}
                 
-                <Separator className="bg-lunar-border/20" />
+                <Separator className="bg-border/20" />
                 
                 {/* Resumo financeiro */}
                 <div className="flex justify-between text-sm font-medium">
