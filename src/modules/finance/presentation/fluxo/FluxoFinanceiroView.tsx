@@ -169,13 +169,21 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Excluir ${selectedFinanceLinhas.length} lançamento(s)?`)) return;
+    const ok = await confirm({
+      title: 'Excluir lançamentos',
+      description: `Tem certeza que deseja excluir ${selectedFinanceLinhas.length} lançamento(s)? Esta ação não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+    });
+    if (!ok) return;
     for (const l of selectedFinanceLinhas) {
       // eslint-disable-next-line no-await-in-loop
       await financas.removerTransacao(l.referenciaId);
     }
     clearSelection();
   };
+
 
   // Filtros aplicados totalizados
   const filtrosAtivos =
