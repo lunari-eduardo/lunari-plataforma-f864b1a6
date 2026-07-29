@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { hydrateProduto } from '@/features/workflow/domain/productFlow';
+import { workflowStore } from '@/features/workflow/store/workflowStore';
 
 
 export interface VendaAvulsaProduto {
@@ -117,20 +118,38 @@ export function useVendaAvulsa() {
       }
 
       // Faz o card aparecer no Workflow na hora (sem depender do realtime nem
-      // de recarregar): merge no cache + invalidação do mês da venda.
+      // de recarregar): hidrata cliente → merge no cache → store (tarefas)
+      // → refresh forçado do mês (ignora TTL do SWR).
       try {
         const [ano, mes] = input.data.split('-').map(Number);
+
+        let hidratada: any = sessao;
+        if (sessao?.id) {
+          const { data: full } = await supabase
+            .from('clientes_sessoes')
+            .select('*, clientes(nome)')
+            .eq('id', sessao.id)
+            .maybeSingle();
+          if (full) hidratada = full;
+        }
+
         window.dispatchEvent(
-          new CustomEvent('workflow-cache-merge', { detail: { session: sessao } }),
+          new CustomEvent('workflow-cache-merge', { detail: { session: hidratada } }),
         );
+
+        // Alimenta o store do Workflow mesmo que o mês ainda não esteja
+        // carregado → reconciliador Produto↔Tarefa cria as tarefas no dock.
+        workflowStore.upsert(hidratada as any);
+
         window.dispatchEvent(
           new CustomEvent('workflow-cache-silent-refresh', {
-            detail: { year: ano, month: mes },
+            detail: { year: ano, month: mes, force: true },
           }),
         );
       } catch {
         /* noop */
       }
+
 
       toast.success('Venda avulsa registrada com sucesso!');
       return sessao;

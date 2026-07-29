@@ -738,10 +738,11 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
   // SILENT REFRESH LISTENER (usa silentRefreshMonth já definido anteriormente)
   useEffect(() => {
     const handleSilentRefresh = async (event: CustomEvent) => {
-      const { year, month } = event.detail;
-      console.log('🔇 [WorkflowCache] Silent refresh event for:', year, month);
-      await silentRefreshMonth(year, month);
+      const { year, month, force } = event.detail ?? {};
+      console.log('🔇 [WorkflowCache] Silent refresh event for:', year, month, { force: !!force });
+      await silentRefreshMonth(year, month, !!force);
     };
+
     
     window.addEventListener('workflow-cache-silent-refresh', handleSilentRefresh as EventListener);
     return () => window.removeEventListener('workflow-cache-silent-refresh', handleSilentRefresh as EventListener);
