@@ -159,12 +159,8 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   );
 
   const handleBulkMarkPaid = async () => {
-    for (const l of selectedFinanceLinhas) {
-      if (l.status !== 'Pago') {
-        // eslint-disable-next-line no-await-in-loop
-        await financas.marcarComoPago(l.referenciaId);
-      }
-    }
+    const targets = selectedFinanceLinhas.filter((l) => l.status !== 'Pago');
+    await Promise.all(targets.map((l) => financas.marcarComoPago(l.referenciaId)));
     clearSelection();
   };
 
@@ -177,12 +173,12 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
       variant: 'destructive',
     });
     if (!ok) return;
-    for (const l of selectedFinanceLinhas) {
-      // eslint-disable-next-line no-await-in-loop
-      await financas.removerTransacao(l.referenciaId);
-    }
+    await Promise.all(
+      selectedFinanceLinhas.map((l) => financas.removerTransacao(l.referenciaId)),
+    );
     clearSelection();
   };
+
 
 
   // Filtros aplicados totalizados
