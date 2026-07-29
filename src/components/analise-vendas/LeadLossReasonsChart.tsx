@@ -41,9 +41,9 @@ export function LeadLossReasonsChart() {
   return (
     <Card className="border-0 shadow-lg bg-lunar-surface">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
-          <TrendingDown className="h-4 w-4 text-red-500" />
-          Motivos de Leads Perdidos
+          <CardTitle className="text-sm font-medium text-lunar-text flex items-center gap-2">
+            <TrendingDown className="h-4 w-4 text-[hsl(var(--accent-gold))]" />
+            Motivos de Leads Perdidos
           <Badge variant="outline" className="text-2xs ml-auto">
             {totalLostLeads} perdidos
           </Badge>
