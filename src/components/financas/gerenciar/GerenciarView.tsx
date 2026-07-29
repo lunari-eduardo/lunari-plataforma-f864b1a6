@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, FolderTree, Target, CreditCard } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import { useMetasPersonalizadas } from '@/hooks/useMetasPersonalizadas';
 import { useCreditCardsSupabase } from '@/hooks/useCreditCardsSupabase';
 import MetasConfigTab from '@/components/financas/MetasConfigTab';
 import ConfiguracaoCartoes from '@/components/financas/ConfiguracaoCartoes';
 import CategoriasPanel from './CategoriasPanel';
+import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 
 type PanelKey = 'metas' | 'cartoes' | null;
 type View = 'hub' | 'categorias';
