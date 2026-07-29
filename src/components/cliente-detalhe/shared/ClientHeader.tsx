@@ -17,49 +17,58 @@ export function ClientHeader({ cliente, onBack }: ClientHeaderProps) {
     return (first + last).toUpperCase();
   };
 
-  return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-      {/* Linha 1: Botão Voltar */}
-      <div className="flex items-center">
-        <Button onClick={onBack} variant="outline" size="sm" className="h-8 text-xs">
-          <ArrowLeft className="h-3 w-3 mr-1" />
-          Voltar
-        </Button>
-      </div>
+  const whatsapp = ((cliente as any).whatsapp || cliente.telefone) as string | null;
 
-      {/* Linha 2: Avatar + Nome + Origem */}
-      <div className="flex items-center gap-3">
-        <Avatar className="h-8 w-8 md:h-10 md:w-10">
-          <AvatarFallback className="text-xs md:text-sm">{getInitials(cliente.nome)}</AvatarFallback>
+  return (
+    <header className="flex flex-col gap-3 pb-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <Button
+          onClick={onBack}
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+          aria-label="Voltar para Clientes"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+
+        <Avatar className="h-9 w-9 shrink-0">
+          <AvatarFallback className="text-xs">{getInitials(cliente.nome)}</AvatarFallback>
         </Avatar>
-        <div>
+
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="font-bold text-sm md:text-base">{cliente.nome}</h1>
+            <h1 className="truncate font-heading text-[17px] font-semibold tracking-tight text-foreground">
+              {cliente.nome}
+            </h1>
             <OriginBadge originId={cliente.origem} />
           </div>
-          <p className="text-muted-foreground text-[11px] md:text-xs">Perfil completo do cliente</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Perfil completo do cliente</p>
         </div>
       </div>
 
-      {/* Linha 3: Ações com scroll horizontal em mobile */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-        {((cliente as any).whatsapp || cliente.telefone) && (
-          <Button asChild variant="outline" size="sm" className="h-8 text-xs whitespace-nowrap flex-shrink-0">
-            <a href={`https://wa.me/${(((cliente as any).whatsapp || cliente.telefone) as string).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-3 w-3 mr-1" />
+        {whatsapp && (
+          <Button asChild variant="outline" size="sm" className="h-8 shrink-0 whitespace-nowrap text-xs">
+            <a
+              href={`https://wa.me/${whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle className="mr-1.5 h-3.5 w-3.5 text-accent-gold" />
               WhatsApp
             </a>
           </Button>
         )}
         {cliente.email && (
-          <Button asChild variant="outline" size="sm" className="h-8 text-xs whitespace-nowrap flex-shrink-0">
+          <Button asChild variant="outline" size="sm" className="h-8 shrink-0 whitespace-nowrap text-xs">
             <a href={`mailto:${cliente.email}`}>
-              <Mail className="h-3 w-3 mr-1" />
+              <Mail className="mr-1.5 h-3.5 w-3.5 text-accent-gold" />
               E-mail
             </a>
           </Button>
         )}
       </div>
-    </div>
+    </header>
   );
 }
