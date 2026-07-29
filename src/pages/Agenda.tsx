@@ -10,7 +10,6 @@ import {
   addDays,
   subDays,
 } from 'date-fns';
-import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import MonthlyView from "@/components/agenda/MonthlyView";
 import WeeklyView from "@/components/agenda/WeeklyView";
@@ -44,6 +43,8 @@ import { useAgendaKeyboardShortcuts } from '@/hooks/useAgendaKeyboardShortcuts';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { CalendarDays } from 'lucide-react';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 
 
 export default function Agenda() {
@@ -52,7 +53,7 @@ export default function Agenda() {
   const { isFromBudget, getBudgetId } = useIntegration();
   const { orcamentos } = useOrcamentos();
   const { tasks, addTask } = useSupabaseTasks();
-  const { isMobile, isTablet, classes } = useResponsiveLayout();
+  const { isMobile, isTablet } = useResponsiveLayout();
   
   // Task modal state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -314,6 +315,9 @@ export default function Agenda() {
   const sidebarApplicable = view !== 'year' && view !== 'month';
   const showSidebar = !isMobile && !isTablet && sidebarApplicable;
   const isYearView = view === 'year';
+  const Wrapper = isYearView
+    ? ({ children }: { children: React.ReactNode }) => <div className="w-full">{children}</div>
+    : ({ children }: { children: React.ReactNode }) => <PageContainer variant="wide">{children}</PageContainer>;
 
   return (
     <div className={`w-full mx-auto ${isYearView ? 'max-w-[1600px] px-4 md:px-6' : ''} pb-20 md:pb-10`}>
