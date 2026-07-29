@@ -30,9 +30,9 @@ function Card({
   isLoading?: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-card/30 backdrop-blur-lg dark:bg-card/[0.04] border border-white/50 dark:border-white/10 p-4 flex flex-col gap-1.5">
+    <div className="rounded-xl border border-border/60 bg-card p-4 flex flex-col gap-1.5 shadow-none">
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-        <span className="text-sky-500">{icon}</span>
+        <span className="text-[hsl(var(--accent-gold))]">{icon}</span>
         {label}
       </div>
       {isLoading ? (
