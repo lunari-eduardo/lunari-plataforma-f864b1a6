@@ -122,20 +122,28 @@ function ComparisonBadge({ comp, comparisonYear }: { comp: ComparisonValue; comp
   const label = formatVariation(comp);
   const isPositive = comp.isNew || (comp.diffPercentage !== null && comp.diffPercentage > 0);
   const isNegative = comp.diffPercentage !== null && comp.diffPercentage < 0;
-  const isNeutral = !isPositive && !isNegative;
 
   const Icon = isPositive ? ArrowUp : isNegative ? ArrowDown : Minus;
-  const colorClass = isPositive
-    ? 'text-emerald-500'
+  const style = isPositive
+    ? { color: 'hsl(var(--finance-positive))', background: 'hsl(var(--finance-positive-soft))' }
     : isNegative
-      ? 'text-rose-500'
-      : 'text-lunar-textSecondary';
+      ? { color: 'hsl(var(--finance-negative))', background: 'hsl(var(--finance-negative-soft))' }
+      : undefined;
 
   return (
-    <div className={cn('mt-1 flex items-center gap-1 text-xs font-medium truncate', colorClass)}>
-      <Icon className="h-3 w-3 shrink-0" />
-      <span>{label}</span>
-      <span className="text-lunar-textSecondary font-normal">vs {comparisonYear}</span>
+    <div className="mt-2 flex items-center gap-2 min-w-0">
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium tabular-nums',
+          !style && 'bg-muted text-muted-foreground'
+        )}
+        style={style}
+      >
+        <Icon className="h-3 w-3 shrink-0" />
+        {label}
+      </span>
+      <span className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">vs {comparisonYear}</span>
     </div>
   );
 }
+
