@@ -121,14 +121,16 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   const [origem, setOrigem] = useState<OrigemReceitaOperacional | null>(null);
   const precisaOrigem = tipo === 'receita_operacional' && !origem;
 
-  const [state, setState] = useState<FormState>(initialState);
+  const [state, setState] = useState<FormState>(() => initialState(tipo));
   const [submitting, setSubmitting] = useState(false);
+  const runCapability = useRunCapability();
 
   useEffect(() => {
     // reset quando muda o tipo
-    setState(initialState());
+    setState(initialState(tipo));
     setOrigem(null);
   }, [tipo]);
+
 
   const grupo = meta.gruposPermitidos[0];
   const itens = obterItensPorGrupo(grupo as any);
