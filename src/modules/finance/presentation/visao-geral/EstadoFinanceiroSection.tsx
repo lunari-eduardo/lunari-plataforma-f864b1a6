@@ -96,31 +96,28 @@ interface MetricCardProps {
   value: number;
   delta?: number | null;
   deltaLabel?: string;
-  spark: number[];
-  tone?: Tone;
   hint?: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
-function MetricCard({ label, value, delta, deltaLabel, spark, tone = 'neutral', hint, Icon }: MetricCardProps) {
+function MetricCard({ label, value, delta, deltaLabel, hint, Icon }: MetricCardProps) {
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card p-5 flex flex-col justify-between overflow-hidden transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]">
-      <div className="flex items-start justify-between gap-3">
+    <div className="group relative rounded-2xl border border-border/60 bg-card p-3 sm:p-5 flex flex-col justify-between overflow-hidden transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">{label}</div>
-          <div className="mt-2 text-[26px] leading-none font-semibold tracking-tight tabular-nums text-foreground">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground truncate">{label}</div>
+          <div className="mt-1.5 sm:mt-2 text-[18px] sm:text-[26px] leading-tight font-semibold tracking-tight tabular-nums text-foreground">
             {formatCurrency(value)}
           </div>
         </div>
-        <div className="shrink-0 h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
-          <Icon className="h-[18px] w-[18px]" style={{ color: 'hsl(var(--accent-gold))' }} />
+        <div className="shrink-0 h-7 w-7 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
+          <Icon className="h-[14px] w-[14px] sm:h-[18px] sm:w-[18px]" style={{ color: 'hsl(var(--accent-gold))' }} />
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 min-h-[22px]">
+      <div className="mt-2 sm:mt-3 flex items-center gap-2 min-h-0 sm:min-h-[22px]">
         {delta !== undefined && <DeltaBadge value={delta ?? null} />}
-        {deltaLabel && <span className="text-[11px] text-muted-foreground/80 truncate">{deltaLabel}</span>}
-        {hint && !deltaLabel && <span className="text-[11px] text-muted-foreground/80 truncate">{hint}</span>}
+        {deltaLabel && <span className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">{deltaLabel}</span>}
+        {hint && !deltaLabel && <span className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">{hint}</span>}
       </div>
-      <div className="mt-3 -mx-1"><Sparkline values={spark} tone={tone} /></div>
     </div>
   );
 }
