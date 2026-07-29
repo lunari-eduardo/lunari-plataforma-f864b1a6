@@ -55,7 +55,8 @@ export default function AgendaHeader({
       <Button
         variant="outline"
         onClick={onNavigateToday}
-        className={`${classes.buttonHeight} ${classes.buttonPadding} ${classes.subtitle}`}
+        size="sm"
+        className={`${classes.buttonHeight} ${classes.buttonPadding} text-xs`}
       >
         Hoje
       </Button>
