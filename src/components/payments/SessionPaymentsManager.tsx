@@ -294,7 +294,14 @@ export function SessionPaymentsManager({
   const valorRestanteSessao = fin.totalVisual > 0 ? fin.pendenteSess : valorRestante;
 
   const showExtrasChip = fin.hasGaleria && fin.extrasIdeal > 0;
-  const gridCols = showExtrasChip ? 'grid-cols-2 lg:grid-cols-7' : 'grid-cols-2 lg:grid-cols-5';
+  // Modo card (perfil do cliente): Total/Cobrado já aparecem no cabeçalho da linha.
+  const isCard = displayMode === 'card';
+  const showTotalChip = !isCard;
+  const showCobradoChip = !isCard || Math.abs(totalPago - totalRecebido) > 0.001;
+  const chipCount =
+    (showTotalChip ? 1 : 0) + (showExtrasChip ? 2 : 0) + (showCobradoChip ? 1 : 0) + 3;
+  const gridCols = `grid-cols-2 lg:grid-cols-${chipCount}`;
+
 
   const canCobrarSessao = valorRestanteSessao > 0.001;
   const canCobrarExtras = fin.hasGaleria && fin.extrasPend > 0.001;
