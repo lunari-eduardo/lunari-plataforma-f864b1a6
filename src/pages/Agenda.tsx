@@ -316,42 +316,46 @@ export default function Agenda() {
   const isYearView = view === 'year';
 
   return (
-    <div className={`w-full ${isYearView ? 'max-w-[1600px]' : 'max-w-7xl'} mx-auto ${classes.container} pb-20 md:pb-4`}>
-      <Card className={`${classes.card} bg-card/30 backdrop-blur-xl dark:bg-card/[0.04] border-white/50 dark:border-white/10 mx-0`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <AgendaHeader
-              view={view}
-              date={date}
-              onViewChange={setView}
-              onNavigatePrevious={handleNavigatePrevious}
-              onNavigateNext={handleNavigateNext}
-              onNavigateToday={handleNavigateToday}
-              onOpenAvailability={openAvailabilityModal}
-              onOpenShare={view === 'day' ? openShareModal : undefined}
-            />
-          </div>
-          {!showSidebar && sidebarApplicable && (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Abrir mini calendário">
-                  <CalendarDays className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[320px] sm:w-[360px] overflow-y-auto">
-                <div className="pt-6">
-                  <AgendaSidebar
-                    date={date}
-                    view={view}
-                    unifiedEvents={unifiedEvents}
-                    onNavigateToDate={navigateToDate}
-                    onSwitchToDay={() => setView('day')}
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
-          )}
-        </div>
+    <div className={`w-full mx-auto ${isYearView ? 'max-w-[1600px] px-4 md:px-6' : ''} pb-20 md:pb-10`}>
+      <Wrapper>
+        <PageHeader
+          title="Agenda"
+          description="Agendamentos, disponibilidade e tarefas do dia"
+          className="pb-3"
+          action={
+            !showSidebar && sidebarApplicable ? (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-8 w-8 flex-shrink-0" aria-label="Abrir mini calendário">
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[320px] sm:w-[360px] overflow-y-auto">
+                  <div className="pt-6">
+                    <AgendaSidebar
+                      date={date}
+                      view={view}
+                      unifiedEvents={unifiedEvents}
+                      onNavigateToDate={navigateToDate}
+                      onSwitchToDay={() => setView('day')}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
+            ) : undefined
+          }
+        />
+
+        <AgendaHeader
+          view={view}
+          date={date}
+          onViewChange={setView}
+          onNavigatePrevious={handleNavigatePrevious}
+          onNavigateNext={handleNavigateNext}
+          onNavigateToday={handleNavigateToday}
+          onOpenAvailability={openAvailabilityModal}
+          onOpenShare={view === 'day' ? openShareModal : undefined}
+        />
 
         <div className={showSidebar ? 'mt-4 grid grid-cols-[260px_1fr] gap-4' : 'mt-4'}>
           {showSidebar && (
@@ -363,8 +367,11 @@ export default function Agenda() {
               onSwitchToDay={() => setView('day')}
             />
           )}
-          <div className="min-w-0">
-            <div {...(isMobile || isTablet) && view !== 'year' ? swipeHandlers : {}}>
+          <div className="min-w-0 space-y-4">
+            <div
+              className="rounded-xl border border-border/20 bg-card/60 p-2 shadow-sm md:p-3"
+              {...((isMobile || isTablet) && view !== 'year' ? swipeHandlers : {})}
+            >
               {renderView()}
             </div>
 
@@ -376,12 +383,18 @@ export default function Agenda() {
               onDayClick={handleDayClick}
             />
 
-            <div className="mt-4">
-              <DataIntegrityPanel />
-            </div>
+            <details className="group rounded-xl border border-border/20 bg-card/40">
+              <summary className="cursor-pointer list-none px-4 py-2.5 text-xs text-muted-foreground transition-colors hover:text-foreground">
+                Diagnóstico
+              </summary>
+              <div className="px-4 pb-4">
+                <DataIntegrityPanel />
+              </div>
+            </details>
           </div>
         </div>
-      </Card>
+      </Wrapper>
+
 
 
       {/* Task creation modal */}
