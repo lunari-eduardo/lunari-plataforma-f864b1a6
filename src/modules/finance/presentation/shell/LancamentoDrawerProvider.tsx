@@ -170,7 +170,7 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
         </SheetContent>
       </Sheet>
 
-      <ModalVendaAvulsa
+      <VendaAvulsaPanel
         aberto={vendaAvulsaOpen}
         onFechar={() => setVendaAvulsaOpen(false)}
         onSucesso={handleVendaSucesso}
