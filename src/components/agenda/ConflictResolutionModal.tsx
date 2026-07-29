@@ -10,7 +10,7 @@ import { useConflictResolution, type NextAvailableSlot } from '@/hooks/useConfli
 import { useAppContext } from '@/contexts/AppContext';
 import { useToast } from '@/hooks/use-toast';
 import type { Appointment } from '@/modules/agenda/presentation';
-import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_FOOTER, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 interface ConflictResolutionModalProps {
   open: boolean;
@@ -111,13 +111,13 @@ export default function ConflictResolutionModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(dialogSize('lg'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
+            <AlertTriangle className="h-4 w-4 text-warning" />
             Resolver Conflitos de Horário
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className={cn(DIALOG_BODY, "space-y-6 pr-1")}>
           {/* Agendamento Confirmado */}
           <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-2 mb-2">
@@ -217,7 +217,7 @@ export default function ConflictResolutionModal({
           )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className={cn(DIALOG_FOOTER, "gap-2")}>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

@@ -224,7 +224,7 @@ export function ClientEditModal({
             <Loader2 className="h-6 w-6 animate-spin text-lunar-muted" />
           </div>
         ) : (
-          <div className="space-y-4 py-4">
+          <div className={cn(DIALOG_BODY, "space-y-4 py-4 pr-1")}>
             {/* Nome */}
             <div className="space-y-2">
               <Label htmlFor="nome" className="flex items-center gap-2 text-sm">

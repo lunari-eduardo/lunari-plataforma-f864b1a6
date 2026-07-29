@@ -324,7 +324,7 @@ export default function AvailabilityConfigModal({
           <DialogTitle className={DIALOG_TITLE_CLS}>Configurar disponibilidade</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 pt-2">
+        <div className={cn(DIALOG_BODY, "space-y-6 pt-2 pr-1")}>
           {/* === Seção: Horários de Trabalho Padrão (topo) === */}
           <div className="border-b pb-4">
             <button
