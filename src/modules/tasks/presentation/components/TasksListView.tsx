@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/card';
 import CleanTaskCard from '@/modules/tasks/presentation/components/cards/CleanTaskCard';
 import ChecklistPanel from '@/modules/tasks/presentation/components/ChecklistPanel';
 import type { Task } from '@/types/tasks';
