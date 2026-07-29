@@ -282,10 +282,10 @@ export default function AppointmentDetails({
     <>
     <div className={cn("space-y-4 transition-all duration-200", (sendBriefingOpen || viewRespostas || showChargeModal) && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
-      <div className="border-b border-border/20 pb-4">
+      <div className="border-b border-border/20 pb-3">
         <div className="flex items-center gap-2">
           <h2 
-            className="text-xl font-semibold text-foreground cursor-pointer hover:text-lunar-accent transition-colors"
+            className="text-[15px] font-semibold tracking-tight text-foreground cursor-pointer hover:text-primary transition-colors"
             onClick={() => setShowClientEditModal(true)}
             title="Clique para editar cliente"
           >
@@ -294,18 +294,18 @@ export default function AppointmentDetails({
           <button
             type="button"
             onClick={() => setShowClientEditModal(true)}
-            className="text-muted-foreground hover:text-lunar-accent transition-colors"
+            className="text-muted-foreground hover:text-primary transition-colors"
             title="Editar cliente"
           >
             <UserRoundPen className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {format(formData.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} às {formData.time}
         </p>
         <Badge 
-          className={`mt-2 ${
+          className={`mt-2 text-[11px] ${
             formData.status === 'confirmado' 
               ? 'bg-lunar-success/20 text-lunar-success border-lunar-success/30' 
               : 'bg-lunar-warning/20 text-lunar-warning border-lunar-warning/30'
