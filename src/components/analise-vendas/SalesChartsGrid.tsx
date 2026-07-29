@@ -325,11 +325,11 @@ interface ChartCardProps {
 
 function ChartCard({ icon: Icon, title, hasData, children }: ChartCardProps) {
   return (
-    <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
+    <Card className="border border-border/60 bg-card shadow-none">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2.5">
-          <Icon className="h-4 w-4 text-lunar-textSecondary" />
-          <h3 className="text-sm font-medium text-lunar-text">{title}</h3>
+          <Icon className="h-4 w-4 text-[hsl(var(--accent-gold))]" />
+          <h3 className="text-sm font-medium text-foreground">{title}</h3>
         </div>
         
         {hasData ? (
