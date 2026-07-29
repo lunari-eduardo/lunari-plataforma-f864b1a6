@@ -247,12 +247,12 @@ export default function Sidebar() {
       <div className="w-16 shrink-0 h-screen relative z-40">
         <aside
           aria-label="Navegação principal"
-          className="absolute inset-y-0 left-0 w-16 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden"
+          className="absolute inset-y-0 left-0 w-16 flex flex-col p-2 bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] border-r border-[hsl(var(--sidebar-border))] overflow-hidden"
         >
           {/* Logo (apenas ícone) */}
           <div className="h-10 flex items-center justify-center mb-2">
             <img
-              src={isDark ? logoIconWhite : logoIconBlack}
+              src={logoIconWhite}
               alt="Lunari"
               className="h-7 w-7 object-contain"
             />
