@@ -10,7 +10,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, useDialogDropdownCont
 import { Label } from "@/components/ui/label";
 import { SelectModal as Select, SelectModalContent as SelectContent, SelectModalItem as SelectItem, SelectModalTrigger as SelectTrigger, SelectModalValue as SelectValue } from '@/components/ui/select-in-modal';
 import { Search, UserPlus, User, Phone, Mail, Edit, Trash2, MessageCircle, Cake, LayoutGrid, List, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from '@/lib/utils';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  dialogSize,
+  DIALOG_SHELL,
+  DIALOG_BODY,
+  DIALOG_FOOTER,
+  DIALOG_TITLE_CLS,
+  FIELD_GROUP,
+  FIELD_LABEL,
+} from '@/lib/dialogTokens';
+import {
+  CLIENT_CARD,
+  CLIENT_ROW,
+  CLIENT_NAME,
+  CLIENT_METRIC_LABEL,
+  CLIENT_METRIC_VALUE,
+  CLIENT_METRIC_PAID,
+  CLIENT_METRIC_DUE,
+  STATUS_BADGE_ACTIVE,
+  STATUS_BADGE_NEW,
+  CLIENT_ICON_ACTION,
+  CLIENT_ICON_ACTION_DANGER,
+} from '@/components/clientes/clienteTokens';
 import { toast } from 'sonner';
 import { useClientMetrics, ClientMetrics } from '@/hooks/useClientMetrics';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
