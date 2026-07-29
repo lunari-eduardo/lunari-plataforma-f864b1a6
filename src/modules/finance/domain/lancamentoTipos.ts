@@ -113,7 +113,7 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
   receita_operacional: {
     id: "receita_operacional",
     label: "Receita Operacional",
-    descricao: "Sessões, vendas de produtos e serviços fotográficos.",
+    descricao: "Vendas avulsas de produtos, pacotes e outras receitas do estúdio.",
     tituloDrawer: "Nova Receita Operacional",
     subtituloDrawer: "Registre uma nova entrada do seu estúdio.",
     icone: ArrowUpRight,
@@ -123,21 +123,15 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
       label: "Origem da receita",
       opcoes: [
         {
-          id: "sessao",
-          label: "Sessão",
-          descricao: "Venda de sessões",
-          icone: Sparkles,
-        },
-        {
           id: "venda_avulsa",
           label: "Venda avulsa",
-          descricao: "Produtos ou pacotes",
+          descricao: "Produtos, pacotes e itens editáveis",
           icone: Package,
         },
         {
           id: "outro",
           label: "Outro",
-          descricao: "Outras receitas",
+          descricao: "Outras receitas operacionais",
           icone: Receipt,
         },
       ],
@@ -146,6 +140,7 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
     camposEssenciais: ["grupo", "categoria", "valor", "competencia", "recebimento", "formaPagamento"],
     camposProibidos: ["vencimento"],
   },
+
 
   receita_nao_operacional: {
     id: "receita_nao_operacional",

@@ -31,6 +31,8 @@ import {
   type LancamentoTipo,
 } from '@/modules/finance/domain/lancamentoTipos';
 import LancamentoForm from './LancamentoForm';
+import ModalVendaAvulsa from '@/components/financas/ModalVendaAvulsa';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ─────────────────────────────────────────────────────────────
 // Contexto
@@ -45,6 +47,7 @@ export interface OpenLancamentoDrawerOptions {
 interface LancamentoDrawerContextValue {
   open: (opts: OpenLancamentoDrawerOptions) => void;
   close: () => void;
+  openVendaAvulsa: () => void;
   isOpen: boolean;
   currentTipo: LancamentoTipo | null;
 }
@@ -61,6 +64,7 @@ export function useLancamentoDrawer(): LancamentoDrawerContextValue {
   return ctx;
 }
 
+
 // ─────────────────────────────────────────────────────────────
 // Provider + Shell
 // ─────────────────────────────────────────────────────────────
@@ -73,8 +77,10 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
   children,
 }: Props) {
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const [tipo, setTipo] = useState<LancamentoTipo | null>(null);
   const [onCreated, setOnCreated] = useState<(() => void) | null>(null);
+  const [vendaAvulsaOpen, setVendaAvulsaOpen] = useState(false);
 
   const open = useCallback((opts: OpenLancamentoDrawerOptions) => {
     setTipo(opts.tipo);
@@ -86,9 +92,25 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
     setOnCreated(null);
   }, []);
 
+  const openVendaAvulsa = useCallback(() => {
+    setTipo(null);
+    setOnCreated(null);
+    setVendaAvulsaOpen(true);
+  }, []);
+
+  const handleVendaSucesso = useCallback(() => {
+    // Invalida caches financeiros e de workflow para refletir a nova venda.
+    queryClient.invalidateQueries({ queryKey: ['transacoes'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-financeiro'] });
+    queryClient.invalidateQueries({ queryKey: ['workflow-metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['workflow-metrics-by-year'] });
+    queryClient.invalidateQueries({ queryKey: ['extrato'] });
+    queryClient.invalidateQueries({ queryKey: ['clientes-sessoes'] });
+  }, [queryClient]);
+
   const value = useMemo<LancamentoDrawerContextValue>(
-    () => ({ open, close, isOpen: tipo !== null, currentTipo: tipo }),
-    [open, close, tipo],
+    () => ({ open, close, openVendaAvulsa, isOpen: tipo !== null, currentTipo: tipo }),
+    [open, close, openVendaAvulsa, tipo],
   );
 
   const meta = tipo ? getLancamentoTipoMeta(tipo) : null;
@@ -141,13 +163,21 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
                 onClose={close}
                 onCreated={onCreated ?? undefined}
                 isMobile={isMobile}
+                onSelectVendaAvulsa={openVendaAvulsa}
               />
             </>
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <ModalVendaAvulsa
+        aberto={vendaAvulsaOpen}
+        onFechar={() => setVendaAvulsaOpen(false)}
+        onSucesso={handleVendaSucesso}
+      />
     </LancamentoDrawerContext.Provider>
   );
 });
 
 export default LancamentoDrawerProvider;
+
