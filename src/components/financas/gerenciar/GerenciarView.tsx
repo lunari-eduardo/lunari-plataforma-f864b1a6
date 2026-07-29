@@ -7,6 +7,7 @@ import MetasConfigTab from '@/components/financas/MetasConfigTab';
 import ConfiguracaoCartoes from '@/components/financas/ConfiguracaoCartoes';
 import CategoriasPanel from './CategoriasPanel';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
+import FinancePageContainer from '@/modules/finance/presentation/shell/FinancePageContainer';
 
 type PanelKey = 'metas' | 'cartoes' | null;
 type View = 'hub' | 'categorias';
@@ -66,14 +67,15 @@ export default function GerenciarView() {
 
   if (view === 'categorias') {
     return (
-      <div className="w-full">
+      <FinancePageContainer>
         <CategoriasPanel onBack={() => setView('hub')} />
-      </div>
+      </FinancePageContainer>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <FinancePageContainer>
+      <div className="max-w-3xl">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Gerenciar</h1>
         <p className="text-sm text-muted-foreground mt-2">
@@ -128,6 +130,7 @@ export default function GerenciarView() {
       >
         <ConfiguracaoCartoes />
       </SidePanel>
-    </div>
+      </div>
+    </FinancePageContainer>
   );
 }

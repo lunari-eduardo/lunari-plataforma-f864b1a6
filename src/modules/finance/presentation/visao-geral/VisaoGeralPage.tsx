@@ -11,6 +11,7 @@
 import { memo, useMemo } from 'react';
 import { useDashboardFinanceiro } from '@/hooks/useDashboardFinanceiro';
 import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import FinancePageContainer from '@/modules/finance/presentation/shell/FinancePageContainer';
 import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import EstadoFinanceiroSection from './EstadoFinanceiroSection';
 import AcompanhamentoSection from './AcompanhamentoSection';
@@ -63,7 +64,8 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
   }, [dash.transacoesFiltradas]);
 
   return (
-    <div className="space-y-8 pb-12">
+    <FinancePageContainer>
+      <div className="space-y-8 pb-12">
       <PeriodActionBar
         ano={dash.anoSelecionado}
         setAno={dash.setAnoSelecionado}
@@ -116,7 +118,8 @@ export const VisaoGeralPage = memo(function VisaoGeralPage() {
         receitaOperacional={(dash.kpisData as any).receitaOperacional}
         receitaNaoOperacional={(dash.kpisData as any).receitaNaoOperacional}
       />
-    </div>
+      </div>
+    </FinancePageContainer>
   );
 });
 

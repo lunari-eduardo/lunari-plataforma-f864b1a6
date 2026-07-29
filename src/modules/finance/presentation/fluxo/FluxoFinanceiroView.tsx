@@ -23,6 +23,7 @@ import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
 import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import FinancePageContainer from '@/modules/finance/presentation/shell/FinancePageContainer';
 import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import {
   FINANCE_FOCUS_FLUXO_EVENT,
@@ -192,7 +193,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
     (valorMax ? 1 : 0);
 
   return (
-    <div className="max-w-6xl mx-auto px-2 sm:px-4 lg:px-6">
+    <FinancePageContainer>
       <PeriodActionBar
         ano={String(filtroMesAno.ano)}
         setAno={(v) => setFiltroMesAno({ mes: filtroMesAno.mes, ano: parseInt(v, 10) })}
@@ -337,7 +338,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onCancel={handleCancel}
         onClose={handleClose}
       />
-    </div>
+    </FinancePageContainer>
 
   );
 });
