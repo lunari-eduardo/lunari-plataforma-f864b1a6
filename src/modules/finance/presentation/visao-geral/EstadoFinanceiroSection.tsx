@@ -147,13 +147,6 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
   const margem = kpis.totalReceita > 0 ? (kpis.totalLucro / kpis.totalReceita) * 100 : 0;
   const cumprimentoProporcional = metaProporcional > 0 ? (kpis.totalReceita / metaProporcional) * 100 : 0;
 
-  // Sparklines só sobre meses reais (dadosMensais já vem cortado no VisaoGeralPage)
-  const nReais = dadosMensais.length;
-  const receitaSpark = dadosMensais.map(d => d.receita);
-  const despesasSpark = dadosMensais.map(d => d.despesas ?? 0);
-  const aReceberSpark = aReceberMensal.slice(0, Math.max(nReais, 1));
-  const aPagarSpark = aPagarMensal.slice(0, Math.max(nReais, 1));
-
   const lucroPositivo = kpis.totalLucro >= 0;
   const lucroColor = lucroPositivo ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))';
 
