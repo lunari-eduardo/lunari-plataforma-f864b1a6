@@ -69,42 +69,6 @@ const statusTheme: Record<Health, { color: string; softBg: string; icon: 'heart'
 };
 
 type Tone = 'neutral' | 'positive' | 'negative' | 'warning';
-const toneColor: Record<Tone, string> = {
-  neutral: 'hsl(var(--foreground) / 0.75)',
-  positive: 'hsl(var(--finance-positive))',
-  negative: 'hsl(var(--finance-negative))',
-  warning: 'hsl(var(--finance-warning))',
-};
-
-function Sparkline({ values, tone = 'neutral' }: { values: number[]; tone?: Tone }) {
-  const width = 100;
-  const height = 32;
-  if (!values.length) return <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-8" />;
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const range = max - min || 1;
-  const stepX = values.length > 1 ? width / (values.length - 1) : width;
-  const pts = values.map((v, i) => [i * stepX, height - ((v - min) / range) * height] as const);
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
-  const area = `${d} L ${pts[pts.length - 1][0]} ${height} L 0 ${height} Z`;
-  const color = toneColor[tone];
-  const gid = `spk-${tone}-${values.length}`;
-  const last = pts[pts.length - 1];
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-8 overflow-visible">
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`} />
-      <path d={d} fill="none" stroke={color} strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke" className="transition-[stroke-width] group-hover:[stroke-width:2]" />
-      <circle cx={last[0]} cy={last[1]} r={1.8} fill={color} />
-    </svg>
-  );
-}
 
 function DeltaBadge({ value }: { value: number | null | undefined }) {
   if (value === null || value === undefined || !isFinite(value)) {
