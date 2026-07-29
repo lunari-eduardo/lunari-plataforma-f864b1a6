@@ -16,7 +16,6 @@ import { Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
-import { useRunCapability } from '@/shared/capability/react';
 import {
   getLancamentoTipoMeta,
   isCampoPermitido,
@@ -35,7 +34,6 @@ import {
   TextField,
   type SmartSelectOption,
 } from './fields';
-import { markTransactionPaid } from '@/modules/finance';
 
 
 
