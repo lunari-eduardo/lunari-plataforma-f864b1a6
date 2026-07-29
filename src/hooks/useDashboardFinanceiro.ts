@@ -434,16 +434,22 @@ export function useDashboardFinanceiro() {
       .reduce((sum, t) => sum + t.valor, 0);
 
     // Calcular lucro anual para ROI
-    const receitaAnual = workflowMetricsByYear.totalAnual.receita + 
+    // Receita anual = Workflow (sessões/vendas avulsas) + manual op + não operacional
+    const receitaOpManualAnual = transacoesDoAno
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Operacional')
+      .reduce((sum, t) => sum + t.valor, 0);
+    const receitaAnual = workflowMetricsByYear.totalAnual.receita +
+      receitaOpManualAnual +
       transacoesDoAno
         .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
         .reduce((sum, t) => sum + t.valor, 0);
-    
+
     const despesasAnuais = transacoesDoAno
       .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
       .reduce((sum, t) => sum + t.valor, 0);
-    
+
     const lucroAnual = receitaAnual - despesasAnuais;
+
 
     const roi = totalInvestimento > 0 ? (lucroAnual / totalInvestimento) * 100 : 0;
 
