@@ -31,6 +31,8 @@ import {
   type LancamentoTipo,
 } from '@/modules/finance/domain/lancamentoTipos';
 import LancamentoForm from './LancamentoForm';
+import ModalVendaAvulsa from '@/components/financas/ModalVendaAvulsa';
+import { useQueryClient } from '@tanstack/react-query';
 
 // ─────────────────────────────────────────────────────────────
 // Contexto
@@ -45,6 +47,7 @@ export interface OpenLancamentoDrawerOptions {
 interface LancamentoDrawerContextValue {
   open: (opts: OpenLancamentoDrawerOptions) => void;
   close: () => void;
+  openVendaAvulsa: () => void;
   isOpen: boolean;
   currentTipo: LancamentoTipo | null;
 }
@@ -60,6 +63,7 @@ export function useLancamentoDrawer(): LancamentoDrawerContextValue {
   }
   return ctx;
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // Provider + Shell
