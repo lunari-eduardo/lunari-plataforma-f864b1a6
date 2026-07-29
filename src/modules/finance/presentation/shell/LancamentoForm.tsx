@@ -13,6 +13,7 @@
  */
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
 import {
@@ -194,52 +195,66 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   if (precisaOrigem && meta.contextoPreForm) {
     const ctx = meta.contextoPreForm;
     return (
-      <>
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
-          <p className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
-            {ctx.label}
-          </p>
-          <div className="grid gap-2">
-            {ctx.opcoes.map((op) => {
-              const Icon = op.icone;
-              const disabled = op.id !== 'outro'; // sessão/venda avulsa: fluxo dedicado
-              return (
-                <button
-                  key={op.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => setOrigem(op.id)}
-                  className={`group flex items-start gap-3 rounded-xl border border-border/60 bg-background p-3 text-left transition-colors ${
-                    disabled
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:border-accent-gold/60 hover:bg-accent-gold/5'
-                  }`}
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold shrink-0">
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-medium text-foreground">{op.label}</div>
-                    <div className="text-[11.5px] text-muted-foreground leading-snug">
-                      {op.descricao}
-                      {disabled ? ' · Use o Workflow / Vendas avulsas' : ''}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="preform"
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -8 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="contents"
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+            <p className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
+              {ctx.label}
+            </p>
+            <div className="grid gap-2">
+              {ctx.opcoes.map((op, i) => {
+                const Icon = op.icone;
+                const disabled = op.id !== 'outro';
+                return (
+                  <motion.button
+                    key={op.id}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setOrigem(op.id)}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, delay: 0.04 * i, ease: 'easeOut' }}
+                    whileHover={disabled ? undefined : { y: -1 }}
+                    whileTap={disabled ? undefined : { scale: 0.985 }}
+                    className={`group flex items-start gap-3 rounded-xl border border-border/60 bg-background p-3 text-left transition-colors ${
+                      disabled
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:border-accent-gold/60 hover:bg-accent-gold/5'
+                    }`}
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold shrink-0">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-medium text-foreground">{op.label}</div>
+                      <div className="text-[11.5px] text-muted-foreground leading-snug">
+                        {op.descricao}
+                        {disabled ? ' · Use o Workflow / Vendas avulsas' : ''}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Cancelar
-          </button>
-        </footer>
-      </>
+          <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Cancelar
+            </button>
+          </footer>
+        </motion.div>
+      </AnimatePresence>
     );
   }
 
@@ -248,7 +263,13 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   // ─────────────────────────────────────────────────────────
 
   return (
-    <>
+    <motion.div
+      key={`form-${tipo}-${origem ?? 'none'}`}
+      initial={{ opacity: 0, x: 8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col min-h-0 flex-1"
+    >
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
         {/* Valor — protagonista */}
         <CurrencyField
@@ -256,6 +277,8 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           onChange={(v) => setField('valor', v)}
           autoFocus
         />
+
+
 
         {/* Essencial */}
         <SectionHeader label="Essencial" />
@@ -379,17 +402,33 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         >
           Cancelar
         </button>
-        <button
+        <motion.button
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent-gold px-3.5 py-1.5 text-[12px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          whileHover={canSubmit ? { y: -1 } : undefined}
+          whileTap={canSubmit ? { scale: 0.97 } : undefined}
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          className="inline-flex items-center gap-1.5 rounded-md bg-accent-gold px-3.5 py-1.5 text-[12px] font-semibold text-background shadow-[0_4px_14px_-4px_rgba(198,163,106,0.45)] hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
         >
-          {submitting && <Loader2 className="h-3 w-3 animate-spin" />}
-          Salvar lançamento
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            {submitting ? (
+              <motion.span
+                key="loading"
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.15 }}
+                className="inline-flex items-center overflow-hidden"
+              >
+                <Loader2 className="h-3 w-3 animate-spin" />
+              </motion.span>
+            ) : null}
+          </AnimatePresence>
+          <span>{submitting ? 'Salvando…' : 'Salvar lançamento'}</span>
+        </motion.button>
       </footer>
-    </>
+    </motion.div>
   );
 });
 
