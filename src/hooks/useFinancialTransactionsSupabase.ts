@@ -449,7 +449,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
         (t) => ({
           ...t,
           status: 'Pago' as StatusTransacao,
-          ...(dataPagamento ? { data_pagamento: dataPagamento } as any : {}),
+          ...(dataPagamento ? { data_competencia: dataPagamento } as any : {}),
         }),
       );
       return { rollback };
