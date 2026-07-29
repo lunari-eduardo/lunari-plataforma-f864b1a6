@@ -138,7 +138,7 @@ export default function CategoriasPanel({ onBack }: Props) {
         Voltar para Gerenciar
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 lg:gap-10 max-w-6xl">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 lg:gap-10">
         {/* Sidebar (desktop) */}
         <aside className="hidden lg:block">
           <nav className="space-y-0.5">
