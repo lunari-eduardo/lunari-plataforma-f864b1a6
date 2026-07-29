@@ -1,4 +1,5 @@
 import { Camera, Layers, TrendingUp } from "lucide-react";
+import { MetricIconBadge } from "@/components/ui/metric-icon";
 
 interface Props {
   fotosTotal: number;
@@ -20,32 +21,39 @@ function Card({
   label,
   primary,
   secondary,
-  icon,
+  icon: Icon,
   isLoading,
 }: {
   label: string;
   primary: React.ReactNode;
   secondary?: React.ReactNode;
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   isLoading?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4 flex flex-col gap-1.5 shadow-none">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-        <span className="text-[hsl(var(--accent-gold))]">{icon}</span>
-        {label}
+    <div className="group relative rounded-2xl border border-border/60 bg-card p-3 sm:p-5 transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground truncate">
+            {label}
+          </div>
+          {isLoading ? (
+            <div className="mt-2 h-6 w-24 rounded bg-muted/60 animate-pulse" />
+          ) : (
+            <div className="mt-1.5 sm:mt-2 text-[18px] sm:text-[26px] leading-tight font-semibold tracking-tight tabular-nums text-foreground">
+              {primary}
+            </div>
+          )}
+        </div>
+        <MetricIconBadge Icon={Icon} />
       </div>
-      {isLoading ? (
-        <div className="h-7 w-24 rounded bg-muted/60 animate-pulse" />
-      ) : (
-        <div className="text-2xl font-semibold text-foreground leading-none">{primary}</div>
-      )}
       {secondary && !isLoading && (
-        <div className="text-xs text-muted-foreground">{secondary}</div>
+        <div className="mt-2 text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">{secondary}</div>
       )}
     </div>
   );
 }
+
 
 export function ProductionMetricsCards(props: Props) {
   const totalSessoes = props.sessoesComPacote + props.sessoesSemPacote;
