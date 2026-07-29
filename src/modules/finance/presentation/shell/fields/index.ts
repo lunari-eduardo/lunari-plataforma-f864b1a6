@@ -5,3 +5,5 @@ export { DateField } from './DateField';
 export { TextField, TextAreaField } from './TextField';
 export { DisclosureSection } from './DisclosureSection';
 export { SectionHeader } from './SectionHeader';
+export { PaidToggle } from './PaidToggle';
+

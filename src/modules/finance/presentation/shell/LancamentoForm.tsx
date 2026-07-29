@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import { useRunCapability } from '@/shared/capability/react';
 import {
   getLancamentoTipoMeta,
   isCampoPermitido,
@@ -27,12 +28,16 @@ import {
   DateField,
   DisclosureSection,
   FieldRow,
+  PaidToggle,
   SectionHeader,
   SmartSelect,
   TextAreaField,
   TextField,
   type SmartSelectOption,
 } from './fields';
+import { markTransactionPaid } from '@/modules/finance';
+
+
 
 // ─────────────────────────────────────────────────────────────
 // Constantes
@@ -68,9 +73,11 @@ interface FormState {
   recebimento: string | null;
   formaPagamento: string | null;
   observacoes: string;
+  pago: boolean;
 }
 
-function initialState(): FormState {
+function initialState(tipo: LancamentoTipo): FormState {
+  const meta = getLancamentoTipoMeta(tipo);
   return {
     valor: 0,
     itemId: null,
@@ -81,8 +88,11 @@ function initialState(): FormState {
     recebimento: hoje(),
     formaPagamento: null,
     observacoes: '',
+    // Receitas: default = já recebido. Despesas/investimento: default = pendente.
+    pago: meta.natureza === 'entrada',
   };
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // Componente
@@ -111,14 +121,16 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   const [origem, setOrigem] = useState<OrigemReceitaOperacional | null>(null);
   const precisaOrigem = tipo === 'receita_operacional' && !origem;
 
-  const [state, setState] = useState<FormState>(initialState);
+  const [state, setState] = useState<FormState>(() => initialState(tipo));
   const [submitting, setSubmitting] = useState(false);
+  const runCapability = useRunCapability();
 
   useEffect(() => {
     // reset quando muda o tipo
-    setState(initialState());
+    setState(initialState(tipo));
     setOrigem(null);
   }, [tipo]);
+
 
   const grupo = meta.gruposPermitidos[0];
   const itens = obterItensPorGrupo(grupo as any);
@@ -173,12 +185,28 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
     setSubmitting(true);
     try {
-      await createTransactionEngine({
+      const result = await createTransactionEngine({
         itemId: state.itemId,
         valorTotal: state.valor,
         dataPrimeiraOcorrencia: dataPrimeira,
         observacoes,
       });
+      // Se o usuário marcou como pago no toggle, marca a transação recém-criada.
+      if (state.pago && result?.ids?.[0]) {
+        try {
+          await runCapability(markTransactionPaid, {
+            id: result.ids[0],
+            dataPagamento: dataPrimeira,
+            source: 'user',
+          } as any);
+        } catch (payErr: any) {
+          toast({
+            title: 'Lançamento criado, mas não foi marcado como pago',
+            description: payErr?.message ?? 'Você pode marcar manualmente no extrato.',
+            variant: 'destructive',
+          });
+        }
+      }
       onCreated?.();
       onClose();
     } catch (e: any) {
@@ -191,6 +219,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       setSubmitting(false);
     }
   }
+
 
   // ─────────────────────────────────────────────────────────
   // Pré-form: Origem da receita operacional
@@ -278,12 +307,26 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       className="flex flex-col min-h-0 flex-1"
     >
       <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-4' : 'px-6 py-5'}`}>
-        {/* Valor — protagonista */}
-        <CurrencyField
-          value={state.valor}
-          onChange={(v) => setField('valor', v)}
-          autoFocus
-        />
+        {/* Valor — protagonista, com toggle "Pago" ao lado */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <CurrencyField
+              value={state.valor}
+              onChange={(v) => setField('valor', v)}
+              autoFocus
+            />
+          </div>
+          <div className="pt-3">
+            <PaidToggle
+              checked={state.pago}
+              onChange={(v) => setField('pago', v)}
+              label={meta.natureza === 'entrada' ? 'Recebido' : 'Pago'}
+              labelInactive={meta.natureza === 'entrada' ? 'A receber' : 'A pagar'}
+            />
+          </div>
+        </div>
+
+
 
 
 
@@ -348,7 +391,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         {/* Quando */}
         <SectionHeader label="Quando" />
         {showRecebimento && (
-          <FieldRow label="Recebimento" required>
+          <FieldRow label={state.pago ? 'Recebido em' : 'Recebimento'} required>
             <DateField
               value={state.recebimento}
               onChange={(v) => setField('recebimento', v)}
@@ -356,13 +399,14 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
         {showVencimento && (
-          <FieldRow label="Vencimento" required>
+          <FieldRow label={state.pago ? 'Pago em' : 'Vencimento'} required>
             <DateField
               value={state.vencimento}
               onChange={(v) => setField('vencimento', v)}
             />
           </FieldRow>
         )}
+
 
         {/* Origem / pagamento */}
         <SectionHeader label="Pagamento" />

@@ -82,11 +82,14 @@ export function useNovoFinancas() {
     transacoesPorGrupo: transacoesPorGrupoSupabase,
     isLoading,
     criarTransacao,
+    criarTransacaoAsync,
     atualizarTransacao: atualizarTransacaoSupabase,
     removerTransacao: removerTransacaoSupabase,
     marcarComoPago: marcarComoPagoSupabase,
+    marcarComoPagoAsync,
     calcularMetricasPorGrupo,
   } = useFinancialTransactionsSupabase(filtroMesAno);
+
 
   // Carrega arquivados sob demanda quando alguma transação referencia id que não está nos ativos.
   useEffect(() => {
@@ -318,13 +321,15 @@ export function useNovoFinancas() {
         data_compra: dataCompra || dataPrimeiraOcorrencia
       };
 
-      await criarTransacao(params);
-      console.log('Transação criada com sucesso');
+      const result = await criarTransacaoAsync(params);
+      console.log('Transação criada com sucesso', result);
+      return result as { ids: string[]; count: number };
     } catch (error) {
       console.error('Erro ao criar transação:', error);
       throw error;
     }
   };
+
 
   // Compatibilidade com createRecurringTransactionsEngine
   const createRecurringTransactionsEngine = async (input: any) => {
@@ -364,12 +369,13 @@ export function useNovoFinancas() {
 
   const marcarComoPago = async (id: string) => {
     try {
-      await marcarComoPagoSupabase(id);
+      await marcarComoPagoAsync(id);
     } catch (error) {
       console.error('Erro ao marcar como pago:', error);
       throw error;
     }
   };
+
 
   // Função auxiliar para obter itens por grupo
   const obterItensPorGrupo = (grupo: GrupoPrincipal): ItemFinanceiroCompativel[] => {
