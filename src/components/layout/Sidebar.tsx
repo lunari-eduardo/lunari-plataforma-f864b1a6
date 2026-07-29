@@ -192,7 +192,11 @@ export default function Sidebar() {
   // ────────────────────────── MOBILE ──────────────────────────
   if (mode === 'mobile') {
     return <>
-        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-40 p-2 border-t border-border bg-background/80">
+        <div
+          className="fixed bottom-0 left-0 right-0 backdrop-blur-sm shadow-lunar-md z-40 px-2 pt-2 border-t border-border bg-background/80"
+          style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+        >
+
           <div className="grid grid-cols-5 h-12 gap-1">
             {navItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
             isActive
