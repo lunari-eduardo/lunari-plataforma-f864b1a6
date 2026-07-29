@@ -380,12 +380,20 @@ export function useDashboardFinanceiro() {
 
   // ============= CÁLCULOS DE MÉTRICAS (KPIs DINÂMICOS) =============
   
-  const kpisData = useMemo((): KPIsData & { receitaOperacional: number; receitaNaoOperacional: number } => {
-    // FONTE: Workflow (realtime para mês / agregado anual para "ano-completo")
-    const receitaOperacional = workflowPeriod.receita;
+  const kpisData = useMemo((): KPIsData & { receitaOperacional: number; receitaNaoOperacional: number; receitaOperacionalManual: number } => {
+    // FONTE 1: Workflow (sessões + vendas avulsas via clientes_sessoes)
+    const receitaOperacionalWorkflow = workflowPeriod.receita;
     const valorPrevisto = workflowPeriod.previsto;
     const aReceber = workflowPeriod.aReceber;
-    
+
+    // FONTE 2: Lançamentos manuais em fin_transactions grupo "Receita Operacional"
+    // (não vivem em clientes_sessoes → precisam ser somados aqui, sem dupla contagem).
+    const receitaOperacionalManual = transacoesFiltradasPorPeriodo
+      .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Operacional')
+      .reduce((sum, t) => sum + t.valor, 0);
+
+    const receitaOperacional = receitaOperacionalWorkflow + receitaOperacionalManual;
+
     // RECEITAS NÃO OPERACIONAIS (filtradas pelo período)
     const receitaNaoOperacional = transacoesFiltradasPorPeriodo
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
@@ -412,8 +420,10 @@ export function useDashboardFinanceiro() {
       saldoTotal,
       receitaOperacional,
       receitaNaoOperacional,
+      receitaOperacionalManual,
     };
   }, [workflowPeriod, transacoesFiltradasPorPeriodo]);
+
 
   // ============= ROI (SEMPRE DADOS ANUAIS) =============
   
