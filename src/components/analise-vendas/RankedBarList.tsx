@@ -49,11 +49,11 @@ export function RankedBarList({
   const maxValue = Math.max(...sortedData.map(d => d.value), 1);
 
   return (
-    <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
+    <Card className="border border-border/60 bg-card shadow-none">
       <CardContent className="p-3">
         <div className="flex items-center gap-2 mb-3">
-          <Icon className="h-3.5 w-3.5 text-lunar-textSecondary" />
-          <h3 className="text-xs font-medium text-lunar-text">{title}</h3>
+          <Icon className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
+          <h3 className="text-xs font-medium text-foreground">{title}</h3>
         </div>
         
         {hasData ? (
