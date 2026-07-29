@@ -36,7 +36,6 @@ function resolveInitialTab(): FinanceTab {
 const NovaFinancasInner = memo(function NovaFinancasInner() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<FinanceTab>(resolveInitialTab);
-  const drawer = useLancamentoDrawer();
 
   useEffect(() => {
     const handler = (ev: Event) => {
@@ -56,8 +55,7 @@ const NovaFinancasInner = memo(function NovaFinancasInner() {
     <ScrollArea className="h-[calc(100vh-120px)]">
       <div className="min-h-screen bg-background pr-4">
         <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 py-0 my-0">
-          {/* Header global do módulo — botão fixo no canto superior direito */}
-          <FinanceHeader onSelectTipo={(tipo) => drawer.open({ tipo })} />
+
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as FinanceTab)}>
             <TabsList className="w-full h-auto p-0 bg-transparent border-b border-border rounded-none justify-start gap-2 sm:gap-6">
