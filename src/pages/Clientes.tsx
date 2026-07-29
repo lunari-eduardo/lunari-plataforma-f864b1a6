@@ -561,57 +561,57 @@ export default function Clientes() {
         <ClientFiltersBar filters={filters} onFiltersChange={setFilters} totalClients={clientMetrics.length} filteredClients={clientesFiltrados.length} />
 
         {/* Visualização em Lista */}
-        {viewMode === 'list' && <div className="border rounded-lg overflow-hidden">
+        {viewMode === 'list' && <div className="overflow-hidden rounded-xl border border-border/20">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className={CLIENT_ROW}>
                   <SortableHeader label="Nome" sortKey="nome" />
                   <SortableHeader label="Total" sortKey="totalFaturado" />
                   <SortableHeader label="Pago" sortKey="totalPago" />
                   <SortableHeader label="A Receber" sortKey="aReceber" />
                   <SortableHeader label="Sessões" sortKey="sessoes" />
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-xs text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right text-xs text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientesPaginados.map(cliente => <TableRow key={cliente.id}>
+                {clientesPaginados.map(cliente => <TableRow key={cliente.id} className={CLIENT_ROW}>
                     <TableCell>
-                      <Link to={`/app/clientes/${cliente.id}`} className="font-medium text-primary hover:text-primary/80">
+                      <Link to={`/app/clientes/${cliente.id}`} className={CLIENT_NAME}>
                         {cliente.nome}
                       </Link>
                       {(cliente as any).origem && <div className="mt-1">
                           <OriginBadge originId={(cliente as any).origem} />
                         </div>}
                     </TableCell>
-                    <TableCell className="font-semibold text-primary">
+                    <TableCell className={CLIENT_METRIC_VALUE}>
                       {formatCurrency(cliente.totalFaturado)}
                     </TableCell>
-                    <TableCell className="font-semibold text-green-600">
+                    <TableCell className={CLIENT_METRIC_PAID}>
                       {formatCurrency(cliente.totalPago)}
                     </TableCell>
-                    <TableCell className="font-semibold text-orange-600">
+                    <TableCell className={CLIENT_METRIC_DUE}>
                       {formatCurrency(cliente.aReceber)}
                     </TableCell>
                     <TableCell>
-                      <span className="text-muted-foreground">
+                      <span className="text-xs tabular-nums text-muted-foreground">
                         {cliente.sessoes}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 text-xs rounded-full ${cliente.totalFaturado > 0 ? 'bg-green-100 text-green-700' : 'bg-muted/40 text-muted-foreground'}`}>
+                      <span className={cliente.totalFaturado > 0 ? STATUS_BADGE_ACTIVE : STATUS_BADGE_NEW}>
                         {cliente.totalFaturado > 0 ? 'Ativo' : 'Novo'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className="h-8 w-8 p-0 text-green-600 hover:text-green-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleWhatsApp(cliente)} className={CLIENT_ICON_ACTION}>
                           <MessageCircle className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditClient(cliente)} className={CLIENT_ICON_ACTION}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(cliente.id)} className={CLIENT_ICON_ACTION_DANGER}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
