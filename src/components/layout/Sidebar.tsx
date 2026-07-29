@@ -292,14 +292,14 @@ export default function Sidebar() {
             willChange: 'width',
           }}
           className={cn(
-            "absolute inset-y-0 left-0 flex flex-col p-2 bg-background border-r border-border/50 overflow-hidden",
+            "absolute inset-y-0 left-0 flex flex-col p-2 bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] border-r border-[hsl(var(--sidebar-border))] overflow-hidden",
             isHovered && "shadow-lunar-md"
           )}
         >
           {/* Logo */}
           <div className="h-10 flex items-center px-2 mb-2 overflow-hidden relative">
             <img
-              src={isDark ? logoIconWhite : logoIconBlack}
+              src={logoIconWhite}
               alt="Lunari"
               className={cn(
                 "absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 object-contain transition-opacity duration-150 ease-out",
@@ -307,7 +307,7 @@ export default function Sidebar() {
               )}
             />
             <img
-              src={isDark ? logoFullWhite : logoFullBlack}
+              src={logoFullWhite}
               alt="Lunari"
               className={cn(
                 "absolute left-3 top-1/2 -translate-y-1/2 h-6 object-contain object-left transition-opacity duration-150 ease-out",
