@@ -105,13 +105,23 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
             'flex flex-col gap-0 border-l border-border/60 bg-background p-0',
             'shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]',
             isMobile
-              ? 'h-[92dvh] w-full rounded-t-2xl border-l-0 border-t'
+              ? 'h-[92dvh] max-h-[92dvh] w-full rounded-t-2xl border-l-0 border-t'
               : 'w-full sm:max-w-[560px]',
           )}
         >
           {meta && Icone ? (
             <>
-              <header className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-border/40">
+              {isMobile && (
+                <div className="flex justify-center pt-2 pb-1 shrink-0">
+                  <span aria-hidden className="h-1 w-10 rounded-full bg-border/80" />
+                </div>
+              )}
+              <header
+                className={cn(
+                  'flex items-start gap-3 border-b border-border/40 shrink-0',
+                  isMobile ? 'px-5 pt-3 pb-3' : 'px-6 pt-6 pb-4',
+                )}
+              >
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold shrink-0">
                   <Icone className="h-4 w-4" />
                 </span>
@@ -130,6 +140,7 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
                 tipo={tipo!}
                 onClose={close}
                 onCreated={onCreated ?? undefined}
+                isMobile={isMobile}
               />
             </>
           ) : null}
