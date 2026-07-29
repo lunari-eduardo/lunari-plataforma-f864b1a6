@@ -77,8 +77,10 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
   children,
 }: Props) {
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const [tipo, setTipo] = useState<LancamentoTipo | null>(null);
   const [onCreated, setOnCreated] = useState<(() => void) | null>(null);
+  const [vendaAvulsaOpen, setVendaAvulsaOpen] = useState(false);
 
   const open = useCallback((opts: OpenLancamentoDrawerOptions) => {
     setTipo(opts.tipo);
@@ -90,9 +92,25 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
     setOnCreated(null);
   }, []);
 
+  const openVendaAvulsa = useCallback(() => {
+    setTipo(null);
+    setOnCreated(null);
+    setVendaAvulsaOpen(true);
+  }, []);
+
+  const handleVendaSucesso = useCallback(() => {
+    // Invalida caches financeiros e de workflow para refletir a nova venda.
+    queryClient.invalidateQueries({ queryKey: ['transacoes'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-financeiro'] });
+    queryClient.invalidateQueries({ queryKey: ['workflow-metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['workflow-metrics-by-year'] });
+    queryClient.invalidateQueries({ queryKey: ['extrato'] });
+    queryClient.invalidateQueries({ queryKey: ['clientes-sessoes'] });
+  }, [queryClient]);
+
   const value = useMemo<LancamentoDrawerContextValue>(
-    () => ({ open, close, isOpen: tipo !== null, currentTipo: tipo }),
-    [open, close, tipo],
+    () => ({ open, close, openVendaAvulsa, isOpen: tipo !== null, currentTipo: tipo }),
+    [open, close, openVendaAvulsa, tipo],
   );
 
   const meta = tipo ? getLancamentoTipoMeta(tipo) : null;
@@ -145,13 +163,21 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
                 onClose={close}
                 onCreated={onCreated ?? undefined}
                 isMobile={isMobile}
+                onSelectVendaAvulsa={openVendaAvulsa}
               />
             </>
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <ModalVendaAvulsa
+        aberto={vendaAvulsaOpen}
+        onFechar={() => setVendaAvulsaOpen(false)}
+        onSucesso={handleVendaSucesso}
+      />
     </LancamentoDrawerContext.Provider>
   );
 });
 
 export default LancamentoDrawerProvider;
+
