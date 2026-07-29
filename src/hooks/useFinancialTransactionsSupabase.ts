@@ -34,6 +34,10 @@ import {
   markTransactionPaid,
   markTransactionPending,
 } from '@/modules/finance';
+import {
+  invalidateFinanceAll,
+  refetchDashboardActive,
+} from '@/modules/finance/infrastructure/realtime/invalidateFinanceAll';
 
 export interface CreateTransactionParams {
   item_id: string;
