@@ -93,7 +93,10 @@ interface Props {
   onClose: () => void;
   onCreated?: () => void;
   isMobile?: boolean;
+  /** Callback opcional: quando o usuário escolhe "Venda avulsa" no pré-form. */
+  onSelectVendaAvulsa?: () => void;
 }
+
 
 export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
