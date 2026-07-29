@@ -82,11 +82,14 @@ export function useNovoFinancas() {
     transacoesPorGrupo: transacoesPorGrupoSupabase,
     isLoading,
     criarTransacao,
+    criarTransacaoAsync,
     atualizarTransacao: atualizarTransacaoSupabase,
     removerTransacao: removerTransacaoSupabase,
     marcarComoPago: marcarComoPagoSupabase,
+    marcarComoPagoAsync,
     calcularMetricasPorGrupo,
   } = useFinancialTransactionsSupabase(filtroMesAno);
+
 
   // Carrega arquivados sob demanda quando alguma transação referencia id que não está nos ativos.
   useEffect(() => {
