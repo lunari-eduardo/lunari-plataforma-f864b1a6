@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { Plus, X, Clock, Settings } from 'lucide-react';
 import { formatDateForInput } from '@/utils/dateUtils';
 import type { DateRange } from 'react-day-picker';
-import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS, FIELD_LABEL } from '@/lib/dialogTokens';
 
 type Action = 'liberar' | 'bloquear';
 type WeekdayMode = 'all' | 'specific';
