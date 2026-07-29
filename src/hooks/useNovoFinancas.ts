@@ -321,13 +321,15 @@ export function useNovoFinancas() {
         data_compra: dataCompra || dataPrimeiraOcorrencia
       };
 
-      await criarTransacao(params);
-      console.log('Transação criada com sucesso');
+      const result = await criarTransacaoAsync(params);
+      console.log('Transação criada com sucesso', result);
+      return result as { ids: string[]; count: number };
     } catch (error) {
       console.error('Erro ao criar transação:', error);
       throw error;
     }
   };
+
 
   // Compatibilidade com createRecurringTransactionsEngine
   const createRecurringTransactionsEngine = async (input: any) => {
