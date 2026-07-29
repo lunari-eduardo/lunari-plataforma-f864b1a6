@@ -11,7 +11,7 @@ export default function CentroAjuda() {
   const { data: articles, isLoading } = useHelpArticles();
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 md:px-6 py-4 space-y-6">
+    <div className="max-w-[79rem] mx-auto w-full px-4 md:px-6 py-4 space-y-6">
       <SEOHead title="Centro de Ajuda | Lunari" noindex />
 
       <header className="flex items-start justify-between gap-4 pb-4">
