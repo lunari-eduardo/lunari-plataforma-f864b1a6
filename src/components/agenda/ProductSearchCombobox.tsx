@@ -107,20 +107,21 @@ export default function ProductSearchCombobox({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 dropdown-solid border border-border rounded-md shadow-lg max-h-60 overflow-auto scrollbar-minimal">
+        <div className={DROPDOWN_PANEL}>
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
               <div
                 key={product.id}
                 onClick={() => handleSelect(product)}
-                className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0"
+                className={DROPDOWN_ITEM}
               >
                 <div className="flex items-center">
                   {product.favorito ? (
-                    <Star className="h-3 w-3 mr-2 fill-amber-400 text-amber-500 shrink-0" />
+                    <Star className="h-3 w-3 mr-2 fill-accent-gold text-accent-gold shrink-0" />
                   ) : (
                     <ShoppingBag className="h-3 w-3 mr-2 text-muted-foreground shrink-0" />
                   )}
+
                   <div className="flex-1">
                     <span className={cn('font-medium', product.favorito && 'text-foreground')}>{product.nome}</span>
                     <div className="text-[11px] text-muted-foreground">
