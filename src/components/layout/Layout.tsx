@@ -7,8 +7,6 @@ import { useEquipmentSync } from '@/hooks/useEquipmentSync';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { HelpFloatingButton } from '@/components/help/HelpFloatingButton';
 import { cn } from '@/lib/utils';
-import InternalBackground from '@/components/backgrounds/InternalBackground';
-import DashboardBackground from '@/components/backgrounds/DashboardBackground';
 import { AssistantLauncher } from '@/modules/assistant';
 
 export default function Layout() {
