@@ -27,12 +27,15 @@ import {
   DateField,
   DisclosureSection,
   FieldRow,
+  PaidToggle,
   SectionHeader,
   SmartSelect,
   TextAreaField,
   TextField,
   type SmartSelectOption,
 } from './fields';
+import { markTransactionPaid } from '@/modules/finance';
+
 
 // ─────────────────────────────────────────────────────────────
 // Constantes
