@@ -1,4 +1,3 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { usePricing } from '@/contexts/PricingContext';
 import { CollapsibleCustoSection } from './custos/CollapsibleCustoSection';
 import { CardGastosPessoaisContent } from './custos/CardGastosPessoaisContent';
@@ -70,7 +69,7 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
       defaultOpen={false}
       statusSalvamento={statusSalvamento}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Gastos Pessoais - Colapsável */}
         <CollapsibleCustoSection
           icon={User}
@@ -120,16 +119,12 @@ export function EtapaCustosFixos({ onTotalChange }: EtapaCustosFixosProps) {
         </CollapsibleCustoSection>
         
         {/* Resumo da Etapa */}
-        <Card className="bg-muted/50 border">
-          <CardContent className="py-4">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">Total de Custos Fixos Mensais</span>
-              <span className="text-2xl font-bold text-foreground">
-                {formatCurrency(totalCustosFixos)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between border-t border-border/20 pt-3">
+          <span className="text-xs text-muted-foreground">Total de custos fixos mensais</span>
+          <span className="text-[17px] font-semibold text-foreground tabular-nums">
+            {formatCurrency(totalCustosFixos)}
+          </span>
+        </div>
       </div>
     </EtapaColapsavel>
   );
