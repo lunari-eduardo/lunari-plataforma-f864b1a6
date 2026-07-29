@@ -282,10 +282,10 @@ export default function AppointmentDetails({
     <>
     <div className={cn("space-y-4 transition-all duration-200", (sendBriefingOpen || viewRespostas || showChargeModal) && "opacity-40 blur-[2px] pointer-events-none")}>
       {/* HEADER: Nome do cliente + data + status badge */}
-      <div className="border-b border-lunar-border/30 pb-4">
+      <div className="border-b border-border/20 pb-3">
         <div className="flex items-center gap-2">
           <h2 
-            className="text-xl font-semibold text-lunar-text cursor-pointer hover:text-lunar-accent transition-colors"
+            className="text-[15px] font-semibold tracking-tight text-foreground cursor-pointer hover:text-primary transition-colors"
             onClick={() => setShowClientEditModal(true)}
             title="Clique para editar cliente"
           >
@@ -294,18 +294,18 @@ export default function AppointmentDetails({
           <button
             type="button"
             onClick={() => setShowClientEditModal(true)}
-            className="text-lunar-muted hover:text-lunar-accent transition-colors"
+            className="text-muted-foreground hover:text-primary transition-colors"
             title="Editar cliente"
           >
             <UserRoundPen className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="text-sm text-lunar-muted mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {format(formData.date, "EEEE, dd 'de' MMMM", { locale: ptBR })} às {formData.time}
         </p>
         <Badge 
-          className={`mt-2 ${
+          className={`mt-2 text-[11px] ${
             formData.status === 'confirmado' 
               ? 'bg-lunar-success/20 text-lunar-success border-lunar-success/30' 
               : 'bg-lunar-warning/20 text-lunar-warning border-lunar-warning/30'
@@ -317,14 +317,14 @@ export default function AppointmentDetails({
       </div>
 
       {/* BLOCO 1: Sessão */}
-      <div className="bg-lunar-surface/30 rounded-lg p-4 space-y-3 border border-lunar-border/20">
-        <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-lunar-accent" /> Sessão
+      <div className="rounded-lg border border-border/20 bg-card/60 p-3 space-y-2.5">
+        <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-accent-gold" /> Sessão
         </h3>
         
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="date" className="text-xs text-lunar-muted">Data</Label>
+            <Label htmlFor="date" className="text-xs text-muted-foreground">Data</Label>
             <Input 
               id="date" 
               name="date" 
@@ -337,7 +337,7 @@ export default function AppointmentDetails({
             />
           </div>
           <div>
-            <Label htmlFor="time" className="text-xs text-lunar-muted">Horário</Label>
+            <Label htmlFor="time" className="text-xs text-muted-foreground">Horário</Label>
             <Input 
               id="time" 
               name="time" 
@@ -351,7 +351,7 @@ export default function AppointmentDetails({
         </div>
 
         <div>
-          <Label htmlFor="package" className="text-xs text-lunar-muted">Pacote</Label>
+          <Label htmlFor="package" className="text-xs text-muted-foreground">Pacote</Label>
           <div className={`mt-1 ${!isEditable ? 'opacity-50 pointer-events-none' : ''}`}>
             <PackageSearchCombobox
               value={formData.packageId}
@@ -363,9 +363,9 @@ export default function AppointmentDetails({
 
         {/* Toggle de status - apenas para pendentes */}
         {formData.status === 'a confirmar' && (
-          <div className="pt-2 border-t border-lunar-border/20">
+          <div className="pt-2 border-t border-border/20">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-lunar-muted">Alterar status</span>
+              <span className="text-xs text-muted-foreground">Alterar status</span>
               <Button 
                 variant="outline" 
                 size="sm"
@@ -380,8 +380,8 @@ export default function AppointmentDetails({
 
         {/* Aviso para confirmados - não pode reverter */}
         {formData.status === 'confirmado' && (
-          <div className="pt-2 border-t border-lunar-border/20">
-            <p className="text-xs text-lunar-muted italic flex items-center gap-1.5">
+          <div className="pt-2 border-t border-border/20">
+            <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
               <AlertCircle className="h-3.5 w-3.5" />
               Agendamentos confirmados não podem ser revertidos. Se necessário, exclua e reagende.
             </p>
@@ -390,15 +390,15 @@ export default function AppointmentDetails({
       </div>
 
       {/* BLOCO 2: Financeiro */}
-      <div className="bg-lunar-surface/30 rounded-lg p-4 space-y-3 border border-lunar-border/20">
-        <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-lunar-accent" /> Financeiro
+      <div className="rounded-lg border border-border/20 bg-card/60 p-3 space-y-2.5">
+        <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
+          <DollarSign className="h-4 w-4 text-accent-gold" /> Financeiro
         </h3>
         
         <div className="flex justify-between items-center text-sm">
-          <span className="text-lunar-muted">Valor de entrada</span>
+          <span className="text-muted-foreground">Valor de entrada</span>
           <div className="flex items-center gap-1">
-            <span className="text-lunar-muted text-xs">R$</span>
+            <span className="text-muted-foreground text-xs">R$</span>
             <Input 
               id="paidAmount" 
               name="paidAmount" 
@@ -408,14 +408,14 @@ export default function AppointmentDetails({
               value={paidAmountInput.displayValue} 
               onChange={paidAmountInput.handleChange} 
               onFocus={paidAmountInput.handleFocus}
-              className={`w-24 h-7 text-sm text-right ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} 
+              className={`w-24 h-8 text-sm text-right ${!isEditable ? 'bg-muted cursor-not-allowed' : ''}`} 
               disabled={!isEditable} 
             />
           </div>
         </div>
 
         {formData.status === 'a confirmar' && resolvedClienteId && (
-          <div className="pt-2 border-t border-lunar-border/20">
+          <div className="pt-2 border-t border-border/20">
             <Button
               type="button"
               variant="outline"
@@ -489,15 +489,15 @@ export default function AppointmentDetails({
               <CreditCard className="h-3.5 w-3.5" />
               Cobrar cliente via link
             </Button>
-            <p className="text-[10px] text-lunar-muted mt-1.5 text-center">
+            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
               Quando o cliente pagar, o agendamento será confirmado automaticamente.
             </p>
           </div>
         )}
 
         {formData.status === 'a confirmar' && !resolvedClienteId && (
-          <div className="pt-2 border-t border-lunar-border/20">
-            <p className="text-[11px] text-lunar-muted text-center italic">
+          <div className="pt-2 border-t border-border/20">
+            <p className="text-[11px] text-muted-foreground text-center italic">
               Vincule um cliente do CRM para habilitar cobrança via link.
             </p>
           </div>
@@ -505,9 +505,9 @@ export default function AppointmentDetails({
       </div>
 
       {/* BLOCO 3: Observações */}
-      <div className="bg-lunar-surface/30 rounded-lg p-4 border border-lunar-border/20">
-        <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2 mb-2">
-          <FileText className="h-4 w-4 text-lunar-accent" /> Observações
+      <div className="rounded-lg border border-border/20 bg-card/60 p-3">
+        <h3 className="text-xs font-semibold text-foreground flex items-center gap-2 mb-2">
+          <FileText className="h-4 w-4 text-accent-gold" /> Observações
         </h3>
         <Textarea 
           id="description" 
@@ -520,10 +520,10 @@ export default function AppointmentDetails({
       </div>
 
       {/* BLOCO 4: Briefing */}
-      <div className="bg-lunar-surface/30 rounded-lg p-4 border border-lunar-border/20">
+      <div className="rounded-lg border border-border/20 bg-card/60 p-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-lunar-text flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-lunar-accent" /> Briefing
+          <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-accent-gold" /> Briefing
           </h3>
           <Button
             variant="outline"
@@ -539,7 +539,7 @@ export default function AppointmentDetails({
           <div className="space-y-1.5">
             {sessionFormularios.map((form) => (
               <div key={form.id} className="flex items-center justify-between text-sm py-1">
-                <span className="text-lunar-text truncate">{form.titulo}</span>
+                <span className="text-foreground truncate">{form.titulo}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   {form.status_envio === 'respondido' ? (
                     <>
@@ -569,54 +569,54 @@ export default function AppointmentDetails({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-lunar-muted">Nenhum briefing enviado</p>
+          <p className="text-xs text-muted-foreground">Nenhum briefing enviado</p>
         )}
       </div>
 
       {/* BLOCO 5: Histórico da Sessão (Colapsável) */}
       <Collapsible open={historyOpen} onOpenChange={handleHistoryToggle}>
-        <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-4 text-sm font-medium text-lunar-text bg-lunar-surface/30 rounded-lg border border-lunar-border/20 hover:bg-lunar-surface/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 px-3 text-xs font-semibold text-foreground rounded-lg border border-border/20 bg-card/60 hover:bg-accent/40 transition-colors">
           <ChevronRight className={`h-4 w-4 transition-transform ${historyOpen ? 'rotate-90' : ''}`} />
-          <History className="h-4 w-4 text-lunar-accent" />
+          <History className="h-4 w-4 text-accent-gold" />
           Histórico da Sessão
           {!workflowInfo.hasSession && (
-            <span className="ml-auto text-xs text-lunar-muted">(não confirmado)</span>
+            <span className="ml-auto text-xs text-muted-foreground">(não confirmado)</span>
           )}
         </CollapsibleTrigger>
         
         <CollapsibleContent className="pt-2">
-          <div className="bg-lunar-surface/20 rounded-lg p-4 border border-lunar-border/10 space-y-3">
+          <div className="rounded-lg border border-border/20 bg-muted/30 p-3 space-y-2.5">
             {loadingDetails ? (
               <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin text-lunar-muted" />
-                <span className="ml-2 text-sm text-lunar-muted">Carregando...</span>
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
               </div>
             ) : sessionDetails ? (
               <>
                 {/* Dados do Pacote */}
                 <div className="flex justify-between text-sm">
-                  <span className="text-lunar-muted flex items-center gap-1">
+                  <span className="text-muted-foreground flex items-center gap-1">
                     <Package className="h-3 w-3" /> Pacote
                   </span>
-                  <span className="text-lunar-text">{sessionDetails.pacote || '-'}</span>
+                  <span className="text-foreground">{sessionDetails.pacote || '-'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-lunar-muted">Categoria</span>
-                  <span className="text-lunar-text">{sessionDetails.categoria}</span>
+                  <span className="text-muted-foreground">Categoria</span>
+                  <span className="text-foreground">{sessionDetails.categoria}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-lunar-muted">Valor do Pacote</span>
-                  <span className="text-lunar-text">R$ {sessionDetails.valorBasePacote.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Valor do Pacote</span>
+                  <span className="text-foreground">R$ {sessionDetails.valorBasePacote.toFixed(2)}</span>
                 </div>
                 
                 {/* Produtos (se houver) */}
                 {sessionDetails.produtos && sessionDetails.produtos.length > 0 && (
-                  <div className="border-t border-lunar-border/20 pt-2">
-                    <span className="text-xs font-medium text-lunar-muted">Produtos</span>
+                  <div className="border-t border-border/20 pt-2">
+                    <span className="text-xs font-medium text-muted-foreground">Produtos</span>
                     {sessionDetails.produtos.map((p, idx) => (
                       <div key={idx} className="flex justify-between text-xs mt-1">
-                        <span className="text-lunar-text">{p.nome} (x{p.quantidade})</span>
-                        <span className="text-lunar-text">R$ {p.valorTotal.toFixed(2)}</span>
+                        <span className="text-foreground">{p.nome} (x{p.quantidade})</span>
+                        <span className="text-foreground">R$ {p.valorTotal.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -625,34 +625,34 @@ export default function AppointmentDetails({
                 {/* Fotos extras */}
                 {sessionDetails.qtdFotosExtra > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-lunar-muted">
+                    <span className="text-muted-foreground">
                       Fotos extras ({sessionDetails.qtdFotosExtra}x)
                     </span>
-                    <span className="text-lunar-text">R$ {sessionDetails.valorTotalFotoExtra.toFixed(2)}</span>
+                    <span className="text-foreground">R$ {sessionDetails.valorTotalFotoExtra.toFixed(2)}</span>
                   </div>
                 )}
 
                 {/* Desconto */}
                 {sessionDetails.desconto > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-lunar-muted">Desconto</span>
+                    <span className="text-muted-foreground">Desconto</span>
                     <span className="text-lunar-error">- R$ {sessionDetails.desconto.toFixed(2)}</span>
                   </div>
                 )}
                 
-                <Separator className="bg-lunar-border/20" />
+                <Separator className="bg-border/20" />
                 
                 {/* Resumo financeiro */}
                 <div className="flex justify-between text-sm font-medium">
-                  <span className="text-lunar-text">Total</span>
-                  <span className="text-lunar-text">R$ {sessionDetails.valorTotal.toFixed(2)}</span>
+                  <span className="text-foreground">Total</span>
+                  <span className="text-foreground">R$ {sessionDetails.valorTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-lunar-muted">Pago</span>
+                  <span className="text-muted-foreground">Pago</span>
                   <span className="text-lunar-success">R$ {sessionDetails.valorPago.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-medium items-center">
-                  <span className="text-lunar-muted">Pendente</span>
+                  <span className="text-muted-foreground">Pendente</span>
                   <div className="flex items-center gap-2">
                     {resolvedClienteId && (
                       <SessionCreditBadge
@@ -668,11 +668,11 @@ export default function AppointmentDetails({
                 </div>
               </>
             ) : workflowInfo.hasSession ? (
-              <p className="text-sm text-lunar-muted text-center py-2">
+              <p className="text-sm text-muted-foreground text-center py-2">
                 Erro ao carregar dados da sessão
               </p>
             ) : (
-              <p className="text-sm text-lunar-muted text-center py-2">
+              <p className="text-sm text-muted-foreground text-center py-2">
                 Sessão ainda não confirmada no Workflow
               </p>
             )}
@@ -681,7 +681,7 @@ export default function AppointmentDetails({
       </Collapsible>
       
       {/* Footer com botões */}
-      <div className="flex justify-between pt-4 border-t border-lunar-border/20">
+      <div className="flex justify-between pt-4 border-t border-border/20">
         <Button variant="destructive" onClick={() => setDeleteModalOpen(true)} className="text-xs h-9">
           Excluir
         </Button>

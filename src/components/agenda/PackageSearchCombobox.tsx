@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { configurationService } from '@/services/ConfigurationService';
+import { DROPDOWN_PANEL, DROPDOWN_ITEM } from '@/lib/dialogTokens';
+
 
 // Função para normalizar texto (remover acentos e caracteres especiais)
 const normalizeText = (text: string): string => {
@@ -173,18 +175,18 @@ export default function PackageSearchCombobox({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 dropdown-solid border border-border rounded-md shadow-lg max-h-60 overflow-auto scrollbar-minimal">
+        <div className={DROPDOWN_PANEL}>
           {Object.keys(groupedPackages).length > 0 ? (
             Object.entries(groupedPackages).map(([category, packages]) => (
               <div key={category}>
-                <div className="px-3 py-1 dropdown-solid-header text-[11px] font-medium text-muted-foreground border-b border-border">
+                <div className="px-3 py-1 dropdown-solid-header text-[11px] font-medium text-muted-foreground border-b border-border/20">
                   {category}
                 </div>
                 {packages.map((pkg) => (
                   <div
                     key={pkg.id}
                     onClick={() => handleSelect(pkg.id)}
-                    className="px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border last:border-b-0"
+                    className={DROPDOWN_ITEM}
                   >
                     <div className="flex items-center">
                       <Package className="h-3 w-3 mr-2 text-muted-foreground" />
@@ -192,9 +194,10 @@ export default function PackageSearchCombobox({
                         <div className="flex items-center">
                           <span className="font-medium">{pkg.name}</span>
                           {value === pkg.id && (
-                            <Check className="ml-2 h-3 w-3 text-green-600" />
+                            <Check className="ml-2 h-3 w-3 text-lunar-success" />
                           )}
                         </div>
+
                         <div className="text-[11px] text-muted-foreground">
                           R$ {pkg.price.toFixed(2)}
                         </div>

@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { Plus, X, Clock, Settings } from 'lucide-react';
 import { formatDateForInput } from '@/utils/dateUtils';
 import type { DateRange } from 'react-day-picker';
-import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS, FIELD_LABEL } from '@/lib/dialogTokens';
 
 type Action = 'liberar' | 'bloquear';
 type WeekdayMode = 'all' | 'specific';
@@ -324,7 +324,7 @@ export default function AvailabilityConfigModal({
           <DialogTitle className={DIALOG_TITLE_CLS}>Configurar disponibilidade</DialogTitle>
         </DialogHeader>
 
-        <div className={cn(DIALOG_BODY, "space-y-6 pt-2 pr-1")}>
+        <div className={cn(DIALOG_BODY, "space-y-4 pt-2 pr-1")}>
           {/* === Seção: Horários de Trabalho Padrão (topo) === */}
           <div className="border-b pb-4">
             <button
@@ -336,7 +336,7 @@ export default function AvailabilityConfigModal({
                   setWorkingHoursInput('');
                 }
               }}
-              className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors w-full"
+              className="flex items-center gap-2 text-xs font-semibold text-foreground hover:text-primary transition-colors w-full"
             >
               <Settings className="h-4 w-4" />
               Horários de trabalho padrão
@@ -348,7 +348,7 @@ export default function AvailabilityConfigModal({
             </button>
 
             {showWorkingHours && (
-              <div className="mt-3 space-y-3 p-3 rounded-lg border border-border/20 bg-card/60">
+              <div className="mt-2.5 space-y-2.5 rounded-lg border border-border/20 bg-card/60 p-3">
                 <p className="text-xs text-muted-foreground">
                   Defina os horários padrão que aparecerão na agenda para todos os dias sem personalização.
                 </p>
@@ -435,13 +435,13 @@ export default function AvailabilityConfigModal({
 
           {/* === Seção 1: Ação === */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">O que deseja fazer?</Label>
+            <Label className={FIELD_LABEL}>O que deseja fazer?</Label>
             <div className="grid grid-cols-2 gap-1 rounded-lg border border-border/40 bg-muted/40 p-1">
               <button
                 type="button"
                 onClick={() => setAction('liberar')}
                 className={cn(
-                  'rounded-md px-3 py-2 text-sm font-medium transition-all',
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                   action === 'liberar'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -453,7 +453,7 @@ export default function AvailabilityConfigModal({
                 type="button"
                 onClick={() => setAction('bloquear')}
                 className={cn(
-                  'rounded-md px-3 py-2 text-sm font-medium transition-all',
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                   action === 'bloquear'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -466,7 +466,7 @@ export default function AvailabilityConfigModal({
 
           {/* === Seção 2: Período === */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Período</Label>
+            <Label className={FIELD_LABEL}>Período</Label>
             <div className="flex justify-center">
               <Calendar
                 mode="range"
@@ -488,7 +488,7 @@ export default function AvailabilityConfigModal({
                     onChange={() => setWeekdayMode('all')}
                     className="accent-primary"
                   />
-                  <span className="text-sm">Todos os dias do período</span>
+                  <span className="text-[13px]">Todos os dias do período</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -498,7 +498,7 @@ export default function AvailabilityConfigModal({
                     onChange={() => setWeekdayMode('specific')}
                     className="accent-primary"
                   />
-                  <span className="text-sm">Dias específicos da semana</span>
+                  <span className="text-[13px]">Dias específicos da semana</span>
                 </label>
               </div>
 
@@ -520,7 +520,7 @@ export default function AvailabilityConfigModal({
 
           {/* === Seção 3: Aplicação === */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Aplicação</Label>
+            <Label className={FIELD_LABEL}>Aplicação</Label>
 
             {action === 'bloquear' ? (
               <div className="space-y-3">
@@ -533,7 +533,7 @@ export default function AvailabilityConfigModal({
                       onChange={() => setBlockMode('fullDay')}
                       className="accent-primary"
                     />
-                    <span className="text-sm">Dia inteiro</span>
+                    <span className="text-[13px]">Dia inteiro</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -543,7 +543,7 @@ export default function AvailabilityConfigModal({
                       onChange={() => setBlockMode('specific')}
                       className="accent-primary"
                     />
-                    <span className="text-sm">Horários específicos</span>
+                    <span className="text-[13px]">Horários específicos</span>
                   </label>
                 </div>
 
@@ -604,7 +604,7 @@ export default function AvailabilityConfigModal({
                       className="accent-primary"
                     />
                     <div>
-                      <span className="text-sm">Criar novos horários</span>
+                      <span className="text-[13px]">Criar novos horários</span>
                       <p className="text-xs text-muted-foreground">Adiciona onde não houver disponibilidade ou bloqueio</p>
                     </div>
                   </label>
@@ -617,7 +617,7 @@ export default function AvailabilityConfigModal({
                       className="accent-primary"
                     />
                     <div>
-                      <span className="text-sm">Substituir existentes</span>
+                      <span className="text-[13px]">Substituir existentes</span>
                       <p className="text-xs text-muted-foreground">Recria horários disponíveis (bloqueios são preservados)</p>
                     </div>
                   </label>
