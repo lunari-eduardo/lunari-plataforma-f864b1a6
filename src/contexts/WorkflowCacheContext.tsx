@@ -125,27 +125,46 @@ export const WorkflowCacheProvider: React.FC<{ children: React.ReactNode }> = ({
     [],
   );
 
-  // Inicializar BroadcastChannel para sync entre tabs
+  // Inicializar BroadcastChannel para sync entre tabs — com fallback
+  // via `storage` event para Safari < 15.4 / modo privado.
   useEffect(() => {
-    broadcastChannel.current = new BroadcastChannel('workflow-cache-sync');
-    
-    broadcastChannel.current.onmessage = async (event) => {
-      if (event.data.type === 'cache-updated' && userId) {
-        const { year, month } = event.data;
-        // Recarregar do IndexedDB
-        const data = await indexedDBCache.get<WorkflowSession[]>(userId, year, month);
-        if (data) {
+    const BC_KEY = 'workflow-cache-sync';
+    const LS_FALLBACK_KEY = '__lunari_bc_workflow_cache_sync__';
+
+    const applyMessage = async (data: any) => {
+      if (data?.type === 'cache-updated' && userId) {
+        const { year, month } = data;
+        const stored = await indexedDBCache.get<WorkflowSession[]>(userId, year, month);
+        if (stored) {
           const key = `${year}-${String(month).padStart(2, '0')}`;
-          memoryCache.current.set(key, data);
+          memoryCache.current.set(key, stored);
           notifySubscribers();
         }
       }
     };
 
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        broadcastChannel.current = new BroadcastChannel(BC_KEY);
+        broadcastChannel.current.onmessage = (event) => { void applyMessage(event.data); };
+      }
+    } catch {
+      broadcastChannel.current = null;
+    }
+
+    // Fallback universal: storage event (dispara entre abas do mesmo origin).
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== LS_FALLBACK_KEY || !e.newValue) return;
+      try { void applyMessage(JSON.parse(e.newValue)); } catch { /* noop */ }
+    };
+    window.addEventListener('storage', onStorage);
+
     return () => {
       broadcastChannel.current?.close();
+      window.removeEventListener('storage', onStorage);
     };
   }, [userId]);
+
 
   // Monitorar auth state
   useEffect(() => {
