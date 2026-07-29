@@ -73,9 +73,11 @@ interface FormState {
   recebimento: string | null;
   formaPagamento: string | null;
   observacoes: string;
+  pago: boolean;
 }
 
-function initialState(): FormState {
+function initialState(tipo: LancamentoTipo): FormState {
+  const meta = getLancamentoTipoMeta(tipo);
   return {
     valor: 0,
     itemId: null,
@@ -86,8 +88,11 @@ function initialState(): FormState {
     recebimento: hoje(),
     formaPagamento: null,
     observacoes: '',
+    // Receitas: default = já recebido. Despesas/investimento: default = pendente.
+    pago: meta.natureza === 'entrada',
   };
 }
+
 
 // ─────────────────────────────────────────────────────────────
 // Componente
