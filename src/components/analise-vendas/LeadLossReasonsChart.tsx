@@ -90,7 +90,7 @@ export function LeadLossReasonsChart() {
                     <div className="w-4 shrink-0" />
                     <div className="flex-1 h-1.5 bg-lunar-border/30 rounded-full overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-destructive transition-all duration-300"
+                        className="h-full rounded-full bg-[hsl(var(--accent-gold))] transition-all duration-300"
                         style={{ 
                           width: `${barWidth}%`,
                           opacity: Math.max(opacity, 0.4)
