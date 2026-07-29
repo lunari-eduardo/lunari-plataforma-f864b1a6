@@ -82,7 +82,9 @@ export function useVendaAvulsa() {
           observacoes: input.observacoes || null,
           produtos_incluidos: produtosIncluidos,
           valor_pago: input.registrarPagamento ? input.valorTotal : 0,
-          status: input.registrarPagamento ? 'concluido' : 'agendado',
+          // Sem etapa: venda avulsa entra no funil sem status, o fotógrafo
+          // escolhe a etapa se quiser acompanhar produção.
+          status: null,
           tipo_registro: 'venda_avulsa',
         })
         .select()
