@@ -33,6 +33,7 @@ import {
 import LancamentoForm from './LancamentoForm';
 import VendaAvulsaPanel from '@/modules/finance/presentation/vendaAvulsa/VendaAvulsaPanel';
 import { useQueryClient } from '@tanstack/react-query';
+import { invalidateFinanceAll } from '@/modules/finance/infrastructure/realtime/invalidateFinanceAll';
 
 // ─────────────────────────────────────────────────────────────
 // Contexto
@@ -99,14 +100,9 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
   }, []);
 
   const handleVendaSucesso = useCallback(() => {
-    // Invalida caches financeiros e de workflow para refletir a nova venda.
-    queryClient.invalidateQueries({ queryKey: ['transacoes'] });
-    queryClient.invalidateQueries({ queryKey: ['dashboard-financeiro'] });
-    queryClient.invalidateQueries({ queryKey: ['workflow-metrics'] });
-    queryClient.invalidateQueries({ queryKey: ['workflow-metrics-by-year'] });
-    queryClient.invalidateQueries({ queryKey: ['extrato'] });
-    queryClient.invalidateQueries({ queryKey: ['clientes-sessoes'] });
+    invalidateFinanceAll(queryClient);
   }, [queryClient]);
+
 
   const value = useMemo<LancamentoDrawerContextValue>(
     () => ({ open, close, openVendaAvulsa, isOpen: tipo !== null, currentTipo: tipo }),

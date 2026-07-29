@@ -18,6 +18,7 @@ import { supabaseItemsRepo } from "../supabase/itemsRepo";
 import { transactionsStore } from "../../presentation/store/transactionsStore";
 import { itemsStore } from "../../presentation/store/itemsStore";
 import { financeRealtime } from "./financeRealtimeChannel";
+import { invalidateFinanceAll } from "./invalidateFinanceAll";
 
 const VISIBILITY_REHYDRATE_AFTER_MS = 30_000;
 const BACKOFF_MS = [1_000, 3_000, 10_000];
@@ -81,12 +82,7 @@ export function FinanceRealtimeBridge() {
     const invalidateTxDebounced = () => {
       if (txTimerRef.current) clearTimeout(txTimerRef.current);
       txTimerRef.current = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
-        // Dashboard direto (query dedicada do useDashboardFinanceiro)
-        queryClient.invalidateQueries({ queryKey: ["dashboard-transactions-period"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard-available-years"] });
-        // Breakdown por natureza (capability finance.kpi.byNatureRange)
-        queryClient.invalidateQueries({ queryKey: ["finance", "kpisByNatureRange"] });
+        invalidateFinanceAll(queryClient);
       }, TX_DEBOUNCE_MS);
     };
 

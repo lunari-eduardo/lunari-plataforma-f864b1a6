@@ -34,6 +34,10 @@ import {
   markTransactionPaid,
   markTransactionPending,
 } from '@/modules/finance';
+import {
+  invalidateFinanceAll,
+  refetchDashboardActive,
+} from '@/modules/finance/infrastructure/realtime/invalidateFinanceAll';
 
 export interface CreateTransactionParams {
   item_id: string;
@@ -295,8 +299,7 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   const runCapability = useRunCapability();
 
   function invalidateAll() {
-    queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['extrato-unificado'] });
+    invalidateFinanceAll(queryClient);
   }
 
   function unwrapOrThrow<T>(
@@ -304,6 +307,40 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   ): T {
     if (result.ok) return result.value as T;
     throw new CapabilityError((result as { ok: false; error: any }).error);
+  }
+
+
+  /**
+   * Snapshot + patch de todas as queries `['financial-transactions', ...]` no cache.
+   * Retorna função de rollback.
+   */
+  function patchAllMonthQueries(
+    predicate: (t: TransacaoComItem) => boolean,
+    transform: (t: TransacaoComItem) => TransacaoComItem | null,
+  ): () => void {
+    const entries = queryClient.getQueriesData<TransacaoComItem[]>({
+      queryKey: ['financial-transactions'],
+    });
+    const snapshots: Array<[readonly unknown[], TransacaoComItem[] | undefined]> = [];
+    for (const [key, data] of entries) {
+      snapshots.push([key, data]);
+      if (!Array.isArray(data)) continue;
+      const next: TransacaoComItem[] = [];
+      let changed = false;
+      for (const row of data) {
+        if (predicate(row)) {
+          const patched = transform(row);
+          changed = true;
+          if (patched) next.push(patched);
+        } else {
+          next.push(row);
+        }
+      }
+      if (changed) queryClient.setQueryData(key, next);
+    }
+    return () => {
+      for (const [key, data] of snapshots) queryClient.setQueryData(key, data);
+    };
   }
 
   const criarTransacaoMutation = useMutation({
@@ -334,7 +371,6 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
           const res = await runCapability(markTransactionPending, { id, source: 'user' } as any);
           unwrapOrThrow(res);
         } else {
-          // 'Agendado' não tem capability dedicada — limitação documentada.
           console.warn('[finance] update.status="Agendado" não suportado via capability; ignorado.');
         }
       }
@@ -368,23 +404,64 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
       unwrapOrThrow(res);
       return { id };
     },
-    onSuccess: () => invalidateAll(),
-    onError: (error) => {
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['financial-transactions'] });
+      const rollback = patchAllMonthQueries(
+        (t) => t.id === id,
+        () => null,
+      );
+      try {
+        transactionsStore.remove(id);
+      } catch {
+        /* noop */
+      }
+      return { rollback };
+    },
+    onError: (error, _id, ctx) => {
+      ctx?.rollback?.();
       console.error('Erro ao remover transação:', error);
       toast({ title: 'Erro', description: 'Erro ao remover transação', variant: 'destructive' });
     },
+    onSettled: () => {
+      invalidateAll();
+      refetchDashboardActive(queryClient);
+    },
   });
 
+  type MarcarPagoInput = string | { id: string; dataPagamento?: string };
+
   const marcarComoPagoMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await runCapability(markTransactionPaid, { id, source: 'user' } as any);
+    mutationFn: async (input: MarcarPagoInput) => {
+      const { id, dataPagamento } =
+        typeof input === 'string' ? { id: input, dataPagamento: undefined } : input;
+      const payload: any = { id, source: 'user' };
+      if (dataPagamento) payload.dataPagamento = dataPagamento;
+      const res = await runCapability(markTransactionPaid, payload);
       unwrapOrThrow(res);
       return { id };
     },
-    onSuccess: () => invalidateAll(),
-    onError: (error) => {
+    onMutate: async (input: MarcarPagoInput) => {
+      const { id, dataPagamento } =
+        typeof input === 'string' ? { id: input, dataPagamento: undefined } : input;
+      await queryClient.cancelQueries({ queryKey: ['financial-transactions'] });
+      const rollback = patchAllMonthQueries(
+        (t) => t.id === id,
+        (t) => ({
+          ...t,
+          status: 'Pago' as StatusTransacao,
+          ...(dataPagamento ? { data_pagamento: dataPagamento } as any : {}),
+        }),
+      );
+      return { rollback };
+    },
+    onError: (error, _input, ctx) => {
+      ctx?.rollback?.();
       console.error('Erro ao marcar como pago:', error);
       toast({ title: 'Erro', description: 'Erro ao marcar como pago', variant: 'destructive' });
+    },
+    onSettled: () => {
+      invalidateAll();
+      refetchDashboardActive(queryClient);
     },
   });
 

@@ -16,7 +16,6 @@ import { Loader2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
-import { useRunCapability } from '@/shared/capability/react';
 import {
   getLancamentoTipoMeta,
   isCampoPermitido,
@@ -35,7 +34,6 @@ import {
   TextField,
   type SmartSelectOption,
 } from './fields';
-import { markTransactionPaid } from '@/modules/finance';
 
 
 
@@ -123,7 +121,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
   const [state, setState] = useState<FormState>(() => initialState(tipo));
   const [submitting, setSubmitting] = useState(false);
-  const runCapability = useRunCapability();
+  
 
   useEffect(() => {
     // reset quando muda o tipo
@@ -185,28 +183,14 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
     setSubmitting(true);
     try {
-      const result = await createTransactionEngine({
+      await createTransactionEngine({
         itemId: state.itemId,
         valorTotal: state.valor,
         dataPrimeiraOcorrencia: dataPrimeira,
         observacoes,
+        pago: state.pago,
+        dataPagamento: state.pago ? dataPrimeira : undefined,
       });
-      // Se o usuário marcou como pago no toggle, marca a transação recém-criada.
-      if (state.pago && result?.ids?.[0]) {
-        try {
-          await runCapability(markTransactionPaid, {
-            id: result.ids[0],
-            dataPagamento: dataPrimeira,
-            source: 'user',
-          } as any);
-        } catch (payErr: any) {
-          toast({
-            title: 'Lançamento criado, mas não foi marcado como pago',
-            description: payErr?.message ?? 'Você pode marcar manualmente no extrato.',
-            variant: 'destructive',
-          });
-        }
-      }
       onCreated?.();
       onClose();
     } catch (e: any) {
@@ -219,6 +203,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       setSubmitting(false);
     }
   }
+
 
 
   // ─────────────────────────────────────────────────────────
