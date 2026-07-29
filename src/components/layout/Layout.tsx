@@ -16,15 +16,11 @@ export default function Layout() {
   // Inicializar monitoramento de equipamentos
   useEquipmentSync();
 
-  const isDashboard = location.pathname === '/app' || location.pathname === '/app/';
-  
   return <div className="flex h-screen bg-background">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Backgrounds */}
-        {isDashboard && <DashboardBackground />}
-        {!isDashboard && <InternalBackground />}
+      <div className="flex-1 flex flex-col overflow-hidden relative bg-background">
+
 
         <TrialBanner />
         <Header />
