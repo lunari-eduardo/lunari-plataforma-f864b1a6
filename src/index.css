@@ -554,7 +554,7 @@
   }
   .nav-item-lunar:hover {
     background: hsl(var(--accent-gold) / 0.20);
-    color: hsl(var(--foreground));
+    /* inherit current text color — sidebar overrides with --sidebar-fg */
   }
   .nav-item-lunar.active {
     color: hsl(var(--accent-gold));
