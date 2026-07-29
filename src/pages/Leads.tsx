@@ -51,7 +51,7 @@ export default function Leads() {
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="h-[calc(100vh-4rem)] flex flex-col pl-2 md:pl-4">
       {/* Mobile Metrics Toggle Button */}
       {isMobile && (
         <div className="flex-shrink-0 px-2 pt-2">
