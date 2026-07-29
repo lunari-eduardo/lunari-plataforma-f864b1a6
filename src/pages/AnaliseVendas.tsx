@@ -228,7 +228,8 @@ export default function AnaliseVendas() {
           {/* Leads Perdidos */}
           <LeadLossReasonsChart />
         </section>
-      </main>
+        </main>
+      </PageContainer>
     </div>
   );
 }
