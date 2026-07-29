@@ -38,12 +38,12 @@ export default function AgendaHeader({
 
   const ViewToggleButton = ({ viewKey, label }: { viewKey: ViewType; label: string }) => (
     <Button
-      variant={view === viewKey ? "default" : "ghost"}
+      variant="ghost"
       size="sm"
       onClick={() => onViewChange(viewKey)}
       className={view === viewKey
-        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-        : "text-muted-foreground hover:text-foreground hover:bg-accent-gold/20"
+        ? "h-7 flex-1 bg-background text-[12px] font-medium text-foreground shadow-sm hover:bg-background"
+        : "h-7 flex-1 text-[12px] text-muted-foreground hover:bg-background/60 hover:text-foreground"
       }
     >
       {label}
@@ -55,7 +55,8 @@ export default function AgendaHeader({
       <Button
         variant="outline"
         onClick={onNavigateToday}
-        className={`${classes.buttonHeight} ${classes.buttonPadding} ${classes.subtitle} bg-card/40 dark:bg-card/[0.06] hover:bg-card/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10`}
+        size="sm"
+        className={`${classes.buttonHeight} ${classes.buttonPadding} text-xs`}
       >
         Hoje
       </Button>
@@ -66,12 +67,12 @@ export default function AgendaHeader({
           size="icon"
           onClick={onNavigatePrevious}
           aria-label="Período anterior"
-          className={`bg-card/40 dark:bg-card/[0.06] hover:bg-card/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${classes.iconButton}`}
+          className={classes.iconButton}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
         
-        <div className={`${classes.title} font-medium min-w-[150px] md:min-w-[200px] text-center px-2`}>
+        <div className="text-[13px] font-semibold tracking-tight text-foreground min-w-[150px] md:min-w-[200px] text-center px-2">
           {formatDateTitle(date, view)}
         </div>
         
@@ -80,7 +81,7 @@ export default function AgendaHeader({
           size="icon"
           onClick={onNavigateNext}
           aria-label="Próximo período"
-          className={`bg-card/40 dark:bg-card/[0.06] hover:bg-card/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${classes.iconButton}`}
+          className={classes.iconButton}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -89,7 +90,7 @@ export default function AgendaHeader({
   );
 
   const ViewToggleGroup = () => (
-    <div className="bg-card/40 dark:bg-card/[0.06] border border-white/30 dark:border-white/10 rounded-lg p-1 py-0">
+    <div className="flex items-center gap-0.5 rounded-lg border border-border/40 bg-muted/40 p-1 py-0.5">
       {viewButtons.map(({ key, label }) => (
         <ViewToggleButton key={key} viewKey={key} label={label} />
       ))}
@@ -114,17 +115,18 @@ export default function AgendaHeader({
     <Button
       variant="outline"
       onClick={handleManageClick}
-      className={`bg-card/40 dark:bg-card/[0.06] hover:bg-card/60 dark:hover:bg-white/[0.1] border-white/30 dark:border-white/10 ${
+      size="sm"
+      className={`${
         isMobile 
           ? `${classes.iconButton}` 
           : isTablet 
             ? "h-6 px-3 py-0 my-0 text-xs"
-            : "h-8 px-3 text-sm"
+            : "h-8 px-3 text-xs"
       }`}
       title={isMobile ? "Gerenciar Horários" : undefined}
     >
-      {!hasPro && <Crown className="h-3.5 w-3.5 text-primary" />}
-      {hasPro && <Settings className="h-4 w-4" />}
+      {!hasPro && <Crown className="h-3.5 w-3.5 text-accent-gold" />}
+      {hasPro && <Settings className="h-3.5 w-3.5" />}
       {!isMobile && (
         <span className="ml-1">Gerenciar Horários</span>
       )}
@@ -141,7 +143,7 @@ export default function AgendaHeader({
         
         {/* View Toggle and Manage Button */}
         <div className="flex items-center gap-2 w-full">
-          <div className="flex bg-card/40 dark:bg-card/[0.06] border border-white/30 dark:border-white/10 rounded-lg p-1 flex-1">
+          <div className="flex flex-1 items-center gap-0.5 rounded-lg border border-border/40 bg-muted/40 p-1">
             {viewButtons.map(({ key, label }) => (
               <ViewToggleButton key={key} viewKey={key} label={label} />
             ))}
@@ -151,7 +153,7 @@ export default function AgendaHeader({
 
         {/* Day Title for Daily View */}
         {view === 'day' && (
-          <div className="text-lg font-medium text-lunar-textSecondary">
+          <div className="text-[13px] font-medium text-muted-foreground">
             {formatDayTitle(date)}
           </div>
         )}
@@ -175,7 +177,7 @@ export default function AgendaHeader({
 
         {/* Day Title for Daily View */}
         {view === 'day' && (
-          <div className="text-lg font-medium text-lunar-textSecondary">
+          <div className="text-[13px] font-medium text-muted-foreground">
             {formatDayTitle(date)}
           </div>
         )}
@@ -185,8 +187,8 @@ export default function AgendaHeader({
 
   // Desktop Layout
   return (
-    <div className="flex flex-col items-center justify-center mb-4 gap-3">
-      <div className="flex items-center justify-between w-full max-w-[79rem] mx-auto">
+    <div className="mb-3 flex flex-col items-center justify-center gap-2">
+      <div className="flex w-full items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <NavigationControls />
           <ViewToggleGroup />
@@ -197,7 +199,7 @@ export default function AgendaHeader({
       </div>
 
       {view === 'day' && (
-        <div className="text-lg font-medium text-lunar-textSecondary">
+        <div className="text-[13px] font-medium text-muted-foreground">
           {formatDayTitle(date)}
         </div>
       )}

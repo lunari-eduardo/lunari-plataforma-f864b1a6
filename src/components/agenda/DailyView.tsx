@@ -312,10 +312,10 @@ export default function DailyView({
           return (
             <div
               key={`${time}-${index}`}
-              className={`relative flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 backdrop-blur-sm ${blocked ? 'border-destructive/30' : 'border-white/25 dark:border-white/10'}`}
+              className={`relative flex border rounded-md overflow-hidden py-0 my-[2px] mx-0 px-0 ${blocked ? 'border-destructive/30' : 'border-border/40'}`}
               style={slotBgStyle}
             >
-              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-card/30 dark:bg-card/[0.04]">
+              <div className="p-3 w-16 flex-shrink-0 text-right text-sm text-muted-foreground relative bg-muted/30">
                 {isEditing ? (
                   <div 
                     onClick={(e) => e.stopPropagation()}
@@ -355,7 +355,7 @@ export default function DailyView({
                     onCreateSlot({ date, time });
                   }
                 }} 
-                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-card/40 dark:bg-card/[0.05]'}`}
+                className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-card/60'}`}
               >
                 {events.length > 0 ? (
                   <div className="space-y-2">

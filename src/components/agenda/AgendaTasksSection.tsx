@@ -87,11 +87,11 @@ export default function AgendaTasksSection({
   const getPriorityIndicator = (priority: Task['priority']) => {
     switch (priority) {
       case 'high':
-        return <Circle className="h-2.5 w-2.5 fill-red-500 text-red-500" />;
+        return <Circle className="h-2.5 w-2.5 fill-destructive text-destructive" />;
       case 'medium':
-        return <Circle className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />;
+        return <Circle className="h-2.5 w-2.5 fill-warning text-warning" />;
       case 'low':
-        return <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />;
+        return <Circle className="h-2.5 w-2.5 fill-success text-success" />;
       default:
         return <Circle className="h-2.5 w-2.5 fill-lunar-muted text-lunar-muted" />;
     }
@@ -128,10 +128,10 @@ export default function AgendaTasksSection({
   }
 
   return (
-    <div className="mt-6 p-4 bg-card/30 dark:bg-card/[0.04] border border-white/25 dark:border-white/10 backdrop-blur-sm rounded-lg">
+    <div className="rounded-xl border border-border/20 bg-card/60 shadow-sm p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-lunar-text">
+        <h3 className="text-[13px] font-semibold tracking-tight text-foreground">
           {sectionTitle}
         </h3>
         <Button
@@ -150,7 +150,7 @@ export default function AgendaTasksSection({
         // Monthly summary view
         <div className="space-y-2">
           {monthlyTasksSummary.length === 0 ? (
-            <p className="text-sm text-lunar-muted py-3 text-center">
+            <p className="py-3 text-center text-xs text-muted-foreground">
               Nenhuma tarefa pendente neste mês
             </p>
           ) : (
@@ -158,11 +158,11 @@ export default function AgendaTasksSection({
               {monthlyTasksSummary.map(({ day, count }) => (
                 <li 
                   key={day}
-                  className="flex items-center gap-2 py-2 px-3 rounded-md bg-card/30 hover:bg-card/50 dark:bg-card/[0.04] dark:hover:bg-white/[0.08] cursor-pointer transition-colors group"
+                  className="flex items-center gap-2 py-2 px-3 rounded-md hover:bg-muted/40 cursor-pointer transition-colors group"
                   onClick={() => handleDayItemClick(day)}
                 >
                   <Calendar className="h-3.5 w-3.5 text-lunar-accent" />
-                  <span className="text-sm text-lunar-text flex-1">
+                  <span className="flex-1 text-xs text-foreground">
                     Dia {day} - {count === 1 ? 'existe 1 tarefa' : `existem ${count} tarefas`}
                   </span>
                   <ExternalLink className="h-3 w-3 text-lunar-muted/40 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -175,7 +175,7 @@ export default function AgendaTasksSection({
         // Daily/Weekly task list
         <>
           {visibleTasks.length === 0 ? (
-            <p className="text-sm text-lunar-muted py-3 text-center">
+            <p className="py-3 text-center text-xs text-muted-foreground">
               Nenhuma tarefa para este dia
             </p>
           ) : (
@@ -183,12 +183,12 @@ export default function AgendaTasksSection({
               {visibleTasks.map(task => (
                 <li 
                   key={task.id}
-                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md bg-card/30 hover:bg-card/50 dark:bg-card/[0.04] dark:hover:bg-white/[0.08] cursor-pointer transition-colors group"
+                  className="flex items-center justify-between gap-2 py-2 px-3 rounded-md hover:bg-muted/40 cursor-pointer transition-colors group"
                   onClick={() => handleTaskClick(task.id)}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     {getPriorityIndicator(task.priority)}
-                    <span className="text-sm text-lunar-text truncate">
+                    <span className="truncate text-xs text-foreground">
                       {task.title}
                     </span>
                   </div>

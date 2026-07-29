@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { toTitleCase } from '@/hooks/useTitleCase';
 import { User, Mail, Phone, MapPin, Users, FileText, Loader2, AlertCircle } from 'lucide-react';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 const ORIGENS_PADRAO = [
   { id: 'instagram', nome: 'Instagram', cor: '#E1306C' },
@@ -162,9 +164,9 @@ export function ClientEditModal({
   if (clienteNotFound && !clienteNome) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className={cn(dialogSize('sm'), DIALOG_SHELL)}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
               <AlertCircle className="h-5 w-5 text-lunar-warning" />
               Cliente não vinculado
             </DialogTitle>
@@ -186,9 +188,9 @@ export function ClientEditModal({
   if (clienteNotFound && clienteNome) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className={cn(dialogSize('sm'), DIALOG_SHELL)}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
               <AlertCircle className="h-5 w-5 text-lunar-error" />
               Cliente não encontrado
             </DialogTitle>
@@ -209,10 +211,10 @@ export function ClientEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5 text-lunar-accent" />
+          <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
+            <User className="h-4 w-4 text-muted-foreground" />
             Editar Cliente
           </DialogTitle>
         </DialogHeader>
@@ -222,7 +224,7 @@ export function ClientEditModal({
             <Loader2 className="h-6 w-6 animate-spin text-lunar-muted" />
           </div>
         ) : (
-          <div className="space-y-4 py-4">
+          <div className={cn(DIALOG_BODY, "space-y-4 py-4 pr-1")}>
             {/* Nome */}
             <div className="space-y-2">
               <Label htmlFor="nome" className="flex items-center gap-2 text-sm">

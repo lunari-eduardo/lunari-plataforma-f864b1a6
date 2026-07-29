@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { Plus, X, Clock, Settings } from 'lucide-react';
 import { formatDateForInput } from '@/utils/dateUtils';
 import type { DateRange } from 'react-day-picker';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 type Action = 'liberar' | 'bloquear';
 type WeekdayMode = 'all' | 'specific';
@@ -318,12 +319,12 @@ export default function AvailabilityConfigModal({
   // === Render ===
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Configurar disponibilidade</DialogTitle>
+          <DialogTitle className={DIALOG_TITLE_CLS}>Configurar disponibilidade</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 pt-2">
+        <div className={cn(DIALOG_BODY, "space-y-6 pt-2 pr-1")}>
           {/* === Seção: Horários de Trabalho Padrão (topo) === */}
           <div className="border-b pb-4">
             <button
@@ -347,7 +348,7 @@ export default function AvailabilityConfigModal({
             </button>
 
             {showWorkingHours && (
-              <div className="mt-3 space-y-3 p-3 rounded-lg bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10">
+              <div className="mt-3 space-y-3 p-3 rounded-lg border border-border/20 bg-card/60">
                 <p className="text-xs text-muted-foreground">
                   Defina os horários padrão que aparecerão na agenda para todos os dias sem personalização.
                 </p>
@@ -435,14 +436,14 @@ export default function AvailabilityConfigModal({
           {/* === Seção 1: Ação === */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">O que deseja fazer?</Label>
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-card/30 dark:bg-card/[0.05] p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-border/40 bg-muted/40 p-1">
               <button
                 type="button"
                 onClick={() => setAction('liberar')}
                 className={cn(
                   'rounded-md px-3 py-2 text-sm font-medium transition-all',
                   action === 'liberar'
-                    ? 'bg-card/70 dark:bg-card/[0.1] text-foreground shadow-sm'
+                    ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
@@ -454,7 +455,7 @@ export default function AvailabilityConfigModal({
                 className={cn(
                   'rounded-md px-3 py-2 text-sm font-medium transition-all',
                   action === 'bloquear'
-                    ? 'bg-card/70 dark:bg-card/[0.1] text-foreground shadow-sm'
+                    ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >

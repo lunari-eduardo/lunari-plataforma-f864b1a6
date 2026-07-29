@@ -78,12 +78,12 @@ export default function MonthlyView({
   };
   return (
     <div className="w-full h-full">
-      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-card/15 dark:bg-card/[0.03]">
+      <div className="grid grid-cols-7 gap-px rounded-lg p-1 bg-muted/20">
         {/* Weekday headers */}
         {weekDays.map((day) => (
           <div 
             key={day} 
-            className="h-8 md:h-9 p-1 md:p-2 text-center text-xs font-medium text-muted-foreground bg-card/50 dark:bg-card/[0.06] border border-white/20 dark:border-white/10"
+            className="h-8 md:h-9 p-1 md:p-2 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground bg-muted/40 border border-border/40"
           >
             {day}
           </div>
@@ -93,7 +93,7 @@ export default function MonthlyView({
         {emptyDaysBefore.map((_, index) => (
           <div 
             key={`empty-${index}`} 
-            className={classes.calendarCell + " bg-card/20 dark:bg-card/[0.02] border border-white/20 dark:border-white/10"}
+            className={classes.calendarCell + " bg-muted/20 border border-border/30"}
           />
         ))}
         
@@ -201,7 +201,7 @@ const DayCell = ({
   const cellClassName = `${classes.calendarCell} md:min-h-[104px] lg:min-h-[116px] xl:min-h-[124px] cursor-pointer transition-colors ${
     fullDaySlot 
       ? 'border-2' 
-      : 'bg-card/40 dark:bg-card/[0.05] hover:bg-card/60 dark:hover:bg-white/[0.08] border border-white/20 dark:border-white/10 hover:border-white/40 dark:hover:border-white/20'
+      : 'bg-card/60 hover:bg-muted/40 border border-border/40 hover:border-border'
   }`;
 
   return (

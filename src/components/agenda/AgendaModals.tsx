@@ -6,6 +6,8 @@ import AvailabilityConfigModal from "./AvailabilityConfigModal";
 import ShareAvailabilityModal from "./ShareAvailabilityModal";
 import { Appointment } from "@/modules/agenda/presentation";
 import { Orcamento } from "@/types/orcamento";
+import { cn } from '@/lib/utils';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 interface AgendaModalsProps {
   // Modal states
@@ -75,27 +77,30 @@ export default function AgendaModals({
     <>
       {/* Appointment Form Modal */}
       <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-foreground">
+            <DialogTitle className={DIALOG_TITLE_CLS}>
               {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
             </DialogTitle>
           </DialogHeader>
 
-          <AppointmentForm
-            initialDate={selectedSlot?.date || editingAppointment?.date}
-            initialTime={selectedSlot?.time || editingAppointment?.time}
-            appointment={editingAppointment}
-            onSave={onSaveAppointment}
-            onCancel={() => setIsAppointmentDialogOpen(false)}
-          />
+          <div className={cn(DIALOG_BODY, 'pr-1')}>
+            <AppointmentForm
+              initialDate={selectedSlot?.date || editingAppointment?.date}
+              initialTime={selectedSlot?.time || editingAppointment?.time}
+              appointment={editingAppointment}
+              onSave={onSaveAppointment}
+              onCancel={() => setIsAppointmentDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Appointment Details Modal */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
           {viewingAppointment && (
+            <div className={cn(DIALOG_BODY, 'pr-1')}>
             <AppointmentDetails
               appointment={viewingAppointment}
               onSave={onSaveAppointment}
@@ -103,14 +108,16 @@ export default function AgendaModals({
               onCancel={() => setIsDetailsOpen(false)}
               onDelete={onDeleteAppointment}
             />
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className={cn(dialogSize('lg'), DIALOG_SHELL)}>
           {selectedBudgetAppointment && (
+            <div className={cn(DIALOG_BODY, 'pr-1')}>
             <BudgetAppointmentDetails
               appointment={selectedBudgetAppointment.appointment}
               budget={selectedBudgetAppointment.budget}
@@ -119,6 +126,7 @@ export default function AgendaModals({
               onViewFullBudget={onViewFullBudget}
               onDelete={onDeleteAppointment}
             />
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -126,9 +134,9 @@ export default function AgendaModals({
       {/* Budget Edit Modal - Disabled */}
       {selectedBudget && (
         <Dialog open={isBudgetModalOpen} onOpenChange={setIsBudgetModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
             <DialogHeader>
-              <DialogTitle>Orçamento - Sistema Desabilitado</DialogTitle>
+              <DialogTitle className={DIALOG_TITLE_CLS}>Orçamento - Sistema Desabilitado</DialogTitle>
             </DialogHeader>
             <div className="p-4 text-center text-muted-foreground">
               O sistema de orçamentos foi removido. Use o CRM e Workflow para gerenciar clientes e projetos.

@@ -90,7 +90,7 @@ export default function BudgetAppointmentDetails({
       </div>;
   }
   const valorTotal = budget.valorFinal || budget.valorTotal;
-  return <div className="space-y-2 max-h-[80vh] overflow-y-auto scrollbar-elegant">
+  return <div className="space-y-2">
       {/* Header com badge identificador */}
       <div className="text-center space-y-2">
         <div className="flex items-center justify-center gap-2">

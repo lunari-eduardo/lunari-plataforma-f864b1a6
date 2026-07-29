@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { formatDateForStorage } from '@/utils/dateUtils';
 import { useAvailability } from '@/hooks/useAvailability';
 import { Share2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 interface ShareAvailabilityModalProps {
   isOpen: boolean;
@@ -201,7 +203,7 @@ export default function ShareAvailabilityModal({
   if (availableTypes.length === 0) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
           <DialogHeader>
             <DialogTitle>Compartilhar Horários</DialogTitle>
             <DialogDescription>
@@ -223,9 +225,9 @@ export default function ShareAvailabilityModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className={cn(DIALOG_TITLE_CLS, "flex items-center gap-2")}>
             <Share2 className="h-5 w-5 text-primary" />
             Compartilhar Horários
           </DialogTitle>
@@ -265,7 +267,7 @@ export default function ShareAvailabilityModal({
 
           {/* Preview */}
           {selectedTypeIds.length > 0 && (
-            <div className="p-3 bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10 rounded-lg">
+            <div className="p-3 rounded-lg border border-border/20 bg-card/60">
               <Label className="text-xs font-medium text-muted-foreground">Preview:</Label>
               <div className="text-sm mt-1 whitespace-pre-line max-h-32 overflow-y-auto">
                 {generateShareText()}

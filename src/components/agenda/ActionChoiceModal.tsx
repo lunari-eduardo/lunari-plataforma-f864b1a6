@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar, DollarSign, Settings, Share2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDateForStorage } from '@/utils/dateUtils';
 import { useAvailability } from '@/hooks/useAvailability';
 import { toast } from 'sonner';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 interface ActionChoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -77,7 +79,7 @@ export default function ActionChoiceModal({
     }
   };
   return <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={cn(dialogSize('sm'))}>
         <DialogHeader>
           <div>
               

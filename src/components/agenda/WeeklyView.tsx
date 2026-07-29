@@ -92,12 +92,12 @@ export default function WeeklyView({
     }
   };
 
-  const cellBorder = "border-r border-b border-border/40 dark:border-white/[0.08]";
+  const cellBorder = "border-r border-b border-border/40";
 
   return (
     <div className={`pb-4 scrollbar-elegant ${isMobile ? 'overflow-x-auto' : ''}`}>
       <div className={`${isMobile ? 'min-w-[960px]' : 'w-full'}`}>
-        <div className="grid grid-cols-8 rounded-md border border-border/40 dark:border-white/[0.08] overflow-hidden">
+        <div className="grid grid-cols-8 rounded-md border border-border/40 overflow-hidden">
           {/* First cell empty - for time labels column header */}
           <div className={cn("bg-muted/30 dark:bg-white/[0.03]", cellBorder)}></div>
 
@@ -114,8 +114,8 @@ export default function WeeklyView({
                 className={cn(
                   "text-center cursor-pointer hover:opacity-80 transition-all relative",
                   "bg-muted/30 dark:bg-white/[0.03]",
-                  "border-b border-border/40 dark:border-white/[0.08]",
-                  !isLast && "border-r border-border/40 dark:border-white/[0.08]",
+                  "border-b border-border/40",
+                  !isLast && "border-r border-border/40",
                   isTablet ? 'p-1' : 'p-1 md:p-2',
                   fullDaySlot && "border-b-2",
                   todayCol && !fullDaySlot && "bg-primary/5 dark:bg-primary/10"
@@ -164,8 +164,8 @@ export default function WeeklyView({
                 <div
                   className={cn(
                     classes.timeLabel,
-                    "flex items-center justify-end font-medium text-muted-foreground bg-muted/20 dark:bg-white/[0.02] border-r border-border/40 dark:border-white/[0.08]",
-                    !isLastRow && "border-b border-border/40 dark:border-white/[0.08]"
+                    "flex items-center justify-end font-medium text-muted-foreground bg-muted/20 dark:bg-white/[0.02] border-r border-border/40",
+                    !isLastRow && "border-b border-border/40"
                   )}
                 >
                   {time}
@@ -182,8 +182,8 @@ export default function WeeklyView({
                       className={cn(
                         "relative cursor-pointer transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.04]",
                         classes.weeklyTimeSlot,
-                        !isLastCol && "border-r border-border/40 dark:border-white/[0.08]",
-                        !isLastRow && "border-b border-border/40 dark:border-white/[0.08]"
+                        !isLastCol && "border-r border-border/40",
+                        !isLastRow && "border-b border-border/40"
                       )}
                     >
                       {event ? <div onClick={e => e.stopPropagation()}>

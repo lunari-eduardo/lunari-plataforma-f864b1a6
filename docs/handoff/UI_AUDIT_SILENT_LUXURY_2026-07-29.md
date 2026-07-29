@@ -1,6 +1,6 @@
 # Auditoria de UI — 6 páginas · Padronização "Silent Luxury"
 
-> Data: 2026-07-29 · Status: **Onda 0 implementada**, ondas 1-7 pendentes.
+> Data: 2026-07-29 · Status: **Ondas 0, 1 e 2 implementadas**, ondas 3-7 pendentes.
 > Fonte de verdade visual: `docs/constitution/DESIGN_DNA.md` + `src/styles/lunari-design-rules.md`.
 
 ## Referência do padrão (o que é "certo" hoje)
@@ -177,7 +177,7 @@ Já usa `PageContainer variant="wide"` + `PageHeader`. Desvios:
   - Tokens confirmados: `--success` (light `152 40% 34%` / dark `152 38% 52%`), `--accent-gold` (`39 35% 60%` / `40 45% 66%`), `--shadow-1/2`. Utilitários Tailwind `text-success`, `text-accent-gold`, `bg-accent-gold-soft` já existem.
   - **Zero impacto visual** — nada consome as novas classes ainda.
 - **Onda 1 — Tarefas:** aplicar `.task-card` (kanban + lista), unificar `TaskCard`/`CleanTaskCard`, `glass-btn-primary` → `Button`, container + header. Colunas kanban intocadas.
-- **Onda 2 — Agenda:** container/header, remover glass externo, aplicar `dialogTokens` nos 11 modais, `pb-10`.
+- **Onda 2 — Agenda · ✅ CONCLUÍDA:** container/header, remover glass externo, aplicar `dialogTokens` nos 11 modais, `pb-10`.
 - **Onda 3 — Configurações + Integrações:** tabs unificadas, remover Card wrapper, 79rem, scroll nativo, Crown dourado, densidade alinhada a `PaymentSettings`.
 - **Onda 4 — Clientes + perfil:** container/header, `ClientMetricsGrid` → MetricCard dourado, seção única nas 3 abas, tabs na escala, `pb-10`.
 - **Onda 5 — Precificação:** `PricingHeader` → `PageHeader` + stepper neutro reordenado, `EtapaColapsavel` redesenhado, container/pb.

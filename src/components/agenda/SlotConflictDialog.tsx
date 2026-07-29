@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertTriangle, Lock, Users } from 'lucide-react';
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import type { SlotCheckResult } from '@/hooks/useSlotAvailabilityCheck';
+import { dialogSize, DIALOG_SHELL, DIALOG_BODY, DIALOG_TITLE_CLS } from '@/lib/dialogTokens';
 
 interface SlotConflictDialogProps {
   result: SlotCheckResult | null;
@@ -42,7 +44,7 @@ export function SlotConflictDialog({
 
   return (
     <AlertDialog open onOpenChange={(o) => !o && onClose()}>
-      <AlertDialogContent className="max-w-md z-[70]" data-testid="slot-conflict-dialog">
+      <AlertDialogContent className={cn(dialogSize('sm'), 'z-[70]')} data-testid="slot-conflict-dialog">
         {result.kind === 'busy' && (
           <>
             <AlertDialogHeader>
