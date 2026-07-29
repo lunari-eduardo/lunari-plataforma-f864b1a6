@@ -54,20 +54,27 @@ export function useVersionCheck() {
       console.log(`🧹 Limpando ${cacheNames.length} cache(s)...`);
       await Promise.all(cacheNames.map(name => caches.delete(name)));
       
-      // 3. Limpar IndexedDB
+      // 3. Limpar IndexedDB (Safari não suporta indexedDB.databases())
       try {
+        const knownDbs = ['photoflow-app', 'workbox-precache', 'workbox-runtime', 'vite-cache'];
         if ('databases' in indexedDB) {
-          const dbs = await indexedDB.databases();
-          dbs.forEach(db => {
+          const dbs = await (indexedDB as any).databases();
+          dbs.forEach((db: any) => {
             if (db.name && (db.name.includes('workbox') || db.name.includes('vite'))) {
               console.log(`🧹 Removendo IndexedDB: ${db.name}`);
               indexedDB.deleteDatabase(db.name);
             }
           });
+        } else {
+          // Safari fallback: deletar por nomes conhecidos
+          knownDbs.forEach((name) => {
+            try { indexedDB.deleteDatabase(name); } catch { /* noop */ }
+          });
         }
       } catch (idbError) {
         console.warn('⚠️ Erro ao limpar IndexedDB:', idbError);
       }
+
       
       console.log('✅ Limpeza completa, recarregando...');
       
