@@ -274,7 +274,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col min-h-0 flex-1"
     >
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+      <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-4' : 'px-6 py-5'}`}>
         {/* Valor — protagonista */}
         <CurrencyField
           value={state.valor}
