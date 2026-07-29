@@ -8,6 +8,7 @@ import {
   TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine,
   ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
+// Sparklines removidos dos KPIs para reduzir ruído visual.
 import { formatCurrency } from '@/utils/currencyUtils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { computeHealth, type Health } from '@/modules/finance/domain/healthScore';
