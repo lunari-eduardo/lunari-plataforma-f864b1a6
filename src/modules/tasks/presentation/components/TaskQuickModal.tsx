@@ -265,7 +265,7 @@ export default function TaskQuickModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="glass-modal sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[640px] max-h-[85dvh] overflow-y-auto">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-lg font-bold text-lunar-text">
               {mode === "create" ? "Nova tarefa" : "Editar tarefa"}
