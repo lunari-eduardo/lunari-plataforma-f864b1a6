@@ -1,6 +1,4 @@
 /**
-import { cn } from "@/lib/utils";
-import { dialogSize, DIALOG_TITLE_CLS, DIALOG_DESCRIPTION_CLS } from "@/lib/dialogTokens";
  * TaskModal — modal canônico de visualização e edição de tarefas.
  *
  * Redesign aprovado:
@@ -12,6 +10,8 @@ import { dialogSize, DIALOG_TITLE_CLS, DIALOG_DESCRIPTION_CLS } from "@/lib/dial
  *
  * Substitui `TaskQuickModal` e `UnifiedTaskModal`.
  */
+import { cn } from "@/lib/utils";
+import { dialogSize, DIALOG_TITLE_CLS, DIALOG_DESCRIPTION_CLS } from "@/lib/dialogTokens";
 
 import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { tasksStore } from "../store/tasksStore";
