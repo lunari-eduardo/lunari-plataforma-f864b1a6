@@ -92,9 +92,10 @@ interface Props {
   tipo: LancamentoTipo;
   onClose: () => void;
   onCreated?: () => void;
+  isMobile?: boolean;
 }
 
-export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated }: Props) {
+export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
   const { toast } = useToast();
   const {
@@ -204,7 +205,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           className="contents"
         >
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+          <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-5' : 'px-6 py-6'}`}>
             <p className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
               {ctx.label}
             </p>
@@ -244,11 +245,14 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
               })}
             </div>
           </div>
-          <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
+          <footer
+            className={`flex items-center justify-end gap-2 border-t border-border/40 shrink-0 ${isMobile ? 'px-5 py-3' : 'px-6 py-4'}`}
+            style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' } : undefined}
+          >
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={`rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground ${isMobile ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]'}`}
             >
               Cancelar
             </button>
@@ -270,7 +274,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col min-h-0 flex-1"
     >
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+      <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-4' : 'px-6 py-5'}`}>
         {/* Valor — protagonista */}
         <CurrencyField
           value={state.valor}
@@ -393,12 +397,15 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       </div>
 
       {/* Footer */}
-      <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
+      <footer
+        className={`flex items-center gap-2 border-t border-border/40 shrink-0 ${isMobile ? 'justify-stretch px-5 py-3' : 'justify-end px-6 py-4'}`}
+        style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' } : undefined}
+      >
         <button
           type="button"
           onClick={onClose}
           disabled={submitting}
-          className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+          className={`rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50 ${isMobile ? 'flex-1 px-4 py-2.5 text-[13px]' : 'px-3 py-1.5 text-[12px]'}`}
         >
           Cancelar
         </button>
@@ -409,7 +416,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           whileHover={canSubmit ? { y: -1 } : undefined}
           whileTap={canSubmit ? { scale: 0.97 } : undefined}
           transition={{ duration: 0.15, ease: 'easeOut' }}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent-gold px-3.5 py-1.5 text-[12px] font-semibold text-background shadow-[0_4px_14px_-4px_rgba(198,163,106,0.45)] hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          className={`inline-flex items-center justify-center gap-1.5 rounded-md bg-accent-gold font-semibold text-background shadow-[0_4px_14px_-4px_rgba(198,163,106,0.45)] hover:opacity-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none ${isMobile ? 'flex-[2] px-4 py-2.5 text-[13px]' : 'px-3.5 py-1.5 text-[12px]'}`}
         >
           <AnimatePresence mode="wait" initial={false}>
             {submitting ? (
