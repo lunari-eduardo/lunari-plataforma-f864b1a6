@@ -27,7 +27,7 @@ export function OriginChartsSection({ originData, monthlyOriginData }: OriginCha
       <Card className="border border-lunar-border/30 bg-lunar-surface/50 shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="h-3.5 w-3.5 text-lunar-textSecondary" />
+            <TrendingUp className="h-3.5 w-3.5 text-[hsl(var(--accent-gold))]" />
             <h3 className="text-xs font-medium text-lunar-text">Resumo por Origem</h3>
           </div>
           
