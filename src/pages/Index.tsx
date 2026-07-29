@@ -12,6 +12,7 @@ import { useProductionReminders } from "@/hooks/useProductionReminders";
 import { useFinancialDashboardData } from "@/hooks/useFinancialDashboardData";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { KPIGroupCard } from "@/components/dashboard/KPIGroupCard";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export default function Index() {
   useEffect(() => {
@@ -42,75 +43,76 @@ export default function Index() {
   const pendingCount = overdueAccounts.length + upcomingAccounts.length;
 
   return (
-    <main className="space-y-6 relative z-10">
-      <InstallPWAButton />
+    <PageContainer>
+      <main className="space-y-6 relative z-10 py-4">
+        <InstallPWAButton />
 
-      <DashboardHeader />
+        <DashboardHeader />
 
-      {/* KPIs */}
-      <section
-        aria-label="Indicadores rápidos"
-        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-      >
-        <StatCard
-          icon={CalendarDays}
-          value={sessionsToday}
-          label="Sessões hoje"
-          subtitle={sessionsToday === 0 ? "Nenhuma agendada" : "Confirmadas"}
-          href="/app/agenda"
-        />
-        <StatCard
-          icon={CheckSquare}
-          value={tasksToday}
-          label="Tarefas hoje"
-          subtitle={tasksToday === 0 ? "Tudo em dia" : "Para concluir"}
-          href="/app/tarefas"
-          tone="success"
-        />
-        <StatCard
-          icon={AlertCircle}
-          value={overdueCount}
-          label="Atrasadas"
-          subtitle={overdueCount === 0 ? "Nada em atraso" : "Requer atenção"}
-          href="/app/financas"
-        />
-        <StatCard
-          icon={Clock}
-          value={pendingCount}
-          label="Pendentes"
-          subtitle={pendingCount === 0 ? "Sem pendências" : "Contas em aberto"}
-          href="/app/financas"
-        />
-      </section>
+        {/* KPIs */}
+        <section
+          aria-label="Indicadores rápidos"
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          <StatCard
+            icon={CalendarDays}
+            value={sessionsToday}
+            label="Sessões hoje"
+            subtitle={sessionsToday === 0 ? "Nenhuma agendada" : "Confirmadas"}
+            href="/app/agenda"
+          />
+          <StatCard
+            icon={CheckSquare}
+            value={tasksToday}
+            label="Tarefas hoje"
+            subtitle={tasksToday === 0 ? "Tudo em dia" : "Para concluir"}
+            href="/app/tarefas"
+          />
+          <StatCard
+            icon={AlertCircle}
+            value={overdueCount}
+            label="Atrasadas"
+            subtitle={overdueCount === 0 ? "Nada em atraso" : "Requer atenção"}
+            href="/app/financas"
+          />
+          <StatCard
+            icon={Clock}
+            value={pendingCount}
+            label="Pendentes"
+            subtitle={pendingCount === 0 ? "Sem pendências" : "Contas em aberto"}
+            href="/app/financas"
+          />
+        </section>
 
-      {/* Próximos Agendamentos + Lembretes de Produção */}
-      <section className="grid gap-4 sm:gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <ProximosAgendamentosCard />
-        </div>
-        <div className="lg:col-span-2">
-          <ProductionRemindersCard lembretes={lembretesProducao} />
-        </div>
-      </section>
+        {/* Próximos Agendamentos + Lembretes de Produção */}
+        <section className="grid gap-4 sm:gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <ProximosAgendamentosCard />
+          </div>
+          <div className="lg:col-span-2">
+            <ProductionRemindersCard lembretes={lembretesProducao} />
+          </div>
+        </section>
 
-      {/* Contas a Pagar + Tarefas Pendentes */}
-      <section className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <ContasAPagarCard />
-        <TarefasPendentesCard />
-      </section>
+        {/* Contas a Pagar + Tarefas Pendentes */}
+        <section className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+          <ContasAPagarCard />
+          <TarefasPendentesCard />
+        </section>
 
-      {/* Indicadores principais (métricas inferiores) */}
-      <section aria-label="Indicadores principais">
-        <KPIGroupCard
-          receitaMes={receitaMes}
-          metaMes={metaMes}
-          progressoMeta={progressoMeta}
-          topCategoria={topCategoria}
-          novosClientes60d={novosClientes60d}
-          valorPrevisto={valorPrevisto}
-          isLoading={metricsLoading}
-        />
-      </section>
-    </main>
+        {/* Indicadores principais (métricas inferiores) */}
+        <section aria-label="Indicadores principais">
+          <KPIGroupCard
+            receitaMes={receitaMes}
+            metaMes={metaMes}
+            progressoMeta={progressoMeta}
+            topCategoria={topCategoria}
+            novosClientes60d={novosClientes60d}
+            valorPrevisto={valorPrevisto}
+            isLoading={metricsLoading}
+          />
+        </section>
+      </main>
+    </PageContainer>
   );
 }

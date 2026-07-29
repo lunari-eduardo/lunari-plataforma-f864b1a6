@@ -22,42 +22,22 @@ export function AdminKpiCards({ kpis }: AdminKpiCardsProps) {
   };
 
   const cards = [
-    {
-      title: 'Faturamento Total',
-      value: formatCurrency(kpis.faturamentoTotal),
-      icon: DollarSign,
-      color: 'text-emerald-500'
-    },
-    {
-      title: 'Ticket Médio',
-      value: formatCurrency(kpis.ticketMedio),
-      icon: Receipt,
-      color: 'text-blue-500'
-    },
-    {
-      title: 'Fotógrafos Ativos',
-      value: kpis.fotografosAtivos.toString(),
-      icon: Users,
-      color: 'text-violet-500'
-    },
-    {
-      title: 'Crescimento',
-      value: formatPercentage(kpis.crescimentoPercentual),
-      icon: TrendingUp,
-      color: kpis.crescimentoPercentual >= 0 ? 'text-emerald-500' : 'text-red-500'
-    }
+    { title: 'Faturamento Total', value: formatCurrency(kpis.faturamentoTotal), icon: DollarSign },
+    { title: 'Ticket Médio', value: formatCurrency(kpis.ticketMedio), icon: Receipt },
+    { title: 'Fotógrafos Ativos', value: kpis.fotografosAtivos.toString(), icon: Users },
+    { title: 'Crescimento', value: formatPercentage(kpis.crescimentoPercentual), icon: TrendingUp },
   ];
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
-        <Card key={card.title} className="p-4">
+        <Card key={card.title} className="p-4 border-border/20 bg-card/60 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">{card.title}</p>
-              <p className="text-2xl font-bold mt-1">{card.value}</p>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{card.title}</p>
+              <p className="text-2xl font-semibold mt-1 tabular-nums">{card.value}</p>
             </div>
-            <card.icon className={`h-8 w-8 ${card.color} opacity-80`} />
+            <card.icon className="h-4 w-4 text-muted-foreground" />
           </div>
         </Card>
       ))}

@@ -15,6 +15,8 @@ import { UserProfile } from '@/services/ProfileService';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 // Sync with retry configuration
 const MAX_RETRIES = 3;
@@ -121,15 +123,15 @@ export default function MinhaConta() {
   }
 
   return (
-    <div className="min-h-screen bg-lunar-bg">
+    <div className="min-h-screen">
       <ScrollArea className="h-screen">
-        <div className="container mx-auto p-4 max-w-4xl">
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold text-lunar-text mb-2">Minha Conta</h1>
-            <p className="text-lunar-textSecondary">Gerencie suas informações pessoais e da empresa</p>
-          </div>
+        <PageContainer className="py-4">
+          <PageHeader
+            title="Minha Conta"
+            description="Gerencie suas informações pessoais e da empresa"
+          />
 
-          <Card className="mb-6">
+          <Card className="mb-6 border-border/20 bg-card/60 shadow-sm">
             <CardContent className="p-6">
               <Tabs defaultValue="perfil" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
@@ -177,7 +179,7 @@ export default function MinhaConta() {
               </Tabs>
             </CardContent>
           </Card>
-        </div>
+        </PageContainer>
       </ScrollArea>
     </div>
   );

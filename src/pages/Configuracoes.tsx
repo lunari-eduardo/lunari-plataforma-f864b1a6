@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TableSyncStatus } from '@/components/ui/sync-indicator';
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
 import { useAccessControl } from '@/hooks/useAccessControl';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 import Categorias from '@/components/configuracoes/Categorias';
 import Pacotes from '@/components/configuracoes/Pacotes';
@@ -22,28 +24,27 @@ export default function Configuracoes() {
   
   return (
     <ScrollArea className="h-[calc(100vh-120px)]">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6">
-        {/* Header da página */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Configurações</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configure os parâmetros principais do seu sistema.
-            </p>
-          </div>
-          <TableSyncStatus 
-            categoriasSyncing={configuration.isLoadingCategorias}
-            pacotesSyncing={configuration.isLoadingPacotes}
-            produtosSyncing={configuration.isLoadingProdutos}
-            etapasSyncing={configuration.isLoadingEtapas}
-          />
-        </div>
+      <PageContainer variant="wide" className="py-4">
+        <PageHeader
+          title="Configurações"
+          description="Configure os parâmetros principais do seu sistema."
+          action={
+            <TableSyncStatus
+              categoriasSyncing={configuration.isLoadingCategorias}
+              pacotesSyncing={configuration.isLoadingPacotes}
+              produtosSyncing={configuration.isLoadingProdutos}
+              etapasSyncing={configuration.isLoadingEtapas}
+            />
+          }
+        />
+
 
         {/* Card com Tabs */}
-        <Card className="border border-border">
+        <Card className="border-border/20 bg-card/60 shadow-sm">
           <CardContent className="p-6">
             <Tabs value={tabAtiva} onValueChange={setTabAtiva} className="w-full">
-              <TabsList className="w-full justify-start border-b border-border mb-4">
+              <TabsList className="w-full justify-start border-b border-border/20 mb-4 bg-transparent">
+
                 <TabsTrigger value="categorias" className="flex items-center gap-2">
                   <Shapes className="h-4 w-4" />
                   <span className="hidden sm:inline">Categorias</span>
@@ -127,7 +128,7 @@ export default function Configuracoes() {
             </Tabs>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     </ScrollArea>
   );
 }
