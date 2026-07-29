@@ -9,8 +9,9 @@ import {
 } from '@/modules/finance/presentation/components';
 import FluxoFinanceiroView from '@/modules/finance/presentation/fluxo/FluxoFinanceiroView';
 import FinanceHeader from '@/modules/finance/presentation/shell/FinanceHeader';
-import ModalNovoLancamentoRefatorado from '@/components/financas/ModalNovoLancamentoRefatorado';
-import { useNovoFinancas } from '@/hooks/useNovoFinancas';
+import LancamentoDrawerProvider, {
+  useLancamentoDrawer,
+} from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import { FINANCE_SWITCH_TAB_EVENT, type FinanceTabName } from '@/modules/finance/presentation/navigation';
 
 type FinanceTab = 'visao-geral' | 'fluxo-financeiro' | 'gerenciar';
