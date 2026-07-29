@@ -7,50 +7,22 @@ interface CollapsibleCustoSectionProps {
   icon: LucideIcon;
   title: string;
   total: number | string;
-  colorClass: 'amber' | 'blue' | 'emerald' | 'purple';
+  /** Mantido por compatibilidade — a paleta agora é única (neutra + dourado). */
+  colorClass?: 'amber' | 'blue' | 'emerald' | 'purple';
   children: React.ReactNode;
   defaultOpen?: boolean;
   suffix?: string;
 }
 
-const colorMap = {
-  amber: {
-    bg: 'from-amber-500/20 to-amber-500/5',
-    border: 'border-amber-500/30',
-    icon: 'text-amber-600 dark:text-amber-400',
-    title: 'text-amber-800 dark:text-amber-300'
-  },
-  blue: {
-    bg: 'from-blue-500/20 to-blue-500/5',
-    border: 'border-blue-500/30',
-    icon: 'text-blue-600 dark:text-blue-400',
-    title: 'text-blue-800 dark:text-blue-300'
-  },
-  emerald: {
-    bg: 'from-emerald-500/20 to-emerald-500/5',
-    border: 'border-emerald-500/30',
-    icon: 'text-emerald-600 dark:text-emerald-400',
-    title: 'text-emerald-800 dark:text-emerald-300'
-  },
-  purple: {
-    bg: 'from-purple-500/20 to-purple-500/5',
-    border: 'border-purple-500/30',
-    icon: 'text-purple-600 dark:text-purple-400',
-    title: 'text-purple-800 dark:text-purple-300'
-  }
-};
-
 export function CollapsibleCustoSection({
   icon: Icon,
   title,
   total,
-  colorClass,
   children,
   defaultOpen = false,
   suffix
 }: CollapsibleCustoSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const colors = colorMap[colorClass];
 
   const formatCurrency = (value: number | string) => {
     if (typeof value === 'string') return value;
@@ -62,35 +34,30 @@ export function CollapsibleCustoSection({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
+      <div className="rounded-lg border border-border/20 bg-card/60 overflow-hidden">
         <CollapsibleTrigger className="w-full">
-          <div className={cn(
-            "flex items-center justify-between p-4 cursor-pointer hover:bg-muted/30 transition-colors",
-            `bg-gradient-to-r ${colors.bg} border-b ${colors.border}`
-          )}>
-            <div className="flex items-center gap-3">
-              <Icon className={cn("h-5 w-5", colors.icon)} />
-              <span className={cn("font-semibold", colors.title)}>{title}</span>
+          <div className="flex items-center justify-between gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <Icon className="h-4 w-4 shrink-0" style={{ color: 'hsl(var(--accent-gold))' }} />
+              <span className="text-[13px] font-medium text-foreground truncate">{title}</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <span className="font-bold text-lg text-foreground">
-                  {formatCurrency(total)}
-                </span>
-                {suffix && (
-                  <span className="text-xs text-muted-foreground ml-1">{suffix}</span>
-                )}
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[15px] font-semibold text-foreground tabular-nums">
+                {formatCurrency(total)}
+              </span>
+              {suffix && (
+                <span className="text-[11px] text-muted-foreground">{suffix}</span>
+              )}
               <ChevronDown className={cn(
-                "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
                 isOpen && "rotate-180"
               )} />
             </div>
           </div>
         </CollapsibleTrigger>
-        
+
         <CollapsibleContent>
-          <div className="p-4 space-y-4">
+          <div className="px-3 pb-3 pt-1 space-y-3 border-t border-border/20">
             {children}
           </div>
         </CollapsibleContent>

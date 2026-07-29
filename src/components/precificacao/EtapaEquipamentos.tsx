@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -88,174 +87,159 @@ export function EtapaEquipamentos() {
       defaultOpen={false}
       statusSalvamento={statusSalvamento}
     >
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Header com total */}
-        <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-purple-500/20 to-purple-500/5 border border-purple-500/30">
-          <div className="flex items-center gap-3">
-            <Camera className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            <span className="font-semibold text-purple-800 dark:text-purple-300">
-              Total de Depreciação Mensal
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/20 bg-card/60 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <Camera className="h-4 w-4" style={{ color: 'hsl(var(--accent-gold))' }} />
+            <span className="text-[13px] font-medium text-foreground">
+              Depreciação mensal total
             </span>
           </div>
           <div className="text-right">
-            <span className="font-bold text-2xl text-foreground">
+            <span className="text-[17px] font-semibold tabular-nums" style={{ color: 'hsl(var(--accent-gold))' }}>
               {formatCurrency(totalDepreciacaoMensal)}
             </span>
-            <span className="text-sm text-muted-foreground ml-1">/mês</span>
+            <span className="text-[11px] text-muted-foreground ml-1">/mês</span>
           </div>
         </div>
 
         {/* Formulário de adição */}
-        <Card className="border bg-card">
-          <CardContent className="p-4">
-            <div className="bg-background border-2 border-dashed border-border rounded-lg p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <div className="sm:col-span-2">
-                  <Label className="text-xs text-muted-foreground">Nome do Equipamento</Label>
-                  <Input 
-                    placeholder="Ex: Câmera Canon R6..." 
-                    value={novoEquipamento.nome}
-                    onChange={e => setNovoEquipamento(prev => ({ ...prev, nome: e.target.value }))}
-                    className="h-9 bg-background border-input"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Valor Pago</Label>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    step="0.01"
-                    placeholder="0,00" 
-                    value={novoEquipamento.valorPago}
-                    onChange={e => setNovoEquipamento(prev => ({ ...prev, valorPago: e.target.value }))}
-                    className="h-9 bg-background border-input"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Data Compra</Label>
-                  <Input 
-                    type="date"
-                    value={novoEquipamento.dataCompra}
-                    onChange={e => setNovoEquipamento(prev => ({ ...prev, dataCompra: e.target.value }))}
-                    className="h-9 bg-background border-input"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Vida Útil (Anos)</Label>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    value={novoEquipamento.vidaUtil}
-                    onChange={e => setNovoEquipamento(prev => ({ ...prev, vidaUtil: e.target.value }))}
-                    className="h-9 bg-background border-input"
-                  />
-                </div>
-              </div>
-              
-              {depreciacaoPreview > 0 && (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Depreciação mensal: <span className="font-medium text-foreground">{formatCurrency(depreciacaoPreview)}</span>
-                </div>
-              )}
-              
-              <Button 
-                onClick={handleAdicionar} 
-                disabled={!novoEquipamento.nome || !novoEquipamento.valorPago}
-                className="w-full mt-3"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Equipamento
-              </Button>
+        <div className="rounded-lg border border-border/20 bg-card/60 p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+            <div className="sm:col-span-2">
+              <Label className="text-xs font-medium text-muted-foreground">Nome do equipamento</Label>
+              <Input
+                placeholder="Ex: Câmera Canon R6..."
+                value={novoEquipamento.nome}
+                onChange={e => setNovoEquipamento(prev => ({ ...prev, nome: e.target.value }))}
+                className="h-8 mt-1 text-sm"
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground">Valor pago</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+                value={novoEquipamento.valorPago}
+                onChange={e => setNovoEquipamento(prev => ({ ...prev, valorPago: e.target.value }))}
+                className="h-8 mt-1 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground">Data da compra</Label>
+              <Input
+                type="date"
+                value={novoEquipamento.dataCompra}
+                onChange={e => setNovoEquipamento(prev => ({ ...prev, dataCompra: e.target.value }))}
+                className="h-8 mt-1 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground">Vida útil (anos)</Label>
+              <Input
+                type="number"
+                min="1"
+                value={novoEquipamento.vidaUtil}
+                onChange={e => setNovoEquipamento(prev => ({ ...prev, vidaUtil: e.target.value }))}
+                className="h-8 mt-1 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 mt-2.5">
+            <span className="text-xs text-muted-foreground">
+              {depreciacaoPreview > 0
+                ? <>Depreciação mensal: <span className="font-medium text-foreground tabular-nums">{formatCurrency(depreciacaoPreview)}</span></>
+                : 'Informe nome e valor para adicionar'}
+            </span>
+            <Button
+              onClick={handleAdicionar}
+              disabled={!novoEquipamento.nome || !novoEquipamento.valorPago}
+              size="sm"
+              className="h-8"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
+        </div>
 
         {/* Lista de equipamentos */}
-        <Card className="border bg-card">
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {equipamentos.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Nenhum equipamento cadastrado
-                </p>
-              ) : (
-                equipamentos.map(eq => {
-                  const depreciacao = calcularDepreciacao(eq.valorPago, eq.vidaUtil);
-                  return (
-                    <div 
-                      key={eq.id} 
-                      className="p-4 rounded-lg border border-border bg-muted/40"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <Input 
-                            value={eq.nome}
-                            onChange={e => atualizarEquipamento(eq.id, 'nome', e.target.value)}
-                            className="h-9 text-sm font-medium bg-background border-input"
-                            placeholder="Nome do equipamento"
-                          />
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive flex-shrink-0"
-                          onClick={() => removerEquipamento(eq.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Valor Pago</Label>
-                          <Input 
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={eq.valorPago}
-                            onChange={e => atualizarEquipamento(eq.id, 'valorPago', parseFloat(e.target.value) || 0)}
-                            className="h-8 text-sm bg-background border-input"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Data Compra</Label>
-                          <Input 
-                            type="date"
-                            value={eq.dataCompra}
-                            onChange={e => atualizarEquipamento(eq.id, 'dataCompra', e.target.value)}
-                            className="h-8 text-sm bg-background border-input"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Vida Útil</Label>
-                          <div className="flex items-center gap-1">
-                            <Input 
-                              type="number"
-                              min="1"
-                              value={eq.vidaUtil}
-                              onChange={e => atualizarEquipamento(eq.id, 'vidaUtil', parseInt(e.target.value) || 1)}
-                              className="h-8 text-sm bg-background border-input"
-                            />
-                            <span className="text-xs text-muted-foreground">anos</span>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Depreciação/mês</Label>
-                          <div className="h-8 px-3 bg-purple-500/10 rounded border border-purple-500/30 flex items-center justify-center">
-                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                              {formatCurrency(depreciacao)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+        <div className="rounded-lg border border-border/20 bg-card/60 divide-y divide-border/20">
+          {equipamentos.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">
+              Nenhum equipamento cadastrado
+            </p>
+          ) : (
+            equipamentos.map(eq => {
+              const depreciacao = calcularDepreciacao(eq.valorPago, eq.vidaUtil);
+              return (
+                <div key={eq.id} className="px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={eq.nome}
+                      onChange={e => atualizarEquipamento(eq.id, 'nome', e.target.value)}
+                      className="h-8 text-sm font-medium flex-1"
+                      placeholder="Nome do equipamento"
+                    />
+                    <div className="hidden sm:flex items-center h-8 px-2.5 rounded-md text-[13px] font-medium tabular-nums shrink-0"
+                      style={{ background: 'hsl(var(--accent-gold-soft))', color: 'hsl(var(--accent-gold))' }}>
+                      {formatCurrency(depreciacao)}<span className="ml-1 opacity-70">/mês</span>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => removerEquipamento(eq.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Valor pago</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={eq.valorPago}
+                        onChange={e => atualizarEquipamento(eq.id, 'valorPago', parseFloat(e.target.value) || 0)}
+                        className="h-8 mt-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Data da compra</Label>
+                      <Input
+                        type="date"
+                        value={eq.dataCompra}
+                        onChange={e => atualizarEquipamento(eq.id, 'dataCompra', e.target.value)}
+                        className="h-8 mt-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">Vida útil (anos)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={eq.vidaUtil}
+                        onChange={e => atualizarEquipamento(eq.id, 'vidaUtil', parseInt(e.target.value) || 1)}
+                        className="h-8 mt-1 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="sm:hidden mt-2 text-[11px] text-muted-foreground">
+                    Depreciação: <span className="font-medium text-foreground tabular-nums">{formatCurrency(depreciacao)}/mês</span>
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </EtapaColapsavel>
   );

@@ -1,63 +1,62 @@
-import { useState } from 'react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+/**
+ * EtapaSection — Onda 5. Antes era um acordeão pesado (`bg-primary/40`) que
+ * empilhava 4 blocos fechados. Com as abas da Central de Precificação, cada
+ * etapa já está isolada: aqui sobra apenas um cabeçalho discreto + conteúdo.
+ *
+ * O nome `EtapaColapsavel` é mantido como alias para não quebrar imports.
+ */
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusSalvamento } from '@/types/precificacao';
 
-interface EtapaColapsavelProps {
-  numero: number;
+interface EtapaSectionProps {
+  numero?: number;
   titulo: string;
-  descricao: string;
+  descricao?: string;
   children: React.ReactNode;
+  /** Ignorado — mantido para compatibilidade com os callers antigos. */
   defaultOpen?: boolean;
   statusSalvamento?: StatusSalvamento;
+  className?: string;
 }
 
-export function EtapaColapsavel({
-  numero,
+export function EtapaSection({
   titulo,
   descricao,
   children,
-  defaultOpen = false,
-  statusSalvamento
-}: EtapaColapsavelProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
+  statusSalvamento,
+  className,
+}: EtapaSectionProps) {
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="w-full">
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/40 hover:bg-primary/50 transition-colors border border-primary/30">
-          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-foreground">
-            {numero}
-          </div>
-          <div className="flex-1 text-left">
-            <h2 className="font-semibold text-foreground">{titulo}</h2>
-            <p className="text-sm text-muted-foreground">{descricao}</p>
-          </div>
-          
-          {/* Status de salvamento */}
-          {statusSalvamento && (
-            <div className="flex items-center gap-1 text-xs mr-2">
-              {statusSalvamento === 'salvo' && <CheckCircle className="h-3 w-3 text-green-600" />}
-              {statusSalvamento === 'erro' && <AlertCircle className="h-3 w-3 text-destructive" />}
-              {statusSalvamento === 'salvando' && (
-                <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full" />
-              )}
-            </div>
-          )}
-          
-          <ChevronDown className={cn(
-            "h-5 w-5 text-muted-foreground transition-transform duration-200",
-            isOpen && "rotate-180"
-          )} />
+    <section className={cn('space-y-3', className)}>
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-[13px] font-semibold tracking-tight text-foreground">{titulo}</h2>
+          {descricao ? (
+            <p className="text-xs text-muted-foreground mt-0.5">{descricao}</p>
+          ) : null}
         </div>
-      </CollapsibleTrigger>
-      
-      <CollapsibleContent>
-        <div className="pt-4 space-y-4">
-          {children}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+
+        {statusSalvamento ? (
+          <div className="flex items-center shrink-0">
+            {statusSalvamento === 'salvo' && (
+              <CheckCircle className="h-3.5 w-3.5 text-muted-foreground/60" />
+            )}
+            {statusSalvamento === 'erro' && (
+              <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+            )}
+            {statusSalvamento === 'salvando' && (
+              <div className="animate-spin h-3 w-3 border border-muted-foreground/50 border-t-transparent rounded-full" />
+            )}
+          </div>
+        ) : null}
+      </header>
+
+      <div className="space-y-3">{children}</div>
+    </section>
   );
 }
+
+export const EtapaColapsavel = EtapaSection;
+
+export default EtapaSection;
