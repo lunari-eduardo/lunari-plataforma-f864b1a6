@@ -289,11 +289,14 @@ export function useNovoFinancas() {
 
   // ============= FUNÇÕES DE TRANSAÇÕES =============
   
-  // Motor de criação de transações - adapter para hook Supabase
+  // Motor de criação de transações - adapter para hook Supabase.
+  // Aceita `pago`/`dataPagamento` opcionais: se `pago===true`, encadeia
+  // `marcarComoPagoAsync` na primeira parcela após a criação (mesma
+  // pipeline de invalidação/optimistic da mutation dedicada).
   const createTransactionEngine = async (input: any) => {
     try {
       console.log('createTransactionEngine chamado com dados:', input);
-      
+
       const {
         itemId,
         valorTotal,
@@ -304,10 +307,11 @@ export function useNovoFinancas() {
         observacoes,
         isValorFixo,
         cartaoCreditoId,
-        dataCompra
+        dataCompra,
+        pago,
+        dataPagamento,
       } = input;
 
-      // Mapear para formato do Supabase
       const params: CreateTransactionParams = {
         item_id: itemId,
         valor: valorTotal,
@@ -318,17 +322,33 @@ export function useNovoFinancas() {
         isParcelado: isParcelado || false,
         parcela_total: numeroDeParcelas,
         credit_card_id: cartaoCreditoId,
-        data_compra: dataCompra || dataPrimeiraOcorrencia
+        data_compra: dataCompra || dataPrimeiraOcorrencia,
       };
 
-      const result = await criarTransacaoAsync(params);
+      const result = (await criarTransacaoAsync(params)) as { ids: string[]; count: number };
       console.log('Transação criada com sucesso', result);
-      return result as { ids: string[]; count: number };
+
+      const paidIds: string[] = [];
+      if (pago && result?.ids?.[0]) {
+        try {
+          await marcarComoPagoAsync({
+            id: result.ids[0],
+            dataPagamento: dataPagamento || dataPrimeiraOcorrencia,
+          });
+          paidIds.push(result.ids[0]);
+        } catch (err) {
+          console.error('createTransactionEngine: markPaid falhou', err);
+          throw err;
+        }
+      }
+
+      return { ...result, paidIds };
     } catch (error) {
       console.error('Erro ao criar transação:', error);
       throw error;
     }
   };
+
 
 
   // Compatibilidade com createRecurringTransactionsEngine
