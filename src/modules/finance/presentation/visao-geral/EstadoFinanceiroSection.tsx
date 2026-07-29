@@ -248,7 +248,6 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
           </div>
         </div>
 
-        </div>
 
         <MetricCard label="Receita operacional" value={kpis.totalReceita} delta={comparison.variacaoReceita}
           deltaLabel={comparison.labelComparacao} Icon={TrendingUp} />
