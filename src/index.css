@@ -816,6 +816,19 @@ button,
 a,
 [role="button"] {
   -webkit-tap-highlight-color: transparent;
+  /* Remove o delay de 300ms do double-tap em iOS/Android sem perder
+     zoom por pinça, mantendo a interação tátil imediata. */
+  touch-action: manipulation;
+}
+
+/* Rolagem inercial nativa em contêineres com overflow (Safari iOS).
+   Só aplica em toque para não interferir com trackpad/desktop. */
+@media (hover: none) and (pointer: coarse) {
+  .overflow-y-auto,
+  .overflow-auto,
+  [data-radix-scroll-area-viewport] {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Substitui automaticamente 100vh por 100dvh quando o navegador suportar.
