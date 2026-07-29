@@ -45,6 +45,8 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   const isMobile = useIsMobile();
   const extrato = useExtrato();
   const financas = useNovoFinancas();
+  const { dialogState, confirm, handleConfirm, handleCancel, handleClose } = useConfirmDialog();
+
 
   // Estado local (view-state)
   const [chip, setChip] = useState<Chip>('todos');
