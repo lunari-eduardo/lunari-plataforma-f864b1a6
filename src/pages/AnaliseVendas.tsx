@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { SalesMetricsCards } from '@/components/analise-vendas/SalesMetricsCards';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { SalesChartsGrid } from '@/components/analise-vendas/SalesChartsGrid';
 import { SalesGoalsCard } from '@/components/analise-vendas/SalesGoalsCard';
 import SalesMonthYearFilter from '@/components/analise-vendas/SalesMonthYearFilter';
