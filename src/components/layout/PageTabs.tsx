@@ -13,6 +13,8 @@ export const PAGE_TABS_TRIGGER =
 
 export const PAGE_TABS_CONTENT = 'mt-5';
 
-/** Shell de scroll nativo (iOS-friendly) para páginas com abas. */
-export const PAGE_SCROLL_SHELL =
-  'h-full min-h-0 flex-1 overflow-y-auto overscroll-contain';
+/**
+ * Shell de página com abas. O <main> do Layout já é o container de scroll
+ * nativo (iOS-friendly), então aqui não criamos um segundo scroller.
+ */
+export const PAGE_SCROLL_SHELL = 'w-full';
