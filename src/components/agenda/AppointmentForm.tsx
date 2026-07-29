@@ -471,7 +471,7 @@ export default function AppointmentForm({
               <TabsContent value="new" className="mt-3 space-y-3">
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="new-client-name" className="text-sm font-medium">Nome *</Label>
+                    <Label htmlFor="new-client-name" className={FIELD_LABEL}>Nome *</Label>
                     <Input 
                       id="new-client-name" 
                       name="newClientName" 
@@ -485,7 +485,7 @@ export default function AppointmentForm({
                   </div>
                   
                   <div className="space-y-1.5">
-                    <Label htmlFor="new-client-phone" className="text-sm font-medium">Telefone</Label>
+                    <Label htmlFor="new-client-phone" className={FIELD_LABEL}>Telefone</Label>
                     <Input 
                       id="new-client-phone" 
                       name="newClientPhone" 
@@ -496,7 +496,7 @@ export default function AppointmentForm({
                   </div>
                   
                   <div className="space-y-1.5">
-                    <Label htmlFor="new-client-email" className="text-sm font-medium">E-mail</Label>
+                    <Label htmlFor="new-client-email" className={FIELD_LABEL}>E-mail</Label>
                     <Input 
                       id="new-client-email" 
                       name="newClientEmail" 
@@ -508,7 +508,7 @@ export default function AppointmentForm({
                   </div>
                   
                   <div className="space-y-1.5">
-                    <Label htmlFor="new-client-origem" className="text-sm font-medium">Como conheceu?</Label>
+                    <Label htmlFor="new-client-origem" className={FIELD_LABEL}>Como conheceu?</Label>
                     <Select 
                       value={formData.newClientOrigem} 
                       onValueChange={value => setFormData(prev => ({ ...prev, newClientOrigem: value }))} 
@@ -543,7 +543,7 @@ export default function AppointmentForm({
         {!isFromBudgetAppointment && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Categoria (Opcional)</Label>
+              <Label className={FIELD_LABEL}>Categoria (Opcional)</Label>
               <CategorySelector 
                 categorias={categorias} 
                 value={formData.categoria} 
@@ -553,7 +553,7 @@ export default function AppointmentForm({
             </div>
             
             <div className="space-y-1.5">
-              <Label htmlFor="package-search-input" className="text-sm font-medium">Pacote</Label>
+              <Label htmlFor="package-search-input" className={FIELD_LABEL}>Pacote</Label>
               <PackageSearchCombobox 
                 value={formData.packageId} 
                 onSelect={handlePackageSelect} 
@@ -581,7 +581,7 @@ export default function AppointmentForm({
         {/* ========== SEÇÃO 3: VALOR DO PACOTE (com animação) ========== */}
         {!isFromBudgetAppointment && (
           <div className="space-y-1.5">
-            <Label htmlFor="valor-pacote" className="text-sm font-medium">Valor do pacote</Label>
+            <Label htmlFor="valor-pacote" className={FIELD_LABEL}>Valor do pacote</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
               <Input 
@@ -609,7 +609,7 @@ export default function AppointmentForm({
         {/* ========== SEÇÃO 4: STATUS DO AGENDAMENTO (toggle segmentado full-width) ========== */}
         {!isFromBudgetAppointment && (
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Status do Agendamento</Label>
+            <Label className={FIELD_LABEL}>Status do Agendamento</Label>
             <div className="grid grid-cols-2 w-full">
               {availableStatus.map((status, index) => (
                 <Button 
@@ -654,7 +654,7 @@ export default function AppointmentForm({
             ) : (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="appointment-paid-amount" className="text-sm font-medium">Valor pago (sinal)</Label>
+                  <Label htmlFor="appointment-paid-amount" className={FIELD_LABEL}>Valor pago (sinal)</Label>
                   <button 
                     type="button"
                     onClick={() => {
@@ -705,7 +705,7 @@ export default function AppointmentForm({
             ) : (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="appointment-description" className="text-sm font-medium">Descrição</Label>
+                  <Label htmlFor="appointment-description" className={FIELD_LABEL}>Descrição</Label>
                   <button 
                     type="button"
                     onClick={() => {
