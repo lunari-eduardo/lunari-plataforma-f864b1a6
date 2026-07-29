@@ -34,7 +34,10 @@ export function useVendaAvulsa() {
       if (!user) throw new Error('Usuário não autenticado');
 
       const sessionId = `VA-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const categoria = input.categoria || 'Venda Avulsa';
+      // Venda avulsa NÃO inventa categoria. A receita é do produto.
+      // Só há categoria quando o usuário registrou a venda com um pacote de
+      // uma categoria real já cadastrada. Coluna é NOT NULL → string vazia.
+      const categoria = input.categoria?.trim() || '';
 
       // Convert products to produtos_incluidos JSONB format
       // Hidrata cada produto com id estável, fluxo e etapas — condição
