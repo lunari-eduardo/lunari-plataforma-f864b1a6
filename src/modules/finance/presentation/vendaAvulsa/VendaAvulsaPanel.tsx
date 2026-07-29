@@ -11,8 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { ShoppingBag, Loader2, X, UserPlus, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import ClientSearchCombobox from '@/components/agenda/ClientSearchCombobox';
-import PackageSearchCombobox from '@/components/agenda/PackageSearchCombobox';
 import ProductSearchCombobox, { type ProductComboboxItem } from '@/components/agenda/ProductSearchCombobox';
+
 import { useVendaAvulsa } from '@/hooks/useVendaAvulsa';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
