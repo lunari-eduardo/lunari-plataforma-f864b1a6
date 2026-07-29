@@ -118,7 +118,7 @@ export default function AnnualView({ date, unifiedEvents, availability = [], onD
                       className={cn(
                         "h-9 w-full rounded-md flex flex-col items-center justify-center text-xs leading-none transition-colors hover:bg-muted/40 dark:hover:bg-white/[0.05]",
                         "bg-card/30 dark:bg-card/[0.03] text-lunar-text",
-                        fullDaySlot ? "border-2" : "border border-white/20 dark:border-white/10"
+                        fullDaySlot ? "border-2" : "border border-border/40"
                       )}
                       style={fullDaySlot ? {
                         borderColor: fullDaySlot.color || 'hsl(var(--lunar-accent))',

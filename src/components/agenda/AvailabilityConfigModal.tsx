@@ -347,7 +347,7 @@ export default function AvailabilityConfigModal({
             </button>
 
             {showWorkingHours && (
-              <div className="mt-3 space-y-3 p-3 rounded-lg bg-card/30 dark:bg-card/[0.05] border border-white/25 dark:border-white/10">
+              <div className="mt-3 space-y-3 p-3 rounded-lg border border-border/20 bg-card/60">
                 <p className="text-xs text-muted-foreground">
                   Defina os horários padrão que aparecerão na agenda para todos os dias sem personalização.
                 </p>
