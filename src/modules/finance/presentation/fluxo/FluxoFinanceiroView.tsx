@@ -10,7 +10,6 @@ import { memo, useMemo, useState, useEffect } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import MonthYearNavigator from '@/components/shared/MonthYearNavigator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useExtrato } from '@/hooks/useExtrato';
 import { useNovoFinancas } from '@/hooks/useNovoFinancas';
@@ -23,6 +22,8 @@ import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
 import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
+import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
+import { useLancamentoDrawer } from '@/modules/finance/presentation/shell/LancamentoDrawerProvider';
 import {
   FINANCE_FOCUS_FLUXO_EVENT,
   type FluxoFocusPayload,
