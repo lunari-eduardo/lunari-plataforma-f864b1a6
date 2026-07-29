@@ -677,7 +677,7 @@ export default function Clientes() {
         {/* Paginação */}
         {totalPages > 1 && clientesFiltrados.length > 0 && (
           <div className="flex flex-col items-center gap-3 py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, clientesOrdenados.length)} de {clientesOrdenados.length} clientes
             </p>
             <div className="flex items-center gap-1">
@@ -686,9 +686,9 @@ export default function Clientes() {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="gap-1"
+                className="h-8 gap-1 text-xs"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3.5 w-3.5" />
                 Anterior
               </Button>
               
@@ -701,7 +701,7 @@ export default function Clientes() {
                     variant={currentPage === page ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 text-xs"
                   >
                     {page}
                   </Button>
@@ -713,37 +713,38 @@ export default function Clientes() {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="gap-1"
+                className="h-8 gap-1 text-xs"
               >
                 Próximo
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
         )}
 
-        {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
-            <User className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhum cliente encontrado</h3>
-            <p className="text-sm text-muted-foreground mb-4 text-center">
+        {clientesFiltrados.length === 0 && <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/40 p-12 text-center">
+            <User className="mb-3 h-10 w-10 text-accent-gold" />
+            <h3 className="text-[15px] font-semibold text-foreground">Nenhum cliente encontrado</h3>
+            <p className="mb-4 mt-1 text-xs text-muted-foreground">
               {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? 'Não encontramos clientes com os critérios de busca informados.' : 'Adicione seus primeiros clientes para começar.'}
             </p>
-            {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? <Button onClick={limparFiltros} variant="outline">
+            {filters.filtro || filters.dataInicio || filters.dataFim || (filters.categoria && filters.categoria !== 'todas') ? <Button onClick={limparFiltros} variant="outline" size="sm" className="h-8 text-xs">
                 Limpar filtros
-              </Button> : <Button onClick={handleAddClient} className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
+              </Button> : <Button onClick={handleAddClient} size="sm" className="h-8 gap-1.5 text-xs">
+                <UserPlus className="h-3.5 w-3.5" />
                 Adicionar Cliente
               </Button>}
           </div>}
 
         {/* Modal do Formulário de Cliente */}
         <Dialog open={showClientForm} onOpenChange={handleModalClose}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className={DIALOG_TITLE_CLS}>
                 {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
               </DialogTitle>
             </DialogHeader>
+            
             
             <div className="space-y-4">
               <div>
