@@ -34,6 +34,13 @@ export interface HealthInput {
   metaReceitaProporcional: number;
   dadosMensaisReais: PontoMensal[];
   temDados: boolean; // false quando não há nenhum mês real
+  /**
+   * true quando o último ponto de `dadosMensaisReais` corresponde ao mês
+   * corrente ainda em curso. Nesse caso, o slope de tendência descarta o
+   * mês parcial para não fabricar uma "queda" artificial contra meses
+   * fechados anteriores.
+   */
+  mesCorrenteParcial?: boolean;
 }
 
 function scoreMargem(margem: number): { score: number; label: string; impacto: HealthSignal['impacto']; detalhe: string } {
@@ -46,15 +53,19 @@ function scoreMargem(margem: number): { score: number; label: string; impacto: H
 
 function scoreMeta(cumprimento: number): { score: number; label: string; impacto: HealthSignal['impacto']; detalhe: string } {
   if (cumprimento < 60) return { score: 30, label: 'Abaixo da meta do período', impacto: 'negativo', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
-  if (cumprimento < 90) return { score: 60, label: 'Próximo da meta do período', impacto: 'neutro', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
-  if (cumprimento <= 110) return { score: 90, label: 'Meta do período atingida', impacto: 'positivo', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
-  return { score: 100, label: 'Meta do período superada', impacto: 'positivo', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
+  if (cumprimento < 85) return { score: 60, label: 'Próximo da meta do período', impacto: 'neutro', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
+  if (cumprimento < 95) return { score: 85, label: 'Quase batendo a meta', impacto: 'positivo', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
+  if (cumprimento <= 120) return { score: 100, label: 'Meta do período atingida', impacto: 'positivo', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
+  return { score: 95, label: 'Meta do período superada', impacto: 'positivo', detalhe: `${cumprimento.toFixed(0)}% da meta esperada` };
 }
 
-function slopeReceita(reais: PontoMensal[]): number {
-  const n = reais.length;
+function slopeReceita(reais: PontoMensal[], mesCorrenteParcial: boolean): number {
+  // Descarta o mês corrente ainda em curso — comparar mês parcial contra
+  // meses fechados sempre parece "queda" e derruba o score indevidamente.
+  const base = mesCorrenteParcial ? reais.slice(0, -1) : reais;
+  const n = base.length;
   if (n < 2) return 0;
-  const ultimos = reais.slice(-Math.min(3, n));
+  const ultimos = base.slice(-Math.min(3, n));
   const xs = ultimos.map((_, i) => i);
   const ys = ultimos.map(p => p.receita);
   const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -71,6 +82,7 @@ export function computeHealth(input: HealthInput): HealthResult {
   const {
     receita, despesas, lucro, aReceber, aPagar,
     metaReceitaProporcional, dadosMensaisReais, temDados,
+    mesCorrenteParcial = false,
   } = input;
 
   if (!temDados) {
@@ -91,9 +103,10 @@ export function computeHealth(input: HealthInput): HealthResult {
   sinais.push({ key: 'margem', peso: 25, score: sM.score, label: sM.label, impacto: sM.impacto, detalhe: sM.detalhe });
 
   // 2. Meta proporcional — peso 20 (só se houver meta)
+  let cumprimentoMeta = 0;
   if (metaReceitaProporcional > 0) {
-    const cumprimento = (receita / metaReceitaProporcional) * 100;
-    const sMeta = scoreMeta(cumprimento);
+    cumprimentoMeta = (receita / metaReceitaProporcional) * 100;
+    const sMeta = scoreMeta(cumprimentoMeta);
     sinais.push({ key: 'meta_proporcional', peso: 20, score: sMeta.score, label: sMeta.label, impacto: sMeta.impacto, detalhe: sMeta.detalhe });
   }
 
@@ -111,8 +124,8 @@ export function computeHealth(input: HealthInput): HealthResult {
   }
   sinais.push({ key: 'saldo', peso: 15, score: scoreSaldo, label: labelSaldo, impacto: impSaldo });
 
-  // 4. Tendência da receita — peso 15
-  const slope = slopeReceita(dadosMensaisReais);
+  // 4. Tendência da receita — peso 15 (mês parcial descartado)
+  const slope = slopeReceita(dadosMensaisReais, mesCorrenteParcial);
   let scoreTend = 60, labelTend = 'Receita estável', impTend: HealthSignal['impacto'] = 'neutro';
   if (slope > receita * 0.02) { scoreTend = 95; labelTend = 'Receita em crescimento'; impTend = 'positivo'; }
   else if (slope < -receita * 0.02) { scoreTend = 30; labelTend = 'Receita desacelerando'; impTend = 'negativo'; }
@@ -139,13 +152,39 @@ export function computeHealth(input: HealthInput): HealthResult {
     detalhe: receita > 0 ? `${(razao * 100).toFixed(0)}% da receita` : undefined,
   });
 
+  // 7. Lucro absoluto vs meta — peso 10 (só se houver meta)
+  if (metaReceitaProporcional > 0) {
+    const lucroSobreMeta = (lucro / metaReceitaProporcional) * 100;
+    let scoreLA = 60, labelLA = 'Lucro moderado no período', impLA: HealthSignal['impacto'] = 'neutro';
+    if (lucro < 0) { scoreLA = 20; labelLA = 'Prejuízo no período'; impLA = 'negativo'; }
+    else if (lucroSobreMeta >= 40) { scoreLA = 100; labelLA = 'Lucro expressivo no período'; impLA = 'positivo'; }
+    else if (lucroSobreMeta >= 20) { scoreLA = 80; labelLA = 'Lucro consistente no período'; impLA = 'positivo'; }
+    sinais.push({
+      key: 'lucro_absoluto', peso: 10, score: scoreLA, label: labelLA, impacto: impLA,
+      detalhe: `${lucroSobreMeta.toFixed(0)}% da meta em lucro`,
+    });
+  }
+
   // Score final ponderado
   const pesoTotal = sinais.reduce((s, x) => s + x.peso, 0);
-  const score = pesoTotal > 0 ? sinais.reduce((s, x) => s + x.score * x.peso, 0) / pesoTotal : 0;
+  let score = pesoTotal > 0 ? sinais.reduce((s, x) => s + x.score * x.peso, 0) / pesoTotal : 0;
+
+  // Override "Excelente" por fundamentos: quando os pilares primários
+  // (margem, meta, lucro, saldo) estão claramente sólidos, um sinal
+  // secundário fraco não deve rebaixar o diagnóstico geral.
+  const fundamentosExcelentes =
+    margem >= 30 &&
+    cumprimentoMeta >= 90 &&
+    lucro > 0 &&
+    saldo >= 0;
 
   let status: Health;
   let titulo: string;
-  if (score >= 85) { status = 'excelente'; titulo = 'Excelente'; }
+  if (fundamentosExcelentes) {
+    status = 'excelente';
+    titulo = 'Excelente';
+    score = Math.max(score, 88);
+  } else if (score >= 85) { status = 'excelente'; titulo = 'Excelente'; }
   else if (score >= 70) { status = 'saudavel'; titulo = 'Saudável'; }
   else if (score >= 50) { status = 'atencao'; titulo = 'Requer atenção'; }
   else { status = 'critico'; titulo = 'Crítico'; }

@@ -130,16 +130,23 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
 }: Props) {
   const metaProporcional = metaReceitaProporcional ?? metaReceita;
 
-  const health = useMemo(() => computeHealth({
-    receita: kpis.totalReceita,
-    despesas: kpis.totalDespesas,
-    lucro: kpis.totalLucro,
-    aReceber: kpis.aReceber,
-    aPagar: contasAPagar,
-    metaReceitaProporcional: metaProporcional,
-    dadosMensaisReais: dadosMensais,
-    temDados: kpis.totalReceita > 0 || kpis.totalDespesas > 0,
-  }), [kpis, contasAPagar, metaProporcional, dadosMensais]);
+  const health = useMemo(() => {
+    const hoje = new Date();
+    const mesCorrenteParcial =
+      periodoEfetivo?.ano === hoje.getFullYear() &&
+      (periodoEfetivo?.ultimoMesComDados ?? 0) >= (hoje.getMonth() + 1);
+    return computeHealth({
+      receita: kpis.totalReceita,
+      despesas: kpis.totalDespesas,
+      lucro: kpis.totalLucro,
+      aReceber: kpis.aReceber,
+      aPagar: contasAPagar,
+      metaReceitaProporcional: metaProporcional,
+      dadosMensaisReais: dadosMensais,
+      temDados: kpis.totalReceita > 0 || kpis.totalDespesas > 0,
+      mesCorrenteParcial,
+    });
+  }, [kpis, contasAPagar, metaProporcional, dadosMensais, periodoEfetivo]);
 
   const theme = statusTheme[health.status];
   const HeartIcon = theme.icon === 'crack' ? HeartCrack : theme.icon === 'sparkles' ? Sparkles : Heart;
