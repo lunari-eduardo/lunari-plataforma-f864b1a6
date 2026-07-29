@@ -1,6 +1,6 @@
 # Auditoria de UI — 6 páginas · Padronização "Silent Luxury"
 
-> Data: 2026-07-29 · Status: **Ondas 0, 1, 2 e 6 implementadas**, ondas 3-5 e 7 pendentes.
+> Data: 2026-07-29 · Status: **Ondas 0, 1, 2, 3 e 6 implementadas**, ondas 4, 5 e 7 pendentes.
 > Fonte de verdade visual: `docs/constitution/DESIGN_DNA.md` + `src/styles/lunari-design-rules.md`.
 
 ## Referência do padrão (o que é "certo" hoje)
@@ -203,3 +203,20 @@ Tokens novos em `src/lib/dialogTokens.ts`: `FIELD_LABEL`, `FIELD_GROUP`, `FORM_S
   favorito em `accent-gold`.
 - **TimeSlotOptionsMenu**: itens `h-8 text-xs`; ícones em `lunar-success` / `primary` / `destructive`.
 - **DayPreviewPopover**: bordas `/40` → `/20`.
+
+
+## Onda 3 — Configurações + Integrações · ✅ CONCLUÍDA
+
+Novo `src/components/layout/PageTabs.tsx`: `PAGE_TABS_LIST`, `PAGE_TABS_TRIGGER`,
+`PAGE_TABS_CONTENT`, `PAGE_SCROLL_SHELL`. Utilitário `.no-scrollbar` em `src/index.css`.
+
+- **Configurações**: `ScrollArea h-[calc(100vh-120px)]` removida (o `<main>` do Layout já é o
+  scroller nativo); wrapper `Card`/`CardContent p-6` removido; `variant="wide"` → `default`
+  (79rem); 7 abas migradas para `PAGE_TABS_*` com `title`; `TabsContent` em `mt-5`; `pb-10`.
+- **Integrações**: `min-h-screen` + `ScrollArea h-screen` removidos (fim do scroll fantasma);
+  `TabsList grid grid-cols-4 max-w-2xl` → `PAGE_TABS_LIST` (mesma linguagem de Configurações,
+  com scroll horizontal no mobile); `mt-6` por aba → `PAGE_TABS_CONTENT`; Crown Pro e ícone
+  `Bot` em `text-accent-gold`; painéis `max-w-xl` → `max-w-2xl`; card do Assistente na
+  densidade de `PaymentSettings` (`CardHeader pb-3`, `CardContent pt-0 space-y-3`,
+  título `text-sm font-semibold`, texto de apoio `text-xs`).
+- Nenhuma alteração em hooks, queries, OAuth do Google, gating Pro ou tokens MCP.
