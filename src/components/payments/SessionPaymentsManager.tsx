@@ -460,7 +460,7 @@ export function SessionPaymentsManager({
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isCard ? 'px-0 pb-0' : undefined}>
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
               <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
