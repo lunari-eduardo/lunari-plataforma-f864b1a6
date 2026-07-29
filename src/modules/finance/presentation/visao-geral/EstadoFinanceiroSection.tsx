@@ -249,13 +249,11 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
         </div>
 
         <MetricCard label="Receita operacional" value={kpis.totalReceita} delta={comparison.variacaoReceita}
-          deltaLabel={comparison.labelComparacao} spark={receitaSpark} tone="neutral" Icon={TrendingUp} />
+          deltaLabel={comparison.labelComparacao} Icon={TrendingUp} />
         <MetricCard label="Despesas" value={kpis.totalDespesas} delta={comparison.variacaoDespesas}
-          deltaLabel={comparison.labelComparacao} spark={despesasSpark} tone="negative" Icon={TrendingDown} />
-        <MetricCard label="A Receber" value={kpis.aReceber} spark={aReceberSpark} hint={hintReceber}
-          tone="warning" Icon={ArrowDownToLine} />
-        <MetricCard label="A Pagar" value={contasAPagar} spark={aPagarSpark} hint={hintPagar}
-          tone="negative" Icon={ArrowUpFromLine} />
+          deltaLabel={comparison.labelComparacao} Icon={TrendingDown} />
+        <MetricCard label="A Receber" value={kpis.aReceber} hint={hintReceber} Icon={ArrowDownToLine} />
+        <MetricCard label="A Pagar" value={contasAPagar} hint={hintPagar} Icon={ArrowUpFromLine} />
       </div>
     </section>
   );
