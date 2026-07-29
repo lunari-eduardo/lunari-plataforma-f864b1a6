@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { MetricIconBadge } from "@/components/ui/metric-icon";
+
 import { cn } from "@/lib/utils";
 
 interface StatCardProps {
