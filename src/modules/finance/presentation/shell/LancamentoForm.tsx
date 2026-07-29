@@ -245,11 +245,14 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
               })}
             </div>
           </div>
-          <footer className="flex items-center justify-end gap-2 border-t border-border/40 px-6 py-4">
+          <footer
+            className={`flex items-center justify-end gap-2 border-t border-border/40 shrink-0 ${isMobile ? 'px-5 py-3' : 'px-6 py-4'}`}
+            style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' } : undefined}
+          >
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className={`rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground ${isMobile ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]'}`}
             >
               Cancelar
             </button>
