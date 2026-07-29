@@ -46,17 +46,6 @@ export function IntegracoesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Plug className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Integrações</h2>
-        </div>
-        <p className="text-muted-foreground text-sm">
-          Gerencie suas integrações de pagamento e calendário
-        </p>
-      </div>
-
       {/* Tabs */}
       <Tabs defaultValue="pagamentos" className="w-full">
         <TabsList className="grid w-full grid-cols-4 max-w-2xl">
