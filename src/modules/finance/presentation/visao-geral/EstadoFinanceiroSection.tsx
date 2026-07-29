@@ -216,36 +216,38 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
             )}
           </div>
 
-          <div className="mt-4 space-y-2">
-            <div className="text-3xl font-semibold tracking-tight leading-tight" style={{ color: theme.color }}>
+          <div className="mt-3 sm:mt-4 space-y-2">
+            <div className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight" style={{ color: theme.color }}>
               {health.titulo}
             </div>
-            <p className="text-sm text-muted-foreground max-w-[42ch]">{health.justificativa}</p>
+            <p className="text-[13px] sm:text-sm text-muted-foreground max-w-[42ch]">{health.justificativa}</p>
           </div>
 
-          <div className="mt-auto pt-6 border-t border-border/40 grid grid-cols-3 divide-x divide-border/40">
-            <div className="pr-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Margem</div>
-              <div className="mt-1.5 text-xl font-semibold tabular-nums text-foreground">
+          <div className="mt-auto pt-4 sm:pt-6 border-t border-border/40 grid grid-cols-3 divide-x divide-border/40">
+            <div className="pr-2 sm:pr-4">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Margem</div>
+              <div className="mt-1 sm:mt-1.5 text-base sm:text-xl font-semibold tabular-nums text-foreground">
                 {margem.toFixed(1).replace('.', ',')}%
               </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground/80">Lucro / Receita</div>
+              <div className="mt-0.5 text-[10.5px] sm:text-[11px] text-muted-foreground/80">Lucro / Receita</div>
             </div>
-            <div className="px-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Lucro do período</div>
-              <div className="mt-1.5 text-xl font-semibold tabular-nums" style={{ color: lucroColor }}>
+            <div className="px-2 sm:px-4">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Lucro do período</div>
+              <div className="mt-1 sm:mt-1.5 text-base sm:text-xl font-semibold tabular-nums" style={{ color: lucroColor }}>
                 {formatCurrency(kpis.totalLucro)}
               </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground/80">Receita − Despesas</div>
+              <div className="mt-0.5 text-[10.5px] sm:text-[11px] text-muted-foreground/80">Receita − Despesas</div>
             </div>
-            <div className="pl-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Meta do período</div>
-              <div className="mt-1.5 text-xl font-semibold tabular-nums text-foreground" title={metaProporcional > 0 ? `${formatCurrency(kpis.totalReceita)} de ${formatCurrency(metaProporcional)}` : undefined}>
+            <div className="pl-2 sm:pl-4">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Meta do período</div>
+              <div className="mt-1 sm:mt-1.5 text-base sm:text-xl font-semibold tabular-nums text-foreground" title={metaProporcional > 0 ? `${formatCurrency(kpis.totalReceita)} de ${formatCurrency(metaProporcional)}` : undefined}>
                 {metaProporcional > 0 ? `${cumprimentoProporcional.toFixed(0)}%` : '—'}
               </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground/80">{metaSublabel}</div>
+              <div className="mt-0.5 text-[10.5px] sm:text-[11px] text-muted-foreground/80">{metaSublabel}</div>
             </div>
           </div>
+        </div>
+
         </div>
 
         <MetricCard label="Receita operacional" value={kpis.totalReceita} delta={comparison.variacaoReceita}
