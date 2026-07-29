@@ -8,6 +8,7 @@ import {
   TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine,
   ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react';
+// Sparklines removidos dos KPIs para reduzir ruído visual.
 import { formatCurrency } from '@/utils/currencyUtils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { computeHealth, type Health } from '@/modules/finance/domain/healthScore';
@@ -68,42 +69,6 @@ const statusTheme: Record<Health, { color: string; softBg: string; icon: 'heart'
 };
 
 type Tone = 'neutral' | 'positive' | 'negative' | 'warning';
-const toneColor: Record<Tone, string> = {
-  neutral: 'hsl(var(--foreground) / 0.75)',
-  positive: 'hsl(var(--finance-positive))',
-  negative: 'hsl(var(--finance-negative))',
-  warning: 'hsl(var(--finance-warning))',
-};
-
-function Sparkline({ values, tone = 'neutral' }: { values: number[]; tone?: Tone }) {
-  const width = 100;
-  const height = 32;
-  if (!values.length) return <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-8" />;
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values, 0);
-  const range = max - min || 1;
-  const stepX = values.length > 1 ? width / (values.length - 1) : width;
-  const pts = values.map((v, i) => [i * stepX, height - ((v - min) / range) * height] as const);
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
-  const area = `${d} L ${pts[pts.length - 1][0]} ${height} L 0 ${height} Z`;
-  const color = toneColor[tone];
-  const gid = `spk-${tone}-${values.length}`;
-  const last = pts[pts.length - 1];
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-8 overflow-visible">
-      <defs>
-        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#${gid})`} />
-      <path d={d} fill="none" stroke={color} strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke" className="transition-[stroke-width] group-hover:[stroke-width:2]" />
-      <circle cx={last[0]} cy={last[1]} r={1.8} fill={color} />
-    </svg>
-  );
-}
 
 function DeltaBadge({ value }: { value: number | null | undefined }) {
   if (value === null || value === undefined || !isFinite(value)) {
@@ -131,31 +96,28 @@ interface MetricCardProps {
   value: number;
   delta?: number | null;
   deltaLabel?: string;
-  spark: number[];
-  tone?: Tone;
   hint?: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }
-function MetricCard({ label, value, delta, deltaLabel, spark, tone = 'neutral', hint, Icon }: MetricCardProps) {
+function MetricCard({ label, value, delta, deltaLabel, hint, Icon }: MetricCardProps) {
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card p-5 flex flex-col justify-between overflow-hidden transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]">
-      <div className="flex items-start justify-between gap-3">
+    <div className="group relative rounded-2xl border border-border/60 bg-card p-3 sm:p-5 flex flex-col justify-between overflow-hidden transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_rgba(0,0,0,0.12)]">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground">{label}</div>
-          <div className="mt-2 text-[26px] leading-none font-semibold tracking-tight tabular-nums text-foreground">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] font-medium text-muted-foreground truncate">{label}</div>
+          <div className="mt-1.5 sm:mt-2 text-[18px] sm:text-[26px] leading-tight font-semibold tracking-tight tabular-nums text-foreground">
             {formatCurrency(value)}
           </div>
         </div>
-        <div className="shrink-0 h-9 w-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
-          <Icon className="h-[18px] w-[18px]" style={{ color: 'hsl(var(--accent-gold))' }} />
+        <div className="shrink-0 h-7 w-7 sm:h-9 sm:w-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--accent-gold-soft))' }}>
+          <Icon className="h-[14px] w-[14px] sm:h-[18px] sm:w-[18px]" style={{ color: 'hsl(var(--accent-gold))' }} />
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 min-h-[22px]">
+      <div className="mt-2 sm:mt-3 flex items-center gap-2 min-h-0 sm:min-h-[22px]">
         {delta !== undefined && <DeltaBadge value={delta ?? null} />}
-        {deltaLabel && <span className="text-[11px] text-muted-foreground/80 truncate">{deltaLabel}</span>}
-        {hint && !deltaLabel && <span className="text-[11px] text-muted-foreground/80 truncate">{hint}</span>}
+        {deltaLabel && <span className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">{deltaLabel}</span>}
+        {hint && !deltaLabel && <span className="text-[10.5px] sm:text-[11px] text-muted-foreground/80 truncate">{hint}</span>}
       </div>
-      <div className="mt-3 -mx-1"><Sparkline values={spark} tone={tone} /></div>
     </div>
   );
 }
@@ -185,13 +147,6 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
   const margem = kpis.totalReceita > 0 ? (kpis.totalLucro / kpis.totalReceita) * 100 : 0;
   const cumprimentoProporcional = metaProporcional > 0 ? (kpis.totalReceita / metaProporcional) * 100 : 0;
 
-  // Sparklines só sobre meses reais (dadosMensais já vem cortado no VisaoGeralPage)
-  const nReais = dadosMensais.length;
-  const receitaSpark = dadosMensais.map(d => d.receita);
-  const despesasSpark = dadosMensais.map(d => d.despesas ?? 0);
-  const aReceberSpark = aReceberMensal.slice(0, Math.max(nReais, 1));
-  const aPagarSpark = aPagarMensal.slice(0, Math.max(nReais, 1));
-
   const lucroPositivo = kpis.totalLucro >= 0;
   const lucroColor = lucroPositivo ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))';
 
@@ -217,10 +172,10 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
         <h2 id="secao-estado" className="mt-1 text-lg font-semibold tracking-tight text-foreground">Como está o negócio agora</h2>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-4 auto-rows-fr">
+      <div className="grid grid-cols-2 min-[380px]:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-2.5 sm:gap-4 auto-rows-fr">
         {/* Saúde */}
         <div
-          className="sm:col-span-2 lg:col-span-2 lg:row-span-2 relative rounded-2xl border border-border/60 bg-card p-6 overflow-hidden flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.12)]"
+          className="col-span-2 sm:col-span-2 lg:col-span-2 lg:row-span-2 relative rounded-2xl border border-border/60 bg-card p-4 sm:p-6 overflow-hidden flex flex-col transition-all duration-200 hover:border-border hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.12)]"
           style={{ backgroundImage: `linear-gradient(135deg, ${theme.softBg} 0%, transparent 55%)` }}
         >
           <div className="flex items-center justify-between gap-2.5">
@@ -261,46 +216,45 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
             )}
           </div>
 
-          <div className="mt-4 space-y-2">
-            <div className="text-3xl font-semibold tracking-tight leading-tight" style={{ color: theme.color }}>
+          <div className="mt-3 sm:mt-4 space-y-2">
+            <div className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight" style={{ color: theme.color }}>
               {health.titulo}
             </div>
-            <p className="text-sm text-muted-foreground max-w-[42ch]">{health.justificativa}</p>
+            <p className="text-[13px] sm:text-sm text-muted-foreground max-w-[42ch]">{health.justificativa}</p>
           </div>
 
-          <div className="mt-auto pt-6 border-t border-border/40 grid grid-cols-3 divide-x divide-border/40">
-            <div className="pr-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Margem</div>
-              <div className="mt-1.5 text-xl font-semibold tabular-nums text-foreground">
+          <div className="mt-auto pt-4 sm:pt-6 border-t border-border/40 grid grid-cols-3 divide-x divide-border/40">
+            <div className="pr-2 sm:pr-4">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Margem</div>
+              <div className="mt-1 sm:mt-1.5 text-base sm:text-xl font-semibold tabular-nums text-foreground">
                 {margem.toFixed(1).replace('.', ',')}%
               </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground/80">Lucro / Receita</div>
+              <div className="mt-0.5 text-[10.5px] sm:text-[11px] text-muted-foreground/80">Lucro / Receita</div>
             </div>
-            <div className="px-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Lucro do período</div>
-              <div className="mt-1.5 text-xl font-semibold tabular-nums" style={{ color: lucroColor }}>
+            <div className="px-2 sm:px-4">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Lucro do período</div>
+              <div className="mt-1 sm:mt-1.5 text-base sm:text-xl font-semibold tabular-nums" style={{ color: lucroColor }}>
                 {formatCurrency(kpis.totalLucro)}
               </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground/80">Receita − Despesas</div>
+              <div className="mt-0.5 text-[10.5px] sm:text-[11px] text-muted-foreground/80">Receita − Despesas</div>
             </div>
-            <div className="pl-4">
-              <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Meta do período</div>
-              <div className="mt-1.5 text-xl font-semibold tabular-nums text-foreground" title={metaProporcional > 0 ? `${formatCurrency(kpis.totalReceita)} de ${formatCurrency(metaProporcional)}` : undefined}>
+            <div className="pl-2 sm:pl-4">
+              <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] text-muted-foreground font-medium">Meta do período</div>
+              <div className="mt-1 sm:mt-1.5 text-base sm:text-xl font-semibold tabular-nums text-foreground" title={metaProporcional > 0 ? `${formatCurrency(kpis.totalReceita)} de ${formatCurrency(metaProporcional)}` : undefined}>
                 {metaProporcional > 0 ? `${cumprimentoProporcional.toFixed(0)}%` : '—'}
               </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground/80">{metaSublabel}</div>
+              <div className="mt-0.5 text-[10.5px] sm:text-[11px] text-muted-foreground/80">{metaSublabel}</div>
             </div>
           </div>
         </div>
 
+
         <MetricCard label="Receita operacional" value={kpis.totalReceita} delta={comparison.variacaoReceita}
-          deltaLabel={comparison.labelComparacao} spark={receitaSpark} tone="neutral" Icon={TrendingUp} />
+          deltaLabel={comparison.labelComparacao} Icon={TrendingUp} />
         <MetricCard label="Despesas" value={kpis.totalDespesas} delta={comparison.variacaoDespesas}
-          deltaLabel={comparison.labelComparacao} spark={despesasSpark} tone="negative" Icon={TrendingDown} />
-        <MetricCard label="A Receber" value={kpis.aReceber} spark={aReceberSpark} hint={hintReceber}
-          tone="warning" Icon={ArrowDownToLine} />
-        <MetricCard label="A Pagar" value={contasAPagar} spark={aPagarSpark} hint={hintPagar}
-          tone="negative" Icon={ArrowUpFromLine} />
+          deltaLabel={comparison.labelComparacao} Icon={TrendingDown} />
+        <MetricCard label="A Receber" value={kpis.aReceber} hint={hintReceber} Icon={ArrowDownToLine} />
+        <MetricCard label="A Pagar" value={contasAPagar} hint={hintPagar} Icon={ArrowUpFromLine} />
       </div>
     </section>
   );

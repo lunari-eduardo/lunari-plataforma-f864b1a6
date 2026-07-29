@@ -34,10 +34,10 @@ export const PeriodActionBar = memo(function PeriodActionBar({
   const meses = showAnoTodo ? OPCOES_MES : mesesSemAnoTodo;
 
   return (
-    <div className="flex items-center justify-between gap-3 pb-4">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pb-4 min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         <Select value={ano} onValueChange={setAno}>
-          <SelectTrigger className="w-24 h-9 border-border/60 bg-transparent">
+          <SelectTrigger className="w-[86px] sm:w-24 h-9 border-border/60 bg-transparent">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -50,7 +50,7 @@ export const PeriodActionBar = memo(function PeriodActionBar({
         </Select>
 
         <Select value={mes} onValueChange={setMes}>
-          <SelectTrigger className="w-36 h-9 border-border/60 bg-transparent">
+          <SelectTrigger className="w-[128px] sm:w-36 h-9 border-border/60 bg-transparent">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -63,7 +63,9 @@ export const PeriodActionBar = memo(function PeriodActionBar({
         </Select>
       </div>
 
-      <NovoLancamentoMenu onSelectTipo={onSelectTipo} />
+      <div className="shrink-0 ml-auto">
+        <NovoLancamentoMenu onSelectTipo={onSelectTipo} />
+      </div>
     </div>
   );
 });
