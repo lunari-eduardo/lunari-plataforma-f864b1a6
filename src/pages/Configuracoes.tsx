@@ -7,7 +7,6 @@ import { useAccessControl } from '@/hooks/useAccessControl';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT, PAGE_SCROLL_SHELL } from '@/components/layout/PageTabs';
-import { cn } from '@/lib/utils';
 
 import Categorias from '@/components/configuracoes/Categorias';
 import Pacotes from '@/components/configuracoes/Pacotes';

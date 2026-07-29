@@ -12,6 +12,8 @@ import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegrati
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { useAssistantAccess } from '@/modules/assistant/runtime/useAssistantAccess';
 import { toast } from 'sonner';
+import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT } from '@/components/layout/PageTabs';
+import { cn } from '@/lib/utils';
 
 export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -45,21 +47,22 @@ export function IntegracoesTab() {
   }, [searchParams, setSearchParams, refetchGoogleCalendar]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Tabs */}
       <Tabs defaultValue="pagamentos" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-          <TabsTrigger value="pagamentos" className="gap-2">
+        <TabsList className={PAGE_TABS_LIST}>
+          <TabsTrigger value="pagamentos" className={PAGE_TABS_TRIGGER} title="Pagamentos">
             <CreditCard className="h-4 w-4" />
             <span className="hidden sm:inline">Pagamentos</span>
           </TabsTrigger>
-          <TabsTrigger value="assinatura" className="gap-2">
+          <TabsTrigger value="assinatura" className={PAGE_TABS_TRIGGER} title="Assinatura">
             <FileSignature className="h-4 w-4" />
             <span className="hidden sm:inline">Assinatura</span>
           </TabsTrigger>
           <TabsTrigger
             value="calendar"
-            className="gap-2"
+            className={PAGE_TABS_TRIGGER}
+            title="Google Calendar"
             onClick={(e) => {
               if (!hasPro) {
                 e.preventDefault();
@@ -76,7 +79,7 @@ export function IntegracoesTab() {
           >
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Calendar</span>
-            {!hasPro && <Crown className="h-3.5 w-3.5 text-primary" />}
+            {!hasPro && <Crown className="h-3.5 w-3.5 text-accent-gold" />}
           </TabsTrigger>
           <TabsTrigger value="assistente" className="gap-2">
             <Bot className="h-4 w-4" />
@@ -84,33 +87,33 @@ export function IntegracoesTab() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pagamentos" className="mt-6">
+        <TabsContent value="pagamentos" className={PAGE_TABS_CONTENT}>
           <PaymentSettings />
         </TabsContent>
 
-        <TabsContent value="assinatura" className="mt-6">
-          <div className="max-w-xl">
+        <TabsContent value="assinatura" className={PAGE_TABS_CONTENT}>
+          <div className="max-w-2xl">
             <AutentiqueCard />
           </div>
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-6">
-          <div className="max-w-xl">
+        <TabsContent value="calendar" className={PAGE_TABS_CONTENT}>
+          <div className="max-w-2xl">
             <GoogleCalendarCard />
           </div>
         </TabsContent>
 
-        <TabsContent value="assistente" className="mt-6">
-          <div className="max-w-xl space-y-4">
+        <TabsContent value="assistente" className={PAGE_TABS_CONTENT}>
+          <div className="max-w-2xl space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-primary" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-accent-gold" />
                   Assistente Lu · MCP
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="pt-0 space-y-3">
+                <p className="text-xs text-muted-foreground">
                   Conecte assistentes externos (ChatGPT, Claude Desktop, Cursor, n8n) às ferramentas
                   da Lu via Model Context Protocol. Cada token é individual, revogável e respeita
                   seu estágio de liberação da Lu.
