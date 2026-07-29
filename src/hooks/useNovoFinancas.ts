@@ -369,12 +369,13 @@ export function useNovoFinancas() {
 
   const marcarComoPago = async (id: string) => {
     try {
-      await marcarComoPagoSupabase(id);
+      await marcarComoPagoAsync(id);
     } catch (error) {
       console.error('Erro ao marcar como pago:', error);
       throw error;
     }
   };
+
 
   // Função auxiliar para obter itens por grupo
   const obterItensPorGrupo = (grupo: GrupoPrincipal): ItemFinanceiroCompativel[] => {
