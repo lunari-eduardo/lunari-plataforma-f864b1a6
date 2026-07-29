@@ -308,10 +308,18 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
           await financas.atualizarTransacao(id, patch);
         }}
         onDelete={async (id) => {
-          if (!confirm('Excluir este lançamento?')) return;
+          const ok = await confirm({
+            title: 'Excluir lançamento',
+            description: 'Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            cancelText: 'Cancelar',
+            variant: 'destructive',
+          });
+          if (!ok) return;
           await financas.removerTransacao(id);
           setDetailLinha(null);
         }}
+
         onMarkPaid={async (id) => {
           await financas.marcarComoPago(id);
           setDetailLinha(null);
