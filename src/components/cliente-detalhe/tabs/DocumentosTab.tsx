@@ -1,9 +1,9 @@
 import { Upload } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { FileUploadZone } from '@/components/shared/FileUploadZone';
 import { ClienteFormulariosList } from '@/components/formularios/ClienteFormulariosList';
 import { ClienteContratosList } from '@/components/contratos/ClienteContratosList';
 import { ClienteCompleto } from '@/types/cliente-supabase';
+import { SECTION_SURFACE, SECTION_TITLE } from '@/lib/dialogTokens';
 
 interface DocumentosTabProps {
   cliente: ClienteCompleto;
@@ -11,9 +11,8 @@ interface DocumentosTabProps {
 
 export function DocumentosTab({ cliente }: DocumentosTabProps) {
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Formulários / Briefings */}
-      <section>
+    <div className="space-y-4">
+      <section className={SECTION_SURFACE}>
         <ClienteFormulariosList
           clienteId={cliente.id}
           clienteNome={cliente.nome}
@@ -21,23 +20,17 @@ export function DocumentosTab({ cliente }: DocumentosTabProps) {
         />
       </section>
 
-      <Separator />
-
-      {/* Contratos */}
-      <section>
+      <section className={SECTION_SURFACE}>
         <ClienteContratosList clienteId={cliente.id} clienteNome={cliente.nome} />
       </section>
 
-      <Separator />
-
-      {/* Documentos do Cliente */}
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Upload className="h-4 w-4 text-primary" />
-            Documentos do Cliente
+      <section className={SECTION_SURFACE}>
+        <div className="mb-3">
+          <h3 className={SECTION_TITLE}>
+            <Upload className="h-3.5 w-3.5 text-accent-gold" />
+            Documentos do cliente
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Gerencie todos os documentos relacionados a este cliente
           </p>
         </div>
