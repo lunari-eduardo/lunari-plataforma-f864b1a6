@@ -13,7 +13,6 @@ import { useAccessControl } from '@/hooks/useAccessControl';
 import { useAssistantAccess } from '@/modules/assistant/runtime/useAssistantAccess';
 import { toast } from 'sonner';
 import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT } from '@/components/layout/PageTabs';
-import { cn } from '@/lib/utils';
 
 export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,7 +80,7 @@ export function IntegracoesTab() {
             <span className="hidden sm:inline">Calendar</span>
             {!hasPro && <Crown className="h-3.5 w-3.5 text-accent-gold" />}
           </TabsTrigger>
-          <TabsTrigger value="assistente" className="gap-2">
+          <TabsTrigger value="assistente" className={PAGE_TABS_TRIGGER} title="Assistente">
             <Bot className="h-4 w-4" />
             <span className="hidden sm:inline">Assistente</span>
           </TabsTrigger>
