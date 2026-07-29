@@ -19,13 +19,14 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map(i => (
-          <div 
-            key={i} 
-            className="bg-lunar-surface/80 rounded-xl p-4 border border-lunar-border/30 animate-pulse"
+          <div
+            key={i}
+            className="rounded-2xl border border-border/60 bg-card p-3 sm:p-5 animate-pulse"
           >
-            <div className="h-3.5 w-20 bg-lunar-border/30 rounded mb-2" />
-            <div className="h-7 w-28 bg-lunar-border/30 rounded" />
+            <div className="h-3 w-20 bg-muted/60 rounded mb-3" />
+            <div className="h-6 w-28 bg-muted/60 rounded" />
           </div>
+
         ))}
       </div>
     );
