@@ -589,9 +589,13 @@ export function useDashboardFinanceiro() {
       
       if (transacao.item?.grupo_principal === 'Receita Não Operacional') {
         dadosPorMes[mes].receita += transacao.valor;
+      } else if (transacao.item?.grupo_principal === 'Receita Operacional') {
+        // Lançamento manual de Receita Operacional (não vive em clientes_sessoes).
+        dadosPorMes[mes].receita += transacao.valor;
       } else if (transacao.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(transacao.item.grupo_principal)) {
         dadosPorMes[mes].despesas += transacao.valor;
       }
+
     });
 
     // Opening balance: buscado via RPC finance_get_opening_balance
