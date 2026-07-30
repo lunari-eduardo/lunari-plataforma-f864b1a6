@@ -42,7 +42,13 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-export type AssistantOutputStatus = "ok" | "error" | "denied" | "pending_approval";
+export type AssistantOutputStatus =
+  | "ok"
+  | "error"
+  | "denied"
+  | "pending_approval"
+  | "blocked_by_rollout";
+
 
 export interface AssistantRunOptions {
   user: AuthUser;
