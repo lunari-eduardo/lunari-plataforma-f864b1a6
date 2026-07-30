@@ -42,6 +42,58 @@ export function isExposed(name: string): boolean {
 /** Total alcançável (núcleo + catálogo) — usado nas descrições das meta-tools. */
 export const CATALOG_SIZE = CATALOG_TOOLS.length;
 
+/**
+ * Sinônimos de busca por ferramenta/prefixo. O catálogo é gerado a partir dos
+ * ids das capabilities (títulos técnicos), então sem estes termos de negócio o
+ * modelo procura "análise de vendas" / "faturamento" e não encontra nada.
+ * A chave pode ser o nome exato da tool ou um prefixo (`lunari.leads.`).
+ */
+export const SEARCH_ALIASES: Record<string, string> = {
+  "lunari.workflow.vendas.": "analise de vendas faturamento receita ticket medio desempenho comercial relatorio",
+  "lunari.workflow.vendas.resumo": "analise de vendas faturamento receita total ticket medio sessoes periodo relatorio mensal anual",
+  "lunari.workflow.vendas.compararAnos": "comparativo anual ano a ano crescimento variacao vendas faturamento",
+  "lunari.workflow.vendas.metasProgresso": "metas objetivo progresso atingimento faturamento vendas",
+  "lunari.workflow.photoProduction": "producao fotografica quantidade de fotos entregues volume",
+  "lunari.leads.": "comercial funil conversao prospeccao orcamento origem perdas",
+  "lunari.precificacao.": "precificacao preco pacote custo markup calculadora tabela",
+  "lunari.configuracoes.": "configuracoes ajustes categorias pacotes parametros do sistema",
+  "lunari.contratos.": "contrato assinatura documento",
+  "lunari.formularios.": "formulario briefing questionario resposta",
+  "lunari.finance.": "financeiro extrato despesa receita transacao caixa saldo",
+  "lunari.tasks.": "tarefa lembrete checklist pendencia",
+  "lunari.agenda.": "agenda agendamento horario disponibilidade compromisso",
+  "lunari.workflow.": "sessao ensaio produto etapa pagamento cliente da sessao",
+  "lunari.clientes.": "cliente contato cadastro",
+  "lunari.gallery.": "galeria selecao de fotos entrega",
+  "lunari.billing.": "plano assinatura creditos cobranca da conta",
+};
+
+/** Termos extras de uma tool (nome exato tem prioridade sobre prefixos). */
+export function aliasesFor(name: string): string {
+  const exact = SEARCH_ALIASES[name] ?? "";
+  const prefixes = Object.entries(SEARCH_ALIASES)
+    .filter(([k]) => k.endsWith(".") && name.startsWith(k))
+    .map(([, v]) => v);
+  return [exact, ...prefixes].join(" ");
+}
+
+/** Rótulos de negócio por domínio — o índice anunciado no handshake. */
+export const DOMAIN_LABELS: Record<string, string> = {
+  workflow: "sessões, produtos e análise de vendas",
+  tasks: "tarefas",
+  precificacao: "precificação e pacotes",
+  configuracoes: "configurações do sistema",
+  finance: "financeiro e extrato",
+  contratos: "contratos",
+  formularios: "formulários e briefings",
+  leads: "leads e funil comercial",
+  agenda: "agenda",
+  clientes: "clientes",
+  billing: "plano e créditos",
+  gallery: "galeria (leitura)",
+};
+
+
 export const META_TOOL_DEFS = [
   {
     name: META_SEARCH,
