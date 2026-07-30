@@ -66,6 +66,8 @@ interface AuthContext {
   rolloutAllowed: boolean;
   authSource: "pat" | "oauth" | null;
   clientId: string | null;
+  /** A2 — JWT cru do usuário (só no caminho OAuth); habilita dispatch com RLS. */
+  userJwt: string | null;
 }
 
 const EMPTY_AUTH: AuthContext = {
@@ -75,7 +77,9 @@ const EMPTY_AUTH: AuthContext = {
   rolloutAllowed: false,
   authSource: null,
   clientId: null,
+  userJwt: null,
 };
+
 
 function decodeJwtPayload(jwt: string): Record<string, any> | null {
   try {
