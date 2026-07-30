@@ -622,6 +622,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.getCardBySession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const s = r.sessao!;
     const [{ data: fin }, { data: gal }] = await Promise.all([
@@ -646,6 +647,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.getSessionFinancials": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const s = r.sessao!;
     const { data, error } = await sb.rpc("workflow_session_financials", { p_session_id: s.id });
@@ -897,6 +899,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.diagnoseSession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const s = r.sessao!;
     const findings: Array<{ code: string; severity: string; message: string; suggestedCapability: string | null }> = [];
@@ -919,6 +922,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.produto.listBySession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const produtos = projetarProdutos(r.sessao!);
     return ok(
@@ -1539,6 +1543,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       const date = String(args.date ?? ""), time = String(args.time ?? "");
       if (!date || !time) return fail("Campos 'date' (YYYY-MM-DD) e 'time' (HH:MM) são obrigatórios.");
       const cli = await resolveCliente(sb, uid, args);
+      if (cli.ask) return cli.ask;
       if (cli.error) return fail(cli.error);
       const title = String(args.title ?? cli.nome ?? "Agendamento");
       const duration = Number(args.durationMinutes) || 60;
@@ -1581,6 +1586,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       if (patch.durationMinutes != null) upd.duration_minutes = Number(patch.durationMinutes);
       if (patch.clienteId != null || patch.clienteNome != null) {
         const cli = await resolveCliente(sb, uid, patch);
+        if (cli.ask) return cli.ask;
         if (cli.error) return fail(cli.error);
         upd.cliente_id = cli.id;
       }
@@ -1857,6 +1863,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Atualizar dados da sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
     handler: async (sb, uid, args) => {
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       const src = (args.fields ?? args) as Record<string, any>;
@@ -1887,6 +1894,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       const toStatus = String(args.toStatus ?? args.status ?? "").trim();
       if (!toStatus) return fail("Campo 'toStatus' é obrigatório. Consulte lunari.workflow.statusOptions.");
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       const { data: etapas } = await sb.from("etapas_trabalho").select("nome").eq("user_id", uid);
@@ -1910,6 +1918,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       const valor = Number(args.valor);
       if (!(valor > 0)) return fail("Campo 'valor' (em reais, ex.: 250.00) é obrigatório e deve ser positivo.");
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       if (!s.session_id) return fail("Sessão sem session_id texto — registre o pagamento pelo app.");
@@ -1986,6 +1995,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Excluir a sessão ${a.sessionId ?? a.clienteNome ?? "?"} e seus lançamentos (irreversível)`,
     handler: async (sb, uid, args) => {
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       const { count } = await sb.from("clientes_transacoes")
