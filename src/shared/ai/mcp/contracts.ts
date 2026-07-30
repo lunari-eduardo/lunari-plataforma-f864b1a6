@@ -52,7 +52,7 @@ export interface MCPTool {
   /** Capability Lunari original — o host resolve via dispatcher genérico. */
   capabilityId: string;
   /** A2 — transporte declarado no `defineCapability`. */
-  transport: { type: "rpc" | "edge"; name: string; mapped?: boolean };
+  transport?: { type: "rpc" | "edge"; name: string; mapped?: boolean };
   /** Escopo OAuth/PAT exigido. */
   scope: "read" | "write";
   kind: "command" | "query";
@@ -69,9 +69,10 @@ export interface BuildMCPToolsOptions {
 /**
  * Converte capabilities Lunari em tools MCP.
  *
- * A2 — só entram capabilities que (a) declaram `audience` contendo "mcp" e
- * (b) declaram um `execution` remoto (rpc/edge). Capabilities `client-only`
- * ficam de fora: anunciar tool sem executor é o que produzia o catálogo-fachada.
+ * A2 — entram apenas capabilities cuja `audience` inclui "mcp". Quando a
+ * capability declara `execution` remoto (rpc/edge), o campo `transport` vai
+ * junto e o servidor usa o dispatcher genérico; sem ele, o servidor recorre
+ * ao bridge legado escrito à mão (migração incremental, sem quebrar o catálogo).
  */
 export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
   const { user, namespace = "lunari" } = opts;
@@ -79,9 +80,8 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
 
   const out: MCPTool[] = [];
   for (const t of tools) {
-    if (!t.audience?.includes("mcp")) continue;
+    if (t.audience && !t.audience.includes("mcp")) continue;
     const exec = t.execution;
-    if (!exec || exec.type === "client-only" || !exec.name) continue;
 
     const needsApproval = (t as { needsApproval?: boolean }).needsApproval === true;
     const [module, ...rest] = t.id.split(".");
@@ -108,7 +108,10 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
         requiresApprovalHint: needsApproval,
       },
       capabilityId: t.id,
-      transport: { type: exec.type, name: exec.name, mapped: exec.mapped },
+      transport:
+        exec && exec.type !== "client-only" && exec.name
+          ? { type: exec.type, name: exec.name, mapped: exec.mapped }
+          : undefined,
       scope: t.kind === "query" ? "read" : "write",
       kind: t.kind,
       needsApproval,

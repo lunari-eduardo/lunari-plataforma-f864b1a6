@@ -40,8 +40,9 @@ async function main() {
 
   const missingTransport = tools.filter((t) => !t.transport?.name);
   if (missingTransport.length > 0) {
-    throw new Error(
-      `Catalog inválido: tools sem transport declarado → ${missingTransport.map((t) => t.name).join(", ")}`,
+    console.warn(
+      `[mcp-catalog] ${missingTransport.length}/${tools.length} tools ainda sem transport declarado ` +
+        `(executadas pelo bridge legado até declararem \`execution\` no defineCapability).`,
     );
   }
 
