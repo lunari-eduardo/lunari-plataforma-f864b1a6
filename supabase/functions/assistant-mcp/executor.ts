@@ -1626,8 +1626,8 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       }
       const title = String(args.title ?? cli.nome ?? "Agendamento");
 
-      const duration = Number(args.durationMinutes) || 60;
       const conflict = conflictAt(await appointmentsInDay(sb, uid, date), time, duration);
+
       if (conflict && !args.force) {
         return fail(`Conflito com "${conflict.title}" às ${conflict.time}. Escolha outro horário ou envie force=true.`);
       }
