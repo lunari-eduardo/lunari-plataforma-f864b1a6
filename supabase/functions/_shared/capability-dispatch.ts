@@ -252,6 +252,27 @@ export async function dispatchCapability(args: DispatchArgs): Promise<DispatchRe
   const sb = args.client ?? (args.userJwt ? userScopedClient(args.userJwt) : null);
   if (!sb) return fail("UNAUTHORIZED", started);
 
+  // A6 — gate de rollout, fail-closed.
+  if (args.userId) {
+    let allowed = false;
+    try {
+      const { data, error } = await sb.rpc("assistant_access_allowed", { _uid: args.userId });
+      allowed = !error && data === true;
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) {
+      return fail(
+        "FORBIDDEN",
+        started,
+        "blocked_by_rollout",
+        "A assistente Lu está em teste fechado. Solicite acesso para participar do beta.",
+      );
+    }
+  }
+
+
+
   const timeout = TIMEOUT_BY_COST[tool.costHint ?? "cheap"] ?? TIMEOUT_BY_COST.cheap;
 
   try {
