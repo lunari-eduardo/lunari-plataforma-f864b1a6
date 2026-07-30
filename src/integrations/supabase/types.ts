@@ -589,9 +589,66 @@ export type Database = {
           },
         ]
       }
+      automation_queue: {
+        Row: {
+          attempts: number
+          capability_id: string
+          created_at: string
+          entity_id: string
+          id: string
+          last_error: string | null
+          next_attempt_at: string
+          payload: Json
+          processed_at: string | null
+          rule_id: string
+          trigger_kind: string
+          user_id: string
+          window_key: string
+        }
+        Insert: {
+          attempts?: number
+          capability_id: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          processed_at?: string | null
+          rule_id: string
+          trigger_kind: string
+          user_id: string
+          window_key: string
+        }
+        Update: {
+          attempts?: number
+          capability_id?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          last_error?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          processed_at?: string | null
+          rule_id?: string
+          trigger_kind?: string
+          user_id?: string
+          window_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_queue_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_rules: {
         Row: {
           capability_id: string
+          config: Json
           created_at: string
           enabled: boolean
           id: string
@@ -603,6 +660,7 @@ export type Database = {
         }
         Insert: {
           capability_id: string
+          config?: Json
           created_at?: string
           enabled?: boolean
           id?: string
@@ -614,6 +672,7 @@ export type Database = {
         }
         Update: {
           capability_id?: string
+          config?: Json
           created_at?: string
           enabled?: boolean
           id?: string
@@ -630,6 +689,7 @@ export type Database = {
           actor: string
           capability_id: string
           created_at: string
+          entity_id: string | null
           error_code: string | null
           error_message: string | null
           id: string
@@ -637,12 +697,15 @@ export type Database = {
           result: Json | null
           rule_id: string | null
           status: string
+          trigger_kind: string | null
           user_id: string
+          window_key: string | null
         }
         Insert: {
           actor: string
           capability_id: string
           created_at?: string
+          entity_id?: string | null
           error_code?: string | null
           error_message?: string | null
           id?: string
@@ -650,12 +713,15 @@ export type Database = {
           result?: Json | null
           rule_id?: string | null
           status: string
+          trigger_kind?: string | null
           user_id: string
+          window_key?: string | null
         }
         Update: {
           actor?: string
           capability_id?: string
           created_at?: string
+          entity_id?: string | null
           error_code?: string | null
           error_message?: string | null
           id?: string
@@ -663,7 +729,9 @@ export type Database = {
           result?: Json | null
           rule_id?: string | null
           status?: string
+          trigger_kind?: string | null
           user_id?: string
+          window_key?: string | null
         }
         Relationships: [
           {
@@ -674,6 +742,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      automation_schedule_state: {
+        Row: {
+          consecutive_errors: number
+          created_at: string
+          last_cycle: Json
+          last_run_at: string | null
+          next_run_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consecutive_errors?: number
+          created_at?: string
+          last_cycle?: Json
+          last_run_at?: string | null
+          next_run_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consecutive_errors?: number
+          created_at?: string
+          last_cycle?: Json
+          last_run_at?: string | null
+          next_run_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       availability_slots: {
         Row: {
@@ -6633,6 +6731,7 @@ export type Database = {
         }
         Returns: Json
       }
+      automation_schedule_overview: { Args: never; Returns: Json }
       calculate_gallery_extra_payment: {
         Args: { p_bypass_pre_selecao_gate?: boolean; p_gallery_id: string }
         Returns: Json

@@ -141,3 +141,6 @@ verify_jwt = true
 
 [functions.assistant-mcp]
 verify_jwt = false
+
+[functions.automation-scheduler]
+verify_jwt = false
