@@ -394,7 +394,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       // Meta-tool de execução: reescreve para a tool real e segue o fluxo normal
       // (escopos, rollout, aprovação e auditoria idênticos).
       if (name === META_INVOKE) {
-        const target = String(args.name ?? "").trim();
+        const target = resolveToolName(String(args.name ?? "").trim());
         if (!target) {
           return rpcResult(id, {
             isError: true,
