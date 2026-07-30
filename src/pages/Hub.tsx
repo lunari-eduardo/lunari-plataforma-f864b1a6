@@ -10,7 +10,7 @@
  */
 import * as React from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Sparkles, ShieldCheck, Plug, Activity, Brain } from "lucide-react";
+import { Sparkles, ShieldCheck, Plug, Activity, Brain, Timer } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,10 @@ import { useContextSnapshot } from "@/shared/context/react";
 import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
 import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
 import HubAtividade from "@/components/hub/HubAtividade";
+import HubAutomacoes from "@/components/hub/HubAutomacoes";
 
-type TabKey = "contexto" | "aprovacoes" | "conexoes" | "atividade";
-const VALID: TabKey[] = ["contexto", "aprovacoes", "conexoes", "atividade"];
+type TabKey = "contexto" | "aprovacoes" | "automacoes" | "conexoes" | "atividade";
+const VALID: TabKey[] = ["contexto", "aprovacoes", "automacoes", "conexoes", "atividade"];
 
 export default function Hub() {
   const [params, setParams] = useSearchParams();
