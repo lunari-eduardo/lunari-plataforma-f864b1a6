@@ -21,7 +21,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE, BRIDGE_SCHEMAS } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
-import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
+import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_DESCRIBE, META_INVOKE, isExposed, CATALOG_SIZE } from "./exposed.ts";
 import { toPublicName, publicInputSchema } from "./compat.ts";
 
 import {
@@ -43,10 +43,10 @@ const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
  * com PATs e clientes já configurados).
  */
 const PUBLIC_TO_INTERNAL: Map<string, string> = new Map(
-  [...CATALOG_BY_NAME.keys(), META_SEARCH, META_INVOKE].map((n) => [toPublicName(n), n]),
+  [...CATALOG_BY_NAME.keys(), META_SEARCH, META_DESCRIBE, META_INVOKE].map((n) => [toPublicName(n), n]),
 );
 function resolveToolName(name: string): string {
-  if (CATALOG_BY_NAME.has(name) || name === META_SEARCH || name === META_INVOKE) return name;
+  if (CATALOG_BY_NAME.has(name) || name === META_SEARCH || name === META_DESCRIBE || name === META_INVOKE) return name;
   return PUBLIC_TO_INTERNAL.get(name) ?? name;
 }
 
@@ -96,8 +96,22 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.16.0", // Análise de Vendas (resumo, comparativo anual, metas, produção anual) + Leads (leitura) no bridge
+  version: "0.17.0", // Superfície em camadas: núcleo curado + catálogo sob demanda (search/describe/invoke)
 };
+/**
+ * Instruções do servidor: descrevem a arquitetura em camadas para o modelo,
+ * incluindo o índice compacto de domínios (gerado no catálogo). Isso substitui
+ * a listagem completa de ferramentas no handshake.
+ */
+const DOMAIN_INDEX: string = (catalog as any).manifest?.domainIndex ?? "";
+const INSTRUCTIONS =
+  `${catalog.manifest.instructions}\n\n` +
+  `As ferramentas visíveis cobrem a rotina diária (agenda, workflow, clientes, tarefas, financeiro, leads). ` +
+  `O Lunari tem ${CATALOG_SIZE} ferramentas no total — as demais (precificação, configurações, contratos, ` +
+  `formulários, galeria, relatórios, diagnósticos) NÃO são listadas aqui para manter a conexão leve. ` +
+  `Para usá-las: lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
+  (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "");
+
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -358,7 +372,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         protocolVersion: negotiated,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
-        instructions: catalog.manifest.instructions,
+        instructions: INSTRUCTIONS,
       });
     }
     case "notifications/initialized":
@@ -406,7 +420,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         protocolVersion: PROTOCOL_VERSION,
         serverInfo: SERVER_INFO,
         capabilities: { tools: { listChanged: false } },
-        instructions: catalog.manifest.instructions,
+        instructions: INSTRUCTIONS,
       });
 
     case "tools/call": {
