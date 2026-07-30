@@ -43,6 +43,7 @@ async function main() {
   await import("../src/shared/ai/registry");
   const { buildMCPToolsForUser, buildMCPManifest } = await import("../src/shared/ai/mcp");
   const { mcpBlockReason } = await import("../src/shared/capability/audience");
+  const { tierFor, CORE_MAX_TOOLS } = await import("../src/shared/capability/tiers");
 
   // Stub de usuário — o catálogo público é a superfície completa filtrada por
   // `audience`, não por permissões individuais.
@@ -64,6 +65,29 @@ async function main() {
   tools.sort((a, b) => a.name.localeCompare(b.name));
   const manifest = buildMCPManifest(tools);
 
+  // Camada de exposição (core = publicado no manifesto; catalog = sob demanda).
+  const tiered = tools.map((t) => ({ ...t, tier: tierFor(t.capabilityId) }));
+  const coreCount = tiered.filter((t) => t.tier === "core").length;
+  if (coreCount > CORE_MAX_TOOLS) {
+    console.error(
+      `✖ Núcleo MCP com ${coreCount} capabilities (teto ${CORE_MAX_TOOLS}). ` +
+        "Mova algo para o Catálogo em src/shared/capability/tiers.ts.",
+    );
+    process.exit(1);
+  }
+
+  // Índice compacto por domínio — vai no `instructions` para o modelo saber
+  // ONDE procurar sem precisar listar nada.
+  const byDomain = new Map<string, number>();
+  for (const t of tiered) {
+    const d = t.capabilityId.split(".")[0];
+    byDomain.set(d, (byDomain.get(d) ?? 0) + 1);
+  }
+  const domainIndex = [...byDomain.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([d, n]) => `${d} (${n})`)
+    .join(" · ");
+
   const missingTransport = tools.filter((t) => !t.transport?.name);
   if (missingTransport.length > 0) {
     console.warn(
@@ -72,7 +96,7 @@ async function main() {
     );
   }
 
-  const body = stable({ catalogVersion: 2, manifest, tools });
+  const body = stable({ catalogVersion: 3, manifest: { ...manifest, domainIndex }, tools: tiered });
   const catalogHash = await sha256(JSON.stringify(body));
 
   const out = {
@@ -145,7 +169,7 @@ async function main() {
   await writeFile(path, JSON.stringify(out, null, 2) + "\n", "utf8");
 
   console.log(`✔ MCP catalog escrito em ${path}`);
-  console.log(`  tools: ${tools.length}`);
+  console.log(`  tools: ${tools.length} (núcleo: ${coreCount} · catálogo: ${tools.length - coreCount})`);
   console.log(`  hash:  ${catalogHash.slice(0, 12)}`);
   console.log(`  manifest: ${manifest.name}@${manifest.version}`);
 }

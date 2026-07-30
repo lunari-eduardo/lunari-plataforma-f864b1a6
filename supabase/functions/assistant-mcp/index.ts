@@ -21,7 +21,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE, BRIDGE_SCHEMAS } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
-import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
+import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_DESCRIBE, META_INVOKE, isExposed, CATALOG_SIZE } from "./exposed.ts";
 import { toPublicName, publicInputSchema } from "./compat.ts";
 
 import {
@@ -43,10 +43,10 @@ const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
  * com PATs e clientes já configurados).
  */
 const PUBLIC_TO_INTERNAL: Map<string, string> = new Map(
-  [...CATALOG_BY_NAME.keys(), META_SEARCH, META_INVOKE].map((n) => [toPublicName(n), n]),
+  [...CATALOG_BY_NAME.keys(), META_SEARCH, META_DESCRIBE, META_INVOKE].map((n) => [toPublicName(n), n]),
 );
 function resolveToolName(name: string): string {
-  if (CATALOG_BY_NAME.has(name) || name === META_SEARCH || name === META_INVOKE) return name;
+  if (CATALOG_BY_NAME.has(name) || name === META_SEARCH || name === META_DESCRIBE || name === META_INVOKE) return name;
   return PUBLIC_TO_INTERNAL.get(name) ?? name;
 }
 
@@ -96,8 +96,29 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.16.0", // Análise de Vendas (resumo, comparativo anual, metas, produção anual) + Leads (leitura) no bridge
+  version: "0.17.0", // Superfície em camadas: núcleo curado + catálogo sob demanda (search/describe/invoke)
 };
+/**
+ * Instruções do servidor: descrevem a arquitetura em camadas para o modelo,
+ * incluindo o índice compacto de domínios (gerado no catálogo). Isso substitui
+ * a listagem completa de ferramentas no handshake.
+ */
+const DOMAIN_INDEX: string = (catalog as any).manifest?.domainIndex ?? "";
+const INSTRUCTIONS =
+  `${catalog.manifest.instructions}\n\n` +
+  `As ferramentas visíveis cobrem a rotina diária (agenda, workflow, clientes, tarefas, financeiro, leads). ` +
+  `O Lunari tem ${CATALOG_SIZE} ferramentas no total — as demais (precificação, configurações, contratos, ` +
+  `formulários, galeria, relatórios, diagnósticos) NÃO são listadas aqui para manter a conexão leve. ` +
+  `Para usá-las: lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
+  (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "");
+
+/** Teto de descrição publicada no núcleo (mantém o manifesto pequeno). */
+const CORE_DESCRIPTION_MAX = 160;
+function trimDescription(text: string | undefined): string {
+  const t = String(text ?? "").replace(/\s+/g, " ").trim();
+  return t.length <= CORE_DESCRIPTION_MAX ? t : t.slice(0, CORE_DESCRIPTION_MAX - 1).trimEnd() + "…";
+}
+
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -152,6 +173,8 @@ interface AuthContext {
   clientId: string | null;
   /** A2 — JWT cru do usuário (só no caminho OAuth); habilita dispatch com RLS. */
   userJwt: string | null;
+  /** Motivo exato quando o token não foi aceito (diagnóstico de auth). */
+  reason?: string | null;
 }
 
 const EMPTY_AUTH: AuthContext = {
@@ -162,6 +185,7 @@ const EMPTY_AUTH: AuthContext = {
   authSource: null,
   clientId: null,
   userJwt: null,
+  reason: null,
 };
 
 
@@ -182,14 +206,15 @@ function decodeJwtPayload(jwt: string): Record<string, any> | null {
 async function resolveAuth(req: Request): Promise<AuthContext> {
   const raw = req.headers.get("authorization") ?? "";
   const token = raw.toLowerCase().startsWith("bearer ") ? raw.slice(7).trim() : "";
-  if (!token) return EMPTY_AUTH;
+  if (!token) return { ...EMPTY_AUTH, reason: "no_bearer" };
+  const deny = (reason: string): AuthContext => ({ ...EMPTY_AUTH, reason });
 
   const sb = admin();
 
   // === Caminho 1: Personal Access Token (PAT) ===
   if (token.startsWith("lmcp_")) {
     const { data, error } = await sb.rpc("assistant_mcp_token_validate", { _token: token });
-    if (error || !data || (Array.isArray(data) && data.length === 0)) return EMPTY_AUTH;
+    if (error || !data || (Array.isArray(data) && data.length === 0)) return deny("pat_invalid_or_revoked");
     const row = Array.isArray(data) ? data[0] : (data as any);
     const userId = row.user_id as string;
     const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
@@ -209,13 +234,16 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
   // sessão vindos de signInWithPassword sendo colados como Bearer.
   if (token.startsWith("eyJ")) {
     const claims = decodeJwtPayload(token);
-    if (!claims) return EMPTY_AUTH;
+    if (!claims) return deny("jwt_undecodable");
+    if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now()) {
+      return deny("jwt_expired");
+    }
     const clientId = (claims.client_id as string | undefined) ?? (claims.azp as string | undefined) ?? null;
-    if (!clientId) return EMPTY_AUTH;
+    if (!clientId) return deny("jwt_missing_client_id");
 
     // Verifica assinatura consultando o Auth via SDK.
     const { data: userRes, error: userErr } = await sb.auth.getUser(token);
-    if (userErr || !userRes?.user?.id) return EMPTY_AUTH;
+    if (userErr || !userRes?.user?.id) return deny(`jwt_rejected_by_auth:${userErr?.message ?? "no_user"}`);
     const userId = userRes.user.id;
 
     // A4 — o Supabase OAuth Server não emite scopes customizados, então o
@@ -237,10 +265,11 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
       authSource: "oauth",
       clientId,
       userJwt: token,
+      reason: null,
     };
   }
 
-  return EMPTY_AUTH;
+  return deny("token_format_unrecognized");
 }
 
 /**
@@ -296,6 +325,48 @@ async function audit(entry: AuditEntry) {
     if (error) console.error("[assistant-mcp] auditoria falhou:", error.message, entry.status, entry.toolName);
   } catch (err) {
     console.error("[assistant-mcp] auditoria exception:", String(err));
+  }
+}
+
+/**
+ * Trilha de handshake — registra TODA requisição JSON-RPC que chega, com ou sem
+ * token. Antes só registrávamos execuções de ferramenta, o que tornava
+ * ambíguo o diagnóstico "nada chega do ChatGPT": não dava para distinguir
+ * cliente que nunca chamou de cliente rejeitado no bearer.
+ */
+async function recordHandshake(entry: {
+  flowId: string;
+  methods: string[];
+  userAgent: string | null;
+  hasAuth: boolean;
+  authSource: string | null;
+  clientId: string | null;
+  userId: string | null;
+  authReason: string | null;
+  protocolVersion: string | null;
+  status: number;
+  bytes: number;
+  latencyMs: number;
+}) {
+  try {
+    const sb = admin();
+    const { error } = await sb.from("assistant_mcp_handshakes").insert({
+      flow_id: entry.flowId,
+      methods: entry.methods,
+      user_agent: entry.userAgent,
+      has_authorization: entry.hasAuth,
+      auth_source: entry.authSource,
+      client_id: entry.clientId,
+      user_id: entry.userId,
+      auth_reason: entry.authReason,
+      protocol_version: entry.protocolVersion,
+      status: entry.status,
+      response_bytes: entry.bytes,
+      latency_ms: entry.latencyMs,
+    });
+    if (error) console.error("[assistant-mcp] handshake log falhou:", error.message);
+  } catch (err) {
+    console.error("[assistant-mcp] handshake log exception:", String(err));
   }
 }
 
@@ -358,7 +429,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         protocolVersion: negotiated,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
-        instructions: catalog.manifest.instructions,
+        instructions: INSTRUCTIONS,
       });
     }
     case "notifications/initialized":
@@ -386,7 +457,9 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         .map((t: any) => ({
           name: toPublicName(t.name),
           title: t.title,
-          description: t.description,
+          // Higiene de payload: descrição curta no manifesto; o detalhe completo
+          // fica em lunari.tools.describe.
+          description: trimDescription(t.description),
           inputSchema: publicInputSchema(BRIDGE_SCHEMAS[t.name] ?? t.inputSchema),
           annotations: t.annotations,
         }));
@@ -406,7 +479,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         protocolVersion: PROTOCOL_VERSION,
         serverInfo: SERVER_INFO,
         capabilities: { tools: { listChanged: false } },
-        instructions: catalog.manifest.instructions,
+        instructions: INSTRUCTIONS,
       });
 
     case "tools/call": {
@@ -417,34 +490,65 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
       if (name === META_SEARCH) {
         const q = String(args.query ?? "").toLowerCase().trim();
-        const limit = Math.min(Number(args.limit ?? 20) || 20, 50);
+        const domain = String(args.domain ?? "").toLowerCase().trim();
+        const limit = Math.min(Number(args.limit ?? 15) || 15, 40);
+        const terms = q.split(/\s+/).filter(Boolean);
         const hits = (catalog.tools as any[])
-          .filter((t) =>
-            !q ||
-            t.name.toLowerCase().includes(q) ||
-            String(t.title ?? "").toLowerCase().includes(q) ||
-            String(t.description ?? "").toLowerCase().includes(q)
-          )
+          .filter((t) => !domain || String(t.capabilityId ?? "").toLowerCase().startsWith(domain + "."))
+          .filter((t) => {
+            if (terms.length === 0) return true;
+            const hay = `${t.name} ${t.title ?? ""} ${t.description ?? ""}`.toLowerCase();
+            return terms.every((term) => hay.includes(term));
+          })
           .slice(0, limit)
+          // Resultado LEVE: sem inputSchema (use lunari.tools.describe).
           .map((t) => ({
             name: toPublicName(t.name),
-            internalName: t.name,
             title: t.title,
-            description: t.description,
-            scopeTier: t.scopeTier ?? null,
+            summary: trimDescription(t.description),
+            executable: isBridged(t.name) || !!t.transport?.name,
             needsApproval: t.needsApproval ?? null,
-            inputSchema: publicInputSchema(t.inputSchema),
           }));
 
         return rpcResult(id, {
           content: [{
             type: "text",
             text: hits.length
-              ? `${hits.length} ferramenta(s) encontrada(s). Execute com lunari.tools.invoke.\n` +
+              ? `${hits.length} ferramenta(s). Veja parâmetros com lunari.tools.describe e execute com lunari.tools.invoke.\n` +
                 hits.map((h) => `- ${h.name}: ${h.title}`).join("\n")
-              : "Nenhuma ferramenta encontrada para esse termo.",
+              : "Nenhuma ferramenta encontrada. Tente outro termo ou informe o domínio.",
           }],
           structuredContent: { tools: hits, total: catalog.tools.length },
+        });
+      }
+
+      // Meta-tool de detalhe: schema completo de UMA ferramenta.
+      if (name === META_DESCRIBE) {
+        const target = resolveToolName(String(args.name ?? "").trim());
+        const tool = (catalog.tools as any[]).find((t) => t.name === target);
+        if (!tool) {
+          return rpcResult(id, {
+            isError: true,
+            content: [{ type: "text", text: `Ferramenta "${args.name}" não encontrada. Use lunari.tools.search.` }],
+          });
+        }
+        const schema = publicInputSchema(BRIDGE_SCHEMAS[tool.name] ?? tool.inputSchema);
+        return rpcResult(id, {
+          content: [{
+            type: "text",
+            text: `${toPublicName(tool.name)} — ${tool.title}\n${tool.description ?? ""}\n` +
+              `Parâmetros: ${JSON.stringify(schema)}`,
+          }],
+          structuredContent: {
+            name: toPublicName(tool.name),
+            internalName: tool.name,
+            title: tool.title,
+            description: tool.description,
+            inputSchema: schema,
+            scopeTier: tool.scopeTier ?? null,
+            needsApproval: tool.needsApproval ?? null,
+            executable: isBridged(tool.name) || !!tool.transport?.name,
+          },
         });
       }
 
@@ -755,6 +859,43 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // === Diagnóstico público (sem auth) ===
+  // Permite confirmar de fora que o servidor está sadio e medir o tamanho real
+  // do manifesto — separando "problema de payload" de "problema de token".
+  if (req.method === "GET" && path.endsWith("/health")) {
+    const listBytes = JSON.stringify({
+      tools: [
+        ...catalog.tools.filter((t: any) => isExposed(t.name)).map((t: any) => ({
+          name: toPublicName(t.name),
+          title: t.title,
+          description: trimDescription(t.description),
+          inputSchema: publicInputSchema(BRIDGE_SCHEMAS[t.name] ?? t.inputSchema),
+          annotations: t.annotations,
+        })),
+        ...META_TOOL_DEFS.map((t) => ({ ...t, name: toPublicName(t.name), inputSchema: publicInputSchema(t.inputSchema) })),
+      ],
+    }).length;
+    return jsonResponse({
+      status: "ok",
+      server: SERVER_INFO,
+      protocolVersion: PROTOCOL_VERSION,
+      supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS,
+      catalog: {
+        total: catalog.tools.length,
+        core: EXPOSED_TOOLS.length,
+        metaTools: META_TOOL_DEFS.length,
+        hash: (catalog as any).catalogHash ?? null,
+        generatedAt: catalog.generatedAt,
+        ageDays: Math.round(catalogAgeDays()),
+      },
+      toolsList: { tools: EXPOSED_TOOLS.length + META_TOOL_DEFS.length, bytes: listBytes, kb: +(listBytes / 1024).toFixed(1) },
+      oauth: {
+        issuer: OAUTH_AS_ISSUER,
+        protectedResourceMetadata: `${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource`,
+      },
+    });
+  }
+
   if (req.method === "GET") {
     const accept = (req.headers.get("accept") ?? "").toLowerCase();
     // Spec Streamable HTTP: no GET, ou abrimos um stream SSE, ou respondemos 405.
@@ -927,8 +1068,22 @@ Deno.serve(async (req: Request) => {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
   }
 
-  const logHandshake = (status: number, bytes: number) =>
-    flog(flowId, "http-out", {
+  const logHandshake = (status: number, bytes: number) => {
+    void recordHandshake({
+      flowId,
+      methods: requests.map((r: any) => r?.method).filter(Boolean),
+      userAgent: req.headers.get("user-agent"),
+      hasAuth: hasAuthHeader,
+      authSource: auth.authSource,
+      clientId: auth.clientId,
+      userId: auth.userId,
+      authReason: auth.userId ? null : auth.reason ?? null,
+      protocolVersion: req.headers.get("mcp-protocol-version"),
+      status,
+      bytes,
+      latencyMs: Date.now() - httpStarted,
+    });
+    return flog(flowId, "http-out", {
       methods: requests.map((r: any) => r?.method).filter(Boolean),
       status,
       bytes,
@@ -937,9 +1092,11 @@ Deno.serve(async (req: Request) => {
       client_id: auth.clientId,
       has_user: !!auth.userId,
       challenge: !!responseHeaders["WWW-Authenticate"],
+      auth_reason: auth.userId ? null : auth.reason ?? null,
       rpc_latency_ms: Date.now() - startedAt,
       total_latency_ms: Date.now() - httpStarted,
     });
+  };
 
 
   if (responses.length === 0) {

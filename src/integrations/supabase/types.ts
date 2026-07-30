@@ -493,6 +493,57 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_mcp_handshakes: {
+        Row: {
+          auth_reason: string | null
+          auth_source: string | null
+          client_id: string | null
+          created_at: string
+          flow_id: string | null
+          has_authorization: boolean
+          id: string
+          latency_ms: number | null
+          methods: string[]
+          protocol_version: string | null
+          response_bytes: number | null
+          status: number | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          auth_reason?: string | null
+          auth_source?: string | null
+          client_id?: string | null
+          created_at?: string
+          flow_id?: string | null
+          has_authorization?: boolean
+          id?: string
+          latency_ms?: number | null
+          methods?: string[]
+          protocol_version?: string | null
+          response_bytes?: number | null
+          status?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          auth_reason?: string | null
+          auth_source?: string | null
+          client_id?: string | null
+          created_at?: string
+          flow_id?: string | null
+          has_authorization?: boolean
+          id?: string
+          latency_ms?: number | null
+          methods?: string[]
+          protocol_version?: string | null
+          response_bytes?: number | null
+          status?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       assistant_mcp_tokens: {
         Row: {
           created_at: string
