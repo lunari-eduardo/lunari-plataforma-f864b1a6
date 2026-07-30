@@ -2,6 +2,8 @@ import type { z, ZodTypeAny } from "zod";
 import type { AuthUser } from "@/shared/ports";
 import type { EventName, EventPayload } from "@/shared/event-bus";
 import type { DomainError, Result } from "@/shared/result";
+import type { CapabilityAudience } from "./audience";
+
 
 export type CapabilityKind = "command" | "query";
 
@@ -50,6 +52,13 @@ export interface DefineCapabilityOptions<TInput extends ZodTypeAny, TOutput exte
   output: TOutput;
   permissions?: string[];
   sideEffects?: SideEffect[];
+  /**
+   * Quem enxerga esta capability. Default derivado de `defaultAudienceFor(id)`:
+   * tudo é `["app", "mcp"]` exceto anéis internos e bloqueios explícitos,
+   * que ficam `["app"]`. Declare aqui só para sobrescrever o default.
+   */
+  audience?: CapabilityAudience[];
+
   needsApproval?: boolean | ((args: { input: z.infer<TInput>; user: AuthUser | null }) => boolean);
   idempotencyKey?: (input: z.infer<TInput>) => string | null;
   audit?: AuditMode;
@@ -74,6 +83,9 @@ export interface Capability<TInput extends ZodTypeAny = ZodTypeAny, TOutput exte
   readonly output: TOutput;
   readonly permissions: string[];
   readonly sideEffects: SideEffect[];
+  /** Superfícies que enxergam esta capability. Sempre inclui "app". */
+  readonly audience: readonly CapabilityAudience[];
+
   readonly audit: AuditMode;
   readonly costHint: CostHint;
   readonly examples: CapabilityExample<z.infer<TInput>, z.infer<TOutput>>[];

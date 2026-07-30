@@ -3,7 +3,9 @@ import { eventBus, type EventName, type EventPayload } from "@/shared/event-bus"
 import { domainError, err, isOk, ok, type DomainError, type Result } from "@/shared/result";
 import { authorize } from "./policies";
 import { registerCapability } from "./registry";
+import { defaultAudienceFor } from "./audience";
 import { KERNEL_STRICT_MODE, _isInsideKernelDispatch } from "@/shared/kernel";
+
 import type {
   Capability,
   CapabilityContext,
@@ -57,6 +59,8 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
     output: opts.output,
     permissions: opts.permissions ?? [],
     sideEffects,
+    audience: opts.audience ?? defaultAudienceFor(opts.id),
+
     audit: opts.audit ?? (kind === "command" ? "on-success" : "never"),
     costHint: opts.costHint ?? "cheap",
     examples: opts.examples ?? [],

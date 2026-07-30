@@ -1,143 +1,182 @@
-agenda.appointments.cancel
-agenda.appointments.confirm
-agenda.appointments.create
-agenda.appointments.get
-agenda.appointments.list
-agenda.appointments.reschedule
-agenda.appointments.update
-agenda.availability.add
-agenda.availability.clearDate
-agenda.availability.deleteSlot
-agenda.availability.findNext
-agenda.availability.list
-agenda.slot.check
-billing.createGalleryPayment
-billing.listSessionPayments
-billing.registerManualPayment
-configuracoes.createCategoria
-configuracoes.createEtapa
-configuracoes.createPacote
-configuracoes.createProduto
-configuracoes.deleteCategoria
-configuracoes.deleteEtapa
-configuracoes.deletePacote
-configuracoes.deleteProduto
-configuracoes.getCategoria
-configuracoes.listCategorias
-configuracoes.listEtapas
-configuracoes.listPacotes
-configuracoes.listProdutos
-configuracoes.moveEtapa
-configuracoes.toggleProdutoFavorito
-configuracoes.updateCategoria
-configuracoes.updateEtapa
-configuracoes.updatePacote
-configuracoes.updateProduto
-contratos.createContrato
-contratos.createTemplate
-contratos.deleteContrato
-contratos.deleteTemplate
-contratos.generateContratoWithAI
-contratos.generateTemplateWithAI
-contratos.getContrato
-contratos.getTemplate
-contratos.listContratos
-contratos.listTemplates
-contratos.markSentContrato
-contratos.updateContrato
-contratos.updateTemplate
-finance.category.create
-finance.category.list
-finance.credit.apply
-finance.credit.get
-finance.credit.grant
-finance.credit.listClientsWithCredit
-finance.credit.revoke
-finance.dashboard.kpis
-finance.extrato.list
-finance.extrato.summary
-finance.goal.list
-finance.goal.progress
-finance.goal.set
-finance.group.list
-finance.item.create
-finance.item.list
-finance.kpi.byNature
-finance.kpi.byNatureRange
-finance.nature.list
-finance.transaction.create
-finance.transaction.delete
-finance.transaction.markPaid
-finance.transaction.markPending
-finance.transaction.update
-formularios.createForm
-formularios.deleteForm
-formularios.generateFormWithAI
-formularios.getForm
-formularios.listForms
-formularios.listResponses
-formularios.publishForm
-formularios.unpublishForm
-formularios.updateForm
-gallery.checkAccess
-gallery.listExpiring
-gallery.listInSelection
-gallery.reopenSelection
-tasks.assign
-tasks.attachment.add
-tasks.attachment.list
-tasks.attachment.remove
-tasks.complete
-tasks.countsByStatus
-tasks.create
-tasks.delete
-tasks.dueOverview
-tasks.getById
-tasks.list
-tasks.move
-tasks.people.create
-tasks.people.delete
-tasks.people.list
-tasks.people.reorder
-tasks.people.update
-tasks.reopen
-tasks.search
-tasks.snooze
-tasks.tags.create
-tasks.tags.delete
-tasks.tags.list
-tasks.tags.reorder
-tasks.tags.update
-tasks.update
-workflow.addPayment
-workflow.advanceCard
-workflow.deleteSession
-workflow.diagnoseSession
-workflow.getCardBySession
-workflow.getSessionFinancials
-workflow.listMonth
-workflow.listSessionsByPaymentStatus
-workflow.metricsForMonth
-workflow.pendingPayments
-workflow.photoProductionForMonth
-workflow.produto.add
-workflow.produto.advanceStage
-workflow.produto.duplicate
-workflow.produto.getFlowTemplate
-workflow.produto.listBySession
-workflow.produto.listPending
-workflow.produto.remove
-workflow.produto.reopenProduction
-workflow.produto.retreatStage
-workflow.produto.setDeadline
-workflow.produto.setPrice
-workflow.produto.setQuantity
-workflow.produto.setStages
-workflow.produto.startProduction
-workflow.produto.switchFluxo
-workflow.reconcileFotosExtras
-workflow.refundPayment
-workflow.search
-workflow.statusOptions
-workflow.syncFromAgenda
-workflow.updateFields
+# AI_SURFACE_CAPS — inventário vivo do registry de capabilities
+# gerado em: 2026-07-30T02:54:18.001Z
+# total: 177 | audience mcp: 150 | app-only: 27
+# formato: id | kind | audience | approval | módulo
+
+agenda.appointments.cancel | command | app+mcp | approval | agenda
+agenda.appointments.confirm | command | app+mcp | - | agenda
+agenda.appointments.create | command | app+mcp | - | agenda
+agenda.appointments.get | query | app+mcp | - | agenda
+agenda.appointments.list | query | app+mcp | - | agenda
+agenda.appointments.reschedule | command | app+mcp | approval | agenda
+agenda.appointments.update | command | app+mcp | - | agenda
+agenda.availability.add | command | app+mcp | - | agenda
+agenda.availability.clearDate | command | app+mcp | - | agenda
+agenda.availability.deleteSlot | command | app+mcp | - | agenda
+agenda.availability.findNext | query | app+mcp | - | agenda
+agenda.availability.list | query | app+mcp | - | agenda
+agenda.slot.check | query | app+mcp | - | agenda
+automation.rules.delete | command | app | - | automation
+automation.rules.list | query | app | - | automation
+automation.rules.upsert | command | app | - | automation
+automation.runs.list | query | app | - | automation
+automation.tick | command | app | - | automation
+billing.createGalleryPayment | command | app+mcp | - | billing
+billing.listSessionPayments | query | app+mcp | - | billing
+billing.registerManualPayment | command | app+mcp | approval | billing
+clientes.addNota | command | app+mcp | - | clientes
+clientes.create | command | app+mcp | - | clientes
+clientes.get | query | app+mcp | - | clientes
+clientes.list | query | app+mcp | - | clientes
+clientes.listSessoes | query | app+mcp | - | clientes
+clientes.listTransacoes | query | app+mcp | - | clientes
+clientes.search | query | app+mcp | - | clientes
+clientes.update | command | app+mcp | - | clientes
+configuracoes.createCategoria | command | app+mcp | - | configuracoes
+configuracoes.createEtapa | command | app+mcp | - | configuracoes
+configuracoes.createPacote | command | app+mcp | - | configuracoes
+configuracoes.createProduto | command | app+mcp | - | configuracoes
+configuracoes.deleteCategoria | command | app+mcp | approval | configuracoes
+configuracoes.deleteEtapa | command | app+mcp | approval | configuracoes
+configuracoes.deletePacote | command | app+mcp | approval | configuracoes
+configuracoes.deleteProduto | command | app+mcp | approval | configuracoes
+configuracoes.getCategoria | query | app+mcp | - | configuracoes
+configuracoes.listCategorias | query | app+mcp | - | configuracoes
+configuracoes.listEtapas | query | app+mcp | - | configuracoes
+configuracoes.listPacotes | query | app+mcp | - | configuracoes
+configuracoes.listProdutos | query | app+mcp | - | configuracoes
+configuracoes.moveEtapa | command | app+mcp | - | configuracoes
+configuracoes.toggleProdutoFavorito | command | app+mcp | - | configuracoes
+configuracoes.updateCategoria | command | app+mcp | - | configuracoes
+configuracoes.updateEtapa | command | app+mcp | - | configuracoes
+configuracoes.updatePacote | command | app+mcp | - | configuracoes
+configuracoes.updateProduto | command | app+mcp | - | configuracoes
+contratos.createContrato | command | app+mcp | - | contratos
+contratos.createTemplate | command | app+mcp | - | contratos
+contratos.deleteContrato | command | app+mcp | approval | contratos
+contratos.deleteTemplate | command | app+mcp | approval | contratos
+contratos.generateContratoWithAI | command | app+mcp | approval | contratos
+contratos.generateTemplateWithAI | command | app+mcp | approval | contratos
+contratos.getContrato | query | app+mcp | - | contratos
+contratos.getTemplate | query | app+mcp | - | contratos
+contratos.listContratos | query | app+mcp | - | contratos
+contratos.listTemplates | query | app+mcp | - | contratos
+contratos.markSentContrato | command | app+mcp | approval | contratos
+contratos.updateContrato | command | app+mcp | - | contratos
+contratos.updateTemplate | command | app+mcp | - | contratos
+decision.accept | command | app | - | decision
+decision.dismiss | command | app | - | decision
+decision.list | query | app | - | decision
+decision.propose | command | app | - | decision
+finance.category.create | command | app+mcp | - | finance
+finance.category.list | query | app+mcp | - | finance
+finance.credit.apply | command | app | - | finance
+finance.credit.get | query | app+mcp | - | finance
+finance.credit.grant | command | app | - | finance
+finance.credit.listClientsWithCredit | query | app+mcp | - | finance
+finance.credit.revoke | command | app | - | finance
+finance.dashboard.kpis | query | app+mcp | - | finance
+finance.extrato.list | query | app+mcp | - | finance
+finance.extrato.summary | query | app+mcp | - | finance
+finance.goal.list | query | app+mcp | - | finance
+finance.goal.progress | query | app+mcp | - | finance
+finance.goal.set | command | app+mcp | - | finance
+finance.group.list | query | app+mcp | - | finance
+finance.item.create | command | app+mcp | - | finance
+finance.item.list | query | app+mcp | - | finance
+finance.kpi.byNature | query | app+mcp | - | finance
+finance.kpi.byNatureRange | query | app+mcp | - | finance
+finance.nature.list | query | app+mcp | - | finance
+finance.transaction.create | command | app+mcp | - | finance
+finance.transaction.delete | command | app+mcp | approval | finance
+finance.transaction.markPaid | command | app+mcp | - | finance
+finance.transaction.markPending | command | app+mcp | - | finance
+finance.transaction.update | command | app+mcp | - | finance
+formularios.createForm | command | app+mcp | - | formularios
+formularios.deleteForm | command | app+mcp | approval | formularios
+formularios.generateFormWithAI | command | app+mcp | approval | formularios
+formularios.getForm | query | app+mcp | - | formularios
+formularios.listForms | query | app+mcp | - | formularios
+formularios.listResponses | query | app+mcp | - | formularios
+formularios.publishForm | command | app+mcp | approval | formularios
+formularios.unpublishForm | command | app+mcp | approval | formularios
+formularios.updateForm | command | app+mcp | - | formularios
+gallery.checkAccess | query | app+mcp | - | gallery
+gallery.listExpiring | query | app+mcp | - | gallery
+gallery.listInSelection | query | app+mcp | - | gallery
+gallery.reopenSelection | command | app | approval | gallery
+intelligence.list | query | app | - | intelligence
+intelligence.refresh | command | app | - | intelligence
+knowledge.embed | command | app | - | knowledge
+knowledge.search | query | app | - | knowledge
+learning.patches.apply | command | app | - | learning
+learning.patches.dismiss | command | app | - | learning
+learning.patches.list | query | app | - | learning
+learning.patterns.list | query | app | - | learning
+learning.recompute | command | app | - | learning
+memory.forget | command | app | approval | memory
+memory.recall | query | app | - | memory
+memory.remember | command | app | - | memory
+observation.recent | query | app | - | observation
+observation.record | command | app | - | observation
+tasks.assign | command | app+mcp | - | tasks
+tasks.attachment.add | command | app+mcp | - | tasks
+tasks.attachment.list | query | app+mcp | - | tasks
+tasks.attachment.remove | command | app+mcp | approval | tasks
+tasks.complete | command | app+mcp | - | tasks
+tasks.countsByStatus | query | app+mcp | - | tasks
+tasks.create | command | app+mcp | - | tasks
+tasks.delete | command | app+mcp | approval | tasks
+tasks.dueOverview | query | app+mcp | - | tasks
+tasks.getById | query | app+mcp | - | tasks
+tasks.list | query | app+mcp | - | tasks
+tasks.move | command | app+mcp | - | tasks
+tasks.people.create | command | app+mcp | - | tasks
+tasks.people.delete | command | app+mcp | - | tasks
+tasks.people.list | query | app+mcp | - | tasks
+tasks.people.reorder | command | app+mcp | - | tasks
+tasks.people.update | command | app+mcp | - | tasks
+tasks.reopen | command | app+mcp | - | tasks
+tasks.search | query | app+mcp | - | tasks
+tasks.snooze | command | app+mcp | - | tasks
+tasks.tags.create | command | app+mcp | - | tasks
+tasks.tags.delete | command | app+mcp | - | tasks
+tasks.tags.list | query | app+mcp | - | tasks
+tasks.tags.reorder | command | app+mcp | - | tasks
+tasks.tags.update | command | app+mcp | - | tasks
+tasks.update | command | app+mcp | - | tasks
+workflow.addPayment | command | app+mcp | - | workflow
+workflow.advanceCard | command | app+mcp | - | workflow
+workflow.analytics.summary | query | app+mcp | - | workflow
+workflow.deleteSession | command | app+mcp | - | workflow
+workflow.diagnoseSession | query | app+mcp | - | workflow
+workflow.getCardBySession | query | app+mcp | - | workflow
+workflow.getSessionFinancials | query | app+mcp | - | workflow
+workflow.listMonth | query | app+mcp | - | workflow
+workflow.listRange | query | app+mcp | - | workflow
+workflow.listSessionsByPaymentStatus | query | app+mcp | - | workflow
+workflow.metricsForMonth | query | app+mcp | - | workflow
+workflow.metricsForRange | query | app+mcp | - | workflow
+workflow.pendingPayments | query | app+mcp | - | workflow
+workflow.photoProductionForMonth | query | app+mcp | - | workflow
+workflow.produto.add | command | app+mcp | - | workflow
+workflow.produto.advanceStage | command | app+mcp | - | workflow
+workflow.produto.duplicate | command | app+mcp | - | workflow
+workflow.produto.getFlowTemplate | query | app+mcp | - | workflow
+workflow.produto.listBySession | query | app+mcp | - | workflow
+workflow.produto.listPending | query | app+mcp | - | workflow
+workflow.produto.remove | command | app+mcp | - | workflow
+workflow.produto.reopenProduction | command | app+mcp | - | workflow
+workflow.produto.retreatStage | command | app+mcp | - | workflow
+workflow.produto.setDeadline | command | app+mcp | - | workflow
+workflow.produto.setPrice | command | app+mcp | - | workflow
+workflow.produto.setQuantity | command | app+mcp | - | workflow
+workflow.produto.setStages | command | app+mcp | - | workflow
+workflow.produto.startProduction | command | app+mcp | - | workflow
+workflow.produto.switchFluxo | command | app+mcp | - | workflow
+workflow.reconcileFotosExtras | command | app+mcp | - | workflow
+workflow.refundPayment | command | app+mcp | - | workflow
+workflow.search | query | app+mcp | - | workflow
+workflow.statusOptions | query | app+mcp | - | workflow
+workflow.syncFromAgenda | command | app+mcp | - | workflow
+workflow.updateFields | command | app+mcp | - | workflow
