@@ -149,6 +149,98 @@ async function resolveFinanceItem(
 
 const GRUPOS_RECEITA = ["Receita Operacional", "Receita Não Operacional"];
 
+// -------------------- Workflow: helpers --------------------
+
+const SESSAO_COLS =
+  "id,session_id,cliente_id,appointment_id,galeria_id,data_sessao,hora_sessao,categoria,pacote," +
+  "descricao,observacoes,detalhes,status,status_financeiro,valor_total,valor_pago,valor_base_pacote," +
+  "valor_adicional,desconto,qtd_fotos_extra,valor_foto_extra,valor_total_foto_extra,produtos_incluidos," +
+  "clientes(id,nome,telefone,email)";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve uma sessão a partir de `sessionId` (UUID), `session_id` texto
+ * (workflow-*) ou do nome do cliente (fuzzy, igual aos demais resolvers).
+ */
+async function resolveSessao(
+  sb: SupabaseClient,
+  uid: string,
+  args: Record<string, any>,
+): Promise<{ sessao: any | null; error?: string }> {
+  const key = String(args.sessionId ?? args.session_id ?? args.id ?? "").trim();
+  if (key) {
+    if (UUID_RE.test(key)) {
+      const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
+        .eq("user_id", uid).eq("id", key).maybeSingle();
+      if (data) return { sessao: data };
+    }
+    const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
+      .eq("user_id", uid).eq("session_id", key).maybeSingle();
+    if (data) return { sessao: data };
+    return { sessao: null, error: `Sessão "${key}" não encontrada.` };
+  }
+
+  const cli = await resolveCliente(sb, uid, args);
+  if (cli.error) return { sessao: null, error: cli.error };
+  if (!cli.id) {
+    return { sessao: null, error: "Informe 'sessionId' ou 'clienteNome' para identificar a sessão." };
+  }
+  const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
+    .eq("user_id", uid).eq("cliente_id", cli.id)
+    .order("data_sessao", { ascending: false }).limit(10);
+  const list = data ?? [];
+  if (list.length === 0) return { sessao: null, error: `Nenhuma sessão para "${cli.nome}".` };
+  if (list.length > 1 && !args.latest) {
+    return {
+      sessao: null,
+      error:
+        `"${cli.nome}" tem ${list.length} sessões: ` +
+        list.map((s: any) => `${s.data_sessao ?? "sem data"} (${s.pacote ?? s.categoria ?? "—"}) id=${s.id}`).join("; ") +
+        ". Informe sessionId ou latest=true.",
+    };
+  }
+  return { sessao: list[0] };
+}
+
+/** Janela do mês a partir de `year`/`month` (padrão: mês corrente). */
+function monthRange(args: Record<string, any>): { start: string; end: string } {
+  const now = new Date();
+  const year = Number(args.year) || now.getUTCFullYear();
+  const month = Number(args.month) || now.getUTCMonth() + 1;
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextY = month === 12 ? year + 1 : year;
+  const nextM = month === 12 ? 1 : month + 1;
+  const end = addDays(`${nextY}-${String(nextM).padStart(2, "0")}-01`, -1);
+  return { start, end };
+}
+
+/** Projeção somente-leitura de `produtos_incluidos` (JSONB da sessão). */
+function projetarProdutos(sessao: any) {
+  const raw = Array.isArray(sessao?.produtos_incluidos) ? sessao.produtos_incluidos : [];
+  return raw.map((p: any, idx: number) => {
+    const etapas = Array.isArray(p?.etapas) ? p.etapas : [];
+    const feitas = etapas.filter((e: any) => e?.done).length;
+    const atual = etapas.find((e: any) => !e?.done);
+    return {
+      id: p?.id ?? p?.produtoId ?? `idx-${idx}`,
+      nome: p?.nome ?? "Produto",
+      quantidade: Number(p?.quantidade) || 0,
+      valorUnitario: Number(p?.valorUnitario) || 0,
+      valorTotal: (Number(p?.quantidade) || 0) * (Number(p?.valorUnitario) || 0),
+      tipo: p?.tipo ?? "manual",
+      fluxo: p?.fluxo ?? "padrao",
+      prazoEntrega: p?.prazoEntrega ?? null,
+      etapaAtual: atual?.nome ?? (etapas.length ? "concluído" : null),
+      etapasConcluidas: feitas,
+      etapasTotal: etapas.length,
+      entregue: Boolean(p?.entregue) || (etapas.length > 0 && feitas === etapas.length),
+    };
+  });
+}
+
+
+
 // -------------------- AGENDA --------------------
 
 const APPT_COLS = "id,title,date,time,type,status,description,cliente_id,duration_minutes,session_id,paid_amount";
