@@ -96,6 +96,12 @@ export interface Capability<TInput extends ZodTypeAny = ZodTypeAny, TOutput exte
   readonly sideEffects: SideEffect[];
   /** Superfícies que enxergam esta capability. Sempre inclui "app". */
   readonly audience: readonly CapabilityAudience[];
+  /** A2 — transporte declarado para execução server-side. */
+  readonly execution: CapabilityExecution;
+  /** Resumo humano opcional do output. */
+  readonly summarize?: (output: z.infer<TOutput>) => string;
+
+
 
   readonly audit: AuditMode;
   readonly costHint: CostHint;
