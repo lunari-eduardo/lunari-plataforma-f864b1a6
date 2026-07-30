@@ -60,6 +60,8 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
     permissions: opts.permissions ?? [],
     sideEffects,
     audience: opts.audience ?? defaultAudienceFor(opts.id),
+    execution: opts.execution ?? CLIENT_ONLY,
+    summarize: opts.summarize,
 
     audit: opts.audit ?? (kind === "command" ? "on-success" : "never"),
     costHint: opts.costHint ?? "cheap",
