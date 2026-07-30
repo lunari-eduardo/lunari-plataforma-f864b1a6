@@ -9,6 +9,8 @@ import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import type { Categoria, Pacote } from '@/types/configuration';
+import { LIST_SHELL, ROW_DIVIDER } from '@/lib/dialogTokens';
+
 
 interface CategoriasProps {
   categorias: Categoria[];
