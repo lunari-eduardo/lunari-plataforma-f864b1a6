@@ -15,10 +15,21 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "configuracoes.deleteProduto",
   "configuracoes.deleteEtapa",
   "configuracoes.deleteContratoTemplate",
-  "configuracoes.setPricingModel",
-  "configuracoes.updateGlobalPricingTable",
-  "configuracoes.setCategoriaPricingTable",
 ]);
+
+/**
+ * B2: os ids legados `configuracoes.setPricingModel`,
+ * `configuracoes.updateGlobalPricingTable` e
+ * `configuracoes.setCategoriaPricingTable` eram órfãos (nunca existiram como
+ * capability registrada). A precificação agora vive no módulo `precificacao`
+ * (`precificacao.setModelo`, `precificacao.upsertTabelaGlobal`,
+ * `precificacao.upsertTabelaCategoria`), com o mesmo gate de aprovação.
+ */
+export const LEGACY_PRICING_IDS: Readonly<Record<string, string>> = {
+  "configuracoes.setPricingModel": "precificacao.setModelo",
+  "configuracoes.updateGlobalPricingTable": "precificacao.upsertTabelaGlobal",
+  "configuracoes.setCategoriaPricingTable": "precificacao.upsertTabelaCategoria",
+};
 
 registerModuleApprovals({ module: "configuracoes", requireApproval: REQUIRES_APPROVAL });
 
