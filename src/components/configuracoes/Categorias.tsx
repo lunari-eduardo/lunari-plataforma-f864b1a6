@@ -219,7 +219,7 @@ export default function Categorias({ categorias, onAdd, onUpdate, onDelete, paco
 
       {/* List */}
       {categorias.length === 0 ? (
-        <div className="text-center py-6 border border-dashed border-border rounded-lg">
+        <div className="text-center py-8 rounded-lg bg-muted/20">
           <p className="text-sm text-muted-foreground">
             Nenhuma categoria cadastrada.
           </p>
