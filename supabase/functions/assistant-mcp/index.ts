@@ -724,25 +724,32 @@ Deno.serve(async (req: Request) => {
   // para nosso proxy sanitizador. Assim scopes desconhecidos são descartados antes
   // de chegarem ao Supabase.
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-authorization-server")) {
+    const base = {
+      // Este documento é servido a partir de MCP_RESOURCE_URL, então o issuer
+      // precisa ser esta mesma origem/path para o cliente considerá-lo coerente
+      // (RFC 8414 §3.3). Endpoints de token/registro seguem no Supabase.
+      issuer: MCP_RESOURCE_URL,
+      authorization_endpoint: AUTHORIZE_PROXY_URL,
+      token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
+      registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients/register`,
+      jwks_uri: `${OAUTH_AS_ISSUER}/.well-known/jwks.json`,
+      userinfo_endpoint: `${OAUTH_AS_ISSUER}/oauth/userinfo`,
+      response_types_supported: ["code"],
+      response_modes_supported: ["query"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
+      code_challenge_methods_supported: ["S256"],
+      token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
+      scopes_supported: ["openid", "email", "profile"],
+    };
     try {
       const upstream = await fetch(`${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`);
       const meta = await upstream.json();
-      meta.authorization_endpoint = AUTHORIZE_PROXY_URL;
-      meta.scopes_supported = ["openid", "email", "profile"];
-      return jsonResponse(meta);
-    } catch {
-      return jsonResponse({
-        issuer: OAUTH_AS_ISSUER,
-        authorization_endpoint: AUTHORIZE_PROXY_URL,
-        token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
-        registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients/register`,
-        jwks_uri: `${OAUTH_AS_ISSUER}/.well-known/jwks.json`,
-        response_types_supported: ["code"],
-        grant_types_supported: ["authorization_code", "refresh_token"],
-        code_challenge_methods_supported: ["S256"],
-        token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
-        scopes_supported: ["openid", "email", "profile"],
-      });
+      const merged = { ...meta, ...base };
+      flog(flowId, "discovery", { doc: "authorization-server", upstream: upstream.status, status: 200, latency_ms: Date.now() - httpStarted });
+      return jsonResponse(merged);
+    } catch (err) {
+      flog(flowId, "discovery", { doc: "authorization-server", upstream: "fetch_failed", error: String(err), status: 200 });
+      return jsonResponse(base);
     }
   }
 
