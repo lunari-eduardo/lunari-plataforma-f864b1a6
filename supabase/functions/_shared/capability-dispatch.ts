@@ -16,6 +16,7 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { tierOf, tierSatisfiedBy } from "./mcp-scopes.ts";
 
 export type CapabilityErrorCode =
   | "VALIDATION"
@@ -64,6 +65,7 @@ export interface CatalogTool {
   capabilityId: string;
   transport?: { type: "rpc" | "edge"; name: string; mapped?: boolean };
   scope?: "read" | "write";
+  scopeTier?: "read" | "write" | "destructive";
   kind?: "command" | "query";
   needsApproval?: boolean;
   costHint?: string;
@@ -224,9 +226,13 @@ export async function dispatchCapability(args: DispatchArgs): Promise<DispatchRe
     return fail("NOT_FOUND", started, `tool sem transport: ${tool.name}`);
   }
 
-  const needsWrite = (tool.scope ?? (tool.kind === "query" ? "read" : "write")) === "write";
-  const hasWrite = scopes.includes("write") || scopes.includes("admin");
-  if (needsWrite && !hasWrite) return fail("SCOPE_MISSING", started);
+  // A4 — validação única de escopo (read ⊂ write ⊂ destructive); `admin` não existe mais.
+  const requiredTier =
+    tool.scopeTier ??
+    tierOf({ kind: tool.kind ?? (tool.scope === "read" ? "query" : "command"), needsApproval: tool.needsApproval });
+  if (!tierSatisfiedBy(requiredTier, scopes)) {
+    return fail("SCOPE_MISSING", started, `requer escopo "${requiredTier}"`);
+  }
 
   const input = { ...(args.input ?? {}) };
   delete (input as any).approval_token;
