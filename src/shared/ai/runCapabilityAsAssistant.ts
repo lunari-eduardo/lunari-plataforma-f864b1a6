@@ -21,6 +21,26 @@ import {
   type ConfirmationSource,
 } from "./confirmationMatcher";
 import { needsHumanApproval as centralNeedsApproval } from "./approvalRegistry";
+import { timeoutForCost } from "@/shared/capability/execution";
+import { normalizeErrorCode, SAFE_MESSAGE_BY_ERROR } from "@/shared/capability/errors";
+
+/** A2 — timeout único por costHint, igual ao dispatcher server-side. */
+class CapabilityTimeoutError extends Error {
+  constructor(ms: number) {
+    super(`A operação demorou mais que ${Math.round(ms / 1000)}s e foi cancelada.`);
+    this.name = "CapabilityTimeoutError";
+  }
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new CapabilityTimeoutError(ms)), ms);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
 
 export type AssistantOutputStatus = "ok" | "error" | "denied" | "pending_approval";
 
@@ -190,16 +210,20 @@ export async function runCapabilityAsAssistant<T = unknown>(
 
   try {
     // defineCommand/defineQuery expõem `execute(rawInput, overrides)` → Result.
-    const result = await kernel.run(cap, input, { actor: assistantActor(opts.user) });
+    const result = await withTimeout(
+      kernel.run(cap, input, { actor: assistantActor(opts.user) }),
+      timeoutForCost(cap.costHint),
+    );
     const latencyMs = Math.round(performance.now() - t0);
     if (result.ok === false) {
       const errObj = result.error;
-      const message = errObj?.message ?? "Capability error";
-      const denied = errObj?.code === "UNAUTHORIZED" || errObj?.code === "FORBIDDEN";
+      const code = normalizeErrorCode(errObj?.code);
+      const message = errObj?.message ?? SAFE_MESSAGE_BY_ERROR[code];
+      const denied = code === "UNAUTHORIZED" || code === "FORBIDDEN";
       // Onda 2 — Policy Engine: Kernel devolve APPROVAL_REQUIRED quando
       // a política pediu confirmação e nenhum token/confirmação foi
       // provido. Convertemos em `pending_approval` idêntico ao gate legado.
-      if (errObj?.code === "APPROVAL_REQUIRED") {
+      if (code === "APPROVAL_REQUIRED") {
         const invocationId = await recordInvocation({
           userId: opts.user.id,
           capabilityId,

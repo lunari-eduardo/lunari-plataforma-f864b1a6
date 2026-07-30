@@ -32,17 +32,27 @@ async function main() {
   const { buildMCPToolsForUser, buildMCPManifest } = await import("../src/shared/ai/mcp");
 
   // Passa um user stub — a lista aplica permissões por usuário; no catálogo
-  // público queremos a superfície completa, e o `hideApprovalRequired` oculta
-  // commands destrutivos por default.
+  // público queremos a superfície completa. A2: o filtro agora é `audience`
+  // + `execution` declarado, não mais `hideApprovalRequired`.
   const stubUser = { id: "mcp-catalog", email: "mcp@lunari" } as never;
-  const tools = buildMCPToolsForUser({ user: stubUser, hideApprovalRequired: true });
+  const tools = buildMCPToolsForUser({ user: stubUser });
   const manifest = buildMCPManifest(tools);
+
+  const missingTransport = tools.filter((t) => !t.transport?.name);
+  if (missingTransport.length > 0) {
+    console.warn(
+      `[mcp-catalog] ${missingTransport.length}/${tools.length} tools ainda sem transport declarado ` +
+        `(executadas pelo bridge legado até declararem \`execution\` no defineCapability).`,
+    );
+  }
 
   const out = {
     generatedAt: new Date().toISOString(),
+    catalogVersion: 2,
     manifest,
     tools,
   };
+
 
   // Sanidade: nenhum schema pode ser o placeholder Zod antigo.
   const serialized = JSON.stringify(out);

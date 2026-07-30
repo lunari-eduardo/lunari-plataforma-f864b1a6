@@ -3,6 +3,7 @@ import type { AuthUser } from "@/shared/ports";
 import type { EventName, EventPayload } from "@/shared/event-bus";
 import type { DomainError, Result } from "@/shared/result";
 import type { CapabilityAudience } from "./audience";
+import type { CapabilityExecution } from "./execution";
 
 
 export type CapabilityKind = "command" | "query";
@@ -59,6 +60,16 @@ export interface DefineCapabilityOptions<TInput extends ZodTypeAny, TOutput exte
    */
   audience?: CapabilityAudience[];
 
+  /**
+   * A2 — Contrato único de execução. Declara como esta capability é
+   * executada fora do browser (RPC ou edge function). Sem isso ela é
+   * `client-only` e não entra no catálogo MCP.
+   */
+  execution?: CapabilityExecution;
+
+  /** Resumo humano do output — usado no `content[0].text` das respostas MCP. */
+  summarize?: (output: z.infer<TOutput>) => string;
+
   needsApproval?: boolean | ((args: { input: z.infer<TInput>; user: AuthUser | null }) => boolean);
   idempotencyKey?: (input: z.infer<TInput>) => string | null;
   audit?: AuditMode;
@@ -85,6 +96,12 @@ export interface Capability<TInput extends ZodTypeAny = ZodTypeAny, TOutput exte
   readonly sideEffects: SideEffect[];
   /** Superfícies que enxergam esta capability. Sempre inclui "app". */
   readonly audience: readonly CapabilityAudience[];
+  /** A2 — transporte declarado para execução server-side. */
+  readonly execution: CapabilityExecution;
+  /** Resumo humano opcional do output. */
+  readonly summarize?: (output: z.infer<TOutput>) => string;
+
+
 
   readonly audit: AuditMode;
   readonly costHint: CostHint;

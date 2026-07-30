@@ -46,37 +46,44 @@ export interface MCPTool {
   description: string;
   /** JSON Schema dos parâmetros. */
   inputSchema: Record<string, unknown>;
+  /** JSON Schema do retorno — o dispatcher usa para montar structuredContent. */
+  outputSchema: Record<string, unknown>;
   annotations: MCPToolAnnotations;
-  /** Capability Lunari original — o host resolve via runCapabilityAsAssistant. */
+  /** Capability Lunari original — o host resolve via dispatcher genérico. */
   capabilityId: string;
+  /** A2 — transporte declarado no `defineCapability`. */
+  transport?: { type: "rpc" | "edge"; name: string; mapped?: boolean };
+  /** Escopo OAuth/PAT exigido. */
+  scope: "read" | "write";
+  kind: "command" | "query";
+  needsApproval: boolean;
+  costHint: string;
 }
 
 export interface BuildMCPToolsOptions {
   user: AuthUser | null;
   /** Prefixo do namespace; default `lunari`. */
   namespace?: string;
-  /** Se true (default), oculta capabilities marcadas como command que exigem approval.
-   *  MCP hosts sem UI de aprovação humana não devem ver ferramentas destrutivas. */
-  hideApprovalRequired?: boolean;
 }
 
 /**
  * Converte capabilities Lunari em tools MCP.
  *
- * O `name` MCP substitui `.` do capability id por `_` no último segmento
- * apenas quando necessário — Claude/ChatGPT aceitam pontos, mas alguns
- * clientes tratam `.` como separador. Mantemos o formato canônico com `.`
- * e deixamos o host normalizar se preciso.
+ * A2 — entram apenas capabilities cuja `audience` inclui "mcp". Quando a
+ * capability declara `execution` remoto (rpc/edge), o campo `transport` vai
+ * junto e o servidor usa o dispatcher genérico; sem ele, o servidor recorre
+ * ao bridge legado escrito à mão (migração incremental, sem quebrar o catálogo).
  */
 export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
-  const { user, namespace = "lunari", hideApprovalRequired = false } = opts;
+  const { user, namespace = "lunari" } = opts;
   const tools = listAllLunariAITools({ user });
 
   const out: MCPTool[] = [];
   for (const t of tools) {
-    const needsApproval = (t as { needsApproval?: boolean }).needsApproval === true;
-    if (hideApprovalRequired && needsApproval && t.kind === "command") continue;
+    if (t.audience && !t.audience.includes("mcp")) continue;
+    const exec = t.execution;
 
+    const needsApproval = (t as { needsApproval?: boolean }).needsApproval === true;
     const [module, ...rest] = t.id.split(".");
     const action = rest.join(".");
     const name = `${namespace}.${module}.${action}`;
@@ -89,6 +96,10 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
         string,
         unknown
       >,
+      outputSchema: (t.outputSchema ?? { type: "object", properties: {} }) as Record<
+        string,
+        unknown
+      >,
       annotations: {
         readOnlyHint: t.kind === "query",
         destructiveHint: needsApproval && t.kind === "command",
@@ -97,10 +108,19 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
         requiresApprovalHint: needsApproval,
       },
       capabilityId: t.id,
+      transport:
+        exec && exec.type !== "client-only" && exec.name
+          ? { type: exec.type, name: exec.name, mapped: exec.mapped }
+          : undefined,
+      scope: t.kind === "query" ? "read" : "write",
+      kind: t.kind,
+      needsApproval,
+      costHint: t.costHint,
     });
   }
   return out;
 }
+
 
 /** Resposta MCP padronizada para erro de autorização/approval. */
 export function mcpApprovalRequired(capabilityId: string): MCPToolResult {

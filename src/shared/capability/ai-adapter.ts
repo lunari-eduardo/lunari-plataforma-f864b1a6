@@ -1,5 +1,7 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { Capability } from "./types";
+import type { CapabilityAudience } from "./audience";
+import { serializeExecution, type SerializedExecution } from "./execution";
 
 /**
  * Converte uma capability num descritor serializável para o AI SDK / MCP.
@@ -30,7 +32,12 @@ export interface AICapabilityTool {
   examples: Array<{ nl: string; input: unknown; output?: unknown }>;
   /** Metadados para a UI de confirmação (só em capabilities com approval). */
   confirmation?: ConfirmationChallenge;
+  /** A2 — transporte declarado (rpc/edge/client-only). */
+  execution: SerializedExecution;
+  /** Superfícies que enxergam esta capability. */
+  audience: readonly CapabilityAudience[];
 }
+
 
 const EMPTY_OBJECT_SCHEMA: Record<string, unknown> = {
   type: "object",
@@ -75,6 +82,8 @@ export function capabilityToAITool(cap: Capability): AICapabilityTool {
     outputSchema: convertSchema(cap.output),
     costHint: cap.costHint,
     examples: cap.examples,
+    execution: serializeExecution(cap.execution),
+    audience: cap.audience,
   };
 }
 

@@ -20,6 +20,35 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
+import {
+  dispatchCapability,
+  type CatalogTool,
+  type DispatchResult,
+} from "../_shared/capability-dispatch.ts";
+
+/** A2 — índice do catálogo por nome de tool (transport declarado na capability). */
+const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
+  ((catalog as any).tools ?? []).map((t: CatalogTool) => [t.name, t]),
+);
+
+/** Só despacha genericamente quando há transporte declarado E JWT do usuário (RLS real). */
+function dispatchableTool(name: string, auth: AuthContext): CatalogTool | null {
+  if (!auth.userJwt) return null; // PAT não carrega JWT → cai no bridge legado
+  const tool = CATALOG_BY_NAME.get(name);
+  if (!tool?.transport?.name) return null;
+  return tool;
+}
+
+function dispatchToMcpResult(tool: CatalogTool, r: DispatchResult) {
+  if (r.ok) {
+    const structured =
+      r.value && typeof r.value === "object" && !Array.isArray(r.value)
+        ? (r.value as Record<string, unknown>)
+        : { value: r.value };
+    return { content: [{ type: "text", text: r.summary }], structuredContent: structured };
+  }
+  return { isError: true, content: [{ type: "text", text: r.message }] };
+}
 
 const mcpHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +60,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.6.0", // Leitura estratégica multi-mês: workflow.listRange/metricsForRange/analytics.summary + workflow.listMonth ganha includeHistorico
+  version: "0.7.0", // A2 — contrato único de execução: dispatcher genérico (rpc/edge) com JWT do usuário
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -66,6 +95,8 @@ interface AuthContext {
   rolloutAllowed: boolean;
   authSource: "pat" | "oauth" | null;
   clientId: string | null;
+  /** A2 — JWT cru do usuário (só no caminho OAuth); habilita dispatch com RLS. */
+  userJwt: string | null;
 }
 
 const EMPTY_AUTH: AuthContext = {
@@ -75,7 +106,9 @@ const EMPTY_AUTH: AuthContext = {
   rolloutAllowed: false,
   authSource: null,
   clientId: null,
+  userJwt: null,
 };
+
 
 function decodeJwtPayload(jwt: string): Record<string, any> | null {
   try {
@@ -112,6 +145,7 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
       rolloutAllowed: allowed === true,
       authSource: "pat",
       clientId: null,
+      userJwt: null,
     };
   }
 
@@ -144,6 +178,7 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
       rolloutAllowed: allowed === true,
       authSource: "oauth",
       clientId,
+      userJwt: token,
     };
   }
 
@@ -259,15 +294,23 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, rolloutBlockedResponse());
       }
+      // A2 — contrato único: se a capability declarou transporte (rpc/edge) e
+      // temos JWT do usuário, executamos pelo dispatcher genérico (RLS real).
+      // Caso contrário, caímos no bridge legado escrito à mão (caminho PAT).
+      const dispatchTool = dispatchableTool(name, auth);
       const bridged = getBridged(name);
-      if (!bridged) {
+      if (!dispatchTool && !bridged) {
         await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, inAppFallback(name));
       }
 
-      // Escopo do PAT: por default `read`. Escrita exige `write` explícito.
+      const toolScope: "read" | "write" =
+        bridged?.scope ?? (dispatchTool?.scope ?? (dispatchTool?.kind === "query" ? "read" : "write"));
+      const requiresApproval = bridged?.requiresApproval ?? dispatchTool?.needsApproval ?? false;
+
+      // Escopo do token: por default `read`. Escrita exige `write` explícito.
       const hasWrite = auth.scopes.includes("write") || auth.scopes.includes("admin");
-      if (bridged.scope === "write" && !hasWrite) {
+      if (toolScope === "write" && !hasWrite) {
         await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, {
           isError: true,
@@ -280,8 +323,25 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 
       const sb = admin();
 
+      const execute = async (effectiveArgs: Record<string, any>) => {
+        if (dispatchTool) {
+          const r = await dispatchCapability({
+            tool: dispatchTool,
+            input: effectiveArgs,
+            userJwt: auth.userJwt,
+            scopes: auth.scopes,
+          });
+          if (!r.ok && r.auditDetail) {
+            console.error("[mcp-dispatch]", JSON.stringify({ tool: name, code: r.code, detail: r.auditDetail }));
+          }
+          return dispatchToMcpResult(dispatchTool, r) as any;
+        }
+        return await runBridged(sb, auth.userId!, name, effectiveArgs);
+      };
+
+
       // Fluxo de aprovação assíncrona para tools destrutivas.
-      if (bridged.requiresApproval) {
+      if (requiresApproval) {
         const approvalToken = typeof args.approval_token === "string" ? (args.approval_token as string) : "";
         if (approvalToken) {
           // Tenta consumir aprovação existente para esta tool.
@@ -300,7 +360,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           const row = Array.isArray(consumed) ? consumed[0] : consumed;
           const effectiveArgs = { ...(row?.tool_args ?? {}), ...args };
           delete (effectiveArgs as any).approval_token;
-          const result = await runBridged(sb, auth.userId, name, effectiveArgs);
+          const result = await execute(effectiveArgs);
           await audit({
             userId: auth.userId, toolName: name,
             status: result.isError ? "error" : "ok_approved",
@@ -312,7 +372,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         }
 
         // Sem token: cria pedido de aprovação e responde "pending".
-        const summary = bridged.summarize ? bridged.summarize(args) : `Executar ${name}`;
+        const summary = bridged?.summarize ? bridged.summarize(args) : `Executar ${name}: ${dispatchTool?.title ?? name}`;
         const { data: approvalId, error: apprErr } = await sb.rpc("assistant_approval_create", {
           _user_id: auth.userId,
           _token_id: auth.tokenId,
@@ -338,7 +398,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       }
 
       // Escritas sem approval e leituras: executa direto.
-      const result = await runBridged(sb, auth.userId, name, args);
+      const result = await execute(args);
       await audit({
         userId: auth.userId, toolName: name,
         status: result.isError ? "error" : "ok",

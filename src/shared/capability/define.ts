@@ -4,6 +4,7 @@ import { domainError, err, isOk, ok, type DomainError, type Result } from "@/sha
 import { authorize } from "./policies";
 import { registerCapability } from "./registry";
 import { defaultAudienceFor } from "./audience";
+import { CLIENT_ONLY } from "./execution";
 import { KERNEL_STRICT_MODE, _isInsideKernelDispatch } from "@/shared/kernel";
 
 import type {
@@ -60,6 +61,8 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
     permissions: opts.permissions ?? [],
     sideEffects,
     audience: opts.audience ?? defaultAudienceFor(opts.id),
+    execution: opts.execution ?? CLIENT_ONLY,
+    summarize: opts.summarize,
 
     audit: opts.audit ?? (kind === "command" ? "on-success" : "never"),
     costHint: opts.costHint ?? "cheap",
