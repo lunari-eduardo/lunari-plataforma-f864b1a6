@@ -1163,7 +1163,121 @@ export const BRIDGED_TOOLS: Record<string, BridgedTool> = {
  * Schemas simplificados publicados em `tools/list` no lugar do schema do
  * catálogo — o cliente remoto não conhece UUIDs internos.
  */
+const SESSION_REF = {
+  sessionId: { type: "string", description: "UUID da sessão ou o código de texto (ex.: workflow-123)." },
+  clienteNome: { type: "string", description: "Nome do cliente — usado quando o sessionId não é conhecido." },
+  latest: { type: "boolean", description: "Se o cliente tiver várias sessões, usar a mais recente." },
+} as const;
+
 export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
+  "lunari.workflow.getCardBySession": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.getSessionFinancials": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.diagnoseSession": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.produto.listBySession": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.produto.listPending": {
+    type: "object", properties: { limit: { type: "number" } }, additionalProperties: false,
+  },
+  "lunari.workflow.listSessionsByPaymentStatus": {
+    type: "object",
+    properties: {
+      statusFinanceiro: { type: "string", description: "pendente, parcial, pago ou quitado." },
+      limit: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.statusOptions": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.workflow.metricsForMonth": {
+    type: "object",
+    properties: {
+      year: { type: "number", description: "Ano (padrão: atual)." },
+      month: { type: "number", description: "Mês 1-12 (padrão: atual)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.photoProductionForMonth": {
+    type: "object",
+    properties: { year: { type: "number" }, month: { type: "number" }, categoria: { type: "string" } },
+    additionalProperties: false,
+  },
+  "lunari.workflow.metricsForRange": {
+    type: "object",
+    properties: {
+      start: { type: "string", description: "Data inicial YYYY-MM-DD." },
+      end: { type: "string", description: "Data final YYYY-MM-DD." },
+      granularity: { type: "string", enum: ["day", "week", "month"] },
+      includeHistorico: { type: "boolean" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.analytics.summary": {
+    type: "object",
+    properties: {
+      start: { type: "string" },
+      end: { type: "string" },
+      includeHistorico: { type: "boolean" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.updateFields": {
+    type: "object",
+    properties: {
+      ...SESSION_REF,
+      descricao: { type: "string" },
+      observacoes: { type: "string" },
+      detalhes: { type: "string" },
+      categoria: { type: "string" },
+      pacote: { type: "string" },
+      data_sessao: { type: "string", description: "Data YYYY-MM-DD." },
+      hora_sessao: { type: "string", description: "Hora HH:MM." },
+      desconto: { type: "number", description: "Desconto em reais." },
+      valor_adicional: { type: "number", description: "Valor adicional em reais." },
+      valor_base_pacote: { type: "number" },
+      valor_foto_extra: { type: "number", description: "Preço unitário da foto extra." },
+      qtd_fotos_extra: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.advanceCard": {
+    type: "object",
+    properties: { ...SESSION_REF, toStatus: { type: "string", description: "Etapa de destino (ver statusOptions)." } },
+    required: ["toStatus"],
+    additionalProperties: false,
+  },
+  "lunari.workflow.addPayment": {
+    type: "object",
+    properties: {
+      ...SESSION_REF,
+      valor: { type: "number", description: "Valor em reais (ex.: 250.00)." },
+      data: { type: "string", description: "Data do pagamento YYYY-MM-DD (padrão: hoje)." },
+      formaPagamento: { type: "string", description: "PIX, Cartão, Dinheiro, Transferência..." },
+      descricao: { type: "string", description: "Observação do lançamento." },
+    },
+    required: ["valor"],
+    additionalProperties: false,
+  },
+  "lunari.workflow.refundPayment": {
+    type: "object",
+    properties: {
+      transactionId: { type: "string", description: "UUID do pagamento a estornar." },
+      motivo: { type: "string" },
+    },
+    required: ["transactionId"],
+    additionalProperties: false,
+  },
+  "lunari.workflow.deleteSession": {
+    type: "object",
+    properties: { ...SESSION_REF, force: { type: "boolean", description: "Excluir mesmo com lançamentos financeiros." } },
+    additionalProperties: false,
+  },
+
   "lunari.agenda.appointments.create": {
     type: "object",
     properties: {
