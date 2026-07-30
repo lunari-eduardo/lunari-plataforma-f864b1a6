@@ -321,21 +321,75 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       return null;
     case "ping":
       return rpcResult(id, {});
-    case "tools/list":
-      return rpcResult(id, {
-        tools: catalog.tools.map((t: any) => ({
+    case "tools/list": {
+      // Superfície curada + meta-tools (o catálogo completo continua acessível
+      // via lunari.tools.search / lunari.tools.invoke).
+      const exposed = catalog.tools
+        .filter((t: any) => isExposed(t.name))
+        .map((t: any) => ({
           name: t.name,
           title: t.title,
           description: t.description,
           inputSchema: t.inputSchema,
           annotations: t.annotations,
-        })),
-      });
+        }));
+      return rpcResult(id, { tools: [...exposed, ...META_TOOL_DEFS] });
+    }
     case "tools/call": {
-      const name = (req.params?.name as string) ?? "unknown";
-      const args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
+      let name = (req.params?.name as string) ?? "unknown";
+      let args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
+
+      // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
+      if (name === META_SEARCH) {
+        const q = String(args.query ?? "").toLowerCase().trim();
+        const limit = Math.min(Number(args.limit ?? 20) || 20, 50);
+        const hits = (catalog.tools as any[])
+          .filter((t) =>
+            !q ||
+            t.name.toLowerCase().includes(q) ||
+            String(t.title ?? "").toLowerCase().includes(q) ||
+            String(t.description ?? "").toLowerCase().includes(q)
+          )
+          .slice(0, limit)
+          .map((t) => ({
+            name: t.name,
+            title: t.title,
+            description: t.description,
+            scopeTier: t.scopeTier ?? null,
+            needsApproval: t.needsApproval ?? null,
+            inputSchema: t.inputSchema,
+          }));
+        return rpcResult(id, {
+          content: [{
+            type: "text",
+            text: hits.length
+              ? `${hits.length} ferramenta(s) encontrada(s). Execute com lunari.tools.invoke.\n` +
+                hits.map((h) => `- ${h.name}: ${h.title}`).join("\n")
+              : "Nenhuma ferramenta encontrada para esse termo.",
+          }],
+          structuredContent: { tools: hits, total: catalog.tools.length },
+        });
+      }
+
+      // Meta-tool de execução: reescreve para a tool real e segue o fluxo normal
+      // (escopos, rollout, aprovação e auditoria idênticos).
+      if (name === META_INVOKE) {
+        const target = String(args.name ?? "").trim();
+        if (!target) {
+          return rpcResult(id, {
+            isError: true,
+            content: [{ type: "text", text: 'Informe "name" com o nome exato da ferramenta (use lunari.tools.search).' }],
+          });
+        }
+        const inner = (args.arguments && typeof args.arguments === "object" ? args.arguments : {}) as Record<string, any>;
+        if (typeof args.approval_token === "string") inner.approval_token = args.approval_token;
+        name = target;
+        args = inner;
+      }
+
       const started = Date.now();
       const requestId = crypto.randomUUID();
+
       // Contexto comum de auditoria (A5): toda saída deste bloco grava uma linha.
       const actx = {
         authSource: auth.authSource,
