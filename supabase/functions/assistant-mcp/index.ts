@@ -124,10 +124,15 @@ const INSTRUCTIONS =
 
 /** Teto de descrição publicada no núcleo (mantém o manifesto pequeno). */
 const CORE_DESCRIPTION_MAX = 160;
+/** Normaliza para busca: minúsculas e sem acentos ("análise" ≡ "analise"). */
+function fold(text: string): string {
+  return String(text ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
 function trimDescription(text: string | undefined): string {
   const t = String(text ?? "").replace(/\s+/g, " ").trim();
   return t.length <= CORE_DESCRIPTION_MAX ? t : t.slice(0, CORE_DESCRIPTION_MAX - 1).trimEnd() + "…";
 }
+
 
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
