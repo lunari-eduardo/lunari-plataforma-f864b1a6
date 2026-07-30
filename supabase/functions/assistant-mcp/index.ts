@@ -867,7 +867,25 @@ Deno.serve(async (req: Request) => {
   const auth = await resolveAuth(req);
 
   // Se veio Authorization: Bearer inválido, sinaliza fluxo OAuth (RFC 9728).
-  const hasAuthHeader = (req.headers.get("authorization") ?? "").toLowerCase().startsWith("bearer ");
+  const rawAuth = req.headers.get("authorization") ?? "";
+  const hasAuthHeader = rawAuth.toLowerCase().startsWith("bearer ");
+  const bearer = hasAuthHeader ? rawAuth.slice(7).trim() : "";
+  if (hasAuthHeader) {
+    const claims = bearer.startsWith("eyJ") ? decodeJwtPayload(bearer) : null;
+    flog(flowId, "auth", {
+      token_kind: bearer.startsWith("lmcp_") ? "pat" : bearer.startsWith("eyJ") ? "jwt" : "unknown",
+      token_fp: await fingerprint(bearer),
+      iss: claims?.iss ?? null,
+      aud: claims?.aud ?? null,
+      has_client_id: !!(claims?.client_id ?? claims?.azp),
+      exp: claims?.exp ?? null,
+      expired: typeof claims?.exp === "number" ? claims.exp * 1000 < Date.now() : null,
+      accepted: !!auth.userId,
+      auth_source: auth.authSource,
+      rollout_allowed: auth.rolloutAllowed,
+      scopes: auth.scopes,
+    });
+  }
   const responseHeaders: Record<string, string> = { ...mcpHeaders, "Content-Type": "application/json" };
   if (hasAuthHeader && !auth.userId) {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
@@ -883,10 +901,22 @@ Deno.serve(async (req: Request) => {
   const responses: unknown[] = [];
   for (const r of requests) {
     if (!r || typeof r !== "object" || (r as JsonRpcRequest).jsonrpc !== "2.0") {
+      flog(flowId, "invalid-request", {
+        reason: !r || typeof r !== "object" ? "not_object" : "missing_jsonrpc_2_0",
+        keys: r && typeof r === "object" ? Object.keys(r as object).slice(0, 8) : [],
+      });
       responses.push(rpcError(null, -32600, "Invalid Request"));
       continue;
     }
-    const res = await handleMethod(r as JsonRpcRequest, auth);
+    const rpc = r as JsonRpcRequest;
+    const mStarted = Date.now();
+    const res = await handleMethod(rpc, auth);
+    flog(flowId, "rpc", {
+      method: rpc.method,
+      is_notification: rpc.id === undefined || rpc.id === null,
+      responded: !!res,
+      latency_ms: Date.now() - mStarted,
+    });
     if (res) responses.push(res);
   }
 
@@ -896,16 +926,19 @@ Deno.serve(async (req: Request) => {
   }
 
   const logHandshake = (status: number, bytes: number) =>
-    console.log("[mcp-http]", JSON.stringify({
+    flog(flowId, "http-out", {
       methods: requests.map((r: any) => r?.method).filter(Boolean),
       status,
       bytes,
-      sessionId,
-      authSource: auth.authSource,
-      clientId: auth.clientId,
-      hasUser: !!auth.userId,
-      latencyMs: Date.now() - startedAt,
-    }));
+      session_id: sessionId,
+      auth_source: auth.authSource,
+      client_id: auth.clientId,
+      has_user: !!auth.userId,
+      challenge: !!responseHeaders["WWW-Authenticate"],
+      rpc_latency_ms: Date.now() - startedAt,
+      total_latency_ms: Date.now() - httpStarted,
+    });
+
 
   if (responses.length === 0) {
     logHandshake(202, 0);
