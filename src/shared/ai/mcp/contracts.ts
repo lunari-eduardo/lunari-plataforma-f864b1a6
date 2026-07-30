@@ -80,8 +80,10 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
 
   const out: MCPTool[] = [];
   for (const t of tools) {
-    if (t.audience && !t.audience.includes("mcp")) continue;
+    // A3 — fail-closed: sem audiência declarada, a tool NÃO entra no catálogo.
+    if (!t.audience || !t.audience.includes("mcp")) continue;
     const exec = t.execution;
+
 
     const needsApproval = (t as { needsApproval?: boolean }).needsApproval === true;
     const [module, ...rest] = t.id.split(".");
