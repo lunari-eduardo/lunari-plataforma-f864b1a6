@@ -16,6 +16,18 @@
  */
 // deno-lint-ignore-file no-explicit-any
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
+import {
+  calcularPrecoFinal,
+  faixaPara,
+  loadEstruturaCustos,
+  loadModelo,
+  loadTabelas,
+  markupDaMargem,
+  parseFaixas,
+  round2,
+  validarFaixas,
+  valorPorFoto,
+} from "./pricing.ts";
 
 export interface McpContent { type: "text"; text: string }
 export interface McpToolResult {
