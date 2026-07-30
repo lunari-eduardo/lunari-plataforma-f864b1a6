@@ -389,13 +389,15 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           )
           .slice(0, limit)
           .map((t) => ({
-            name: t.name,
+            name: toPublicName(t.name),
+            internalName: t.name,
             title: t.title,
             description: t.description,
             scopeTier: t.scopeTier ?? null,
             needsApproval: t.needsApproval ?? null,
-            inputSchema: t.inputSchema,
+            inputSchema: publicInputSchema(t.inputSchema),
           }));
+
         return rpcResult(id, {
           content: [{
             type: "text",
