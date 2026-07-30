@@ -149,6 +149,98 @@ async function resolveFinanceItem(
 
 const GRUPOS_RECEITA = ["Receita Operacional", "Receita Não Operacional"];
 
+// -------------------- Workflow: helpers --------------------
+
+const SESSAO_COLS =
+  "id,session_id,cliente_id,appointment_id,galeria_id,data_sessao,hora_sessao,categoria,pacote," +
+  "descricao,observacoes,detalhes,status,status_financeiro,valor_total,valor_pago,valor_base_pacote," +
+  "valor_adicional,desconto,qtd_fotos_extra,valor_foto_extra,valor_total_foto_extra,produtos_incluidos," +
+  "clientes(id,nome,telefone,email)";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve uma sessão a partir de `sessionId` (UUID), `session_id` texto
+ * (workflow-*) ou do nome do cliente (fuzzy, igual aos demais resolvers).
+ */
+async function resolveSessao(
+  sb: SupabaseClient,
+  uid: string,
+  args: Record<string, any>,
+): Promise<{ sessao: any | null; error?: string }> {
+  const key = String(args.sessionId ?? args.session_id ?? args.id ?? "").trim();
+  if (key) {
+    if (UUID_RE.test(key)) {
+      const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
+        .eq("user_id", uid).eq("id", key).maybeSingle();
+      if (data) return { sessao: data };
+    }
+    const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
+      .eq("user_id", uid).eq("session_id", key).maybeSingle();
+    if (data) return { sessao: data };
+    return { sessao: null, error: `Sessão "${key}" não encontrada.` };
+  }
+
+  const cli = await resolveCliente(sb, uid, args);
+  if (cli.error) return { sessao: null, error: cli.error };
+  if (!cli.id) {
+    return { sessao: null, error: "Informe 'sessionId' ou 'clienteNome' para identificar a sessão." };
+  }
+  const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
+    .eq("user_id", uid).eq("cliente_id", cli.id)
+    .order("data_sessao", { ascending: false }).limit(10);
+  const list = data ?? [];
+  if (list.length === 0) return { sessao: null, error: `Nenhuma sessão para "${cli.nome}".` };
+  if (list.length > 1 && !args.latest) {
+    return {
+      sessao: null,
+      error:
+        `"${cli.nome}" tem ${list.length} sessões: ` +
+        list.map((s: any) => `${s.data_sessao ?? "sem data"} (${s.pacote ?? s.categoria ?? "—"}) id=${s.id}`).join("; ") +
+        ". Informe sessionId ou latest=true.",
+    };
+  }
+  return { sessao: list[0] };
+}
+
+/** Janela do mês a partir de `year`/`month` (padrão: mês corrente). */
+function monthRange(args: Record<string, any>): { start: string; end: string } {
+  const now = new Date();
+  const year = Number(args.year) || now.getUTCFullYear();
+  const month = Number(args.month) || now.getUTCMonth() + 1;
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextY = month === 12 ? year + 1 : year;
+  const nextM = month === 12 ? 1 : month + 1;
+  const end = addDays(`${nextY}-${String(nextM).padStart(2, "0")}-01`, -1);
+  return { start, end };
+}
+
+/** Projeção somente-leitura de `produtos_incluidos` (JSONB da sessão). */
+function projetarProdutos(sessao: any) {
+  const raw = Array.isArray(sessao?.produtos_incluidos) ? sessao.produtos_incluidos : [];
+  return raw.map((p: any, idx: number) => {
+    const etapas = Array.isArray(p?.etapas) ? p.etapas : [];
+    const feitas = etapas.filter((e: any) => e?.done).length;
+    const atual = etapas.find((e: any) => !e?.done);
+    return {
+      id: p?.id ?? p?.produtoId ?? `idx-${idx}`,
+      nome: p?.nome ?? "Produto",
+      quantidade: Number(p?.quantidade) || 0,
+      valorUnitario: Number(p?.valorUnitario) || 0,
+      valorTotal: (Number(p?.quantidade) || 0) * (Number(p?.valorUnitario) || 0),
+      tipo: p?.tipo ?? "manual",
+      fluxo: p?.fluxo ?? "padrao",
+      prazoEntrega: p?.prazoEntrega ?? null,
+      etapaAtual: atual?.nome ?? (etapas.length ? "concluído" : null),
+      etapasConcluidas: feitas,
+      etapasTotal: etapas.length,
+      entregue: Boolean(p?.entregue) || (etapas.length > 0 && feitas === etapas.length),
+    };
+  });
+}
+
+
+
 // -------------------- AGENDA --------------------
 
 const APPT_COLS = "id,title,date,time,type,status,description,cliente_id,duration_minutes,session_id,paid_amount";
@@ -345,6 +437,170 @@ const READ_TOOLS: Record<string, Handler> = {
     const pendente = (data ?? []).reduce((s: number, r: any) => s + ((Number(r.valor_total) || 0) - (Number(r.valor_pago) || 0)), 0);
     return ok({ sessoes: data ?? [], totalPendente: pendente }, `${data?.length ?? 0} sessão(ões) com ${money(pendente)} pendente(s).`);
   },
+  "lunari.workflow.getCardBySession": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const s = r.sessao!;
+    const [{ data: fin }, { data: gal }] = await Promise.all([
+      sb.rpc("workflow_session_financials", { p_session_id: s.id }),
+      s.galeria_id
+        ? sb.from("galerias").select("id,titulo,status,status_pagamento").eq("id", s.galeria_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+    ]);
+    const produtos = Array.isArray(s.produtos_incluidos) ? s.produtos_incluidos : [];
+    return ok(
+      {
+        sessao: s,
+        cliente: s.clientes ?? null,
+        galeria: gal ?? null,
+        financeiro: Array.isArray(fin) ? fin[0] ?? null : fin ?? null,
+        produtos,
+      },
+      `Sessão ${s.session_id ?? s.id} · ${s.clientes?.nome ?? "sem cliente"} · ${s.data_sessao ?? "sem data"} · ` +
+        `${s.status ?? "sem etapa"} · total ${money(s.valor_total)} · pago ${money(s.valor_pago)} · ` +
+        `pendente ${money((Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0))}.`,
+    );
+  },
+  "lunari.workflow.getSessionFinancials": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const s = r.sessao!;
+    const { data, error } = await sb.rpc("workflow_session_financials", { p_session_id: s.id });
+    if (error) return fail(error.message);
+    const fin = Array.isArray(data) ? data[0] ?? null : data ?? null;
+    const { data: pagamentos } = await sb.from("clientes_transacoes")
+      .select("id,valor,tipo,data_transacao,descricao")
+      .eq("user_id", uid).eq("session_id", s.session_id ?? "__none__")
+      .order("data_transacao", { ascending: false }).limit(100);
+    return ok(
+      { sessionId: s.id, sessionKey: s.session_id, financeiro: fin, pagamentos: pagamentos ?? [] },
+      `Total ${money(s.valor_total)} · pago ${money(s.valor_pago)} · pendente ${money((Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0))} · ${pagamentos?.length ?? 0} lançamento(s).`,
+    );
+  },
+  "lunari.workflow.listSessionsByPaymentStatus": async (sb, uid, args) => {
+    const status = String(args.statusFinanceiro ?? args.status ?? "pendente");
+    const { data, error } = await sb.from("clientes_sessoes")
+      .select("id,session_id,cliente_id,data_sessao,pacote,status,valor_total,valor_pago,status_financeiro")
+      .eq("user_id", uid).eq("status_financeiro", status)
+      .order("data_sessao", { ascending: false }).limit(clampLimit(args.limit, 50, 200));
+    if (error) return fail(error.message);
+    return ok({ statusFinanceiro: status, sessoes: data ?? [] }, `${data?.length ?? 0} sessão(ões) com status financeiro "${status}".`);
+  },
+  "lunari.workflow.statusOptions": async (sb, uid) => {
+    const { data, error } = await sb.from("etapas_trabalho")
+      .select("nome,cor,ordem").eq("user_id", uid).order("ordem");
+    if (error) return fail(error.message);
+    const options = (data ?? []).map((r: any) => ({ value: r.nome, label: r.nome, color: r.cor ?? null, ordem: r.ordem ?? null }));
+    return ok({ options }, options.length ? `Etapas: ${options.map((o: any) => o.value).join(" → ")}.` : "Nenhuma etapa configurada.");
+  },
+  "lunari.workflow.metricsForMonth": async (sb, uid, args) => {
+    const { start, end } = monthRange(args);
+    const { data, error } = await sb.rpc("workflow_month_metrics", { p_user_id: uid, p_start: start, p_end: end });
+    if (error) return fail(error.message);
+    const m = (Array.isArray(data) ? data[0] : data) ?? {};
+    return ok(
+      { start, end, metrics: m },
+      `${start.slice(0, 7)}: ${m.sessoes ?? 0} sessão(ões) · previsto ${money(m.previsto)} · recebido ${money(m.receita)} · pendente ${money(m.pendente)}.`,
+    );
+  },
+  "lunari.workflow.metricsForRange": async (sb, uid, args) => {
+    const start = String(args.start ?? args.startDate ?? addDays(today(), -90));
+    const end = String(args.end ?? args.endDate ?? today());
+    const { data, error } = await sb.rpc("workflow_range_metrics", {
+      p_user_id: uid, p_start: start, p_end: end,
+      p_granularity: String(args.granularity ?? "month"),
+      p_include_historico: Boolean(args.includeHistorico ?? false),
+    });
+    if (error) return fail(error.message);
+    return ok({ start, end, metrics: data }, `Métricas de ${start} a ${end} calculadas.`);
+  },
+  "lunari.workflow.analytics.summary": async (sb, uid, args) => {
+    const start = String(args.start ?? args.startDate ?? addDays(today(), -365));
+    const end = String(args.end ?? args.endDate ?? today());
+    const { data, error } = await sb.rpc("workflow_analytics_summary", {
+      p_user_id: uid, p_start: start, p_end: end,
+      p_include_historico: Boolean(args.includeHistorico ?? false),
+    });
+    if (error) return fail(error.message);
+    const t = (data as any)?.totals ?? {};
+    return ok(
+      { start, end, summary: data },
+      `${t.sessoes ?? 0} sessão(ões) de ${start} a ${end} · previsto ${money(t.previsto)} · receita ${money(t.receita)} · ticket médio ${money(t.ticket_medio)}.`,
+    );
+  },
+  "lunari.workflow.photoProductionForMonth": async (sb, uid, args) => {
+    const { start, end } = monthRange(args);
+    const { data, error } = await sb.rpc("workflow_photo_production_month", {
+      p_user_id: uid, p_start: start, p_end: end,
+      p_categoria: args.categoria ? String(args.categoria) : null,
+    });
+    if (error) return fail(error.message);
+    const row = (Array.isArray(data) ? data[0] : data) ?? {};
+    return ok({ start, end, producao: data }, `Produção fotográfica de ${start.slice(0, 7)}: ${JSON.stringify(row).slice(0, 300)}`);
+  },
+  "lunari.workflow.diagnoseSession": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const s = r.sessao!;
+    const findings: Array<{ code: string; severity: string; message: string; suggestedCapability: string | null }> = [];
+    const total = Number(s.valor_total) || 0, pago = Number(s.valor_pago) || 0;
+    if (!s.cliente_id) findings.push({ code: "SEM_CLIENTE", severity: "warning", message: "Sessão sem cliente vinculado.", suggestedCapability: "lunari.workflow.updateFields" });
+    if (!s.data_sessao) findings.push({ code: "SEM_DATA", severity: "warning", message: "Sessão sem data.", suggestedCapability: "lunari.workflow.updateFields" });
+    if (total <= 0) findings.push({ code: "TOTAL_ZERADO", severity: "warning", message: "Valor total zerado.", suggestedCapability: "lunari.workflow.updateFields" });
+    if (pago > total + 0.009) findings.push({ code: "PAGO_MAIOR_TOTAL", severity: "critical", message: `Pago (${money(pago)}) maior que o total (${money(total)}).`, suggestedCapability: "lunari.workflow.getSessionFinancials" });
+    if (!s.galeria_id) findings.push({ code: "SEM_GALERIA", severity: "info", message: "Sessão sem galeria vinculada.", suggestedCapability: null });
+    const produtos = Array.isArray(s.produtos_incluidos) ? s.produtos_incluidos : [];
+    for (const p of produtos as any[]) {
+      if (p?.tipo === "manual" && !(Number(p.valorUnitario) > 0)) {
+        findings.push({ code: "PRODUTO_SEM_PRECO", severity: "warning", message: `Produto "${p?.nome ?? "?"}" sem preço unitário.`, suggestedCapability: "lunari.workflow.produto.setPrice" });
+      }
+    }
+    return ok(
+      { sessionId: s.id, ok: findings.length === 0, findings },
+      findings.length === 0 ? "Nenhuma inconsistência encontrada." : `${findings.length} ponto(s) de atenção: ${findings.map((f) => f.message).join(" ")}`,
+    );
+  },
+  "lunari.workflow.produto.listBySession": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const produtos = projetarProdutos(r.sessao!);
+    return ok(
+      { sessionId: r.sessao!.id, produtos },
+      produtos.length
+        ? produtos.map((p: any) => `${p.nome} ×${p.quantidade} · ${p.etapaAtual ?? "sem etapa"}${p.prazoEntrega ? ` · prazo ${p.prazoEntrega}` : ""}`).join(" | ")
+        : "Nenhum produto nesta sessão.",
+    );
+  },
+  "lunari.workflow.produto.listPending": async (sb, uid, args) => {
+    const { data, error } = await sb.from("clientes_sessoes")
+      .select("id,session_id,data_sessao,produtos_incluidos,clientes(nome)")
+      .eq("user_id", uid).neq("status", "historico")
+      .not("produtos_incluidos", "is", null)
+      .order("data_sessao", { ascending: false }).limit(clampLimit(args.limit, 200, 400));
+    if (error) return fail(error.message);
+    const hoje = today();
+    const buckets: Record<string, any[]> = { atrasado: [], hoje: [], amanha: [], semana: [], futuro: [], semPrazo: [] };
+    for (const s of (data ?? []) as any[]) {
+      for (const p of projetarProdutos(s)) {
+        if (p.entregue) continue;
+        const item = { sessionId: s.id, sessionKey: s.session_id, cliente: s.clientes?.nome ?? null, ...p };
+        const prazo = p.prazoEntrega;
+        if (!prazo) buckets.semPrazo.push(item);
+        else if (prazo < hoje) buckets.atrasado.push(item);
+        else if (prazo === hoje) buckets.hoje.push(item);
+        else if (prazo === addDays(hoje, 1)) buckets.amanha.push(item);
+        else if (prazo <= addDays(hoje, 7)) buckets.semana.push(item);
+        else buckets.futuro.push(item);
+      }
+    }
+    const totalPend = Object.values(buckets).reduce((a, b) => a + b.length, 0);
+    return ok(
+      { buckets, total: totalPend },
+      `${totalPend} produto(s) em produção · ${buckets.atrasado.length} atrasado(s), ${buckets.hoje.length} para hoje, ${buckets.semana.length} nesta semana.`,
+    );
+  },
+
+
 
   // -------------------- FINANCEIRO --------------------
   "lunari.finance.item.list": async (sb, uid, args) => {
@@ -711,7 +967,185 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       return ok({ deleted: id }, "Tarefa excluída.");
     },
   },
+
+  // ---------- WORKFLOW ----------
+  "lunari.workflow.updateFields": {
+    requiresApproval: false,
+    summarize: (a) => `Atualizar dados da sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
+    handler: async (sb, uid, args) => {
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      const src = (args.fields ?? args) as Record<string, any>;
+      const upd: Record<string, unknown> = {};
+      for (const key of WORKFLOW_EDITABLE) {
+        if (src[key] != null) upd[key] = WORKFLOW_NUMERIC.has(key) ? Number(src[key]) : String(src[key]);
+      }
+      if (src.qtd_fotos_extra != null) upd.qtd_fotos_extra = Math.max(0, Math.floor(Number(src.qtd_fotos_extra) || 0));
+      if (!Object.keys(upd).length) {
+        return fail(`Nada para atualizar. Campos aceitos: ${[...WORKFLOW_EDITABLE, "qtd_fotos_extra"].join(", ")}.`);
+      }
+      upd.updated_by = uid;
+      const { error } = await sb.from("clientes_sessoes").update(upd).eq("id", s.id).eq("user_id", uid);
+      if (error) return fail(error.message);
+      const { data: novo } = await sb.from("clientes_sessoes")
+        .select("id,session_id,status,valor_total,valor_pago,status_financeiro,desconto,valor_adicional")
+        .eq("id", s.id).maybeSingle();
+      return ok(
+        { sessionId: s.id, changedKeys: Object.keys(upd).filter((k) => k !== "updated_by"), sessao: novo },
+        `Sessão atualizada (${Object.keys(upd).filter((k) => k !== "updated_by").join(", ")}). Total ${money(novo?.valor_total)} · pago ${money(novo?.valor_pago)}.`,
+      );
+    },
+  },
+  "lunari.workflow.advanceCard": {
+    requiresApproval: false,
+    summarize: (a) => `Mover sessão ${a.sessionId ?? a.clienteNome ?? "?"} para "${a.toStatus ?? a.status ?? "?"}"`,
+    handler: async (sb, uid, args) => {
+      const toStatus = String(args.toStatus ?? args.status ?? "").trim();
+      if (!toStatus) return fail("Campo 'toStatus' é obrigatório. Consulte lunari.workflow.statusOptions.");
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      const { data: etapas } = await sb.from("etapas_trabalho").select("nome").eq("user_id", uid);
+      const nomes = (etapas ?? []).map((e: any) => e.nome as string);
+      const match = nomes.find((n) => norm(n) === norm(toStatus)) ?? nomes.find((n) => norm(n).includes(norm(toStatus)));
+      if (nomes.length && !match) {
+        return fail(`Etapa "${toStatus}" não existe. Etapas disponíveis: ${nomes.join(", ")}.`);
+      }
+      const destino = match ?? toStatus;
+      if (norm(s.status) === norm(destino)) return ok({ sessionId: s.id, status: destino }, `Sessão já está em "${destino}".`);
+      const { error } = await sb.from("clientes_sessoes")
+        .update({ status: destino, updated_by: uid }).eq("id", s.id).eq("user_id", uid);
+      if (error) return fail(error.message);
+      return ok({ sessionId: s.id, fromStatus: s.status ?? null, toStatus: destino }, `Sessão movida de "${s.status ?? "—"}" para "${destino}".`);
+    },
+  },
+  "lunari.workflow.addPayment": {
+    requiresApproval: false,
+    summarize: (a) => `Registrar pagamento de ${money(a.valor)} na sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
+    handler: async (sb, uid, args) => {
+      const valor = Number(args.valor);
+      if (!(valor > 0)) return fail("Campo 'valor' (em reais, ex.: 250.00) é obrigatório e deve ser positivo.");
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      if (!s.session_id) return fail("Sessão sem session_id texto — registre o pagamento pelo app.");
+      const data = String(args.data ?? args.dataTransacao ?? today());
+      const forma = String(args.formaPagamento ?? args.forma ?? "PIX");
+      const paymentId = `mcp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const intentKey = String(args.intentKey ?? `mcp:${s.session_id}:${valor}:${data}:${forma}`);
+
+      // Idempotência: mesma intenção já lançada?
+      const { data: dup } = await sb.from("clientes_transacoes")
+        .select("id").eq("user_id", uid).eq("session_id", s.session_id).eq("tipo", "pagamento")
+        .ilike("descricao", `%[INTENT:${intentKey}]%`).limit(1).maybeSingle();
+      if (dup?.id) return ok({ sessionId: s.id, transactionId: dup.id, duplicate: true }, "Pagamento idêntico já registrado — nada foi duplicado.");
+
+      const obs = String(args.descricao ?? args.observacoes ?? `Pagamento ${forma}`);
+      const descricao = `${obs} [ID:${paymentId}] [INTENT:${intentKey}]`;
+      const { data: inserted, error } = await sb.from("clientes_transacoes").insert({
+        user_id: uid,
+        cliente_id: s.cliente_id,
+        session_id: s.session_id,
+        tipo: "pagamento",
+        valor,
+        data_transacao: data,
+        descricao,
+        updated_by: uid,
+      }).select("id").single();
+      if (error) return fail(error.message);
+
+      const { data: novo } = await sb.from("clientes_sessoes")
+        .select("valor_total,valor_pago,status_financeiro").eq("id", s.id).maybeSingle();
+      const pend = (Number(novo?.valor_total) || 0) - (Number(novo?.valor_pago) || 0);
+      return ok(
+        { sessionId: s.id, transactionId: inserted.id, valor, data, formaPagamento: forma, sessao: novo },
+        `Pagamento de ${money(valor)} (${forma}) registrado em ${data}. Pago ${money(novo?.valor_pago)} de ${money(novo?.valor_total)} · pendente ${money(pend)}.`,
+      );
+    },
+  },
+  "lunari.workflow.refundPayment": {
+    requiresApproval: true,
+    summarize: (a) => `Estornar o pagamento ${a.transactionId ?? "?"} (cria transação espelhada)`,
+    handler: async (sb, uid, args) => {
+      const transactionId = String(args.transactionId ?? args.id ?? "");
+      if (!UUID_RE.test(transactionId)) return fail("Campo 'transactionId' (UUID do pagamento) é obrigatório.");
+      const { data: orig } = await sb.from("clientes_transacoes")
+        .select("id,user_id,cliente_id,session_id,valor,tipo,descricao")
+        .eq("id", transactionId).eq("user_id", uid).maybeSingle();
+      if (!orig) return fail("Pagamento não encontrado.");
+      if (orig.tipo !== "pagamento") return fail("Somente pagamentos podem ser estornados.");
+      if (!(Number(orig.valor) > 0)) return fail("Pagamento sem valor positivo — nada a estornar.");
+      const { data: jaEstornado } = await sb.from("clientes_transacoes")
+        .select("id").eq("user_id", uid).eq("tipo", "estorno")
+        .ilike("descricao", `%[ESTORNO_DE:${transactionId}]%`).limit(1).maybeSingle();
+      if (jaEstornado?.id) return ok({ estornoId: jaEstornado.id, duplicate: true }, "Este pagamento já foi estornado.");
+      const motivo = args.motivo ? String(args.motivo) : "Estorno via assistente";
+      const { data: est, error } = await sb.from("clientes_transacoes").insert({
+        user_id: uid,
+        cliente_id: orig.cliente_id,
+        session_id: orig.session_id,
+        tipo: "estorno",
+        valor: -Math.abs(Number(orig.valor)),
+        data_transacao: today(),
+        descricao: `${motivo} [ESTORNO_DE:${transactionId}]`,
+        updated_by: uid,
+      }).select("id").single();
+      if (error) return fail(error.message);
+      return ok(
+        { transactionId, estornoId: est.id, valorEstornado: Number(orig.valor) },
+        `Estorno de ${money(orig.valor)} registrado. Motivo: ${motivo}.`,
+      );
+    },
+  },
+  "lunari.workflow.deleteSession": {
+    requiresApproval: true,
+    summarize: (a) => `Excluir a sessão ${a.sessionId ?? a.clienteNome ?? "?"} e seus lançamentos (irreversível)`,
+    handler: async (sb, uid, args) => {
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      const { count } = await sb.from("clientes_transacoes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", uid).eq("session_id", s.session_id ?? "__none__");
+      if ((count ?? 0) > 0 && !args.force) {
+        return fail(
+          `Esta sessão tem ${count} lançamento(s) financeiro(s) (${money(s.valor_pago)} pago). ` +
+            "Reenvie com force=true para excluir sessão e lançamentos.",
+        );
+      }
+      if (s.session_id) {
+        await sb.from("clientes_transacoes").delete().eq("user_id", uid).eq("session_id", s.session_id);
+      }
+      const { error } = await sb.from("clientes_sessoes").delete().eq("id", s.id).eq("user_id", uid);
+      if (error) return fail(error.message);
+      return ok({ deleted: s.id, transacoesRemovidas: count ?? 0 }, `Sessão excluída (${count ?? 0} lançamento(s) removido(s)).`);
+    },
+  },
 };
+
+/** Campos da sessão que a IA pode alterar (nunca valor_pago/status_financeiro). */
+const WORKFLOW_EDITABLE = [
+  "descricao",
+  "observacoes",
+  "detalhes",
+  "categoria",
+  "pacote",
+  "data_sessao",
+  "hora_sessao",
+  "desconto",
+  "valor_adicional",
+  "valor_base_pacote",
+  "valor_foto_extra",
+] as const;
+
+const WORKFLOW_NUMERIC = new Set<string>([
+  "desconto",
+  "valor_adicional",
+  "valor_base_pacote",
+  "valor_foto_extra",
+]);
+
 
 export const BRIDGED_TOOLS: Record<string, BridgedTool> = {
   ...Object.fromEntries(
@@ -729,7 +1163,121 @@ export const BRIDGED_TOOLS: Record<string, BridgedTool> = {
  * Schemas simplificados publicados em `tools/list` no lugar do schema do
  * catálogo — o cliente remoto não conhece UUIDs internos.
  */
+const SESSION_REF = {
+  sessionId: { type: "string", description: "UUID da sessão ou o código de texto (ex.: workflow-123)." },
+  clienteNome: { type: "string", description: "Nome do cliente — usado quando o sessionId não é conhecido." },
+  latest: { type: "boolean", description: "Se o cliente tiver várias sessões, usar a mais recente." },
+} as const;
+
 export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
+  "lunari.workflow.getCardBySession": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.getSessionFinancials": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.diagnoseSession": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.produto.listBySession": {
+    type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
+  },
+  "lunari.workflow.produto.listPending": {
+    type: "object", properties: { limit: { type: "number" } }, additionalProperties: false,
+  },
+  "lunari.workflow.listSessionsByPaymentStatus": {
+    type: "object",
+    properties: {
+      statusFinanceiro: { type: "string", description: "pendente, parcial, pago ou quitado." },
+      limit: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.statusOptions": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.workflow.metricsForMonth": {
+    type: "object",
+    properties: {
+      year: { type: "number", description: "Ano (padrão: atual)." },
+      month: { type: "number", description: "Mês 1-12 (padrão: atual)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.photoProductionForMonth": {
+    type: "object",
+    properties: { year: { type: "number" }, month: { type: "number" }, categoria: { type: "string" } },
+    additionalProperties: false,
+  },
+  "lunari.workflow.metricsForRange": {
+    type: "object",
+    properties: {
+      start: { type: "string", description: "Data inicial YYYY-MM-DD." },
+      end: { type: "string", description: "Data final YYYY-MM-DD." },
+      granularity: { type: "string", enum: ["day", "week", "month"] },
+      includeHistorico: { type: "boolean" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.analytics.summary": {
+    type: "object",
+    properties: {
+      start: { type: "string" },
+      end: { type: "string" },
+      includeHistorico: { type: "boolean" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.updateFields": {
+    type: "object",
+    properties: {
+      ...SESSION_REF,
+      descricao: { type: "string" },
+      observacoes: { type: "string" },
+      detalhes: { type: "string" },
+      categoria: { type: "string" },
+      pacote: { type: "string" },
+      data_sessao: { type: "string", description: "Data YYYY-MM-DD." },
+      hora_sessao: { type: "string", description: "Hora HH:MM." },
+      desconto: { type: "number", description: "Desconto em reais." },
+      valor_adicional: { type: "number", description: "Valor adicional em reais." },
+      valor_base_pacote: { type: "number" },
+      valor_foto_extra: { type: "number", description: "Preço unitário da foto extra." },
+      qtd_fotos_extra: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.advanceCard": {
+    type: "object",
+    properties: { ...SESSION_REF, toStatus: { type: "string", description: "Etapa de destino (ver statusOptions)." } },
+    required: ["toStatus"],
+    additionalProperties: false,
+  },
+  "lunari.workflow.addPayment": {
+    type: "object",
+    properties: {
+      ...SESSION_REF,
+      valor: { type: "number", description: "Valor em reais (ex.: 250.00)." },
+      data: { type: "string", description: "Data do pagamento YYYY-MM-DD (padrão: hoje)." },
+      formaPagamento: { type: "string", description: "PIX, Cartão, Dinheiro, Transferência..." },
+      descricao: { type: "string", description: "Observação do lançamento." },
+    },
+    required: ["valor"],
+    additionalProperties: false,
+  },
+  "lunari.workflow.refundPayment": {
+    type: "object",
+    properties: {
+      transactionId: { type: "string", description: "UUID do pagamento a estornar." },
+      motivo: { type: "string" },
+    },
+    required: ["transactionId"],
+    additionalProperties: false,
+  },
+  "lunari.workflow.deleteSession": {
+    type: "object",
+    properties: { ...SESSION_REF, force: { type: "boolean", description: "Excluir mesmo com lançamentos financeiros." } },
+    additionalProperties: false,
+  },
+
   "lunari.agenda.appointments.create": {
     type: "object",
     properties: {
