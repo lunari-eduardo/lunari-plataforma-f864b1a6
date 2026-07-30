@@ -64,6 +64,43 @@ const fail = (message: string): McpToolResult => ({
   content: [{ type: "text", text: message }],
 });
 
+export interface NeedsInputOption { label: string; value: string; hint?: string }
+
+/**
+ * Contrato `needs_input` — NÃO é erro: é uma pergunta obrigatória ao usuário.
+ * O agente (GPT/Lu) deve perguntar e reenviar a chamada com o campo preenchido.
+ * Proibido escolher sozinho ou criar registro novo para "resolver" a pergunta.
+ */
+function needsInput(input: {
+  missing: string[];
+  question: string;
+  options?: NeedsInputOption[];
+  allowCreate?: boolean;
+  createHint?: string;
+}): McpToolResult {
+  const lines = [input.question];
+  if (input.options?.length) {
+    lines.push(
+      ...input.options.map((o) => `- ${o.label}${o.hint ? ` (${o.hint})` : ""} → ${o.value}`),
+    );
+  }
+  if (input.allowCreate && input.createHint) lines.push(input.createHint);
+  lines.push(
+    `[needs_input] Pergunte ao usuário antes de prosseguir. Campos faltando: ${input.missing.join(", ")}. Não escolha nem crie nada por conta própria.`,
+  );
+  return {
+    content: [{ type: "text", text: lines.join("\n") }],
+    structuredContent: {
+      status: "needs_input",
+      missing: input.missing,
+      question: input.question,
+      options: input.options ?? [],
+      allowCreate: !!input.allowCreate,
+    },
+  };
+}
+
+
 function clampLimit(n: unknown, def = 20, max = 200): number {
   const v = Number(n);
   if (!Number.isFinite(v) || v <= 0) return def;
@@ -110,12 +147,13 @@ function resolverMarkup(args: Record<string, any>, margemPadrao: number): { mark
 }
 async function resolveCategoria(
   sb: SupabaseClient, uid: string, args: Record<string, any>,
-): Promise<{ id: string | null; nome?: string; error?: string }> {
+): Promise<{ id: string | null; nome?: string; error?: string; ask?: McpToolResult }> {
   const raw = String(args.categoriaId ?? args.categoria ?? "").trim();
-  if (!raw) return { id: null };
   const { data, error } = await sb.from("categorias").select("id,nome").eq("user_id", uid);
   if (error) return { id: null, error: error.message };
   const list = data ?? [];
+  const opcoes = (): NeedsInputOption[] => list.slice(0, 20).map((c: any) => ({ label: c.nome, value: c.id }));
+  if (!raw) return { id: null };
   const byId = list.find((c: any) => c.id === raw);
   if (byId) return { id: byId.id, nome: byId.nome };
   const alvo = norm(raw);
@@ -124,10 +162,41 @@ async function resolveCategoria(
   const parciais = list.filter((c: any) => norm(c.nome).includes(alvo));
   if (parciais.length === 1) return { id: parciais[0].id, nome: parciais[0].nome };
   if (parciais.length > 1) {
-    return { id: null, error: `Categoria ambígua: ${parciais.map((c: any) => c.nome).join(", ")}.` };
+    return {
+      id: null,
+      ask: needsInput({
+        missing: ["categoriaId"],
+        question: `Qual categoria você quis dizer com "${raw}"?`,
+        options: parciais.slice(0, 10).map((c: any) => ({ label: c.nome, value: c.id })),
+      }),
+    };
   }
-  return { id: null, error: `Categoria "${raw}" não encontrada. Disponíveis: ${list.map((c: any) => c.nome).join(", ") || "nenhuma"}.` };
+  return {
+    id: null,
+    ask: needsInput({
+      missing: ["categoriaId"],
+      question: `Não existe a categoria "${raw}". Qual das categorias cadastradas devo usar?`,
+      options: opcoes(),
+      allowCreate: true,
+      createHint: "Nunca crie categoria sozinho: só crie se o usuário confirmar explicitamente o nome.",
+    }),
+  };
 }
+
+/** Pergunta a categoria quando ela não foi informada (obrigatória em pacotes). */
+async function askCategoriaObrigatoria(
+  sb: SupabaseClient, uid: string,
+): Promise<McpToolResult> {
+  const { data } = await sb.from("categorias").select("id,nome").eq("user_id", uid);
+  return needsInput({
+    missing: ["categoria"],
+    question: "Todo pacote precisa de uma categoria. Qual delas devo usar?",
+    options: (data ?? []).slice(0, 20).map((c: any) => ({ label: c.nome, value: c.id })),
+    allowCreate: true,
+    createHint: "Se nenhuma servir, pergunte ao usuário o nome da nova categoria antes de criar.",
+  });
+}
+
 async function resolvePacote(
   sb: SupabaseClient, uid: string, args: Record<string, any>,
 ): Promise<{ pacote?: any; error?: string }> {
@@ -203,7 +272,7 @@ async function resolveCliente(
   sb: SupabaseClient,
   uid: string,
   args: Record<string, any>,
-): Promise<{ id: string | null; nome: string | null; error?: string }> {
+): Promise<{ id: string | null; nome: string | null; error?: string; ask?: McpToolResult }> {
   const id = args.clienteId ?? args.cliente_id;
   if (id) {
     const { data } = await sb.from("clientes").select("id,nome").eq("user_id", uid).eq("id", String(id)).maybeSingle();
@@ -212,22 +281,39 @@ async function resolveCliente(
   }
   const nome = args.clienteNome ?? args.client ?? args.cliente;
   if (!nome) return { id: null, nome: null };
-  const { data } = await sb.from("clientes").select("id,nome").eq("user_id", uid).limit(500);
+  const { data } = await sb.from("clientes").select("id,nome,telefone,email").eq("user_id", uid).limit(500);
   const alvo = norm(nome);
   const hits = (data ?? []).filter((c: any) => norm(c.nome).includes(alvo) || alvo.includes(norm(c.nome)));
-  if (hits.length === 0) return { id: null, nome: String(nome), error: `Nenhum cliente parecido com "${nome}".` };
+  if (hits.length === 0) {
+    return {
+      id: null,
+      nome: String(nome),
+      ask: needsInput({
+        missing: ["clienteId"],
+        question: `Não encontrei nenhum cliente parecido com "${nome}". Qual é o cliente correto?`,
+        allowCreate: true,
+        createHint: "Se for cliente novo, confirme com o usuário e crie com lunari.clientes.create antes de continuar.",
+      }),
+    };
+  }
   if (hits.length > 1) {
-    const exato = hits.find((c: any) => norm(c.nome) === alvo);
-    if (!exato) {
-      return {
-        id: null, nome: String(nome),
-        error: `Vários clientes parecidos com "${nome}": ${hits.slice(0, 5).map((c: any) => c.nome).join(", ")}. Especifique clienteId.`,
-      };
-    }
-    return { id: exato.id, nome: exato.nome };
+    return {
+      id: null,
+      nome: String(nome),
+      ask: needsInput({
+        missing: ["clienteId"],
+        question: `Há ${hits.length} clientes parecidos com "${nome}". Qual deles?`,
+        options: hits.slice(0, 8).map((c: any) => ({
+          label: c.nome,
+          value: c.id,
+          hint: c.telefone || c.email || undefined,
+        })),
+      }),
+    };
   }
   return { id: hits[0].id, nome: hits[0].nome };
 }
+
 
 async function resolveFinanceItem(
   sb: SupabaseClient,
@@ -283,7 +369,7 @@ async function resolveSessao(
   sb: SupabaseClient,
   uid: string,
   args: Record<string, any>,
-): Promise<{ sessao: any | null; error?: string }> {
+): Promise<{ sessao: any | null; error?: string; ask?: McpToolResult }> {
   const key = String(args.sessionId ?? args.session_id ?? args.id ?? "").trim();
   if (key) {
     if (UUID_RE.test(key)) {
@@ -298,9 +384,16 @@ async function resolveSessao(
   }
 
   const cli = await resolveCliente(sb, uid, args);
+  if (cli.ask) return { sessao: null, ask: cli.ask };
   if (cli.error) return { sessao: null, error: cli.error };
   if (!cli.id) {
-    return { sessao: null, error: "Informe 'sessionId' ou 'clienteNome' para identificar a sessão." };
+    return {
+      sessao: null,
+      ask: needsInput({
+        missing: ["sessionId"],
+        question: "De qual sessão você está falando? Informe o cliente ou o identificador da sessão.",
+      }),
+    };
   }
   const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
     .eq("user_id", uid).eq("cliente_id", cli.id)
@@ -310,14 +403,20 @@ async function resolveSessao(
   if (list.length > 1 && !args.latest) {
     return {
       sessao: null,
-      error:
-        `"${cli.nome}" tem ${list.length} sessões: ` +
-        list.map((s: any) => `${s.data_sessao ?? "sem data"} (${s.pacote ?? s.categoria ?? "—"}) id=${s.id}`).join("; ") +
-        ". Informe sessionId ou latest=true.",
+      ask: needsInput({
+        missing: ["sessionId"],
+        question: `"${cli.nome}" tem ${list.length} sessões. Qual delas?`,
+        options: list.map((s: any) => ({
+          label: `${s.data_sessao ?? "sem data"} — ${s.pacote ?? s.categoria ?? "sem pacote"}`,
+          value: s.id,
+          hint: s.status ?? undefined,
+        })),
+      }),
     };
   }
   return { sessao: list[0] };
 }
+
 
 /** Janela do mês a partir de `year`/`month` (padrão: mês corrente). */
 function monthRange(args: Record<string, any>): { start: string; end: string } {
@@ -555,6 +654,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.getCardBySession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const s = r.sessao!;
     const [{ data: fin }, { data: gal }] = await Promise.all([
@@ -579,6 +679,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.getSessionFinancials": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const s = r.sessao!;
     const { data, error } = await sb.rpc("workflow_session_financials", { p_session_id: s.id });
@@ -830,6 +931,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.diagnoseSession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const s = r.sessao!;
     const findings: Array<{ code: string; severity: string; message: string; suggestedCapability: string | null }> = [];
@@ -852,6 +954,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.workflow.produto.listBySession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
+    if (r.ask) return r.ask;
     if (r.error) return fail(r.error);
     const produtos = projetarProdutos(r.sessao!);
     return ok(
@@ -966,6 +1069,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.precificacao.getTabelaCategoria": async (sb, uid, args) => {
     const cat = await resolveCategoria(sb, uid, args);
+    if (cat.ask) return cat.ask;
     if (cat.error) return fail(cat.error);
     if (!cat.id) return fail("Informe a categoria.");
     const tabelas = await loadTabelas(sb, uid);
@@ -977,6 +1081,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.precificacao.listPacotesComPreco": async (sb, uid, args) => {
     const cat = await resolveCategoria(sb, uid, args);
+    if (cat.ask) return cat.ask;
     if (cat.error) return fail(cat.error);
     let q = sb.from("pacotes")
       .select("id,nome,categoria_id,valor_base,valor_foto_extra,fotos_incluidas")
@@ -1145,6 +1250,7 @@ const READ_TOOLS: Record<string, Handler> = {
     let catId: string | null = null;
     if (escopo === "categoria") {
       const cat = await resolveCategoria(sb, uid, args);
+      if (cat.ask) return cat.ask;
       if (cat.error) return fail(cat.error);
       if (!cat.id) return fail("Informe a categoria para simular o escopo por categoria.");
       catId = cat.id;
@@ -1180,6 +1286,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.configuracoes.listPacotes": async (sb, uid, args) => {
     const cat = await resolveCategoria(sb, uid, args);
+    if (cat.ask) return cat.ask;
     if (cat.error) return fail(cat.error);
     let q = sb.from("pacotes").select("id,nome,categoria_id,valor_base,valor_foto_extra,fotos_incluidas")
       .eq("user_id", uid).order("nome");
@@ -1220,6 +1327,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       const nome = String(args.nome ?? "").trim();
       if (!nome) return fail("Campo 'nome' é obrigatório.");
       const cat = await resolveCategoria(sb, uid, args);
+      if (cat.ask) return cat.ask;
       if (cat.error) return fail(cat.error);
       if (!cat.id) return fail("Informe a categoria do pacote.");
       const dup = await pacoteDuplicado(sb, uid, cat.id, nome);
@@ -1244,18 +1352,24 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Criar pacote precificado "${a.nome ?? "?"}" em ${a.categoria ?? a.categoriaId ?? "categoria"}`,
     handler: async (sb, uid, args) => {
       const nome = String(args.nome ?? "").trim();
-      if (!nome) return fail("Campo 'nome' é obrigatório.");
+      if (!nome) {
+        return needsInput({ missing: ["nome"], question: "Qual será o nome do pacote?" });
+      }
 
       let catId = "", catNome = "";
+      const temCategoria = String(args.categoriaId ?? args.categoria ?? "").trim();
+      if (!temCategoria) return await askCategoriaObrigatoria(sb, uid);
       const cat = await resolveCategoria(sb, uid, args);
       if (cat.id) { catId = cat.id; catNome = cat.nome ?? ""; }
-      else if (args.criarCategoria && args.categoria) {
+      else if (args.criarCategoria === true && args.categoria) {
         const { data, error } = await sb.from("categorias")
           .insert({ user_id: uid, nome: String(args.categoria).trim() }).select("id,nome").single();
         if (error) return fail(error.message);
         catId = data.id; catNome = data.nome;
+      } else if (cat.ask) {
+        return cat.ask;
       } else {
-        return fail(cat.error ?? "Informe a categoria (use criarCategoria=true para criá-la).");
+        return fail(cat.error ?? "Informe a categoria do pacote.");
       }
 
       const dup = await pacoteDuplicado(sb, uid, catId, nome);
@@ -1267,7 +1381,14 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
 
       if (!args.valorBase) {
         const horas = Number(args.horasEstimadas ?? 0) || 0;
-        if (horas <= 0) return fail("Informe 'horasEstimadas' (ou um 'valorBase' fechado).");
+        if (horas <= 0) {
+          return needsInput({
+            missing: ["horasEstimadas"],
+            question:
+              `Para precificar "${nome}" preciso das horas estimadas de trabalho (ou de um valor base fechado). Quantas horas?`,
+          });
+        }
+
         const estrutura = await loadEstruturaCustos(sb, uid);
         const { markup, origem } = resolverMarkup(args, estrutura.margemLucroDesejada);
         markupInfo = origem;
@@ -1388,6 +1509,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Aplicar tabela de foto extra da categoria "${a.categoria ?? a.categoriaId ?? "?"}"`,
     handler: async (sb, uid, args) => {
       const cat = await resolveCategoria(sb, uid, args);
+      if (cat.ask) return cat.ask;
       if (cat.error) return fail(cat.error);
       if (!cat.id) return fail("Informe a categoria.");
       return upsertTabela(sb, uid, args, "categoria", cat.id);
@@ -1470,12 +1592,42 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Criar agendamento "${a.title ?? a.type ?? "sessão"}" em ${a.date ?? "?"} ${a.time ?? ""}`,
     handler: async (sb, uid, args) => {
       const date = String(args.date ?? ""), time = String(args.time ?? "");
-      if (!date || !time) return fail("Campos 'date' (YYYY-MM-DD) e 'time' (HH:MM) são obrigatórios.");
+      if (!date) {
+        return needsInput({
+          missing: ["date"],
+          question: "Para qual data é o agendamento? (formato YYYY-MM-DD)",
+        });
+      }
       const cli = await resolveCliente(sb, uid, args);
+      if (cli.ask) return cli.ask;
       if (cli.error) return fail(cli.error);
-      const title = String(args.title ?? cli.nome ?? "Agendamento");
+      if (!cli.id && !args.semCliente) {
+        return needsInput({
+          missing: ["clienteNome"],
+          question: "Para qual cliente é este agendamento?",
+          allowCreate: true,
+          createHint:
+            "Se for um bloqueio pessoal (sem cliente), reenvie com semCliente=true. Se for cliente novo, confirme antes de criar.",
+        });
+      }
       const duration = Number(args.durationMinutes) || 60;
+      if (!time) {
+        const doDia = await appointmentsInDay(sb, uid, date);
+        const livres: NeedsInputOption[] = [];
+        for (let m = 8 * 60; m + duration <= 19 * 60 && livres.length < 8; m += 30) {
+          const hhmm = fromMinutes(m);
+          if (!conflictAt(doDia, hhmm, duration)) livres.push({ label: hhmm, value: hhmm });
+        }
+        return needsInput({
+          missing: ["time"],
+          question: `Qual horário em ${date}? Horários livres sugeridos:`,
+          options: livres,
+        });
+      }
+      const title = String(args.title ?? cli.nome ?? "Agendamento");
+
       const conflict = conflictAt(await appointmentsInDay(sb, uid, date), time, duration);
+
       if (conflict && !args.force) {
         return fail(`Conflito com "${conflict.title}" às ${conflict.time}. Escolha outro horário ou envie force=true.`);
       }
@@ -1514,6 +1666,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       if (patch.durationMinutes != null) upd.duration_minutes = Number(patch.durationMinutes);
       if (patch.clienteId != null || patch.clienteNome != null) {
         const cli = await resolveCliente(sb, uid, patch);
+        if (cli.ask) return cli.ask;
         if (cli.error) return fail(cli.error);
         upd.cliente_id = cli.id;
       }
@@ -1790,6 +1943,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Atualizar dados da sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
     handler: async (sb, uid, args) => {
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       const src = (args.fields ?? args) as Record<string, any>;
@@ -1820,6 +1974,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       const toStatus = String(args.toStatus ?? args.status ?? "").trim();
       if (!toStatus) return fail("Campo 'toStatus' é obrigatório. Consulte lunari.workflow.statusOptions.");
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       const { data: etapas } = await sb.from("etapas_trabalho").select("nome").eq("user_id", uid);
@@ -1840,12 +1995,25 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     requiresApproval: false,
     summarize: (a) => `Registrar pagamento de ${money(a.valor)} na sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
     handler: async (sb, uid, args) => {
-      const valor = Number(args.valor);
-      if (!(valor > 0)) return fail("Campo 'valor' (em reais, ex.: 250.00) é obrigatório e deve ser positivo.");
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       if (!s.session_id) return fail("Sessão sem session_id texto — registre o pagamento pelo app.");
+      const valor = Number(args.valor);
+      if (!(valor > 0)) {
+        const pendente = (Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0);
+        return needsInput({
+          missing: ["valor"],
+          question: pendente > 0
+            ? `Qual o valor do pagamento? O saldo pendente desta sessão é ${money(pendente)}.`
+            : "Qual o valor do pagamento (em reais)?",
+          options: pendente > 0
+            ? [{ label: `Quitar o pendente (${money(pendente)})`, value: String(pendente) }]
+            : [],
+        });
+      }
+
       const data = String(args.data ?? args.dataTransacao ?? today());
       const forma = String(args.formaPagamento ?? args.forma ?? "PIX");
       const paymentId = `mcp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -1919,6 +2087,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Excluir a sessão ${a.sessionId ?? a.clienteNome ?? "?"} e seus lançamentos (irreversível)`,
     handler: async (sb, uid, args) => {
       const r = await resolveSessao(sb, uid, args);
+      if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       const { count } = await sb.from("clientes_transacoes")
@@ -2398,13 +2567,15 @@ export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
       time: { type: "string", description: "Hora HH:MM." },
       type: { type: "string", description: "Categoria/tipo (ex.: Newborn, Família)." },
       status: { type: "string", enum: ["confirmado", "a confirmar"] },
-      clienteId: { type: "string", description: "UUID do cliente (opcional)." },
-      clienteNome: { type: "string", description: "Nome do cliente — resolvido automaticamente." },
+      clienteId: { type: "string", description: "UUID do cliente." },
+      clienteNome: { type: "string", description: "Nome do cliente — resolvido automaticamente; pergunte se houver dúvida." },
+      semCliente: { type: "boolean", description: "Só para bloqueio pessoal sem cliente. Confirme com o usuário antes." },
       description: { type: "string" },
       durationMinutes: { type: "number", description: "Duração em minutos (padrão 60)." },
       force: { type: "boolean", description: "Criar mesmo havendo conflito de horário." },
     },
-    required: ["date", "time"],
+    required: ["date"],
+
     additionalProperties: false,
   },
   "lunari.agenda.appointments.update": {
