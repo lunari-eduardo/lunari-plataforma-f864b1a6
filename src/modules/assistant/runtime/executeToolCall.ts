@@ -17,7 +17,7 @@ export interface ExecuteToolCallInput {
 }
 
 export interface ExecuteToolCallResult {
-  status: "ok" | "error" | "denied" | "pending_approval";
+  status: "ok" | "error" | "denied" | "pending_approval" | "blocked_by_rollout";
   output?: unknown;
   error?: string;
   latencyMs?: number;
