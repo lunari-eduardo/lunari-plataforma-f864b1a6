@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.16.0", // Análise de Vendas + Leads (leitura) no bridge: estrutura de custos, simulações, criação de pacote precificado e tabelas
+  version: "0.16.0", // Análise de Vendas (resumo, comparativo anual, metas, produção anual) + Leads (leitura) no bridge
 };
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
