@@ -147,12 +147,13 @@ function resolverMarkup(args: Record<string, any>, margemPadrao: number): { mark
 }
 async function resolveCategoria(
   sb: SupabaseClient, uid: string, args: Record<string, any>,
-): Promise<{ id: string | null; nome?: string; error?: string }> {
+): Promise<{ id: string | null; nome?: string; error?: string; ask?: McpToolResult }> {
   const raw = String(args.categoriaId ?? args.categoria ?? "").trim();
-  if (!raw) return { id: null };
   const { data, error } = await sb.from("categorias").select("id,nome").eq("user_id", uid);
   if (error) return { id: null, error: error.message };
   const list = data ?? [];
+  const opcoes = (): NeedsInputOption[] => list.slice(0, 20).map((c: any) => ({ label: c.nome, value: c.id }));
+  if (!raw) return { id: null };
   const byId = list.find((c: any) => c.id === raw);
   if (byId) return { id: byId.id, nome: byId.nome };
   const alvo = norm(raw);
@@ -161,10 +162,41 @@ async function resolveCategoria(
   const parciais = list.filter((c: any) => norm(c.nome).includes(alvo));
   if (parciais.length === 1) return { id: parciais[0].id, nome: parciais[0].nome };
   if (parciais.length > 1) {
-    return { id: null, error: `Categoria ambígua: ${parciais.map((c: any) => c.nome).join(", ")}.` };
+    return {
+      id: null,
+      ask: needsInput({
+        missing: ["categoriaId"],
+        question: `Qual categoria você quis dizer com "${raw}"?`,
+        options: parciais.slice(0, 10).map((c: any) => ({ label: c.nome, value: c.id })),
+      }),
+    };
   }
-  return { id: null, error: `Categoria "${raw}" não encontrada. Disponíveis: ${list.map((c: any) => c.nome).join(", ") || "nenhuma"}.` };
+  return {
+    id: null,
+    ask: needsInput({
+      missing: ["categoriaId"],
+      question: `Não existe a categoria "${raw}". Qual das categorias cadastradas devo usar?`,
+      options: opcoes(),
+      allowCreate: true,
+      createHint: "Nunca crie categoria sozinho: só crie se o usuário confirmar explicitamente o nome.",
+    }),
+  };
 }
+
+/** Pergunta a categoria quando ela não foi informada (obrigatória em pacotes). */
+async function askCategoriaObrigatoria(
+  sb: SupabaseClient, uid: string,
+): Promise<McpToolResult> {
+  const { data } = await sb.from("categorias").select("id,nome").eq("user_id", uid);
+  return needsInput({
+    missing: ["categoria"],
+    question: "Todo pacote precisa de uma categoria. Qual delas devo usar?",
+    options: (data ?? []).slice(0, 20).map((c: any) => ({ label: c.nome, value: c.id })),
+    allowCreate: true,
+    createHint: "Se nenhuma servir, pergunte ao usuário o nome da nova categoria antes de criar.",
+  });
+}
+
 async function resolvePacote(
   sb: SupabaseClient, uid: string, args: Record<string, any>,
 ): Promise<{ pacote?: any; error?: string }> {
