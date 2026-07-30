@@ -355,8 +355,9 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       });
 
     case "tools/call": {
-      let name = (req.params?.name as string) ?? "unknown";
+      let name = resolveToolName((req.params?.name as string) ?? "unknown");
       let args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
+
 
       // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
       if (name === META_SEARCH) {
