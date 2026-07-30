@@ -6842,6 +6842,7 @@ export type Database = {
         }
         Returns: string
       }
+      purge_webhook_logs: { Args: never; Returns: Json }
       recalculate_referral_transfer_bonus: {
         Args: { _new_plan_storage_bytes: number; _referred_user_id: string }
         Returns: boolean
