@@ -21,11 +21,13 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
+import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
 import {
   dispatchCapability,
   type CatalogTool,
   type DispatchResult,
 } from "../_shared/capability-dispatch.ts";
+
 
 /** A2 — índice do catálogo por nome de tool (transport declarado na capability). */
 const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
@@ -67,15 +69,17 @@ function dispatchToMcpResult(tool: CatalogTool, r: DispatchResult) {
 
 const mcpHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, mcp-session-id, mcp-protocol-version",
+    "authorization, x-client-info, apikey, content-type, mcp-session-id, mcp-protocol-version, accept",
+  "Access-Control-Expose-Headers": "mcp-session-id, mcp-protocol-version, www-authenticate",
 };
+
 
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.9.0", // A5 — auditoria completa (inclusive negadas) + tickets de aprovação; A4 — escopos read/write/destructive + grants por cliente OAuth
+  version: "0.10.0", // superfície curada p/ conectores + transporte Streamable HTTP corrigido (SSE/405, Mcp-Session-Id)
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -319,21 +323,75 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       return null;
     case "ping":
       return rpcResult(id, {});
-    case "tools/list":
-      return rpcResult(id, {
-        tools: catalog.tools.map((t: any) => ({
+    case "tools/list": {
+      // Superfície curada + meta-tools (o catálogo completo continua acessível
+      // via lunari.tools.search / lunari.tools.invoke).
+      const exposed = catalog.tools
+        .filter((t: any) => isExposed(t.name))
+        .map((t: any) => ({
           name: t.name,
           title: t.title,
           description: t.description,
           inputSchema: t.inputSchema,
           annotations: t.annotations,
-        })),
-      });
+        }));
+      return rpcResult(id, { tools: [...exposed, ...META_TOOL_DEFS] });
+    }
     case "tools/call": {
-      const name = (req.params?.name as string) ?? "unknown";
-      const args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
+      let name = (req.params?.name as string) ?? "unknown";
+      let args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
+
+      // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
+      if (name === META_SEARCH) {
+        const q = String(args.query ?? "").toLowerCase().trim();
+        const limit = Math.min(Number(args.limit ?? 20) || 20, 50);
+        const hits = (catalog.tools as any[])
+          .filter((t) =>
+            !q ||
+            t.name.toLowerCase().includes(q) ||
+            String(t.title ?? "").toLowerCase().includes(q) ||
+            String(t.description ?? "").toLowerCase().includes(q)
+          )
+          .slice(0, limit)
+          .map((t) => ({
+            name: t.name,
+            title: t.title,
+            description: t.description,
+            scopeTier: t.scopeTier ?? null,
+            needsApproval: t.needsApproval ?? null,
+            inputSchema: t.inputSchema,
+          }));
+        return rpcResult(id, {
+          content: [{
+            type: "text",
+            text: hits.length
+              ? `${hits.length} ferramenta(s) encontrada(s). Execute com lunari.tools.invoke.\n` +
+                hits.map((h) => `- ${h.name}: ${h.title}`).join("\n")
+              : "Nenhuma ferramenta encontrada para esse termo.",
+          }],
+          structuredContent: { tools: hits, total: catalog.tools.length },
+        });
+      }
+
+      // Meta-tool de execução: reescreve para a tool real e segue o fluxo normal
+      // (escopos, rollout, aprovação e auditoria idênticos).
+      if (name === META_INVOKE) {
+        const target = String(args.name ?? "").trim();
+        if (!target) {
+          return rpcResult(id, {
+            isError: true,
+            content: [{ type: "text", text: 'Informe "name" com o nome exato da ferramenta (use lunari.tools.search).' }],
+          });
+        }
+        const inner = (args.arguments && typeof args.arguments === "object" ? args.arguments : {}) as Record<string, any>;
+        if (typeof args.approval_token === "string") inner.approval_token = args.approval_token;
+        name = target;
+        args = inner;
+      }
+
       const started = Date.now();
       const requestId = crypto.randomUUID();
+
       // Contexto comum de auditoria (A5): toda saída deste bloco grava uma linha.
       const actx = {
         authSource: auth.authSource,
@@ -593,6 +651,39 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method === "GET") {
+    const accept = (req.headers.get("accept") ?? "").toLowerCase();
+    // Spec Streamable HTTP: no GET, ou abrimos um stream SSE, ou respondemos 405.
+    // Antes devolvíamos JSON 200 aqui, o que travava clientes (ChatGPT) que abrem
+    // o canal de eventos logo após o OAuth.
+    if (accept.includes("text/event-stream")) {
+      const stream = new ReadableStream({
+        start(controller) {
+          const enc = new TextEncoder();
+          controller.enqueue(enc.encode(": lunari-mcp ready\n\n"));
+          const iv = setInterval(() => {
+            try { controller.enqueue(enc.encode(": ping\n\n")); } catch { clearInterval(iv); }
+          }, 25_000);
+          (req.signal as AbortSignal | undefined)?.addEventListener("abort", () => {
+            clearInterval(iv);
+            try { controller.close(); } catch { /* já fechado */ }
+          });
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          ...mcpHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    }
+    if (!accept.includes("application/json") && accept !== "" && !accept.includes("*/*")) {
+      return new Response("Method Not Allowed", {
+        status: 405,
+        headers: { ...mcpHeaders, Allow: "POST, GET, OPTIONS" },
+      });
+    }
     const bridged = Object.entries(BRIDGED_TOOLS).map(([name, t]) => ({
       name, scope: t.scope, requiresApproval: t.requiresApproval,
     }));
@@ -600,6 +691,7 @@ Deno.serve(async (req: Request) => {
       server: SERVER_INFO,
       protocolVersion: PROTOCOL_VERSION,
       tools: catalog.tools.length,
+      exposedTools: EXPOSED_TOOLS.length + META_TOOL_DEFS.length,
       bridgedTools: bridged,
       generatedAt: catalog.generatedAt,
       auth: {
@@ -621,9 +713,18 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405, headers: mcpHeaders });
+  if (req.method === "DELETE") {
+    // Encerramento de sessão (spec): nada a limpar — servidor é stateless.
+    return new Response(null, { status: 204, headers: mcpHeaders });
   }
+
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { ...mcpHeaders, Allow: "POST, GET, OPTIONS" },
+    });
+  }
+
 
   let body: unknown;
   try {
@@ -635,6 +736,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const startedAt = Date.now();
   const auth = await resolveAuth(req);
 
   // Se veio Authorization: Bearer inválido, sinaliza fluxo OAuth (RFC 9728).
@@ -643,6 +745,12 @@ Deno.serve(async (req: Request) => {
   if (hasAuthHeader && !auth.userId) {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
   }
+  // Sessão: ecoa a do cliente ou emite uma nova no initialize.
+  const incomingSession = req.headers.get("mcp-session-id");
+  const sessionId = incomingSession ?? crypto.randomUUID();
+  responseHeaders["Mcp-Session-Id"] = sessionId;
+  const protoHeader = req.headers.get("mcp-protocol-version");
+  if (protoHeader) responseHeaders["Mcp-Protocol-Version"] = protoHeader;
 
   const requests = Array.isArray(body) ? body : [body];
   const responses: unknown[] = [];
@@ -660,13 +768,31 @@ Deno.serve(async (req: Request) => {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
   }
 
-  if (responses.length === 0) return new Response(null, { status: 202, headers: mcpHeaders });
+  const logHandshake = (status: number, bytes: number) =>
+    console.log("[mcp-http]", JSON.stringify({
+      methods: requests.map((r: any) => r?.method).filter(Boolean),
+      status,
+      bytes,
+      sessionId,
+      authSource: auth.authSource,
+      clientId: auth.clientId,
+      hasUser: !!auth.userId,
+      latencyMs: Date.now() - startedAt,
+    }));
+
+  if (responses.length === 0) {
+    logHandshake(202, 0);
+    return new Response(null, { status: 202, headers: { ...mcpHeaders, "Mcp-Session-Id": sessionId } });
+  }
 
   const payload = Array.isArray(body) ? responses : responses[0];
+  const serialized = JSON.stringify(payload);
+  logHandshake(200, serialized.length);
   // Mantém 200 (JSON-RPC body carrega o erro); WWW-Authenticate no header já dispara o fluxo OAuth
   // em clientes MCP compatíveis com a spec 2025-06-18.
-  return new Response(JSON.stringify(payload), {
+  return new Response(serialized, {
     status: 200,
+
     headers: responseHeaders,
   });
 });
