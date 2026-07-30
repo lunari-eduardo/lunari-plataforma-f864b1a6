@@ -460,3 +460,92 @@ export const generateContratoWithAICap = defineCommand({
     return ok(parsed.data);
   },
 });
+
+/* ======================= B1 — GAPS DE GESTÃO ======================= */
+
+export const duplicateTemplateCap = defineCommand({
+  id: "contratos.duplicateTemplate",
+  title: "Duplicar template de contrato",
+  description:
+    "Cria uma cópia do template (inativa e sem is_padrao) para edição segura do original.",
+  input: z.object({ id: z.string(), nome: z.string().optional() }).strict(),
+  output: TemplateSchema,
+  permissions: [],
+  sideEffects: ["db:contrato_templates"],
+  handler: async ({ id, nome }, ctx) => {
+    if (!ctx.user?.id) return err(domainError("UNAUTHORIZED", "Sessão expirada."));
+    const { data: original, error: gErr } = await supabase
+      .from("contrato_templates")
+      .select(TEMPLATE_COLS)
+      .eq("id", id)
+      .maybeSingle();
+    if (gErr) return err(domainError("DB", gErr.message));
+    if (!original) return err(domainError("NOT_FOUND", "Template não encontrado."));
+
+    const novoNome = (nome?.trim() || `${original.nome} (cópia)`).slice(0, 150);
+    const { data, error } = await supabase
+      .from("contrato_templates")
+      .insert({
+        user_id: ctx.user.id,
+        nome: novoNome,
+        descricao: original.descricao,
+        categoria: original.categoria,
+        conteudo: original.conteudo,
+        ativo: false,
+        is_padrao: false,
+      })
+      .select(TEMPLATE_COLS)
+      .single();
+    if (error) return err(domainError("DB", error.message));
+    return ok(data as z.infer<typeof TemplateSchema>);
+  },
+});
+
+export const markSignedContratoCap = defineCommand({
+  id: "contratos.markSignedContrato",
+  title: "Marcar contrato como assinado",
+  description:
+    "Registra assinatura manual (status = 'assinado', assinado_em = agora). Não substitui assinatura digital.",
+  input: z.object({ id: z.string(), assinadoEm: z.string().optional() }).strict(),
+  output: ContratoSchema,
+  permissions: [],
+  needsApproval: true,
+  sideEffects: ["db:contratos"],
+  handler: async ({ id, assinadoEm }) => {
+    const { data, error } = await supabase
+      .from("contratos")
+      .update({
+        status: "assinado",
+        assinado_em: assinadoEm ?? new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select(CONTRATO_COLS)
+      .maybeSingle();
+    if (error) return err(domainError("DB", error.message));
+    if (!data) return err(domainError("NOT_FOUND", "Contrato não encontrado."));
+    return ok(data as z.infer<typeof ContratoSchema>);
+  },
+});
+
+export const listContratosPendentesCap = defineQuery({
+  id: "contratos.listPendentes",
+  title: "Listar contratos pendentes de assinatura",
+  description:
+    "Contratos já enviados e ainda não assinados, do mais antigo para o mais recente (prioridade de cobrança).",
+  input: z
+    .object({ limit: z.number().int().positive().max(100).default(30) })
+    .strict(),
+  output: z.object({ items: z.array(ContratoSummarySchema) }),
+  permissions: [],
+  handler: async ({ limit }) => {
+    const { data, error } = await supabase
+      .from("contratos")
+      .select(CONTRATO_SUMMARY_COLS)
+      .is("assinado_em", null)
+      .not("enviado_em", "is", null)
+      .order("enviado_em", { ascending: true })
+      .limit(limit);
+    if (error) return err(domainError("DB", error.message));
+    return ok({ items: (data ?? []) as z.infer<typeof ContratoSummarySchema>[] });
+  },
+});
