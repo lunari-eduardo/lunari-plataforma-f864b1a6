@@ -1,5 +1,7 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { Capability } from "./types";
+import type { CapabilityAudience } from "./audience";
+import { serializeExecution, type SerializedExecution } from "./execution";
 
 /**
  * Converte uma capability num descritor serializável para o AI SDK / MCP.
