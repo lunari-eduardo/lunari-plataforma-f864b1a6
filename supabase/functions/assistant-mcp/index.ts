@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.17.0", // Superfície em camadas: núcleo curado + catálogo sob demanda (search/describe/invoke)
+  version: "0.18.0", // Grants herdados por usuário + busca tolerante (acentos/sinônimos) + vendas no núcleo
 };
 /**
  * Instruções do servidor: descrevem a arquitetura em camadas para o modelo,
