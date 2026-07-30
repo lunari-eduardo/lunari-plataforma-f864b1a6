@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.19.0", // Grants herdados por usuário + busca tolerante (acentos/sinônimos) + vendas no núcleo
+  version: "0.19.0", // Contrato needs_input: pergunta antes de salvar (cliente, horário, categoria, valor)
 };
 /**
  * Instruções do servidor: descrevem a arquitetura em camadas para o modelo,
