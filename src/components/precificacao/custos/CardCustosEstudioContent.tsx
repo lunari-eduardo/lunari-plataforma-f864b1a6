@@ -224,83 +224,69 @@ export function CardCustosEstudioContent({
         </DialogContent>
       </Dialog>
 
-      {/* Formulário de adição */}
-      <div className="bg-background border-2 border-dashed border-border rounded-lg p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs text-muted-foreground">Descrição</Label>
-            <Input 
-              placeholder="Ex: Aluguel, Energia, Internet..." 
+      <div className={LIST_SHELL}>
+        {/* Adição inline */}
+        <div className={INLINE_ADD}>
+          <div className="grid grid-cols-[minmax(0,1fr)_128px_32px] items-center gap-2">
+            <Input
+              placeholder="Ex: Aluguel, Energia, Internet..."
               value={novoCusto.descricao}
               onChange={e => setNovoCusto(prev => ({ ...prev, descricao: e.target.value }))}
-              className="h-9 bg-background border-input"
+              className="h-8 text-[13px]"
             />
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">Valor</Label>
-            <Input 
-              type="number" 
-              min="0" 
-              step="0.01"
-              placeholder="0,00" 
+            <CurrencyInput
               value={novoCusto.valor}
-              onChange={e => setNovoCusto(prev => ({ ...prev, valor: e.target.value }))}
-              className="h-9 bg-background border-input"
+              onChange={v => setNovoCusto(prev => ({ ...prev, valor: v }))}
+              className="h-8 text-[13px]"
             />
+            <Button
+              onClick={adicionarCusto}
+              disabled={!novoCusto.descricao || novoCusto.valor <= 0}
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              title="Adicionar custo"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <Button 
-          onClick={adicionarCusto} 
-          disabled={!novoCusto.descricao || !novoCusto.valor}
-          className="w-full mt-3 h-9"
-          size="sm"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Adicionar Custo
-        </Button>
+
+        {/* Lista */}
+        <div className={ROW_DIVIDER}>
+          {custosEstudio.length === 0 ? (
+            <p className={LIST_EMPTY}>Nenhum custo do estúdio cadastrado</p>
+          ) : (
+            custosEstudio.map(custo => (
+              <div key={custo.id} className={ROW_BASE}>
+                <div className="grid grid-cols-[minmax(0,1fr)_128px_32px] items-center gap-2">
+                  <Input
+                    value={custo.descricao}
+                    onChange={e => onAtualizar(custo.id, 'descricao', e.target.value)}
+                    className={GHOST_INPUT}
+                    placeholder="Descrição"
+                  />
+                  <CurrencyInput
+                    value={custo.valor}
+                    onChange={v => onAtualizar(custo.id, 'valor', v)}
+                    showPrefix={false}
+                    className={GHOST_INPUT}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => onRemover(custo.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Lista de custos */}
-      <div className="space-y-2 max-h-64 overflow-y-auto">
-        {custosEstudio.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nenhum custo do estúdio cadastrado
-          </p>
-        ) : (
-          custosEstudio.map(custo => (
-            <div 
-              key={custo.id} 
-              className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/40 shadow-sm"
-            >
-              <Input 
-                value={custo.descricao}
-                onChange={e => onAtualizar(custo.id, 'descricao', e.target.value)}
-                className="flex-1 h-8 text-sm bg-background border-input"
-                placeholder="Descrição"
-              />
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">R$</span>
-                <Input 
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={custo.valor}
-                  onChange={e => onAtualizar(custo.id, 'valor', parseFloat(e.target.value) || 0)}
-                  className="w-24 h-8 text-sm text-right bg-background border-input"
-                />
-              </div>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                onClick={() => onRemover(custo.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))
-        )}
-      </div>
     </>
   );
 }
