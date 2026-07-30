@@ -60,6 +60,16 @@ export interface DefineCapabilityOptions<TInput extends ZodTypeAny, TOutput exte
    */
   audience?: CapabilityAudience[];
 
+  /**
+   * A2 — Contrato único de execução. Declara como esta capability é
+   * executada fora do browser (RPC ou edge function). Sem isso ela é
+   * `client-only` e não entra no catálogo MCP.
+   */
+  execution?: CapabilityExecution;
+
+  /** Resumo humano do output — usado no `content[0].text` das respostas MCP. */
+  summarize?: (output: z.infer<TOutput>) => string;
+
   needsApproval?: boolean | ((args: { input: z.infer<TInput>; user: AuthUser | null }) => boolean);
   idempotencyKey?: (input: z.infer<TInput>) => string | null;
   audit?: AuditMode;
