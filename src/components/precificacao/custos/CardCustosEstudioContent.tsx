@@ -9,6 +9,16 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { pricingFinancialIntegrationService, type SyncPreview } from '@/services/PricingFinancialIntegrationService';
 import type { GastoItem } from '@/types/precificacao';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import {
+  LIST_SHELL,
+  ROW_DIVIDER,
+  ROW_BASE,
+  INLINE_ADD,
+  GHOST_INPUT,
+  LIST_EMPTY,
+} from '@/lib/dialogTokens';
+
 
 interface CardCustosEstudioContentProps {
   custosEstudio: GastoItem[];
