@@ -22,6 +22,8 @@ import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
 import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
+import { toPublicName, publicInputSchema } from "./compat.ts";
+
 import {
   dispatchCapability,
   type CatalogTool,
