@@ -284,14 +284,14 @@ export default function PacoteForm({
         <button 
           type="button"
           onClick={() => setProdutosExpanded(true)}
-          className="w-full h-8 flex items-center justify-center gap-2 text-xs text-muted-foreground border border-dashed border-border rounded-md hover:border-primary/50 hover:text-foreground transition-colors bg-transparent"
+          className="w-full h-8 flex items-center justify-center gap-2 text-xs text-muted-foreground rounded-md bg-muted/30 hover:bg-muted/50 hover:text-foreground transition-colors bg-transparent"
         >
           <Plus className="h-3.5 w-3.5" />
           Adicionar produtos ao pacote
         </button>
       ) : (
         // Expandido ou com produtos: mostra busca + lista
-        <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-dashed border-border">
+        <div className="space-y-2 p-3 bg-muted/20 rounded-lg">
           <div className="flex items-center justify-between">
             <Label className="text-2xs font-medium text-muted-foreground">
               Produtos Incluídos {hasProdutos && `(${formData.produtosIncluidos.length})`}

@@ -9,6 +9,8 @@ import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigSectionHeader from './ConfigSectionHeader';
 import type { Categoria, Pacote } from '@/types/configuration';
+import { LIST_SHELL, ROW_DIVIDER } from '@/lib/dialogTokens';
+
 
 interface CategoriasProps {
   categorias: Categoria[];
@@ -225,7 +227,7 @@ export default function Categorias({ categorias, onAdd, onUpdate, onDelete, paco
           </p>
         </div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+        <div className={`${LIST_SHELL} ${ROW_DIVIDER}`}>
           {categorias.map((cat) => (
             <InlineEditCategoriaRow
               key={cat.id}

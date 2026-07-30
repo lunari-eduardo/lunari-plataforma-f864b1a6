@@ -264,7 +264,7 @@ export default function FormularioTemplateEditor({
               </div>
 
               {campos.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                <div className="rounded-lg bg-muted/20 p-6 text-center text-sm text-muted-foreground">
                   Nenhum campo adicionado. Clique em "Adicionar campo" para começar.
                 </div>
               ) : (

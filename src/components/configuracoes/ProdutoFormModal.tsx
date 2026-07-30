@@ -144,7 +144,7 @@ export default function ProdutoFormModal({
                   }
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5 min-h-[28px] p-2 rounded-md border border-dashed border-border">
+              <div className="flex flex-wrap gap-1.5 min-h-[28px] p-2 rounded-md bg-muted/20">
                 {selectedEtiquetas.length === 0 ? (
                   <span className="text-xs text-muted-foreground self-center">Nenhuma etiqueta atribuída</span>
                 ) : (
