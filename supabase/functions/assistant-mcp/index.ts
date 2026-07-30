@@ -347,16 +347,33 @@ function rolloutBlockedResponse() {
 async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
   const id = req.id ?? null;
   switch (req.method) {
-    case "initialize":
+    case "initialize": {
+      // Negocia a versão pedida pelo cliente quando suportada. Responder sempre
+      // 2025-06-18 a um cliente que pediu 2025-03-26 derruba a conexão em alguns
+      // conectores logo após o OAuth.
+      const asked = (req.params?.protocolVersion as string | undefined) ?? "";
+      const negotiated = SUPPORTED_PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
       return rpcResult(id, {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: negotiated,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
         instructions: catalog.manifest.instructions,
       });
+    }
     case "notifications/initialized":
     case "notifications/cancelled":
+    case "notifications/roots/list_changed":
       return null;
+    // Métodos opcionais que alguns clientes chamam no handshake. Responder
+    // "Method not found" a estes derruba a conexão — devolvemos listas vazias.
+    case "resources/list":
+      return rpcResult(id, { resources: [] });
+    case "resources/templates/list":
+      return rpcResult(id, { resourceTemplates: [] });
+    case "prompts/list":
+      return rpcResult(id, { prompts: [] });
+    case "logging/setLevel":
+      return rpcResult(id, {});
     case "ping":
       return rpcResult(id, {});
     case "tools/list": {
