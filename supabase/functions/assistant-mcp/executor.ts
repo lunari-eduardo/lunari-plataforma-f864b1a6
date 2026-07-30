@@ -967,7 +967,185 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       return ok({ deleted: id }, "Tarefa excluída.");
     },
   },
+
+  // ---------- WORKFLOW ----------
+  "lunari.workflow.updateFields": {
+    requiresApproval: false,
+    summarize: (a) => `Atualizar dados da sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
+    handler: async (sb, uid, args) => {
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      const src = (args.fields ?? args) as Record<string, any>;
+      const upd: Record<string, unknown> = {};
+      for (const key of WORKFLOW_EDITABLE) {
+        if (src[key] != null) upd[key] = WORKFLOW_NUMERIC.has(key) ? Number(src[key]) : String(src[key]);
+      }
+      if (src.qtd_fotos_extra != null) upd.qtd_fotos_extra = Math.max(0, Math.floor(Number(src.qtd_fotos_extra) || 0));
+      if (!Object.keys(upd).length) {
+        return fail(`Nada para atualizar. Campos aceitos: ${[...WORKFLOW_EDITABLE, "qtd_fotos_extra"].join(", ")}.`);
+      }
+      upd.updated_by = uid;
+      const { error } = await sb.from("clientes_sessoes").update(upd).eq("id", s.id).eq("user_id", uid);
+      if (error) return fail(error.message);
+      const { data: novo } = await sb.from("clientes_sessoes")
+        .select("id,session_id,status,valor_total,valor_pago,status_financeiro,desconto,valor_adicional")
+        .eq("id", s.id).maybeSingle();
+      return ok(
+        { sessionId: s.id, changedKeys: Object.keys(upd).filter((k) => k !== "updated_by"), sessao: novo },
+        `Sessão atualizada (${Object.keys(upd).filter((k) => k !== "updated_by").join(", ")}). Total ${money(novo?.valor_total)} · pago ${money(novo?.valor_pago)}.`,
+      );
+    },
+  },
+  "lunari.workflow.advanceCard": {
+    requiresApproval: false,
+    summarize: (a) => `Mover sessão ${a.sessionId ?? a.clienteNome ?? "?"} para "${a.toStatus ?? a.status ?? "?"}"`,
+    handler: async (sb, uid, args) => {
+      const toStatus = String(args.toStatus ?? args.status ?? "").trim();
+      if (!toStatus) return fail("Campo 'toStatus' é obrigatório. Consulte lunari.workflow.statusOptions.");
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      const { data: etapas } = await sb.from("etapas_trabalho").select("nome").eq("user_id", uid);
+      const nomes = (etapas ?? []).map((e: any) => e.nome as string);
+      const match = nomes.find((n) => norm(n) === norm(toStatus)) ?? nomes.find((n) => norm(n).includes(norm(toStatus)));
+      if (nomes.length && !match) {
+        return fail(`Etapa "${toStatus}" não existe. Etapas disponíveis: ${nomes.join(", ")}.`);
+      }
+      const destino = match ?? toStatus;
+      if (norm(s.status) === norm(destino)) return ok({ sessionId: s.id, status: destino }, `Sessão já está em "${destino}".`);
+      const { error } = await sb.from("clientes_sessoes")
+        .update({ status: destino, updated_by: uid }).eq("id", s.id).eq("user_id", uid);
+      if (error) return fail(error.message);
+      return ok({ sessionId: s.id, fromStatus: s.status ?? null, toStatus: destino }, `Sessão movida de "${s.status ?? "—"}" para "${destino}".`);
+    },
+  },
+  "lunari.workflow.addPayment": {
+    requiresApproval: false,
+    summarize: (a) => `Registrar pagamento de ${money(a.valor)} na sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
+    handler: async (sb, uid, args) => {
+      const valor = Number(args.valor);
+      if (!(valor > 0)) return fail("Campo 'valor' (em reais, ex.: 250.00) é obrigatório e deve ser positivo.");
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      if (!s.session_id) return fail("Sessão sem session_id texto — registre o pagamento pelo app.");
+      const data = String(args.data ?? args.dataTransacao ?? today());
+      const forma = String(args.formaPagamento ?? args.forma ?? "PIX");
+      const paymentId = `mcp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const intentKey = String(args.intentKey ?? `mcp:${s.session_id}:${valor}:${data}:${forma}`);
+
+      // Idempotência: mesma intenção já lançada?
+      const { data: dup } = await sb.from("clientes_transacoes")
+        .select("id").eq("user_id", uid).eq("session_id", s.session_id).eq("tipo", "pagamento")
+        .ilike("descricao", `%[INTENT:${intentKey}]%`).limit(1).maybeSingle();
+      if (dup?.id) return ok({ sessionId: s.id, transactionId: dup.id, duplicate: true }, "Pagamento idêntico já registrado — nada foi duplicado.");
+
+      const obs = String(args.descricao ?? args.observacoes ?? `Pagamento ${forma}`);
+      const descricao = `${obs} [ID:${paymentId}] [INTENT:${intentKey}]`;
+      const { data: inserted, error } = await sb.from("clientes_transacoes").insert({
+        user_id: uid,
+        cliente_id: s.cliente_id,
+        session_id: s.session_id,
+        tipo: "pagamento",
+        valor,
+        data_transacao: data,
+        descricao,
+        updated_by: uid,
+      }).select("id").single();
+      if (error) return fail(error.message);
+
+      const { data: novo } = await sb.from("clientes_sessoes")
+        .select("valor_total,valor_pago,status_financeiro").eq("id", s.id).maybeSingle();
+      const pend = (Number(novo?.valor_total) || 0) - (Number(novo?.valor_pago) || 0);
+      return ok(
+        { sessionId: s.id, transactionId: inserted.id, valor, data, formaPagamento: forma, sessao: novo },
+        `Pagamento de ${money(valor)} (${forma}) registrado em ${data}. Pago ${money(novo?.valor_pago)} de ${money(novo?.valor_total)} · pendente ${money(pend)}.`,
+      );
+    },
+  },
+  "lunari.workflow.refundPayment": {
+    requiresApproval: true,
+    summarize: (a) => `Estornar o pagamento ${a.transactionId ?? "?"} (cria transação espelhada)`,
+    handler: async (sb, uid, args) => {
+      const transactionId = String(args.transactionId ?? args.id ?? "");
+      if (!UUID_RE.test(transactionId)) return fail("Campo 'transactionId' (UUID do pagamento) é obrigatório.");
+      const { data: orig } = await sb.from("clientes_transacoes")
+        .select("id,user_id,cliente_id,session_id,valor,tipo,descricao")
+        .eq("id", transactionId).eq("user_id", uid).maybeSingle();
+      if (!orig) return fail("Pagamento não encontrado.");
+      if (orig.tipo !== "pagamento") return fail("Somente pagamentos podem ser estornados.");
+      if (!(Number(orig.valor) > 0)) return fail("Pagamento sem valor positivo — nada a estornar.");
+      const { data: jaEstornado } = await sb.from("clientes_transacoes")
+        .select("id").eq("user_id", uid).eq("tipo", "estorno")
+        .ilike("descricao", `%[ESTORNO_DE:${transactionId}]%`).limit(1).maybeSingle();
+      if (jaEstornado?.id) return ok({ estornoId: jaEstornado.id, duplicate: true }, "Este pagamento já foi estornado.");
+      const motivo = args.motivo ? String(args.motivo) : "Estorno via assistente";
+      const { data: est, error } = await sb.from("clientes_transacoes").insert({
+        user_id: uid,
+        cliente_id: orig.cliente_id,
+        session_id: orig.session_id,
+        tipo: "estorno",
+        valor: -Math.abs(Number(orig.valor)),
+        data_transacao: today(),
+        descricao: `${motivo} [ESTORNO_DE:${transactionId}]`,
+        updated_by: uid,
+      }).select("id").single();
+      if (error) return fail(error.message);
+      return ok(
+        { transactionId, estornoId: est.id, valorEstornado: Number(orig.valor) },
+        `Estorno de ${money(orig.valor)} registrado. Motivo: ${motivo}.`,
+      );
+    },
+  },
+  "lunari.workflow.deleteSession": {
+    requiresApproval: true,
+    summarize: (a) => `Excluir a sessão ${a.sessionId ?? a.clienteNome ?? "?"} e seus lançamentos (irreversível)`,
+    handler: async (sb, uid, args) => {
+      const r = await resolveSessao(sb, uid, args);
+      if (r.error) return fail(r.error);
+      const s = r.sessao!;
+      const { count } = await sb.from("clientes_transacoes")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", uid).eq("session_id", s.session_id ?? "__none__");
+      if ((count ?? 0) > 0 && !args.force) {
+        return fail(
+          `Esta sessão tem ${count} lançamento(s) financeiro(s) (${money(s.valor_pago)} pago). ` +
+            "Reenvie com force=true para excluir sessão e lançamentos.",
+        );
+      }
+      if (s.session_id) {
+        await sb.from("clientes_transacoes").delete().eq("user_id", uid).eq("session_id", s.session_id);
+      }
+      const { error } = await sb.from("clientes_sessoes").delete().eq("id", s.id).eq("user_id", uid);
+      if (error) return fail(error.message);
+      return ok({ deleted: s.id, transacoesRemovidas: count ?? 0 }, `Sessão excluída (${count ?? 0} lançamento(s) removido(s)).`);
+    },
+  },
 };
+
+/** Campos da sessão que a IA pode alterar (nunca valor_pago/status_financeiro). */
+const WORKFLOW_EDITABLE = [
+  "descricao",
+  "observacoes",
+  "detalhes",
+  "categoria",
+  "pacote",
+  "data_sessao",
+  "hora_sessao",
+  "desconto",
+  "valor_adicional",
+  "valor_base_pacote",
+  "valor_foto_extra",
+] as const;
+
+const WORKFLOW_NUMERIC = new Set<string>([
+  "desconto",
+  "valor_adicional",
+  "valor_base_pacote",
+  "valor_foto_extra",
+]);
+
 
 export const BRIDGED_TOOLS: Record<string, BridgedTool> = {
   ...Object.fromEntries(
