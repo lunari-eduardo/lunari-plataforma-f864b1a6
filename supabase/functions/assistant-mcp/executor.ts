@@ -2504,13 +2504,15 @@ export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
       time: { type: "string", description: "Hora HH:MM." },
       type: { type: "string", description: "Categoria/tipo (ex.: Newborn, Família)." },
       status: { type: "string", enum: ["confirmado", "a confirmar"] },
-      clienteId: { type: "string", description: "UUID do cliente (opcional)." },
-      clienteNome: { type: "string", description: "Nome do cliente — resolvido automaticamente." },
+      clienteId: { type: "string", description: "UUID do cliente." },
+      clienteNome: { type: "string", description: "Nome do cliente — resolvido automaticamente; pergunte se houver dúvida." },
+      semCliente: { type: "boolean", description: "Só para bloqueio pessoal sem cliente. Confirme com o usuário antes." },
       description: { type: "string" },
       durationMinutes: { type: "number", description: "Duração em minutos (padrão 60)." },
       force: { type: "boolean", description: "Criar mesmo havendo conflito de horário." },
     },
-    required: ["date", "time"],
+    required: ["date"],
+
     additionalProperties: false,
   },
   "lunari.agenda.appointments.update": {
