@@ -337,7 +337,7 @@ async function resolveSessao(
   sb: SupabaseClient,
   uid: string,
   args: Record<string, any>,
-): Promise<{ sessao: any | null; error?: string }> {
+): Promise<{ sessao: any | null; error?: string; ask?: McpToolResult }> {
   const key = String(args.sessionId ?? args.session_id ?? args.id ?? "").trim();
   if (key) {
     if (UUID_RE.test(key)) {
@@ -352,9 +352,16 @@ async function resolveSessao(
   }
 
   const cli = await resolveCliente(sb, uid, args);
+  if (cli.ask) return { sessao: null, ask: cli.ask };
   if (cli.error) return { sessao: null, error: cli.error };
   if (!cli.id) {
-    return { sessao: null, error: "Informe 'sessionId' ou 'clienteNome' para identificar a sessão." };
+    return {
+      sessao: null,
+      ask: needsInput({
+        missing: ["sessionId"],
+        question: "De qual sessão você está falando? Informe o cliente ou o identificador da sessão.",
+      }),
+    };
   }
   const { data } = await sb.from("clientes_sessoes").select(SESSAO_COLS)
     .eq("user_id", uid).eq("cliente_id", cli.id)
@@ -364,14 +371,20 @@ async function resolveSessao(
   if (list.length > 1 && !args.latest) {
     return {
       sessao: null,
-      error:
-        `"${cli.nome}" tem ${list.length} sessões: ` +
-        list.map((s: any) => `${s.data_sessao ?? "sem data"} (${s.pacote ?? s.categoria ?? "—"}) id=${s.id}`).join("; ") +
-        ". Informe sessionId ou latest=true.",
+      ask: needsInput({
+        missing: ["sessionId"],
+        question: `"${cli.nome}" tem ${list.length} sessões. Qual delas?`,
+        options: list.map((s: any) => ({
+          label: `${s.data_sessao ?? "sem data"} — ${s.pacote ?? s.categoria ?? "sem pacote"}`,
+          value: s.id,
+          hint: s.status ?? undefined,
+        })),
+      }),
     };
   }
   return { sessao: list[0] };
 }
+
 
 /** Janela do mês a partir de `year`/`month` (padrão: mês corrente). */
 function monthRange(args: Record<string, any>): { start: string; end: string } {
