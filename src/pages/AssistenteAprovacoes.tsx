@@ -38,7 +38,8 @@ export default function AssistenteAprovacoes() {
     setLoading(true);
     // A5 — varre pedidos vencidos antes de listar, para a fila nunca mostrar
     // "pendente" em algo que já não pode mais ser aprovado.
-    await supabase.rpc("assistant_approvals_expire_stale").catch(() => {});
+    // O builder do Supabase é "thenable", não Promise: erro vai em `error`.
+    await supabase.rpc("assistant_approvals_expire_stale");
     const { data, error } = await supabase
       .from("assistant_approvals")
       .select("id,tool_name,tool_args,summary,status,requested_at,expires_at,surface,client_id,confirmation_mode")
