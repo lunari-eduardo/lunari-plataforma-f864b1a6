@@ -55,13 +55,17 @@ for (const internal of EXPOSED_TOOLS) {
   const depth = scan(schema, pub);
   if (depth > MAX_DEPTH) errors.push(`${pub}: schema com profundidade ${depth} (máx ${MAX_DEPTH})`);
 
-  if (String(tool.description ?? "").length > CORE_DESCRIPTION_MAX) {
-    errors.push(`${pub}: descrição com ${String(tool.description).length} chars (máx ${CORE_DESCRIPTION_MAX} no núcleo)`);
+  // Espelha o runtime: o servidor publica a descrição truncada.
+  const rawDesc = String(tool.description ?? "").replace(/\s+/g, " ").trim();
+  const desc =
+    rawDesc.length <= CORE_DESCRIPTION_MAX ? rawDesc : rawDesc.slice(0, CORE_DESCRIPTION_MAX - 1).trimEnd() + "…";
+  if (rawDesc.length > CORE_DESCRIPTION_MAX) {
+    console.warn(`  aviso: ${pub} tem descrição de ${rawDesc.length} chars — publicada truncada.`);
   }
   payload.push({
     name: pub,
     title: tool.title,
-    description: tool.description,
+    description: desc,
     inputSchema: schema,
     annotations: tool.annotations,
   });
