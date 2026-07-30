@@ -1541,11 +1541,40 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Criar agendamento "${a.title ?? a.type ?? "sessão"}" em ${a.date ?? "?"} ${a.time ?? ""}`,
     handler: async (sb, uid, args) => {
       const date = String(args.date ?? ""), time = String(args.time ?? "");
-      if (!date || !time) return fail("Campos 'date' (YYYY-MM-DD) e 'time' (HH:MM) são obrigatórios.");
+      if (!date) {
+        return needsInput({
+          missing: ["date"],
+          question: "Para qual data é o agendamento? (formato YYYY-MM-DD)",
+        });
+      }
       const cli = await resolveCliente(sb, uid, args);
       if (cli.ask) return cli.ask;
       if (cli.error) return fail(cli.error);
+      if (!cli.id && !args.semCliente) {
+        return needsInput({
+          missing: ["clienteNome"],
+          question: "Para qual cliente é este agendamento?",
+          allowCreate: true,
+          createHint:
+            "Se for um bloqueio pessoal (sem cliente), reenvie com semCliente=true. Se for cliente novo, confirme antes de criar.",
+        });
+      }
+      const duration = Number(args.durationMinutes) || 60;
+      if (!time) {
+        const doDia = await appointmentsInDay(sb, uid, date);
+        const livres: NeedsInputOption[] = [];
+        for (let m = 8 * 60; m + duration <= 19 * 60 && livres.length < 8; m += 30) {
+          const hhmm = fromMinutes(m);
+          if (!conflictAt(doDia, hhmm, duration)) livres.push({ label: hhmm, value: hhmm });
+        }
+        return needsInput({
+          missing: ["time"],
+          question: `Qual horário em ${date}? Horários livres sugeridos:`,
+          options: livres,
+        });
+      }
       const title = String(args.title ?? cli.nome ?? "Agendamento");
+
       const duration = Number(args.durationMinutes) || 60;
       const conflict = conflictAt(await appointmentsInDay(sb, uid, date), time, duration);
       if (conflict && !args.force) {
