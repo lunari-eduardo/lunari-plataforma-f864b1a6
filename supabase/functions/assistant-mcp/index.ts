@@ -649,6 +649,39 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method === "GET") {
+    const accept = (req.headers.get("accept") ?? "").toLowerCase();
+    // Spec Streamable HTTP: no GET, ou abrimos um stream SSE, ou respondemos 405.
+    // Antes devolvíamos JSON 200 aqui, o que travava clientes (ChatGPT) que abrem
+    // o canal de eventos logo após o OAuth.
+    if (accept.includes("text/event-stream")) {
+      const stream = new ReadableStream({
+        start(controller) {
+          const enc = new TextEncoder();
+          controller.enqueue(enc.encode(": lunari-mcp ready\n\n"));
+          const iv = setInterval(() => {
+            try { controller.enqueue(enc.encode(": ping\n\n")); } catch { clearInterval(iv); }
+          }, 25_000);
+          (req.signal as AbortSignal | undefined)?.addEventListener("abort", () => {
+            clearInterval(iv);
+            try { controller.close(); } catch { /* já fechado */ }
+          });
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          ...mcpHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    }
+    if (!accept.includes("application/json") && accept !== "" && !accept.includes("*/*")) {
+      return new Response("Method Not Allowed", {
+        status: 405,
+        headers: { ...mcpHeaders, Allow: "POST, GET, OPTIONS" },
+      });
+    }
     const bridged = Object.entries(BRIDGED_TOOLS).map(([name, t]) => ({
       name, scope: t.scope, requiresApproval: t.requiresApproval,
     }));
@@ -656,6 +689,7 @@ Deno.serve(async (req: Request) => {
       server: SERVER_INFO,
       protocolVersion: PROTOCOL_VERSION,
       tools: catalog.tools.length,
+      exposedTools: EXPOSED_TOOLS.length + META_TOOL_DEFS.length,
       bridgedTools: bridged,
       generatedAt: catalog.generatedAt,
       auth: {
@@ -677,9 +711,18 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405, headers: mcpHeaders });
+  if (req.method === "DELETE") {
+    // Encerramento de sessão (spec): nada a limpar — servidor é stateless.
+    return new Response(null, { status: 204, headers: mcpHeaders });
   }
+
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { ...mcpHeaders, Allow: "POST, GET, OPTIONS" },
+    });
+  }
+
 
   let body: unknown;
   try {
