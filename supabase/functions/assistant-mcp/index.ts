@@ -69,10 +69,12 @@ function dispatchToMcpResult(tool: CatalogTool, r: DispatchResult) {
 
 const mcpHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, mcp-session-id, mcp-protocol-version",
+    "authorization, x-client-info, apikey, content-type, mcp-session-id, mcp-protocol-version, accept",
+  "Access-Control-Expose-Headers": "mcp-session-id, mcp-protocol-version, www-authenticate",
 };
+
 
 const SERVER_INFO = {
   name: catalog.manifest.name,
