@@ -84,27 +84,24 @@ export function PricingPreview({ model, globalTable, categorias }: PricingPrevie
           />
         </div>
         
-        <div className="p-4 bg-muted rounded-lg">
-          <p className="text-sm whitespace-pre-line">
+        <div className="rounded-md bg-muted/40 p-3">
+          <p className="whitespace-pre-line text-[13px]">
             <strong>Resultado:</strong> {calcularPreview()}
           </p>
         </div>
 
         {/* Important Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-orange-600 text-sm">
-              Informações Importantes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-sm space-y-2 text-muted-foreground">
-              <li>• A mudança de modelo afeta todos os cálculos FUTUROS no sistema</li>
-              <li>• Dados existentes no Workflow mantêm seus valores até serem recalculados</li>
-              <li>• Tabelas progressivas permitem descontos por volume</li>
-            </ul>
-          </CardContent>
-        </Card>
+        <div className="border-t border-border/60 pt-3">
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Informações importantes
+          </p>
+          <ul className="space-y-1 text-[12px] text-muted-foreground">
+            <li>• A mudança de modelo afeta todos os cálculos FUTUROS no sistema</li>
+            <li>• Dados existentes no Workflow mantêm seus valores até serem recalculados</li>
+            <li>• Tabelas progressivas permitem descontos por volume</li>
+          </ul>
+        </div>
+
       </CardContent>
     </Card>
   );
