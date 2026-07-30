@@ -20,6 +20,35 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
+import {
+  dispatchCapability,
+  type CatalogTool,
+  type DispatchResult,
+} from "../_shared/capability-dispatch.ts";
+
+/** A2 — índice do catálogo por nome de tool (transport declarado na capability). */
+const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
+  ((catalog as any).tools ?? []).map((t: CatalogTool) => [t.name, t]),
+);
+
+/** Só despacha genericamente quando há transporte declarado E JWT do usuário (RLS real). */
+function dispatchableTool(name: string, auth: AuthContext): CatalogTool | null {
+  if (!auth.userJwt) return null; // PAT não carrega JWT → cai no bridge legado
+  const tool = CATALOG_BY_NAME.get(name);
+  if (!tool?.transport?.name) return null;
+  return tool;
+}
+
+function dispatchToMcpResult(tool: CatalogTool, r: DispatchResult) {
+  if (r.ok) {
+    const structured =
+      r.value && typeof r.value === "object" && !Array.isArray(r.value)
+        ? (r.value as Record<string, unknown>)
+        : { value: r.value };
+    return { content: [{ type: "text", text: r.summary }], structuredContent: structured };
+  }
+  return { isError: true, content: [{ type: "text", text: r.message }] };
+}
 
 const mcpHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -116,6 +145,7 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
       rolloutAllowed: allowed === true,
       authSource: "pat",
       clientId: null,
+      userJwt: null,
     };
   }
 
@@ -148,6 +178,7 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
       rolloutAllowed: allowed === true,
       authSource: "oauth",
       clientId,
+      userJwt: token,
     };
   }
 
