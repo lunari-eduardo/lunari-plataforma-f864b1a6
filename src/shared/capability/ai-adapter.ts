@@ -82,6 +82,8 @@ export function capabilityToAITool(cap: Capability): AICapabilityTool {
     outputSchema: convertSchema(cap.output),
     costHint: cap.costHint,
     examples: cap.examples,
+    execution: serializeExecution(cap.execution),
+    audience: cap.audience,
   };
 }
 
