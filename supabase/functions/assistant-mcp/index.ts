@@ -36,6 +36,21 @@ const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
   ((catalog as any).tools ?? []).map((t: CatalogTool) => [t.name, t]),
 );
 
+/**
+ * Alias público → nome interno. Conectores só aceitam `[a-zA-Z0-9_-]`, então
+ * `tools/list` publica `lunari_workflow_listMonth` e `tools/call` traduz de
+ * volta. Nomes internos com ponto continuam aceitos (retrocompatibilidade
+ * com PATs e clientes já configurados).
+ */
+const PUBLIC_TO_INTERNAL: Map<string, string> = new Map(
+  [...CATALOG_BY_NAME.keys(), META_SEARCH, META_INVOKE].map((n) => [toPublicName(n), n]),
+);
+function resolveToolName(name: string): string {
+  if (CATALOG_BY_NAME.has(name) || name === META_SEARCH || name === META_INVOKE) return name;
+  return PUBLIC_TO_INTERNAL.get(name) ?? name;
+}
+
+
 /** A3 — idade do catálogo em dias; congelamento vira sinal observável. */
 const CATALOG_STALE_DAYS = 30;
 function catalogAgeDays(): number {
