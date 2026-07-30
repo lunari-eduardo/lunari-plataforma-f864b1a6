@@ -212,7 +212,14 @@ export interface DispatchArgs {
   /** Client já construído — usado no caminho PAT, que não tem JWT do usuário. */
   client?: SupabaseClient;
   scopes: string[];
+  /**
+   * A6 — id do usuário dono da execução. Quando informado, o dispatcher
+   * revalida o gate de rollout antes de despachar (defesa em profundidade
+   * para qualquer consumidor futuro que esqueça de checar).
+   */
+  userId?: string | null;
 }
+
 
 /**
  * Executa uma tool do catálogo. Único ponto de execução server-side.
