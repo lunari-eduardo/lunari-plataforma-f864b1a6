@@ -20,13 +20,17 @@ const MAX_BYTES = 60_000;
 
 const errors: string[] = [];
 
-function scan(node: unknown, path: string, depth = 0): number {
+/** Profundidade = níveis de aninhamento de schema (object.properties / array.items). */
+function scan(node: any, path: string, depth = 0): number {
   if (!node || typeof node !== "object") return depth;
-  let max = depth;
-  for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+  for (const k of Object.keys(node)) {
     if (FORBIDDEN.includes(k)) errors.push(`${path}: chave proibida "${k}"`);
+  }
+  let max = depth;
+  for (const [k, v] of Object.entries(node.properties ?? {})) {
     max = Math.max(max, scan(v, `${path}.${k}`, depth + 1));
   }
+  if (node.items) max = Math.max(max, scan(node.items, `${path}[]`, depth + 1));
   return max;
 }
 
