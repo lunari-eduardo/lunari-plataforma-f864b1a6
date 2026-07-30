@@ -2031,6 +2031,71 @@ const CUSTOS_PROP = {
 } as const;
 
 export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
+  // ---------- ANÁLISE DE VENDAS ----------
+  "lunari.workflow.vendas.resumo": {
+    type: "object",
+    properties: {
+      ano: { type: "number", description: "Ano (ex.: 2026). Padrão: ano corrente." },
+      mes: { type: "number", description: "Mês 1-12. Omita para o ano inteiro." },
+      categoria: { type: "string", description: "Filtrar por categoria (ex.: Newborn)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.vendas.compararAnos": {
+    type: "object",
+    properties: {
+      anoBase: { type: "number", description: "Ano principal (padrão: ano corrente)." },
+      anoComparacao: { type: "number", description: "Ano de comparação (padrão: ano anterior)." },
+      limiteMes: { type: "number", description: "Compara só até este mês (1-12). Automático quando omitido." },
+      categoria: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.vendas.metasProgresso": {
+    type: "object",
+    properties: {
+      ano: { type: "number", description: "Ano das metas (padrão: corrente)." },
+      mes: { type: "number", description: "Mês de referência 1-12 (padrão: mês atual)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.photoProductionForYear": {
+    type: "object",
+    properties: {
+      year: { type: "number", description: "Ano (padrão: corrente)." },
+      categoria: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+  // ---------- LEADS (leitura) ----------
+  "lunari.leads.list": {
+    type: "object",
+    properties: {
+      status: { type: "string", description: "Chave do estágio do funil." },
+      origem: { type: "string" },
+      desde: { type: "string", description: "Data inicial YYYY-MM-DD (criação do lead)." },
+      ate: { type: "string", description: "Data final YYYY-MM-DD." },
+      search: { type: "string", description: "Parte do nome do lead." },
+      arquivados: { type: "string", enum: ["ocultar", "incluir", "somente"] },
+      limit: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.leads.metrics": {
+    type: "object",
+    properties: {
+      desde: { type: "string", description: "Data inicial YYYY-MM-DD (padrão: 1º de janeiro)." },
+      ate: { type: "string", description: "Data final YYYY-MM-DD (padrão: hoje)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.leads.get": {
+    type: "object",
+    properties: { id: { type: "string", description: "UUID do lead ou parte do nome." } },
+    required: ["id"],
+    additionalProperties: false,
+  },
+  "lunari.leads.listStatuses": { type: "object", properties: {}, additionalProperties: false },
   // ---------- PRECIFICAÇÃO ----------
   "lunari.precificacao.getConfiguracao": { type: "object", properties: {}, additionalProperties: false },
   "lunari.precificacao.getEstruturaCustos": { type: "object", properties: {}, additionalProperties: false },
