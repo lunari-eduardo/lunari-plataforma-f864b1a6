@@ -45,19 +45,42 @@ export const MCP_BLOCKED_CAPABILITIES: ReadonlySet<string> = new Set([
   "gallery.reopenSelection",
 ]);
 
+/**
+ * Prefixos de superfície administrativa/plataforma. MCP é do FOTÓGRAFO
+ * operando o próprio estúdio — nunca do operador da plataforma. Qualquer
+ * capability nova sob estes prefixos fica app-only automaticamente.
+ */
+export const MCP_BLOCKED_PREFIXES: readonly string[] = [
+  "admin.",
+  "platform.",
+  "billing.plan.",
+];
+
 /** Módulo derivado do id (`finance.transaction.create` → `finance`). */
 export function moduleOf(capabilityId: string): string {
   return capabilityId.split(".")[0] ?? capabilityId;
 }
 
+/**
+ * Fonte única da verdade do bloqueio. Usada tanto pelo default de audiência
+ * quanto pela revalidação fail-closed do gerador de catálogo (defesa em
+ * profundidade: mesmo declarando `audience: ["mcp"]` à mão, o build falha).
+ */
+export function mcpBlockReason(capabilityId: string): string | null {
+  if (MCP_BLOCKED_MODULES.has(moduleOf(capabilityId))) return "anel interno";
+  if (MCP_BLOCKED_CAPABILITIES.has(capabilityId)) return "capability bloqueada";
+  const prefix = MCP_BLOCKED_PREFIXES.find((p) => capabilityId.startsWith(p));
+  if (prefix) return `prefixo administrativo "${prefix}"`;
+  return null;
+}
+
 /** Audiência default de uma capability, quando não declarada explicitamente. */
 export function defaultAudienceFor(capabilityId: string): CapabilityAudience[] {
-  if (MCP_BLOCKED_MODULES.has(moduleOf(capabilityId))) return ["app"];
-  if (MCP_BLOCKED_CAPABILITIES.has(capabilityId)) return ["app"];
-  return ["app", "mcp"];
+  return mcpBlockReason(capabilityId) ? ["app"] : ["app", "mcp"];
 }
 
 /** Conveniência para filtros. */
 export function isExposedToMCP(audience: readonly CapabilityAudience[]): boolean {
   return audience.includes("mcp");
 }
+
