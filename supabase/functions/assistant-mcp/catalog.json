@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-30T18:45:22.258Z",
-  "catalogHash": "d920c2bf5ae6b36bc50e972a020dcca826d0cb498a7e0389340c068bc1e72823",
+  "generatedAt": "2026-07-30T18:57:22.484Z",
+  "catalogHash": "558c9b478e4086d6036ad61559d0e69544e42ad8409cbe9ac110c64e7ad3a83a",
   "catalogVersion": 2,
   "manifest": {
     "auth": {
@@ -1993,6 +1993,18 @@
       },
       {
         "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Produção fotográfica do ano. Total de fotos do ano (incluídas + extras), média por sessão, categoria líder e série mês a mês.",
+        "name": "lunari.workflow.photoProductionForYear",
+        "title": "workflow.photoProductionForYear"
+      },
+      {
+        "annotations": {
           "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false,
@@ -2242,6 +2254,42 @@
         "description": "Atualizar campos da sessão. Atualiza campos editáveis de uma sessão (card). Bloqueia campos computados.",
         "name": "lunari.workflow.updateFields",
         "title": "workflow.updateFields"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Comparativo de vendas ano a ano. Compara dois anos no mesmo período (mês-limite automático quando o ano base é o corrente): receita, sessões, ticket médio e fotos extras, com variação percentual e série mensal lado a lado.",
+        "name": "lunari.workflow.vendas.compararAnos",
+        "title": "workflow.vendas.compararAnos"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Progresso das metas de vendas. Compara as metas configuradas (anual, mensal e por categoria) com o realizado do ano: percentual atingido, quanto falta e ritmo mensal necessário para bater a meta.",
+        "name": "lunari.workflow.vendas.metasProgresso",
+        "title": "workflow.vendas.metasProgresso"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Resumo de Análise de Vendas. Métricas da página Análise de Vendas para um ano (opcionalmente mês e categoria): receita realizada e prevista, pendente, ticket médio, desconto, fotos extras, valor adicional, clientes únicos, série mensal e quebras por categoria, pacote e origem do lead.",
+        "name": "lunari.workflow.vendas.resumo",
+        "title": "workflow.vendas.resumo"
       }
     ],
     "version": "0.1.0"
@@ -16910,6 +16958,60 @@
     },
     {
       "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.photoProductionForYear",
+      "costHint": "cheap",
+      "description": "Produção fotográfica do ano. Total de fotos do ano (incluídas + extras), média por sessão, categoria líder e série mês a mês.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoria": {
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "year": {
+            "maximum": 2100,
+            "minimum": 2000,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.workflow.photoProductionForYear",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "porMes": {
+            "type": "array"
+          },
+          "total": {},
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "year",
+          "porMes"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "workflow.photoProductionForYear"
+    },
+    {
+      "annotations": {
         "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": false,
@@ -18424,6 +18526,217 @@
       "scope": "write",
       "scopeTier": "write",
       "title": "workflow.updateFields"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.vendas.compararAnos",
+      "costHint": "cheap",
+      "description": "Comparativo de vendas ano a ano. Compara dois anos no mesmo período (mês-limite automático quando o ano base é o corrente): receita, sessões, ticket médio e fotos extras, com variação percentual e série mensal lado a lado.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "anoBase": {
+            "maximum": 2100,
+            "minimum": 2000,
+            "type": "integer"
+          },
+          "anoComparacao": {
+            "maximum": 2100,
+            "minimum": 2000,
+            "type": "integer"
+          },
+          "categoria": {
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "limiteMes": {
+            "maximum": 12,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anoBase",
+          "anoComparacao"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.workflow.vendas.compararAnos",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "anoBase": {
+            "type": "number"
+          },
+          "anoComparacao": {
+            "type": "number"
+          },
+          "base": {},
+          "comparacao": {},
+          "limiteMes": {
+            "type": "number"
+          },
+          "porMes": {
+            "type": "array"
+          },
+          "variacaoPercentual": {}
+        },
+        "required": [
+          "anoBase",
+          "anoComparacao",
+          "limiteMes",
+          "porMes"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "workflow.vendas.compararAnos"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.vendas.metasProgresso",
+      "costHint": "cheap",
+      "description": "Progresso das metas de vendas. Compara as metas configuradas (anual, mensal e por categoria) com o realizado do ano: percentual atingido, quanto falta e ritmo mensal necessário para bater a meta.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ano": {
+            "maximum": 2100,
+            "minimum": 2000,
+            "type": "integer"
+          },
+          "mes": {
+            "maximum": 12,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ano"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.workflow.vendas.metasProgresso",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ano": {
+            "type": "number"
+          },
+          "anual": {},
+          "mensal": {
+            "nullable": true
+          },
+          "porCategoria": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "ano",
+          "porCategoria"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "workflow.vendas.metasProgresso"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "workflow.vendas.resumo",
+      "costHint": "cheap",
+      "description": "Resumo de Análise de Vendas. Métricas da página Análise de Vendas para um ano (opcionalmente mês e categoria): receita realizada e prevista, pendente, ticket médio, desconto, fotos extras, valor adicional, clientes únicos, série mensal e quebras por categoria, pacote e origem do lead.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ano": {
+            "maximum": 2100,
+            "minimum": 2000,
+            "type": "integer"
+          },
+          "categoria": {
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "mes": {
+            "maximum": 12,
+            "minimum": 1,
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ano"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.workflow.vendas.resumo",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "anosDisponiveis": {
+            "type": "array"
+          },
+          "categoriasDisponiveis": {
+            "type": "array"
+          },
+          "filtros": {},
+          "porCategoria": {
+            "type": "array"
+          },
+          "porMes": {
+            "type": "array"
+          },
+          "porOrigem": {
+            "type": "array"
+          },
+          "porPacote": {
+            "type": "array"
+          },
+          "totais": {}
+        },
+        "required": [
+          "porMes",
+          "porCategoria",
+          "porPacote",
+          "porOrigem",
+          "anosDisponiveis",
+          "categoriasDisponiveis"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "workflow.vendas.resumo"
     }
   ]
 }

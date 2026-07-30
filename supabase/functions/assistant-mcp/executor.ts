@@ -654,6 +654,180 @@ const READ_TOOLS: Record<string, Handler> = {
     const row = (Array.isArray(data) ? data[0] : data) ?? {};
     return ok({ start, end, producao: data }, `Produção fotográfica de ${start.slice(0, 7)}: ${JSON.stringify(row).slice(0, 300)}`);
   },
+  "lunari.workflow.photoProductionForYear": async (sb, uid, args) => {
+    const year = Number(args.year ?? args.ano ?? new Date().getFullYear());
+    const categoria = args.categoria ? String(args.categoria) : null;
+    const n = (v: unknown) => Number(v) || 0;
+    const porMes: any[] = [];
+    for (let m = 1; m <= 12; m++) {
+      const mm = String(m).padStart(2, "0");
+      const last = new Date(Date.UTC(year, m, 0)).getUTCDate();
+      const { data, error } = await sb.rpc("workflow_photo_production_month", {
+        p_user_id: uid, p_start: `${year}-${mm}-01`, p_end: `${year}-${mm}-${String(last).padStart(2, "0")}`,
+        p_categoria: categoria,
+      });
+      if (error) return fail(error.message);
+      const r: any = (Array.isArray(data) ? data[0] : data) ?? {};
+      porMes.push({
+        mes: m,
+        fotosIncluidas: Math.round(n(r.fotos_incluidas)),
+        fotosExtras: Math.round(n(r.fotos_extras)),
+        fotosTotal: Math.round(n(r.fotos_total)),
+        sessoes: Math.round(n(r.sessoes_com_pacote)) + Math.round(n(r.sessoes_sem_pacote)),
+        categoriaTop: r.categoria_top ?? null,
+        fotosCategoriaTop: Math.round(n(r.fotos_categoria_top)),
+      });
+    }
+    const sum = (k: string) => porMes.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+    const catMap = new Map<string, number>();
+    for (const m of porMes) if (m.categoriaTop) catMap.set(m.categoriaTop, (catMap.get(m.categoriaTop) ?? 0) + m.fotosCategoriaTop);
+    const top = [...catMap.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+    const sessoes = sum("sessoes");
+    const total = {
+      fotosIncluidas: sum("fotosIncluidas"), fotosExtras: sum("fotosExtras"), fotosTotal: sum("fotosTotal"),
+      sessoes, mediaFotosPorSessao: sessoes > 0 ? Number((sum("fotosTotal") / sessoes).toFixed(2)) : 0,
+      categoriaTop: top?.[0] ?? null, fotosCategoriaTop: top?.[1] ?? 0,
+    };
+    return ok(
+      { year, total, porMes },
+      `${year}: ${total.fotosTotal} foto(s) em ${sessoes} sessão(ões) · ${total.fotosIncluidas} inclusas + ${total.fotosExtras} extras · média ${total.mediaFotosPorSessao}/sessão${total.categoriaTop ? ` · categoria líder ${total.categoriaTop}` : ""}.`,
+    );
+  },
+
+  // -------------------- ANÁLISE DE VENDAS --------------------
+  "lunari.workflow.vendas.resumo": async (sb, uid, args) => {
+    const ano = Number(args.ano ?? args.year ?? new Date().getFullYear());
+    const mes = args.mes != null ? Number(args.mes) : (args.month != null ? Number(args.month) : null);
+    const categoria = args.categoria ? String(args.categoria) : null;
+    const { data, error } = await sb.rpc("sales_analytics_summary", {
+      p_user_id: uid, p_year: ano, p_month: mes, p_categoria: categoria,
+    });
+    if (error) return fail(error.message);
+    const t = (data as any)?.totais ?? {};
+    const periodo = mes ? `${ano}-${String(mes).padStart(2, "0")}` : String(ano);
+    return ok(
+      { periodo, resumo: data },
+      `${periodo}: ${t.sessoes ?? 0} sessão(ões) · receita ${money(t.receita_realizada)} de ${money(t.receita_prevista)} previstos · pendente ${money(t.pendente)} · ticket médio ${money(t.ticket_medio)} · fotos extras ${money(t.receita_fotos_extras)} · desconto ${money(t.desconto_total)} · ${t.clientes_unicos ?? 0} cliente(s).`,
+    );
+  },
+  "lunari.workflow.vendas.compararAnos": async (sb, uid, args) => {
+    const anoBase = Number(args.anoBase ?? new Date().getFullYear());
+    const anoComparacao = Number(args.anoComparacao ?? anoBase - 1);
+    const { data, error } = await sb.rpc("sales_analytics_compare", {
+      p_user_id: uid, p_ano_base: anoBase, p_ano_comparacao: anoComparacao,
+      p_limite_mes: args.limiteMes != null ? Number(args.limiteMes) : null,
+      p_categoria: args.categoria ? String(args.categoria) : null,
+    });
+    if (error) return fail(error.message);
+    const d = data as any;
+    const v = d?.variacaoPercentual ?? {};
+    return ok(
+      { comparativo: data },
+      `${anoBase} vs ${anoComparacao} (até o mês ${d?.limiteMes}): receita ${money(d?.base?.receita)} vs ${money(d?.comparacao?.receita)} (${v.receita ?? "—"}%) · sessões ${d?.base?.sessoes ?? 0} vs ${d?.comparacao?.sessoes ?? 0} (${v.sessoes ?? "—"}%) · ticket médio ${money(d?.base?.ticket_medio)} vs ${money(d?.comparacao?.ticket_medio)} (${v.ticketMedio ?? "—"}%).`,
+    );
+  },
+  "lunari.workflow.vendas.metasProgresso": async (sb, uid, args) => {
+    const ano = Number(args.ano ?? new Date().getFullYear());
+    const mesRef = args.mes != null ? Number(args.mes) : new Date().getUTCMonth() + 1;
+    const [resumoRes, cfgRes, metasRes] = await Promise.all([
+      sb.rpc("sales_analytics_summary", { p_user_id: uid, p_year: ano, p_month: null, p_categoria: null }),
+      sb.from("pricing_configuracoes").select("meta_faturamento_anual,ano_meta,modo_metas").eq("user_id", uid).maybeSingle(),
+      sb.from("metas_personalizadas").select("mes,categoria,meta_faturamento").eq("user_id", uid).eq("ano", ano),
+    ]);
+    if (resumoRes.error) return fail(resumoRes.error.message);
+    const resumo: any = resumoRes.data ?? {};
+    const num = (v: unknown) => Number(v) || 0;
+    const metas: any[] = (metasRes.data as any[]) ?? [];
+    const metaAnualPers = metas.find((m) => !m.mes && !m.categoria)?.meta_faturamento;
+    const metaAnual = num(metaAnualPers ?? (cfgRes.data as any)?.meta_faturamento_anual);
+    const realizadoAno = num(resumo?.totais?.receita_realizada);
+    const realizadoMes = num((resumo?.porMes ?? []).find((m: any) => Number(m.mes) === mesRef)?.receita);
+    const metaMes = num(metas.find((m) => Number(m.mes) === mesRef && !m.categoria)?.meta_faturamento ?? (metaAnual > 0 ? metaAnual / 12 : 0));
+    const mesesRestantes = Math.max(12 - mesRef + 1, 1);
+    const gap = Math.max(metaAnual - realizadoAno, 0);
+    const porCategoria = metas.filter((m) => !!m.categoria).map((m) => {
+      const meta = num(m.meta_faturamento);
+      const realizado = num((resumo?.porCategoria ?? []).find((c: any) => String(c.categoria).toLowerCase() === String(m.categoria).toLowerCase())?.receita);
+      return { categoria: m.categoria, meta, realizado, progressoPercentual: meta > 0 ? Number(((realizado / meta) * 100).toFixed(2)) : null, falta: Math.max(meta - realizado, 0) };
+    });
+    const pct = metaAnual > 0 ? Number(((realizadoAno / metaAnual) * 100).toFixed(1)) : null;
+    return ok(
+      {
+        ano,
+        anual: { meta: metaAnual, realizado: realizadoAno, progressoPercentual: pct, falta: gap, ritmoMensalNecessario: Number((gap / mesesRestantes).toFixed(2)), mesesRestantes, origem: metaAnualPers != null ? "metas_personalizadas" : "precificacao" },
+        mensal: { mes: mesRef, meta: metaMes, realizado: realizadoMes, progressoPercentual: metaMes > 0 ? Number(((realizadoMes / metaMes) * 100).toFixed(1)) : null, falta: Math.max(metaMes - realizadoMes, 0) },
+        porCategoria,
+      },
+      metaAnual > 0
+        ? `Meta anual ${money(metaAnual)} · realizado ${money(realizadoAno)} (${pct}%) · faltam ${money(gap)} em ${mesesRestantes} mês(es) → ${money(gap / mesesRestantes)}/mês. Mês ${mesRef}: ${money(realizadoMes)} de ${money(metaMes)}.`
+        : `Nenhuma meta anual configurada para ${ano}. Realizado: ${money(realizadoAno)}.`,
+    );
+  },
+
+  // -------------------- LEADS (leitura) --------------------
+  "lunari.leads.listStatuses": async (sb, uid) => {
+    const { data, error } = await sb.from("lead_statuses")
+      .select("key,name,sort_order,color,is_converted,is_lost").eq("user_id", uid).order("sort_order");
+    if (error) return fail(error.message);
+    return ok({ statuses: data ?? [] }, (data ?? []).map((s: any) => s.name).join(" → ") || "Nenhum estágio configurado.");
+  },
+  "lunari.leads.get": async (sb, uid, args) => {
+    const id = String(args.id ?? "");
+    let q = sb.from("leads").select("*").eq("user_id", uid).limit(1);
+    q = UUID_RE.test(id) ? q.eq("id", id) : q.ilike("nome", `%${id}%`);
+    const { data, error } = await q;
+    if (error) return fail(error.message);
+    const lead = (data ?? [])[0];
+    if (!lead) return fail(`Lead não encontrado: ${id}`);
+    return ok({ lead }, `${lead.nome} · ${lead.status ?? "sem estágio"} · origem ${lead.origem ?? "—"}${lead.motivo_perda ? ` · perdido: ${lead.motivo_perda}` : ""}.`);
+  },
+  "lunari.leads.list": async (sb, uid, args) => {
+    let q = sb.from("leads")
+      .select("id,nome,email,telefone,origem,status,motivo_perda,created_at,data_contato,arquivado,cliente_id")
+      .eq("user_id", uid).order("created_at", { ascending: false }).limit(clampLimit(args.limit, 50, 200));
+    const arq = String(args.arquivados ?? "ocultar");
+    if (arq === "ocultar") q = q.or("arquivado.is.null,arquivado.eq.false");
+    else if (arq === "somente") q = q.eq("arquivado", true);
+    if (args.status) q = q.eq("status", String(args.status));
+    if (args.origem) q = q.eq("origem", String(args.origem));
+    if (args.desde) q = q.gte("created_at", String(args.desde));
+    if (args.ate) q = q.lte("created_at", `${String(args.ate)}T23:59:59.999Z`);
+    if (args.search) q = q.ilike("nome", `%${String(args.search)}%`);
+    const { data, error } = await q;
+    if (error) return fail(error.message);
+    return ok({ leads: data ?? [] }, `${data?.length ?? 0} lead(s).`);
+  },
+  "lunari.leads.metrics": async (sb, uid, args) => {
+    const now = new Date();
+    const desde = String(args.desde ?? `${now.getUTCFullYear()}-01-01`);
+    const ate = String(args.ate ?? today());
+    const [{ data: statuses, error: sErr }, { data: rows, error: lErr }] = await Promise.all([
+      sb.from("lead_statuses").select("key,name,is_converted,is_lost").eq("user_id", uid),
+      sb.from("leads").select("status,origem,motivo_perda,cliente_id")
+        .eq("user_id", uid).gte("created_at", desde).lte("created_at", `${ate}T23:59:59.999Z`).limit(5000),
+    ]);
+    if (sErr) return fail(sErr.message);
+    if (lErr) return fail(lErr.message);
+    const conv = new Set((statuses ?? []).filter((s: any) => s.is_converted).map((s: any) => s.key));
+    const lost = new Set((statuses ?? []).filter((s: any) => s.is_lost).map((s: any) => s.key));
+    const porStatus: Record<string, number> = {}, porOrigem: Record<string, number> = {}, motivos: Record<string, number> = {};
+    let convertidos = 0, perdidos = 0;
+    for (const l of ((rows ?? []) as any[])) {
+      const st = l.status ?? "sem-status";
+      porStatus[st] = (porStatus[st] ?? 0) + 1;
+      const og = l.origem || "nao-especificado";
+      porOrigem[og] = (porOrigem[og] ?? 0) + 1;
+      if (conv.has(st) || l.cliente_id) convertidos++;
+      if (lost.has(st)) { perdidos++; const mp = l.motivo_perda || "não informado"; motivos[mp] = (motivos[mp] ?? 0) + 1; }
+    }
+    const total = rows?.length ?? 0;
+    const taxa = total > 0 ? Number(((convertidos / total) * 100).toFixed(1)) : 0;
+    const topMotivo = Object.entries(motivos).sort((a, b) => b[1] - a[1])[0] ?? null;
+    return ok(
+      { periodo: { desde, ate }, total, porStatus, porOrigem, convertidos, perdidos, motivosPerda: motivos, taxaConversao: taxa },
+      `${total} lead(s) de ${desde} a ${ate} · ${convertidos} convertido(s) (${taxa}%) · ${perdidos} perdido(s)${topMotivo ? ` · principal motivo: ${topMotivo[0]} (${topMotivo[1]})` : ""}.`,
+    );
+  },
   "lunari.workflow.diagnoseSession": async (sb, uid, args) => {
     const r = await resolveSessao(sb, uid, args);
     if (r.error) return fail(r.error);
@@ -1857,6 +2031,71 @@ const CUSTOS_PROP = {
 } as const;
 
 export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
+  // ---------- ANÁLISE DE VENDAS ----------
+  "lunari.workflow.vendas.resumo": {
+    type: "object",
+    properties: {
+      ano: { type: "number", description: "Ano (ex.: 2026). Padrão: ano corrente." },
+      mes: { type: "number", description: "Mês 1-12. Omita para o ano inteiro." },
+      categoria: { type: "string", description: "Filtrar por categoria (ex.: Newborn)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.vendas.compararAnos": {
+    type: "object",
+    properties: {
+      anoBase: { type: "number", description: "Ano principal (padrão: ano corrente)." },
+      anoComparacao: { type: "number", description: "Ano de comparação (padrão: ano anterior)." },
+      limiteMes: { type: "number", description: "Compara só até este mês (1-12). Automático quando omitido." },
+      categoria: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.vendas.metasProgresso": {
+    type: "object",
+    properties: {
+      ano: { type: "number", description: "Ano das metas (padrão: corrente)." },
+      mes: { type: "number", description: "Mês de referência 1-12 (padrão: mês atual)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.workflow.photoProductionForYear": {
+    type: "object",
+    properties: {
+      year: { type: "number", description: "Ano (padrão: corrente)." },
+      categoria: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+  // ---------- LEADS (leitura) ----------
+  "lunari.leads.list": {
+    type: "object",
+    properties: {
+      status: { type: "string", description: "Chave do estágio do funil." },
+      origem: { type: "string" },
+      desde: { type: "string", description: "Data inicial YYYY-MM-DD (criação do lead)." },
+      ate: { type: "string", description: "Data final YYYY-MM-DD." },
+      search: { type: "string", description: "Parte do nome do lead." },
+      arquivados: { type: "string", enum: ["ocultar", "incluir", "somente"] },
+      limit: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.leads.metrics": {
+    type: "object",
+    properties: {
+      desde: { type: "string", description: "Data inicial YYYY-MM-DD (padrão: 1º de janeiro)." },
+      ate: { type: "string", description: "Data final YYYY-MM-DD (padrão: hoje)." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.leads.get": {
+    type: "object",
+    properties: { id: { type: "string", description: "UUID do lead ou parte do nome." } },
+    required: ["id"],
+    additionalProperties: false,
+  },
+  "lunari.leads.listStatuses": { type: "object", properties: {}, additionalProperties: false },
   // ---------- PRECIFICAÇÃO ----------
   "lunari.precificacao.getConfiguracao": { type: "object", properties: {}, additionalProperties: false },
   "lunari.precificacao.getEstruturaCustos": { type: "object", properties: {}, additionalProperties: false },
