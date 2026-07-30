@@ -1352,18 +1352,24 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Criar pacote precificado "${a.nome ?? "?"}" em ${a.categoria ?? a.categoriaId ?? "categoria"}`,
     handler: async (sb, uid, args) => {
       const nome = String(args.nome ?? "").trim();
-      if (!nome) return fail("Campo 'nome' é obrigatório.");
+      if (!nome) {
+        return needsInput({ missing: ["nome"], question: "Qual será o nome do pacote?" });
+      }
 
       let catId = "", catNome = "";
+      const temCategoria = String(args.categoriaId ?? args.categoria ?? "").trim();
+      if (!temCategoria) return await askCategoriaObrigatoria(sb, uid);
       const cat = await resolveCategoria(sb, uid, args);
       if (cat.id) { catId = cat.id; catNome = cat.nome ?? ""; }
-      else if (args.criarCategoria && args.categoria) {
+      else if (args.criarCategoria === true && args.categoria) {
         const { data, error } = await sb.from("categorias")
           .insert({ user_id: uid, nome: String(args.categoria).trim() }).select("id,nome").single();
         if (error) return fail(error.message);
         catId = data.id; catNome = data.nome;
+      } else if (cat.ask) {
+        return cat.ask;
       } else {
-        return fail(cat.error ?? "Informe a categoria (use criarCategoria=true para criá-la).");
+        return fail(cat.error ?? "Informe a categoria do pacote.");
       }
 
       const dup = await pacoteDuplicado(sb, uid, catId, nome);
@@ -1375,7 +1381,14 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
 
       if (!args.valorBase) {
         const horas = Number(args.horasEstimadas ?? 0) || 0;
-        if (horas <= 0) return fail("Informe 'horasEstimadas' (ou um 'valorBase' fechado).");
+        if (horas <= 0) {
+          return needsInput({
+            missing: ["horasEstimadas"],
+            question:
+              `Para precificar "${nome}" preciso das horas estimadas de trabalho (ou de um valor base fechado). Quantas horas?`,
+          });
+        }
+
         const estrutura = await loadEstruturaCustos(sb, uid);
         const { markup, origem } = resolverMarkup(args, estrutura.margemLucroDesejada);
         markupInfo = origem;
