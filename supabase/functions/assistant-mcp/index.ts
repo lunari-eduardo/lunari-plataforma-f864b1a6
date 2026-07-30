@@ -736,6 +736,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const startedAt = Date.now();
   const auth = await resolveAuth(req);
 
   // Se veio Authorization: Bearer inválido, sinaliza fluxo OAuth (RFC 9728).
@@ -744,6 +745,12 @@ Deno.serve(async (req: Request) => {
   if (hasAuthHeader && !auth.userId) {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
   }
+  // Sessão: ecoa a do cliente ou emite uma nova no initialize.
+  const incomingSession = req.headers.get("mcp-session-id");
+  const sessionId = incomingSession ?? crypto.randomUUID();
+  responseHeaders["Mcp-Session-Id"] = sessionId;
+  const protoHeader = req.headers.get("mcp-protocol-version");
+  if (protoHeader) responseHeaders["Mcp-Protocol-Version"] = protoHeader;
 
   const requests = Array.isArray(body) ? body : [body];
   const responses: unknown[] = [];
@@ -761,13 +768,31 @@ Deno.serve(async (req: Request) => {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
   }
 
-  if (responses.length === 0) return new Response(null, { status: 202, headers: mcpHeaders });
+  const logHandshake = (status: number, bytes: number) =>
+    console.log("[mcp-http]", JSON.stringify({
+      methods: requests.map((r: any) => r?.method).filter(Boolean),
+      status,
+      bytes,
+      sessionId,
+      authSource: auth.authSource,
+      clientId: auth.clientId,
+      hasUser: !!auth.userId,
+      latencyMs: Date.now() - startedAt,
+    }));
+
+  if (responses.length === 0) {
+    logHandshake(202, 0);
+    return new Response(null, { status: 202, headers: { ...mcpHeaders, "Mcp-Session-Id": sessionId } });
+  }
 
   const payload = Array.isArray(body) ? responses : responses[0];
+  const serialized = JSON.stringify(payload);
+  logHandshake(200, serialized.length);
   // Mantém 200 (JSON-RPC body carrega o erro); WWW-Authenticate no header já dispara o fluxo OAuth
   // em clientes MCP compatíveis com a spec 2025-06-18.
-  return new Response(JSON.stringify(payload), {
+  return new Response(serialized, {
     status: 200,
+
     headers: responseHeaders,
   });
 });
