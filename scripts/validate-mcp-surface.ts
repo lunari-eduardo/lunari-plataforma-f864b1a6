@@ -11,13 +11,14 @@
  */
 import catalog from "../supabase/functions/assistant-mcp/catalog.json" with { type: "json" };
 import { EXPOSED_TOOLS, META_TOOL_DEFS } from "../supabase/functions/assistant-mcp/exposed.ts";
+import { CORE_MAX_TOOLS, TOOLS_LIST_MAX_BYTES, CORE_DESCRIPTION_MAX, CORE_CAPABILITIES } from "../src/shared/capability/tiers.ts";
 import { BRIDGE_SCHEMAS } from "../supabase/functions/assistant-mcp/executor.ts";
 import { toPublicName, publicInputSchema } from "../supabase/functions/assistant-mcp/compat.ts";
 
 const NAME_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 const FORBIDDEN = ["anyOf", "oneOf", "allOf", "not", "$ref"];
 const MAX_DEPTH = 6;
-const MAX_BYTES = 60_000;
+const MAX_BYTES = TOOLS_LIST_MAX_BYTES;
 
 const errors: string[] = [];
 
@@ -54,6 +55,9 @@ for (const internal of EXPOSED_TOOLS) {
   const depth = scan(schema, pub);
   if (depth > MAX_DEPTH) errors.push(`${pub}: schema com profundidade ${depth} (máx ${MAX_DEPTH})`);
 
+  if (String(tool.description ?? "").length > CORE_DESCRIPTION_MAX) {
+    errors.push(`${pub}: descrição com ${String(tool.description).length} chars (máx ${CORE_DESCRIPTION_MAX} no núcleo)`);
+  }
   payload.push({
     name: pub,
     title: tool.title,
@@ -69,10 +73,26 @@ for (const meta of META_TOOL_DEFS) {
   payload.push({ ...meta, name: pub, inputSchema: publicInputSchema(meta.inputSchema) });
 }
 
+if (EXPOSED_TOOLS.length > CORE_MAX_TOOLS) {
+  errors.push(`núcleo com ${EXPOSED_TOOLS.length} tools (máx ${CORE_MAX_TOOLS}) — edite src/shared/capability/tiers.ts`);
+}
+
+// Coerência: toda capability declarada core deve existir no catálogo.
+const catalogCaps = new Set((catalog as any).tools.map((t: any) => t.capabilityId));
+for (const cap of CORE_CAPABILITIES) {
+  if (!catalogCaps.has(cap)) errors.push(`core "${cap}" não existe no catálogo (renomeada ou bloqueada?)`);
+}
+
+// Toda tool do catálogo precisa continuar alcançável por lunari.tools.invoke.
+const invokeReachable = (catalog as any).tools.length;
+
 const bytes = JSON.stringify({ tools: payload }).length;
 if (bytes > MAX_BYTES) errors.push(`tools/list com ${bytes} bytes (máx ${MAX_BYTES})`);
 
-console.log(`Tools expostas: ${payload.length} | tools/list: ${(bytes / 1024).toFixed(1)} KB`);
+console.log(
+  `Núcleo: ${EXPOSED_TOOLS.length} + ${META_TOOL_DEFS.length} meta | tools/list: ${(bytes / 1024).toFixed(1)} KB ` +
+    `| catálogo sob demanda: ${invokeReachable} tools`,
+);
 if (errors.length) {
   console.error(`\n${errors.length} problema(s):`);
   for (const e of errors) console.error(` - ${e}`);

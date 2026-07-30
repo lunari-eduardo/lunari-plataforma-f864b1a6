@@ -1,12 +1,13 @@
 {
-  "generatedAt": "2026-07-30T18:57:22.484Z",
-  "catalogHash": "558c9b478e4086d6036ad61559d0e69544e42ad8409cbe9ac110c64e7ad3a83a",
-  "catalogVersion": 2,
+  "generatedAt": "2026-07-30T19:23:18.173Z",
+  "catalogHash": "b7938efd21b6e875443db6c383d0fe6cd6079e34b1ea3c55e27e93dadf2c4cf0",
+  "catalogVersion": 3,
   "manifest": {
     "auth": {
       "acceptedAudiences": "authenticated",
       "type": "oauth-supabase"
     },
+    "domainIndex": "workflow (39) · tasks (26) · precificacao (20) · configuracoes (19) · finance (19) · contratos (16) · formularios (14) · leads (13) · agenda (10) · clientes (8) · billing (3) · gallery (3)",
     "instructions": "Ferramentas do Lunari para fotógrafos: agenda, workflow, financeiro, cobranças, clientes, galerias, formulários e contratos. Escritas destrutivas exigem aprovação humana explícita no app.",
     "name": "lunari-mcp",
     "title": "Lunari",
@@ -2436,6 +2437,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "agenda.appointments.confirm"
     },
     {
@@ -2674,6 +2676,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "agenda.appointments.create"
     },
     {
@@ -2817,6 +2820,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "agenda.appointments.get"
     },
     {
@@ -2974,6 +2978,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "agenda.appointments.list"
     },
     {
@@ -3034,6 +3039,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "core",
       "title": "agenda.appointments.reschedule"
     },
     {
@@ -3181,6 +3187,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "agenda.appointments.update"
     },
     {
@@ -3264,6 +3271,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "agenda.availability.add"
     },
     {
@@ -3325,6 +3333,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "agenda.availability.findNext"
     },
     {
@@ -3414,6 +3423,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "agenda.availability.list"
     },
     {
@@ -3796,6 +3806,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "agenda.slot.check"
     },
     {
@@ -3877,6 +3888,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "billing.createGalleryPayment"
     },
     {
@@ -3977,6 +3989,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "billing.listSessionPayments"
     },
     {
@@ -4075,6 +4088,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "billing.registerManualPayment"
     },
     {
@@ -4165,6 +4179,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "clientes.addNota"
     },
     {
@@ -4283,6 +4298,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "clientes.create"
     },
     {
@@ -4370,6 +4386,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "clientes.get"
     },
     {
@@ -4485,6 +4502,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "clientes.list"
     },
     {
@@ -4565,6 +4583,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "clientes.listSessoes"
     },
     {
@@ -4641,6 +4660,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "clientes.listTransacoes"
     },
     {
@@ -4739,6 +4759,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "clientes.search"
     },
     {
@@ -4856,6 +4877,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "clientes.update"
     },
     {
@@ -4911,6 +4933,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.createCategoria"
     },
     {
@@ -4978,6 +5001,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.createEtapa"
     },
     {
@@ -5059,6 +5083,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.createPacote"
     },
     {
@@ -5130,6 +5155,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.createProduto"
     },
     {
@@ -5172,6 +5198,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "configuracoes.deleteCategoria"
     },
     {
@@ -5214,6 +5241,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "configuracoes.deleteEtapa"
     },
     {
@@ -5256,6 +5284,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "configuracoes.deletePacote"
     },
     {
@@ -5298,6 +5327,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "configuracoes.deleteProduto"
     },
     {
@@ -5350,6 +5380,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "configuracoes.getCategoria"
     },
     {
@@ -5406,6 +5437,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "configuracoes.listCategorias"
     },
     {
@@ -5474,6 +5506,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "configuracoes.listEtapas"
     },
     {
@@ -5545,6 +5578,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "configuracoes.listPacotes"
     },
     {
@@ -5615,6 +5649,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "configuracoes.listProdutos"
     },
     {
@@ -5683,6 +5718,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.moveEtapa"
     },
     {
@@ -5741,6 +5777,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.toggleProdutoFavorito"
     },
     {
@@ -5799,6 +5836,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.updateCategoria"
     },
     {
@@ -5871,6 +5909,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.updateEtapa"
     },
     {
@@ -5951,6 +5990,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.updatePacote"
     },
     {
@@ -6023,6 +6063,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "configuracoes.updateProduto"
     },
     {
@@ -6133,6 +6174,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "contratos.createContrato"
     },
     {
@@ -6224,6 +6266,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "contratos.createTemplate"
     },
     {
@@ -6266,6 +6309,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "contratos.deleteContrato"
     },
     {
@@ -6308,6 +6352,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "contratos.deleteTemplate"
     },
     {
@@ -6387,6 +6432,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "contratos.duplicateTemplate"
     },
     {
@@ -6462,6 +6508,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "contratos.generateContratoWithAI"
     },
     {
@@ -6533,6 +6580,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "contratos.generateTemplateWithAI"
     },
     {
@@ -6625,6 +6673,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "contratos.getContrato"
     },
     {
@@ -6702,6 +6751,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "contratos.getTemplate"
     },
     {
@@ -6804,6 +6854,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "contratos.listContratos"
     },
     {
@@ -6895,6 +6946,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "contratos.listPendentes"
     },
     {
@@ -6979,6 +7031,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "contratos.listTemplates"
     },
     {
@@ -7070,6 +7123,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "contratos.markSentContrato"
     },
     {
@@ -7164,6 +7218,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "contratos.markSignedContrato"
     },
     {
@@ -7269,6 +7324,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "contratos.updateContrato"
     },
     {
@@ -7362,6 +7418,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "contratos.updateTemplate"
     },
     {
@@ -7435,6 +7492,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "finance.category.create"
     },
     {
@@ -7516,6 +7574,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.category.list"
     },
     {
@@ -7626,6 +7685,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.credit.get"
     },
     {
@@ -7702,6 +7762,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.credit.listClientsWithCredit"
     },
     {
@@ -7784,6 +7845,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.dashboard.kpis"
     },
     {
@@ -7872,6 +7934,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.extrato.list"
     },
     {
@@ -7953,6 +8016,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "finance.extrato.summary"
     },
     {
@@ -8001,6 +8065,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.goal.list"
     },
     {
@@ -8079,6 +8144,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.goal.progress"
     },
     {
@@ -8153,6 +8219,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "finance.goal.set"
     },
     {
@@ -8228,6 +8295,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.group.list"
     },
     {
@@ -8307,6 +8375,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "finance.item.create"
     },
     {
@@ -8384,6 +8453,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.item.list"
     },
     {
@@ -8456,6 +8526,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "finance.nature.list"
     },
     {
@@ -8576,6 +8647,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "finance.transaction.create"
     },
     {
@@ -8628,6 +8700,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "finance.transaction.delete"
     },
     {
@@ -8688,6 +8761,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "finance.transaction.markPaid"
     },
     {
@@ -8744,6 +8818,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "finance.transaction.markPending"
     },
     {
@@ -8827,6 +8902,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "finance.transaction.update"
     },
     {
@@ -9008,6 +9084,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "formularios.createForm"
     },
     {
@@ -9050,6 +9127,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.deleteForm"
     },
     {
@@ -9092,6 +9170,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.deleteResponse"
     },
     {
@@ -9219,6 +9298,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "formularios.duplicateForm"
     },
     {
@@ -9275,6 +9355,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.generateAIBriefing"
     },
     {
@@ -9382,6 +9463,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.generateFormWithAI"
     },
     {
@@ -9507,6 +9589,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "formularios.getForm"
     },
     {
@@ -9623,6 +9706,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "formularios.getResponse"
     },
     {
@@ -9712,6 +9796,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "formularios.listForms"
     },
     {
@@ -9775,6 +9860,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "formularios.listResponses"
     },
     {
@@ -9899,6 +9985,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.publishForm"
     },
     {
@@ -9967,6 +10054,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.reopenSubmission"
     },
     {
@@ -10091,6 +10179,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "formularios.unpublishForm"
     },
     {
@@ -10275,6 +10364,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "formularios.updateForm"
     },
     {
@@ -10320,6 +10410,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "gallery.checkAccess"
     },
     {
@@ -10421,6 +10512,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "gallery.listExpiring"
     },
     {
@@ -10521,6 +10613,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "gallery.listInSelection"
     },
     {
@@ -10600,6 +10693,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "leads.addInteracao"
     },
     {
@@ -10669,6 +10763,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "leads.archive"
     },
     {
@@ -10757,6 +10852,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "leads.convertToCliente"
     },
     {
@@ -10851,6 +10947,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "leads.create"
     },
     {
@@ -11015,6 +11112,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "leads.get"
     },
     {
@@ -11176,6 +11274,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "leads.list"
     },
     {
@@ -11326,6 +11425,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "leads.listFollowUpsDue"
     },
     {
@@ -11426,6 +11526,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "leads.listOrcamentosAgendados"
     },
     {
@@ -11500,6 +11601,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "leads.listStatuses"
     },
     {
@@ -11572,6 +11674,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "leads.markLost"
     },
     {
@@ -11664,6 +11767,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "leads.metrics"
     },
     {
@@ -11736,6 +11840,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "leads.moveStatus"
     },
     {
@@ -11830,6 +11935,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "leads.update"
     },
     {
@@ -11980,6 +12086,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.criarPacotePrecificado"
     },
     {
@@ -12029,6 +12136,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.diagnostico"
     },
     {
@@ -12101,6 +12209,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.getConfiguracao"
     },
     {
@@ -12185,6 +12294,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.getEstruturaCustos"
     },
     {
@@ -12275,6 +12385,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.getMetas"
     },
     {
@@ -12364,6 +12475,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.getTabelaCategoria"
     },
     {
@@ -12453,6 +12565,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.listCenarios"
     },
     {
@@ -12525,6 +12638,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.listPacotesComPreco"
     },
     {
@@ -12627,6 +12741,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.listTabelas"
     },
     {
@@ -12746,6 +12861,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "precificacao.salvarCenario"
     },
     {
@@ -12853,6 +12969,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.setMetas"
     },
     {
@@ -12933,6 +13050,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.setModelo"
     },
     {
@@ -13035,6 +13153,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.simularFotoExtra"
     },
     {
@@ -13173,6 +13292,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.simularImpactoTabela"
     },
     {
@@ -13274,6 +13394,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.simularPacote"
     },
     {
@@ -13425,6 +13546,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "precificacao.simularPreco"
     },
     {
@@ -13505,6 +13627,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.updateMargemEHoras"
     },
     {
@@ -13591,6 +13714,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.updatePacotePreco"
     },
     {
@@ -13699,6 +13823,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.upsertTabelaCategoria"
     },
     {
@@ -13799,6 +13924,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "precificacao.upsertTabelaGlobal"
     },
     {
@@ -13861,6 +13987,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.assign"
     },
     {
@@ -13933,6 +14060,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.attachment.add"
     },
     {
@@ -14012,6 +14140,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.attachment.list"
     },
     {
@@ -14055,6 +14184,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "tasks.attachment.remove"
     },
     {
@@ -14102,6 +14232,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "tasks.complete"
     },
     {
@@ -14182,6 +14313,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.countsByStatus"
     },
     {
@@ -14328,6 +14460,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "tasks.create"
     },
     {
@@ -14371,6 +14504,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "tasks.delete"
     },
     {
@@ -14470,6 +14604,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.dueOverview"
     },
     {
@@ -14508,6 +14643,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.getById"
     },
     {
@@ -14554,6 +14690,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "tasks.list"
     },
     {
@@ -14615,6 +14752,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.move"
     },
     {
@@ -14669,6 +14807,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.people.create"
     },
     {
@@ -14712,6 +14851,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "tasks.people.delete"
     },
     {
@@ -14748,6 +14888,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.people.list"
     },
     {
@@ -14812,6 +14953,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.people.reorder"
     },
     {
@@ -14863,6 +15005,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.people.update"
     },
     {
@@ -14913,6 +15056,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.reopen"
     },
     {
@@ -14966,6 +15110,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.search"
     },
     {
@@ -15018,6 +15163,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.snooze"
     },
     {
@@ -15072,6 +15218,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.tags.create"
     },
     {
@@ -15115,6 +15262,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "tasks.tags.delete"
     },
     {
@@ -15151,6 +15299,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "tasks.tags.list"
     },
     {
@@ -15215,6 +15364,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.tags.reorder"
     },
     {
@@ -15266,6 +15416,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.tags.update"
     },
     {
@@ -15419,6 +15570,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "tasks.update"
     },
     {
@@ -15501,6 +15653,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "core",
       "title": "workflow.addPayment"
     },
     {
@@ -15587,6 +15740,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "workflow.advanceCard"
     },
     {
@@ -15705,6 +15859,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.analytics.summary"
     },
     {
@@ -15795,6 +15950,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.deleteSession"
     },
     {
@@ -15880,6 +16036,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.diagnoseSession"
     },
     {
@@ -15972,6 +16129,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "workflow.getCardBySession"
     },
     {
@@ -16095,6 +16253,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "workflow.getSessionFinancials"
     },
     {
@@ -16221,6 +16380,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.listMonth"
     },
     {
@@ -16402,6 +16562,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.listRange"
     },
     {
@@ -16516,6 +16677,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.listSessionsByPaymentStatus"
     },
     {
@@ -16598,6 +16760,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.metricsForMonth"
     },
     {
@@ -16763,6 +16926,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.metricsForRange"
     },
     {
@@ -16862,6 +17026,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "workflow.pendingPayments"
     },
     {
@@ -16954,6 +17119,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.photoProductionForMonth"
     },
     {
@@ -17008,6 +17174,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.photoProductionForYear"
     },
     {
@@ -17114,6 +17281,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.add"
     },
     {
@@ -17175,6 +17343,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.advanceStage"
     },
     {
@@ -17236,6 +17405,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.duplicate"
     },
     {
@@ -17316,6 +17486,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.produto.getFlowTemplate"
     },
     {
@@ -17363,6 +17534,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.produto.listBySession"
     },
     {
@@ -17503,6 +17675,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.produto.listPending"
     },
     {
@@ -17564,6 +17737,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.remove"
     },
     {
@@ -17625,6 +17799,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.reopenProduction"
     },
     {
@@ -17686,6 +17861,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.retreatStage"
     },
     {
@@ -17762,6 +17938,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.setDeadline"
     },
     {
@@ -17828,6 +18005,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.setPrice"
     },
     {
@@ -17894,6 +18072,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.setQuantity"
     },
     {
@@ -17960,6 +18139,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.setStages"
     },
     {
@@ -18021,6 +18201,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.startProduction"
     },
     {
@@ -18096,6 +18277,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.produto.switchFluxo"
     },
     {
@@ -18179,6 +18361,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "workflow.reconcileFotosExtras"
     },
     {
@@ -18239,6 +18422,7 @@
       },
       "scope": "write",
       "scopeTier": "destructive",
+      "tier": "catalog",
       "title": "workflow.refundPayment"
     },
     {
@@ -18355,6 +18539,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "core",
       "title": "workflow.search"
     },
     {
@@ -18416,6 +18601,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.statusOptions"
     },
     {
@@ -18467,6 +18653,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "catalog",
       "title": "workflow.syncFromAgenda"
     },
     {
@@ -18525,6 +18712,7 @@
       },
       "scope": "write",
       "scopeTier": "write",
+      "tier": "core",
       "title": "workflow.updateFields"
     },
     {
@@ -18601,6 +18789,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.vendas.compararAnos"
     },
     {
@@ -18659,6 +18848,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.vendas.metasProgresso"
     },
     {
@@ -18736,6 +18926,7 @@
       },
       "scope": "read",
       "scopeTier": "read",
+      "tier": "catalog",
       "title": "workflow.vendas.resumo"
     }
   ]
