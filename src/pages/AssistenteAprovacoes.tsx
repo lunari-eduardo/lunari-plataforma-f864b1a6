@@ -23,6 +23,10 @@ interface ApprovalRow {
   status: "pending" | "approved" | "denied" | "expired" | "consumed";
   requested_at: string;
   expires_at: string;
+  /** A5 — origem do pedido: app (chat da Lu) ou mcp (assistente externo). */
+  surface: "app" | "mcp" | null;
+  client_id: string | null;
+  confirmation_mode: string | null;
 }
 
 export default function AssistenteAprovacoes() {
@@ -32,9 +36,12 @@ export default function AssistenteAprovacoes() {
 
   async function load() {
     setLoading(true);
+    // A5 — varre pedidos vencidos antes de listar, para a fila nunca mostrar
+    // "pendente" em algo que já não pode mais ser aprovado.
+    await supabase.rpc("assistant_approvals_expire_stale").catch(() => {});
     const { data, error } = await supabase
       .from("assistant_approvals")
-      .select("id,tool_name,tool_args,summary,status,requested_at,expires_at")
+      .select("id,tool_name,tool_args,summary,status,requested_at,expires_at,surface,client_id,confirmation_mode")
       .order("requested_at", { ascending: false })
       .limit(50);
     if (error) toast.error(error.message);
@@ -103,7 +110,12 @@ export default function AssistenteAprovacoes() {
               <div key={r.id} className="rounded-md border p-3 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <div className="font-mono text-xs text-muted-foreground">{r.tool_name}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-mono text-xs text-muted-foreground">{r.tool_name}</div>
+                      <Badge variant="outline" className="text-[10px]">
+                        {r.surface === "app" ? "Chat da Lu" : r.client_id ? `App: ${r.client_id}` : "MCP externo"}
+                      </Badge>
+                    </div>
                     <div className="text-sm font-medium">{r.summary ?? "Ação sem resumo"}</div>
                     <div className="text-xs text-muted-foreground">
                       Pedido em {new Date(r.requested_at).toLocaleString("pt-BR")} · expira{" "}
