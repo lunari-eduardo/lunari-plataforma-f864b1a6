@@ -225,7 +225,7 @@ export default function Categorias({ categorias, onAdd, onUpdate, onDelete, paco
           </p>
         </div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+        <div className={`${LIST_SHELL} ${ROW_DIVIDER}`}>
           {categorias.map((cat) => (
             <InlineEditCategoriaRow
               key={cat.id}
