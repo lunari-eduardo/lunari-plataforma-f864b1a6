@@ -173,6 +173,8 @@ interface AuthContext {
   clientId: string | null;
   /** A2 — JWT cru do usuário (só no caminho OAuth); habilita dispatch com RLS. */
   userJwt: string | null;
+  /** Motivo exato quando o token não foi aceito (diagnóstico de auth). */
+  reason?: string | null;
 }
 
 const EMPTY_AUTH: AuthContext = {
@@ -183,6 +185,7 @@ const EMPTY_AUTH: AuthContext = {
   authSource: null,
   clientId: null,
   userJwt: null,
+  reason: null,
 };
 
 
@@ -203,14 +206,15 @@ function decodeJwtPayload(jwt: string): Record<string, any> | null {
 async function resolveAuth(req: Request): Promise<AuthContext> {
   const raw = req.headers.get("authorization") ?? "";
   const token = raw.toLowerCase().startsWith("bearer ") ? raw.slice(7).trim() : "";
-  if (!token) return EMPTY_AUTH;
+  if (!token) return { ...EMPTY_AUTH, reason: "no_bearer" };
+  const deny = (reason: string): AuthContext => ({ ...EMPTY_AUTH, reason });
 
   const sb = admin();
 
   // === Caminho 1: Personal Access Token (PAT) ===
   if (token.startsWith("lmcp_")) {
     const { data, error } = await sb.rpc("assistant_mcp_token_validate", { _token: token });
-    if (error || !data || (Array.isArray(data) && data.length === 0)) return EMPTY_AUTH;
+    if (error || !data || (Array.isArray(data) && data.length === 0)) return deny("pat_invalid_or_revoked");
     const row = Array.isArray(data) ? data[0] : (data as any);
     const userId = row.user_id as string;
     const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
@@ -230,13 +234,16 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
   // sessão vindos de signInWithPassword sendo colados como Bearer.
   if (token.startsWith("eyJ")) {
     const claims = decodeJwtPayload(token);
-    if (!claims) return EMPTY_AUTH;
+    if (!claims) return deny("jwt_undecodable");
+    if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now()) {
+      return deny("jwt_expired");
+    }
     const clientId = (claims.client_id as string | undefined) ?? (claims.azp as string | undefined) ?? null;
-    if (!clientId) return EMPTY_AUTH;
+    if (!clientId) return deny("jwt_missing_client_id");
 
     // Verifica assinatura consultando o Auth via SDK.
     const { data: userRes, error: userErr } = await sb.auth.getUser(token);
-    if (userErr || !userRes?.user?.id) return EMPTY_AUTH;
+    if (userErr || !userRes?.user?.id) return deny(`jwt_rejected_by_auth:${userErr?.message ?? "no_user"}`);
     const userId = userRes.user.id;
 
     // A4 — o Supabase OAuth Server não emite scopes customizados, então o
@@ -258,10 +265,11 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
       authSource: "oauth",
       clientId,
       userJwt: token,
+      reason: null,
     };
   }
 
-  return EMPTY_AUTH;
+  return deny("token_format_unrecognized");
 }
 
 /**
@@ -317,6 +325,48 @@ async function audit(entry: AuditEntry) {
     if (error) console.error("[assistant-mcp] auditoria falhou:", error.message, entry.status, entry.toolName);
   } catch (err) {
     console.error("[assistant-mcp] auditoria exception:", String(err));
+  }
+}
+
+/**
+ * Trilha de handshake — registra TODA requisição JSON-RPC que chega, com ou sem
+ * token. Antes só registrávamos execuções de ferramenta, o que tornava
+ * ambíguo o diagnóstico "nada chega do ChatGPT": não dava para distinguir
+ * cliente que nunca chamou de cliente rejeitado no bearer.
+ */
+async function recordHandshake(entry: {
+  flowId: string;
+  methods: string[];
+  userAgent: string | null;
+  hasAuth: boolean;
+  authSource: string | null;
+  clientId: string | null;
+  userId: string | null;
+  authReason: string | null;
+  protocolVersion: string | null;
+  status: number;
+  bytes: number;
+  latencyMs: number;
+}) {
+  try {
+    const sb = admin();
+    const { error } = await sb.from("assistant_mcp_handshakes").insert({
+      flow_id: entry.flowId,
+      methods: entry.methods,
+      user_agent: entry.userAgent,
+      has_authorization: entry.hasAuth,
+      auth_source: entry.authSource,
+      client_id: entry.clientId,
+      user_id: entry.userId,
+      auth_reason: entry.authReason,
+      protocol_version: entry.protocolVersion,
+      status: entry.status,
+      response_bytes: entry.bytes,
+      latency_ms: entry.latencyMs,
+    });
+    if (error) console.error("[assistant-mcp] handshake log falhou:", error.message);
+  } catch (err) {
+    console.error("[assistant-mcp] handshake log exception:", String(err));
   }
 }
 
@@ -981,8 +1031,22 @@ Deno.serve(async (req: Request) => {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
   }
 
-  const logHandshake = (status: number, bytes: number) =>
-    flog(flowId, "http-out", {
+  const logHandshake = (status: number, bytes: number) => {
+    void recordHandshake({
+      flowId,
+      methods: requests.map((r: any) => r?.method).filter(Boolean),
+      userAgent: req.headers.get("user-agent"),
+      hasAuth: hasAuthHeader,
+      authSource: auth.authSource,
+      clientId: auth.clientId,
+      userId: auth.userId,
+      authReason: auth.userId ? null : auth.reason ?? null,
+      protocolVersion: req.headers.get("mcp-protocol-version"),
+      status,
+      bytes,
+      latencyMs: Date.now() - httpStarted,
+    });
+    return flog(flowId, "http-out", {
       methods: requests.map((r: any) => r?.method).filter(Boolean),
       status,
       bytes,
@@ -991,9 +1055,11 @@ Deno.serve(async (req: Request) => {
       client_id: auth.clientId,
       has_user: !!auth.userId,
       challenge: !!responseHeaders["WWW-Authenticate"],
+      auth_reason: auth.userId ? null : auth.reason ?? null,
       rpc_latency_ms: Date.now() - startedAt,
       total_latency_ms: Date.now() - httpStarted,
     });
+  };
 
 
   if (responses.length === 0) {
