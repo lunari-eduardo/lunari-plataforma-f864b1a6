@@ -362,7 +362,11 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         return rpcResult(id, inAppFallback(name));
       }
 
-      const requiresApproval = bridged?.requiresApproval ?? dispatchTool?.needsApproval ?? false;
+      // A5 fail-closed: sem classificação declarada, tratamos como destrutiva.
+      const requiresApproval =
+        bridged?.requiresApproval ??
+        dispatchTool?.needsApproval ??
+        (dispatchTool?.scopeTier === "destructive" ? true : dispatchTool ? false : true);
       const toolScope: "read" | "write" =
         bridged?.scope ?? (dispatchTool?.scope ?? (dispatchTool?.kind === "query" ? "read" : "write"));
 
@@ -451,6 +455,12 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         if (apprErr) {
           await audit({ ...actx, userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message, requiredTier, needsApproval: true });
           return rpcResult(id, { isError: true, content: [{ type: "text", text: `Falha ao criar pedido de aprovação: ${apprErr.message}` }] });
+        }
+        if (approvalId) {
+          // Marca a origem do pedido (aplicativo OAuth ou PAT) para a fila do app.
+          await sb.from("assistant_approvals")
+            .update({ surface: "mcp", client_id: auth.clientId })
+            .eq("id", approvalId as string);
         }
         await audit({ ...actx, userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started, requiredTier, needsApproval: true, approvalId: (approvalId as string) ?? null });
         return rpcResult(id, {
