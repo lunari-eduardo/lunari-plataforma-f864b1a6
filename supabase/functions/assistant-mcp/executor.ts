@@ -240,7 +240,7 @@ async function resolveCliente(
   sb: SupabaseClient,
   uid: string,
   args: Record<string, any>,
-): Promise<{ id: string | null; nome: string | null; error?: string }> {
+): Promise<{ id: string | null; nome: string | null; error?: string; ask?: McpToolResult }> {
   const id = args.clienteId ?? args.cliente_id;
   if (id) {
     const { data } = await sb.from("clientes").select("id,nome").eq("user_id", uid).eq("id", String(id)).maybeSingle();
@@ -249,22 +249,39 @@ async function resolveCliente(
   }
   const nome = args.clienteNome ?? args.client ?? args.cliente;
   if (!nome) return { id: null, nome: null };
-  const { data } = await sb.from("clientes").select("id,nome").eq("user_id", uid).limit(500);
+  const { data } = await sb.from("clientes").select("id,nome,telefone,email").eq("user_id", uid).limit(500);
   const alvo = norm(nome);
   const hits = (data ?? []).filter((c: any) => norm(c.nome).includes(alvo) || alvo.includes(norm(c.nome)));
-  if (hits.length === 0) return { id: null, nome: String(nome), error: `Nenhum cliente parecido com "${nome}".` };
+  if (hits.length === 0) {
+    return {
+      id: null,
+      nome: String(nome),
+      ask: needsInput({
+        missing: ["clienteId"],
+        question: `Não encontrei nenhum cliente parecido com "${nome}". Qual é o cliente correto?`,
+        allowCreate: true,
+        createHint: "Se for cliente novo, confirme com o usuário e crie com lunari.clientes.create antes de continuar.",
+      }),
+    };
+  }
   if (hits.length > 1) {
-    const exato = hits.find((c: any) => norm(c.nome) === alvo);
-    if (!exato) {
-      return {
-        id: null, nome: String(nome),
-        error: `Vários clientes parecidos com "${nome}": ${hits.slice(0, 5).map((c: any) => c.nome).join(", ")}. Especifique clienteId.`,
-      };
-    }
-    return { id: exato.id, nome: exato.nome };
+    return {
+      id: null,
+      nome: String(nome),
+      ask: needsInput({
+        missing: ["clienteId"],
+        question: `Há ${hits.length} clientes parecidos com "${nome}". Qual deles?`,
+        options: hits.slice(0, 8).map((c: any) => ({
+          label: c.nome,
+          value: c.id,
+          hint: c.telefone || c.email || undefined,
+        })),
+      }),
+    };
   }
   return { id: hits[0].id, nome: hits[0].nome };
 }
+
 
 async function resolveFinanceItem(
   sb: SupabaseClient,
