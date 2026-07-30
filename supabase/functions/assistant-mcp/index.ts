@@ -77,7 +77,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.9.0", // A5 — auditoria completa (inclusive negadas) + tickets de aprovação; A4 — escopos read/write/destructive + grants por cliente OAuth
+  version: "0.10.0", // superfície curada p/ conectores + transporte Streamable HTTP corrigido (SSE/405, Mcp-Session-Id)
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
