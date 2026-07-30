@@ -859,6 +859,43 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // === Diagnóstico público (sem auth) ===
+  // Permite confirmar de fora que o servidor está sadio e medir o tamanho real
+  // do manifesto — separando "problema de payload" de "problema de token".
+  if (req.method === "GET" && path.endsWith("/health")) {
+    const listBytes = JSON.stringify({
+      tools: [
+        ...catalog.tools.filter((t: any) => isExposed(t.name)).map((t: any) => ({
+          name: toPublicName(t.name),
+          title: t.title,
+          description: trimDescription(t.description),
+          inputSchema: publicInputSchema(BRIDGE_SCHEMAS[t.name] ?? t.inputSchema),
+          annotations: t.annotations,
+        })),
+        ...META_TOOL_DEFS.map((t) => ({ ...t, name: toPublicName(t.name), inputSchema: publicInputSchema(t.inputSchema) })),
+      ],
+    }).length;
+    return jsonResponse({
+      status: "ok",
+      server: SERVER_INFO,
+      protocolVersion: PROTOCOL_VERSION,
+      supportedProtocolVersions: SUPPORTED_PROTOCOL_VERSIONS,
+      catalog: {
+        total: catalog.tools.length,
+        core: EXPOSED_TOOLS.length,
+        metaTools: META_TOOL_DEFS.length,
+        hash: (catalog as any).catalogHash ?? null,
+        generatedAt: catalog.generatedAt,
+        ageDays: Math.round(catalogAgeDays()),
+      },
+      toolsList: { tools: EXPOSED_TOOLS.length + META_TOOL_DEFS.length, bytes: listBytes, kb: +(listBytes / 1024).toFixed(1) },
+      oauth: {
+        issuer: OAUTH_AS_ISSUER,
+        protectedResourceMetadata: `${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource`,
+      },
+    });
+  }
+
   if (req.method === "GET") {
     const accept = (req.headers.get("accept") ?? "").toLowerCase();
     // Spec Streamable HTTP: no GET, ou abrimos um stream SSE, ou respondemos 405.
