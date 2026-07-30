@@ -341,7 +341,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 
 
       // Fluxo de aprovação assíncrona para tools destrutivas.
-      if (bridged.requiresApproval) {
+      if (requiresApproval) {
         const approvalToken = typeof args.approval_token === "string" ? (args.approval_token as string) : "";
         if (approvalToken) {
           // Tenta consumir aprovação existente para esta tool.
@@ -360,7 +360,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           const row = Array.isArray(consumed) ? consumed[0] : consumed;
           const effectiveArgs = { ...(row?.tool_args ?? {}), ...args };
           delete (effectiveArgs as any).approval_token;
-          const result = await runBridged(sb, auth.userId, name, effectiveArgs);
+          const result = await execute(effectiveArgs);
           await audit({
             userId: auth.userId, toolName: name,
             status: result.isError ? "error" : "ok_approved",
@@ -372,7 +372,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         }
 
         // Sem token: cria pedido de aprovação e responde "pending".
-        const summary = bridged.summarize ? bridged.summarize(args) : `Executar ${name}`;
+        const summary = bridged?.summarize ? bridged.summarize(args) : `Executar ${name}: ${dispatchTool?.title ?? name}`;
         const { data: approvalId, error: apprErr } = await sb.rpc("assistant_approval_create", {
           _user_id: auth.userId,
           _token_id: auth.tokenId,
@@ -398,7 +398,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       }
 
       // Escritas sem approval e leituras: executa direto.
-      const result = await runBridged(sb, auth.userId, name, args);
+      const result = await execute(args);
       await audit({
         userId: auth.userId, toolName: name,
         status: result.isError ? "error" : "ok",
