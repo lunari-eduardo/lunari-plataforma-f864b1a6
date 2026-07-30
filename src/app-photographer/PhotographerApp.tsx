@@ -18,7 +18,7 @@ import AnaliseVendas from "@/pages/AnaliseVendas";
 import MinhaConta from "@/pages/MinhaConta";
 import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
-import FeedTest from "@/pages/FeedTest";
+
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
 import GalleryOverviewPage from "@/pages/site/GalleryOverviewPage";
@@ -166,9 +166,7 @@ export default function PhotographerApp() {
                 <Route path="tarefas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><Tarefas /></PlanRestrictionGuard>
                 } />
-                <Route path="feed-test" element={
-                  <PlanRestrictionGuard requiredPlan="pro"><FeedTest /></PlanRestrictionGuard>
-                } />
+                <Route path="feed-test" element={<Navigate to="/app/workflow" replace />} />
                 <Route path="preferencias" element={<Navigate to="/app/integracoes" replace />} />
 
                 {/* Compat: rotas admin antigas redirecionam para admin.lunarihub.com */}
