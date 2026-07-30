@@ -1,4 +1,6 @@
 import type { Capability } from "./types";
+import type { CapabilityAudience } from "./audience";
+
 
 const registry = new Map<string, Capability>();
 
@@ -21,12 +23,16 @@ export function getCapability(id: string): Capability | undefined {
 export function listCapabilities(filter?: {
   module?: string;
   kind?: "command" | "query";
+  /** Filtra pela superfície que enxerga a capability (ex.: "mcp"). */
+  audience?: CapabilityAudience;
 }): Capability[] {
   let arr = Array.from(registry.values());
   if (filter?.module) arr = arr.filter((c) => c.id.startsWith(`${filter.module}.`));
   if (filter?.kind) arr = arr.filter((c) => c.kind === filter.kind);
+  if (filter?.audience) arr = arr.filter((c) => c.audience.includes(filter.audience!));
   return arr.sort((a, b) => a.id.localeCompare(b.id));
 }
+
 
 export function clearRegistry(): void {
   registry.clear();

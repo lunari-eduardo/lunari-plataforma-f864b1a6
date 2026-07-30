@@ -1,5 +1,7 @@
 export * from "./types";
+export * from "./audience";
 export * from "./define";
+
 export * from "./registry";
 export * from "./policies";
 export * from "./ai-adapter";
