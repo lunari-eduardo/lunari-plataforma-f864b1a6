@@ -96,9 +96,28 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.11.0", // aliases sem ponto + schemas achatados + server/discover (compat ChatGPT)
+  version: "0.12.0", // forense ponta a ponta + POST tolerante + discovery coerente
 };
 const PROTOCOL_VERSION = "2025-06-18";
+/** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
+const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+
+/**
+ * Forense: fingerprint irreversível. Permite comparar se o MESMO valor
+ * (state, code_challenge, token) atravessou o fluxo, sem jamais logar o segredo.
+ */
+async function fingerprint(value: string | null | undefined): Promise<string | null> {
+  if (!value) return null;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(buf).slice(0, 6))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Log estruturado único do fluxo — sempre com flow_id para correlação. */
+function flog(flowId: string, stage: string, data: Record<string, unknown>) {
+  console.log(`[mcp:${stage}]`, JSON.stringify({ flow_id: flowId, ...data }));
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -328,16 +347,33 @@ function rolloutBlockedResponse() {
 async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
   const id = req.id ?? null;
   switch (req.method) {
-    case "initialize":
+    case "initialize": {
+      // Negocia a versão pedida pelo cliente quando suportada. Responder sempre
+      // 2025-06-18 a um cliente que pediu 2025-03-26 derruba a conexão em alguns
+      // conectores logo após o OAuth.
+      const asked = (req.params?.protocolVersion as string | undefined) ?? "";
+      const negotiated = SUPPORTED_PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSION;
       return rpcResult(id, {
-        protocolVersion: PROTOCOL_VERSION,
+        protocolVersion: negotiated,
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
         instructions: catalog.manifest.instructions,
       });
+    }
     case "notifications/initialized":
     case "notifications/cancelled":
+    case "notifications/roots/list_changed":
       return null;
+    // Métodos opcionais que alguns clientes chamam no handshake. Responder
+    // "Method not found" a estes derruba a conexão — devolvemos listas vazias.
+    case "resources/list":
+      return rpcResult(id, { resources: [] });
+    case "resources/templates/list":
+      return rpcResult(id, { resourceTemplates: [] });
+    case "prompts/list":
+      return rpcResult(id, { prompts: [] });
+    case "logging/setLevel":
+      return rpcResult(id, {});
     case "ping":
       return rpcResult(id, {});
     case "tools/list": {
@@ -610,13 +646,27 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 Deno.serve(async (req: Request) => {
+  const flowId = req.headers.get("x-request-id") ?? crypto.randomUUID();
   if (req.method === "OPTIONS") return new Response("ok", { headers: mcpHeaders });
 
   const url = new URL(req.url);
   const path = url.pathname;
+  const httpStarted = Date.now();
 
-  // === RFC 9728 — Protected Resource Metadata ===
-  // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  // Entrada HTTP — nunca loga corpo, token ou segredo; só forma e tamanho.
+  flog(flowId, "http-in", {
+    method: req.method,
+    path,
+    content_type: req.headers.get("content-type"),
+    accept: req.headers.get("accept"),
+    protocol_version: req.headers.get("mcp-protocol-version"),
+    has_session: !!req.headers.get("mcp-session-id"),
+    has_authorization: (req.headers.get("authorization") ?? "").length > 0,
+    content_length: req.headers.get("content-length"),
+    user_agent: req.headers.get("user-agent"),
+    origin: req.headers.get("origin"),
+  });
+
   // === Proxy /oauth/authorize com scope sanitization ===
   // Corrige clientes MCP que cachearam scopes antigos (read/write) e não conseguem
   // completar OAuth porque o Supabase rejeita com "unsupported scope".
@@ -628,19 +678,23 @@ Deno.serve(async (req: Request) => {
     const dropped = requested.filter((s) => !SUPABASE_SUPPORTED_SCOPES.has(s));
     // Garante openid — necessário para emissão de id_token no OIDC flow.
     if (kept.length === 0 || !kept.includes("openid")) kept.unshift("openid");
-    console.log("[oauth-authorize-proxy]", JSON.stringify({
+    flog(flowId, "oauth-authorize", {
       client_id: incoming.get("client_id"),
       redirect_uri: incoming.get("redirect_uri"),
       response_type: incoming.get("response_type"),
-      state: incoming.get("state"),
+      // `state` nunca em texto puro: fingerprint permite comparar preservação.
+      state_fp: await fingerprint(incoming.get("state")),
+      state_len: (incoming.get("state") ?? "").length,
       code_challenge_method: incoming.get("code_challenge_method"),
-      has_code_challenge: !!incoming.get("code_challenge"),
+      code_challenge_fp: await fingerprint(incoming.get("code_challenge")),
+      resource: incoming.get("resource"),
       scope_in: rawScope,
       scope_out: kept.join(" "),
       dropped_scopes: dropped,
-    }));
+    });
     incoming.set("scope", Array.from(new Set(kept)).join(" "));
     const target = `${OAUTH_AS_ISSUER}/oauth/authorize?${incoming.toString()}`;
+    flog(flowId, "oauth-authorize-redirect", { status: 302, latency_ms: Date.now() - httpStarted });
     return new Response(null, {
       status: 302,
       headers: { ...mcpHeaders, Location: target },
@@ -649,10 +703,14 @@ Deno.serve(async (req: Request) => {
 
   // === RFC 9728 — Protected Resource Metadata ===
   // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  // Anunciamos o próprio MCP como authorization server (RFC 8414 issuer) para que
+  // o cliente leia o NOSSO metadata — que aponta o `authorization_endpoint` ao proxy
+  // sanitizador. O issuer do Supabase segue anunciado como alternativa.
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-protected-resource")) {
+    flog(flowId, "discovery", { doc: "protected-resource", status: 200, latency_ms: Date.now() - httpStarted });
     return jsonResponse({
       resource: MCP_RESOURCE_URL,
-      authorization_servers: [OAUTH_AS_ISSUER],
+      authorization_servers: [MCP_RESOURCE_URL, OAUTH_AS_ISSUER],
       bearer_methods_supported: ["header"],
       scopes_supported: ["openid", "email", "profile"],
       resource_documentation:
@@ -660,30 +718,38 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+
   // === RFC 8414 — Authorization Server Metadata ===
   // Servimos versão modificada do doc do Supabase apontando `authorization_endpoint`
   // para nosso proxy sanitizador. Assim scopes desconhecidos são descartados antes
   // de chegarem ao Supabase.
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-authorization-server")) {
+    const base = {
+      // Este documento é servido a partir de MCP_RESOURCE_URL, então o issuer
+      // precisa ser esta mesma origem/path para o cliente considerá-lo coerente
+      // (RFC 8414 §3.3). Endpoints de token/registro seguem no Supabase.
+      issuer: MCP_RESOURCE_URL,
+      authorization_endpoint: AUTHORIZE_PROXY_URL,
+      token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
+      registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients/register`,
+      jwks_uri: `${OAUTH_AS_ISSUER}/.well-known/jwks.json`,
+      userinfo_endpoint: `${OAUTH_AS_ISSUER}/oauth/userinfo`,
+      response_types_supported: ["code"],
+      response_modes_supported: ["query"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
+      code_challenge_methods_supported: ["S256"],
+      token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
+      scopes_supported: ["openid", "email", "profile"],
+    };
     try {
       const upstream = await fetch(`${OAUTH_AS_ISSUER}/.well-known/oauth-authorization-server`);
       const meta = await upstream.json();
-      meta.authorization_endpoint = AUTHORIZE_PROXY_URL;
-      meta.scopes_supported = ["openid", "email", "profile"];
-      return jsonResponse(meta);
-    } catch {
-      return jsonResponse({
-        issuer: OAUTH_AS_ISSUER,
-        authorization_endpoint: AUTHORIZE_PROXY_URL,
-        token_endpoint: `${OAUTH_AS_ISSUER}/oauth/token`,
-        registration_endpoint: `${OAUTH_AS_ISSUER}/oauth/clients/register`,
-        jwks_uri: `${OAUTH_AS_ISSUER}/.well-known/jwks.json`,
-        response_types_supported: ["code"],
-        grant_types_supported: ["authorization_code", "refresh_token"],
-        code_challenge_methods_supported: ["S256"],
-        token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
-        scopes_supported: ["openid", "email", "profile"],
-      });
+      const merged = { ...meta, ...base };
+      flog(flowId, "discovery", { doc: "authorization-server", upstream: upstream.status, status: 200, latency_ms: Date.now() - httpStarted });
+      return jsonResponse(merged);
+    } catch (err) {
+      flog(flowId, "discovery", { doc: "authorization-server", upstream: "fetch_failed", error: String(err), status: 200 });
+      return jsonResponse(base);
     }
   }
 
@@ -763,21 +829,63 @@ Deno.serve(async (req: Request) => {
   }
 
 
+  // Leitura tolerante do corpo. Antes, qualquer POST fora do formato virava 400
+  // "Parse error" SEM registro de forma/tamanho — exatamente o 400 silencioso que
+  // derrubava o handshake do ChatGPT sem deixar rastro.
+  const rawBody = await req.text();
+  const trimmed = rawBody.trim();
+
+  // Corpo vazio (keep-alive / probe de alguns conectores): 202, não erro.
+  if (trimmed.length === 0) {
+    flog(flowId, "post-empty", { status: 202, bytes: 0, latency_ms: Date.now() - httpStarted });
+    return new Response(null, {
+      status: 202,
+      headers: { ...mcpHeaders, "Mcp-Session-Id": req.headers.get("mcp-session-id") ?? crypto.randomUUID() },
+    });
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
+    body = JSON.parse(trimmed);
+  } catch (err) {
+    flog(flowId, "post-parse-error", {
+      status: 400,
+      bytes: rawBody.length,
+      content_type: req.headers.get("content-type"),
+      // Prefixo curto e sem segredo: suficiente para identificar form-encoded, XML, etc.
+      shape: trimmed.slice(0, 24),
+      error: String(err),
+    });
     return new Response(JSON.stringify(rpcError(null, -32700, "Parse error")), {
       status: 400,
       headers: { ...mcpHeaders, "Content-Type": "application/json" },
     });
   }
 
+
   const startedAt = Date.now();
   const auth = await resolveAuth(req);
 
   // Se veio Authorization: Bearer inválido, sinaliza fluxo OAuth (RFC 9728).
-  const hasAuthHeader = (req.headers.get("authorization") ?? "").toLowerCase().startsWith("bearer ");
+  const rawAuth = req.headers.get("authorization") ?? "";
+  const hasAuthHeader = rawAuth.toLowerCase().startsWith("bearer ");
+  const bearer = hasAuthHeader ? rawAuth.slice(7).trim() : "";
+  if (hasAuthHeader) {
+    const claims = bearer.startsWith("eyJ") ? decodeJwtPayload(bearer) : null;
+    flog(flowId, "auth", {
+      token_kind: bearer.startsWith("lmcp_") ? "pat" : bearer.startsWith("eyJ") ? "jwt" : "unknown",
+      token_fp: await fingerprint(bearer),
+      iss: claims?.iss ?? null,
+      aud: claims?.aud ?? null,
+      has_client_id: !!(claims?.client_id ?? claims?.azp),
+      exp: claims?.exp ?? null,
+      expired: typeof claims?.exp === "number" ? claims.exp * 1000 < Date.now() : null,
+      accepted: !!auth.userId,
+      auth_source: auth.authSource,
+      rollout_allowed: auth.rolloutAllowed,
+      scopes: auth.scopes,
+    });
+  }
   const responseHeaders: Record<string, string> = { ...mcpHeaders, "Content-Type": "application/json" };
   if (hasAuthHeader && !auth.userId) {
     responseHeaders["WWW-Authenticate"] = WWW_AUTH_HEADER;
@@ -793,10 +901,22 @@ Deno.serve(async (req: Request) => {
   const responses: unknown[] = [];
   for (const r of requests) {
     if (!r || typeof r !== "object" || (r as JsonRpcRequest).jsonrpc !== "2.0") {
+      flog(flowId, "invalid-request", {
+        reason: !r || typeof r !== "object" ? "not_object" : "missing_jsonrpc_2_0",
+        keys: r && typeof r === "object" ? Object.keys(r as object).slice(0, 8) : [],
+      });
       responses.push(rpcError(null, -32600, "Invalid Request"));
       continue;
     }
-    const res = await handleMethod(r as JsonRpcRequest, auth);
+    const rpc = r as JsonRpcRequest;
+    const mStarted = Date.now();
+    const res = await handleMethod(rpc, auth);
+    flog(flowId, "rpc", {
+      method: rpc.method,
+      is_notification: rpc.id === undefined || rpc.id === null,
+      responded: !!res,
+      latency_ms: Date.now() - mStarted,
+    });
     if (res) responses.push(res);
   }
 
@@ -806,16 +926,19 @@ Deno.serve(async (req: Request) => {
   }
 
   const logHandshake = (status: number, bytes: number) =>
-    console.log("[mcp-http]", JSON.stringify({
+    flog(flowId, "http-out", {
       methods: requests.map((r: any) => r?.method).filter(Boolean),
       status,
       bytes,
-      sessionId,
-      authSource: auth.authSource,
-      clientId: auth.clientId,
-      hasUser: !!auth.userId,
-      latencyMs: Date.now() - startedAt,
-    }));
+      session_id: sessionId,
+      auth_source: auth.authSource,
+      client_id: auth.clientId,
+      has_user: !!auth.userId,
+      challenge: !!responseHeaders["WWW-Authenticate"],
+      rpc_latency_ms: Date.now() - startedAt,
+      total_latency_ms: Date.now() - httpStarted,
+    });
+
 
   if (responses.length === 0) {
     logHandshake(202, 0);
