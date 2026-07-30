@@ -26,6 +26,10 @@ import { snapshotForAgenda, type AgendaPageSnapshot } from "@/modules/agenda/ai"
 import { snapshotForGallery, type GalleryPageSnapshot } from "@/modules/gallery/ai";
 import { snapshotForClientes, type ClientesPageSnapshot } from "@/modules/clientes/ai";
 import { snapshotForLeads, type LeadsPageSnapshot } from "@/modules/leads/ai";
+import {
+  snapshotForPrecificacao,
+  type PrecificacaoPageSnapshot,
+} from "@/modules/precificacao/ai";
 import { snapshotForFormularios, type FormulariosPageSnapshot } from "@/modules/formularios/ai";
 import { snapshotForContratos, type ContratosPageSnapshot } from "@/modules/contratos/ai";
 import {
@@ -43,6 +47,7 @@ export type LunariPage =
   | "gallery"
   | "clientes"
   | "leads"
+  | "precificacao"
   | "formularios"
   | "contratos"
   | "configuracoes";
@@ -56,6 +61,7 @@ export interface AllPageSnapshots {
   gallery: GalleryPageSnapshot;
   clientes: ClientesPageSnapshot;
   leads: LeadsPageSnapshot;
+  precificacao: PrecificacaoPageSnapshot;
   formularios: FormulariosPageSnapshot;
   contratos: ContratosPageSnapshot;
   configuracoes: ConfiguracoesPageSnapshot;
@@ -85,6 +91,7 @@ export function buildAllPageSnapshots(user: AuthUser | null): AllPageSnapshots {
     gallery: snapshotForGallery(user),
     clientes: snapshotForClientes(user),
     leads: snapshotForLeads(user),
+    precificacao: snapshotForPrecificacao(user),
     formularios: snapshotForFormularios(user),
     contratos: snapshotForContratos(user),
     configuracoes: snapshotForConfiguracoes(user),
@@ -110,6 +117,8 @@ export function getPageSnapshot<P extends LunariPage>(
       return snapshotForClientes(user) as AllPageSnapshots[P];
     case "leads":
       return snapshotForLeads(user) as AllPageSnapshots[P];
+    case "precificacao":
+      return snapshotForPrecificacao(user) as AllPageSnapshots[P];
     case "formularios":
       return snapshotForFormularios(user) as AllPageSnapshots[P];
     case "contratos":
