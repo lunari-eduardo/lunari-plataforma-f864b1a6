@@ -32,7 +32,12 @@ export interface AICapabilityTool {
   examples: Array<{ nl: string; input: unknown; output?: unknown }>;
   /** Metadados para a UI de confirmação (só em capabilities com approval). */
   confirmation?: ConfirmationChallenge;
+  /** A2 — transporte declarado (rpc/edge/client-only). */
+  execution: SerializedExecution;
+  /** Superfícies que enxergam esta capability. */
+  audience: readonly CapabilityAudience[];
 }
+
 
 const EMPTY_OBJECT_SCHEMA: Record<string, unknown> = {
   type: "object",
