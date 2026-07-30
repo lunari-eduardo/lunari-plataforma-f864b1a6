@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-30T05:04:44.735Z",
-  "catalogHash": "83f1dd99daf4833283802f95c9a82152445de88fd988821c9a5ce983c2ce05a5",
+  "generatedAt": "2026-07-30T18:45:22.258Z",
+  "catalogHash": "d920c2bf5ae6b36bc50e972a020dcca826d0cb498a7e0389340c068bc1e72823",
   "catalogVersion": 2,
   "manifest": {
     "auth": {
@@ -1273,6 +1273,18 @@
       },
       {
         "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Criar pacote com preço calculado. Calcula o preço a partir das horas, custo por hora e markup (ou margem desejada) e cria o pacote já precificado na categoria informada. Requer aprovação.",
+        "name": "lunari.precificacao.criarPacotePrecificado",
+        "title": "precificacao.criarPacotePrecificado"
+      },
+      {
+        "annotations": {
           "destructiveHint": false,
           "idempotentHint": true,
           "openWorldHint": false,
@@ -1366,6 +1378,18 @@
         "description": "Listar tabelas de preço de foto extra. Lista a tabela global e as tabelas por categoria com suas faixas progressivas de valor por foto.",
         "name": "lunari.precificacao.listTabelas",
         "title": "precificacao.listTabelas"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Salvar cenário da calculadora. Calcula e salva um cenário de precificação (horas, markup, produtos e custos extras) sem alterar nenhum preço praticado.",
+        "name": "lunari.precificacao.salvarCenario",
+        "title": "precificacao.salvarCenario"
       },
       {
         "annotations": {
@@ -11762,6 +11786,156 @@
     },
     {
       "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.criarPacotePrecificado",
+      "costHint": "cheap",
+      "description": "Criar pacote com preço calculado. Calcula o preço a partir das horas, custo por hora e markup (ou margem desejada) e cria o pacote já precificado na categoria informada. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arredondarPara": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "categoriaId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "criarCategoria": {
+            "type": "boolean"
+          },
+          "custosExtras": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "descricao": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "type": "number"
+                },
+                "valorUnitario": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "valorUnitario"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "fotosIncluidas": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "horasEstimadas": {
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "number"
+          },
+          "margemDesejada": {
+            "type": "number"
+          },
+          "markup": {
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "number"
+          },
+          "nome": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "produtos": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "custo": {
+                  "type": "number"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "custo"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "valorBase": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "valorFotoExtra": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.criarPacotePrecificado",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "custoTotal": {
+            "nullable": true,
+            "type": "number"
+          },
+          "lucratividade": {
+            "nullable": true,
+            "type": "number"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "pacoteId": {
+            "type": "string"
+          },
+          "valorBase": {
+            "type": "number"
+          },
+          "valorFotoExtra": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pacoteId",
+          "nome",
+          "valorBase",
+          "valorFotoExtra",
+          "custoTotal",
+          "lucratividade",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.criarPacotePrecificado"
+    },
+    {
+      "annotations": {
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": false,
@@ -12406,6 +12580,125 @@
       "scope": "read",
       "scopeTier": "read",
       "title": "precificacao.listTabelas"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.salvarCenario",
+      "costHint": "cheap",
+      "description": "Salvar cenário da calculadora. Calcula e salva um cenário de precificação (horas, markup, produtos e custos extras) sem alterar nenhum preço praticado.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "custosExtras": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "descricao": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "type": "number"
+                },
+                "valorUnitario": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "valorUnitario"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "horasEstimadas": {
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "number"
+          },
+          "margemDesejada": {
+            "type": "number"
+          },
+          "markup": {
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "number"
+          },
+          "nome": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "produtos": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "custo": {
+                  "type": "number"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "custo"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "nome",
+          "horasEstimadas"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.salvarCenario",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "cenarioId": {
+            "type": "string"
+          },
+          "custoTotal": {
+            "type": "number"
+          },
+          "lucratividade": {
+            "type": "number"
+          },
+          "markupUsado": {
+            "type": "number"
+          },
+          "precoFinal": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "cenarioId",
+          "custoTotal",
+          "precoFinal",
+          "lucratividade",
+          "markupUsado",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "precificacao.salvarCenario"
     },
     {
       "annotations": {
