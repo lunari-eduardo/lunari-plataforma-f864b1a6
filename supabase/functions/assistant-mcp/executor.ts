@@ -345,6 +345,170 @@ const READ_TOOLS: Record<string, Handler> = {
     const pendente = (data ?? []).reduce((s: number, r: any) => s + ((Number(r.valor_total) || 0) - (Number(r.valor_pago) || 0)), 0);
     return ok({ sessoes: data ?? [], totalPendente: pendente }, `${data?.length ?? 0} sessão(ões) com ${money(pendente)} pendente(s).`);
   },
+  "lunari.workflow.getCardBySession": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const s = r.sessao!;
+    const [{ data: fin }, { data: gal }] = await Promise.all([
+      sb.rpc("workflow_session_financials", { p_session_id: s.id }),
+      s.galeria_id
+        ? sb.from("galerias").select("id,titulo,status,status_pagamento").eq("id", s.galeria_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+    ]);
+    const produtos = Array.isArray(s.produtos_incluidos) ? s.produtos_incluidos : [];
+    return ok(
+      {
+        sessao: s,
+        cliente: s.clientes ?? null,
+        galeria: gal ?? null,
+        financeiro: Array.isArray(fin) ? fin[0] ?? null : fin ?? null,
+        produtos,
+      },
+      `Sessão ${s.session_id ?? s.id} · ${s.clientes?.nome ?? "sem cliente"} · ${s.data_sessao ?? "sem data"} · ` +
+        `${s.status ?? "sem etapa"} · total ${money(s.valor_total)} · pago ${money(s.valor_pago)} · ` +
+        `pendente ${money((Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0))}.`,
+    );
+  },
+  "lunari.workflow.getSessionFinancials": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const s = r.sessao!;
+    const { data, error } = await sb.rpc("workflow_session_financials", { p_session_id: s.id });
+    if (error) return fail(error.message);
+    const fin = Array.isArray(data) ? data[0] ?? null : data ?? null;
+    const { data: pagamentos } = await sb.from("clientes_transacoes")
+      .select("id,valor,tipo,data_transacao,descricao")
+      .eq("user_id", uid).eq("session_id", s.session_id ?? "__none__")
+      .order("data_transacao", { ascending: false }).limit(100);
+    return ok(
+      { sessionId: s.id, sessionKey: s.session_id, financeiro: fin, pagamentos: pagamentos ?? [] },
+      `Total ${money(s.valor_total)} · pago ${money(s.valor_pago)} · pendente ${money((Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0))} · ${pagamentos?.length ?? 0} lançamento(s).`,
+    );
+  },
+  "lunari.workflow.listSessionsByPaymentStatus": async (sb, uid, args) => {
+    const status = String(args.statusFinanceiro ?? args.status ?? "pendente");
+    const { data, error } = await sb.from("clientes_sessoes")
+      .select("id,session_id,cliente_id,data_sessao,pacote,status,valor_total,valor_pago,status_financeiro")
+      .eq("user_id", uid).eq("status_financeiro", status)
+      .order("data_sessao", { ascending: false }).limit(clampLimit(args.limit, 50, 200));
+    if (error) return fail(error.message);
+    return ok({ statusFinanceiro: status, sessoes: data ?? [] }, `${data?.length ?? 0} sessão(ões) com status financeiro "${status}".`);
+  },
+  "lunari.workflow.statusOptions": async (sb, uid) => {
+    const { data, error } = await sb.from("etapas_trabalho")
+      .select("nome,cor,ordem").eq("user_id", uid).order("ordem");
+    if (error) return fail(error.message);
+    const options = (data ?? []).map((r: any) => ({ value: r.nome, label: r.nome, color: r.cor ?? null, ordem: r.ordem ?? null }));
+    return ok({ options }, options.length ? `Etapas: ${options.map((o: any) => o.value).join(" → ")}.` : "Nenhuma etapa configurada.");
+  },
+  "lunari.workflow.metricsForMonth": async (sb, uid, args) => {
+    const { start, end } = monthRange(args);
+    const { data, error } = await sb.rpc("workflow_month_metrics", { p_user_id: uid, p_start: start, p_end: end });
+    if (error) return fail(error.message);
+    const m = (Array.isArray(data) ? data[0] : data) ?? {};
+    return ok(
+      { start, end, metrics: m },
+      `${start.slice(0, 7)}: ${m.sessoes ?? 0} sessão(ões) · previsto ${money(m.previsto)} · recebido ${money(m.receita)} · pendente ${money(m.pendente)}.`,
+    );
+  },
+  "lunari.workflow.metricsForRange": async (sb, uid, args) => {
+    const start = String(args.start ?? args.startDate ?? addDays(today(), -90));
+    const end = String(args.end ?? args.endDate ?? today());
+    const { data, error } = await sb.rpc("workflow_range_metrics", {
+      p_user_id: uid, p_start: start, p_end: end,
+      p_granularity: String(args.granularity ?? "month"),
+      p_include_historico: Boolean(args.includeHistorico ?? false),
+    });
+    if (error) return fail(error.message);
+    return ok({ start, end, metrics: data }, `Métricas de ${start} a ${end} calculadas.`);
+  },
+  "lunari.workflow.analytics.summary": async (sb, uid, args) => {
+    const start = String(args.start ?? args.startDate ?? addDays(today(), -365));
+    const end = String(args.end ?? args.endDate ?? today());
+    const { data, error } = await sb.rpc("workflow_analytics_summary", {
+      p_user_id: uid, p_start: start, p_end: end,
+      p_include_historico: Boolean(args.includeHistorico ?? false),
+    });
+    if (error) return fail(error.message);
+    const t = (data as any)?.totals ?? {};
+    return ok(
+      { start, end, summary: data },
+      `${t.sessoes ?? 0} sessão(ões) de ${start} a ${end} · previsto ${money(t.previsto)} · receita ${money(t.receita)} · ticket médio ${money(t.ticket_medio)}.`,
+    );
+  },
+  "lunari.workflow.photoProductionForMonth": async (sb, uid, args) => {
+    const { start, end } = monthRange(args);
+    const { data, error } = await sb.rpc("workflow_photo_production_month", {
+      p_user_id: uid, p_start: start, p_end: end,
+      p_categoria: args.categoria ? String(args.categoria) : null,
+    });
+    if (error) return fail(error.message);
+    const row = (Array.isArray(data) ? data[0] : data) ?? {};
+    return ok({ start, end, producao: data }, `Produção fotográfica de ${start.slice(0, 7)}: ${JSON.stringify(row).slice(0, 300)}`);
+  },
+  "lunari.workflow.diagnoseSession": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const s = r.sessao!;
+    const findings: Array<{ code: string; severity: string; message: string; suggestedCapability: string | null }> = [];
+    const total = Number(s.valor_total) || 0, pago = Number(s.valor_pago) || 0;
+    if (!s.cliente_id) findings.push({ code: "SEM_CLIENTE", severity: "warning", message: "Sessão sem cliente vinculado.", suggestedCapability: "lunari.workflow.updateFields" });
+    if (!s.data_sessao) findings.push({ code: "SEM_DATA", severity: "warning", message: "Sessão sem data.", suggestedCapability: "lunari.workflow.updateFields" });
+    if (total <= 0) findings.push({ code: "TOTAL_ZERADO", severity: "warning", message: "Valor total zerado.", suggestedCapability: "lunari.workflow.updateFields" });
+    if (pago > total + 0.009) findings.push({ code: "PAGO_MAIOR_TOTAL", severity: "critical", message: `Pago (${money(pago)}) maior que o total (${money(total)}).`, suggestedCapability: "lunari.workflow.getSessionFinancials" });
+    if (!s.galeria_id) findings.push({ code: "SEM_GALERIA", severity: "info", message: "Sessão sem galeria vinculada.", suggestedCapability: null });
+    const produtos = Array.isArray(s.produtos_incluidos) ? s.produtos_incluidos : [];
+    for (const p of produtos as any[]) {
+      if (p?.tipo === "manual" && !(Number(p.valorUnitario) > 0)) {
+        findings.push({ code: "PRODUTO_SEM_PRECO", severity: "warning", message: `Produto "${p?.nome ?? "?"}" sem preço unitário.`, suggestedCapability: "lunari.workflow.produto.setPrice" });
+      }
+    }
+    return ok(
+      { sessionId: s.id, ok: findings.length === 0, findings },
+      findings.length === 0 ? "Nenhuma inconsistência encontrada." : `${findings.length} ponto(s) de atenção: ${findings.map((f) => f.message).join(" ")}`,
+    );
+  },
+  "lunari.workflow.produto.listBySession": async (sb, uid, args) => {
+    const r = await resolveSessao(sb, uid, args);
+    if (r.error) return fail(r.error);
+    const produtos = projetarProdutos(r.sessao!);
+    return ok(
+      { sessionId: r.sessao!.id, produtos },
+      produtos.length
+        ? produtos.map((p) => `${p.nome} ×${p.quantidade} · ${p.etapaAtual ?? "sem etapa"}${p.prazoEntrega ? ` · prazo ${p.prazoEntrega}` : ""}`).join(" | ")
+        : "Nenhum produto nesta sessão.",
+    );
+  },
+  "lunari.workflow.produto.listPending": async (sb, uid, args) => {
+    const { data, error } = await sb.from("clientes_sessoes")
+      .select("id,session_id,data_sessao,produtos_incluidos,clientes(nome)")
+      .eq("user_id", uid).neq("status", "historico")
+      .not("produtos_incluidos", "is", null)
+      .order("data_sessao", { ascending: false }).limit(clampLimit(args.limit, 200, 400));
+    if (error) return fail(error.message);
+    const hoje = today();
+    const buckets: Record<string, any[]> = { atrasado: [], hoje: [], amanha: [], semana: [], futuro: [], semPrazo: [] };
+    for (const s of (data ?? []) as any[]) {
+      for (const p of projetarProdutos(s)) {
+        if (p.entregue) continue;
+        const item = { sessionId: s.id, sessionKey: s.session_id, cliente: s.clientes?.nome ?? null, ...p };
+        const prazo = p.prazoEntrega;
+        if (!prazo) buckets.semPrazo.push(item);
+        else if (prazo < hoje) buckets.atrasado.push(item);
+        else if (prazo === hoje) buckets.hoje.push(item);
+        else if (prazo === addDays(hoje, 1)) buckets.amanha.push(item);
+        else if (prazo <= addDays(hoje, 7)) buckets.semana.push(item);
+        else buckets.futuro.push(item);
+      }
+    }
+    const totalPend = Object.values(buckets).reduce((a, b) => a + b.length, 0);
+    return ok(
+      { buckets, total: totalPend },
+      `${totalPend} produto(s) em produção · ${buckets.atrasado.length} atrasado(s), ${buckets.hoje.length} para hoje, ${buckets.semana.length} nesta semana.`,
+    );
+  },
+
+
 
   // -------------------- FINANCEIRO --------------------
   "lunari.finance.item.list": async (sb, uid, args) => {
