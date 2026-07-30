@@ -1,11 +1,24 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Camera, Plus, Trash2 } from 'lucide-react';
 import { usePricing } from '@/contexts/PricingContext';
 import { EtapaColapsavel } from './EtapaColapsavel';
-import type { Equipamento } from '@/types/precificacao';
+import { formatCurrency } from '@/utils/currencyUtils';
+import {
+  LIST_SHELL,
+  ROW_DIVIDER,
+  ROW_HEADER,
+  ROW_BASE,
+  INLINE_ADD,
+  GHOST_INPUT,
+  GOLD_ICON,
+  LIST_EMPTY,
+} from '@/lib/dialogTokens';
+
+/** Grade única compartilhada entre cabeçalho, formulário e linhas. */
+const GRID = 'grid grid-cols-[minmax(0,1fr)_112px_120px_64px_104px_32px] items-center gap-2';
 
 export function EtapaEquipamentos() {
   const {
@@ -19,49 +32,37 @@ export function EtapaEquipamentos() {
 
   const [novoEquipamento, setNovoEquipamento] = useState({
     nome: '',
-    valorPago: '',
+    valorPago: 0,
     dataCompra: '',
     vidaUtil: '5'
   });
 
   const equipamentos = estruturaCustos?.equipamentos || [];
-  
-  const totalDepreciacaoMensal = equipamentos.reduce((total, eq) => {
-    const depreciacaoMensal = eq.valorPago / (eq.vidaUtil * 12);
-    return total + depreciacaoMensal;
-  }, 0);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
+  const calcularDepreciacao = (valorPago: number, vidaUtil: number) =>
+    vidaUtil > 0 ? valorPago / (vidaUtil * 12) : 0;
 
-  const calcularDepreciacao = (valorPago: number, vidaUtil: number) => {
-    return valorPago / (vidaUtil * 12);
-  };
+  const totalDepreciacaoMensal = equipamentos.reduce(
+    (total, eq) => total + calcularDepreciacao(eq.valorPago, eq.vidaUtil),
+    0
+  );
 
   const handleAdicionar = () => {
-    if (novoEquipamento.nome && novoEquipamento.valorPago) {
+    if (novoEquipamento.nome && novoEquipamento.valorPago > 0) {
       adicionarEquipamento({
         nome: novoEquipamento.nome,
-        valorPago: parseFloat(novoEquipamento.valorPago) || 0,
+        valorPago: novoEquipamento.valorPago,
         dataCompra: novoEquipamento.dataCompra || new Date().toISOString().split('T')[0],
         vidaUtil: parseInt(novoEquipamento.vidaUtil) || 5
       });
-      setNovoEquipamento({
-        nome: '',
-        valorPago: '',
-        dataCompra: '',
-        vidaUtil: '5'
-      });
+      setNovoEquipamento({ nome: '', valorPago: 0, dataCompra: '', vidaUtil: '5' });
     }
   };
 
-  const depreciacaoPreview = novoEquipamento.valorPago && novoEquipamento.vidaUtil
-    ? calcularDepreciacao(parseFloat(novoEquipamento.valorPago), parseInt(novoEquipamento.vidaUtil))
-    : 0;
+  const depreciacaoPreview = calcularDepreciacao(
+    novoEquipamento.valorPago,
+    parseInt(novoEquipamento.vidaUtil) || 0
+  );
 
   if (loading) {
     return (
@@ -73,7 +74,7 @@ export function EtapaEquipamentos() {
         statusSalvamento="salvando"
       >
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+          <div className="animate-spin h-5 w-5 rounded-full border border-muted-foreground/40 border-t-transparent" />
         </div>
       </EtapaColapsavel>
     );
@@ -88,157 +89,132 @@ export function EtapaEquipamentos() {
       statusSalvamento={statusSalvamento}
     >
       <div className="space-y-3">
-        {/* Header com total */}
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/20 bg-card/60 px-3 py-2.5">
+        {/* Faixa de total — sem card, apenas hairline */}
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2.5">
           <div className="flex items-center gap-2">
-            <Camera className="h-4 w-4" style={{ color: 'hsl(var(--accent-gold))' }} />
-            <span className="text-[13px] font-medium text-foreground">
+            <Camera className={GOLD_ICON} />
+            <span className="text-[13px] font-semibold text-foreground">
               Depreciação mensal total
             </span>
           </div>
           <div className="text-right">
-            <span className="text-[17px] font-semibold tabular-nums" style={{ color: 'hsl(var(--accent-gold))' }}>
+            <span className="text-[15px] font-semibold tabular-nums text-[hsl(var(--accent-gold))]">
               {formatCurrency(totalDepreciacaoMensal)}
             </span>
-            <span className="text-[11px] text-muted-foreground ml-1">/mês</span>
+            <span className="ml-1 text-[11px] text-muted-foreground">/mês</span>
           </div>
         </div>
 
-        {/* Formulário de adição */}
-        <div className="rounded-lg border border-border/20 bg-card/60 p-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-            <div className="sm:col-span-2">
-              <Label className="text-xs font-medium text-muted-foreground">Nome do equipamento</Label>
+        <div className={LIST_SHELL}>
+          {/* Cabeçalho da grade (desktop) */}
+          <div className={`hidden sm:block ${ROW_HEADER} border-b border-border/60`}>
+            <div className={GRID}>
+              <span>Equipamento</span>
+              <span className="text-right">Valor pago</span>
+              <span className="text-right">Compra</span>
+              <span className="text-right">Anos</span>
+              <span className="text-right">Depreciação</span>
+              <span />
+            </div>
+          </div>
+
+          {/* Adição inline */}
+          <div className={INLINE_ADD}>
+            <div className={`${GRID} max-sm:grid-cols-2`}>
               <Input
                 placeholder="Ex: Câmera Canon R6..."
                 value={novoEquipamento.nome}
                 onChange={e => setNovoEquipamento(prev => ({ ...prev, nome: e.target.value }))}
-                className="h-8 mt-1 text-sm"
+                className="h-8 text-[13px] max-sm:col-span-2"
               />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Valor pago</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0,00"
+              <CurrencyInput
                 value={novoEquipamento.valorPago}
-                onChange={e => setNovoEquipamento(prev => ({ ...prev, valorPago: e.target.value }))}
-                className="h-8 mt-1 text-sm"
+                onChange={v => setNovoEquipamento(prev => ({ ...prev, valorPago: v }))}
+                className="h-8 text-[13px]"
               />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Data da compra</Label>
               <Input
                 type="date"
                 value={novoEquipamento.dataCompra}
                 onChange={e => setNovoEquipamento(prev => ({ ...prev, dataCompra: e.target.value }))}
-                className="h-8 mt-1 text-sm"
+                className="h-8 text-[13px]"
               />
-            </div>
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground">Vida útil (anos)</Label>
               <Input
                 type="number"
                 min="1"
                 value={novoEquipamento.vidaUtil}
                 onChange={e => setNovoEquipamento(prev => ({ ...prev, vidaUtil: e.target.value }))}
-                className="h-8 mt-1 text-sm"
+                className="h-8 text-[13px] text-right"
               />
+              <span className="text-right text-[12px] tabular-nums text-muted-foreground max-sm:hidden">
+                {depreciacaoPreview > 0 ? formatCurrency(depreciacaoPreview) : '—'}
+              </span>
+              <Button
+                onClick={handleAdicionar}
+                disabled={!novoEquipamento.nome || novoEquipamento.valorPago <= 0}
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 max-sm:col-span-2 max-sm:w-full"
+                title="Adicionar equipamento"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="sm:hidden ml-1 text-[13px]">Adicionar</span>
+              </Button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 mt-2.5">
-            <span className="text-xs text-muted-foreground">
-              {depreciacaoPreview > 0
-                ? <>Depreciação mensal: <span className="font-medium text-foreground tabular-nums">{formatCurrency(depreciacaoPreview)}</span></>
-                : 'Informe nome e valor para adicionar'}
-            </span>
-            <Button
-              onClick={handleAdicionar}
-              disabled={!novoEquipamento.nome || !novoEquipamento.valorPago}
-              size="sm"
-              className="h-8"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Adicionar
-            </Button>
-          </div>
-        </div>
-
-        {/* Lista de equipamentos */}
-        <div className="rounded-lg border border-border/20 bg-card/60 divide-y divide-border/20">
-          {equipamentos.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-6">
-              Nenhum equipamento cadastrado
-            </p>
-          ) : (
-            equipamentos.map(eq => {
-              const depreciacao = calcularDepreciacao(eq.valorPago, eq.vidaUtil);
-              return (
-                <div key={eq.id} className="px-3 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={eq.nome}
-                      onChange={e => atualizarEquipamento(eq.id, 'nome', e.target.value)}
-                      className="h-8 text-sm font-medium flex-1"
-                      placeholder="Nome do equipamento"
-                    />
-                    <div className="hidden sm:flex items-center h-8 px-2.5 rounded-md text-[13px] font-medium tabular-nums shrink-0"
-                      style={{ background: 'hsl(var(--accent-gold-soft))', color: 'hsl(var(--accent-gold))' }}>
-                      {formatCurrency(depreciacao)}<span className="ml-1 opacity-70">/mês</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => removerEquipamento(eq.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground">Valor pago</Label>
+          {/* Lista */}
+          <div className={ROW_DIVIDER}>
+            {equipamentos.length === 0 ? (
+              <p className={LIST_EMPTY}>Nenhum equipamento cadastrado</p>
+            ) : (
+              equipamentos.map(eq => {
+                const depreciacao = calcularDepreciacao(eq.valorPago, eq.vidaUtil);
+                return (
+                  <div key={eq.id} className={ROW_BASE}>
+                    <div className={`${GRID} max-sm:grid-cols-2`}>
                       <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={eq.valorPago}
-                        onChange={e => atualizarEquipamento(eq.id, 'valorPago', parseFloat(e.target.value) || 0)}
-                        className="h-8 mt-1 text-sm"
+                        value={eq.nome}
+                        onChange={e => atualizarEquipamento(eq.id, 'nome', e.target.value)}
+                        className={`${GHOST_INPUT} font-medium max-sm:col-span-2`}
+                        placeholder="Nome do equipamento"
                       />
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground">Data da compra</Label>
+                      <CurrencyInput
+                        value={eq.valorPago}
+                        onChange={v => atualizarEquipamento(eq.id, 'valorPago', v)}
+                        showPrefix={false}
+                        className={GHOST_INPUT}
+                      />
                       <Input
                         type="date"
                         value={eq.dataCompra}
                         onChange={e => atualizarEquipamento(eq.id, 'dataCompra', e.target.value)}
-                        className="h-8 mt-1 text-sm"
+                        className={`${GHOST_INPUT} text-right`}
                       />
-                    </div>
-                    <div>
-                      <Label className="text-[11px] text-muted-foreground">Vida útil (anos)</Label>
                       <Input
                         type="number"
                         min="1"
                         value={eq.vidaUtil}
                         onChange={e => atualizarEquipamento(eq.id, 'vidaUtil', parseInt(e.target.value) || 1)}
-                        className="h-8 mt-1 text-sm"
+                        className={`${GHOST_INPUT} text-right`}
                       />
+                      <span className="text-right text-[13px] font-medium tabular-nums text-[hsl(var(--accent-gold))] max-sm:text-left">
+                        {formatCurrency(depreciacao)}
+                        <span className="ml-0.5 text-[11px] opacity-70">/mês</span>
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive max-sm:justify-self-end"
+                        onClick={() => removerEquipamento(eq.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-
-                  <p className="sm:hidden mt-2 text-[11px] text-muted-foreground">
-                    Depreciação: <span className="font-medium text-foreground tabular-nums">{formatCurrency(depreciacao)}/mês</span>
-                  </p>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </EtapaColapsavel>
