@@ -61,6 +61,10 @@ export const CORE_CAPABILITIES: ReadonlySet<string> = new Set([
   "finance.transaction.create",
   "finance.extrato.summary",
 
+  // Análise de vendas — consulta de rotina (faturamento, ticket médio)
+  "workflow.vendas.resumo",
+
+
   // Comercial
   "leads.list",
 ]);

@@ -21,7 +21,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE, BRIDGE_SCHEMAS } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
-import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_DESCRIBE, META_INVOKE, isExposed, CATALOG_SIZE } from "./exposed.ts";
+import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_DESCRIBE, META_INVOKE, isExposed, CATALOG_SIZE, aliasesFor, DOMAIN_LABELS } from "./exposed.ts";
 import { toPublicName, publicInputSchema } from "./compat.ts";
 
 import {
@@ -96,28 +96,43 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.17.0", // Superfície em camadas: núcleo curado + catálogo sob demanda (search/describe/invoke)
+  version: "0.18.0", // Grants herdados por usuário + busca tolerante (acentos/sinônimos) + vendas no núcleo
 };
 /**
  * Instruções do servidor: descrevem a arquitetura em camadas para o modelo,
  * incluindo o índice compacto de domínios (gerado no catálogo). Isso substitui
  * a listagem completa de ferramentas no handshake.
  */
-const DOMAIN_INDEX: string = (catalog as any).manifest?.domainIndex ?? "";
+const DOMAIN_COUNTS: Map<string, number> = new Map();
+for (const t of (catalog as any).tools ?? []) {
+  const d = String((t as any).capabilityId ?? "").split(".")[0];
+  if (d) DOMAIN_COUNTS.set(d, (DOMAIN_COUNTS.get(d) ?? 0) + 1);
+}
+const DOMAIN_INDEX: string = [...DOMAIN_COUNTS.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .map(([d, n]) => `${DOMAIN_LABELS[d] ?? d} (${n})`)
+  .join(" · ");
 const INSTRUCTIONS =
   `${catalog.manifest.instructions}\n\n` +
-  `As ferramentas visíveis cobrem a rotina diária (agenda, workflow, clientes, tarefas, financeiro, leads). ` +
+  `As ferramentas visíveis cobrem a rotina diária (agenda, workflow, clientes, tarefas, financeiro, leads, resumo de vendas). ` +
   `O Lunari tem ${CATALOG_SIZE} ferramentas no total — as demais (precificação, configurações, contratos, ` +
-  `formulários, galeria, relatórios, diagnósticos) NÃO são listadas aqui para manter a conexão leve. ` +
-  `Para usá-las: lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
+  `formulários, galeria, relatórios de vendas detalhados, metas, diagnósticos) NÃO são listadas aqui para manter a conexão leve, ` +
+  `mas TODAS estão disponíveis. Antes de dizer que algo não é possível, use: ` +
+  `lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
   (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "");
+
 
 /** Teto de descrição publicada no núcleo (mantém o manifesto pequeno). */
 const CORE_DESCRIPTION_MAX = 160;
+/** Normaliza para busca: minúsculas e sem acentos ("análise" ≡ "analise"). */
+function fold(text: string): string {
+  return String(text ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
 function trimDescription(text: string | undefined): string {
   const t = String(text ?? "").replace(/\s+/g, " ").trim();
   return t.length <= CORE_DESCRIPTION_MAX ? t : t.slice(0, CORE_DESCRIPTION_MAX - 1).trimEnd() + "…";
 }
+
 
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
@@ -489,26 +504,36 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 
       // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
       if (name === META_SEARCH) {
-        const q = String(args.query ?? "").toLowerCase().trim();
-        const domain = String(args.domain ?? "").toLowerCase().trim();
+        const q = fold(String(args.query ?? ""));
+        const domain = fold(String(args.domain ?? ""));
         const limit = Math.min(Number(args.limit ?? 15) || 15, 40);
-        const terms = q.split(/\s+/).filter(Boolean);
-        const hits = (catalog.tools as any[])
-          .filter((t) => !domain || String(t.capabilityId ?? "").toLowerCase().startsWith(domain + "."))
-          .filter((t) => {
-            if (terms.length === 0) return true;
-            const hay = `${t.name} ${t.title ?? ""} ${t.description ?? ""}`.toLowerCase();
-            return terms.every((term) => hay.includes(term));
+        // Ignora palavras vazias comuns ("de", "do", "por"...) e casa por
+        // QUALQUER termo, com ranqueamento — "análise de vendas" precisa achar.
+        const STOP = new Set(["de", "do", "da", "dos", "das", "e", "em", "no", "na", "por", "para", "com", "a", "o", "os", "as", "um", "uma"]);
+        const terms = q.split(/\s+/).filter((t) => t && !STOP.has(t));
+        const scored = (catalog.tools as any[])
+          .filter((t) => !domain || fold(String(t.capabilityId ?? "")).startsWith(domain + ".") || fold(String(t.capabilityId ?? "")).includes("." + domain + "."))
+          .map((t) => {
+            const name = fold(t.name);
+            const hay = fold(`${t.name} ${t.title ?? ""} ${t.description ?? ""} ${aliasesFor(t.name)}`);
+            let score = terms.length === 0 ? 1 : 0;
+            for (const term of terms) {
+              if (name.includes(term)) score += 3;
+              else if (hay.includes(term)) score += 1;
+            }
+            return { t, score };
           })
-          .slice(0, limit)
-          // Resultado LEVE: sem inputSchema (use lunari.tools.describe).
-          .map((t) => ({
-            name: toPublicName(t.name),
-            title: t.title,
-            summary: trimDescription(t.description),
-            executable: isBridged(t.name) || !!t.transport?.name,
-            needsApproval: t.needsApproval ?? null,
-          }));
+          .filter((x) => x.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+
+        const hits = scored.map(({ t }) => ({
+          name: toPublicName(t.name),
+          title: t.title,
+          summary: trimDescription(t.description),
+          executable: isBridged(t.name) || !!t.transport?.name,
+          needsApproval: t.needsApproval ?? null,
+        }));
 
         return rpcResult(id, {
           content: [{
@@ -521,6 +546,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           structuredContent: { tools: hits, total: catalog.tools.length },
         });
       }
+
 
       // Meta-tool de detalhe: schema completo de UMA ferramenta.
       if (name === META_DESCRIBE) {
