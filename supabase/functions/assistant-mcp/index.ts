@@ -19,7 +19,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
-import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
+import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE, BRIDGE_SCHEMAS } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
 import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
 import { toPublicName, publicInputSchema } from "./compat.ts";
@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.12.0", // forense ponta a ponta + POST tolerante + discovery coerente
+  version: "0.13.0", // execução remota real: bridge server-side de agenda, tarefas, clientes, workflow e financeiro
 };
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
@@ -306,9 +306,10 @@ function inAppFallback(name: string) {
       {
         type: "text",
         text:
-          `A tool "${name}" ainda não está habilitada para execução remota. ` +
-          `Ferramentas bridged: ${Object.keys(BRIDGED_TOOLS).join(", ")}. ` +
-          `Use a Lu dentro do app (https://lunari.app) para as demais.`,
+          `A tool "${name}" ainda não roda remotamente. ` +
+          `Use lunari_tools_search para achar uma equivalente executável ` +
+          `(${Object.keys(BRIDGED_TOOLS).length} disponíveis hoje: agenda, tarefas, clientes, workflow e financeiro) ` +
+          `ou execute essa ação na Lu dentro do app (https://app.lunarihub.com).`,
       },
     ],
   };
@@ -386,9 +387,10 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           name: toPublicName(t.name),
           title: t.title,
           description: t.description,
-          inputSchema: publicInputSchema(t.inputSchema),
+          inputSchema: publicInputSchema(BRIDGE_SCHEMAS[t.name] ?? t.inputSchema),
           annotations: t.annotations,
         }));
+
       const metas = META_TOOL_DEFS.map((t) => ({
         ...t,
         name: toPublicName(t.name),

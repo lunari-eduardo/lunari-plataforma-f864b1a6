@@ -11,6 +11,7 @@
  */
 import catalog from "../supabase/functions/assistant-mcp/catalog.json" with { type: "json" };
 import { EXPOSED_TOOLS, META_TOOL_DEFS } from "../supabase/functions/assistant-mcp/exposed.ts";
+import { BRIDGE_SCHEMAS } from "../supabase/functions/assistant-mcp/executor.ts";
 import { toPublicName, publicInputSchema } from "../supabase/functions/assistant-mcp/compat.ts";
 
 const NAME_RE = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -49,7 +50,7 @@ for (const internal of EXPOSED_TOOLS) {
   if (seen.has(pub)) errors.push(`${internal}: alias duplicado "${pub}"`);
   seen.add(pub);
 
-  const schema = publicInputSchema(tool.inputSchema);
+  const schema = publicInputSchema(BRIDGE_SCHEMAS[internal] ?? tool.inputSchema);
   const depth = scan(schema, pub);
   if (depth > MAX_DEPTH) errors.push(`${pub}: schema com profundidade ${depth} (máx ${MAX_DEPTH})`);
 

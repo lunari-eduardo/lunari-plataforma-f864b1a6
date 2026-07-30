@@ -1,73 +1,21 @@
 /**
  * Superfície curada exposta a clientes MCP remotos (ChatGPT, Claude).
  *
- * Motivo: o catálogo completo tem 184 tools (~110 KB em `tools/list`), acima do
- * teto prático dos conectores do ChatGPT — o conector falha logo após o OAuth
- * com "erro de conexão". Aqui listamos um conjunto de alto valor do dia a dia e
- * mantemos o alcance total via meta-tools (`lunari.tools.search` /
- * `lunari.tools.invoke`), que passam pelo MESMO dispatcher, escopos, rollout,
- * aprovação e auditoria.
+ * Onda 2 — coerência: a lista visível é DERIVADA da capacidade real de
+ * execução (`BRIDGED_TOOLS` em executor.ts). Assim o conector nunca vê uma
+ * ferramenta que responderia "ainda não habilitada para execução remota".
+ * O catálogo completo (184 tools) continua alcançável via meta-tools
+ * (`lunari.tools.search` / `lunari.tools.invoke`), que passam pelo mesmo
+ * dispatcher, escopos, rollout, aprovação e auditoria.
  */
+import { BRIDGED_TOOLS } from "./executor.ts";
 
 export const META_SEARCH = "lunari.tools.search";
 export const META_INVOKE = "lunari.tools.invoke";
 
-/** Tools curadas — leitura + escritas mais usadas no dia a dia do fotógrafo. */
-export const EXPOSED_TOOLS: string[] = [
-  // Agenda
-  "lunari.agenda.appointments.list",
-  "lunari.agenda.appointments.get",
-  "lunari.agenda.appointments.create",
-  "lunari.agenda.appointments.update",
-  "lunari.agenda.availability.findNext",
-  "lunari.agenda.slot.check",
-  // Clientes
-  "lunari.clientes.search",
-  "lunari.clientes.list",
-  "lunari.clientes.get",
-  "lunari.clientes.listSessoes",
-  "lunari.clientes.listTransacoes",
-  "lunari.clientes.create",
-  "lunari.clientes.update",
-  "lunari.clientes.addNota",
-  // Workflow / sessões
-  "lunari.workflow.search",
-  "lunari.workflow.listMonth",
-  "lunari.workflow.listRange",
-  "lunari.workflow.getCardBySession",
-  "lunari.workflow.getSessionFinancials",
-  "lunari.workflow.pendingPayments",
-  "lunari.workflow.metricsForMonth",
-  "lunari.workflow.metricsForRange",
-  "lunari.workflow.updateFields",
-  "lunari.workflow.advanceCard",
-  "lunari.workflow.addPayment",
-  "lunari.workflow.produto.listBySession",
-  // Financeiro
-  "lunari.finance.dashboard.kpis",
-  "lunari.finance.extrato.list",
-  "lunari.finance.extrato.summary",
-  "lunari.finance.transaction.create",
-  "lunari.finance.transaction.markPaid",
-  "lunari.finance.goal.progress",
-  "lunari.billing.listSessionPayments",
-  "lunari.billing.registerManualPayment",
-  // Leads
-  "lunari.leads.list",
-  "lunari.leads.get",
-  "lunari.leads.create",
-  "lunari.leads.moveStatus",
-  "lunari.leads.addInteracao",
-  "lunari.leads.listFollowUpsDue",
-  // Tarefas
-  "lunari.tasks.list",
-  "lunari.tasks.dueOverview",
-  "lunari.tasks.create",
-  "lunari.tasks.complete",
-  // Contratos / formulários (leitura)
-  "lunari.contratos.listPendentes",
-  "lunari.formularios.listResponses",
-];
+/** Tools executáveis remotamente hoje (bridge server-side). */
+export const EXPOSED_TOOLS: string[] = Object.keys(BRIDGED_TOOLS);
+
 
 const EXPOSED_SET = new Set(EXPOSED_TOOLS);
 
