@@ -60,7 +60,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.6.0", // Leitura estratégica multi-mês: workflow.listRange/metricsForRange/analytics.summary + workflow.listMonth ganha includeHistorico
+  version: "0.7.0", // A2 — contrato único de execução: dispatcher genérico (rpc/edge) com JWT do usuário
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
