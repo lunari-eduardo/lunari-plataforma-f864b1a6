@@ -39,17 +39,6 @@ function confirmationFor(
     };
   }
 
-  if (
-    capabilityId === "configuracoes.setPricingModel" ||
-    capabilityId === "configuracoes.updateGlobalPricingTable" ||
-    capabilityId === "configuracoes.setCategoriaPricingTable"
-  ) {
-    return {
-      kind: "publish",
-      prompt: "Isto altera a regra de preço para novas sessões. Confirme para aplicar.",
-    };
-  }
-
   return { kind: "destructive", prompt: "Confirme a ação para prosseguir." };
 }
 
