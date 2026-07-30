@@ -88,9 +88,7 @@ export default function AssistantRolloutPage() {
 
   const changeStage = async (next: Stage) => {
     setSaving(true);
-    const { error } = await supabase
-      .from("app_settings")
-      .upsert({ key: "assistant_rollout_stage", value: next as any });
+    const { error } = await supabase.rpc("assistant_rollout_set", { _stage: next });
     setSaving(false);
     if (error) {
       toast.error("Falha ao alterar estágio: " + error.message);
