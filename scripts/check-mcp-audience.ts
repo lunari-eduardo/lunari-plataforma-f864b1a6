@@ -13,20 +13,7 @@
  * Uso: bun run scripts/check-mcp-audience.ts
  */
 
-const g = globalThis as unknown as { localStorage?: unknown };
-if (!g.localStorage) {
-  const store = new Map<string, string>();
-  g.localStorage = {
-    getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => void store.set(k, String(v)),
-    removeItem: (k: string) => void store.delete(k),
-    clear: () => store.clear(),
-    key: (i: number) => Array.from(store.keys())[i] ?? null,
-    get length() {
-      return store.size;
-    },
-  };
-}
+import "./_shim";
 
 const GALLERY_READS_EXPECTED = [
   "gallery.checkAccess",
