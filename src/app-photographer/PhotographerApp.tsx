@@ -9,6 +9,7 @@ import NovaFinancas from "@/pages/NovaFinancas";
 import Precificacao from "@/pages/Precificacao";
 import Configuracoes from "@/pages/Configuracoes";
 import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
+import { RequireAssistantAccess } from "@/modules/assistant/runtime/RequireAssistantAccess";
 import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
 import Hub from "@/pages/Hub";
 import ClienteDetalhe from "@/pages/ClienteDetalhe";
@@ -155,9 +156,9 @@ export default function PhotographerApp() {
                   <PlanRestrictionGuard requiredPlan="pro"><AnaliseVendas /></PlanRestrictionGuard>
                 } />
                 <Route path="configuracoes" element={<Configuracoes />} />
-                <Route path="configuracoes/assistente-mcp" element={<AssistenteMcpTokens />} />
-                <Route path="assistente/mcp" element={<AssistenteMcpTokens />} />
-                <Route path="assistente/aprovacoes" element={<AssistenteAprovacoes />} />
+                <Route path="configuracoes/assistente-mcp" element={<RequireAssistantAccess><AssistenteMcpTokens /></RequireAssistantAccess>} />
+                <Route path="assistente/mcp" element={<RequireAssistantAccess><AssistenteMcpTokens /></RequireAssistantAccess>} />
+                <Route path="assistente/aprovacoes" element={<RequireAssistantAccess><AssistenteAprovacoes /></RequireAssistantAccess>} />
                 <Route path="hub" element={<Hub />} />
                 <Route path="inteligencia" element={<Navigate to="/app/hub" replace />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
