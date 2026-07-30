@@ -4,6 +4,7 @@ import { domainError, err, isOk, ok, type DomainError, type Result } from "@/sha
 import { authorize } from "./policies";
 import { registerCapability } from "./registry";
 import { defaultAudienceFor } from "./audience";
+import { CLIENT_ONLY } from "./execution";
 import { KERNEL_STRICT_MODE, _isInsideKernelDispatch } from "@/shared/kernel";
 
 import type {
