@@ -294,15 +294,23 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, rolloutBlockedResponse());
       }
+      // A2 — contrato único: se a capability declarou transporte (rpc/edge) e
+      // temos JWT do usuário, executamos pelo dispatcher genérico (RLS real).
+      // Caso contrário, caímos no bridge legado escrito à mão (caminho PAT).
+      const dispatchTool = dispatchableTool(name, auth);
       const bridged = getBridged(name);
-      if (!bridged) {
+      if (!dispatchTool && !bridged) {
         await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, inAppFallback(name));
       }
 
-      // Escopo do PAT: por default `read`. Escrita exige `write` explícito.
+      const toolScope: "read" | "write" =
+        bridged?.scope ?? (dispatchTool?.scope ?? (dispatchTool?.kind === "query" ? "read" : "write"));
+      const requiresApproval = bridged?.requiresApproval ?? dispatchTool?.needsApproval ?? false;
+
+      // Escopo do token: por default `read`. Escrita exige `write` explícito.
       const hasWrite = auth.scopes.includes("write") || auth.scopes.includes("admin");
-      if (bridged.scope === "write" && !hasWrite) {
+      if (toolScope === "write" && !hasWrite) {
         await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, authSource: auth.authSource });
         return rpcResult(id, {
           isError: true,
@@ -314,6 +322,23 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       }
 
       const sb = admin();
+
+      const execute = async (effectiveArgs: Record<string, any>) => {
+        if (dispatchTool) {
+          const r = await dispatchCapability({
+            tool: dispatchTool,
+            input: effectiveArgs,
+            userJwt: auth.userJwt,
+            scopes: auth.scopes,
+          });
+          if (!r.ok && r.auditDetail) {
+            console.error("[mcp-dispatch]", JSON.stringify({ tool: name, code: r.code, detail: r.auditDetail }));
+          }
+          return dispatchToMcpResult(dispatchTool, r) as any;
+        }
+        return await runBridged(sb, auth.userId!, name, effectiveArgs);
+      };
+
 
       // Fluxo de aprovação assíncrona para tools destrutivas.
       if (bridged.requiresApproval) {
