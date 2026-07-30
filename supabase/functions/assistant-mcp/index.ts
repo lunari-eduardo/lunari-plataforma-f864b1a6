@@ -499,26 +499,36 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
 
       // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
       if (name === META_SEARCH) {
-        const q = String(args.query ?? "").toLowerCase().trim();
-        const domain = String(args.domain ?? "").toLowerCase().trim();
+        const q = fold(String(args.query ?? ""));
+        const domain = fold(String(args.domain ?? ""));
         const limit = Math.min(Number(args.limit ?? 15) || 15, 40);
-        const terms = q.split(/\s+/).filter(Boolean);
-        const hits = (catalog.tools as any[])
-          .filter((t) => !domain || String(t.capabilityId ?? "").toLowerCase().startsWith(domain + "."))
-          .filter((t) => {
-            if (terms.length === 0) return true;
-            const hay = `${t.name} ${t.title ?? ""} ${t.description ?? ""}`.toLowerCase();
-            return terms.every((term) => hay.includes(term));
+        // Ignora palavras vazias comuns ("de", "do", "por"...) e casa por
+        // QUALQUER termo, com ranqueamento — "análise de vendas" precisa achar.
+        const STOP = new Set(["de", "do", "da", "dos", "das", "e", "em", "no", "na", "por", "para", "com", "a", "o", "os", "as", "um", "uma"]);
+        const terms = q.split(/\s+/).filter((t) => t && !STOP.has(t));
+        const scored = (catalog.tools as any[])
+          .filter((t) => !domain || fold(String(t.capabilityId ?? "")).startsWith(domain + ".") || fold(String(t.capabilityId ?? "")).includes("." + domain + "."))
+          .map((t) => {
+            const name = fold(t.name);
+            const hay = fold(`${t.name} ${t.title ?? ""} ${t.description ?? ""} ${aliasesFor(t.name)}`);
+            let score = terms.length === 0 ? 1 : 0;
+            for (const term of terms) {
+              if (name.includes(term)) score += 3;
+              else if (hay.includes(term)) score += 1;
+            }
+            return { t, score };
           })
-          .slice(0, limit)
-          // Resultado LEVE: sem inputSchema (use lunari.tools.describe).
-          .map((t) => ({
-            name: toPublicName(t.name),
-            title: t.title,
-            summary: trimDescription(t.description),
-            executable: isBridged(t.name) || !!t.transport?.name,
-            needsApproval: t.needsApproval ?? null,
-          }));
+          .filter((x) => x.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+
+        const hits = scored.map(({ t }) => ({
+          name: toPublicName(t.name),
+          title: t.title,
+          summary: trimDescription(t.description),
+          executable: isBridged(t.name) || !!t.transport?.name,
+          needsApproval: t.needsApproval ?? null,
+        }));
 
         return rpcResult(id, {
           content: [{
@@ -531,6 +541,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           structuredContent: { tools: hits, total: catalog.tools.length },
         });
       }
+
 
       // Meta-tool de detalhe: schema completo de UMA ferramenta.
       if (name === META_DESCRIBE) {
