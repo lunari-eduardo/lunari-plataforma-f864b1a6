@@ -64,6 +64,43 @@ const fail = (message: string): McpToolResult => ({
   content: [{ type: "text", text: message }],
 });
 
+export interface NeedsInputOption { label: string; value: string; hint?: string }
+
+/**
+ * Contrato `needs_input` — NÃO é erro: é uma pergunta obrigatória ao usuário.
+ * O agente (GPT/Lu) deve perguntar e reenviar a chamada com o campo preenchido.
+ * Proibido escolher sozinho ou criar registro novo para "resolver" a pergunta.
+ */
+function needsInput(input: {
+  missing: string[];
+  question: string;
+  options?: NeedsInputOption[];
+  allowCreate?: boolean;
+  createHint?: string;
+}): McpToolResult {
+  const lines = [input.question];
+  if (input.options?.length) {
+    lines.push(
+      ...input.options.map((o) => `- ${o.label}${o.hint ? ` (${o.hint})` : ""} → ${o.value}`),
+    );
+  }
+  if (input.allowCreate && input.createHint) lines.push(input.createHint);
+  lines.push(
+    `[needs_input] Pergunte ao usuário antes de prosseguir. Campos faltando: ${input.missing.join(", ")}. Não escolha nem crie nada por conta própria.`,
+  );
+  return {
+    content: [{ type: "text", text: lines.join("\n") }],
+    structuredContent: {
+      status: "needs_input",
+      missing: input.missing,
+      question: input.question,
+      options: input.options ?? [],
+      allowCreate: !!input.allowCreate,
+    },
+  };
+}
+
+
 function clampLimit(n: unknown, def = 20, max = 200): number {
   const v = Number(n);
   if (!Number.isFinite(v) || v <= 0) return def;
