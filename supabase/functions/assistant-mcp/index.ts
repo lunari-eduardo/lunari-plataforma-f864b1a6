@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.13.0", // execução remota real: bridge server-side de agenda, tarefas, clientes, workflow e financeiro
+  version: "0.14.0", // Workflow completo no bridge: leitura de sessões/produtos/métricas + escritas seguras
 };
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
