@@ -1995,13 +1995,25 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     requiresApproval: false,
     summarize: (a) => `Registrar pagamento de ${money(a.valor)} na sessão ${a.sessionId ?? a.clienteNome ?? "?"}`,
     handler: async (sb, uid, args) => {
-      const valor = Number(args.valor);
-      if (!(valor > 0)) return fail("Campo 'valor' (em reais, ex.: 250.00) é obrigatório e deve ser positivo.");
       const r = await resolveSessao(sb, uid, args);
       if (r.ask) return r.ask;
       if (r.error) return fail(r.error);
       const s = r.sessao!;
       if (!s.session_id) return fail("Sessão sem session_id texto — registre o pagamento pelo app.");
+      const valor = Number(args.valor);
+      if (!(valor > 0)) {
+        const pendente = (Number(s.valor_total) || 0) - (Number(s.valor_pago) || 0);
+        return needsInput({
+          missing: ["valor"],
+          question: pendente > 0
+            ? `Qual o valor do pagamento? O saldo pendente desta sessão é ${money(pendente)}.`
+            : "Qual o valor do pagamento (em reais)?",
+          options: pendente > 0
+            ? [{ label: `Quitar o pendente (${money(pendente)})`, value: String(pendente) }]
+            : [],
+        });
+      }
+
       const data = String(args.data ?? args.dataTransacao ?? today());
       const forma = String(args.formaPagamento ?? args.forma ?? "PIX");
       const paymentId = `mcp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
