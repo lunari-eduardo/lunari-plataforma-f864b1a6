@@ -1169,7 +1169,238 @@ const SESSION_REF = {
   latest: { type: "boolean", description: "Se o cliente tiver várias sessões, usar a mais recente." },
 } as const;
 
+const FAIXAS_PROP = {
+  type: "array",
+  description: "Faixas progressivas: contíguas, começando em 1, a última com max nulo (ou mais).",
+  items: {
+    type: "object",
+    properties: {
+      min: { type: "number" },
+      max: { type: "number", description: "Deixe ausente/nulo na última faixa." },
+      valor: { type: "number", description: "Valor por foto em reais." },
+    },
+    required: ["min", "valor"],
+    additionalProperties: false,
+  },
+} as const;
+
+const PRODUTOS_PROP = {
+  type: "array",
+  description: "Produtos inclusos com custo unitário.",
+  items: {
+    type: "object",
+    properties: {
+      nome: { type: "string" },
+      custo: { type: "number", description: "Custo unitário em reais." },
+      quantidade: { type: "number" },
+    },
+    required: ["custo"],
+    additionalProperties: false,
+  },
+} as const;
+
+const CUSTOS_PROP = {
+  type: "array",
+  description: "Custos extras do trabalho (deslocamento, assistente, locação...).",
+  items: {
+    type: "object",
+    properties: {
+      descricao: { type: "string" },
+      valorUnitario: { type: "number" },
+      quantidade: { type: "number" },
+    },
+    required: ["valorUnitario"],
+    additionalProperties: false,
+  },
+} as const;
+
 export const BRIDGE_SCHEMAS: Record<string, Record<string, unknown>> = {
+  // ---------- PRECIFICAÇÃO ----------
+  "lunari.precificacao.getConfiguracao": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.precificacao.getEstruturaCustos": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.precificacao.listTabelas": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.precificacao.diagnostico": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.precificacao.getTabelaCategoria": {
+    type: "object",
+    properties: {
+      categoria: { type: "string", description: "Nome da categoria (ex.: Newborn) ou UUID." },
+      categoriaId: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.precificacao.listPacotesComPreco": {
+    type: "object",
+    properties: { categoria: { type: "string" }, categoriaId: { type: "string" } },
+    additionalProperties: false,
+  },
+  "lunari.precificacao.getMetas": {
+    type: "object", properties: { ano: { type: "number" } }, additionalProperties: false,
+  },
+  "lunari.precificacao.listCenarios": {
+    type: "object", properties: { limit: { type: "number" } }, additionalProperties: false,
+  },
+  "lunari.precificacao.simularPreco": {
+    type: "object",
+    properties: {
+      horasEstimadas: { type: "number", description: "Horas totais do trabalho (captação + edição + entrega)." },
+      markup: { type: "number", description: "Multiplicador sobre o custo. Se omitido, deriva da margem desejada." },
+      margemDesejada: { type: "number", description: "Margem de lucro alvo em % (alternativa ao markup)." },
+      produtos: PRODUTOS_PROP,
+      custosExtras: CUSTOS_PROP,
+      custoPorHoraOverride: { type: "number" },
+    },
+    required: ["horasEstimadas"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.simularFotoExtra": {
+    type: "object",
+    properties: {
+      quantidade: { type: "number" },
+      pacote: { type: "string", description: "Nome do pacote (ou UUID em pacoteId)." },
+      pacoteId: { type: "string" },
+      categoria: { type: "string" },
+      categoriaId: { type: "string" },
+    },
+    required: ["quantidade"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.simularPacote": {
+    type: "object",
+    properties: {
+      pacote: { type: "string", description: "Nome do pacote." },
+      pacoteId: { type: "string" },
+      fotosExtras: { type: "number" },
+      valorAdicional: { type: "number" },
+      desconto: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.precificacao.simularImpactoTabela": {
+    type: "object",
+    properties: {
+      escopo: { type: "string", enum: ["global", "categoria"] },
+      categoria: { type: "string" },
+      categoriaId: { type: "string" },
+      faixas: FAIXAS_PROP,
+      quantidades: { type: "array", items: { type: "number" } },
+    },
+    required: ["faixas"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.criarPacotePrecificado": {
+    type: "object",
+    properties: {
+      nome: { type: "string", description: "Nome do novo pacote." },
+      categoria: { type: "string", description: "Nome da categoria (criada se não existir com criarCategoria=true)." },
+      categoriaId: { type: "string" },
+      criarCategoria: { type: "boolean", description: "Cria a categoria quando ela não existir." },
+      horasEstimadas: { type: "number", description: "Horas do trabalho — base do cálculo." },
+      markup: { type: "number" },
+      margemDesejada: { type: "number", description: "Margem alvo em % (alternativa ao markup)." },
+      produtos: PRODUTOS_PROP,
+      custosExtras: CUSTOS_PROP,
+      valorBase: { type: "number", description: "Se informado, ignora o cálculo e usa este preço." },
+      arredondarPara: { type: "number", description: "Arredonda o preço para múltiplos deste valor (ex.: 10)." },
+      fotosIncluidas: { type: "number" },
+      valorFotoExtra: { type: "number", description: "Se omitido, usa a tabela vigente da categoria." },
+    },
+    required: ["nome"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.salvarCenario": {
+    type: "object",
+    properties: {
+      nome: { type: "string", description: "Nome do cenário (ex.: 'Newborn 2026')." },
+      horasEstimadas: { type: "number" },
+      markup: { type: "number" },
+      margemDesejada: { type: "number" },
+      produtos: PRODUTOS_PROP,
+      custosExtras: CUSTOS_PROP,
+    },
+    required: ["nome", "horasEstimadas"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.updatePacotePreco": {
+    type: "object",
+    properties: {
+      pacote: { type: "string", description: "Nome do pacote." },
+      pacoteId: { type: "string" },
+      valorBase: { type: "number" },
+      valorFotoExtra: { type: "number" },
+      fotosIncluidas: { type: "number" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.precificacao.upsertTabelaGlobal": {
+    type: "object",
+    properties: { nome: { type: "string" }, faixas: FAIXAS_PROP, usarValorFixoPacote: { type: "boolean" } },
+    required: ["faixas"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.upsertTabelaCategoria": {
+    type: "object",
+    properties: {
+      categoria: { type: "string" },
+      categoriaId: { type: "string" },
+      nome: { type: "string" },
+      faixas: FAIXAS_PROP,
+      usarValorFixoPacote: { type: "boolean" },
+    },
+    required: ["faixas"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.setModelo": {
+    type: "object",
+    properties: { modelo: { type: "string", enum: ["fixo", "global", "categoria"] } },
+    required: ["modelo"],
+    additionalProperties: false,
+  },
+  "lunari.precificacao.updateMargemEHoras": {
+    type: "object",
+    properties: {
+      margemLucroDesejada: { type: "number", description: "Margem alvo em %." },
+      percentualProLabore: { type: "number" },
+      horasDisponiveis: { type: "number", description: "Horas produtivas por dia." },
+      diasTrabalhados: { type: "number", description: "Dias por semana." },
+    },
+    additionalProperties: false,
+  },
+  "lunari.precificacao.setMetas": {
+    type: "object",
+    properties: {
+      ano: { type: "number" },
+      metaFaturamentoAnual: { type: "number" },
+      metaLucroAnual: { type: "number" },
+      usarMetasPersonalizadas: { type: "boolean" },
+    },
+    additionalProperties: false,
+  },
+  "lunari.configuracoes.listCategorias": { type: "object", properties: {}, additionalProperties: false },
+  "lunari.configuracoes.listPacotes": {
+    type: "object",
+    properties: { categoria: { type: "string" }, categoriaId: { type: "string" } },
+    additionalProperties: false,
+  },
+  "lunari.configuracoes.createCategoria": {
+    type: "object",
+    properties: { nome: { type: "string" }, cor: { type: "string" } },
+    required: ["nome"],
+    additionalProperties: false,
+  },
+  "lunari.configuracoes.createPacote": {
+    type: "object",
+    properties: {
+      nome: { type: "string" },
+      categoria: { type: "string", description: "Nome da categoria." },
+      categoriaId: { type: "string" },
+      valorBase: { type: "number" },
+      valorFotoExtra: { type: "number" },
+      fotosIncluidas: { type: "number" },
+    },
+    required: ["nome"],
+    additionalProperties: false,
+  },
+
   "lunari.workflow.getCardBySession": {
     type: "object", properties: { ...SESSION_REF }, additionalProperties: false,
   },
