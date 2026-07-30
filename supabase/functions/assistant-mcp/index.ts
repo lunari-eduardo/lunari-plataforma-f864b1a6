@@ -22,6 +22,8 @@ import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
 import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
+import { toPublicName, publicInputSchema } from "./compat.ts";
+
 import {
   dispatchCapability,
   type CatalogTool,
@@ -33,6 +35,21 @@ import {
 const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
   ((catalog as any).tools ?? []).map((t: CatalogTool) => [t.name, t]),
 );
+
+/**
+ * Alias público → nome interno. Conectores só aceitam `[a-zA-Z0-9_-]`, então
+ * `tools/list` publica `lunari_workflow_listMonth` e `tools/call` traduz de
+ * volta. Nomes internos com ponto continuam aceitos (retrocompatibilidade
+ * com PATs e clientes já configurados).
+ */
+const PUBLIC_TO_INTERNAL: Map<string, string> = new Map(
+  [...CATALOG_BY_NAME.keys(), META_SEARCH, META_INVOKE].map((n) => [toPublicName(n), n]),
+);
+function resolveToolName(name: string): string {
+  if (CATALOG_BY_NAME.has(name) || name === META_SEARCH || name === META_INVOKE) return name;
+  return PUBLIC_TO_INTERNAL.get(name) ?? name;
+}
+
 
 /** A3 — idade do catálogo em dias; congelamento vira sinal observável. */
 const CATALOG_STALE_DAYS = 30;
@@ -79,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.10.0", // superfície curada p/ conectores + transporte Streamable HTTP corrigido (SSE/405, Mcp-Session-Id)
+  version: "0.11.0", // aliases sem ponto + schemas achatados + server/discover (compat ChatGPT)
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -326,20 +343,38 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
     case "tools/list": {
       // Superfície curada + meta-tools (o catálogo completo continua acessível
       // via lunari.tools.search / lunari.tools.invoke).
+      // Nomes públicos sem ponto e schemas achatados — exigência dos conectores.
       const exposed = catalog.tools
         .filter((t: any) => isExposed(t.name))
         .map((t: any) => ({
-          name: t.name,
+          name: toPublicName(t.name),
           title: t.title,
           description: t.description,
-          inputSchema: t.inputSchema,
+          inputSchema: publicInputSchema(t.inputSchema),
           annotations: t.annotations,
         }));
-      return rpcResult(id, { tools: [...exposed, ...META_TOOL_DEFS] });
+      const metas = META_TOOL_DEFS.map((t) => ({
+        ...t,
+        name: toPublicName(t.name),
+        inputSchema: publicInputSchema(t.inputSchema),
+      }));
+      return rpcResult(id, { tools: [...exposed, ...metas] });
     }
+    // Alguns clientes (incl. ChatGPT) chamam `server/discover` no handshake.
+    // Responder "Method not found" derruba a conexão logo após o OAuth.
+    case "server/discover":
+    case "server/info":
+      return rpcResult(id, {
+        protocolVersion: PROTOCOL_VERSION,
+        serverInfo: SERVER_INFO,
+        capabilities: { tools: { listChanged: false } },
+        instructions: catalog.manifest.instructions,
+      });
+
     case "tools/call": {
-      let name = (req.params?.name as string) ?? "unknown";
+      let name = resolveToolName((req.params?.name as string) ?? "unknown");
       let args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
+
 
       // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
       if (name === META_SEARCH) {
@@ -354,13 +389,15 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           )
           .slice(0, limit)
           .map((t) => ({
-            name: t.name,
+            name: toPublicName(t.name),
+            internalName: t.name,
             title: t.title,
             description: t.description,
             scopeTier: t.scopeTier ?? null,
             needsApproval: t.needsApproval ?? null,
-            inputSchema: t.inputSchema,
+            inputSchema: publicInputSchema(t.inputSchema),
           }));
+
         return rpcResult(id, {
           content: [{
             type: "text",
@@ -376,7 +413,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       // Meta-tool de execução: reescreve para a tool real e segue o fluxo normal
       // (escopos, rollout, aprovação e auditoria idênticos).
       if (name === META_INVOKE) {
-        const target = String(args.name ?? "").trim();
+        const target = resolveToolName(String(args.name ?? "").trim());
         if (!target) {
           return rpcResult(id, {
             isError: true,

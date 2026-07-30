@@ -13,6 +13,7 @@
     "audit:ai": "bun scripts/ai-surface-audit.ts",
     "mcp:catalog": "bun run scripts/build-mcp-catalog.ts",
     "mcp:catalog:check": "bun run scripts/build-mcp-catalog.ts --check",
+    "mcp:surface": "bun run scripts/validate-mcp-surface.ts",
     "mcp:audience": "bun run scripts/check-mcp-audience.ts",
     "mcp:approvals": "bun run scripts/check-approval-parity.ts",
     "assistant:gate": "bun run scripts/check-assistant-gate.ts",

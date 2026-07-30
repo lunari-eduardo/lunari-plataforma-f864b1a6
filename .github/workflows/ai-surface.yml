@@ -31,6 +31,10 @@ jobs:
       - name: Catálogo MCP em dia
         run: bun run mcp:catalog:check
 
+      # Compat de conectores: nomes sem ponto, schemas achatados, payload < 60 KB.
+      - name: Superfície MCP compatível com conectores
+        run: bun run mcp:surface
+
       # A5 — paridade de aprovação: catálogo × app × bridge legado.
       - name: Paridade de aprovação
         run: bun run mcp:approvals
