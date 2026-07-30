@@ -75,7 +75,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.8.0", // A4 — escopos read/write/destructive + grants por cliente OAuth
+  version: "0.9.0", // A5 — auditoria completa (inclusive negadas) + tickets de aprovação; A4 — escopos read/write/destructive + grants por cliente OAuth
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -333,15 +333,23 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       const name = (req.params?.name as string) ?? "unknown";
       const args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
       const started = Date.now();
+      const requestId = crypto.randomUUID();
+      // Contexto comum de auditoria (A5): toda saída deste bloco grava uma linha.
+      const actx = {
+        authSource: auth.authSource,
+        clientId: auth.clientId,
+        grantedTiers: auth.scopes,
+        requestId,
+      };
 
       if (!auth.userId) {
-        await audit({ userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started, authSource: null });
+        await audit({ ...actx, userId: null, toolName: name, status: "blocked_no_token", latencyMs: Date.now() - started });
         // Sinaliza pro dispatcher HTTP retornar 401 + WWW-Authenticate.
         (auth as any).__challenge = true;
         return rpcResult(id, needsAuthResponse(name));
       }
       if (!auth.rolloutAllowed) {
-        await audit({ userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started, authSource: auth.authSource });
+        await audit({ ...actx, userId: auth.userId, toolName: name, status: "blocked_by_rollout", latencyMs: Date.now() - started });
         return rpcResult(id, rolloutBlockedResponse());
       }
       // A2 — contrato único: se a capability declarou transporte (rpc/edge) e
@@ -350,7 +358,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       const dispatchTool = dispatchableTool(name, auth);
       const bridged = getBridged(name);
       if (!dispatchTool && !bridged) {
-        await audit({ userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started, authSource: auth.authSource });
+        await audit({ ...actx, userId: auth.userId, toolName: name, status: "bridge_unsupported", latencyMs: Date.now() - started });
         return rpcResult(id, inAppFallback(name));
       }
 
@@ -364,7 +372,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         tierOf({ kind: toolScope === "read" ? "query" : "command", needsApproval: requiresApproval });
 
       if (!tierSatisfiedBy(requiredTier, auth.scopes)) {
-        await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, authSource: auth.authSource });
+        await audit({ ...actx, userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, requiredTier });
         const how = auth.authSource === "oauth"
           ? `Abra https://app.lunarihub.com/app/assistente/mcp → "Aplicativos conectados" e libere "${TIER_LABEL[requiredTier]}" para este aplicativo. Depois repita o comando.`
           : `Gere um novo Personal Access Token com o nível "${TIER_LABEL[requiredTier]}" em https://app.lunarihub.com/app/assistente/mcp.`;
@@ -407,7 +415,7 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
             _tool_name: name,
           });
           if (consumeErr || !consumed || (Array.isArray(consumed) && consumed.length === 0)) {
-            await audit({ userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started, authSource: auth.authSource });
+            await audit({ ...actx, userId: auth.userId, toolName: name, status: "approval_invalid", latencyMs: Date.now() - started, requiredTier, needsApproval: true });
             return rpcResult(id, {
               isError: true,
               content: [{ type: "text", text: "Token de aprovação inválido, já usado ou expirado. Solicite nova aprovação no app." }],
@@ -418,11 +426,15 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           delete (effectiveArgs as any).approval_token;
           const result = await execute(effectiveArgs);
           await audit({
+            ...actx,
             userId: auth.userId, toolName: name,
             status: result.isError ? "error" : "ok_approved",
             latencyMs: Date.now() - started,
             errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
-            authSource: auth.authSource,
+            requiredTier,
+            needsApproval: true,
+            approvalId: (row?.approval_id as string) ?? null,
+            approvedBy: auth.userId,
           });
           return rpcResult(id, result);
         }
@@ -437,10 +449,10 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           _summary: summary,
         });
         if (apprErr) {
-          await audit({ userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message , authSource: auth.authSource });
+          await audit({ ...actx, userId: auth.userId, toolName: name, status: "approval_create_failed", latencyMs: Date.now() - started, errorMessage: apprErr.message, requiredTier, needsApproval: true });
           return rpcResult(id, { isError: true, content: [{ type: "text", text: `Falha ao criar pedido de aprovação: ${apprErr.message}` }] });
         }
-        await audit({ userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started, authSource: auth.authSource });
+        await audit({ ...actx, userId: auth.userId, toolName: name, status: "pending_approval", latencyMs: Date.now() - started, requiredTier, needsApproval: true, approvalId: (approvalId as string) ?? null });
         return rpcResult(id, {
           content: [{
             type: "text",
@@ -456,11 +468,12 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       // Escritas sem approval e leituras: executa direto.
       const result = await execute(args);
       await audit({
+        ...actx,
         userId: auth.userId, toolName: name,
         status: result.isError ? "error" : "ok",
         latencyMs: Date.now() - started,
         errorMessage: result.isError ? result.content?.[0]?.text ?? null : null,
-        authSource: auth.authSource,
+        requiredTier,
       });
       return rpcResult(id, result);
     }
