@@ -72,6 +72,110 @@ function norm(s: unknown): string {
     .toLowerCase()
     .trim();
 }
+
+// ---------- helpers de precificação ----------
+function somaProdutos(raw: unknown): number {
+  if (!Array.isArray(raw)) return 0;
+  return raw.reduce((s: number, p: any) => s + (Number(p?.custo) || 0) * (Number(p?.quantidade) || 1), 0);
+}
+function somaCustos(raw: unknown): number {
+  if (!Array.isArray(raw)) return 0;
+  return raw.reduce((s: number, c: any) => s + (Number(c?.valorUnitario ?? c?.valor) || 0) * (Number(c?.quantidade) || 1), 0);
+}
+function arredondar(valor: number, passo: number): number {
+  if (!passo || passo <= 0) return round2(valor);
+  return round2(Math.ceil(valor / passo) * passo);
+}
+function resolverMarkup(args: Record<string, any>, margemPadrao: number): { markup: number; origem: string } {
+  if (Number(args.markup) > 0) return { markup: Number(args.markup), origem: `markup informado ${Number(args.markup)}x` };
+  if (Number(args.margemDesejada) > 0) {
+    const m = markupDaMargem(Number(args.margemDesejada));
+    if (m) return { markup: m, origem: `derivado da margem ${Number(args.margemDesejada)}%` };
+  }
+  const padrao = margemPadrao > 0 ? markupDaMargem(margemPadrao) : null;
+  if (padrao) return { markup: padrao, origem: `margem configurada ${margemPadrao}%` };
+  return { markup: 2, origem: "markup padrão 2x (nenhuma margem configurada)" };
+}
+async function resolveCategoria(
+  sb: SupabaseClient, uid: string, args: Record<string, any>,
+): Promise<{ id: string | null; nome?: string; error?: string }> {
+  const raw = String(args.categoriaId ?? args.categoria ?? "").trim();
+  if (!raw) return { id: null };
+  const { data, error } = await sb.from("categorias").select("id,nome").eq("user_id", uid);
+  if (error) return { id: null, error: error.message };
+  const list = data ?? [];
+  const byId = list.find((c: any) => c.id === raw);
+  if (byId) return { id: byId.id, nome: byId.nome };
+  const alvo = norm(raw);
+  const exata = list.find((c: any) => norm(c.nome) === alvo);
+  if (exata) return { id: exata.id, nome: exata.nome };
+  const parciais = list.filter((c: any) => norm(c.nome).includes(alvo));
+  if (parciais.length === 1) return { id: parciais[0].id, nome: parciais[0].nome };
+  if (parciais.length > 1) {
+    return { id: null, error: `Categoria ambígua: ${parciais.map((c: any) => c.nome).join(", ")}.` };
+  }
+  return { id: null, error: `Categoria "${raw}" não encontrada. Disponíveis: ${list.map((c: any) => c.nome).join(", ") || "nenhuma"}.` };
+}
+async function resolvePacote(
+  sb: SupabaseClient, uid: string, args: Record<string, any>,
+): Promise<{ pacote?: any; error?: string }> {
+  const raw = String(args.pacoteId ?? args.pacote ?? "").trim();
+  if (!raw) return { error: "Informe o pacote (nome ou id)." };
+  const { data, error } = await sb.from("pacotes")
+    .select("id,nome,categoria_id,valor_base,valor_foto_extra,fotos_incluidas").eq("user_id", uid);
+  if (error) return { error: error.message };
+  const list = data ?? [];
+  const byId = list.find((p: any) => p.id === raw);
+  if (byId) return { pacote: byId };
+  const alvo = norm(raw);
+  const exato = list.find((p: any) => norm(p.nome) === alvo);
+  if (exato) return { pacote: exato };
+  const parciais = list.filter((p: any) => norm(p.nome).includes(alvo));
+  if (parciais.length === 1) return { pacote: parciais[0] };
+  if (parciais.length > 1) return { error: `Pacote ambíguo: ${parciais.map((p: any) => p.nome).join(", ")}.` };
+  return { error: `Pacote "${raw}" não encontrado. Disponíveis: ${list.map((p: any) => p.nome).join(", ") || "nenhum"}.` };
+}
+async function pacoteDuplicado(
+  sb: SupabaseClient, uid: string, categoriaId: string, nome: string,
+): Promise<string | null> {
+  const { data } = await sb.from("pacotes").select("nome").eq("user_id", uid).eq("categoria_id", categoriaId);
+  return (data ?? []).some((p: any) => norm(p.nome) === norm(nome))
+    ? `Já existe um pacote "${nome}" nessa categoria.` : null;
+}
+async function upsertTabela(
+  sb: SupabaseClient, uid: string, args: Record<string, any>,
+  tipo: "global" | "categoria", categoriaId: string | null,
+): Promise<McpToolResult> {
+  const faixas = parseFaixas(args.faixas);
+  const validacao = validarFaixas(faixas);
+  if (!validacao.valid) return fail(`Faixas inválidas: ${validacao.errors.join(" ")}`);
+  const tabelas = await loadTabelas(sb, uid);
+  const atual = tipo === "global"
+    ? tabelas.find((t) => t.tipo === "global")
+    : tabelas.find((t) => t.tipo === "categoria" && t.categoriaId === categoriaId);
+  const payload: Record<string, unknown> = {
+    user_id: uid,
+    nome: String(args.nome ?? atual?.nome ?? (tipo === "global" ? "Tabela global" : "Tabela da categoria")),
+    tipo,
+    categoria_id: categoriaId,
+    faixas,
+    usar_valor_fixo_pacote: args.usarValorFixoPacote !== undefined
+      ? Boolean(args.usarValorFixoPacote) : Boolean(atual?.usarValorFixoPacote),
+  };
+  if (atual) {
+    const { error } = await sb.from("tabelas_precos").update(payload).eq("id", atual.id).eq("user_id", uid);
+    if (error) return fail(error.message);
+  } else {
+    const { error } = await sb.from("tabelas_precos").insert(payload);
+    if (error) return fail(error.message);
+  }
+  const amostra = [1, 5, 10, 20].map((q) => `${q}: ${money(valorPorFoto(q, faixas))}/foto`).join(" · ");
+  return ok(
+    { tipo, categoriaId, faixas, criada: !atual },
+    `Tabela ${tipo}${atual ? " atualizada" : " criada"} com ${faixas.length} faixa(s). ${amostra}. Vale para sessões novas.`,
+  );
+}
+
 function toMinutes(hhmm: string): number {
   const [h, m] = String(hhmm).split(":").map((x) => Number(x) || 0);
   return h * 60 + m;
