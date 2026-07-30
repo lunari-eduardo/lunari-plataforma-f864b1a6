@@ -203,27 +203,59 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
   return EMPTY_AUTH;
 }
 
-async function audit(entry: {
+/**
+ * A5 — auditoria completa. Antes desta onda o insert usava colunas inexistentes
+ * (`surface`, `tool_name`) e omitia colunas obrigatórias, então TODA chamada MCP
+ * ficava sem registro (0 linhas na tabela). Agora o contrato é completo e a
+ * falha de auditoria vira log de erro visível — nunca mais silêncio.
+ */
+interface AuditEntry {
   userId: string | null;
   toolName: string;
   status: string;
   latencyMs: number;
   errorMessage?: string | null;
   authSource?: "pat" | "oauth" | null;
-}) {
+  clientId?: string | null;
+  requiredTier?: string | null;
+  grantedTiers?: string[] | null;
+  requestId?: string | null;
+  approvalId?: string | null;
+  needsApproval?: boolean;
+  approvedBy?: string | null;
+}
+
+async function audit(entry: AuditEntry) {
+  const tool = CATALOG_BY_NAME.get(entry.toolName);
+  const capabilityId = tool?.capabilityId ?? entry.toolName;
+  const moduleName = capabilityId.includes(".") ? capabilityId.split(".")[0] : "mcp";
+  const kind = tool?.kind ?? (tool?.scope === "read" ? "query" : "command");
   try {
     const sb = admin();
-    await sb.from("assistant_invocations").insert({
+    const { error } = await sb.from("assistant_invocations").insert({
       user_id: entry.userId,
+      capability_id: capabilityId,
+      module: moduleName,
+      kind,
+      actor: "assistant",
       surface: "mcp",
       tool_name: entry.toolName,
       output_status: entry.status,
       latency_ms: entry.latencyMs,
       error_message: entry.errorMessage ?? null,
       auth_source: entry.authSource ?? null,
+      client_id: entry.clientId ?? null,
+      required_tier: entry.requiredTier ?? null,
+      granted_tiers: entry.grantedTiers ?? null,
+      request_id: entry.requestId ?? null,
+      approval_id: entry.approvalId ?? null,
+      needs_approval: entry.needsApproval ?? false,
+      approved_by: entry.approvedBy ?? null,
+      approved_at: entry.approvedBy ? new Date().toISOString() : null,
     });
-  } catch {
-    /* auditoria best-effort */
+    if (error) console.error("[assistant-mcp] auditoria falhou:", error.message, entry.status, entry.toolName);
+  } catch (err) {
+    console.error("[assistant-mcp] auditoria exception:", String(err));
   }
 }
 
