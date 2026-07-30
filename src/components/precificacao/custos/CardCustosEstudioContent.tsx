@@ -34,7 +34,7 @@ export function CardCustosEstudioContent({
   onAtualizar
 }: CardCustosEstudioContentProps) {
   const { toast } = useToast();
-  const [novoCusto, setNovoCusto] = useState({ descricao: '', valor: '' });
+  const [novoCusto, setNovoCusto] = useState({ descricao: '', valor: 0 });
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [syncPreview, setSyncPreview] = useState<SyncPreview[]>([]);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -48,14 +48,15 @@ export function CardCustosEstudioContent({
   };
 
   const adicionarCusto = () => {
-    if (novoCusto.descricao && novoCusto.valor) {
+    if (novoCusto.descricao && novoCusto.valor > 0) {
       onAdicionar({
         descricao: novoCusto.descricao,
-        valor: parseFloat(novoCusto.valor) || 0
+        valor: novoCusto.valor
       });
-      setNovoCusto({ descricao: '', valor: '' });
+      setNovoCusto({ descricao: '', valor: 0 });
     }
   };
+
 
   const openSyncDialog = async () => {
     setIsLoadingSync(true);
