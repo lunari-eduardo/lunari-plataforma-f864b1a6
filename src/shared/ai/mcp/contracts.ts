@@ -53,12 +53,15 @@ export interface MCPTool {
   capabilityId: string;
   /** A2 — transporte declarado no `defineCapability`. */
   transport?: { type: "rpc" | "edge"; name: string; mapped?: boolean };
-  /** Escopo OAuth/PAT exigido. */
+  /** Escopo legado (read/write) — mantido para clientes já conectados. */
   scope: "read" | "write";
+  /** A4 — tier real exigido: read | write | destructive. */
+  scopeTier: ScopeTier;
   kind: "command" | "query";
   needsApproval: boolean;
   costHint: string;
 }
+
 
 export interface BuildMCPToolsOptions {
   user: AuthUser | null;
