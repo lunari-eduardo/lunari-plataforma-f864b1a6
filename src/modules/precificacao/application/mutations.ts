@@ -16,6 +16,7 @@ import { defineCommand } from "@/shared/capability";
 import { supabase } from "@/integrations/supabase/client";
 import { domainError, err, ok } from "@/shared/result";
 import { round2, validarFaixas } from "../domain/calculo";
+import type { Json } from "@/integrations/supabase/types";
 import type { FaixaPreco } from "../domain/types";
 import { FaixaSchema, loadModelo, loadTabelas } from "./leitura";
 
@@ -117,7 +118,7 @@ async function upsertTabela(params: {
     nome: params.nome,
     tipo: params.tipo,
     categoria_id: params.categoriaId,
-    faixas: params.faixas as unknown as Record<string, unknown>[],
+    faixas: params.faixas as unknown as Json,
     usar_valor_fixo_pacote: params.usarValorFixoPacote,
     updated_at: new Date().toISOString(),
   };
