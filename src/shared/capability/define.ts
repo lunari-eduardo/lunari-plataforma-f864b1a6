@@ -59,6 +59,8 @@ function build<TInput extends ZodTypeAny, TOutput extends ZodTypeAny>(
     output: opts.output,
     permissions: opts.permissions ?? [],
     sideEffects,
+    audience: opts.audience ?? defaultAudienceFor(opts.id),
+
     audit: opts.audit ?? (kind === "command" ? "on-success" : "never"),
     costHint: opts.costHint ?? "cheap",
     examples: opts.examples ?? [],
