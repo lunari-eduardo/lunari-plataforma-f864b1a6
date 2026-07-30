@@ -48,6 +48,15 @@ interface TokenRow {
   created_at: string;
 }
 
+interface GrantRow {
+  id: string;
+  client_id: string;
+  client_name: string | null;
+  tiers: string[];
+  last_used_at: string | null;
+  created_at: string;
+}
+
 interface OAuthAppRow {
   id: string;
   client_id: string;
@@ -68,6 +77,9 @@ export default function AssistenteMcpTokens() {
   const [loadingApps, setLoadingApps] = useState(true);
   const [name, setName] = useState("");
   const [allowWrite, setAllowWrite] = useState(false);
+  const [allowDestructive, setAllowDestructive] = useState(false);
+  const [grants, setGrants] = useState<GrantRow[]>([]);
+  const [savingGrant, setSavingGrant] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [freshToken, setFreshToken] = useState<string | null>(null);
 
@@ -95,15 +107,40 @@ export default function AssistenteMcpTokens() {
     setLoadingApps(false);
   }, []);
 
+  const loadGrants = useCallback(async () => {
+    const { data } = await supabase
+      .from("assistant_mcp_client_grants")
+      .select("id,client_id,client_name,tiers,last_used_at,created_at")
+      .order("last_used_at", { ascending: false, nullsFirst: false });
+    setGrants((data ?? []) as GrantRow[]);
+  }, []);
+
+  /** A4 — permissões por aplicativo conectado (OAuth não emite scope customizado). */
+  async function setGrantTiers(clientId: string, tiers: string[]) {
+    setSavingGrant(clientId);
+    const { error } = await (supabase.rpc as any)("assistant_mcp_grant_set", {
+      _client_id: clientId,
+      _tiers: tiers,
+    });
+    setSavingGrant(null);
+    if (error) return toast.error(error.message);
+    loadGrants();
+  }
+
   useEffect(() => {
     loadTokens();
     loadApps();
-  }, [loadTokens, loadApps]);
+    loadGrants();
+  }, [loadTokens, loadApps, loadGrants]);
 
   async function createToken() {
     if (!name.trim()) return toast.error("Dê um nome ao token (ex.: 'n8n produção').");
     setCreating(true);
-    const scopes = allowWrite ? ["read", "write"] : ["read"];
+    const scopes = allowDestructive
+      ? ["read", "write", "destructive"]
+      : allowWrite
+        ? ["read", "write"]
+        : ["read"];
     const { data, error } = await (supabase.rpc as any)("assistant_mcp_token_create", {
       _name: name.trim(),
       _expires_at: null,
@@ -116,6 +153,7 @@ export default function AssistenteMcpTokens() {
     setFreshToken(row.token);
     setName("");
     setAllowWrite(false);
+    setAllowDestructive(false);
     loadTokens();
   }
 
@@ -234,6 +272,75 @@ export default function AssistenteMcpTokens() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Permissões por aplicativo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {grants.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Assim que um aplicativo chamar o MCP, ele aparece aqui com permissão de
+                  leitura. Libere escrita ou ações destrutivas manualmente.
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {grants.map((g) => {
+                    const canWrite = g.tiers?.includes("write");
+                    const canDestroy = g.tiers?.includes("destructive");
+                    return (
+                      <div key={g.id} className="flex items-center justify-between gap-4 py-3">
+                        <div className="min-w-0 space-y-1">
+                          <div className="text-sm font-medium truncate">
+                            {g.client_name || g.client_id}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {g.last_used_at
+                              ? `Última chamada ${new Date(g.last_used_at).toLocaleString("pt-BR")}`
+                              : "Sem chamadas ainda"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 shrink-0">
+                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!canWrite}
+                              disabled={savingGrant === g.client_id}
+                              onChange={(e) =>
+                                setGrantTiers(
+                                  g.client_id,
+                                  e.target.checked ? ["read", "write"] : ["read"],
+                                )
+                              }
+                            />
+                            Escrita
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!canDestroy}
+                              disabled={savingGrant === g.client_id}
+                              onChange={(e) =>
+                                setGrantTiers(
+                                  g.client_id,
+                                  e.target.checked
+                                    ? ["read", "write", "destructive"]
+                                    : canWrite
+                                      ? ["read", "write"]
+                                      : ["read"],
+                                )
+                              }
+                            />
+                            Destrutivo
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base">Aplicativos autorizados</CardTitle>
             </CardHeader>
             <CardContent>
@@ -338,6 +445,22 @@ export default function AssistenteMcpTokens() {
                       .
                     </span>
                   </label>
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={allowDestructive}
+                      onChange={(e) => {
+                        setAllowDestructive(e.target.checked);
+                        if (e.target.checked) setAllowWrite(true);
+                      }}
+                      disabled={creating}
+                    />
+                    <span>
+                      Permitir ações destrutivas (exclusões e cancelamentos). Conceda só quando
+                      a automação realmente precisar.
+                    </span>
+                  </label>
                   {freshToken && (
                     <div className="rounded-md border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-2">
                       <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
@@ -396,12 +519,18 @@ export default function AssistenteMcpTokens() {
                           {t.name}
                           <span
                             className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                              t.scopes?.includes("write")
-                                ? "border-amber-500/50 text-amber-700 dark:text-amber-300"
-                                : "border-muted-foreground/30 text-muted-foreground"
+                              t.scopes?.includes("destructive")
+                                ? "border-destructive/50 text-destructive"
+                                : t.scopes?.includes("write")
+                                  ? "border-amber-500/50 text-amber-700 dark:text-amber-300"
+                                  : "border-muted-foreground/30 text-muted-foreground"
                             }`}
                           >
-                            {t.scopes?.includes("write") ? "read + write" : "read"}
+                            {t.scopes?.includes("destructive")
+                              ? "leitura + escrita + destrutivo"
+                              : t.scopes?.includes("write")
+                                ? "leitura + escrita"
+                                : "leitura"}
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground font-mono">
