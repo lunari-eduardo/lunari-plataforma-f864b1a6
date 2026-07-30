@@ -128,17 +128,16 @@ export default function FormulariosConfig() {
         </div>
 
         {customTemplates.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Você ainda não criou nenhum template personalizado.
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Duplique um template pronto ou crie do zero.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center rounded-lg bg-muted/20 py-8 text-center">
+            <FileText className="mb-3 h-9 w-9 text-muted-foreground/50" />
+            <p className="text-[13px] text-muted-foreground">
+              Você ainda não criou nenhum template personalizado.
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Duplique um template pronto ou crie do zero.
+            </p>
+          </div>
+
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {customTemplates.map((template) => (

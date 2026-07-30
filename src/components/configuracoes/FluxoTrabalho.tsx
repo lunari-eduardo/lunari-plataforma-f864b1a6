@@ -150,7 +150,7 @@ export default function FluxoTrabalho({
         {/* Lista de Etapas */}
         <div className="space-y-3">
           {etapasOrdenadas.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-border rounded-lg">
+            <div className="text-center py-8 rounded-lg bg-muted/20">
               <p className="text-sm text-muted-foreground">
                 Nenhuma etapa cadastrada. Adicione sua primeira etapa acima.
               </p>

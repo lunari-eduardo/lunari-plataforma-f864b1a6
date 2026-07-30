@@ -74,3 +74,53 @@ export const DROPDOWN_PANEL =
 export const DROPDOWN_ITEM =
   'px-3 py-2 dropdown-solid-item cursor-pointer text-xs border-b border-border/20 last:border-b-0';
 
+/* ============================================================
+ * Onda 6 (2ª passagem) — listas, linhas e escala tipográfica
+ * ============================================================ */
+
+/**
+ * Casca de lista: o raio existe UMA única vez, aqui.
+ * Os itens internos nunca têm borda nem raio próprios.
+ */
+export const LIST_SHELL =
+  'rounded-lg border border-border/20 overflow-hidden bg-card/60';
+
+/**
+ * Divisor entre linhas — propositalmente mais aparente que a borda
+ * de input (`border-border/20`), para dar ritmo à leitura.
+ */
+export const ROW_DIVIDER = 'divide-y divide-border/60';
+
+/** Linha de lista: sem borda, sem raio, com hover discreto. */
+export const ROW_BASE =
+  'px-3 py-2 transition-colors hover:bg-muted/40';
+
+/** Cabeçalho de tabela/lista. */
+export const ROW_HEADER =
+  'px-3 py-2 bg-muted/30 text-[11px] font-medium uppercase tracking-wide text-muted-foreground';
+
+/** Faixa de adição inline (sem `border-dashed`). */
+export const INLINE_ADD =
+  'px-3 py-2.5 bg-muted/20 border-b border-border/60';
+
+/** Valor numérico em linha de lista. */
+export const VALUE_NUM =
+  'tabular-nums text-[13px] font-medium text-foreground';
+
+/** Ícone dourado fosco — substitui os `style={{ color: ... }}` avulsos. */
+export const GOLD_ICON = 'h-4 w-4 shrink-0 text-[hsl(var(--accent-gold))]';
+
+/**
+ * Input "ghost": sem borda/fundo em repouso, borda apenas em hover/focus.
+ * Reduz drasticamente a quantidade de cantos arredondados em listas editáveis.
+ */
+export const GHOST_INPUT =
+  'h-8 text-[13px] bg-transparent border-transparent shadow-none px-2 ' +
+  'hover:border-border/40 hover:bg-background/60 ' +
+  'focus-visible:border-border focus-visible:bg-background';
+
+/** Estado vazio de lista. */
+export const LIST_EMPTY =
+  'text-[13px] text-muted-foreground text-center py-6';
+
+

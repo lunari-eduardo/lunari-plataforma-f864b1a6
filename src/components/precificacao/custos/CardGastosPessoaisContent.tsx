@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  LIST_SHELL,
+  ROW_DIVIDER,
+  ROW_BASE,
+  INLINE_ADD,
+  GHOST_INPUT,
+  LIST_EMPTY,
+} from '@/lib/dialogTokens';
 import type { GastoItem } from '@/types/precificacao';
 
 interface CardGastosPessoaisContentProps {
@@ -18,97 +26,77 @@ export function CardGastosPessoaisContent({
   onRemover,
   onAtualizar
 }: CardGastosPessoaisContentProps) {
-  const [novoGasto, setNovoGasto] = useState({ descricao: '', valor: '' });
+  const [novoGasto, setNovoGasto] = useState({ descricao: '', valor: 0 });
 
   const adicionarGasto = () => {
-    if (novoGasto.descricao && novoGasto.valor) {
-      onAdicionar({
-        descricao: novoGasto.descricao,
-        valor: parseFloat(novoGasto.valor) || 0
-      });
-      setNovoGasto({ descricao: '', valor: '' });
+    if (novoGasto.descricao && novoGasto.valor > 0) {
+      onAdicionar({ descricao: novoGasto.descricao, valor: novoGasto.valor });
+      setNovoGasto({ descricao: '', valor: 0 });
     }
   };
 
   return (
-    <>
-      {/* Formulário de adição */}
-      <div className="bg-background border-2 border-dashed border-border rounded-lg p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs text-muted-foreground">Descrição</Label>
-            <Input 
-              placeholder="Ex: Alimentação, Transporte..." 
-              value={novoGasto.descricao}
-              onChange={e => setNovoGasto(prev => ({ ...prev, descricao: e.target.value }))}
-              className="h-9 bg-background border-input"
-            />
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">Valor</Label>
-            <Input 
-              type="number" 
-              min="0" 
-              step="0.01"
-              placeholder="0,00" 
-              value={novoGasto.valor}
-              onChange={e => setNovoGasto(prev => ({ ...prev, valor: e.target.value }))}
-              className="h-9 bg-background border-input"
-            />
-          </div>
+    <div className={LIST_SHELL}>
+      {/* Adição inline */}
+      <div className={INLINE_ADD}>
+        <div className="grid grid-cols-[minmax(0,1fr)_128px_32px] items-center gap-2">
+          <Input
+            placeholder="Ex: Alimentação, Transporte..."
+            value={novoGasto.descricao}
+            onChange={e => setNovoGasto(prev => ({ ...prev, descricao: e.target.value }))}
+            className="h-8 text-[13px]"
+          />
+          <CurrencyInput
+            value={novoGasto.valor}
+            onChange={v => setNovoGasto(prev => ({ ...prev, valor: v }))}
+            className="h-8 text-[13px]"
+          />
+          <Button
+            onClick={adicionarGasto}
+            disabled={!novoGasto.descricao || novoGasto.valor <= 0}
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8"
+            title="Adicionar gasto"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
-        <Button 
-          onClick={adicionarGasto} 
-          disabled={!novoGasto.descricao || !novoGasto.valor}
-          className="w-full mt-3 h-9"
-          size="sm"
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Adicionar Gasto
-        </Button>
       </div>
 
-      {/* Lista de gastos */}
-      <div className="space-y-2 max-h-64 overflow-y-auto">
+      {/* Lista */}
+      <div className={ROW_DIVIDER}>
         {gastosPessoais.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nenhum gasto pessoal cadastrado
-          </p>
+          <p className={LIST_EMPTY}>Nenhum gasto pessoal cadastrado</p>
         ) : (
           gastosPessoais.map(gasto => (
-            <div 
-              key={gasto.id} 
-              className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/40 shadow-sm"
-            >
-              <Input 
-                value={gasto.descricao}
-                onChange={e => onAtualizar(gasto.id, 'descricao', e.target.value)}
-                className="flex-1 h-8 text-sm bg-background border-input"
-                placeholder="Descrição"
-              />
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">R$</span>
-                <Input 
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={gasto.valor}
-                  onChange={e => onAtualizar(gasto.id, 'valor', parseFloat(e.target.value) || 0)}
-                  className="w-24 h-8 text-sm text-right bg-background border-input"
+            <div key={gasto.id} className={ROW_BASE}>
+              <div className="grid grid-cols-[minmax(0,1fr)_128px_32px] items-center gap-2">
+                <Input
+                  value={gasto.descricao}
+                  onChange={e => onAtualizar(gasto.id, 'descricao', e.target.value)}
+                  className={GHOST_INPUT}
+                  placeholder="Descrição"
                 />
+                <CurrencyInput
+                  value={gasto.valor}
+                  onChange={v => onAtualizar(gasto.id, 'valor', v)}
+                  showPrefix={false}
+                  className={GHOST_INPUT}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => onRemover(gasto.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                onClick={() => onRemover(gasto.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           ))
         )}
       </div>
-    </>
+    </div>
   );
 }

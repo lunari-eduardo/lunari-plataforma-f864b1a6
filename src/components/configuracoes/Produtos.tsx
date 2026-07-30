@@ -244,13 +244,13 @@ export default function Produtos({ pacotes }: ProdutosProps) {
       {/* Lista */}
       <div className="space-y-3" ref={listContainerRef}>
         {produtos.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-border rounded-lg">
+          <div className="text-center py-8 rounded-lg bg-muted/20">
             <p className="text-sm text-muted-foreground">
               Nenhum produto cadastrado. Adicione seu primeiro produto acima.
             </p>
           </div>
         ) : produtosComMargem.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-border rounded-lg">
+          <div className="text-center py-8 rounded-lg bg-muted/20">
             <p className="text-sm text-muted-foreground">
               Nenhum produto corresponde aos filtros.
             </p>
