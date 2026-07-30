@@ -30,15 +30,19 @@ export function CategoryPricingConfig({ categorias }: CategoryPricingConfigProps
             const temTabela = PricingConfigurationService.loadCategoryTable(categoria.id) !== null;
             
             return (
-              <div key={categoria.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={categoria.id}
+                className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2 last:border-b-0"
+              >
                 <div>
-                  <span className="font-medium">{categoria.nome}</span>
+                  <span className="text-[13px] font-medium">{categoria.nome}</span>
                   {temTabela && (
-                    <div className="text-xs text-green-600 mt-1">
-                      ✓ Tabela configurada
+                    <div className="mt-0.5 text-[11px] text-[hsl(var(--accent-gold))]">
+                      Tabela configurada
                     </div>
                   )}
                 </div>
+
                 <TabelaPrecosModal 
                   categoriaId={categoria.id}
                   categoriaNome={categoria.nome}
