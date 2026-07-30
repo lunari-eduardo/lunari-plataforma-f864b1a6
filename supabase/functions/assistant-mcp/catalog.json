@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-30T04:42:51.942Z",
-  "catalogHash": "e600c4a1e74af7dd76a00601a876b0c61eb098d5fb116f4efb9c221cd95a0d86",
+  "generatedAt": "2026-07-30T05:04:29.281Z",
+  "catalogHash": "83f1dd99daf4833283802f95c9a82152445de88fd988821c9a5ce983c2ce05a5",
   "catalogVersion": 2,
   "manifest": {
     "auth": {
@@ -1270,6 +1270,222 @@
         "description": "Atualizar lead. Atualiza dados cadastrais do lead (nome, contato, origem, observações, tags). Não muda status — use leads.moveStatus.",
         "name": "lunari.leads.update",
         "title": "leads.update"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Diagnosticar precificação. Aponta o que ainda falta configurar para o preço ser confiável: custos, horas, margem, tabela do modelo ativo e pacotes sem valor.",
+        "name": "lunari.precificacao.diagnostico",
+        "title": "precificacao.diagnostico"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Ver configuração de precificação. Retorna o modelo de preço ativo (fixo, tabela global ou tabela por categoria), horas produtivas, pró-labore e margem desejada.",
+        "name": "lunari.precificacao.getConfiguracao",
+        "title": "precificacao.getConfiguracao"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Ver estrutura de custos. Retorna gastos pessoais, pró-labore, custos de estúdio, depreciação de equipamentos, custo fixo mensal e custo por hora.",
+        "name": "lunari.precificacao.getEstruturaCustos",
+        "title": "precificacao.getEstruturaCustos"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Ver metas de faturamento e lucro. Retorna a margem desejada, as metas anuais e as metas personalizadas por mês/categoria.",
+        "name": "lunari.precificacao.getMetas",
+        "title": "precificacao.getMetas"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Ver tabela de preço de uma categoria. Retorna as faixas progressivas configuradas para uma categoria específica.",
+        "name": "lunari.precificacao.getTabelaCategoria",
+        "title": "precificacao.getTabelaCategoria"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar cenários salvos da calculadora. Lista os cenários de precificação já salvos, com horas, markup, custo total e preço final.",
+        "name": "lunari.precificacao.listCenarios",
+        "title": "precificacao.listCenarios"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar pacotes com preço. Lista os pacotes do estúdio com valor base, valor da foto extra e quantidade de fotos incluídas.",
+        "name": "lunari.precificacao.listPacotesComPreco",
+        "title": "precificacao.listPacotesComPreco"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar tabelas de preço de foto extra. Lista a tabela global e as tabelas por categoria com suas faixas progressivas de valor por foto.",
+        "name": "lunari.precificacao.listTabelas",
+        "title": "precificacao.listTabelas"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Definir metas de faturamento e lucro. Define as metas anuais de faturamento e lucro e, opcionalmente, uma meta personalizada de um mês/categoria. Requer aprovação.",
+        "name": "lunari.precificacao.setMetas",
+        "title": "precificacao.setMetas"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Alterar modelo de precificação. Troca o modelo de cobrança de foto extra entre valor fixo do pacote, tabela global progressiva ou tabela por categoria. Requer aprovação.",
+        "name": "lunari.precificacao.setModelo",
+        "title": "precificacao.setModelo"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Simular cobrança de fotos extras. Dada uma quantidade de fotos extras (e opcionalmente pacote ou categoria), retorna valor unitário, total e a faixa aplicada segundo o modelo de preço ativo.",
+        "name": "lunari.precificacao.simularFotoExtra",
+        "title": "precificacao.simularFotoExtra"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Simular impacto de uma nova tabela de preço. Compara a tabela atual com uma proposta de faixas em quantidades típicas, mostrando o antes/depois por foto e no total. Nada é gravado — use antes de aplicar qualquer alteração.",
+        "name": "lunari.precificacao.simularImpactoTabela",
+        "title": "precificacao.simularImpactoTabela"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Simular valor total de uma sessão. Combina valor base do pacote, fotos extras (pelo modelo ativo), valor adicional e desconto para estimar o total ao cliente. Não cria sessão nem cobrança.",
+        "name": "lunari.precificacao.simularPacote",
+        "title": "precificacao.simularPacote"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Simular preço de um trabalho. Calcula custo total, preço final e lucratividade a partir de horas estimadas, markup, produtos e custos extras — usando o custo por hora real do estúdio. Não salva nada.",
+        "name": "lunari.precificacao.simularPreco",
+        "title": "precificacao.simularPreco"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Alterar margem, horas e pró-labore. Atualiza margem de lucro desejada, horas produtivas por dia, dias trabalhados por semana e percentual de pró-labore. Muda o custo por hora de todas as simulações. Requer aprovação.",
+        "name": "lunari.precificacao.updateMargemEHoras",
+        "title": "precificacao.updateMargemEHoras"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Alterar preço de um pacote. Atualiza valor base, valor da foto extra e/ou fotos incluídas de um pacote. Requer aprovação.",
+        "name": "lunari.precificacao.updatePacotePreco",
+        "title": "precificacao.updatePacotePreco"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Atualizar tabela de foto extra de uma categoria. Substitui as faixas progressivas de fotos extras de uma categoria específica. Requer aprovação.",
+        "name": "lunari.precificacao.upsertTabelaCategoria",
+        "title": "precificacao.upsertTabelaCategoria"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Atualizar tabela global de foto extra. Substitui as faixas progressivas da tabela global de fotos extras. Faixas precisam ser contíguas, começar em 1 e terminar aberta. Requer aprovação.",
+        "name": "lunari.precificacao.upsertTabelaGlobal",
+        "title": "precificacao.upsertTabelaGlobal"
       },
       {
         "annotations": {
@@ -11543,6 +11759,1706 @@
       "scope": "write",
       "scopeTier": "write",
       "title": "leads.update"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.diagnostico",
+      "costHint": "cheap",
+      "description": "Diagnosticar precificação. Aponta o que ainda falta configurar para o preço ser confiável: custos, horas, margem, tabela do modelo ativo e pacotes sem valor.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.diagnostico",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "avisos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "problemas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "pronto": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pronto",
+          "problemas",
+          "avisos"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.diagnostico"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.getConfiguracao",
+      "costHint": "cheap",
+      "description": "Ver configuração de precificação. Retorna o modelo de preço ativo (fixo, tabela global ou tabela por categoria), horas produtivas, pró-labore e margem desejada.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.getConfiguracao",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoriasComTabela": {
+            "type": "number"
+          },
+          "custoPorHora": {
+            "type": "number"
+          },
+          "diasTrabalhadosSemana": {
+            "type": "number"
+          },
+          "hasTabelaGlobal": {
+            "type": "boolean"
+          },
+          "horasDisponiveisDia": {
+            "type": "number"
+          },
+          "horasMes": {
+            "type": "number"
+          },
+          "margemLucroDesejada": {
+            "type": "number"
+          },
+          "modelo": {
+            "enum": [
+              "fixo",
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          },
+          "percentualProLabore": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "modelo",
+          "hasTabelaGlobal",
+          "categoriasComTabela",
+          "horasDisponiveisDia",
+          "diasTrabalhadosSemana",
+          "horasMes",
+          "percentualProLabore",
+          "margemLucroDesejada",
+          "custoPorHora"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.getConfiguracao"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.getEstruturaCustos",
+      "costHint": "cheap",
+      "description": "Ver estrutura de custos. Retorna gastos pessoais, pró-labore, custos de estúdio, depreciação de equipamentos, custo fixo mensal e custo por hora.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.getEstruturaCustos",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contagens": {
+            "additionalProperties": false,
+            "properties": {
+              "custosEstudio": {
+                "type": "number"
+              },
+              "equipamentos": {
+                "type": "number"
+              },
+              "gastosPessoais": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "gastosPessoais",
+              "custosEstudio",
+              "equipamentos"
+            ],
+            "type": "object"
+          },
+          "custoFixoMensal": {
+            "type": "number"
+          },
+          "custoPorHora": {
+            "type": "number"
+          },
+          "horasMes": {
+            "type": "number"
+          },
+          "percentualProLabore": {
+            "type": "number"
+          },
+          "proLaboreCalculado": {
+            "type": "number"
+          },
+          "totalCustosEstudio": {
+            "type": "number"
+          },
+          "totalDepreciacaoMensal": {
+            "type": "number"
+          },
+          "totalGastosPessoais": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "totalGastosPessoais",
+          "percentualProLabore",
+          "proLaboreCalculado",
+          "totalCustosEstudio",
+          "totalDepreciacaoMensal",
+          "custoFixoMensal",
+          "horasMes",
+          "custoPorHora",
+          "contagens"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.getEstruturaCustos"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.getMetas",
+      "costHint": "cheap",
+      "description": "Ver metas de faturamento e lucro. Retorna a margem desejada, as metas anuais e as metas personalizadas por mês/categoria.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ano": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.getMetas",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "anoMeta": {
+            "nullable": true,
+            "type": "number"
+          },
+          "margemLucroDesejada": {
+            "type": "number"
+          },
+          "metaFaturamentoAnual": {
+            "type": "number"
+          },
+          "metaLucroAnual": {
+            "type": "number"
+          },
+          "personalizadas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "ano": {
+                  "type": "number"
+                },
+                "categoria": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "mes": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "metaFaturamento": {
+                  "type": "number"
+                },
+                "metaLucro": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "ano",
+                "mes",
+                "categoria",
+                "metaFaturamento",
+                "metaLucro"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "usarMetasPersonalizadas": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "margemLucroDesejada",
+          "anoMeta",
+          "metaFaturamentoAnual",
+          "metaLucroAnual",
+          "usarMetasPersonalizadas",
+          "personalizadas"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.getMetas"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.getTabelaCategoria",
+      "costHint": "cheap",
+      "description": "Ver tabela de preço de uma categoria. Retorna as faixas progressivas configuradas para uma categoria específica.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoriaId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "categoriaId"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.getTabelaCategoria",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "nullable": true,
+        "properties": {
+          "categoriaId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "faixas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "valor": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "min",
+                "max",
+                "valor"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "tipo": {
+            "enum": [
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          },
+          "usarValorFixoPacote": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "tipo",
+          "categoriaId",
+          "usarValorFixoPacote",
+          "faixas"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.getTabelaCategoria"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.listCenarios",
+      "costHint": "cheap",
+      "description": "Listar cenários salvos da calculadora. Lista os cenários de precificação já salvos, com horas, markup, custo total e preço final.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 20,
+            "exclusiveMinimum": true,
+            "maximum": 50,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.listCenarios",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "custoTotal": {
+                  "type": "number"
+                },
+                "horasEstimadas": {
+                  "type": "number"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "isDefault": {
+                  "type": "boolean"
+                },
+                "lucratividade": {
+                  "type": "number"
+                },
+                "markup": {
+                  "type": "number"
+                },
+                "nome": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "precoFinal": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome",
+                "horasEstimadas",
+                "markup",
+                "custoTotal",
+                "precoFinal",
+                "lucratividade",
+                "isDefault",
+                "updatedAt"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.listCenarios"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.listPacotesComPreco",
+      "costHint": "cheap",
+      "description": "Listar pacotes com preço. Lista os pacotes do estúdio com valor base, valor da foto extra e quantidade de fotos incluídas.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoriaId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.listPacotesComPreco",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "categoriaId": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "fotosIncluidas": {
+                  "type": "number"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "valorBase": {
+                  "type": "number"
+                },
+                "valorFotoExtra": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "nome",
+                "categoriaId",
+                "valorBase",
+                "valorFotoExtra",
+                "fotosIncluidas"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.listPacotesComPreco"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.listTabelas",
+      "costHint": "cheap",
+      "description": "Listar tabelas de preço de foto extra. Lista a tabela global e as tabelas por categoria com suas faixas progressivas de valor por foto.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.listTabelas",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "categoriaId": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "faixas": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "max": {
+                        "nullable": true,
+                        "type": "number"
+                      },
+                      "min": {
+                        "type": "number"
+                      },
+                      "valor": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "min",
+                      "max",
+                      "valor"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "tipo": {
+                  "enum": [
+                    "global",
+                    "categoria"
+                  ],
+                  "type": "string"
+                },
+                "usarValorFixoPacote": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "nome",
+                "tipo",
+                "categoriaId",
+                "usarValorFixoPacote",
+                "faixas"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "modelo": {
+            "enum": [
+              "fixo",
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "modelo",
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.listTabelas"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.setMetas",
+      "costHint": "cheap",
+      "description": "Definir metas de faturamento e lucro. Define as metas anuais de faturamento e lucro e, opcionalmente, uma meta personalizada de um mês/categoria. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ano": {
+            "maximum": 2100,
+            "minimum": 2020,
+            "type": "integer"
+          },
+          "metaFaturamentoAnual": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "metaLucroAnual": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "personalizada": {
+            "additionalProperties": false,
+            "properties": {
+              "categoria": {
+                "nullable": true,
+                "type": "string"
+              },
+              "mes": {
+                "maximum": 12,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "metaFaturamento": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "metaLucro": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "mes",
+              "metaFaturamento",
+              "metaLucro"
+            ],
+            "type": "object"
+          },
+          "usarMetasPersonalizadas": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ano"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.setMetas",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "campo": {
+                  "type": "string"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "para": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campo",
+                "de",
+                "para"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "diff",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.setMetas"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.setModelo",
+      "costHint": "cheap",
+      "description": "Alterar modelo de precificação. Troca o modelo de cobrança de foto extra entre valor fixo do pacote, tabela global progressiva ou tabela por categoria. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "modelo": {
+            "enum": [
+              "fixo",
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "modelo"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.setModelo",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "campo": {
+                  "type": "string"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "para": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campo",
+                "de",
+                "para"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "modelo": {
+            "enum": [
+              "fixo",
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "modelo",
+          "diff",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.setModelo"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.simularFotoExtra",
+      "costHint": "cheap",
+      "description": "Simular cobrança de fotos extras. Dada uma quantidade de fotos extras (e opcionalmente pacote ou categoria), retorna valor unitário, total e a faixa aplicada segundo o modelo de preço ativo.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoriaId": {
+            "type": "string"
+          },
+          "pacoteId": {
+            "type": "string"
+          },
+          "quantidade": {
+            "exclusiveMinimum": true,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantidade"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.simularFotoExtra",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "faixaAplicada": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "max": {
+                "nullable": true,
+                "type": "number"
+              },
+              "min": {
+                "type": "number"
+              },
+              "valor": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "min",
+              "max",
+              "valor"
+            ],
+            "type": "object"
+          },
+          "modelo": {
+            "enum": [
+              "fixo",
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          },
+          "notas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "quantidade": {
+            "type": "number"
+          },
+          "tabelaUsada": {
+            "nullable": true,
+            "type": "string"
+          },
+          "valorTotal": {
+            "type": "number"
+          },
+          "valorUnitario": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "modelo",
+          "quantidade",
+          "valorUnitario",
+          "valorTotal",
+          "faixaAplicada",
+          "tabelaUsada",
+          "notas"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.simularFotoExtra"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.simularImpactoTabela",
+      "costHint": "cheap",
+      "description": "Simular impacto de uma nova tabela de preço. Compara a tabela atual com uma proposta de faixas em quantidades típicas, mostrando o antes/depois por foto e no total. Nada é gravado — use antes de aplicar qualquer alteração.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoriaId": {
+            "type": "string"
+          },
+          "escopo": {
+            "default": "global",
+            "enum": [
+              "global",
+              "categoria"
+            ],
+            "type": "string"
+          },
+          "faixas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "valor": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "min",
+                "max",
+                "valor"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "quantidades": {
+            "items": {
+              "exclusiveMinimum": true,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "maxItems": 12,
+            "type": "array"
+          }
+        },
+        "required": [
+          "faixas"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.simularImpactoTabela",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "comparativo": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "quantidade": {
+                  "type": "number"
+                },
+                "totalAtual": {
+                  "type": "number"
+                },
+                "totalNovo": {
+                  "type": "number"
+                },
+                "unitarioAtual": {
+                  "type": "number"
+                },
+                "unitarioNovo": {
+                  "type": "number"
+                },
+                "variacaoPercentual": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "quantidade",
+                "unitarioAtual",
+                "unitarioNovo",
+                "totalAtual",
+                "totalNovo",
+                "variacaoPercentual"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "erros": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "notas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "temTabelaAtual": {
+            "type": "boolean"
+          },
+          "valida": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valida",
+          "erros",
+          "temTabelaAtual",
+          "comparativo",
+          "notas"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.simularImpactoTabela"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.simularPacote",
+      "costHint": "cheap",
+      "description": "Simular valor total de uma sessão. Combina valor base do pacote, fotos extras (pelo modelo ativo), valor adicional e desconto para estimar o total ao cliente. Não cria sessão nem cobrança.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "desconto": {
+            "default": 0,
+            "minimum": 0,
+            "type": "number"
+          },
+          "fotosExtras": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pacoteId": {
+            "type": "string"
+          },
+          "valorAdicional": {
+            "default": 0,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "pacoteId"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.simularPacote",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "desconto": {
+            "type": "number"
+          },
+          "notas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "pacote": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "valorBase": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "nome",
+              "valorBase"
+            ],
+            "type": "object"
+          },
+          "totalCliente": {
+            "type": "number"
+          },
+          "valorAdicional": {
+            "type": "number"
+          },
+          "valorFotosExtras": {
+            "type": "number"
+          },
+          "valorUnitarioFotoExtra": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pacote",
+          "valorFotosExtras",
+          "valorUnitarioFotoExtra",
+          "valorAdicional",
+          "desconto",
+          "totalCliente",
+          "notas"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.simularPacote"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "precificacao.simularPreco",
+      "costHint": "cheap",
+      "description": "Simular preço de um trabalho. Calcula custo total, preço final e lucratividade a partir de horas estimadas, markup, produtos e custos extras — usando o custo por hora real do estúdio. Não salva nada.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "custoPorHoraOverride": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "custosExtras": {
+            "default": [],
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "descricao": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "default": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "valorUnitario": {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "valorUnitario"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "horasEstimadas": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "markup": {
+            "exclusiveMinimum": true,
+            "maximum": 50,
+            "minimum": 0,
+            "type": "number"
+          },
+          "produtos": {
+            "default": [],
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "custo": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "quantidade": {
+                  "default": 1,
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "custo"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "horasEstimadas"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.precificacao.simularPreco",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "breakdown": {
+            "additionalProperties": false,
+            "properties": {
+              "custoHoras": {
+                "type": "number"
+              },
+              "custoProdutos": {
+                "type": "number"
+              },
+              "custosAdicionais": {
+                "type": "number"
+              },
+              "lucroEstimado": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "custoHoras",
+              "custoProdutos",
+              "custosAdicionais",
+              "lucroEstimado"
+            ],
+            "type": "object"
+          },
+          "custoPorHora": {
+            "type": "number"
+          },
+          "custoTotal": {
+            "type": "number"
+          },
+          "lucratividade": {
+            "type": "number"
+          },
+          "markupUsado": {
+            "type": "number"
+          },
+          "notas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "precoFinal": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "custoPorHora",
+          "markupUsado",
+          "custoTotal",
+          "precoFinal",
+          "lucratividade",
+          "breakdown",
+          "notas"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "precificacao.simularPreco"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.updateMargemEHoras",
+      "costHint": "cheap",
+      "description": "Alterar margem, horas e pró-labore. Atualiza margem de lucro desejada, horas produtivas por dia, dias trabalhados por semana e percentual de pró-labore. Muda o custo por hora de todas as simulações. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "diasTrabalhados": {
+            "maximum": 7,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "horasDisponiveis": {
+            "maximum": 24,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "margemLucroDesejada": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "number"
+          },
+          "percentualProLabore": {
+            "maximum": 500,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.updateMargemEHoras",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "campo": {
+                  "type": "string"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "para": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campo",
+                "de",
+                "para"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "diff",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.updateMargemEHoras"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.updatePacotePreco",
+      "costHint": "cheap",
+      "description": "Alterar preço de um pacote. Atualiza valor base, valor da foto extra e/ou fotos incluídas de um pacote. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "fotosIncluidas": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pacoteId": {
+            "type": "string"
+          },
+          "valorBase": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "valorFotoExtra": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "pacoteId"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.updatePacotePreco",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "campo": {
+                  "type": "string"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "para": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campo",
+                "de",
+                "para"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "diff",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.updatePacotePreco"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.upsertTabelaCategoria",
+      "costHint": "cheap",
+      "description": "Atualizar tabela de foto extra de uma categoria. Substitui as faixas progressivas de fotos extras de uma categoria específica. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "categoriaId": {
+            "type": "string"
+          },
+          "faixas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "valor": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "min",
+                "max",
+                "valor"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "nome": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "usarValorFixoPacote": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "categoriaId",
+          "faixas"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.upsertTabelaCategoria",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "categoriaId": {
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "campo": {
+                  "type": "string"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "para": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campo",
+                "de",
+                "para"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "categoriaId",
+          "diff",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.upsertTabelaCategoria"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "precificacao.upsertTabelaGlobal",
+      "costHint": "cheap",
+      "description": "Atualizar tabela global de foto extra. Substitui as faixas progressivas da tabela global de fotos extras. Faixas precisam ser contíguas, começar em 1 e terminar aberta. Requer aprovação.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "faixas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "valor": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "min",
+                "max",
+                "valor"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "nome": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "usarValorFixoPacote": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "faixas"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.precificacao.upsertTabelaGlobal",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "aviso": {
+            "type": "string"
+          },
+          "diff": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "campo": {
+                  "type": "string"
+                },
+                "de": {
+                  "type": "string"
+                },
+                "para": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campo",
+                "de",
+                "para"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "diff",
+          "aviso"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "precificacao.upsertTabelaGlobal"
     },
     {
       "annotations": {
