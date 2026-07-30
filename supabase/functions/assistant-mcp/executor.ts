@@ -567,7 +567,7 @@ const READ_TOOLS: Record<string, Handler> = {
     return ok(
       { sessionId: r.sessao!.id, produtos },
       produtos.length
-        ? produtos.map((p) => `${p.nome} ×${p.quantidade} · ${p.etapaAtual ?? "sem etapa"}${p.prazoEntrega ? ` · prazo ${p.prazoEntrega}` : ""}`).join(" | ")
+        ? produtos.map((p: any) => `${p.nome} ×${p.quantidade} · ${p.etapaAtual ?? "sem etapa"}${p.prazoEntrega ? ` · prazo ${p.prazoEntrega}` : ""}`).join(" | ")
         : "Nenhum produto nesta sessão.",
     );
   },
