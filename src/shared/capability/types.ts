@@ -3,6 +3,7 @@ import type { AuthUser } from "@/shared/ports";
 import type { EventName, EventPayload } from "@/shared/event-bus";
 import type { DomainError, Result } from "@/shared/result";
 import type { CapabilityAudience } from "./audience";
+import type { CapabilityExecution } from "./execution";
 
 
 export type CapabilityKind = "command" | "query";
