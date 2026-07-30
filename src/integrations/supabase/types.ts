@@ -6999,6 +6999,25 @@ export type Database = {
         Args: { p_ledger_id: string; p_motivo?: string }
         Returns: string
       }
+      sales_analytics_compare: {
+        Args: {
+          p_ano_base: number
+          p_ano_comparacao: number
+          p_categoria?: string
+          p_limite_mes?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      sales_analytics_summary: {
+        Args: {
+          p_categoria?: string
+          p_month?: number
+          p_user_id: string
+          p_year: number
+        }
+        Returns: Json
+      }
       set_session_extras: {
         Args: {
           p_session_id: string
