@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.18.0", // Grants herdados por usuário + busca tolerante (acentos/sinônimos) + vendas no núcleo
+  version: "0.19.0", // Grants herdados por usuário + busca tolerante (acentos/sinônimos) + vendas no núcleo
 };
 /**
  * Instruções do servidor: descrevem a arquitetura em camadas para o modelo,
@@ -119,7 +119,12 @@ const INSTRUCTIONS =
   `formulários, galeria, relatórios de vendas detalhados, metas, diagnósticos) NÃO são listadas aqui para manter a conexão leve, ` +
   `mas TODAS estão disponíveis. Antes de dizer que algo não é possível, use: ` +
   `lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
-  (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "");
+  (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "") +
+  `\n\nCONTRATO needs_input: quando uma resposta trouxer structuredContent.status = "needs_input", ela NÃO é erro nem falha. ` +
+  `Significa que falta um dado obrigatório (campos em "missing"). Faça a pergunta em "question" ao usuário, ` +
+  `mostrando as alternativas de "options" (use o campo value ao reenviar), e só então repita a chamada com o campo preenchido. ` +
+  `Nunca escolha uma opção por conta própria, nunca invente valores e nunca crie registros novos (cliente, categoria) ` +
+  `sem confirmação explícita do usuário.`;
 
 
 /** Teto de descrição publicada no núcleo (mantém o manifesto pequeno). */
