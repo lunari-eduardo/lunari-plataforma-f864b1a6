@@ -212,7 +212,14 @@ export interface DispatchArgs {
   /** Client já construído — usado no caminho PAT, que não tem JWT do usuário. */
   client?: SupabaseClient;
   scopes: string[];
+  /**
+   * A6 — id do usuário dono da execução. Quando informado, o dispatcher
+   * revalida o gate de rollout antes de despachar (defesa em profundidade
+   * para qualquer consumidor futuro que esqueça de checar).
+   */
+  userId?: string | null;
 }
+
 
 /**
  * Executa uma tool do catálogo. Único ponto de execução server-side.
@@ -244,6 +251,27 @@ export async function dispatchCapability(args: DispatchArgs): Promise<DispatchRe
 
   const sb = args.client ?? (args.userJwt ? userScopedClient(args.userJwt) : null);
   if (!sb) return fail("UNAUTHORIZED", started);
+
+  // A6 — gate de rollout, fail-closed.
+  if (args.userId) {
+    let allowed = false;
+    try {
+      const { data, error } = await sb.rpc("assistant_access_allowed", { _uid: args.userId });
+      allowed = !error && data === true;
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) {
+      return fail(
+        "FORBIDDEN",
+        started,
+        "blocked_by_rollout",
+        "A assistente Lu está em teste fechado. Solicite acesso para participar do beta.",
+      );
+    }
+  }
+
+
 
   const timeout = TIMEOUT_BY_COST[tool.costHint ?? "cheap"] ?? TIMEOUT_BY_COST.cheap;
 

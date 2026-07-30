@@ -40,3 +40,5 @@ jobs:
       - name: Auditoria da superfície AI
         continue-on-error: true
         run: bun run audit:ai
+      - name: Gate de rollout da Lu
+        run: bun run scripts/check-assistant-gate.ts

@@ -42,7 +42,13 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-export type AssistantOutputStatus = "ok" | "error" | "denied" | "pending_approval";
+export type AssistantOutputStatus =
+  | "ok"
+  | "error"
+  | "denied"
+  | "pending_approval"
+  | "blocked_by_rollout";
+
 
 export interface AssistantRunOptions {
   user: AuthUser;
@@ -200,6 +206,43 @@ export async function runCapabilityAsAssistant<T = unknown>(
       invocationId,
     };
   }
+
+  // A6 — gate de rollout (admin → beta → geral). Fail-closed: qualquer erro
+  // bloqueia a execução. O launcher escondido é UX; isto é a barreira real.
+  {
+    let rolloutAllowed = false;
+    try {
+      const { data, error } = await supabase.rpc("assistant_access_allowed", {
+        _uid: opts.user.id,
+      });
+      rolloutAllowed = !error && data === true;
+    } catch {
+      rolloutAllowed = false;
+    }
+    if (!rolloutAllowed) {
+      const latencyMs = Math.round(performance.now() - t0);
+      const invocationId = await recordInvocation({
+        userId: opts.user.id,
+        capabilityId,
+        module: opts.module,
+        kind: cap.kind === "query" ? "query" : "command",
+        inputHash,
+        outputStatus: "blocked_by_rollout",
+        errorMessage: "assistant_locked",
+        latencyMs,
+        needsApproval: !!opts.needsApproval,
+      });
+      return {
+        status: "denied",
+        error:
+          "A assistente Lu está em teste fechado. Solicite acesso para participar do beta.",
+        latencyMs,
+        invocationId,
+      };
+    }
+  }
+
+
 
   // Gate de aprovação humana — pode ser satisfeito por approvalToken OU por
   // uma confirmação texto/voz válida contra o desafio da tool.

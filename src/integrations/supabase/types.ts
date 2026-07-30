@@ -252,6 +252,39 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_access_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          message: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          message?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          message?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assistant_approvals: {
         Row: {
           approval_token_hash: string | null
@@ -6490,6 +6523,10 @@ export type Database = {
         Returns: undefined
       }
       assistant_access_allowed: { Args: { _uid: string }; Returns: boolean }
+      assistant_access_request_decide: {
+        Args: { _approve: boolean; _id: string }
+        Returns: string
+      }
       assistant_approval_consume: {
         Args: { _approval_token: string; _tool_name: string; _user_id: string }
         Returns: {
@@ -6585,6 +6622,7 @@ export type Database = {
           scopes: string[]
         }[]
       }
+      assistant_rollout_set: { Args: { _stage: string }; Returns: string }
       atomic_update_session_extras: {
         Args: {
           p_extras_increment: number

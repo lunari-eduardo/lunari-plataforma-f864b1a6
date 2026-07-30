@@ -15,6 +15,7 @@
     "mcp:catalog:check": "bun run scripts/build-mcp-catalog.ts --check",
     "mcp:audience": "bun run scripts/check-mcp-audience.ts",
     "mcp:approvals": "bun run scripts/check-approval-parity.ts",
+    "assistant:gate": "bun run scripts/check-assistant-gate.ts",
     "prebuild": "command -v bun >/dev/null 2>&1 && bun run scripts/build-mcp-catalog.ts || echo '[prebuild] bun ausente - catalogo MCP nao regenerado (guarda de CI cobre)'"
   },
   "dependencies": {

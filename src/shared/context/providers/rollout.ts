@@ -16,7 +16,7 @@ export const rolloutContextProvider: ContextProvider = {
       .maybeSingle();
     if (error || !data) return [];
     const raw = (data as { value?: unknown }).value;
-    const value = typeof raw === "string" ? raw : (raw as { stage?: string })?.stage;
+    const value = raw === "admin" || raw === "beta" || raw === "geral" ? raw : null;
     if (!value) return [];
     return [
       {
