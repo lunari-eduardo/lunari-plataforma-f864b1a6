@@ -646,13 +646,27 @@ function jsonResponse(body: unknown, init: ResponseInit = {}) {
 }
 
 Deno.serve(async (req: Request) => {
+  const flowId = req.headers.get("x-request-id") ?? crypto.randomUUID();
   if (req.method === "OPTIONS") return new Response("ok", { headers: mcpHeaders });
 
   const url = new URL(req.url);
   const path = url.pathname;
+  const httpStarted = Date.now();
 
-  // === RFC 9728 — Protected Resource Metadata ===
-  // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  // Entrada HTTP — nunca loga corpo, token ou segredo; só forma e tamanho.
+  flog(flowId, "http-in", {
+    method: req.method,
+    path,
+    content_type: req.headers.get("content-type"),
+    accept: req.headers.get("accept"),
+    protocol_version: req.headers.get("mcp-protocol-version"),
+    has_session: !!req.headers.get("mcp-session-id"),
+    has_authorization: (req.headers.get("authorization") ?? "").length > 0,
+    content_length: req.headers.get("content-length"),
+    user_agent: req.headers.get("user-agent"),
+    origin: req.headers.get("origin"),
+  });
+
   // === Proxy /oauth/authorize com scope sanitization ===
   // Corrige clientes MCP que cachearam scopes antigos (read/write) e não conseguem
   // completar OAuth porque o Supabase rejeita com "unsupported scope".
@@ -664,19 +678,23 @@ Deno.serve(async (req: Request) => {
     const dropped = requested.filter((s) => !SUPABASE_SUPPORTED_SCOPES.has(s));
     // Garante openid — necessário para emissão de id_token no OIDC flow.
     if (kept.length === 0 || !kept.includes("openid")) kept.unshift("openid");
-    console.log("[oauth-authorize-proxy]", JSON.stringify({
+    flog(flowId, "oauth-authorize", {
       client_id: incoming.get("client_id"),
       redirect_uri: incoming.get("redirect_uri"),
       response_type: incoming.get("response_type"),
-      state: incoming.get("state"),
+      // `state` nunca em texto puro: fingerprint permite comparar preservação.
+      state_fp: await fingerprint(incoming.get("state")),
+      state_len: (incoming.get("state") ?? "").length,
       code_challenge_method: incoming.get("code_challenge_method"),
-      has_code_challenge: !!incoming.get("code_challenge"),
+      code_challenge_fp: await fingerprint(incoming.get("code_challenge")),
+      resource: incoming.get("resource"),
       scope_in: rawScope,
       scope_out: kept.join(" "),
       dropped_scopes: dropped,
-    }));
+    });
     incoming.set("scope", Array.from(new Set(kept)).join(" "));
     const target = `${OAUTH_AS_ISSUER}/oauth/authorize?${incoming.toString()}`;
+    flog(flowId, "oauth-authorize-redirect", { status: 302, latency_ms: Date.now() - httpStarted });
     return new Response(null, {
       status: 302,
       headers: { ...mcpHeaders, Location: target },
@@ -685,16 +703,21 @@ Deno.serve(async (req: Request) => {
 
   // === RFC 9728 — Protected Resource Metadata ===
   // ChatGPT/Claude leem esse documento pra descobrir sozinhos o Authorization Server.
+  // Anunciamos o próprio MCP como authorization server (RFC 8414 issuer) para que
+  // o cliente leia o NOSSO metadata — que aponta o `authorization_endpoint` ao proxy
+  // sanitizador. O issuer do Supabase segue anunciado como alternativa.
   if (req.method === "GET" && path.endsWith("/.well-known/oauth-protected-resource")) {
+    flog(flowId, "discovery", { doc: "protected-resource", status: 200, latency_ms: Date.now() - httpStarted });
     return jsonResponse({
       resource: MCP_RESOURCE_URL,
-      authorization_servers: [OAUTH_AS_ISSUER],
+      authorization_servers: [MCP_RESOURCE_URL, OAUTH_AS_ISSUER],
       bearer_methods_supported: ["header"],
       scopes_supported: ["openid", "email", "profile"],
       resource_documentation:
         "https://modelcontextprotocol.io/specification/2025-06-18/basic/transports",
     });
   }
+
 
   // === RFC 8414 — Authorization Server Metadata ===
   // Servimos versão modificada do doc do Supabase apontando `authorization_endpoint`
