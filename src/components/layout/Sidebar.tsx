@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInputMode } from '@/hooks/useInputMode';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, FlaskConical, Crown, Plug, Brain } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
@@ -183,7 +183,7 @@ export default function Sidebar() {
     { to: "/app/clientes", icon: <UserCheck size={14} />, label: "Clientes" },
     { to: "/app/precificacao", icon: <Tag size={14} />, label: "Precificação", isPro: true },
     { to: "/app/analise-vendas", icon: <PieChart size={14} />, label: "Análise de Vendas", isPro: true },
-    { to: "/app/feed-test", icon: <FlaskConical size={14} />, label: "Feed Test", isPro: true },
+    
     { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" },
     { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" },
     { to: "/app/hub", icon: <Brain size={14} />, label: "Hub de IA" },
