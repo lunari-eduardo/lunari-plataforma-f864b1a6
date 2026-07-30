@@ -17,6 +17,7 @@
 
 import type { AuthUser } from "@/shared/ports";
 import { listAllLunariAITools } from "../registry";
+import { tierOf, type ScopeTier } from "@/shared/capability/scopes";
 
 export type MCPToolAnnotations = {
   readOnlyHint?: boolean;
@@ -118,6 +119,7 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
           ? { type: exec.type, name: exec.name, mapped: exec.mapped }
           : undefined,
       scope: t.kind === "query" ? "read" : "write",
+      scopeTier: tierOf({ kind: t.kind, needsApproval }),
       kind: t.kind,
       needsApproval,
       costHint: t.costHint,
