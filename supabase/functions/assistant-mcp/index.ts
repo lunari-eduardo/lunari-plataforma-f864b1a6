@@ -386,9 +386,10 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
           name: toPublicName(t.name),
           title: t.title,
           description: t.description,
-          inputSchema: publicInputSchema(t.inputSchema),
+          inputSchema: publicInputSchema(BRIDGE_SCHEMAS[t.name] ?? t.inputSchema),
           annotations: t.annotations,
         }));
+
       const metas = META_TOOL_DEFS.map((t) => ({
         ...t,
         name: toPublicName(t.name),
