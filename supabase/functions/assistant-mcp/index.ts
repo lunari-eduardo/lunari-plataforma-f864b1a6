@@ -112,6 +112,13 @@ const INSTRUCTIONS =
   `Para usá-las: lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
   (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "");
 
+/** Teto de descrição publicada no núcleo (mantém o manifesto pequeno). */
+const CORE_DESCRIPTION_MAX = 160;
+function trimDescription(text: string | undefined): string {
+  const t = String(text ?? "").replace(/\s+/g, " ").trim();
+  return t.length <= CORE_DESCRIPTION_MAX ? t : t.slice(0, CORE_DESCRIPTION_MAX - 1).trimEnd() + "…";
+}
+
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
 const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
@@ -400,7 +407,9 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         .map((t: any) => ({
           name: toPublicName(t.name),
           title: t.title,
-          description: t.description,
+          // Higiene de payload: descrição curta no manifesto; o detalhe completo
+          // fica em lunari.tools.describe.
+          description: trimDescription(t.description),
           inputSchema: publicInputSchema(BRIDGE_SCHEMAS[t.name] ?? t.inputSchema),
           annotations: t.annotations,
         }));
@@ -431,34 +440,65 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
       // Meta-tool de busca no catálogo completo (read-only, sem efeitos).
       if (name === META_SEARCH) {
         const q = String(args.query ?? "").toLowerCase().trim();
-        const limit = Math.min(Number(args.limit ?? 20) || 20, 50);
+        const domain = String(args.domain ?? "").toLowerCase().trim();
+        const limit = Math.min(Number(args.limit ?? 15) || 15, 40);
+        const terms = q.split(/\s+/).filter(Boolean);
         const hits = (catalog.tools as any[])
-          .filter((t) =>
-            !q ||
-            t.name.toLowerCase().includes(q) ||
-            String(t.title ?? "").toLowerCase().includes(q) ||
-            String(t.description ?? "").toLowerCase().includes(q)
-          )
+          .filter((t) => !domain || String(t.capabilityId ?? "").toLowerCase().startsWith(domain + "."))
+          .filter((t) => {
+            if (terms.length === 0) return true;
+            const hay = `${t.name} ${t.title ?? ""} ${t.description ?? ""}`.toLowerCase();
+            return terms.every((term) => hay.includes(term));
+          })
           .slice(0, limit)
+          // Resultado LEVE: sem inputSchema (use lunari.tools.describe).
           .map((t) => ({
             name: toPublicName(t.name),
-            internalName: t.name,
             title: t.title,
-            description: t.description,
-            scopeTier: t.scopeTier ?? null,
+            summary: trimDescription(t.description),
+            executable: isBridged(t.name) || !!t.transport?.name,
             needsApproval: t.needsApproval ?? null,
-            inputSchema: publicInputSchema(t.inputSchema),
           }));
 
         return rpcResult(id, {
           content: [{
             type: "text",
             text: hits.length
-              ? `${hits.length} ferramenta(s) encontrada(s). Execute com lunari.tools.invoke.\n` +
+              ? `${hits.length} ferramenta(s). Veja parâmetros com lunari.tools.describe e execute com lunari.tools.invoke.\n` +
                 hits.map((h) => `- ${h.name}: ${h.title}`).join("\n")
-              : "Nenhuma ferramenta encontrada para esse termo.",
+              : "Nenhuma ferramenta encontrada. Tente outro termo ou informe o domínio.",
           }],
           structuredContent: { tools: hits, total: catalog.tools.length },
+        });
+      }
+
+      // Meta-tool de detalhe: schema completo de UMA ferramenta.
+      if (name === META_DESCRIBE) {
+        const target = resolveToolName(String(args.name ?? "").trim());
+        const tool = (catalog.tools as any[]).find((t) => t.name === target);
+        if (!tool) {
+          return rpcResult(id, {
+            isError: true,
+            content: [{ type: "text", text: `Ferramenta "${args.name}" não encontrada. Use lunari.tools.search.` }],
+          });
+        }
+        const schema = publicInputSchema(BRIDGE_SCHEMAS[tool.name] ?? tool.inputSchema);
+        return rpcResult(id, {
+          content: [{
+            type: "text",
+            text: `${toPublicName(tool.name)} — ${tool.title}\n${tool.description ?? ""}\n` +
+              `Parâmetros: ${JSON.stringify(schema)}`,
+          }],
+          structuredContent: {
+            name: toPublicName(tool.name),
+            internalName: tool.name,
+            title: tool.title,
+            description: tool.description,
+            inputSchema: schema,
+            scopeTier: tool.scopeTier ?? null,
+            needsApproval: tool.needsApproval ?? null,
+            executable: isBridged(tool.name) || !!tool.transport?.name,
+          },
         });
       }
 
