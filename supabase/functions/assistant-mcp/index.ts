@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.10.0", // superfície curada p/ conectores + transporte Streamable HTTP corrigido (SSE/405, Mcp-Session-Id)
+  version: "0.11.0", // aliases sem ponto + schemas achatados + server/discover (compat ChatGPT)
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
