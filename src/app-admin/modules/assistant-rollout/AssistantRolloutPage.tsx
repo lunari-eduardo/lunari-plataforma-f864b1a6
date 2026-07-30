@@ -30,6 +30,14 @@ import { Sparkles, UserPlus, Trash2 } from "lucide-react";
 
 type Stage = "admin" | "beta" | "geral";
 
+type RequestRow = {
+  id: string;
+  user_id: string;
+  message: string | null;
+  created_at: string;
+  email?: string | null;
+};
+
 type BetaRow = {
   user_id: string;
   granted_at: string;
@@ -51,6 +59,7 @@ export default function AssistantRolloutPage() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [metrics, setMetrics] = useState<{ total: number; blocked: number } | null>(null);
+  const [requests, setRequests] = useState<RequestRow[]>([]);
 
   const loadAll = async () => {
     const [{ data: settingRows }, { data: betaRows }, { data: invRows }] = await Promise.all([
@@ -74,6 +83,22 @@ export default function AssistantRolloutPage() {
       rows.forEach((r) => (r.email = map.get(r.user_id) ?? null));
     }
     setBeta(rows);
+
+    const { data: reqRows } = await supabase
+      .from("assistant_access_requests")
+      .select("id, user_id, message, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    const reqs = (reqRows ?? []) as RequestRow[];
+    if (reqs.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", reqs.map((r) => r.user_id));
+      const pmap = new Map<string, string | null>((profs ?? []).map((p: any) => [p.id, p.email]));
+      reqs.forEach((r) => (r.email = pmap.get(r.user_id) ?? null));
+    }
+    setRequests(reqs);
 
     const invocations = (invRows ?? []) as unknown as { output_status: string | null }[];
     setMetrics({
@@ -120,6 +145,17 @@ export default function AssistantRolloutPage() {
     }
     setEmail("");
     setNote("");
+    await loadAll();
+  };
+
+  const decideRequest = async (id: string, approve: boolean) => {
+    setBusy(true);
+    const { error } = await supabase.rpc("assistant_access_request_decide", {
+      _id: id,
+      _approve: approve,
+    });
+    setBusy(false);
+    if (error) return toast.error("Falha ao decidir: " + error.message);
     await loadAll();
   };
 
@@ -181,6 +217,52 @@ export default function AssistantRolloutPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pedidos de acesso ({requests.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {requests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum pedido pendente.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Mensagem</TableHead>
+                  <TableHead>Pedido em</TableHead>
+                  <TableHead className="w-44"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requests.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell>{r.email ?? r.user_id}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.message ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell className="flex gap-2">
+                      <Button size="sm" disabled={busy} onClick={() => decideRequest(r.id, true)}>
+                        Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => decideRequest(r.id, false)}
+                      >
+                        Negar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
