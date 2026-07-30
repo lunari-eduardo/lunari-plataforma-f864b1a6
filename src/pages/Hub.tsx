@@ -57,12 +57,15 @@ export default function Hub() {
       </header>
 
       <Tabs value={tab} onValueChange={onChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="contexto" className="gap-1.5">
             <Sparkles size={13} /> <span className="hidden sm:inline">Contexto</span>
           </TabsTrigger>
           <TabsTrigger value="aprovacoes" className="gap-1.5">
             <ShieldCheck size={13} /> <span className="hidden sm:inline">Aprovações</span>
+          </TabsTrigger>
+          <TabsTrigger value="automacoes" className="gap-1.5">
+            <Timer size={13} /> <span className="hidden sm:inline">Automações</span>
           </TabsTrigger>
           <TabsTrigger value="conexoes" className="gap-1.5">
             <Plug size={13} /> <span className="hidden sm:inline">Conexões</span>
@@ -77,6 +80,9 @@ export default function Hub() {
         </TabsContent>
         <TabsContent value="aprovacoes" className="mt-4">
           <AssistenteAprovacoes />
+        </TabsContent>
+        <TabsContent value="automacoes" className="mt-4">
+          <HubAutomacoes />
         </TabsContent>
         <TabsContent value="conexoes" className="mt-4">
           <AssistenteMcpTokens />
