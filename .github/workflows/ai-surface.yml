@@ -31,6 +31,10 @@ jobs:
       - name: Catálogo MCP em dia
         run: bun run mcp:catalog:check
 
+      # A5 — paridade de aprovação: catálogo × app × bridge legado.
+      - name: Paridade de aprovação
+        run: bun run mcp:approvals
+
       # D.2 — approvals/destrutivas com gate humano.
       # D.2 — informativo por enquanto (backlog de approvals ainda aberto).
       - name: Auditoria da superfície AI
