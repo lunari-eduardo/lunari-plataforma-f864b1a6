@@ -103,14 +103,24 @@ const SERVER_INFO = {
  * incluindo o índice compacto de domínios (gerado no catálogo). Isso substitui
  * a listagem completa de ferramentas no handshake.
  */
-const DOMAIN_INDEX: string = (catalog as any).manifest?.domainIndex ?? "";
+const DOMAIN_COUNTS: Map<string, number> = new Map();
+for (const t of (catalog as any).tools ?? []) {
+  const d = String((t as any).capabilityId ?? "").split(".")[0];
+  if (d) DOMAIN_COUNTS.set(d, (DOMAIN_COUNTS.get(d) ?? 0) + 1);
+}
+const DOMAIN_INDEX: string = [...DOMAIN_COUNTS.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .map(([d, n]) => `${DOMAIN_LABELS[d] ?? d} (${n})`)
+  .join(" · ");
 const INSTRUCTIONS =
   `${catalog.manifest.instructions}\n\n` +
-  `As ferramentas visíveis cobrem a rotina diária (agenda, workflow, clientes, tarefas, financeiro, leads). ` +
+  `As ferramentas visíveis cobrem a rotina diária (agenda, workflow, clientes, tarefas, financeiro, leads, resumo de vendas). ` +
   `O Lunari tem ${CATALOG_SIZE} ferramentas no total — as demais (precificação, configurações, contratos, ` +
-  `formulários, galeria, relatórios, diagnósticos) NÃO são listadas aqui para manter a conexão leve. ` +
-  `Para usá-las: lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
+  `formulários, galeria, relatórios de vendas detalhados, metas, diagnósticos) NÃO são listadas aqui para manter a conexão leve, ` +
+  `mas TODAS estão disponíveis. Antes de dizer que algo não é possível, use: ` +
+  `lunari.tools.search (achar) → lunari.tools.describe (ver parâmetros) → lunari.tools.invoke (executar).` +
   (DOMAIN_INDEX ? `\nDomínios disponíveis: ${DOMAIN_INDEX}.` : "");
+
 
 /** Teto de descrição publicada no núcleo (mantém o manifesto pequeno). */
 const CORE_DESCRIPTION_MAX = 160;
