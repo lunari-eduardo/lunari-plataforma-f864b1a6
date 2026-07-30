@@ -15,20 +15,7 @@
 // Node/Bun não têm localStorage; o client Supabase quebra no import top-level.
 // Shim precisa vir ANTES de qualquer import estático — por isso todos os
 // imports do grafo do app são dinâmicos abaixo.
-const g = globalThis as unknown as { localStorage?: unknown };
-if (!g.localStorage) {
-  const store = new Map<string, string>();
-  g.localStorage = {
-    getItem: (k: string) => (store.has(k) ? (store.get(k) as string) : null),
-    setItem: (k: string, v: string) => void store.set(k, String(v)),
-    removeItem: (k: string) => void store.delete(k),
-    clear: () => store.clear(),
-    key: (i: number) => Array.from(store.keys())[i] ?? null,
-    get length() {
-      return store.size;
-    },
-  };
-}
+import "./_shim";
 
 const DESTRUCTIVE_SUFFIXES = [
   ".delete",

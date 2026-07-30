@@ -31,6 +31,20 @@ const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
   ((catalog as any).tools ?? []).map((t: CatalogTool) => [t.name, t]),
 );
 
+/** A3 — idade do catálogo em dias; congelamento vira sinal observável. */
+const CATALOG_STALE_DAYS = 30;
+function catalogAgeDays(): number {
+  const t = Date.parse((catalog as any).generatedAt ?? "");
+  if (Number.isNaN(t)) return Number.POSITIVE_INFINITY;
+  return (Date.now() - t) / 86_400_000;
+}
+if (catalogAgeDays() > CATALOG_STALE_DAYS) {
+  console.warn(
+    `[assistant-mcp] catálogo gerado há ${Math.round(catalogAgeDays())} dias — ` +
+      "o pipeline de regeneração pode ter parado (bun run mcp:catalog).",
+  );
+}
+
 /** Só despacha genericamente quando há transporte declarado E JWT do usuário (RLS real). */
 function dispatchableTool(name: string, auth: AuthContext): CatalogTool | null {
   if (!auth.userJwt) return null; // PAT não carrega JWT → cai no bridge legado

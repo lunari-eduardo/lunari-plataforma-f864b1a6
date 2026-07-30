@@ -1,0 +1,38 @@
+name: AI surface
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "supabase/functions/assistant-mcp/**"
+      - ".github/workflows/ai-surface.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "supabase/functions/assistant-mcp/**"
+
+jobs:
+  ai-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+
+      # A1 — audiência: nenhum anel interno/admin exposto ao MCP.
+      - name: Guarda de audiência
+        run: bun run mcp:audience
+
+      # A3 — catálogo derivado: falha se o arquivo commitado divergir do registry.
+      - name: Catálogo MCP em dia
+        run: bun run mcp:catalog:check
+
+      # D.2 — approvals/destrutivas com gate humano.
+      # D.2 — informativo por enquanto (backlog de approvals ainda aberto).
+      - name: Auditoria da superfície AI
+        continue-on-error: true
+        run: bun run audit:ai
