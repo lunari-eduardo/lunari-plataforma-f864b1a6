@@ -118,7 +118,5 @@ export function CardProLaboreContent({
         </div>
       </div>
     </div>
-
-    </>
   );
 }
