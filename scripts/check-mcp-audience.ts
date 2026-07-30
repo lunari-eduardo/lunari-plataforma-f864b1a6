@@ -24,7 +24,7 @@ const GALLERY_READS_EXPECTED = [
 async function main() {
   await import("../src/shared/ai/registry");
   const { listCapabilities } = await import("../src/shared/capability");
-  const { MCP_BLOCKED_CAPABILITIES, MCP_BLOCKED_MODULES, moduleOf } = await import(
+  const { MCP_BLOCKED_CAPABILITIES, mcpBlockReason, moduleOf } = await import(
     "../src/shared/capability/audience"
   );
 
@@ -37,9 +37,8 @@ async function main() {
   }
 
   for (const c of mcp) {
-    if (MCP_BLOCKED_MODULES.has(moduleOf(c.id))) {
-      failures.push(`anel interno exposto ao MCP: ${c.id}`);
-    }
+    const reason = mcpBlockReason(c.id);
+    if (reason) failures.push(`exposto ao MCP indevidamente (${reason}): ${c.id}`);
   }
 
   const mcpIds = new Set(mcp.map((c) => c.id));
