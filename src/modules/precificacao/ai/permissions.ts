@@ -19,6 +19,7 @@ export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "precificacao.updatePacotePreco",
   "precificacao.updateMargemEHoras",
   "precificacao.setMetas",
+  "precificacao.criarPacotePrecificado",
 ]);
 
 registerModuleApprovals({
