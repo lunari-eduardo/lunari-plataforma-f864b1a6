@@ -99,6 +99,9 @@ async function recordInvocation(row: {
   latencyMs: number;
   needsApproval: boolean;
   approvedBy?: string | null;
+  /** A5 — ticket de aprovação vinculado (quando houve gate destrutivo). */
+  approvalId?: string | null;
+  confirmationMode?: string | null;
 }): Promise<string | undefined> {
   try {
     const { data, error } = await supabase
@@ -114,6 +117,9 @@ async function recordInvocation(row: {
         error_message: row.errorMessage ?? null,
         latency_ms: row.latencyMs,
         needs_approval: row.needsApproval,
+        surface: "app",
+        tool_name: row.capabilityId,
+        approval_id: row.approvalId ?? null,
         approved_by: row.approvedBy ?? null,
         approved_at: row.approvedBy ? new Date().toISOString() : null,
       })
@@ -127,6 +133,37 @@ async function recordInvocation(row: {
   } catch (err) {
     console.warn("[assistant] auditoria exception:", err);
     return undefined;
+  }
+}
+
+/**
+ * A5 — toda ação destrutiva vira ticket em `assistant_approvals`, inclusive
+ * quando resolvida por confirmação inline (texto/voz) dentro do app. Assim o
+ * histórico de aprovações cobre app e MCP com o mesmo contrato.
+ */
+async function recordInlineApproval(args: {
+  capabilityId: string;
+  input: unknown;
+  summary: string;
+  confirmationMode: string;
+  approved: boolean;
+}): Promise<string | null> {
+  try {
+    const { data, error } = await (supabase.rpc as any)("assistant_approval_record_inline", {
+      _tool_name: args.capabilityId,
+      _tool_args: (args.input ?? {}) as Record<string, unknown>,
+      _summary: args.summary,
+      _confirmation_mode: args.confirmationMode,
+      _approved: args.approved,
+    });
+    if (error) {
+      console.warn("[assistant] ticket de aprovação falhou:", error.message);
+      return null;
+    }
+    return (data as string) ?? null;
+  } catch (err) {
+    console.warn("[assistant] ticket de aprovação exception:", err);
+    return null;
   }
 }
 
@@ -168,6 +205,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
   // uma confirmação texto/voz válida contra o desafio da tool.
   // D.1: cruzamos com o registry central para não depender só do caller.
   const requiresApproval = !!opts.needsApproval || centralNeedsApproval(capabilityId);
+  let inlineApprovalId: string | null = null;
   if (requiresApproval && !opts.approvalToken) {
     let confirmed = false;
     let confirmationError: string | undefined;
@@ -186,7 +224,15 @@ export async function runCapabilityAsAssistant<T = unknown>(
 
     if (!confirmed) {
       const latencyMs = Math.round(performance.now() - t0);
+      const approvalId = await recordInlineApproval({
+        capabilityId,
+        input,
+        summary: cap.title ?? capabilityId,
+        confirmationMode: opts.confirmationSource ?? "none",
+        approved: false,
+      });
       const invocationId = await recordInvocation({
+        approvalId,
         userId: opts.user.id,
         capabilityId,
         module: opts.module,
@@ -204,7 +250,14 @@ export async function runCapabilityAsAssistant<T = unknown>(
         invocationId,
       };
     }
-    // Confirmação válida → segue para execução (auditoria marca approved_by).
+    // Confirmação válida → abre e fecha o ticket no mesmo instante.
+    inlineApprovalId = await recordInlineApproval({
+      capabilityId,
+      input,
+      summary: cap.title ?? capabilityId,
+      confirmationMode: opts.confirmationSource ?? "text",
+      approved: true,
+    });
   }
 
 
@@ -244,6 +297,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
         kind: cap.kind,
         inputHash,
         outputStatus: denied ? "denied" : "error",
+      approvalId: inlineApprovalId,
         errorMessage: message,
         latencyMs,
         needsApproval: !!opts.needsApproval,
@@ -258,6 +312,7 @@ export async function runCapabilityAsAssistant<T = unknown>(
       kind: cap.kind,
       inputHash,
       outputStatus: "ok",
+      approvalId: inlineApprovalId,
       latencyMs,
       needsApproval: !!opts.needsApproval,
       approvedBy: opts.approvalToken || opts.confirmationInput ? opts.user.id : null,

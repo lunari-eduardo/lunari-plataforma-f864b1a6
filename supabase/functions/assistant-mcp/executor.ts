@@ -158,7 +158,9 @@ const WRITE_HANDLERS: Record<string, { handler: Handler; requiresApproval: boole
     },
   },
   "lunari.finance.transaction.create": {
-    requiresApproval: true,
+    // A5 — criar lançamento é escrita comum (não destrutiva); a classificação
+    // única vive no catálogo. Manter `true` aqui divergia do app e do MCP.
+    requiresApproval: false,
     summarize: (a) =>
       `Registrar ${a.tipo ?? "transação"} de R$ ${Number(a.valor ?? 0).toFixed(2)}${a.descricao ? ` — ${a.descricao}` : ""}`,
     handler: async (sb, uid, args) => {

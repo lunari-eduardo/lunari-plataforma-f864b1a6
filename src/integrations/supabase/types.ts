@@ -255,6 +255,9 @@ export type Database = {
       assistant_approvals: {
         Row: {
           approval_token_hash: string | null
+          args_fingerprint: string | null
+          client_id: string | null
+          confirmation_mode: string | null
           consumed_at: string | null
           created_at: string
           decided_at: string | null
@@ -263,6 +266,7 @@ export type Database = {
           requested_at: string
           status: Database["public"]["Enums"]["assistant_approval_status"]
           summary: string | null
+          surface: string
           token_id: string | null
           tool_args: Json
           tool_name: string
@@ -270,6 +274,9 @@ export type Database = {
         }
         Insert: {
           approval_token_hash?: string | null
+          args_fingerprint?: string | null
+          client_id?: string | null
+          confirmation_mode?: string | null
           consumed_at?: string | null
           created_at?: string
           decided_at?: string | null
@@ -278,6 +285,7 @@ export type Database = {
           requested_at?: string
           status?: Database["public"]["Enums"]["assistant_approval_status"]
           summary?: string | null
+          surface?: string
           token_id?: string | null
           tool_args?: Json
           tool_name: string
@@ -285,6 +293,9 @@ export type Database = {
         }
         Update: {
           approval_token_hash?: string | null
+          args_fingerprint?: string | null
+          client_id?: string | null
+          confirmation_mode?: string | null
           consumed_at?: string | null
           created_at?: string
           decided_at?: string | null
@@ -293,6 +304,7 @@ export type Database = {
           requested_at?: string
           status?: Database["public"]["Enums"]["assistant_approval_status"]
           summary?: string | null
+          surface?: string
           token_id?: string | null
           tool_args?: Json
           tool_name?: string
@@ -332,12 +344,15 @@ export type Database = {
       assistant_invocations: {
         Row: {
           actor: string
+          approval_id: string | null
           approved_at: string | null
           approved_by: string | null
           auth_source: string | null
           capability_id: string
+          client_id: string | null
           created_at: string
           error_message: string | null
+          granted_tiers: string[] | null
           id: string
           input_hash: string | null
           kind: string
@@ -345,17 +360,24 @@ export type Database = {
           module: string
           needs_approval: boolean
           output_status: string
+          request_id: string | null
+          required_tier: string | null
+          surface: string | null
+          tool_name: string | null
           ts: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           actor?: string
+          approval_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           auth_source?: string | null
           capability_id: string
+          client_id?: string | null
           created_at?: string
           error_message?: string | null
+          granted_tiers?: string[] | null
           id?: string
           input_hash?: string | null
           kind: string
@@ -363,17 +385,24 @@ export type Database = {
           module: string
           needs_approval?: boolean
           output_status: string
+          request_id?: string | null
+          required_tier?: string | null
+          surface?: string | null
+          tool_name?: string | null
           ts?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           actor?: string
+          approval_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           auth_source?: string | null
           capability_id?: string
+          client_id?: string | null
           created_at?: string
           error_message?: string | null
+          granted_tiers?: string[] | null
           id?: string
           input_hash?: string | null
           kind?: string
@@ -381,10 +410,22 @@ export type Database = {
           module?: string
           needs_approval?: boolean
           output_status?: string
+          request_id?: string | null
+          required_tier?: string | null
+          surface?: string | null
+          tool_name?: string | null
           ts?: string
-          user_id?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assistant_invocations_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_approvals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assistant_mcp_client_grants: {
         Row: {
@@ -6470,6 +6511,9 @@ export type Database = {
         Args: { _approve: boolean; _id: string }
         Returns: {
           approval_token_hash: string | null
+          args_fingerprint: string | null
+          client_id: string | null
+          confirmation_mode: string | null
           consumed_at: string | null
           created_at: string
           decided_at: string | null
@@ -6478,6 +6522,7 @@ export type Database = {
           requested_at: string
           status: Database["public"]["Enums"]["assistant_approval_status"]
           summary: string | null
+          surface: string
           token_id: string | null
           tool_args: Json
           tool_name: string
@@ -6490,6 +6535,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      assistant_approval_record_inline: {
+        Args: {
+          _approved: boolean
+          _confirmation_mode: string
+          _summary: string
+          _tool_args: Json
+          _tool_name: string
+        }
+        Returns: string
+      }
+      assistant_approvals_expire_stale: { Args: never; Returns: number }
       assistant_mcp_grant_resolve: {
         Args: { _client_id: string; _client_name?: string; _user_id: string }
         Returns: string[]
