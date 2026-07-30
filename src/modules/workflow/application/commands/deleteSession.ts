@@ -83,8 +83,10 @@ export const deleteSession = defineCommand({
       result = await workflowRpc.deleteWorkflowSessionCascade(sessionId, action);
     } catch (cause) {
       ctx.log.error("falha na RPC delete_workflow_session_cascade", { cause });
+      const detalhe =
+        (cause as { message?: string })?.message?.trim() || "Erro desconhecido no banco de dados.";
       return err(
-        domainError("EXTERNAL", "Não foi possível excluir a sessão.", {
+        domainError("EXTERNAL", `Não foi possível excluir a sessão: ${detalhe}`, {
           retriable: true,
           cause,
         }),
