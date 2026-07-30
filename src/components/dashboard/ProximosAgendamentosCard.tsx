@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, ChevronRight } from "lucide-react";
 import { useAppointmentsRangeQuery } from "@/modules/agenda";
 import { format, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { parseDateFromStorage } from "@/utils/dateUtils";
 
 /**
@@ -73,7 +74,7 @@ export function ProximosAgendamentosCard() {
               >
                 <div className="flex shrink-0 flex-col items-start gap-0.5 border-l-2 border-primary pl-3 leading-tight">
                   <span className="text-[11px] font-bold uppercase tracking-wide text-primary">
-                    {format(when, "dd")} {format(when, "MMM").toUpperCase().replace(".", "")}
+                    {format(when, "dd")} {format(when, "MMM", { locale: ptBR }).toUpperCase().replace(".", "")}
                   </span>
                   <span className="text-[11px] font-semibold text-primary/80">
                     {a.time}
