@@ -21,11 +21,13 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
 import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
+import { EXPOSED_TOOLS, META_TOOL_DEFS, META_SEARCH, META_INVOKE, isExposed } from "./exposed.ts";
 import {
   dispatchCapability,
   type CatalogTool,
   type DispatchResult,
 } from "../_shared/capability-dispatch.ts";
+
 
 /** A2 — índice do catálogo por nome de tool (transport declarado na capability). */
 const CATALOG_BY_NAME: Map<string, CatalogTool> = new Map(
