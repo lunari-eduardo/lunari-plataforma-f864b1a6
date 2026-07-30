@@ -829,15 +829,39 @@ Deno.serve(async (req: Request) => {
   }
 
 
+  // Leitura tolerante do corpo. Antes, qualquer POST fora do formato virava 400
+  // "Parse error" SEM registro de forma/tamanho — exatamente o 400 silencioso que
+  // derrubava o handshake do ChatGPT sem deixar rastro.
+  const rawBody = await req.text();
+  const trimmed = rawBody.trim();
+
+  // Corpo vazio (keep-alive / probe de alguns conectores): 202, não erro.
+  if (trimmed.length === 0) {
+    flog(flowId, "post-empty", { status: 202, bytes: 0, latency_ms: Date.now() - httpStarted });
+    return new Response(null, {
+      status: 202,
+      headers: { ...mcpHeaders, "Mcp-Session-Id": req.headers.get("mcp-session-id") ?? crypto.randomUUID() },
+    });
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
+    body = JSON.parse(trimmed);
+  } catch (err) {
+    flog(flowId, "post-parse-error", {
+      status: 400,
+      bytes: rawBody.length,
+      content_type: req.headers.get("content-type"),
+      // Prefixo curto e sem segredo: suficiente para identificar form-encoded, XML, etc.
+      shape: trimmed.slice(0, 24),
+      error: String(err),
+    });
     return new Response(JSON.stringify(rpcError(null, -32700, "Parse error")), {
       status: 400,
       headers: { ...mcpHeaders, "Content-Type": "application/json" },
     });
   }
+
 
   const startedAt = Date.now();
   const auth = await resolveAuth(req);
