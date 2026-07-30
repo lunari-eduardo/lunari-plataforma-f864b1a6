@@ -94,13 +94,30 @@ async function main() {
   const { dirname } = await import("node:path");
 
   if (CHECK_ONLY) {
-    let current: { catalogHash?: string; tools?: { name: string }[] } | null = null;
+    let current: {
+      catalogVersion?: number;
+      manifest?: unknown;
+      tools?: { name: string }[];
+    } | null = null;
     try {
       current = JSON.parse(await readFile(path, "utf8"));
     } catch {
       current = null;
     }
-    if (current?.catalogHash === catalogHash) {
+    // Recalcula o hash A PARTIR DO CONTEÚDO do arquivo — nunca confia no campo
+    // `catalogHash` gravado (edição manual do JSON tem que ser detectada).
+    const currentHash = current
+      ? await sha256(
+          JSON.stringify(
+            stable({
+              catalogVersion: current.catalogVersion,
+              manifest: current.manifest,
+              tools: current.tools,
+            }),
+          ),
+        )
+      : null;
+    if (currentHash === catalogHash) {
       console.log(`✔ catálogo em dia (${tools.length} tools · ${catalogHash.slice(0, 12)})`);
       return;
     }
@@ -111,7 +128,7 @@ async function main() {
     const removed = [...currentNames].filter((n) => !nextNames.has(n));
 
     console.error("✖ catálogo MCP desatualizado em relação ao registry.");
-    console.error(`  arquivo:  ${current?.catalogHash?.slice(0, 12) ?? "<ausente>"} · ${currentNames.size} tools`);
+    console.error(`  arquivo:  ${currentHash?.slice(0, 12) ?? "<ausente>"} · ${currentNames.size} tools`);
     console.error(`  registry: ${catalogHash.slice(0, 12)} · ${nextNames.size} tools`);
     for (const n of added) console.error(`  + ${n}`);
     for (const n of removed) console.error(`  - ${n}`);
