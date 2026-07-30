@@ -96,7 +96,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.12.0", // forense ponta a ponta + POST tolerante + discovery coerente
+  version: "0.13.0", // execução remota real: bridge server-side de agenda, tarefas, clientes, workflow e financeiro
 };
 const PROTOCOL_VERSION = "2025-06-18";
 /** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
@@ -306,9 +306,10 @@ function inAppFallback(name: string) {
       {
         type: "text",
         text:
-          `A tool "${name}" ainda não está habilitada para execução remota. ` +
-          `Ferramentas bridged: ${Object.keys(BRIDGED_TOOLS).join(", ")}. ` +
-          `Use a Lu dentro do app (https://lunari.app) para as demais.`,
+          `A tool "${name}" ainda não roda remotamente. ` +
+          `Use lunari_tools_search para achar uma equivalente executável ` +
+          `(${Object.keys(BRIDGED_TOOLS).length} disponíveis hoje: agenda, tarefas, clientes, workflow e financeiro) ` +
+          `ou execute essa ação na Lu dentro do app (https://app.lunarihub.com).`,
       },
     ],
   };
