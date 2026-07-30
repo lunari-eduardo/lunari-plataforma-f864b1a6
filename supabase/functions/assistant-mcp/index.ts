@@ -96,9 +96,28 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.11.0", // aliases sem ponto + schemas achatados + server/discover (compat ChatGPT)
+  version: "0.12.0", // forense ponta a ponta + POST tolerante + discovery coerente
 };
 const PROTOCOL_VERSION = "2025-06-18";
+/** Versões que aceitamos negociar no handshake (ChatGPT ainda usa 2025-03-26). */
+const SUPPORTED_PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
+
+/**
+ * Forense: fingerprint irreversível. Permite comparar se o MESMO valor
+ * (state, code_challenge, token) atravessou o fluxo, sem jamais logar o segredo.
+ */
+async function fingerprint(value: string | null | undefined): Promise<string | null> {
+  if (!value) return null;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(buf).slice(0, 6))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Log estruturado único do fluxo — sempre com flow_id para correlação. */
+function flog(flowId: string, stage: string, data: Record<string, unknown>) {
+  console.log(`[mcp:${stage}]`, JSON.stringify({ flow_id: flowId, ...data }));
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
