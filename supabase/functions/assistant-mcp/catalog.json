@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-30T04:29:43.331Z",
-  "catalogHash": "304f8a69568758094fbf8735f2c5bd859ed834c7e95d81fd2c4b4c607321ab4b",
+  "generatedAt": "2026-07-30T04:42:51.942Z",
+  "catalogHash": "e600c4a1e74af7dd76a00601a876b0c61eb098d5fb116f4efb9c221cd95a0d86",
   "catalogVersion": 2,
   "manifest": {
     "auth": {
@@ -541,6 +541,18 @@
       },
       {
         "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Duplicar template de contrato. Cria uma cópia do template (inativa e sem is_padrao) para edição segura do original.",
+        "name": "lunari.contratos.duplicateTemplate",
+        "title": "contratos.duplicateTemplate"
+      },
+      {
+        "annotations": {
           "destructiveHint": true,
           "idempotentHint": false,
           "openWorldHint": false,
@@ -607,6 +619,18 @@
           "readOnlyHint": true,
           "requiresApprovalHint": false
         },
+        "description": "Listar contratos pendentes de assinatura. Contratos já enviados e ainda não assinados, do mais antigo para o mais recente (prioridade de cobrança).",
+        "name": "lunari.contratos.listPendentes",
+        "title": "contratos.listPendentes"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
         "description": "Listar templates de contrato. Lista templates do usuário. Filtros opcionais por categoria/ativo/busca.",
         "name": "lunari.contratos.listTemplates",
         "title": "contratos.listTemplates"
@@ -622,6 +646,18 @@
         "description": "Marcar contrato como enviado. Marca `enviado_em = now()` e status = 'enviado'. Não envia mensagens — apenas registra.",
         "name": "lunari.contratos.markSentContrato",
         "title": "contratos.markSentContrato"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Marcar contrato como assinado. Registra assinatura manual (status = 'assinado', assinado_em = agora). Não substitui assinatura digital.",
+        "name": "lunari.contratos.markSignedContrato",
+        "title": "contratos.markSignedContrato"
       },
       {
         "annotations": {
@@ -907,6 +943,42 @@
           "readOnlyHint": false,
           "requiresApprovalHint": true
         },
+        "description": "Excluir resposta de formulário. Exclusão definitiva de uma resposta enviada pelo cliente. Irreversível.",
+        "name": "lunari.formularios.deleteResponse",
+        "title": "formularios.deleteResponse"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Duplicar formulário. Cria uma cópia em rascunho (sem token público, sem respostas) para reaproveitar a estrutura.",
+        "name": "lunari.formularios.duplicateForm",
+        "title": "formularios.duplicateForm"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Resumir briefing com IA. Lê uma resposta de formulário e devolve um resumo operacional (pontos-chave e alertas) para o fotógrafo. Não grava nada.",
+        "name": "lunari.formularios.generateAIBriefing",
+        "title": "formularios.generateAIBriefing"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
         "description": "Gerar formulário com IA. Propõe título/descrição/campos com base em um brief. Não cria nada — retorna apenas a proposta.",
         "name": "lunari.formularios.generateFormWithAI",
         "title": "formularios.generateFormWithAI"
@@ -922,6 +994,18 @@
         "description": "Obter formulário. Retorna o formulário completo (com campos).",
         "name": "lunari.formularios.getForm",
         "title": "formularios.getForm"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Obter resposta de formulário. Retorna uma resposta completa (perguntas + respostas) para leitura do briefing pelo fotógrafo.",
+        "name": "lunari.formularios.getResponse",
+        "title": "formularios.getResponse"
       },
       {
         "annotations": {
@@ -958,6 +1042,18 @@
         "description": "Publicar formulário. Publica o formulário e gera public_token se ainda não existir. Torna a URL acessível.",
         "name": "lunari.formularios.publishForm",
         "title": "formularios.publishForm"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Reabrir formulário para novo envio. Libera um formulário já respondido para que o cliente possa enviar novamente (status_envio volta a pendente).",
+        "name": "lunari.formularios.reopenSubmission",
+        "title": "formularios.reopenSubmission"
       },
       {
         "annotations": {
@@ -1018,6 +1114,162 @@
         "description": "Galerias em seleção. Galerias ativas com seleção em andamento.",
         "name": "lunari.gallery.listInSelection",
         "title": "gallery.listInSelection"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Registrar interação no lead. Anexa uma interação (conversa, follow-up, nota manual) ao histórico do lead e zera o contador de dias sem contato.",
+        "name": "lunari.leads.addInteracao",
+        "title": "leads.addInteracao"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Arquivar ou desarquivar lead. Oculta o lead do funil sem apagar dados (arquivar) ou o traz de volta (desarquivar).",
+        "name": "lunari.leads.archive",
+        "title": "leads.archive"
+      },
+      {
+        "annotations": {
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": true
+        },
+        "description": "Converter lead em cliente. Cria (ou vincula) um cliente a partir do lead e marca o lead como convertido. Exige aprovação humana.",
+        "name": "lunari.leads.convertToCliente",
+        "title": "leads.convertToCliente"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Criar lead. Cria um lead no topo do funil. Nome obrigatório; status default é o primeiro estágio configurado.",
+        "name": "lunari.leads.create",
+        "title": "leads.create"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Obter lead. Retorna o lead completo, incluindo interações, histórico de status e motivo de perda.",
+        "name": "lunari.leads.get",
+        "title": "leads.get"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar leads. Lista leads do funil com filtros por status, origem, tag, período de criação e busca por nome/email/telefone. Arquivados ocultos por padrão.",
+        "name": "lunari.leads.list",
+        "title": "leads.list"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar follow-ups pendentes. Leads marcados para follow-up ou parados há mais dias que o configurado em lead_follow_up_config.",
+        "name": "lunari.leads.listFollowUpsDue",
+        "title": "leads.listFollowUpsDue"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar orçamentos agendados. Projeção de orçamentos sobre a agenda (compromissos do tipo 'budget'), por período e/ou cliente. O Lunari não possui tabela própria de orçamentos.",
+        "name": "lunari.leads.listOrcamentosAgendados",
+        "title": "leads.listOrcamentosAgendados"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Listar estágios do funil. Colunas do kanban de leads na ordem configurada, indicando quais representam conversão e perda.",
+        "name": "lunari.leads.listStatuses",
+        "title": "leads.listStatuses"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Marcar lead como perdido. Marca o lead como perdido com motivo obrigatório, preservando o histórico. Reversível via leads.moveStatus.",
+        "name": "lunari.leads.markLost",
+        "title": "leads.markLost"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false,
+          "readOnlyHint": true,
+          "requiresApprovalHint": false
+        },
+        "description": "Métricas do funil de leads. Totais por estágio, por origem, conversões, perdas com motivo e taxa de conversão no período informado (default: mês corrente).",
+        "name": "lunari.leads.metrics",
+        "title": "leads.metrics"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Mover lead de estágio. Move o lead para outro estágio do funil, registrando histórico e interação automática. Para perda use leads.markLost.",
+        "name": "lunari.leads.moveStatus",
+        "title": "leads.moveStatus"
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false,
+          "readOnlyHint": false,
+          "requiresApprovalHint": false
+        },
+        "description": "Atualizar lead. Atualiza dados cadastrais do lead (nome, contato, origem, observações, tags). Não muda status — use leads.moveStatus.",
+        "name": "lunari.leads.update",
+        "title": "leads.update"
       },
       {
         "annotations": {
@@ -5772,6 +6024,85 @@
     },
     {
       "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.duplicateTemplate",
+      "costHint": "cheap",
+      "description": "Duplicar template de contrato. Cria uma cópia do template (inativa e sem is_padrao) para edição segura do original.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.contratos.duplicateTemplate",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ativo": {
+            "type": "boolean"
+          },
+          "categoria": {
+            "nullable": true,
+            "type": "string"
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "descricao": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_padrao": {
+            "type": "boolean"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "categoria",
+          "conteudo",
+          "ativo",
+          "is_padrao",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "contratos.duplicateTemplate"
+    },
+    {
+      "annotations": {
         "destructiveHint": true,
         "idempotentHint": false,
         "openWorldHint": false,
@@ -6195,6 +6526,97 @@
         "readOnlyHint": true,
         "requiresApprovalHint": false
       },
+      "capabilityId": "contratos.listPendentes",
+      "costHint": "cheap",
+      "description": "Listar contratos pendentes de assinatura. Contratos já enviados e ainda não assinados, do mais antigo para o mais recente (prioridade de cobrança).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 30,
+            "exclusiveMinimum": true,
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.contratos.listPendentes",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assinado_em": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "cliente_id": {
+                  "type": "string"
+                },
+                "enviado_em": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "session_id": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "template_id": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "titulo": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "titulo",
+                "status",
+                "cliente_id",
+                "session_id",
+                "template_id",
+                "enviado_em",
+                "assinado_em",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "contratos.listPendentes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
       "capabilityId": "contratos.listTemplates",
       "costHint": "cheap",
       "description": "Listar templates de contrato. Lista templates do usuário. Filtros opcionais por categoria/ativo/busca.",
@@ -6361,6 +6783,100 @@
       "scope": "write",
       "scopeTier": "destructive",
       "title": "contratos.markSentContrato"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "contratos.markSignedContrato",
+      "costHint": "cheap",
+      "description": "Marcar contrato como assinado. Registra assinatura manual (status = 'assinado', assinado_em = agora). Não substitui assinatura digital.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "assinadoEm": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.contratos.markSignedContrato",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "assinado_em": {
+            "nullable": true,
+            "type": "string"
+          },
+          "cliente_id": {
+            "type": "string"
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "enviado_em": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "observacoes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "session_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "template_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "conteudo",
+          "status",
+          "cliente_id",
+          "session_id",
+          "template_id",
+          "observacoes",
+          "enviado_em",
+          "assinado_em",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "contratos.markSignedContrato"
     },
     {
       "annotations": {
@@ -8256,6 +8772,231 @@
         "readOnlyHint": false,
         "requiresApprovalHint": true
       },
+      "capabilityId": "formularios.deleteResponse",
+      "costHint": "cheap",
+      "description": "Excluir resposta de formulário. Exclusão definitiva de uma resposta enviada pelo cliente. Irreversível.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.formularios.deleteResponse",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "formularios.deleteResponse"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.duplicateForm",
+      "costHint": "cheap",
+      "description": "Duplicar formulário. Cria uma cópia em rascunho (sem token público, sem respostas) para reaproveitar a estrutura.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.formularios.duplicateForm",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "campos": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "descricao": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "obrigatorio": {
+                  "type": "boolean"
+                },
+                "opcoes": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "pergunta": {
+                  "type": "string"
+                },
+                "tipo": {
+                  "enum": [
+                    "texto_curto",
+                    "texto_longo",
+                    "data",
+                    "selecao_unica",
+                    "multipla_escolha",
+                    "upload_imagem",
+                    "upload_referencia",
+                    "selecao_cores"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "tipo",
+                "pergunta"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "descricao": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "public_token": {
+            "nullable": true,
+            "type": "string"
+          },
+          "session_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_envio": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "descricao",
+          "status",
+          "status_envio",
+          "cliente_id",
+          "session_id",
+          "public_token",
+          "campos",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "formularios.duplicateForm"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "formularios.generateAIBriefing",
+      "costHint": "cheap",
+      "description": "Resumir briefing com IA. Lê uma resposta de formulário e devolve um resumo operacional (pontos-chave e alertas) para o fotógrafo. Não grava nada.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "respostaId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "respostaId"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.formularios.generateAIBriefing",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "alertas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "pontosChave": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "resumo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resumo",
+          "pontosChave",
+          "alertas"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "formularios.generateAIBriefing"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
       "capabilityId": "formularios.generateFormWithAI",
       "costHint": "cheap",
       "description": "Gerar formulário com IA. Propõe título/descrição/campos com base em um brief. Não cria nada — retorna apenas a proposta.",
@@ -8479,6 +9220,122 @@
       "scope": "read",
       "scopeTier": "read",
       "title": "formularios.getForm"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "formularios.getResponse",
+      "costHint": "cheap",
+      "description": "Obter resposta de formulário. Retorna uma resposta completa (perguntas + respostas) para leitura do briefing pelo fotógrafo.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.formularios.getResponse",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "nullable": true,
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "formulario": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "campos": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "descricao": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "obrigatorio": {
+                      "type": "boolean"
+                    },
+                    "opcoes": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "pergunta": {
+                      "type": "string"
+                    },
+                    "tipo": {
+                      "enum": [
+                        "texto_curto",
+                        "texto_longo",
+                        "data",
+                        "selecao_unica",
+                        "multipla_escolha",
+                        "upload_imagem",
+                        "upload_referencia",
+                        "selecao_cores"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "tipo",
+                    "pergunta"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "id": {
+                "type": "string"
+              },
+              "titulo": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "titulo",
+              "campos"
+            ],
+            "type": "object"
+          },
+          "formulario_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "respostas": {}
+        },
+        "required": [
+          "id",
+          "formulario_id",
+          "created_at",
+          "formulario"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "formularios.getResponse"
     },
     {
       "annotations": {
@@ -8755,6 +9612,74 @@
       "scope": "write",
       "scopeTier": "destructive",
       "title": "formularios.publishForm"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "formularios.reopenSubmission",
+      "costHint": "cheap",
+      "description": "Reabrir formulário para novo envio. Libera um formulário já respondido para que o cliente possa enviar novamente (status_envio volta a pendente).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.formularios.reopenSubmission",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "respondido_em": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "status_envio": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "titulo",
+          "status",
+          "status_envio",
+          "cliente_id",
+          "respondido_em",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "formularios.reopenSubmission"
     },
     {
       "annotations": {
@@ -9309,6 +10234,1315 @@
       "scope": "read",
       "scopeTier": "read",
       "title": "gallery.listInSelection"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.addInteracao",
+      "costHint": "cheap",
+      "description": "Registrar interação no lead. Anexa uma interação (conversa, follow-up, nota manual) ao histórico do lead e zera o contador de dias sem contato.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "descricao": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "default": "manual",
+            "enum": [
+              "conversa",
+              "manual",
+              "followup",
+              "orcamento"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "descricao"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.addInteracao",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "status",
+          "cliente_id",
+          "arquivado",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "leads.addInteracao"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.archive",
+      "costHint": "cheap",
+      "description": "Arquivar ou desarquivar lead. Oculta o lead do funil sem apagar dados (arquivar) ou o traz de volta (desarquivar).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "default": true,
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.archive",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "status",
+          "cliente_id",
+          "arquivado",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "leads.archive"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": true
+      },
+      "capabilityId": "leads.convertToCliente",
+      "costHint": "cheap",
+      "description": "Converter lead em cliente. Cria (ou vincula) um cliente a partir do lead e marca o lead como convertido. Exige aprovação humana.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "clienteId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.convertToCliente",
+      "needsApproval": true,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "clienteCriado": {
+            "type": "boolean"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "lead": {
+            "additionalProperties": false,
+            "properties": {
+              "arquivado": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "cliente_id": {
+                "nullable": true,
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "status": {
+                "nullable": true,
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nome",
+              "status",
+              "cliente_id",
+              "arquivado",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "lead",
+          "clienteId",
+          "clienteCriado"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "destructive",
+      "title": "leads.convertToCliente"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.create",
+      "costHint": "cheap",
+      "description": "Criar lead. Cria um lead no topo do funil. Nome obrigatório; status default é o primeiro estágio configurado.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "observacoes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "origem": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "telefone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "whatsapp": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.create",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "status",
+          "cliente_id",
+          "arquivado",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "leads.create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.get",
+      "costHint": "cheap",
+      "description": "Obter lead. Retorna o lead completo, incluindo interações, histórico de status e motivo de perda.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.leads.get",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "nullable": true,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "data_contato": {
+            "nullable": true,
+            "type": "string"
+          },
+          "data_nascimento": {
+            "nullable": true,
+            "type": "string"
+          },
+          "dias_sem_interacao": {
+            "nullable": true,
+            "type": "number"
+          },
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "endereco": {
+            "nullable": true,
+            "type": "string"
+          },
+          "historico_status": {
+            "nullable": true
+          },
+          "id": {
+            "type": "string"
+          },
+          "interacoes": {
+            "nullable": true
+          },
+          "motivo_perda": {
+            "nullable": true,
+            "type": "string"
+          },
+          "needs_follow_up": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "needs_scheduling": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "observacoes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "origem": {
+            "nullable": true,
+            "type": "string"
+          },
+          "perdido_em": {
+            "nullable": true,
+            "type": "string"
+          },
+          "scheduled_appointment_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status_timestamp": {
+            "nullable": true,
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "telefone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "ultima_interacao": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "whatsapp": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "email",
+          "telefone",
+          "whatsapp",
+          "status",
+          "origem",
+          "tags",
+          "cliente_id",
+          "arquivado",
+          "needs_follow_up",
+          "dias_sem_interacao",
+          "ultima_interacao",
+          "created_at",
+          "updated_at",
+          "observacoes",
+          "motivo_perda",
+          "perdido_em",
+          "data_contato",
+          "data_nascimento",
+          "endereco",
+          "needs_scheduling",
+          "scheduled_appointment_id",
+          "status_timestamp"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "leads.get"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.list",
+      "costHint": "cheap",
+      "description": "Listar leads. Lista leads do funil com filtros por status, origem, tag, período de criação e busca por nome/email/telefone. Arquivados ocultos por padrão.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivados": {
+            "default": "ocultar",
+            "enum": [
+              "ocultar",
+              "incluir",
+              "somente"
+            ],
+            "type": "string"
+          },
+          "ate": {
+            "type": "string"
+          },
+          "desde": {
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "exclusiveMinimum": true,
+            "maximum": 200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "origem": {
+            "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.leads.list",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "type": "number"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "arquivado": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "cliente_id": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "dias_sem_interacao": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "email": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "needs_follow_up": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "origem": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "status": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "tags": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "nullable": true,
+                  "type": "array"
+                },
+                "telefone": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "ultima_interacao": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "whatsapp": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome",
+                "email",
+                "telefone",
+                "whatsapp",
+                "status",
+                "origem",
+                "tags",
+                "cliente_id",
+                "arquivado",
+                "needs_follow_up",
+                "dias_sem_interacao",
+                "ultima_interacao",
+                "created_at",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "leads.list"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.listFollowUpsDue",
+      "costHint": "cheap",
+      "description": "Listar follow-ups pendentes. Leads marcados para follow-up ou parados há mais dias que o configurado em lead_follow_up_config.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "default": 30,
+            "exclusiveMinimum": true,
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.leads.listFollowUpsDue",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "ativo": {
+                "nullable": true,
+                "type": "boolean"
+              },
+              "dias_para_follow_up": {
+                "nullable": true,
+                "type": "number"
+              },
+              "status_monitorado": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "ativo",
+              "dias_para_follow_up",
+              "status_monitorado"
+            ],
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "arquivado": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "cliente_id": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "dias_sem_interacao": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "email": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "needs_follow_up": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "nome": {
+                  "type": "string"
+                },
+                "origem": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "status": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "tags": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "nullable": true,
+                  "type": "array"
+                },
+                "telefone": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "ultima_interacao": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "whatsapp": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nome",
+                "email",
+                "telefone",
+                "whatsapp",
+                "status",
+                "origem",
+                "tags",
+                "cliente_id",
+                "arquivado",
+                "needs_follow_up",
+                "dias_sem_interacao",
+                "ultima_interacao",
+                "created_at",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "config",
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "leads.listFollowUpsDue"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.listOrcamentosAgendados",
+      "costHint": "cheap",
+      "description": "Listar orçamentos agendados. Projeção de orçamentos sobre a agenda (compromissos do tipo 'budget'), por período e/ou cliente. O Lunari não possui tabela própria de orçamentos.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ate": {
+            "type": "string"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "desde": {
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "exclusiveMinimum": true,
+            "maximum": 200,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.leads.listOrcamentosAgendados",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "cliente_id": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "description": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "paid_amount": {
+                  "nullable": true,
+                  "type": "number"
+                },
+                "session_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "time": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "description",
+                "date",
+                "time",
+                "status",
+                "cliente_id",
+                "session_id",
+                "paid_amount"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "leads.listOrcamentosAgendados"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.listStatuses",
+      "costHint": "cheap",
+      "description": "Listar estágios do funil. Colunas do kanban de leads na ordem configurada, indicando quais representam conversão e perda.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.leads.listStatuses",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "is_converted": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "is_lost": {
+                  "nullable": true,
+                  "type": "boolean"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "sort_order": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "name",
+                "color",
+                "sort_order",
+                "is_converted",
+                "is_lost"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "leads.listStatuses"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.markLost",
+      "costHint": "cheap",
+      "description": "Marcar lead como perdido. Marca o lead como perdido com motivo obrigatório, preservando o histórico. Reversível via leads.moveStatus.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "motivo"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.markLost",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "status",
+          "cliente_id",
+          "arquivado",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "leads.markLost"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.metrics",
+      "costHint": "cheap",
+      "description": "Métricas do funil de leads. Totais por estágio, por origem, conversões, perdas com motivo e taxa de conversão no período informado (default: mês corrente).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "ate": {
+            "type": "string"
+          },
+          "desde": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "query",
+      "name": "lunari.leads.metrics",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "convertidos": {
+            "type": "number"
+          },
+          "motivosPerda": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "perdidos": {
+            "type": "number"
+          },
+          "periodo": {
+            "additionalProperties": false,
+            "properties": {
+              "ate": {
+                "type": "string"
+              },
+              "desde": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "desde",
+              "ate"
+            ],
+            "type": "object"
+          },
+          "porOrigem": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "porStatus": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "taxaConversao": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "periodo",
+          "total",
+          "porStatus",
+          "porOrigem",
+          "convertidos",
+          "perdidos",
+          "motivosPerda",
+          "taxaConversao"
+        ],
+        "type": "object"
+      },
+      "scope": "read",
+      "scopeTier": "read",
+      "title": "leads.metrics"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.moveStatus",
+      "costHint": "cheap",
+      "description": "Mover lead de estágio. Move o lead para outro estágio do funil, registrando histórico e interação automática. Para perda use leads.markLost.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nota": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.moveStatus",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "status",
+          "cliente_id",
+          "arquivado",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "leads.moveStatus"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false,
+        "requiresApprovalHint": false
+      },
+      "capabilityId": "leads.update",
+      "costHint": "cheap",
+      "description": "Atualizar lead. Atualiza dados cadastrais do lead (nome, contato, origem, observações, tags). Não muda status — use leads.moveStatus.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "observacoes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "origem": {
+            "nullable": true,
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "telefone": {
+            "nullable": true,
+            "type": "string"
+          },
+          "whatsapp": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "command",
+      "name": "lunari.leads.update",
+      "needsApproval": false,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "arquivado": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "cliente_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "status",
+          "cliente_id",
+          "arquivado",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "scope": "write",
+      "scopeTier": "write",
+      "title": "leads.update"
     },
     {
       "annotations": {

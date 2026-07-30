@@ -31,11 +31,37 @@ const CAMPO_TIPOS = [
 ];
 
 interface Body {
-  brief: string;
+  /** "gerar" (default) propõe campos; "resumo" resume uma resposta recebida. */
+  mode?: "gerar" | "resumo";
+  brief?: string;
   tipoEnsaio?: string;
   clienteNome?: string;
   idiomaOutput?: "pt-BR" | "en";
+  // mode = "resumo"
+  titulo?: string;
+  campos?: unknown;
+  respostas?: unknown;
 }
+
+async function callGateway(systemPrompt: string, userPrompt: string) {
+  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": LOVABLE_API_KEY!,
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  return resp;
+}
+
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -67,8 +93,67 @@ Deno.serve(async (req) => {
   } catch {
     return json(400, { error: "invalid_json" });
   }
+  // ---------------------------------------------------------------------
+  // mode = "resumo": resume um briefing já respondido pelo cliente.
+  // ---------------------------------------------------------------------
+  if (body?.mode === "resumo") {
+    const campos = Array.isArray(body.campos) ? body.campos : [];
+    const perguntas = campos
+      .map((c: Record<string, unknown>) => `${String(c?.id ?? "")}: ${String(c?.pergunta ?? "")}`)
+      .join("\n")
+      .slice(0, 4000);
+    const respostasTxt = JSON.stringify(body.respostas ?? {}).slice(0, 6000);
+
+    const sys = [
+      "Você é a Lu, assistente do Lunari (SaaS para fotógrafos).",
+      "Resuma o briefing respondido pelo cliente para o fotógrafo se preparar para o ensaio.",
+      "Retorne EXCLUSIVAMENTE JSON válido no esquema:",
+      '{ "resumo": string, "pontosChave": string[], "alertas": string[] }',
+      "- resumo: até 4 frases, tom prático, português do Brasil.",
+      "- pontosChave: até 6 itens objetivos (local, estilo, pessoas, horário, referências).",
+      "- alertas: até 4 itens com riscos/pendências (dados faltando, prazos apertados, pedidos incomuns). Pode ser vazio.",
+      "- Não invente informação que não esteja nas respostas.",
+    ].join("\n");
+
+    const usr = [
+      `Formulário: ${String(body.titulo ?? "Briefing").slice(0, 150)}`,
+      "Perguntas:",
+      perguntas,
+      "Respostas (JSON):",
+      respostasTxt,
+    ].join("\n");
+
+    try {
+      const resp = await callGateway(sys, usr);
+      if (resp.status === 429) return json(429, { error: "rate_limited" });
+      if (resp.status === 402) return json(402, { error: "credits_exhausted" });
+      if (!resp.ok) {
+        const text = await resp.text();
+        return json(502, { error: "ai_upstream_error", detail: text.slice(0, 500) });
+      }
+      const payload = await resp.json();
+      const content = payload?.choices?.[0]?.message?.content ?? "";
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        return json(502, { error: "ai_invalid_json", raw: String(content).slice(0, 500) });
+      }
+      const toList = (v: unknown, max: number) =>
+        Array.isArray(v) ? v.map((x) => String(x).slice(0, 200)).slice(0, max) : [];
+      return json(200, {
+        resumo: String(parsed.resumo ?? "").slice(0, 1200),
+        pontosChave: toList(parsed.pontosChave, 6),
+        alertas: toList(parsed.alertas, 4),
+      });
+    } catch (e) {
+      return json(500, { error: "internal", detail: (e as Error).message });
+    }
+  }
+
   const brief = String(body?.brief ?? "").trim();
   if (brief.length < 4) return json(400, { error: "brief_required" });
+
 
   const idioma = body.idiomaOutput ?? "pt-BR";
   const tipo = body.tipoEnsaio?.trim();

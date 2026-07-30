@@ -329,3 +329,177 @@ export const generateFormWithAICap = defineCommand({
     return ok(parsed.data);
   },
 });
+
+/* ======================= B1 — GAPS DE GESTÃO ======================= */
+
+export const getResponseCap = defineQuery({
+  id: "formularios.getResponse",
+  title: "Obter resposta de formulário",
+  description:
+    "Retorna uma resposta completa (perguntas + respostas) para leitura do briefing pelo fotógrafo.",
+  input: z.object({ id: z.string() }).strict(),
+  output: z
+    .object({
+      id: z.string(),
+      formulario_id: z.string(),
+      created_at: z.string(),
+      respostas: z.any(),
+      formulario: z
+        .object({ id: z.string(), titulo: z.string(), campos: z.array(CampoSchema) })
+        .nullable(),
+    })
+    .nullable(),
+  permissions: [],
+  handler: async ({ id }) => {
+    const { data, error } = await supabase
+      .from("formulario_respostas")
+      .select("id, formulario_id, created_at, respostas")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) return err(domainError("DB", error.message));
+    if (!data) return ok(null);
+
+    const { data: form } = await supabase
+      .from("formularios")
+      .select("id, titulo, campos")
+      .eq("id", data.formulario_id)
+      .maybeSingle();
+
+    return ok({
+      ...data,
+      formulario: form
+        ? { id: form.id, titulo: form.titulo, campos: (Array.isArray(form.campos) ? form.campos : []) as never }
+        : null,
+    } as never);
+  },
+});
+
+export const duplicateFormCap = defineCommand({
+  id: "formularios.duplicateForm",
+  title: "Duplicar formulário",
+  description:
+    "Cria uma cópia em rascunho (sem token público, sem respostas) para reaproveitar a estrutura.",
+  input: z.object({ id: z.string(), titulo: z.string().optional() }).strict(),
+  output: FormSchema,
+  permissions: [],
+  sideEffects: ["db:formularios"],
+  handler: async ({ id, titulo }, ctx) => {
+    if (!ctx.user?.id) return err(domainError("UNAUTHORIZED", "Sessão expirada."));
+    const { data: original, error: gErr } = await supabase
+      .from("formularios")
+      .select("titulo, descricao, campos, cliente_id, session_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (gErr) return err(domainError("DB", gErr.message));
+    if (!original) return err(domainError("NOT_FOUND", "Formulário não encontrado."));
+
+    const { data, error } = await supabase
+      .from("formularios")
+      .insert({
+        user_id: ctx.user.id,
+        titulo: (titulo?.trim() || `${original.titulo} (cópia)`).slice(0, 150),
+        descricao: original.descricao,
+        campos: original.campos,
+        cliente_id: original.cliente_id,
+        session_id: original.session_id,
+        status: "rascunho",
+      })
+      .select(
+        "id, titulo, descricao, status, status_envio, cliente_id, session_id, public_token, campos, created_at",
+      )
+      .single();
+    if (error) return err(domainError("DB", error.message));
+    return ok(toFormRow(data as Record<string, unknown>) as never);
+  },
+});
+
+export const deleteResponseCap = defineCommand({
+  id: "formularios.deleteResponse",
+  title: "Excluir resposta de formulário",
+  description: "Exclusão definitiva de uma resposta enviada pelo cliente. Irreversível.",
+  input: z.object({ id: z.string() }).strict(),
+  output: z.object({ deleted: z.boolean() }),
+  permissions: [],
+  needsApproval: true,
+  sideEffects: ["db:formulario_respostas"],
+  handler: async ({ id }) => {
+    const { error } = await supabase.from("formulario_respostas").delete().eq("id", id);
+    if (error) return err(domainError("DB", error.message));
+    return ok({ deleted: true });
+  },
+});
+
+export const reopenSubmissionCap = defineCommand({
+  id: "formularios.reopenSubmission",
+  title: "Reabrir formulário para novo envio",
+  description:
+    "Libera um formulário já respondido para que o cliente possa enviar novamente (status_envio volta a pendente).",
+  input: z.object({ id: z.string() }).strict(),
+  output: FormSummarySchema,
+  permissions: [],
+  needsApproval: true,
+  sideEffects: ["db:formularios"],
+  handler: async ({ id }) => {
+    const { data, error } = await supabase
+      .from("formularios")
+      .update({ status_envio: "pendente", respondido_em: null })
+      .eq("id", id)
+      .select("id, titulo, status, status_envio, cliente_id, respondido_em, created_at")
+      .maybeSingle();
+    if (error) return err(domainError("DB", error.message));
+    if (!data) return err(domainError("NOT_FOUND", "Formulário não encontrado."));
+    return ok(data as never);
+  },
+});
+
+export const generateAIBriefingCap = defineCommand({
+  id: "formularios.generateAIBriefing",
+  title: "Resumir briefing com IA",
+  description:
+    "Lê uma resposta de formulário e devolve um resumo operacional (pontos-chave e alertas) para o fotógrafo. Não grava nada.",
+  input: z.object({ respostaId: z.string() }).strict(),
+  output: z.object({
+    resumo: z.string(),
+    pontosChave: z.array(z.string()),
+    alertas: z.array(z.string()),
+  }),
+  permissions: [],
+  needsApproval: true,
+  sideEffects: ["external:lovable-ai"],
+  handler: async ({ respostaId }) => {
+    const { data: resposta, error: rErr } = await supabase
+      .from("formulario_respostas")
+      .select("id, formulario_id, respostas")
+      .eq("id", respostaId)
+      .maybeSingle();
+    if (rErr) return err(domainError("DB", rErr.message));
+    if (!resposta) return err(domainError("NOT_FOUND", "Resposta não encontrada."));
+
+    const { data: form } = await supabase
+      .from("formularios")
+      .select("titulo, campos")
+      .eq("id", resposta.formulario_id)
+      .maybeSingle();
+
+    const { data, error } = await supabase.functions.invoke("assistant-forms-generate", {
+      body: {
+        mode: "resumo",
+        titulo: form?.titulo ?? "Briefing",
+        campos: Array.isArray(form?.campos) ? form?.campos : [],
+        respostas: resposta.respostas,
+      },
+    });
+    if (error) return err(domainError("AI", error.message));
+    const parsed = z
+      .object({
+        resumo: z.string(),
+        pontosChave: z.array(z.string()),
+        alertas: z.array(z.string()),
+      })
+      .safeParse(data);
+    if (!parsed.success) {
+      return err(domainError("AI", "IA retornou formato inválido: " + parsed.error.message));
+    }
+    return ok(parsed.data);
+  },
+});
