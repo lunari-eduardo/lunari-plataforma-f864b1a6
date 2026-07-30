@@ -326,17 +326,34 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
     case "tools/list": {
       // Superfície curada + meta-tools (o catálogo completo continua acessível
       // via lunari.tools.search / lunari.tools.invoke).
+      // Nomes públicos sem ponto e schemas achatados — exigência dos conectores.
       const exposed = catalog.tools
         .filter((t: any) => isExposed(t.name))
         .map((t: any) => ({
-          name: t.name,
+          name: toPublicName(t.name),
           title: t.title,
           description: t.description,
-          inputSchema: t.inputSchema,
+          inputSchema: publicInputSchema(t.inputSchema),
           annotations: t.annotations,
         }));
-      return rpcResult(id, { tools: [...exposed, ...META_TOOL_DEFS] });
+      const metas = META_TOOL_DEFS.map((t) => ({
+        ...t,
+        name: toPublicName(t.name),
+        inputSchema: publicInputSchema(t.inputSchema),
+      }));
+      return rpcResult(id, { tools: [...exposed, ...metas] });
     }
+    // Alguns clientes (incl. ChatGPT) chamam `server/discover` no handshake.
+    // Responder "Method not found" derruba a conexão logo após o OAuth.
+    case "server/discover":
+    case "server/info":
+      return rpcResult(id, {
+        protocolVersion: PROTOCOL_VERSION,
+        serverInfo: SERVER_INFO,
+        capabilities: { tools: { listChanged: false } },
+        instructions: catalog.manifest.instructions,
+      });
+
     case "tools/call": {
       let name = (req.params?.name as string) ?? "unknown";
       let args = ((req.params?.arguments as Record<string, unknown>) ?? {}) as Record<string, any>;
