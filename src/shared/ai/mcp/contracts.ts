@@ -17,6 +17,7 @@
 
 import type { AuthUser } from "@/shared/ports";
 import { listAllLunariAITools } from "../registry";
+import { tierOf, type ScopeTier } from "@/shared/capability/scopes";
 
 export type MCPToolAnnotations = {
   readOnlyHint?: boolean;
@@ -53,12 +54,15 @@ export interface MCPTool {
   capabilityId: string;
   /** A2 — transporte declarado no `defineCapability`. */
   transport?: { type: "rpc" | "edge"; name: string; mapped?: boolean };
-  /** Escopo OAuth/PAT exigido. */
+  /** Escopo legado (read/write) — mantido para clientes já conectados. */
   scope: "read" | "write";
+  /** A4 — tier real exigido: read | write | destructive. */
+  scopeTier: ScopeTier;
   kind: "command" | "query";
   needsApproval: boolean;
   costHint: string;
 }
+
 
 export interface BuildMCPToolsOptions {
   user: AuthUser | null;
@@ -115,6 +119,7 @@ export function buildMCPToolsForUser(opts: BuildMCPToolsOptions): MCPTool[] {
           ? { type: exec.type, name: exec.name, mapped: exec.mapped }
           : undefined,
       scope: t.kind === "query" ? "read" : "write",
+      scopeTier: tierOf({ kind: t.kind, needsApproval }),
       kind: t.kind,
       needsApproval,
       costHint: t.costHint,

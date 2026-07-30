@@ -386,6 +386,39 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_mcp_client_grants: {
+        Row: {
+          client_id: string
+          client_name: string | null
+          created_at: string
+          id: string
+          last_used_at: string | null
+          tiers: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          tiers?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          tiers?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assistant_mcp_tokens: {
         Row: {
           created_at: string
@@ -6456,6 +6489,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      assistant_mcp_grant_resolve: {
+        Args: { _client_id: string; _client_name?: string; _user_id: string }
+        Returns: string[]
+      }
+      assistant_mcp_grant_set: {
+        Args: { _client_id: string; _tiers: string[] }
+        Returns: string[]
       }
       assistant_mcp_token_create: {
         Args: { _expires_at?: string; _name: string; _scopes?: string[] }

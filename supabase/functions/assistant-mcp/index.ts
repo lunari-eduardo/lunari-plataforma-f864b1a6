@@ -20,6 +20,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import catalog from "./catalog.json" with { type: "json" };
 import { isBridged, runBridged, getBridged, BRIDGED_TOOLS, READ_ONLY_BRIDGE } from "./executor.ts";
+import { normalizeScopes, tierOf, tierSatisfiedBy, TIER_LABEL, type ScopeTier } from "../_shared/mcp-scopes.ts";
 import {
   dispatchCapability,
   type CatalogTool,
@@ -74,7 +75,7 @@ const mcpHeaders = {
 const SERVER_INFO = {
   name: catalog.manifest.name,
   title: catalog.manifest.title,
-  version: "0.7.0", // A2 — contrato único de execução: dispatcher genérico (rpc/edge) com JWT do usuário
+  version: "0.8.0", // A4 — escopos read/write/destructive + grants por cliente OAuth
 };
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -155,7 +156,7 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
     return {
       userId,
       tokenId: row.token_id as string,
-      scopes: (row.scopes ?? []) as string[],
+      scopes: normalizeScopes(row.scopes as unknown[]),
       rolloutAllowed: allowed === true,
       authSource: "pat",
       clientId: null,
@@ -177,12 +178,15 @@ async function resolveAuth(req: Request): Promise<AuthContext> {
     if (userErr || !userRes?.user?.id) return EMPTY_AUTH;
     const userId = userRes.user.id;
 
-    // Escopos: claim `scope` (string separada por espaço) ou `scopes` (array).
-    let scopes: string[] = [];
-    if (typeof claims.scope === "string") scopes = claims.scope.split(/\s+/).filter(Boolean);
-    else if (Array.isArray(claims.scopes)) scopes = claims.scopes.map(String);
-    // Fallback: se OAuth Server não injetar scope, assumimos read.
-    if (scopes.length === 0) scopes = ["read"];
+    // A4 — o Supabase OAuth Server não emite scopes customizados, então o
+    // nível de permissão vem do grant que o usuário concedeu a este cliente
+    // (tabela assistant_mcp_client_grants). Default fail-closed: leitura.
+    const { data: granted } = await sb.rpc("assistant_mcp_grant_resolve", {
+      _user_id: userId,
+      _client_id: clientId,
+      _client_name: (claims.client_name as string | undefined) ?? null,
+    });
+    const scopes: ScopeTier[] = normalizeScopes(granted as unknown[]);
 
     const { data: allowed } = await sb.rpc("assistant_access_allowed", { _uid: userId });
     return {
@@ -318,19 +322,25 @@ async function handleMethod(req: JsonRpcRequest, auth: AuthContext) {
         return rpcResult(id, inAppFallback(name));
       }
 
+      const requiresApproval = bridged?.requiresApproval ?? dispatchTool?.needsApproval ?? false;
       const toolScope: "read" | "write" =
         bridged?.scope ?? (dispatchTool?.scope ?? (dispatchTool?.kind === "query" ? "read" : "write"));
-      const requiresApproval = bridged?.requiresApproval ?? dispatchTool?.needsApproval ?? false;
 
-      // Escopo do token: por default `read`. Escrita exige `write` explícito.
-      const hasWrite = auth.scopes.includes("write") || auth.scopes.includes("admin");
-      if (toolScope === "write" && !hasWrite) {
+      // A4 — nível exigido: read (query) / write (command) / destructive (command + aprovação).
+      const requiredTier: ScopeTier =
+        (dispatchTool?.scopeTier as ScopeTier | undefined) ??
+        tierOf({ kind: toolScope === "read" ? "query" : "command", needsApproval: requiresApproval });
+
+      if (!tierSatisfiedBy(requiredTier, auth.scopes)) {
         await audit({ userId: auth.userId, toolName: name, status: "scope_missing", latencyMs: Date.now() - started, authSource: auth.authSource });
+        const how = auth.authSource === "oauth"
+          ? `Abra https://app.lunarihub.com/app/assistente/mcp → "Aplicativos conectados" e libere "${TIER_LABEL[requiredTier]}" para este aplicativo. Depois repita o comando.`
+          : `Gere um novo Personal Access Token com o nível "${TIER_LABEL[requiredTier]}" em https://app.lunarihub.com/app/assistente/mcp.`;
         return rpcResult(id, {
           isError: true,
           content: [{
             type: "text",
-            text: `Este token não possui o escopo "write". Gere um novo token com escopo de escrita em https://lunari.app/assistente/mcp.`,
+            text: `Permissão insuficiente para "${name}": requer ${TIER_LABEL[requiredTier]} (atual: ${auth.scopes.map((s) => TIER_LABEL[s as ScopeTier] ?? s).join(", ")}). ${how}`,
           }],
         });
       }
