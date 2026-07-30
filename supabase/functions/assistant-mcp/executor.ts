@@ -1069,6 +1069,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.precificacao.getTabelaCategoria": async (sb, uid, args) => {
     const cat = await resolveCategoria(sb, uid, args);
+    if (cat.ask) return cat.ask;
     if (cat.error) return fail(cat.error);
     if (!cat.id) return fail("Informe a categoria.");
     const tabelas = await loadTabelas(sb, uid);
@@ -1080,6 +1081,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.precificacao.listPacotesComPreco": async (sb, uid, args) => {
     const cat = await resolveCategoria(sb, uid, args);
+    if (cat.ask) return cat.ask;
     if (cat.error) return fail(cat.error);
     let q = sb.from("pacotes")
       .select("id,nome,categoria_id,valor_base,valor_foto_extra,fotos_incluidas")
@@ -1248,6 +1250,7 @@ const READ_TOOLS: Record<string, Handler> = {
     let catId: string | null = null;
     if (escopo === "categoria") {
       const cat = await resolveCategoria(sb, uid, args);
+      if (cat.ask) return cat.ask;
       if (cat.error) return fail(cat.error);
       if (!cat.id) return fail("Informe a categoria para simular o escopo por categoria.");
       catId = cat.id;
@@ -1283,6 +1286,7 @@ const READ_TOOLS: Record<string, Handler> = {
   },
   "lunari.configuracoes.listPacotes": async (sb, uid, args) => {
     const cat = await resolveCategoria(sb, uid, args);
+    if (cat.ask) return cat.ask;
     if (cat.error) return fail(cat.error);
     let q = sb.from("pacotes").select("id,nome,categoria_id,valor_base,valor_foto_extra,fotos_incluidas")
       .eq("user_id", uid).order("nome");
@@ -1323,6 +1327,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
       const nome = String(args.nome ?? "").trim();
       if (!nome) return fail("Campo 'nome' é obrigatório.");
       const cat = await resolveCategoria(sb, uid, args);
+      if (cat.ask) return cat.ask;
       if (cat.error) return fail(cat.error);
       if (!cat.id) return fail("Informe a categoria do pacote.");
       const dup = await pacoteDuplicado(sb, uid, cat.id, nome);
@@ -1491,6 +1496,7 @@ const WRITE_HANDLERS: Record<string, WriteCfg> = {
     summarize: (a) => `Aplicar tabela de foto extra da categoria "${a.categoria ?? a.categoriaId ?? "?"}"`,
     handler: async (sb, uid, args) => {
       const cat = await resolveCategoria(sb, uid, args);
+      if (cat.ask) return cat.ask;
       if (cat.error) return fail(cat.error);
       if (!cat.id) return fail("Informe a categoria.");
       return upsertTabela(sb, uid, args, "categoria", cat.id);
