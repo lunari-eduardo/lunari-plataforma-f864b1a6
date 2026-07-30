@@ -143,7 +143,7 @@ export default function ProdutoSelectorImproved({
           <Button
             variant="outline"
             size="sm"
-            className="w-full justify-start gap-2 h-9 text-xs border-dashed border-lunar-border hover:border-lunar-accent hover:bg-lunar-accent/5"
+            className="w-full justify-start gap-2 h-9 text-xs border-border/40 hover:border-lunar-accent hover:bg-lunar-accent/5"
             disabled={disabled || produtosDisponiveis.length === 0}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -197,7 +197,7 @@ export default function ProdutoSelectorImproved({
 
       {/* Estado vazio */}
       {produtosIncluidos.length === 0 && (
-        <div className="text-center py-4 text-xs text-muted-foreground border border-dashed border-lunar-border rounded-md bg-muted/30">
+        <div className="text-center py-4 text-xs text-muted-foreground rounded-md bg-muted/20">
           Nenhum produto incluído neste pacote
         </div>
       )}

@@ -210,7 +210,7 @@ export default function Pacotes({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-lg">
+          <div className="flex flex-col items-center justify-center py-12 text-center rounded-lg bg-muted/20">
             <div className="rounded-full bg-muted p-4 mb-4">
               <Package className="h-8 w-8 text-muted-foreground" />
             </div>

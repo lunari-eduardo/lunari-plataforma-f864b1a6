@@ -148,7 +148,7 @@ export default function ContratosConfig() {
       {isLoading ? (
         <div className="text-sm text-muted-foreground py-8 text-center">Carregando...</div>
       ) : templates.length === 0 ? (
-        <Card className="p-6 border-dashed">
+        <Card className="p-6 border-border/40">
           <div className="text-center mb-5">
             <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
             <h4 className="font-medium mb-1">Comece com modelos prontos</h4>
