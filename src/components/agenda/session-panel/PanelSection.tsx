@@ -19,7 +19,7 @@ export function PanelSection({ icon: Icon, title, action, className, children }:
   return (
     <section
       className={cn(
-        'rounded-xl border border-border/60 bg-card/60 p-3.5 space-y-3',
+        'rounded-xl border border-border/60 bg-background/70 p-3.5 space-y-3',
         className,
       )}
     >
