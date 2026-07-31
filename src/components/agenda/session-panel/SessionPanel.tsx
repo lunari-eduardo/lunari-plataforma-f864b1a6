@@ -485,7 +485,7 @@ export default function SessionPanel({
                     value={dateInput}
                     onChange={(e) => setDateInput(e.target.value)}
                     onBlur={commitDate}
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                 </PanelField>
                 <PanelField label="Horário" htmlFor="sp-time">
@@ -495,7 +495,7 @@ export default function SessionPanel({
                     value={timeInput}
                     onChange={(e) => setTimeInput(e.target.value)}
                     onBlur={commitTime}
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                 </PanelField>
               </div>
@@ -503,7 +503,7 @@ export default function SessionPanel({
           </header>
 
           {/* =========================== CONTEÚDO ROLÁVEL =========================== */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* -------------------------------- CLIENTE -------------------------------- */}
             <PanelSection
               icon={User}
@@ -536,13 +536,13 @@ export default function SessionPanel({
                     value={newClient.nome}
                     onChange={(e) => setNewClient(p => ({ ...p, nome: toTitleCase(e.target.value) }))}
                     placeholder="Nome do cliente"
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                   <Input
                     value={newClient.telefone}
                     onChange={(e) => setNewClient(p => ({ ...p, telefone: e.target.value }))}
                     placeholder="Telefone"
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                   <button
                     type="button"
@@ -613,7 +613,7 @@ export default function SessionPanel({
                     onChange={paidInput.handleChange}
                     onFocus={paidInput.handleFocus}
                     placeholder="0,00"
-                    className="h-10 rounded-lg pl-10 text-sm"
+                    className="h-10 rounded-lg pl-10 text-base sm:text-sm"
                   />
                 </div>
               </PanelField>
@@ -712,7 +712,7 @@ export default function SessionPanel({
                   value={form.description}
                   onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Notas sobre a sessão..."
-                  className="min-h-[72px] rounded-lg text-sm resize-none"
+                  className="min-h-[72px] rounded-lg text-base sm:text-sm resize-none"
                 />
               </PanelField>
               {isEdit && (
@@ -857,11 +857,11 @@ export default function SessionPanel({
       {showCharge && form.clienteId && (
         <ChargeModal
           isOpen={showCharge}
-          onClose={() => setShowCharge(false)}
+          onClose={() => { setShowCharge(false); setChargeSessionId(null); }}
           clienteId={form.clienteId}
           clienteNome={clientDisplayName}
           clienteWhatsapp={cliente?.telefone}
-          sessionId={appointment?.sessionId}
+          sessionId={chargeSessionId || appointment?.sessionId}
           valorSugerido={valorPacote > 0 ? valorPacote : form.paidAmount || 0}
         />
       )}
