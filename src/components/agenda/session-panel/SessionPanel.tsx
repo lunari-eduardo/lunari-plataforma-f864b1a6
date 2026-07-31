@@ -120,6 +120,9 @@ export default function SessionPanel({
   const [newClientMode, setNewClientMode] = useState(false);
   const [newClient, setNewClient] = useState({ nome: '', telefone: '' });
   const [saving, setSaving] = useState(false);
+  const [cobrarAoSalvar, setCobrarAoSalvar] = useState(false);
+  const [chargeSessionId, setChargeSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const buildInitialState = useCallback((): PanelFormState => {
     if (appointment) {
