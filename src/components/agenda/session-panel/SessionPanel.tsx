@@ -388,7 +388,7 @@ export default function SessionPanel({
           side="right"
           className={cn(
             'w-full sm:max-w-[520px] p-0 gap-0 flex flex-col',
-            'h-dvh max-h-dvh bg-card backdrop-blur-none',
+            'h-dvh max-h-dvh bg-background backdrop-blur-none',
             overlayOpen && 'opacity-40 blur-[2px] pointer-events-none',
           )}
         >
