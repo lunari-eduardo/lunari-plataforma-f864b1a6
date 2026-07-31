@@ -1,44 +1,50 @@
-# Correção: estorno de pagamento de extras (Gallery / Asaas)
+# Estorno de pagamento de extras (Gallery / Asaas) — plano revisado
 
-## O que está acontecendo
+## Diagnóstico confirmado no banco
 
-Confirmei no banco, para a galeria `2fdd500e-…`:
+Para a galeria `2fdd500e-…` (sessão de 07/10/2026):
 
-- A cobrança de extras existe (`a9a0247d-…`, provedor `asaas`, status `pago`, R$ 80).
-- Existe uma transação em `clientes_transacoes` (`d2530663-…`) com `cobranca_id` preenchido e descrição `Fotos extras (cobranca a9a0247d-…) Asaas`.
-- O ID do pagamento no Asaas (`pay_n36k894rtmi6h9xb`) está gravado em `cobranca_parcelas`, **não** em `cobrancas.dados_extras` (que só tem as flags de repasse).
+- Cobrança de extras `a9a0247d-…`, provedor `asaas`, status `pago`, R$ 80.
+- Transação `d2530663-…` em `clientes_transacoes` com `cobranca_id` preenchido e descrição `Fotos extras (cobranca a9a0247d-…) Asaas`.
+- O `asaas_payment_id` (`pay_n36k894rtmi6h9xb`) está em `cobranca_parcelas` — **não** em `cobrancas.dados_extras`.
 
-Com isso, há **duas falhas encadeadas**:
+Duas falhas encadeadas:
 
-1. **Front (causa do erro na tela):** a lista de pagamentos monta o item a partir da transação, então o `id` do pagamento é o UUID da transação. A rotina de estorno só sabe extrair a cobrança de IDs que começam com `asaas-` ou `asaas-parcela-`. Como o ID não bate com nenhum padrão, ela aborta com "Não foi possível identificar a cobrança Asaas para estornar" — sem nem chamar o gateway.
-2. **Edge function:** mesmo corrigindo o item 1, a função de estorno procura o `asaas_payment_id` apenas em `cobrancas.dados_extras`. Nesse caso ele não está lá, e a chamada falharia com "ID do pagamento no Asaas não encontrado".
+1. **Front:** o pagamento exibido vem da transação, então seu `id` é o UUID da transação. O estorno só sabe extrair a cobrança de ids no formato `asaas-…` / `asaas-parcela-…`; como não bate, aborta com "Não foi possível identificar a cobrança Asaas para estornar" — nem chama o gateway.
+2. **Edge function:** mesmo com o id certo, ela procura o `asaas_payment_id` só em `cobrancas.dados_extras`; ali não existe, então falharia depois.
 
-## O que será feito
+## Estratégia aprovada
 
-### 1. Propagar a cobrança até o item de pagamento
-No hook que monta os pagamentos da sessão, incluir `cobrancaId` (e `parcelaId` quando houver) no objeto do pagamento, usando a coluna `cobranca_id` da transação. Assim o vínculo deixa de depender de parsing do ID textual.
+Separar por ambiente: **sandbox = estorno interno (sem gateway)**; **produção = corrigir o caminho real**.
 
-### 2. Resolver a cobrança de forma robusta no estorno
-Na rotina de estorno, resolver o ID da cobrança nesta ordem:
-1. `payment.cobrancaId` (novo campo);
-2. prefixos existentes `asaas-parcela-` / `asaas-` (retrocompatibilidade);
-3. fallback: buscar `cobranca_id` na transação pelo ID do pagamento.
+### 1. Sandbox tratado como pagamento manual
 
-Só exibir o erro atual se todas as tentativas falharem.
+- Detectar o ambiente da integração Asaas ativa do usuário (`usuarios_integracoes.dados_extras.environment`), exposto por um hook simples de leitura.
+- Quando o ambiente for sandbox, no modal de estorno:
+  - a opção "Realizar estorno automaticamente no Asaas" fica desligada e desabilitada, com nota "ambiente de teste — estorno registrado apenas no Lunari";
+  - o estorno segue o caminho interno já existente (transação espelhada negativa / crédito do cliente), sem chamar a edge function;
+  - liberar também a exclusão do pagamento, igual a um pagamento manual.
+- Nada muda no comportamento em produção.
 
-### 3. Fallback do `asaas_payment_id` na edge function
-Na função de estorno Asaas, quando não houver `asaas_payment_id` em `cobrancas.dados_extras`, buscar em `cobranca_parcelas` pela `cobranca_id` (parcela paga/confirmada, ordenada por número). Só então retornar erro.
+### 2. Produção — resolver a cobrança corretamente
 
-### 4. Ambiente correto (sandbox vs produção)
-Verificar de qual integração a cobrança nasceu e usar a mesma chave/ambiente no estorno, em vez de sempre pegar a integração `is_default` do usuário. Se a cobrança não guardar essa referência, manter o comportamento atual e registrar log claro do ambiente usado, para não estornar em produção uma cobrança de sandbox (e vice-versa).
+- Propagar `cobrancaId` (e `parcelaId` quando existir) da transação para o objeto de pagamento, usando a coluna `cobranca_id`, em vez de depender de prefixo no id.
+- No estorno, resolver a cobrança nesta ordem: `payment.cobrancaId` → prefixos `asaas-parcela-` / `asaas-` (retrocompatível) → consulta da transação pelo id. Só então mostrar erro.
 
-### 5. Mensagens de erro
-Passar a mostrar a mensagem real devolvida pelo gateway/edge function, em vez de mensagens genéricas, para diagnóstico futuro.
+### 3. Produção — fallback do `asaas_payment_id` na edge function
+
+- Quando `cobrancas.dados_extras` não tiver o id, buscar em `cobranca_parcelas` pela `cobranca_id` (parcela paga/confirmada, menor número de parcela). Só depois retornar erro.
+- Registrar em log o ambiente usado (sandbox/produção) para evitar estorno cruzado.
+
+### 4. Mensagens de erro
+
+Exibir a mensagem real devolvida pela edge function/gateway em vez de texto genérico.
 
 ## Arquivos afetados
 
-- `src/hooks/useSessionPayments.ts` — montagem do pagamento + resolução no `refundPayment`.
+- `src/hooks/useSessionPayments.ts` — `cobrancaId` na montagem do pagamento, resolução robusta no `refundPayment`, bypass do gateway em sandbox.
 - `src/types/sessionPayments.ts` — campos opcionais `cobrancaId` / `parcelaId`.
-- `supabase/functions/gestao-asaas-refund/index.ts` — fallback via `cobranca_parcelas` e seleção de ambiente.
+- Modal de estorno (`src/components/payments/…`) — estado do switch e liberação de exclusão em sandbox.
+- `supabase/functions/gestao-asaas-refund/index.ts` — fallback via `cobranca_parcelas` + log de ambiente.
 
-Sem migração de banco. Nenhum registro financeiro existente é alterado.
+Sem migração de banco; nenhum registro financeiro existente é alterado.
