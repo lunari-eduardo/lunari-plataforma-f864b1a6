@@ -28,6 +28,8 @@ interface PackageSearchComboboxProps {
   onSelect: (packageId: string, packageData?: any) => void;
   placeholder?: string;
   filtrarPorCategoria?: string;
+  /** Oculta o valor do pacote (Agenda nunca expõe preço). */
+  hidePrice?: boolean;
 }
 
 import { useRealtimeConfiguration } from '@/hooks/useRealtimeConfiguration';
@@ -36,7 +38,8 @@ export default function PackageSearchCombobox({
   value,
   onSelect,
   placeholder = "Buscar pacote...",
-  filtrarPorCategoria
+  filtrarPorCategoria,
+  hidePrice = false
 }: PackageSearchComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,7 +147,9 @@ export default function PackageSearchCombobox({
 
   const displayValue = (isEditing || !selectedPackage)
     ? searchTerm
-    : `${selectedPackage.name} - R$ ${selectedPackage.price.toFixed(2)}`;
+    : hidePrice
+      ? selectedPackage.name
+      : `${selectedPackage.name} - R$ ${selectedPackage.price.toFixed(2)}`;
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -198,9 +203,11 @@ export default function PackageSearchCombobox({
                           )}
                         </div>
 
-                        <div className="text-[11px] text-muted-foreground">
-                          R$ {pkg.price.toFixed(2)}
-                        </div>
+                        {!hidePrice && (
+                          <div className="text-[11px] text-muted-foreground">
+                            R$ {pkg.price.toFixed(2)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
