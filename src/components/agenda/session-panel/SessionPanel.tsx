@@ -23,6 +23,8 @@ import {
   Paperclip,
   Send,
   Tag,
+  ChevronDown,
+  History,
   Trash2,
   User,
 } from 'lucide-react';
@@ -32,6 +34,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { toTitleCase } from '@/hooks/useTitleCase';
@@ -45,6 +48,7 @@ import { AppointmentDeleteConfirmModal } from '../AppointmentDeleteConfirmModal'
 import { SlotConflictDialog } from '../SlotConflictDialog';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
+import { SessionTimeline } from './SessionTimeline';
 
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
@@ -120,6 +124,9 @@ export default function SessionPanel({
   const [newClientMode, setNewClientMode] = useState(false);
   const [newClient, setNewClient] = useState({ nome: '', telefone: '' });
   const [saving, setSaving] = useState(false);
+  const [cobrarAoSalvar, setCobrarAoSalvar] = useState(false);
+  const [chargeSessionId, setChargeSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const buildInitialState = useCallback((): PanelFormState => {
     if (appointment) {
@@ -168,6 +175,9 @@ export default function SessionPanel({
     setShowSchedule(false);
     setNewClientMode(false);
     setNewClient({ nome: '', telefone: '' });
+    setCobrarAoSalvar(false);
+    setChargeSessionId(null);
+    setShowHistory(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, appointment?.id]);
 
@@ -281,6 +291,41 @@ export default function SessionPanel({
     return null;
   };
 
+  /**
+   * Localiza o session_id do agendamento recém-criado (fluxo "cobrar ao salvar").
+   * Faz algumas tentativas curtas porque a criação é assíncrona.
+   */
+  const findCreatedSessionId = async (
+    clienteId: string,
+    date: Date,
+    time: string,
+  ): Promise<string | null> => {
+    const dateStr = formatDateForStorage(date);
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const userId = auth?.user?.id;
+        if (userId) {
+          const { data } = await supabase
+            .from('appointments')
+            .select('session_id, created_at')
+            .eq('user_id', userId)
+            .eq('cliente_id', clienteId)
+            .eq('date', dateStr)
+            .eq('time', time)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          const sid = (data as any[])?.[0]?.session_id;
+          if (sid) return sid as string;
+        }
+      } catch {
+        /* tenta de novo */
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+  };
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -300,6 +345,13 @@ export default function SessionPanel({
           const next = { ...form, date: parsedDate, time: finalTime };
           setForm(next);
           await onSave(buildPayload(next, resolved));
+
+          // Fluxo "Cobrar ao salvar": abre o modal de cobrança logo após criar
+          if (!isEdit && cobrarAoSalvar && resolved.clienteId) {
+            const sid = await findCreatedSessionId(resolved.clienteId, parsedDate, finalTime);
+            setChargeSessionId(sid);
+            setShowCharge(true);
+          }
         },
       });
     } catch (err) {
@@ -308,6 +360,7 @@ export default function SessionPanel({
       setTimeout(() => setSaving(false), 400);
     }
   };
+
 
   const handleGerarCobranca = async () => {
     if (!form.clienteId) {
@@ -388,6 +441,7 @@ export default function SessionPanel({
           side="right"
           className={cn(
             'w-full sm:max-w-[520px] p-0 gap-0 flex flex-col',
+            'h-dvh max-h-dvh bg-background backdrop-blur-none',
             overlayOpen && 'opacity-40 blur-[2px] pointer-events-none',
           )}
         >
@@ -431,7 +485,7 @@ export default function SessionPanel({
                     value={dateInput}
                     onChange={(e) => setDateInput(e.target.value)}
                     onBlur={commitDate}
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                 </PanelField>
                 <PanelField label="Horário" htmlFor="sp-time">
@@ -441,7 +495,7 @@ export default function SessionPanel({
                     value={timeInput}
                     onChange={(e) => setTimeInput(e.target.value)}
                     onBlur={commitTime}
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                 </PanelField>
               </div>
@@ -449,7 +503,7 @@ export default function SessionPanel({
           </header>
 
           {/* =========================== CONTEÚDO ROLÁVEL =========================== */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3 space-y-3" style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* -------------------------------- CLIENTE -------------------------------- */}
             <PanelSection
               icon={User}
@@ -482,13 +536,13 @@ export default function SessionPanel({
                     value={newClient.nome}
                     onChange={(e) => setNewClient(p => ({ ...p, nome: toTitleCase(e.target.value) }))}
                     placeholder="Nome do cliente"
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                   <Input
                     value={newClient.telefone}
                     onChange={(e) => setNewClient(p => ({ ...p, telefone: e.target.value }))}
                     placeholder="Telefone"
-                    className="h-10 rounded-lg text-sm"
+                    className="h-10 rounded-lg text-base sm:text-sm"
                   />
                   <button
                     type="button"
@@ -559,7 +613,7 @@ export default function SessionPanel({
                     onChange={paidInput.handleChange}
                     onFocus={paidInput.handleFocus}
                     placeholder="0,00"
-                    className="h-10 rounded-lg pl-10 text-sm"
+                    className="h-10 rounded-lg pl-10 text-base sm:text-sm"
                   />
                 </div>
               </PanelField>
@@ -570,18 +624,42 @@ export default function SessionPanel({
               icon={CreditCard}
               title="Cobrança"
               action={
-                !cobranca && isEdit ? (
+                isEdit && (!cobranca || cobranca.status === 'pago') ? (
                   <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleGerarCobranca}>
                     <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                    Gerar cobrança
+                    {cobranca?.status === 'pago' ? 'Nova cobrança' : 'Gerar cobrança'}
                   </Button>
                 ) : undefined
               }
             >
               {!isEdit ? (
-                <p className="text-xs text-muted-foreground">
-                  Disponível após salvar a sessão.
-                </p>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="sp-cobrar-ao-salvar"
+                    className="flex items-start justify-between gap-3 cursor-pointer"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm text-foreground">Cobrar ao salvar</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        Abre o link de cobrança logo após criar. A sessão é confirmada
+                        automaticamente quando o pagamento for aprovado.
+                      </span>
+                    </span>
+                    <Switch
+                      id="sp-cobrar-ao-salvar"
+                      checked={cobrarAoSalvar}
+                      onCheckedChange={setCobrarAoSalvar}
+                    />
+                  </label>
+                  {cobrarAoSalvar && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Valor sugerido:{' '}
+                      <span className="text-foreground">
+                        R$ {(valorPacote > 0 ? valorPacote : form.paidAmount || 0).toFixed(2)}
+                      </span>
+                    </p>
+                  )}
+                </div>
               ) : !cobranca ? (
                 <p className="text-xs text-muted-foreground">Nenhuma cobrança criada.</p>
               ) : cobranca.status === 'pago' ? (
@@ -634,7 +712,7 @@ export default function SessionPanel({
                   value={form.description}
                   onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Notas sobre a sessão..."
-                  className="min-h-[72px] rounded-lg text-sm resize-none"
+                  className="min-h-[72px] rounded-lg text-base sm:text-sm resize-none"
                 />
               </PanelField>
               {isEdit && (
@@ -683,10 +761,39 @@ export default function SessionPanel({
                 </div>
               </PanelSection>
             ) : null}
+
+            {/* ------------------------- HISTÓRICO (colapsável) ------------------------ */}
+            {isEdit && appointment?.sessionId && (
+              <div className="rounded-xl border border-border/60 bg-card/80">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(v => !v)}
+                  className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-sm font-medium text-foreground"
+                  aria-expanded={showHistory}
+                >
+                  <span className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-accent-gold" />
+                    Histórico da sessão
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 text-muted-foreground transition-transform',
+                      showHistory && 'rotate-180',
+                    )}
+                  />
+                </button>
+                {showHistory && (
+                  <div className="border-t border-border/60 px-3.5 py-3">
+                    <SessionTimeline sessionId={appointment.sessionId} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ============================= RODAPÉ FIXO ============================== */}
-          <footer className="shrink-0 border-t border-border/60 px-4 py-3 flex items-center justify-between gap-2">
+          <footer className="shrink-0 border-t border-border/60 px-4 py-3 pb-safe-plus-2 sm:pb-3 flex items-center justify-between gap-2">
+
             {isEdit && onDelete ? (
               <Button
                 variant="ghost"
@@ -750,11 +857,11 @@ export default function SessionPanel({
       {showCharge && form.clienteId && (
         <ChargeModal
           isOpen={showCharge}
-          onClose={() => setShowCharge(false)}
+          onClose={() => { setShowCharge(false); setChargeSessionId(null); }}
           clienteId={form.clienteId}
           clienteNome={clientDisplayName}
           clienteWhatsapp={cliente?.telefone}
-          sessionId={appointment?.sessionId}
+          sessionId={chargeSessionId || appointment?.sessionId}
           valorSugerido={valorPacote > 0 ? valorPacote : form.paidAmount || 0}
         />
       )}
