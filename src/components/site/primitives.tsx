@@ -18,8 +18,10 @@ import { SectionTitle } from "@/components/site/SectionTitle";
 
 type Tone = "light" | "dark" | "navy";
 
+// Cada seção pinta o próprio fundo — nunca "transparent", para que o tom do
+// texto e o tom do fundo andem sempre juntos (evita texto escuro sobre dark).
 const toneBg = (t: Tone) =>
-  t === "navy" ? TOKENS.navy : t === "dark" ? TOKENS.deep : "transparent";
+  t === "navy" ? TOKENS.navy : t === "dark" ? TOKENS.deep : TOKENS.paper;
 const toneText = (t: Tone) => (t === "light" ? TOKENS.ink : TOKENS.paper);
 const toneMuted = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.72)" : "rgba(255,255,255,0.72)";
