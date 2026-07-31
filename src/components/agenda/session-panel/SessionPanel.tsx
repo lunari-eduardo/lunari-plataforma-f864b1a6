@@ -23,6 +23,8 @@ import {
   Paperclip,
   Send,
   Tag,
+  ChevronDown,
+  History,
   Trash2,
   User,
 } from 'lucide-react';
@@ -32,6 +34,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { toTitleCase } from '@/hooks/useTitleCase';
@@ -45,6 +48,7 @@ import { AppointmentDeleteConfirmModal } from '../AppointmentDeleteConfirmModal'
 import { SlotConflictDialog } from '../SlotConflictDialog';
 import { ChargeModal } from '@/components/cobranca/ChargeModal';
 import { SendBriefingModal } from '@/components/formularios/SendBriefingModal';
+import { SessionTimeline } from './SessionTimeline';
 
 import { useOrcamentos } from '@/hooks/useOrcamentos';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
