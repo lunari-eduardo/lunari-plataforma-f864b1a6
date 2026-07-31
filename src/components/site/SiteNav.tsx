@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowUpRight } from "lucide-react";
 import { PrimaryButton } from "@/components/landing/primitives";
 
 type NavItem = {
@@ -99,7 +99,7 @@ export function SiteNav() {
                 onMouseLeave={() => setOpenMenu(null)}
               >
                 <button
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-[13px] text-[rgba(10,10,10,0.7)] hover:text-[#0A0A0A]"
+                  className={`inline-flex items-center gap-1 rounded-md px-3 py-2 text-[13px] ${onDark ? "text-[rgba(245,241,234,0.72)] hover:text-[#F5F1EA]" : "text-[rgba(10,10,10,0.7)] hover:text-[#0A0A0A]"}`}
                   onClick={() => setOpenMenu(openMenu === item.label ? null : item.label)}
                 >
                   {item.label}
@@ -142,8 +142,8 @@ export function SiteNav() {
                 className={({ isActive }) =>
                   `rounded-md px-3 py-2 text-[13px] transition-colors ${
                     isActive
-                      ? "text-[#0A0A0A]"
-                      : "text-[rgba(10,10,10,0.7)] hover:text-[#0A0A0A]"
+                      ? onDark ? "text-[#F5F1EA]" : "text-[#0A0A0A]"
+                      : onDark ? "text-[rgba(245,241,234,0.72)] hover:text-[#F5F1EA]" : "text-[rgba(10,10,10,0.7)] hover:text-[#0A0A0A]"
                   }`
                 }
               >
@@ -156,17 +156,28 @@ export function SiteNav() {
         <div className="hidden items-center gap-2 md:flex">
           <button
             onClick={() => nav("/auth")}
-            className="text-[13px] text-[rgba(10,10,10,0.7)] hover:text-[#0A0A0A]"
+            className={`text-[13px] ${onDark ? "text-[rgba(245,241,234,0.72)] hover:text-[#F5F1EA]" : "text-[rgba(10,10,10,0.7)] hover:text-[#0A0A0A]"}`}
             style={{ fontFamily: '"Geist", sans-serif' }}
           >
             Entrar
           </button>
-          <PrimaryButton onClick={() => nav("/auth")}>Testar grátis</PrimaryButton>
+          <button
+            onClick={() => nav("/auth")}
+            className="group inline-flex h-10 items-center gap-2 rounded-[8px] px-5 text-[14px] font-medium transition-all duration-300 hover:-translate-y-[1px]"
+            style={{
+              fontFamily: '"Geist", sans-serif',
+              background: onDark ? "#C9A87C" : "#0A0A0A",
+              color: onDark ? "#0A0A0A" : "#FAFAF7",
+            }}
+          >
+            Testar grátis
+            <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+          </button>
         </div>
 
         {/* Mobile toggle */}
         <button
-          className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md text-[#0A0A0A]"
+          className={`md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md ${onDark ? "text-[#F5F1EA]" : "text-[#0A0A0A]"}`}
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Menu"
         >
