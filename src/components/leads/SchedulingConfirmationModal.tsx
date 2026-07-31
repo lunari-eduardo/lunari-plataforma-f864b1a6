@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
 import { useAppointmentMutations } from "@/modules/agenda/presentation";
 import { useToast } from "@/hooks/use-toast";
-import AppointmentForm from "@/components/agenda/AppointmentForm";
+import SessionPanel from "@/components/agenda/session-panel/SessionPanel";
 import { useAgendaConflict } from "@/hooks/useAgendaConflict";
 import { SlotConflictDialog } from "@/components/agenda/SlotConflictDialog";
 import type { Lead } from "@/types/leads";
@@ -68,29 +68,14 @@ export default function SchedulingConfirmationModal({
   if (showAppointmentForm) {
     return (
       <>
-        <Dialog open={true} onOpenChange={(open) => !open && handleAppointmentFormClose()}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-elegant">
-            <DialogHeader>
-              <DialogTitle>Agendar Cliente</DialogTitle>
-            </DialogHeader>
-            <AppointmentForm
-              onSave={handleAppointmentSaved}
-              onCancel={handleAppointmentFormClose}
-              initialDate={new Date()}
-              initialTime="14:00"
-              appointment={{
-                id: "",
-                title: `Sessão - ${lead.nome}`,
-                date: new Date(),
-                time: "14:00",
-                type: "Sessão",
-                client: lead.nome,
-                status: "a confirmar",
-                description: `Lead convertido: ${lead.nome}`,
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <SessionPanel
+          open
+          onOpenChange={(o) => !o && handleAppointmentFormClose()}
+          initialDate={new Date()}
+          initialTime="14:00"
+          preselectedClienteId={lead.clienteId}
+          onSave={handleAppointmentSaved}
+        />
         <SlotConflictDialog {...dialogProps} />
       </>
     );
