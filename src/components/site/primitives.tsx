@@ -126,7 +126,10 @@ export function ProductHero({
 }) {
   const nav = useNavigate();
   return (
-    <section className="relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-28">
+    <section
+      className="relative overflow-hidden pt-36 pb-20 md:pt-44 md:pb-28"
+      style={{ background: TOKENS.paper, color: TOKENS.ink }}
+    >
       <GradientHalo />
       <GridLines />
       <NoiseLayer />
