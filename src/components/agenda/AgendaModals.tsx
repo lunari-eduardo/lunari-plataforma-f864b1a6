@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import AppointmentForm from "./AppointmentForm";
-import AppointmentDetails from "./AppointmentDetails";
+import SessionPanel from "./session-panel/SessionPanel";
 import BudgetAppointmentDetails from "./BudgetAppointmentDetails";
 import AvailabilityConfigModal from "./AvailabilityConfigModal";
 import ShareAvailabilityModal from "./ShareAvailabilityModal";
@@ -75,43 +74,27 @@ export default function AgendaModals({
   
   return (
     <>
-      {/* Appointment Form Modal */}
-      <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
-        <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
-          <DialogHeader>
-            <DialogTitle className={DIALOG_TITLE_CLS}>
-              {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Painel de Sessão — Nova sessão */}
+      <SessionPanel
+        open={isAppointmentDialogOpen}
+        onOpenChange={setIsAppointmentDialogOpen}
+        appointment={editingAppointment}
+        initialDate={selectedSlot?.date}
+        initialTime={selectedSlot?.time}
+        onSave={onSaveAppointment}
+        onPersist={onPersistAppointment}
+        onDelete={onDeleteAppointment}
+      />
 
-          <div className={cn(DIALOG_BODY, 'pr-1')}>
-            <AppointmentForm
-              initialDate={selectedSlot?.date || editingAppointment?.date}
-              initialTime={selectedSlot?.time || editingAppointment?.time}
-              appointment={editingAppointment}
-              onSave={onSaveAppointment}
-              onCancel={() => setIsAppointmentDialogOpen(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Appointment Details Modal */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className={cn(dialogSize('md'), DIALOG_SHELL)}>
-          {viewingAppointment && (
-            <div className={cn(DIALOG_BODY, 'pr-1')}>
-            <AppointmentDetails
-              appointment={viewingAppointment}
-              onSave={onSaveAppointment}
-              onPersist={onPersistAppointment}
-              onCancel={() => setIsDetailsOpen(false)}
-              onDelete={onDeleteAppointment}
-            />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Painel de Sessão — Sessão existente (pendente ou confirmada) */}
+      <SessionPanel
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+        appointment={viewingAppointment}
+        onSave={onSaveAppointment}
+        onPersist={onPersistAppointment}
+        onDelete={onDeleteAppointment}
+      />
 
       {/* Budget Appointment Details Modal */}
       <Dialog open={isBudgetAppointmentModalOpen} onOpenChange={setIsBudgetAppointmentModalOpen}>
