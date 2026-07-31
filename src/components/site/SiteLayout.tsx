@@ -19,7 +19,7 @@ export function SiteLayout() {
 
   return (
     <div
-      className="min-h-screen bg-[#FAFAF7] text-[#0A0A0A] antialiased"
+      className="min-h-screen bg-[#0A0A0A] text-[#0A0A0A] antialiased"
       style={{ fontFamily: '"Geist", "Inter Tight", sans-serif', letterSpacing: "-0.005em" }}
     >
       <SiteNav />
