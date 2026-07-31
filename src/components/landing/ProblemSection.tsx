@@ -11,7 +11,7 @@ const pains = [
 
 export function ProblemSection() {
   return (
-    <SectionShell className="bg-[#FAFAF7]">
+    <SectionShell tone="light">
       <Reveal>
         <div className="flex justify-center">
           <EyebrowTag>O custo invisível</EyebrowTag>

@@ -29,6 +29,15 @@ export const TOKENS = {
   hairStrong: "rgba(10,10,10,0.14)",
   hairDark: "rgba(255,255,255,0.08)",
   hairDarkStrong: "rgba(255,255,255,0.14)",
+
+  // --- Tema oficial "silent luxury" (dark) ---
+  obsidian: "#0A0A0A",        // fundo das seções dark
+  obsidianSoft: "#111111",    // superfícies/cards sobre dark
+  gold: "#C9A87C",            // acento sobre dark
+  goldSoft: "#E4CFA8",        // brilho/hover
+  onDark: "#F5F1EA",          // texto principal sobre dark
+  onDarkMuted: "rgba(245,241,234,0.62)",
+  onDarkFaint: "rgba(245,241,234,0.42)",
 };
 
 
@@ -36,17 +45,26 @@ export function SectionShell({
   children,
   className = "",
   id,
+  tone,
 }: {
   children: ReactNode;
   className?: string;
   id?: string;
+  tone?: "light" | "dark";
 }) {
+  const toneCls =
+    tone === "dark"
+      ? "bg-[#0A0A0A] text-[#F5F1EA]"
+      : tone === "light"
+        ? "bg-[#FAFAF7] text-[#0A0A0A]"
+        : "";
   return (
-    <section id={id} className={`relative w-full py-24 md:py-32 ${className}`}>
+    <section id={id} className={`relative w-full py-24 md:py-32 ${toneCls} ${className}`}>
       <div className="mx-auto w-full max-w-[1200px] px-6 md:px-8">{children}</div>
     </section>
   );
 }
+
 
 export function EyebrowTag({
   children,

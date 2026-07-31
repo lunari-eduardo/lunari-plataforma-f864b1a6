@@ -30,7 +30,7 @@ const plans = [
 export function PricingSection() {
   const nav = useNavigate();
   return (
-    <SectionShell id="planos" className="bg-white">
+    <SectionShell id="planos" tone="light">
       <Reveal>
         <div className="flex justify-center">
           <EyebrowTag>Planos honestos</EyebrowTag>

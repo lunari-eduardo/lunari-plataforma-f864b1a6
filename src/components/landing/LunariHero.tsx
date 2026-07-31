@@ -1,14 +1,16 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowUpRight, Check, Play, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  PrimaryButton,
-  GhostLink,
-  GridLines,
-  TechLabel,
-  EASE,
-} from "./primitives";
-import { HeroMockup } from "./mockups/HeroMockup";
+import { EASE, TOKENS, displayFont, monoFont, uiFont } from "./primitives";
+import { HeroMedia } from "./HeroMedia";
+
+const GUARANTEES = [
+  "Contratos digitais",
+  "Financeiro integrado",
+  "Workflow inteligente",
+  "Galerias profissionais",
+  "Inteligência Artificial",
+];
 
 export function LunariHero() {
   const nav = useNavigate();
@@ -21,115 +23,137 @@ export function LunariHero() {
   });
 
   return (
-    <section className="relative w-full overflow-hidden pt-32 pb-16 md:pt-36">
-      <GridLines />
-
-      {/* halo ember bem sutil no canto */}
+    <section
+      className="relative w-full overflow-hidden pt-28 pb-20 md:pt-32 md:pb-24"
+      style={{ background: TOKENS.obsidian, color: TOKENS.onDark }}
+    >
+      {/* feixe dourado no canto superior direito */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-32 right-[10%] h-[400px] w-[600px] opacity-[0.18] blur-3xl"
+        className="pointer-events-none absolute -top-40 right-[-10%] h-[520px] w-[720px] opacity-[0.16] blur-3xl"
         style={{
-          background:
-            "radial-gradient(closest-side, rgba(176,99,47,0.6), transparent 70%)",
+          background: `radial-gradient(closest-side, ${TOKENS.gold}, transparent 70%)`,
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+          backgroundSize: "96px 100%",
+          maskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 55%, transparent 100%)",
         }}
       />
 
-      <div className="relative mx-auto max-w-[1200px] px-6 md:px-8">
-        {/* Eyebrow + section index */}
-        <motion.div {...fadeUp(0)} className="flex items-center gap-4">
-          <TechLabel>{"\n"}</TechLabel>
-          <span className="h-px w-12 bg-[rgba(10,10,10,0.14)]" />
-          <span
-            className="inline-flex items-center gap-2 text-[11px] font-medium text-[rgba(10,10,10,0.55)]"
-            style={{ fontFamily: '"Geist", sans-serif' }}
-          >
+      <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-14 px-6 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-12">
+        {/* ---------- Coluna esquerda ---------- */}
+        <div>
+          <motion.div {...fadeUp(0)}>
             <span
-              className="inline-block h-[6px] w-[6px] animate-pulse rounded-full"
-              style={{ background: "#b0632f" }}
-            />
-            O SISTEMA MAIS COMPLETO PARA FOTÓGRAFOS, FEITO POR FOTÓGRAFOS - EM CADA DETALHE{"\n"}
-          </span>
-        </motion.div>
+              className="inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.22em]"
+              style={{
+                ...monoFont,
+                borderColor: TOKENS.hairDarkStrong,
+                color: TOKENS.onDarkMuted,
+              }}
+            >
+              <Sparkles className="h-3 w-3" strokeWidth={1.5} style={{ color: TOKENS.gold }} />
+              O novo padrão para fotógrafos profissionais
+            </span>
+          </motion.div>
 
-        {/* Headline — alinhada à esquerda, tamanho medido */}
-        <motion.h1
-          {...fadeUp(0.08)}
-          className="mt-10 max-w-[900px] text-[44px] font-medium leading-[1.02] tracking-[-0.035em] text-[#0A0A0A] md:text-[68px]"
-          style={{ fontFamily: '"Geist", sans-serif' }}
-        >
-          O primeiro sistema
-          <br />
-          que{" "}
-          <span
-            className="italic font-normal"
-            style={{ fontFamily: '"Instrument Serif", serif', color: "#0A0A0A" }}
+          <motion.h1
+            {...fadeUp(0.08)}
+            className="mt-9 max-w-[620px] text-[42px] font-medium leading-[1.03] tracking-[-0.035em] md:text-[62px]"
+            style={{ ...uiFont, color: TOKENS.onDark }}
           >
-            pensa
-          </span>{" "}
-          como um fotógrafo.
-        </motion.h1>
+            O primeiro sistema
+            <br />
+            que{" "}
+            <span className="italic font-normal" style={{ ...displayFont, color: TOKENS.gold }}>
+              pensa
+            </span>{" "}
+            como
+            <br className="hidden md:block" /> um fotógrafo.
+          </motion.h1>
 
-        <motion.p
-          {...fadeUp(0.16)}
-          className="mt-7 max-w-[560px] text-[16px] leading-[1.6] text-[rgba(10,10,10,0.6)] md:text-[17px]"
-        >
-          CRM, agenda, contratos, financeiro, galeria e IA operando como um só
-          cérebro. Enquanto os outros vendem seis ferramentas, o Lunari entrega{" "}
-          <span className="text-[#0A0A0A]">um estúdio inteiro</span>.
-        </motion.p>
-
-        <motion.div
-          {...fadeUp(0.24)}
-          className="mt-9 flex flex-wrap items-center gap-4"
-        >
-          <PrimaryButton onClick={() => nav("/auth")}>
-            Testar 30 dias grátis
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
-          </PrimaryButton>
-          <GhostLink
-            onClick={() =>
-              document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" })
-            }
+          <motion.p
+            {...fadeUp(0.16)}
+            className="mt-7 max-w-[520px] text-[16px] leading-[1.65] md:text-[17px]"
+            style={{ ...uiFont, color: TOKENS.onDarkMuted }}
           >
-            Ver o sistema em ação →
-          </GhostLink>
-          <span className="ml-2 text-[12px] text-[rgba(10,10,10,0.4)]" style={{ fontFamily: '"Geist Mono", monospace' }}>
-            sem cartão · cancele quando quiser
-          </span>
-        </motion.div>
+            CRM, contratos, pagamentos, workflow, galerias e IA trabalhando juntos para
+            eliminar tarefas repetitivas e liberar o que realmente importa: fotografar.
+          </motion.p>
 
-        {/* KPIs técnicos abaixo do CTA — dá densidade */}
-        <motion.div
-          {...fadeUp(0.32)}
-          className="mt-14 grid max-w-[720px] grid-cols-3 gap-8 border-t border-[rgba(10,10,10,0.08)] pt-8"
-        >
-          {[
-            ["3.2s", "p95 dashboard"],
-            ["6→1", "ferramentas → um cérebro"],
-            ["24/7", "assistente Lu ao vivo"],
-          ].map(([v, l]) => (
-            <div key={l}>
-              <div
-                className="text-[26px] font-medium tabular-nums text-[#0A0A0A]"
-                style={{ fontFamily: '"Geist", sans-serif', letterSpacing: "-0.02em" }}
+          <motion.div {...fadeUp(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => nav("/auth")}
+              className="group inline-flex h-12 items-center gap-2 rounded-[10px] px-6 text-[14px] font-medium transition-all duration-300 hover:-translate-y-[1px]"
+              style={{
+                ...uiFont,
+                background: TOKENS.gold,
+                color: TOKENS.obsidian,
+                boxShadow: "0 18px 40px -22px rgba(201,168,124,0.9)",
+              }}
+            >
+              Conhecer a Lunari
+              <ArrowUpRight
+                className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                strokeWidth={1.75}
+              />
+            </button>
+
+            <button
+              onClick={() =>
+                document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="inline-flex h-12 items-center gap-2.5 rounded-[10px] border px-6 text-[14px] font-medium transition-colors"
+              style={{
+                ...uiFont,
+                borderColor: TOKENS.hairDarkStrong,
+                color: TOKENS.onDark,
+              }}
+            >
+              <Play className="h-4 w-4" strokeWidth={1.5} style={{ color: TOKENS.gold }} />
+              Ver demonstração
+            </button>
+          </motion.div>
+
+          {/* ---------- Garantias em cascata ---------- */}
+          <ul
+            className="mt-12 flex max-w-[560px] flex-col gap-3 border-t pt-8 md:flex-row md:flex-wrap md:gap-x-7 md:gap-y-3"
+            style={{ borderColor: TOKENS.hairDark }}
+          >
+            {GUARANTEES.map((item, i) => (
+              <motion.li
+                key={item}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: EASE, delay: 0.45 + i * 0.09 }}
+                className="flex items-center gap-2.5 text-[14px]"
+                style={{ ...uiFont, color: TOKENS.onDarkMuted }}
               >
-                {v}
-              </div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgba(10,10,10,0.45)]" style={{ fontFamily: '"Geist Mono", monospace' }}>
-                {l}
-              </div>
-            </div>
-          ))}
-        </motion.div>
+                <span
+                  className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border"
+                  style={{ borderColor: "rgba(201,168,124,0.35)" }}
+                >
+                  <Check className="h-3 w-3" strokeWidth={1.75} style={{ color: TOKENS.gold }} />
+                </span>
+                {item}
+              </motion.li>
+            ))}
+          </ul>
+        </div>
 
-        {/* Mockup */}
+        {/* ---------- Coluna direita: vídeo em loop ---------- */}
         <motion.div
-          initial={reduce ? {} : { opacity: 0, y: 40 }}
+          initial={reduce ? {} : { opacity: 0, y: 30 }}
           animate={reduce ? {} : { opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: EASE, delay: 0.4 }}
-          className="relative mt-16 md:mt-20"
+          transition={{ duration: 1, ease: EASE, delay: 0.3 }}
         >
-          <HeroMockup />
+          <HeroMedia />
         </motion.div>
       </div>
     </section>

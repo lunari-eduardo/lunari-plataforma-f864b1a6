@@ -10,7 +10,7 @@ const points = [
 
 export function GallerySection() {
   return (
-    <SectionShell className="bg-[#FAFAF7]">
+    <SectionShell tone="light">
       <Reveal>
         <div className="flex justify-center">
           <EyebrowTag>Galeria unificada</EyebrowTag>
