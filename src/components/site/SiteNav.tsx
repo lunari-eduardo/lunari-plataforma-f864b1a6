@@ -46,6 +46,9 @@ export function SiteNav() {
     setOpenMenu(null);
   }, [loc.pathname]);
 
+  // Home abre sobre o hero dark: nav transparente com texto claro até rolar.
+  const onDark = loc.pathname === "/" && !scrolled && !mobileOpen;
+
   return (
     <nav
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
@@ -57,21 +60,30 @@ export function SiteNav() {
       <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6 md:px-8">
         <NavLink
           to="/"
-          className="flex items-center gap-2 text-[15px] font-medium tracking-tight text-[#0A0A0A]"
+          className={`flex items-center gap-2 text-[15px] font-medium tracking-tight ${
+            onDark ? "text-[#F5F1EA]" : "text-[#0A0A0A]"
+          }`}
           style={{ fontFamily: '"Geist", sans-serif', letterSpacing: "-0.02em" }}
         >
           <span
             className="inline-block h-[7px] w-[7px] rounded-full"
-            style={{ background: "#b0632f", boxShadow: "0 0 0 3px rgba(176,99,47,0.12)" }}
+            style={
+              onDark
+                ? { background: "#C9A87C", boxShadow: "0 0 0 3px rgba(201,168,124,0.16)" }
+                : { background: "#b0632f", boxShadow: "0 0 0 3px rgba(176,99,47,0.12)" }
+            }
           />
           lunari
           <span
-            className="ml-1 text-[10px] font-normal uppercase tracking-[0.18em] text-[rgba(10,10,10,0.4)]"
+            className={`ml-1 text-[10px] font-normal uppercase tracking-[0.18em] ${
+              onDark ? "text-[rgba(245,241,234,0.45)]" : "text-[rgba(10,10,10,0.4)]"
+            }`}
             style={{ fontFamily: '"Geist Mono", monospace' }}
           >
             hub
           </span>
         </NavLink>
+
 
         {/* Desktop */}
         <div
