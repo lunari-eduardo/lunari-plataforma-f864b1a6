@@ -761,10 +761,39 @@ export default function SessionPanel({
                 </div>
               </PanelSection>
             ) : null}
+
+            {/* ------------------------- HISTÓRICO (colapsável) ------------------------ */}
+            {isEdit && appointment?.sessionId && (
+              <div className="rounded-xl border border-border/60 bg-card/80">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(v => !v)}
+                  className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-sm font-medium text-foreground"
+                  aria-expanded={showHistory}
+                >
+                  <span className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-accent-gold" />
+                    Histórico da sessão
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 text-muted-foreground transition-transform',
+                      showHistory && 'rotate-180',
+                    )}
+                  />
+                </button>
+                {showHistory && (
+                  <div className="border-t border-border/60 px-3.5 py-3">
+                    <SessionTimeline sessionId={appointment.sessionId} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ============================= RODAPÉ FIXO ============================== */}
-          <footer className="shrink-0 border-t border-border/60 px-4 py-3 flex items-center justify-between gap-2">
+          <footer className="shrink-0 border-t border-border/60 px-4 py-3 pb-safe-plus-2 sm:pb-3 flex items-center justify-between gap-2">
+
             {isEdit && onDelete ? (
               <Button
                 variant="ghost"
