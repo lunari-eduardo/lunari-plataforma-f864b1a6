@@ -13,7 +13,7 @@ const flow = [
 
 export function UnifiedFlowSection() {
   return (
-    <SectionShell id="produto" className="bg-white">
+    <SectionShell id="produto" tone="light">
       <Reveal>
         <div className="flex justify-center">
           <EyebrowTag>Uma nova forma de administrar</EyebrowTag>

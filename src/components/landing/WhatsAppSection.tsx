@@ -2,7 +2,7 @@ import { SectionShell, EyebrowTag, Reveal, displayFont, uiFont } from "./primiti
 
 export function WhatsAppSection() {
   return (
-    <SectionShell className="bg-white">
+    <SectionShell tone="light">
       <Reveal>
         <div className="flex justify-center">
           <EyebrowTag>WhatsApp nativo</EyebrowTag>
