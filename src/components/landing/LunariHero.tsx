@@ -141,16 +141,8 @@ export function LunariHero() {
             ))}
           </ul>
         </div>
-
-        {/* ---------- Coluna direita: vídeo em loop ---------- */}
-        <motion.div
-          initial={reduce ? {} : { opacity: 0, y: 30 }}
-          animate={reduce ? {} : { opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: EASE, delay: 0.3 }}
-        >
-          <HeroMedia />
-        </motion.div>
       </div>
+
     </section>
   );
 }
