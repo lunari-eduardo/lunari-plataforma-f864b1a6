@@ -1,230 +1,44 @@
-# Refatoração arquitetural da página Workflow
+# Correção: estorno de pagamento de extras (Gallery / Asaas)
 
-> **Documento vivo.** Consultar antes de iniciar cada Onda. Atualizar a tabela de progresso ao final de cada Onda.
+## O que está acontecendo
 
-Objetivo: transformar a página atual (1.195 linhas de `Workflow.tsx`, 1.181 linhas de `useWorkflowRealtime`, 665 do `WorkflowCacheContext`, ~14k linhas no total no escopo workflow) em um motor por camadas, com superfície tipada que o Assistente de IA possa chamar diretamente.
+Confirmei no banco, para a galeria `2fdd500e-…`:
 
-## Progresso das Ondas
+- A cobrança de extras existe (`a9a0247d-…`, provedor `asaas`, status `pago`, R$ 80).
+- Existe uma transação em `clientes_transacoes` (`d2530663-…`) com `cobranca_id` preenchido e descrição `Fotos extras (cobranca a9a0247d-…) Asaas`.
+- O ID do pagamento no Asaas (`pay_n36k894rtmi6h9xb`) está gravado em `cobranca_parcelas`, **não** em `cobrancas.dados_extras` (que só tem as flags de repasse).
 
-| Onda | Status | Notas |
-|---|---|---|
-| 1 — Domain + Indexers | ✅ concluída | `features/workflow/{domain,store,index.ts}` criados; `useWorkflowRealtime` virou shim do tipo canônico; `tsgo` limpo |
-| 2 — Data layer + repos | ✅ concluída | `data/{sessionsRepo,transactionsRepo,rpc}.ts`; `Context.fetchAndCacheMonth` migrado (smoke); `tsgo` limpo |
-| 3 — Realtime unificado | ✅ concluída | `realtime/useWorkflowRealtimeV2` ativo por padrão; canais legados de **sessões** (`workflow-realtime` no Context, `workflow-sessions-${user.id}` no hook) gated por `isWorkflowRealtimeV2Enabled()`. Canais de **métricas** mantidos (sub-onda futura: substituir por listener do evento `workflow-session-updated`). Fallback: `VITE_WORKFLOW_REALTIME_V2="false"`. |
-| 4 — Actions + Queries | ✅ concluída | Capabilities **implementadas e registradas**: `workflow.advanceCard`, `workflow.updateFields`, `workflow.deleteSession`, `workflow.addPayment`, `workflow.refundPayment`, `workflow.reconcileFotosExtras`, `workflow.createQuickSession`, `workflow.syncFromAgenda`, `workflow.getCardBySession`, `workflow.listMonth`, `workflow.statusOptions`, `workflow.search`, `workflow.metricsForMonth`, `workflow.pendingPayments`. **4a/4b/4c** concluídas. **4d** concluída — `workflow.addPayment` agora delega ao `PaymentSupabaseService.saveSinglePaymentTracked` (preserva binding + idempotência); `AppContext.addPayment` (pagamento rápido) e `useSessionPayments.addPayment` (modal) roteiam pela Capability via flag `VITE_WORKFLOW_PAYMENT_CAPABILITY` (default on). |
-| 5 — Components + Hooks finos | 🟡 em andamento | **5a ✅** `Workflow.tsx` 1.318 → **251** linhas. **5b ✅** `WorkflowTable` 825 → **72** linhas. **5c ✅** Cards quebrados em `components/workflow/details/*`: `WorkflowCardCollapsed` 594 → **394** (extraído `ExtraPhotoQtyInput` 79, `CardGalleryButtons` 115, `CardCollapsedModals` 157); `WorkflowCardExpanded` 632 → **463** (extraído `ExpandedActions` 62, `ExpandedFinancialFooter` 82, `OverrideExtrasDialog` 70). Lógica e estado preservados — só presentation foi recortada. Typecheck limpo. **5d** pendente (QuickSessionAdd 776 + GerenciarProdutosModal 479). |
-| 6 — AI surface + remoção de shims | 🟡 em andamento | **AI surface ✅** `src/features/workflow/ai/{tools,context,permissions,index}.ts` criado. Exporta `listWorkflowAITools`, `workflowAIToolMap`, `buildWorkflowPageSnapshot`, `canUserRun`, `needsHumanApproval`. `REQUIRES_APPROVAL` = {`deleteSession`,`refundPayment`}. Catálogo é derivado do `capabilityRegistry` (14 capabilities workflow). Snapshot v1 estável para chat/autopilot/MCP. Typecheck limpo. **Cleanup de shims pendente** (WorkflowSupabaseService 720, WorkflowCacheManager 754, utils/workflowCacheManager 334, useUnifiedWorkflowData, useWorkflowMetricsByYear, useWorkflowMetricsRealtime) — exige varredura de imports antes de remover. |
+Com isso, há **duas falhas encadeadas**:
 
----
+1. **Front (causa do erro na tela):** a lista de pagamentos monta o item a partir da transação, então o `id` do pagamento é o UUID da transação. A rotina de estorno só sabe extrair a cobrança de IDs que começam com `asaas-` ou `asaas-parcela-`. Como o ID não bate com nenhum padrão, ela aborta com "Não foi possível identificar a cobrança Asaas para estornar" — sem nem chamar o gateway.
+2. **Edge function:** mesmo corrigindo o item 1, a função de estorno procura o `asaas_payment_id` apenas em `cobrancas.dados_extras`. Nesse caso ele não está lá, e a chamada falharia com "ID do pagamento no Asaas não encontrado".
 
-## 1. INVENTÁRIO
+## O que será feito
 
-### Page principal
-- `src/pages/Workflow.tsx` — **1.195 linhas**. God-component: fetch (cache + ensureMonthLoaded), filtros (search/categoria/situação), ordenação, recálculo otimista de `valor_total` e `fotos_extras`, `delete_workflow_session_cascade` RPC, gerenciamento de colunas, métricas, ouvinte de `CustomEvent('workflow-session-updated')`, persistência de UI em local/sessionStorage. Importado por `app-photographer/PhotographerApp.tsx`.
+### 1. Propagar a cobrança até o item de pagamento
+No hook que monta os pagamentos da sessão, incluir `cobrancaId` (e `parcelaId` quando houver) no objeto do pagamento, usando a coluna `cobranca_id` da transação. Assim o vínculo deixa de depender de parsing do ID textual.
 
-### Context / provider
-- `src/contexts/WorkflowCacheContext.tsx` — **665 linhas**. Cache memória + IndexedDB + BroadcastChannel + canal realtime `workflow-realtime` + 6 pontos de `supabase.from('clientes_sessoes')` + normalização parcial + preload de 4 meses + reconciliação por id/session_id. Importado por: `Workflow.tsx`, `WorkflowCacheManager.tsx`, `hooks/useWorkflowData.ts`, `useWorkflowPackageData.ts`, `useAppointmentWorkflowSync.ts`, `useProductionReminders.ts`, `useDashboardFinanceiro.ts`, `ConfigurationContext.tsx`, `DataLayer.ts`.
+### 2. Resolver a cobrança de forma robusta no estorno
+Na rotina de estorno, resolver o ID da cobrança nesta ordem:
+1. `payment.cobrancaId` (novo campo);
+2. prefixos existentes `asaas-parcela-` / `asaas-` (retrocompatibilidade);
+3. fallback: buscar `cobranca_id` na transação pelo ID do pagamento.
 
-### Hooks
-- `useWorkflowRealtime.ts` — **1.181 linhas**, canal `workflow-sessions-${user.id}`, 11 `.from('clientes_sessoes')`, 2 `.from('clientes_transacoes')`.
-- `useWorkflowData.ts` (310), `useUnifiedWorkflowData.ts` (210, suspeita de morto), `useWorkflowCacheInit.ts` (133).
-- `useWorkflowMetrics.ts` (124), `useWorkflowMetricsByYear.ts` (139, canal próprio), `useWorkflowMetricsRealtime.ts` (97, canal próprio).
-- `useWorkflowPackageData.ts` (157), `useWorkflowStatus.ts` (43), `useWorkflow.ts` (18).
-- `useAppointmentWorkflowSync.ts` (302), `useAppointmentWorkflowInfo.ts` (183).
+Só exibir o erro atual se todas as tentativas falharem.
 
-### Services
-- `services/WorkflowSupabaseService.ts` — **720 linhas**, ~10 pontos `clientes_sessoes`.
-- `services/WorkflowCacheManager.ts` — **762 linhas**, segundo cache paralelo ao Context.
-- `services/AgendaWorkflowIntegrationService.ts` — 347 linhas.
+### 3. Fallback do `asaas_payment_id` na edge function
+Na função de estorno Asaas, quando não houver `asaas_payment_id` em `cobrancas.dados_extras`, buscar em `cobranca_parcelas` pela `cobranca_id` (parcela paga/confirmada, ordenada por número). Só então retornar erro.
 
-### Utils
-- `utils/workflowNormalization.ts` (91), `utils/workflowSessionsAdapter.ts` (161), `utils/workflowCacheManager.ts` (334 — terceiro "cacheManager"), migrators.
+### 4. Ambiente correto (sandbox vs produção)
+Verificar de qual integração a cobrança nasceu e usar a mesma chave/ambiente no estorno, em vez de sempre pegar a integração `is_default` do usuário. Se a cobrança não guardar essa referência, manter o comportamento atual e registrar log claro do ambiente usado, para não estornar em produção uma cobrança de sandbox (e vice-versa).
 
-### Components (~7,4k linhas)
-- Tabela: `WorkflowTable.tsx` (825), `WorkflowTableHeader.tsx` (8), `ColumnSettings.tsx` (104).
-- Cards: `WorkflowCard.tsx` (85), `WorkflowCardCollapsed.tsx` (594), `WorkflowCardExpanded.tsx` (632), `WorkflowCardList.tsx` (84).
-- Modais: `WorkflowDeleteConfirmModal.tsx` (184), `FlexibleDeleteModal.tsx` (120), `ReconcileExtrasModal.tsx` (160), `GerenciarProdutosModal.tsx` (479), `GalleryUpgradeModal.tsx` (62), `WorkflowPaymentsModal.tsx` (28).
-- Form: `QuickSessionAdd.tsx` (776), `WorkflowPackageCombobox.tsx` (180), `PackageCombobox.tsx` (96), `ProductCombobox.tsx` (130), `CategoryCombobox.tsx` (81).
-- Filtros/painel: `WorkflowFilters.tsx` (234), `WorkflowTasksPanel.tsx` (292).
-- Badges/aux: `StatusBadge`, `ColoredStatusBadge`, `FinancialStatusBadge`, `FotosExtrasPaymentBadge`, `RegrasCongeladasIndicator`, `DataFreezingStatus`, `AuditInfo`, `DebugPricingRules`, `AutoPhotoCalculator`, `SessionChangeLog`, `FinancialSummary`, `WorkflowSyncButton`.
+### 5. Mensagens de erro
+Passar a mostrar a mensagem real devolvida pelo gateway/edge function, em vez de mensagens genéricas, para diagnóstico futuro.
 
-### Domain types
-- `src/types/workflow.ts` (93): `SessionData`, `SessionPayment`, `ProdutoWorkflow`, `CategoryOption`, `PackageOption`, `ProductOption`.
-- `WorkflowSession` mora dentro de `useWorkflowRealtime.ts` (anti-pattern).
+## Arquivos afetados
 
----
+- `src/hooks/useSessionPayments.ts` — montagem do pagamento + resolução no `refundPayment`.
+- `src/types/sessionPayments.ts` — campos opcionais `cobrancaId` / `parcelaId`.
+- `supabase/functions/gestao-asaas-refund/index.ts` — fallback via `cobranca_parcelas` e seleção de ambiente.
 
-## 2. DIAGNÓSTICO
-
-- **Mistura**: page faz fetch+cache+filtro+sort+RPC+UI; Context mistura cache+IDB+BC+realtime+fetch+normalização; useWorkflowRealtime junta 4 hooks em 1.
-- **Três cache managers** com mesmo nome (`contexts/`, `services/`, `utils/`).
-- **4 canais realtime** simultâneos (`workflow-realtime`, `workflow-sessions-*`, `workflow-metrics-year-*`, `workflow-metrics-*`).
-- **Prop-drilling**: `WorkflowTable` 15+ props; opções viajam page→table→card→combobox.
-- **Hot paths**: `filteredSessions` faz `removeAccents`+regex por keystroke; `sortedSessions` re-sorta com regex de moeda; `sessionsData = workflowSessions.map(convertSessionToData)` a cada `mergeUpdate`; 3 hooks de métricas recomputam.
-- **Realtime eco**: optimistic + realtime sem `sequence`; fallback `window.addEventListener('workflow-session-updated')` é sintoma.
-- **Tipos**: `WorkflowSession` em hook; `SessionData` em types; conversor obrigatório.
-- **Side-effects escondidos**: `useEffect` de visibilidade chama `ensureMonthLoaded`; localStorage espalhado em 5 `useState`; `dispatchEvent` informal.
-- **IA sem superfície**: `handleAddPayment` é `console.log`; `updateSession` privado do componente; regra `preserve/refund/remove` mora no modal.
-
----
-
-## 3. ARQUITETURA-ALVO
-
-```text
-src/features/workflow/
-  domain/    session, payment, money, pricing, filters, sort (zero React/Supabase)
-  data/      sessionsRepo, transactionsRepo, appointmentsBridge, rpc (< 250 linhas cada)
-  realtime/  useWorkflowRealtime único, multiplexado, com sequence anti-eco
-  store/     workflowStore (Zustand) + indexers (byId, bySessionId, byMonth, byStatus,
-             byCliente, byGaleria) + selectors memoizados + persistence (IDB + BC)
-  actions/   defineCommand por mutação (Zod input/output, perms, side-effects, idem)
-  queries/   defineQuery por leitura (números, nunca strings de moeda)
-  hooks/     useWorkflowData / useWorkflowActions / useWorkflowNavigation /
-             useWorkflowModals / useWorkflowColumns (binding React fino)
-  components/ shell + header + views + modals + form/* + details/* (≤ 250 linhas)
-  ai/        tools.ts (LLM) + context.ts (page snapshot) + permissions.ts
-```
-
-Regras: `domain/` sem React/Supabase; `data/` só Supabase; `store/` sem fetch; `actions/` única superfície de mutação; cada arquivo ≤ 250 linhas; sem `useEffect` de fetch fora de `realtime/` e `hooks/`.
-
----
-
-## 4. CONTRATO PARA O AI ASSISTANT
-
-### Actions
-| Action | Descrição | Input | Output | Side-effects | Idempotência |
-|---|---|---|---|---|---|
-| `workflow.advanceStatus` | Move sessão no funil | `{sessionId, toStatus}` | `{from,to}` | db:clientes_sessoes, event | `adv:{id}:{to}` 10min |
-| `workflow.updateFields` | Atualiza campos (sanitizado) | `{sessionId, fields}` | `Session` | db, event | hash(fields) 10min |
-| `workflow.addPayment` | Pagamento manual | `{sessionId, valor, data, forma, obs?}` | `{paymentId}` | db:clientes_transacoes, event | `pay:{id}:{hash}` 10min |
-| `workflow.refundPayment` | Estorna | `{paymentId, motivo?}` | `{estornoId}` | db | `ref:{id}` 24h |
-| `workflow.deleteSession` | Excluir/arquivar | `{sessionId, action:preserve|refund|remove}` | resumo RPC | rpc | `del:{id}:{act}` 1h |
-| `workflow.createQuickSession` | Cria rápida | `{clienteId, data, hora, categoria, pacote?, valorBase?}` | `{sessionId}` | db | `quick:{cli}:{data}:{hora}` 10min |
-| `workflow.reconcileFotosExtras` | Reconcilia | `{sessionId}` | `{antes,depois}` | db | `rec:{id}` 5min |
-| `workflow.syncFromAgenda` | Espelha appointment | `{appointmentId}` | `{sessionId, reused}` | db | `sync:{app}` 10min |
-
-### Queries
-| Query | Params | Retorno | Cache |
-|---|---|---|---|
-| `workflow.listMonth` | `{year, month}` | `Session[]` | Store (mês) |
-| `workflow.getById` | `{sessionId}` | `Session\|null` | Store first |
-| `workflow.search` | `{q,year?,month?,status?,situacao?,categoria?,limit}` | `Session[]` | TTL 30s |
-| `workflow.metricsForMonth` | `{year,month}` | `{previsto,recebido,restante,sessoes}` (number) | derivada |
-| `workflow.pendingPayments` | `{rangeDays?:30}` | `{sessionId,cliente,restante,vencimento?}[]` | derivada |
-| `workflow.sessionTimeline` | `{sessionId}` | `Event[]` | TTL 60s |
-| `workflow.statusOptions` | — | `{value,label,color}[]` | estática |
-
-### Page snapshot
-```
-{ route:'/workflow', currentMonth:{year,month},
-  filters:{search,categoria,situacao,sortField,sortDirection},
-  selection:{sessionId|null}, visibleSessionIds:[],
-  counts:{total,pagas,pendentes,restanteTotalCentavos},
-  permissions:{canWrite,canDelete,canRefund,hasGalleryIntegration},
-  capabilities:[...], userTz:'America/Sao_Paulo' }
-```
-
-### Erro padrão
-`{ code:'VALIDATION'|'FORBIDDEN'|'NOT_FOUND'|'CONFLICT'|'RATE_LIMITED'|'PROVIDER_DOWN'|'INTERNAL', message, retriable, userMessage }`
-
----
-
-## 5. PERFORMANCE & REALTIME
-
-- Indexers em store: `byId`, `bySessionId`, `byMonth`, `byCliente`, `byGaleria`, `byStatus`, `byPaymentStatus`.
-- Patch local + `lastSeq` por id (anti-eco); reconciliação full só em refresh manual, perda > 5s, ou gap de seq.
-- **1 canal único** `workflow:user:{userId}` ouvindo `clientes_sessoes`, `clientes_transacoes`, `cobrancas` filtrados por `user_id`.
-- `listMonth` é unidade de paginação; preload 3 meses (atual + anterior + próximo). Histórico > 12 meses só sob demanda.
-- Tabela virtualizada (`@tanstack/react-virtual`) se > 80 linhas.
-
----
-
-## 6. MIGRAÇÃO EM ONDAS
-
-### Onda 1 — Domain + Indexers
-- Criar `features/workflow/domain/{session,payment,money,pricing,filters,sort}.ts`.
-- Mover `WorkflowSession` de `useWorkflowRealtime` → `domain/session.ts`.
-- Criar `store/workflowStore.ts` (Zustand) com indexers byId/byMonth.
-- Shim: `useWorkflowRealtime` re-exporta `WorkflowSession`.
-- Smoke: `tsgo` limpo; página continua igual.
-
-### Onda 2 — Data layer
-- `data/sessionsRepo.ts`, `transactionsRepo.ts`, `rpc.ts` (< 250 cada, único ponto Supabase por tabela).
-- Context.fetchAndCacheMonth → `sessionsRepo.listByMonth`.
-- Shim: `WorkflowSupabaseService` e `services/WorkflowCacheManager` viram fachadas finas.
-- Smoke: contagem de sessões pré/pós idêntica.
-
-### Onda 3 — Realtime unificado
-- `realtime/useWorkflowRealtime.ts` v2: 1 canal + fan-out com `lastSeq`.
-- Apagar `workflow-realtime` (Context), `workflow-metrics-${year}-${month}`, `workflow-metrics-year-${year}`.
-- Remover `window.addEventListener('workflow-session-updated')`.
-- Flag `VITE_WORKFLOW_REALTIME_V2` para fallback.
-
-### Onda 4 — Actions + Queries
-- Implementar §4 com `defineCommand`/`defineQuery`, registrar em `capabilityRegistry`.
-- Migrar `Workflow.tsx`: `updateSession`→`workflow.updateFields`, delete→`workflow.deleteSession`, `handleStatusChange`→`workflow.advanceStatus`, `handleAddPayment`→`workflow.addPayment` (era `console.log`).
-
-### Onda 5 — Components + Hooks finos
-- `Workflow.tsx` < 150 linhas (`<WorkflowShell>`).
-- `WorkflowTable` 825 → `TableView` + `TableRow` (< 250 cada).
-- `WorkflowCardCollapsed/Expanded` (594+632) → `components/details/*`.
-- `QuickSessionAdd` 776 → `form/QuickAdd/{Header,DateTime,ClientPicker,PackagePicker,Products,Totals,Footer}`.
-- `GerenciarProdutosModal` 479 → `modals/Produtos/{List,Editor,Totals}`.
-- Glassmorphism, z-index, sem toast de sucesso, R2 — mantidos.
-
-### Onda 6 — AI surface + cleanup
-- `ai/tools.ts`, `ai/context.ts`, `ai/permissions.ts`.
-- Remover shims das Ondas 2/3: `WorkflowSupabaseService`, `services/WorkflowCacheManager`, `utils/workflowCacheManager`, `useUnifiedWorkflowData`, `useWorkflowData` (se morto), `useWorkflowMetricsByYear`, `useWorkflowMetricsRealtime`.
-
----
-
-## 7. MÉTRICAS DE SUCESSO
-
-| Métrica | Hoje | Alvo |
-|---|---|---|
-| `Workflow.tsx` | 1.195 | < 150 |
-| `WorkflowCacheContext.tsx` | 665 | 0 (extinto) |
-| `useWorkflowRealtime.ts` | 1.181 | < 250 |
-| Maior componente | `WorkflowTable` 825 | < 250 |
-| Maior modal | `QuickSessionAdd` 776 | < 250 cada arquivo |
-| Canais realtime workflow | 4 | **1** |
-| `from('clientes_sessoes')` em workflow | 22 | ≤ 3 (todas em `sessionsRepo`) |
-| Cache managers paralelos | 3 | 1 (`store/persistence`) |
-| Refetch após mutate erro | full reload | 0 (patch + seq) |
-| Re-renders por update | todas as linhas | só `id` mudado |
-| Conversão `SessionData` por keystroke | sim | 0 (filtros sobre `Session`) |
-| Actions IA tipadas | 0 | 8 actions + 7 queries |
-
----
-
-## 8. RISCOS E ROLLBACK
-
-| Onda | Risco | Detecção | Rollback |
-|---|---|---|---|
-| 1 | Re-export quebra consumidor | `tsgo` CI | Revert PR único |
-| 2 | Repo diverge do fetch (filtro `neq historico`, JOIN clientes) | Contagem pré/pós | Flag `VITE_WORKFLOW_USE_REPO`, fallback Service |
-| 3 | Perda de evento → UI parada | Telemetria gap; polling 30s em dev | Flag `VITE_WORKFLOW_REALTIME_V2=false`, canal antigo paralelo |
-| 3 | Eco volta | React Profiler + `lastSeq` | Desligar flag |
-| 4 | Idempotência bloqueia mutation | Log de hits | Reduzir TTL / key mais específica |
-| 4 | RPC muda payload | Zod no output | try/catch para caminho legado |
-| 5 | Quebra visual mobile | Playwright 3 viewports | `components/_legacy/` por 1 release |
-| 5 | localStorage de colunas perdido (nova key) | Migração one-shot | Ler ambas as keys por 30 dias |
-| 6 | IA executa mutação indesejada | perms + audit + Zod | Desligar `ai/tools.ts` |
-| 6 | Remoção de shim quebra import distante | Grep CI bloqueia | Reintroduzir shim 1 release |
-
-Restrições respeitadas: pt-BR; sem toast de sucesso; glassmorphism; z-index; R2; RLS; capabilities tipadas; eventos via `src/modules/workflow/`.
-
----
-
-## Onda Egress Fase 1 (concluída)
-
-- **DB**: `REPLICA IDENTITY DEFAULT` em `clientes_sessoes`, `clientes`, `fin_transactions` (payload realtime ~60-80% menor). `appointments` e `clientes_transacoes` mantidos em `FULL` porque listeners consomem colunas do row antigo.
-- **Extrato**: `count: 'exact'` → `count: 'estimated'` em `useExtratoSupabase`.
-- **Cleanup**: removida duplicata `useClientesRealtime.tsx` (a versão `.ts` já era a ativa).
-- **Workflow realtime legado**: já desligado em runtime quando V2 ativo (default). Não removido por ainda exportar `updateSession`/tipos consumidos por outros caminhos.
-
-## Dashboard admin de egress (concluída)
-
-- Edge function `admin-egress-stats` (gate: role `admin` via `user_roles`).
-- RPC `admin_egress_table_stats` (`SECURITY DEFINER` + `has_role`).
-- Página `/admin/sistema` com top tabelas por `seq_tup_read + idx_tup_fetch`, tamanho e contadores DML.
+Sem migração de banco. Nenhum registro financeiro existente é alterado.
