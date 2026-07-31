@@ -1,84 +1,100 @@
+import { useEffect, useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import { TOKENS, monoFont } from "./primitives";
+import { TOKENS } from "./primitives";
 
 /**
- * HeroMedia — moldura do vídeo em loop do hero (tema dark "silent luxury").
+ * HeroBackgroundVideo — vídeo em loop como FUNDO da hero (full-bleed).
  *
- * Sem `src`, mostra um placeholder escuro com selo mono. O layout não muda
- * quando o vídeo for apontado: basta passar `src` (e opcionalmente `poster`).
+ * Camadas: vídeo → overlay de legibilidade → (conteúdo fica acima, z-10).
+ *
+ * Performance:
+ * - `poster` é o LCP; o vídeo só entra depois do primeiro paint (idle).
+ * - Fonte separada para mobile (720p leve) e desktop (1080p).
+ * - Respeita `prefers-reduced-motion` e `saveData`/2g-3g → só poster.
+ *
+ * Arquivos esperados em /public/media (opcionais — sem eles fica só o fundo):
+ *   hero-1080.mp4 · hero-720.mp4 · hero-poster.jpg
  */
-export function HeroMedia({
-  src,
-  poster,
+export function HeroBackgroundVideo({
+  srcDesktop = "/media/hero-1080.mp4",
+  srcMobile = "/media/hero-720.mp4",
+  poster = "/media/hero-poster.jpg",
 }: {
-  src?: string;
+  srcDesktop?: string;
+  srcMobile?: string;
   poster?: string;
 }) {
   const reduce = useReducedMotion();
+  const [allowVideo, setAllowVideo] = useState(false);
+
+  useEffect(() => {
+    if (reduce) return;
+    const conn = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+    if (conn?.saveData) return;
+    if (conn?.effectiveType && /2g|3g/.test(conn.effectiveType)) return;
+
+    const idle =
+      (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+        .requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 400));
+    const id = idle(() => setAllowVideo(true));
+    return () => {
+      if (typeof id === "number") window.clearTimeout(id);
+    };
+  }, [reduce]);
 
   return (
-    <div className="relative w-full">
-      {/* halo dourado difuso atrás da moldura */}
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* base sólida — garante contraste mesmo sem mídia */}
+      <div className="absolute inset-0" style={{ background: TOKENS.obsidian }} />
+
+      {allowVideo ? (
+        <video
+          className="absolute inset-0 h-full w-full object-cover opacity-70"
+          poster={poster}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+        >
+          <source src={srcDesktop} media="(min-width: 768px)" type="video/mp4" />
+          <source src={srcMobile} type="video/mp4" />
+        </video>
+      ) : (
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-70"
+          style={{ backgroundImage: `url(${poster})` }}
+        />
+      )}
+
+      {/* overlay de legibilidade (vertical + lateral esquerda) */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-16 h-[320px] w-[420px] opacity-[0.22] blur-3xl"
+        className="absolute inset-0"
         style={{
-          background: `radial-gradient(closest-side, ${TOKENS.gold}, transparent 70%)`,
+          background:
+            "linear-gradient(180deg, rgba(10,10,10,0.88) 0%, rgba(10,10,10,0.58) 45%, rgba(10,10,10,0.94) 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.55) 45%, rgba(10,10,10,0.25) 100%)",
         }}
       />
 
+      {/* feixe dourado difuso */}
       <div
-        className="relative overflow-hidden rounded-[18px] border"
+        className="absolute -top-40 right-[-10%] h-[520px] w-[720px] opacity-[0.16] blur-3xl"
         style={{
-          borderColor: TOKENS.hairDarkStrong,
-          background: TOKENS.obsidianSoft,
-          boxShadow:
-            "0 1px 0 rgba(255,255,255,0.05) inset, 0 60px 120px -60px rgba(0,0,0,0.9)",
-        }}
-      >
-        <div className="relative aspect-[16/10] w-full">
-          {src ? (
-            <video
-              className="h-full w-full object-cover"
-              src={src}
-              poster={poster}
-              autoPlay={!reduce}
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-          ) : (
-            <div
-              className="flex h-full w-full items-center justify-center"
-              style={{
-                background:
-                  "linear-gradient(140deg, #131313 0%, #0C0C0C 55%, #151312 100%)",
-              }}
-            >
-              <span
-                className="rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.22em]"
-                style={{
-                  ...monoFont,
-                  borderColor: TOKENS.hairDarkStrong,
-                  color: TOKENS.onDarkFaint,
-                }}
-              >
-                vídeo em loop
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* reflexo suave abaixo da moldura */}
-      <div
-        aria-hidden
-        className="pointer-events-none mx-auto h-16 w-[85%] rounded-b-[40px] opacity-40 blur-2xl"
-        style={{
-          background: `linear-gradient(to bottom, rgba(201,168,124,0.18), transparent)`,
+          background: `radial-gradient(closest-side, ${TOKENS.gold}, transparent 70%)`,
         }}
       />
     </div>
   );
 }
+
+/** Compat: nome antigo usado por imports existentes. */
+export const HeroMedia = HeroBackgroundVideo;

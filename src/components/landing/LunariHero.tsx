@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight, Check, Play, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { EASE, TOKENS, displayFont, monoFont, uiFont } from "./primitives";
-import { HeroMedia } from "./HeroMedia";
+import { HeroBackgroundVideo } from "./HeroMedia";
 
 const GUARANTEES = [
   "Contratos digitais",
@@ -24,17 +24,12 @@ export function LunariHero() {
 
   return (
     <section
-      className="relative w-full overflow-hidden pt-28 pb-20 md:pt-32 md:pb-24"
+      className="relative flex w-full items-center overflow-hidden min-h-[85svh] pt-28 pb-20 md:min-h-[100svh] md:pt-32 md:pb-24"
       style={{ background: TOKENS.obsidian, color: TOKENS.onDark }}
     >
-      {/* feixe dourado no canto superior direito */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-40 right-[-10%] h-[520px] w-[720px] opacity-[0.16] blur-3xl"
-        style={{
-          background: `radial-gradient(closest-side, ${TOKENS.gold}, transparent 70%)`,
-        }}
-      />
+      <HeroBackgroundVideo />
+
+      {/* linhas verticais sutis */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -46,9 +41,9 @@ export function LunariHero() {
         }}
       />
 
-      <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-14 px-6 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-12">
-        {/* ---------- Coluna esquerda ---------- */}
-        <div>
+      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 md:px-8">
+        <div className="max-w-[720px]">
+
           <motion.div {...fadeUp(0)}>
             <span
               className="inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-[10px] uppercase tracking-[0.22em]"
@@ -146,16 +141,8 @@ export function LunariHero() {
             ))}
           </ul>
         </div>
-
-        {/* ---------- Coluna direita: vídeo em loop ---------- */}
-        <motion.div
-          initial={reduce ? {} : { opacity: 0, y: 30 }}
-          animate={reduce ? {} : { opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: EASE, delay: 0.3 }}
-        >
-          <HeroMedia />
-        </motion.div>
       </div>
+
     </section>
   );
 }
