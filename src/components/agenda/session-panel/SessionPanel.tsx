@@ -281,6 +281,41 @@ export default function SessionPanel({
     return null;
   };
 
+  /**
+   * Localiza o session_id do agendamento recém-criado (fluxo "cobrar ao salvar").
+   * Faz algumas tentativas curtas porque a criação é assíncrona.
+   */
+  const findCreatedSessionId = async (
+    clienteId: string,
+    date: Date,
+    time: string,
+  ): Promise<string | null> => {
+    const dateStr = formatDateForStorage(date);
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const userId = auth?.user?.id;
+        if (userId) {
+          const { data } = await supabase
+            .from('appointments')
+            .select('session_id, created_at')
+            .eq('user_id', userId)
+            .eq('cliente_id', clienteId)
+            .eq('date', dateStr)
+            .eq('time', time)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          const sid = (data as any[])?.[0]?.session_id;
+          if (sid) return sid as string;
+        }
+      } catch {
+        /* tenta de novo */
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+  };
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -300,6 +335,13 @@ export default function SessionPanel({
           const next = { ...form, date: parsedDate, time: finalTime };
           setForm(next);
           await onSave(buildPayload(next, resolved));
+
+          // Fluxo "Cobrar ao salvar": abre o modal de cobrança logo após criar
+          if (!isEdit && cobrarAoSalvar && resolved.clienteId) {
+            const sid = await findCreatedSessionId(resolved.clienteId, parsedDate, finalTime);
+            setChargeSessionId(sid);
+            setShowCharge(true);
+          }
         },
       });
     } catch (err) {
@@ -308,6 +350,7 @@ export default function SessionPanel({
       setTimeout(() => setSaving(false), 400);
     }
   };
+
 
   const handleGerarCobranca = async () => {
     if (!form.clienteId) {
