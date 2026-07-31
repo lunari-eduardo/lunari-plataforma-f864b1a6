@@ -620,18 +620,42 @@ export default function SessionPanel({
               icon={CreditCard}
               title="Cobrança"
               action={
-                !cobranca && isEdit ? (
+                isEdit && (!cobranca || cobranca.status === 'pago') ? (
                   <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleGerarCobranca}>
                     <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                    Gerar cobrança
+                    {cobranca?.status === 'pago' ? 'Nova cobrança' : 'Gerar cobrança'}
                   </Button>
                 ) : undefined
               }
             >
               {!isEdit ? (
-                <p className="text-xs text-muted-foreground">
-                  Disponível após salvar a sessão.
-                </p>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="sp-cobrar-ao-salvar"
+                    className="flex items-start justify-between gap-3 cursor-pointer"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm text-foreground">Cobrar ao salvar</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        Abre o link de cobrança logo após criar. A sessão é confirmada
+                        automaticamente quando o pagamento for aprovado.
+                      </span>
+                    </span>
+                    <Switch
+                      id="sp-cobrar-ao-salvar"
+                      checked={cobrarAoSalvar}
+                      onCheckedChange={setCobrarAoSalvar}
+                    />
+                  </label>
+                  {cobrarAoSalvar && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Valor sugerido:{' '}
+                      <span className="text-foreground">
+                        R$ {(valorPacote > 0 ? valorPacote : form.paidAmount || 0).toFixed(2)}
+                      </span>
+                    </p>
+                  )}
+                </div>
               ) : !cobranca ? (
                 <p className="text-xs text-muted-foreground">Nenhuma cobrança criada.</p>
               ) : cobranca.status === 'pago' ? (
