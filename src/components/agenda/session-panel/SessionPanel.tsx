@@ -171,6 +171,9 @@ export default function SessionPanel({
     setShowSchedule(false);
     setNewClientMode(false);
     setNewClient({ nome: '', telefone: '' });
+    setCobrarAoSalvar(false);
+    setChargeSessionId(null);
+    setShowHistory(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, appointment?.id]);
 
