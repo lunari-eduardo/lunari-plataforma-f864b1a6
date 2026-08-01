@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // 1. Fetch cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
       .from('cobrancas')
-      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras')
+      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras, mp_payment_link, mp_pix_copia_cola, mp_qr_code_base64, ip_checkout_url')
       .eq('id', cobrancaId)
       .maybeSingle();
 
