@@ -267,14 +267,17 @@ export class SalesRepositoryImpl implements SalesRepository {
       );
 
       const revenue = monthSessions.reduce((sum, session) => sum + session.amountPaid, 0);
+      const contractedRevenue = monthSessions.reduce((sum, session) => sum + session.total, 0);
       const sessionCount = monthSessions.length;
-      const averageTicket = sessionCount > 0 ? revenue / sessionCount : 0;
+      // Ticket médio é métrica comercial: valor contratado / sessões
+      const averageTicket = sessionCount > 0 ? contractedRevenue / sessionCount : 0;
       const extraPhotoRevenue = monthSessions.reduce((sum, session) => sum + session.totalExtraPhotoValue, 0);
 
       return {
         month,
         monthIndex: index,
         revenue,
+        contractedRevenue,
         sessions: sessionCount,
         averageTicket,
         extraPhotoRevenue,
@@ -287,6 +290,7 @@ export class SalesRepositoryImpl implements SalesRepository {
     const categoryStats = new Map<string, {
       sessions: number;
       revenue: number;
+      contractedRevenue: number;
       totalExtraPhotos: number;
       packages: Map<string, number>;
     }>();
@@ -296,6 +300,7 @@ export class SalesRepositoryImpl implements SalesRepository {
       const current = categoryStats.get(category) || {
         sessions: 0,
         revenue: 0,
+        contractedRevenue: 0,
         totalExtraPhotos: 0,
         packages: new Map()
       };
@@ -306,13 +311,14 @@ export class SalesRepositoryImpl implements SalesRepository {
       categoryStats.set(category, {
         sessions: current.sessions + 1,
         revenue: current.revenue + session.amountPaid,
+        contractedRevenue: current.contractedRevenue + session.total,
         totalExtraPhotos: current.totalExtraPhotos + session.extraPhotoCount,
         packages: current.packages
       });
     });
 
-    const totalRevenue = Array.from(categoryStats.values())
-      .reduce((sum, cat) => sum + cat.revenue, 0);
+    const totalContracted = Array.from(categoryStats.values())
+      .reduce((sum, cat) => sum + cat.contractedRevenue, 0);
 
     return Array.from(categoryStats.entries()).map(([name, stats]) => {
       const packageValues = Array.from(stats.packages.values());
@@ -327,22 +333,24 @@ export class SalesRepositoryImpl implements SalesRepository {
         name,
         sessions: stats.sessions,
         revenue: stats.revenue,
-        percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0,
+        contractedRevenue: stats.contractedRevenue,
+        percentage: totalContracted > 0 ? (stats.contractedRevenue / totalContracted) * 100 : 0,
         totalExtraPhotos: stats.totalExtraPhotos,
         packageDistribution
       };
-    }).sort((a, b) => b.revenue - a.revenue);
+    }).sort((a, b) => b.contractedRevenue - a.contractedRevenue);
   }
 
   private calculatePackageData(sessions: SalesSession[]): SalesPackageData[] {
-    const packageStats = new Map<string, { sessions: number; revenue: number }>();
+    const packageStats = new Map<string, { sessions: number; revenue: number; contractedRevenue: number }>();
     
     sessions.forEach(session => {
       const packageName = session.package || 'Sem pacote';
-      const current = packageStats.get(packageName) || { sessions: 0, revenue: 0 };
+      const current = packageStats.get(packageName) || { sessions: 0, revenue: 0, contractedRevenue: 0 };
       packageStats.set(packageName, {
         sessions: current.sessions + 1,
-        revenue: current.revenue + session.amountPaid
+        revenue: current.revenue + session.amountPaid,
+        contractedRevenue: current.contractedRevenue + session.total
       });
     });
 
@@ -351,9 +359,11 @@ export class SalesRepositoryImpl implements SalesRepository {
       name,
       sessions: stats.sessions,
       revenue: stats.revenue,
+      contractedRevenue: stats.contractedRevenue,
       percentage: totalSessions > 0 ? (stats.sessions / totalSessions) * 100 : 0
     })).sort((a, b) => b.sessions - a.sessions);
   }
+
 
   private calculateOriginData(sessions: SalesSession[]): SalesOriginData[] {
     const originStats = new Map<string, { sessions: number; revenue: number }>();
