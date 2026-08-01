@@ -425,6 +425,17 @@ export function WorkflowCardCollapsed({
           pela árvore de componentes — colocar aqui como irmão do click-area
           impede que cliques dentro do modal disparem expand/collapse do card. */}
       <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+        <QuickPaymentScopeDialog
+          open={quickPay.scopeOpen}
+          excedente={quickPay.excedente}
+          valorFotoExtra={parseSignedMoney(session.valorFotoExtra)}
+          onCancel={quickPay.cancelScope}
+          onScopeSessao={quickPay.chooseSessao}
+          onScopeExtras={quickPay.chooseExtras}
+        />
+      </div>
+
+      <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
         <CardCollapsedModals
           session={session}
           productOptions={productOptions}
