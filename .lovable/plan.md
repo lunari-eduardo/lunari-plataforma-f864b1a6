@@ -53,13 +53,16 @@ Para um pendente criado antes (ou sem cobrança emitida), o usuário precisa: ab
 - Nova função `ensure_workflow_session_on_confirm()` (trigger em `appointments`, `status → confirmado`): cria `clientes_sessoes` a partir do appointment + pacote quando não existir, ou completa o stub (paridade server-side com `hydrateStubSession`). Resolve F3 sem depender do app aberto.
 - Fallback em `ensure_transaction_on_cobranca_paid`: se não achar sessão pelo `session_id`, tentar via `appointments.session_id` antes de zerar o vínculo.
 
-**Onda 3 — UX do painel**
-- Ao salvar com status "Pendente" (criação ou edição), abrir o `ChargeModal` automaticamente; manter o switch apenas como opt-out ("não cobrar agora").
+**Onda 3 — UX do painel (criação e pendente existente)**
+- Manter o switch "Cobrar ao salvar" como opt-in: o `ChargeModal` abre ao salvar **apenas** quando ligado. Default permanece desligado.
+- Disponibilizar o mesmo switch em modo edição quando o agendamento estiver "Pendente" e sem cobrança em aberto, de modo que reabrir um pendente antigo → ligar o switch → salvar → abre a cobrança.
+- Ajustar a ação "Gerar cobrança" para também aparecer quando a cobrança existente estiver `cancelado` ou `expirado` (hoje só com nenhuma cobrança ou `pago`).
 - Após gerar o link, exibir ação primária "Enviar ao cliente" (WhatsApp) já presente em `ChargeLinkSection`.
 - Assinatura realtime em `cobrancas` + `appointments` dentro do `SessionPanel` para o chip de status virar "Confirmado" sozinho e mostrar o atalho "Abrir no Workflow".
 
 **Onda 4 — verificação**
 - Matriz de teste por provedor (Asaas PIX/link/parcelado, Mercado Pago PIX/link, InfinitePay link, PIX manual): cobrança criada → sessão stub existe → webhook → cobrança `pago` → transação com `session_id` preenchido → appointment `confirmado` → card no Workflow com pacote e valor pago corretos.
+- Repetir a matriz em dois pontos de partida: (a) sessão nova com switch ligado; (b) agendamento pendente já existente cobrado depois.
 
 ## Detalhes técnicos
 - Arquivos: `src/components/agenda/session-panel/SessionPanel.tsx`, `src/modules/agenda/infrastructure/appointments.supabase.ts`, `src/services/WorkflowSupabaseService.ts`, `src/components/cobranca/ChargeModal.tsx`.
