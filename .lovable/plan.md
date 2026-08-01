@@ -39,6 +39,9 @@ Se o agendamento existir sem `session_id`, o botão abre o modal sem stub e sem 
 **F7 — Sem feedback de retorno no painel.**
 Não há realtime/poll do status da cobrança dentro do `SessionPanel`; o usuário não vê o agendamento virar Confirmado sem recarregar.
 
+**F8 — Agendamento pendente antigo não tem caminho completo.**
+Para um pendente criado antes (ou sem cobrança emitida), o usuário precisa: abrir o painel → gerar link → enviar → e a automação pagamento → confirmação → Workflow deve valer igual. Hoje isso depende de F2/F3/F6 estarem resolvidos; sem stub e sem trigger server-side, o pagamento confirma o agendamento mas não materializa o card.
+
 ## Correções propostas (ondas)
 
 **Onda 1 — vínculo da sessão antes de qualquer cobrança (crítico)**
