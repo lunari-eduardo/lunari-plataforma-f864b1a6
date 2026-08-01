@@ -185,6 +185,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         console.log('🔍 [useSessionPayments] Session IDs:', { sessionId, textSessionId, clienteId });
 
         // 2. Buscar transações E cobranças MP EM PARALELO
+        const asaasIntegPromise = (supabase as any)
+          .from('usuarios_integracoes')
+          .select('dados_extras')
+          .eq('user_id', user.id)
+          .eq('tipo', 'asaas')
+          .maybeSingle();
+
         const [transacoesResult, cobrancasResult] = await Promise.all([
           supabase
             .from('clientes_transacoes')
@@ -203,8 +210,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             .order('data_pagamento', { ascending: false })
         ]);
 
+        const asaasIntegResult: any = await asaasIntegPromise;
         const transacoes = transacoesResult.data;
         const cobrancasPagas = cobrancasResult.data;
+        const asaasExtras: any = asaasIntegResult?.data?.dados_extras || {};
+        const asaasSandbox = (asaasExtras?.environment || 'sandbox') !== 'production';
+
+
 
         if (transacoesResult.error) {
           console.error('❌ [useSessionPayments] Erro ao buscar transações:', transacoesResult.error);
@@ -286,10 +298,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               ? 'infinitepay'
               : 'supabase';
 
+            const isSandboxAsaas = isAsaas && asaasSandbox;
+
             // Permitir edição/exclusão para:
             // - Pagamentos pendentes (sempre)
             // - Pagamentos pagos manuais que NÃO são de integração e NÃO são crédito
-            const canEdit = !isCredito && (isPending || (!isGateway && isPaid));
+            // - Pagamentos Asaas em sandbox (dados de teste podem ser removidos manualmente)
+            const canEdit = !isCredito && (isPending || (!isGateway && isPaid) || (isSandboxAsaas && isPaid));
 
             // Calculate valor_liquido and taxas from transaction data
             const valorBruto = Number(t.valor) || 0;
@@ -316,7 +331,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               valorLiquido: valorLiq,
               taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
               taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
+              cobrancaId: (t as any).cobranca_id || undefined,
+              sandbox: isSandboxAsaas || undefined,
             });
+
           }
         }
 
@@ -426,6 +444,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                   dataCreditoReal: parcela.data_credito_real ? String(parcela.data_credito_real).split('T')[0] : undefined,
                   statusRecebimento,
                   createdAt: parcela.created_at || undefined,
+                  cobrancaId: c.id,
+                  parcelaId: parcela.id,
+                  sandbox: (origem === 'asaas' && asaasSandbox) || undefined,
+
                 });
               }
               continue; // Não adicionar a cobrança agregada
@@ -475,6 +497,9 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
               valorLiquido: valorLiq,
               taxaTotal,
+              cobrancaId: c.id,
+              sandbox: (origem === 'asaas' && asaasSandbox) || undefined,
+
             });
           }
         }
@@ -735,7 +760,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     const keepAsCredit = options?.keepAsCredit === true;
     // "Manter como crédito" e "Estornar no gateway" são mutuamente exclusivos:
     // se o valor vira crédito interno, o dinheiro NÃO deve voltar ao cliente.
-    const autoRefund = !keepAsCredit && options?.autoRefund === true;
+    // Sandbox: nunca chamar o gateway — o pagamento é de teste e o estorno é interno.
+    const autoRefund = !keepAsCredit && options?.autoRefund === true && payment.sandbox !== true;
 
     // Se auto refund solicitado, tentar API do gateway antes de gravar registro interno
     if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
@@ -743,21 +769,33 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         const { supabase } = await import('@/integrations/supabase/client');
 
         if (payment.origem === 'asaas') {
-          // paymentId pode ser "asaas-parcela-{parcelaId}" ou "asaas-{cobrancaId}"
-          let cobrancaId: string | undefined;
-          let parcelaId: string | undefined;
+          // Resolução robusta: cobrancaId/parcelaId vindos do próprio registro,
+          // com fallback pelos prefixos legados e pela transação (extras da Gallery).
+          let cobrancaId: string | undefined = payment.cobrancaId;
+          let parcelaId: string | undefined = payment.parcelaId;
 
-          if (paymentId.startsWith('asaas-parcela-')) {
+          if (!parcelaId && paymentId.startsWith('asaas-parcela-')) {
             parcelaId = paymentId.replace('asaas-parcela-', '');
-            // Buscar cobranca_id da parcela
+          }
+          if (!cobrancaId && paymentId.startsWith('asaas-') && !paymentId.startsWith('asaas-parcela-')) {
+            cobrancaId = paymentId.replace('asaas-', '');
+          }
+          if (!cobrancaId && parcelaId) {
             const { data: parcela } = await supabase
               .from('cobranca_parcelas')
               .select('cobranca_id')
               .eq('id', parcelaId)
               .maybeSingle();
-            cobrancaId = parcela?.cobranca_id;
-          } else if (paymentId.startsWith('asaas-')) {
-            cobrancaId = paymentId.replace('asaas-', '');
+            cobrancaId = parcela?.cobranca_id || undefined;
+          }
+          if (!cobrancaId && /^[0-9a-f-]{36}$/i.test(paymentId)) {
+            // paymentId é o UUID da transação — buscar a cobrança vinculada
+            const { data: trx } = await supabase
+              .from('clientes_transacoes')
+              .select('cobranca_id')
+              .eq('id', paymentId)
+              .maybeSingle();
+            cobrancaId = (trx as any)?.cobranca_id || undefined;
           }
 
           if (!cobrancaId) {
@@ -765,6 +803,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             toast.error('Não foi possível identificar a cobrança Asaas para estornar');
             return false;
           }
+
 
           const { data, error } = await supabase.functions.invoke('gestao-asaas-refund', {
             body: { cobrancaId, parcelaId, valor: payment.valor, motivo }
@@ -781,10 +820,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           const suffix = paymentId.replace(/^mp-/, '');
           // Tentar como cobranca.id primeiro (UUID)
           const isUUID = /^[0-9a-f-]{36}$/i.test(suffix);
-          let cobrancaId: string | undefined;
-          if (isUUID) {
+          let cobrancaId: string | undefined = payment.cobrancaId;
+          if (!cobrancaId && isUUID) {
             cobrancaId = suffix;
-          } else {
+          } else if (!cobrancaId) {
             // É mp_payment_id; buscar cobrança correspondente
             const { data: cob } = await supabase
               .from('cobrancas')
@@ -793,6 +832,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               .maybeSingle();
             cobrancaId = cob?.id;
           }
+
 
           if (!cobrancaId) {
             const { toast } = await import('sonner');

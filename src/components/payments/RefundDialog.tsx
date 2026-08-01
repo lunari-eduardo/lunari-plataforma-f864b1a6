@@ -20,22 +20,27 @@ function classifyProvider(payment: SessionPaymentExtended | null): {
   provider: Provider;
   automatable: boolean;
   label: string;
+  sandbox: boolean;
 } {
-  if (!payment) return { provider: 'manual', automatable: false, label: 'manual' };
+  if (!payment) return { provider: 'manual', automatable: false, label: 'manual', sandbox: false };
 
-  if (payment.origem === 'asaas') return { provider: 'asaas', automatable: true, label: 'Asaas' };
-  if (payment.origem === 'mercadopago') return { provider: 'mercadopago', automatable: true, label: 'Mercado Pago' };
-  if (payment.origem === 'infinitepay') return { provider: 'infinitepay', automatable: false, label: 'InfinitePay' };
+  const sandbox = payment.sandbox === true;
+
+  // Em sandbox o gateway é de testes: o estorno é apenas interno.
+  if (payment.origem === 'asaas') return { provider: 'asaas', automatable: !sandbox, label: 'Asaas', sandbox };
+  if (payment.origem === 'mercadopago') return { provider: 'mercadopago', automatable: !sandbox, label: 'Mercado Pago', sandbox };
+  if (payment.origem === 'infinitepay') return { provider: 'infinitepay', automatable: false, label: 'InfinitePay', sandbox };
 
   // PIX manual detectado por forma_pagamento ou observacoes
   const fp = (payment.forma_pagamento || '').toLowerCase();
   const obs = (payment.observacoes || '').toLowerCase();
   if (fp.includes('pix') || obs.includes('pix manual')) {
-    return { provider: 'pix_manual', automatable: false, label: 'PIX manual' };
+    return { provider: 'pix_manual', automatable: false, label: 'PIX manual', sandbox };
   }
 
-  return { provider: 'manual', automatable: false, label: 'manual' };
+  return { provider: 'manual', automatable: false, label: 'manual', sandbox };
 }
+
 
 interface RefundDialogProps {
   payment: SessionPaymentExtended | null;
@@ -49,7 +54,7 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
   const [keepAsCredit, setKeepAsCredit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { automatable, label } = classifyProvider(payment);
+  const { automatable, label, sandbox } = classifyProvider(payment);
 
   // Resetar estado ao abrir novo pagamento
   useEffect(() => {
@@ -93,6 +98,11 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
                   O estorno pode ser realizado diretamente na sua conta de pagamento
                   e o valor será devolvido ao cliente.
                 </p>
+              ) : sandbox ? (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-foreground">
+                  Pagamento de <strong>teste ({label} sandbox)</strong>. Não existe dinheiro real para devolver,
+                  então o estorno será registrado apenas como <strong>lançamento interno</strong>.
+                </div>
               ) : (
                 <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-foreground">
                   O estorno deste pagamento ({label === 'manual' ? 'lançamento manual' : label}) deve ser
@@ -101,6 +111,7 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
                   o dinheiro não será devolvido automaticamente ao cliente.
                 </div>
               )}
+
 
               <p className="text-sm">
                 Valor: <strong>{payment ? formatCurrency(payment.valor) : ''}</strong>.

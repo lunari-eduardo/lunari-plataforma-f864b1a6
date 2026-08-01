@@ -18,7 +18,14 @@ export interface SessionPaymentExtended {
   dataCreditoReal?: string; // Data real de crédito (preenchida no PAYMENT_RECEIVED)
   statusRecebimento?: 'pendente' | 'confirmado' | 'recebido' | 'antecipado'; // Status do recebível
   taxaAntecipacao?: number;
+  /** Cobrança de gateway vinculada (quando houver) — usada no estorno. */
+  cobrancaId?: string;
+  /** Parcela de gateway vinculada (quando houver) — usada no estorno. */
+  parcelaId?: string;
+  /** Pagamento originado em ambiente de teste (sandbox) do gateway. */
+  sandbox?: boolean;
 }
+
 
 export interface PaymentAction {
   type: 'add' | 'edit' | 'delete' | 'mark_paid' | 'refund';
