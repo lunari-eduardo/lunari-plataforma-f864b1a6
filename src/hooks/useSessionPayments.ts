@@ -298,10 +298,13 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               ? 'infinitepay'
               : 'supabase';
 
+            const isSandboxAsaas = isAsaas && asaasSandbox;
+
             // Permitir edição/exclusão para:
             // - Pagamentos pendentes (sempre)
             // - Pagamentos pagos manuais que NÃO são de integração e NÃO são crédito
-            const canEdit = !isCredito && (isPending || (!isGateway && isPaid));
+            // - Pagamentos Asaas em sandbox (dados de teste podem ser removidos manualmente)
+            const canEdit = !isCredito && (isPending || (!isGateway && isPaid) || (isSandboxAsaas && isPaid));
 
             // Calculate valor_liquido and taxas from transaction data
             const valorBruto = Number(t.valor) || 0;
@@ -328,7 +331,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               valorLiquido: valorLiq,
               taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
               taxaAntecipacao: taxaAnt > 0 ? taxaAnt : undefined,
+              cobrancaId: (t as any).cobranca_id || undefined,
+              sandbox: isSandboxAsaas || undefined,
             });
+
           }
         }
 
