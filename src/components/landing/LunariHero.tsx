@@ -85,7 +85,7 @@ export function LunariHero() {
               className="group inline-flex h-12 items-center gap-2 rounded-[10px] px-8 text-[14px] font-medium transition-all duration-300 hover:brightness-110"
               style={{
                 ...uiFont,
-                background: TOKENS.obsidianStrong,
+                background: TOKENS.obsidianSoft,
                 border: `1px solid ${TOKENS.hairDarkStrong}`,
                 color: TOKENS.onDark,
               }}
