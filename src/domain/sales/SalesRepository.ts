@@ -366,14 +366,15 @@ export class SalesRepositoryImpl implements SalesRepository {
 
 
   private calculateOriginData(sessions: SalesSession[]): SalesOriginData[] {
-    const originStats = new Map<string, { sessions: number; revenue: number }>();
+    const originStats = new Map<string, { sessions: number; revenue: number; contractedRevenue: number }>();
     
     sessions.forEach(session => {
       const originKey = session.origin || 'nao-especificado';
-      const current = originStats.get(originKey) || { sessions: 0, revenue: 0 };
+      const current = originStats.get(originKey) || { sessions: 0, revenue: 0, contractedRevenue: 0 };
       originStats.set(originKey, {
         sessions: current.sessions + 1,
-        revenue: current.revenue + session.amountPaid
+        revenue: current.revenue + session.amountPaid,
+        contractedRevenue: current.contractedRevenue + session.total
       });
     });
 
@@ -387,11 +388,13 @@ export class SalesRepositoryImpl implements SalesRepository {
         name,
         sessions: stats.sessions,
         revenue: stats.revenue,
+        contractedRevenue: stats.contractedRevenue,
         percentage: totalSessions > 0 ? (stats.sessions / totalSessions) * 100 : 0,
         color
       };
     }).sort((a, b) => b.sessions - a.sessions);
   }
+
 
   private async calculateMonthlyOriginData(year: number, category: string): Promise<SalesMonthlyOriginData[]> {
     // For now, we'll use the existing RevenueAnalyticsService
