@@ -123,13 +123,15 @@ export default function InfinitePayCheckout() {
         return;
       }
 
-      // Skip form quando CRM já tem tudo que o provedor precisa
+      // Skip form apenas quando o CRM já tem TUDO (inclusive CPF/CNPJ e e-mail).
       const snap = payload.payer_snapshot;
       const missing = Array.isArray(payload.missingFields) ? payload.missingFields : [];
       const hasName = (snap.nome || "").trim().length >= 2;
       const hasPhone = isValidPhoneBR(snap.telefone || "");
+      const hasDoc = validateCpfCnpj(snap.cpfCnpj || "");
+      const hasEmail = isAsciiEmail(snap.email || "");
       const canAutoSubmit =
-        !autoSubmittedRef.current && missing.length === 0 && hasName && hasPhone;
+        !autoSubmittedRef.current && missing.length === 0 && hasName && hasPhone && hasDoc && hasEmail;
 
       if (canAutoSubmit) {
         autoSubmittedRef.current = true;
