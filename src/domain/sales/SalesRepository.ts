@@ -166,17 +166,22 @@ export class SalesRepositoryImpl implements SalesRepository {
   }
 
   private async calculateMetrics(sessions: SalesSession[], filters: SalesFilters): Promise<SalesDomainMetrics> {
+    // Caixa (financeiro)
     const totalRevenue = sessions.reduce((sum, session) => sum + session.amountPaid, 0);
     const totalSessions = sessions.length;
-    const averageTicket = totalSessions > 0 ? totalRevenue / totalSessions : 0;
-    
+
+    // Comercial: valor contratado (pacote + extras + adicional − desconto)
+    const contractedRevenue = sessions.reduce((sum, session) => sum + session.total, 0);
+    const averageTicket = totalSessions > 0 ? contractedRevenue / totalSessions : 0;
+    const averageTicketReceived = totalSessions > 0 ? totalRevenue / totalSessions : 0;
+
     // Calculate extended metrics
     const extraPhotosRevenue = sessions.reduce((sum, session) => sum + session.totalExtraPhotoValue, 0);
     const additionalRevenue = sessions.reduce((sum, session) => sum + session.additionalValue, 0);
     const totalDiscount = sessions.reduce((sum, session) => sum + session.discount, 0);
-    
-    // Expected revenue (valor previsto = total das sessões)
-    const expectedRevenue = sessions.reduce((sum, session) => sum + session.total, 0);
+
+    // Expected revenue (valor previsto = total contratado das sessões)
+    const expectedRevenue = contractedRevenue;
     const pendingRevenue = Math.max(0, expectedRevenue - totalRevenue);
     
     // Count unique clients
@@ -213,6 +218,7 @@ export class SalesRepositoryImpl implements SalesRepository {
 
     this.log('📈 Métricas calculadas:', { 
       totalRevenue, 
+      contractedRevenue,
       totalSessions, 
       averageTicket, 
       extraPhotosRevenue,
@@ -226,6 +232,8 @@ export class SalesRepositoryImpl implements SalesRepository {
       totalRevenue,
       totalSessions,
       averageTicket,
+      averageTicketReceived,
+      contractedRevenue,
       newClients: uniqueClients,
       monthlyGoalProgress,
       conversionRate,
@@ -236,6 +244,7 @@ export class SalesRepositoryImpl implements SalesRepository {
       pendingRevenue
     };
   }
+
 
   private async calculateMonthlyData(sessions: SalesSession[], year: number): Promise<SalesMonthlyData[]> {
     const months = [
