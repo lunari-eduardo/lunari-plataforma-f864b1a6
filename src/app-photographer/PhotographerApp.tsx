@@ -144,8 +144,11 @@ export default function PhotographerApp() {
                 <Route path="clientes" element={<Clientes />} />
                 <Route path="clientes/:id" element={<ClienteDetalhe />} />
                 <Route path="leads" element={
-                  <PlanRestrictionGuard requiredPlan="pro"><Leads /></PlanRestrictionGuard>
+                  <RequireAdmin>
+                    <PlanRestrictionGuard requiredPlan="pro"><Leads /></PlanRestrictionGuard>
+                  </RequireAdmin>
                 } />
+
                 <Route path="financas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><NovaFinancas /></PlanRestrictionGuard>
                 } />
