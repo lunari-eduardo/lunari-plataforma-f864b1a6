@@ -11,6 +11,7 @@ import {
   Wallet,
   Workflow,
   History,
+  type LucideIcon,
 } from "lucide-react";
 import { TOKENS, displayFont, uiFont } from "../primitives";
 
@@ -18,8 +19,8 @@ type NodeDef = {
   id: string;
   before: string;
   after: string;
-  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
-  AfterIcon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  Icon: LucideIcon;
+  AfterIcon: LucideIcon;
   /** posição fragmentada (%) */
   from: [number, number];
   /** posição em órbita (%) */
