@@ -187,6 +187,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   // Filtros aplicados totalizados
   const filtrosAtivos =
     (extrato.filtros.origem && extrato.filtros.origem !== 'todos' ? 1 : 0) +
+    (extrato.filtros.escopo && extrato.filtros.escopo !== 'todos' ? 1 : 0) +
     (extrato.filtros.cliente ? 1 : 0) +
     (extrato.filtros.formaPagamento ? 1 : 0) +
     (valorMin ? 1 : 0) +
