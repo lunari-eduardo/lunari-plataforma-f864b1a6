@@ -62,9 +62,15 @@ export class WorkflowSupabaseService {
         .maybeSingle();
 
       if (existingSession) {
+        // A sessão pode ser um "stub" criado apenas para viabilizar a cobrança de
+        // entrada ainda na etapa "a confirmar" (SessionPanel.handleGerarCobranca).
+        // Nesse caso ela existe, mas sem pacote/valores/regras congeladas — o que
+        // fazia o card do Workflow nascer vazio ao confirmar o agendamento.
+        const hydrated = await this.hydrateStubSession(existingSession, appointmentId, user.user.id);
         console.log('✅ Session already exists for appointment:', appointmentId);
-        return existingSession;
+        return hydrated;
       }
+
 
       // ✅ HIDRATAÇÃO FORÇADA: SEMPRE buscar dados completos do banco
       console.log('🧴 [Workflow] Hidratando appointment do banco (sempre)...');
