@@ -48,8 +48,11 @@ export function LunariHero() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 md:px-8">
-        <div className="max-w-[720px]">
+      <motion.div 
+        style={{ opacity: contentOpacity, y: contentY }}
+        className="relative z-10 mx-auto w-full max-w-[1200px] px-6 md:px-8"
+      >
+        <div className="flex flex-col items-center text-center">
 
           <motion.div {...fadeUp(0)}>
             <span
