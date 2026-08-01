@@ -55,16 +55,29 @@
 
     <meta name="color-scheme" content="light dark" />
     <script>
+      // Checkout público: força light + fundo do checkout antes do React montar
+      try {
+        var p = location.pathname;
+        var isCheckout = /^\/(checkout|pay|l)\//.test(p);
+        if (isCheckout) {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.documentElement.style.background = 'hsl(30,20%,97%)';
+        }
+      } catch (e) {}
+
       // Tema inicial (anti-flash)
       try {
+        var isCheckoutPath = /^\/(checkout|pay|l)\//.test(location.pathname);
         var raw = localStorage.getItem('lunari_user_preferences');
         var prefs = raw ? JSON.parse(raw) : null;
         var tema = (prefs && prefs.tema) || 'sistema';
         var mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-        var isDark = tema === 'escuro' || (tema === 'sistema' && mql && mql.matches);
+        var isDark = !isCheckoutPath && (tema === 'escuro' || (tema === 'sistema' && mql && mql.matches));
         if (isDark) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
       } catch (e) {}
+
 
       // Manifest PWA por subdomínio: admin.* recebe manifest próprio
       try {

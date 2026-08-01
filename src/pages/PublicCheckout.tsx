@@ -9,6 +9,9 @@ import { toast } from 'sonner';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { calcularAntecipacao } from '@/lib/anticipationUtils';
 import { cn } from '@/lib/utils';
+import CheckoutShell, { CheckoutSkeleton } from './checkout/CheckoutShell';
+import ProviderCheckout, { ProviderBlock, Provedor } from './checkout/ProviderCheckout';
+import { PayerValue } from './checkout/PayerGate';
 
 const SUPABASE_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'tlnjspsywycbudhewsfv'}.supabase.co`;
 const POLL_INTERVAL = 15_000;
@@ -98,6 +101,8 @@ interface PayerMissing {
 }
 
 interface CheckoutData {
+  provedor?: string;
+  provider?: ProviderBlock;
   cobranca: { id: string; valor: number; descricao: string; status: string };
   photographer: { name: string | null; logoUrl: string | null; userId: string };
   settings: {
@@ -281,7 +286,8 @@ export default function PublicCheckout() {
   // Auto-gerar PIX quando o CRM já enviou todos os dados necessários
   useEffect(() => {
     if (autoPixRef.current) return;
-    if (!data || tab !== 'pix' || !data.settings.habilitarPix) return;
+    if (!data || (data.provedor ?? 'asaas') !== 'asaas') return;
+    if (tab !== 'pix' || !data.settings.habilitarPix) return;
     if (pixCopiaECola || pixLoading || pixError) return;
     if (!noMissingFields) return;
     if (!validateCpfCnpj(payerCpf)) return;
@@ -430,11 +436,7 @@ export default function PublicCheckout() {
 
   // ═══════════════════ RENDER ═══════════════════
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(30,20%,97%)]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <CheckoutSkeleton />;
   }
 
   if (error || !data) {
@@ -469,6 +471,40 @@ export default function PublicCheckout() {
           )}
         </div>
       </div>
+    );
+  }
+
+  const provedorAtual = (data.provedor ?? 'asaas') as string;
+
+  // ——— Provedores não-Asaas: mesma casca, painel próprio ———
+  if (provedorAtual !== 'asaas') {
+    const payerValue: PayerValue = {
+      nome: payerName,
+      email: payerEmail,
+      telefone: payerPhone,
+      cpfCnpj: payerCpf,
+    };
+    return (
+      <CheckoutShell
+        photographer={data.photographer}
+        valor={data.cobranca.valor}
+        descricao={data.cobranca.descricao}
+      >
+        <Sonner />
+        <ProviderCheckout
+          provedor={provedorAtual as Provedor}
+          cobrancaId={data.cobranca.id}
+          provider={data.provider || {}}
+          payer={payerValue}
+          onPayerChange={(v) => {
+            setPayerName(v.nome);
+            setPayerEmail(v.email);
+            setPayerPhone(v.telefone);
+            setPayerCpf(v.cpfCnpj);
+          }}
+          onPaid={() => setPixConfirmed(true)}
+        />
+      </CheckoutShell>
     );
   }
 

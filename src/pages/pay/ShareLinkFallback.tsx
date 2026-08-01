@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { CheckoutSkeleton } from '@/pages/checkout/CheckoutShell';
 
 export default function ShareLinkFallback() {
   const { cobrancaId } = useParams<{ cobrancaId: string }>();
@@ -27,7 +27,7 @@ export default function ShareLinkFallback() {
     (async () => {
       const { data } = await supabase
         .from('cobrancas')
-        .select('id, provedor')
+        .select('id')
         .eq('id', cobrancaId)
         .maybeSingle();
       if (!alive) return;
@@ -35,11 +35,8 @@ export default function ShareLinkFallback() {
         setNotFound(true);
         return;
       }
-      setTarget(
-        data.provedor === 'infinitepay'
-          ? `/pay/ip/${data.id}`
-          : `/checkout/${data.id}`,
-      );
+      // Rota única — o painel do provedor é resolvido dentro de /checkout/:id
+      setTarget(`/checkout/${data.id}`);
     })();
     return () => {
       alive = false;
@@ -48,10 +45,5 @@ export default function ShareLinkFallback() {
 
   if (notFound) return <Navigate to="/" replace />;
   if (target) return <Navigate to={target} replace />;
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
-      <Loader2 className="h-6 w-6 animate-spin mr-2" />
-      Redirecionando…
-    </div>
-  );
+  return <CheckoutSkeleton />;
 }

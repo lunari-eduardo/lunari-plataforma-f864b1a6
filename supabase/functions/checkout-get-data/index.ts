@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // 1. Fetch cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
       .from('cobrancas')
-      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras')
+      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras, mp_payment_link, mp_pix_copia_cola, mp_qr_code_base64, ip_checkout_url')
       .eq('id', cobrancaId)
       .maybeSingle();
 
@@ -113,6 +113,52 @@ Deno.serve(async (req) => {
       cpfCnpj: !payerHints.cpfCnpj,
     };
 
+    const provedor = (cobranca.provedor || 'asaas').toLowerCase();
+
+    // 2c. Provedores não-Asaas: devolvem casca branded + bloco próprio.
+    if (provedor !== 'asaas') {
+      const providerBlock: Record<string, unknown> = {};
+
+      if (provedor === 'mercadopago') {
+        providerBlock.initPoint = cobranca.mp_payment_link || null;
+        providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
+        providerBlock.pixQrCodeBase64 = cobranca.mp_qr_code_base64 || null;
+      } else if (provedor === 'pix_manual') {
+        providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
+      } else if (provedor === 'infinitepay') {
+        providerBlock.checkoutUrl = cobranca.ip_checkout_url || null;
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          provedor,
+          cobranca: {
+            id: cobranca.id,
+            valor: cobranca.valor,
+            descricao: cobranca.descricao,
+            status: cobranca.status,
+          },
+          photographer: {
+            name: profile?.nome || null,
+            logoUrl: profile?.avatar_url || null,
+            userId: cobranca.user_id,
+          },
+          settings: {
+            habilitarPix: provedor !== 'infinitepay',
+            habilitarCartao: false,
+            habilitarBoleto: false,
+            maxParcelas: 1,
+            absorverTaxa: true,
+          },
+          accountFees: null,
+          provider: providerBlock,
+          payerHints,
+          payerMissing,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
 
     // 3. Fetch Asaas integration settings
@@ -258,6 +304,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        provedor: 'asaas',
         cobranca: {
           id: cobranca.id,
           valor: cobranca.valor,
