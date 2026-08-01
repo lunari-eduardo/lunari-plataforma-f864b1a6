@@ -820,10 +820,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           const suffix = paymentId.replace(/^mp-/, '');
           // Tentar como cobranca.id primeiro (UUID)
           const isUUID = /^[0-9a-f-]{36}$/i.test(suffix);
-          let cobrancaId: string | undefined;
-          if (isUUID) {
+          let cobrancaId: string | undefined = payment.cobrancaId;
+          if (!cobrancaId && isUUID) {
             cobrancaId = suffix;
-          } else {
+          } else if (!cobrancaId) {
             // É mp_payment_id; buscar cobrança correspondente
             const { data: cob } = await supabase
               .from('cobrancas')
@@ -832,6 +832,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               .maybeSingle();
             cobrancaId = cob?.id;
           }
+
 
           if (!cobrancaId) {
             const { toast } = await import('sonner');
