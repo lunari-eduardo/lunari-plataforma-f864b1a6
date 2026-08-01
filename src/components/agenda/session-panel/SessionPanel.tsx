@@ -666,12 +666,17 @@ export default function SessionPanel({
               icon={CreditCard}
               title="Cobrança"
               action={
-                isEdit && (!cobranca || cobranca.status === 'pago') ? (
+                isEdit &&
+                (!cobranca ||
+                  ['pago', 'pago_manual', 'cancelado', 'expirado', 'estornado'].includes(
+                    cobranca.status,
+                  )) ? (
                   <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleGerarCobranca}>
                     <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                    {cobranca?.status === 'pago' ? 'Nova cobrança' : 'Gerar cobrança'}
+                    {cobranca ? 'Nova cobrança' : 'Gerar cobrança'}
                   </Button>
                 ) : undefined
+
               }
             >
               {!isEdit ? (
