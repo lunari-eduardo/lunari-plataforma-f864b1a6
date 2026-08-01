@@ -1,59 +1,29 @@
-# Checkout público — fim do "pisca-pisca" e coleta de dados do cliente em todos os provedores
+# Seleção de transações no Extrato (Fluxo Financeiro)
 
-## O que está acontecendo hoje
+## Problema
 
-Fluxo atual do link enviado ao cliente (`/l/{cobrancaId}`):
+No extrato, clicar na bolinha de seleção não faz nada visível: a seleção é alternada duas vezes no mesmo clique e volta ao estado original.
 
-```text
-/l/:id  →  edge payment-link-preview  →  302
-                                          ├─ infinitepay → /pay/ip/:id  → (form) → redirect externo InfinitePay
-                                          └─ demais      → /checkout/:id (PublicCheckout, só Asaas)
-```
+Além disso, hoje a seleção existe para ações em massa (marcar como pago / excluir), o que não é o comportamento desejado.
 
-Problemas confirmados na varredura:
+## Comportamento desejado
 
-- **P1 — Tela de redirecionamento feia / piscando.** O cliente passa por 3 telas: 302 do edge, boot do SPA (tema escuro por instante, depois forçado para light no `PublicCheckout`), e só então o checkout. No InfinitePay há ainda uma quarta tela ("redirecionando…" + `setTimeout` de 400 ms) antes do site externo.
-- **P2 — Mercado Pago não tem checkout próprio.** Uma cobrança com `provedor = 'mercadopago'` é enviada para `/checkout/:id`, mas `checkout-get-data` só busca integração Asaas e responde `NO_INTEGRATION`. O cliente vê erro; o `init_point` do MP nunca é aberto. Nenhum dado é coletado.
-- **P3 — PIX manual não tem checkout próprio.** Mesmo caminho do MP: cai em `/checkout/:id` e falha. Não existe página com QR/copia-e-cola do PIX manual nem coleta de dados.
-- **P4 — Coleta de dados só existe no Asaas e no InfinitePay.** O Asaas coleta inline e grava no CRM apenas campos vazios (`checkout-process-payment`); o InfinitePay grava via `pay-infinitepay-finalize`. MP e PIX manual não coletam nem gravam nada.
-- **P5 — InfinitePay pula o formulário** quando o CRM já tem nome e telefone, então CPF/CNPJ e e-mail ausentes nunca são preenchidos.
+- Clicar na bolinha seleciona/desseleciona a transação, com feedback visual claro na linha.
+- A seleção serve apenas para somar os itens selecionados nas métricas superiores.
+- Quando houver seleção, as métricas do topo passam a mostrar os totais do que está selecionado (entradas, saídas, saldo e quantidade), com opção de limpar a seleção.
+- Sem seleção, as métricas continuam mostrando o total do período filtrado.
 
-## Objetivo
+## Escopo da correção
 
-Uma única experiência de checkout, com a marca do fotógrafo, sem piscar, que sempre pede os dados faltantes (Nome, E-mail, CPF/CNPJ, Telefone) e os grava no CRM — para Asaas, Mercado Pago, InfinitePay e PIX manual.
-
-## Onda 1 — Rota única e fim do pisca
-
-- `payment-link-preview`: humano passa a receber **302 direto para `/checkout/:id` em todos os provedores** (inclusive InfinitePay), eliminando o salto extra. A rota `/pay/ip/:id` continua existindo para links antigos.
-- `index.html`: script inline anti-flash que aplica tema light e o fundo do checkout antes do React montar quando o path começa com `/checkout`, `/pay` ou `/l`.
-- `PublicCheckout`: skeleton branded (logo/nome do fotógrafo vindos do preview) no lugar do spinner cru, sem troca de fundo entre estados.
-- `ShareLinkFallback`: passa a renderizar o mesmo skeleton branded em vez da linha "Redirecionando…".
-
-## Onda 2 — Bloco único de dados do pagador (todos os provedores)
-
-- Novo componente `src/pages/checkout/PayerGate.tsx`: formulário compacto com Nome, E-mail, Telefone e CPF/CNPJ, exibindo **apenas os campos faltantes**, com máscaras e validação já existentes (`payerRequirements.ts`, `validateCpfCnpj`).
-- Regras por provedor reaproveitadas de `REQUIRED` em `payerRequirements.ts`, estendidas para MP link e PIX manual (nome + e-mail/telefone; CPF quando o provedor exigir).
-- Nova edge `checkout-save-payer`: recebe os campos e chama `enrichClienteIfMissing` (nunca sobrescreve dado existente, nunca toca `whatsapp`). Usada por MP e PIX manual; Asaas e InfinitePay continuam gravando no fluxo que já têm.
-- InfinitePay deixa de pular o formulário quando faltar CPF/CNPJ ou e-mail (corrige P5).
-
-## Onda 3 — Checkout multi-provedor
-
-- `checkout-get-data`: deixa de assumir Asaas. Passa a devolver `provedor` e o bloco específico:
-  - `asaas` → comportamento atual (taxas, PIX, cartão);
-  - `mercadopago` → `init_point` salvo em `cobrancas.mp_payment_link`;
-  - `infinitepay` → dados para gerar/recuperar o `checkoutUrl`;
-  - `pix_manual` → QR e copia-e-cola já persistidos.
-  - Sem integração ativa → erro branded, não tela em branco.
-- `PublicCheckout` vira um roteador de provedores: mesma casca visual (logo, valor, descrição, selo de segurança) e, abaixo, o painel do provedor. Para MP e InfinitePay o botão "Pagar" só habilita depois do `PayerGate`, e a ida ao site externo acontece por clique do usuário — sem redirecionamento automático piscando.
-- PIX manual ganha painel com QR, copia-e-cola e aviso de confirmação manual.
-
-## Onda 4 — Validação
-
-Para cada provedor (Asaas PIX/cartão, Mercado Pago, InfinitePay, PIX manual): abrir `/l/:id` no celular e no desktop e verificar (a) nenhuma tela intermediária visível, (b) campos faltantes solicitados, (c) `clientes` atualizado só nos campos vazios, (d) pagamento conclui e a cobrança muda para `pago`.
+1. Corrigir o duplo disparo da seleção (clique na área da bolinha + evento interno do checkbox), mantendo o clique na linha abrindo o detalhe.
+2. Destacar visualmente a linha selecionada e manter a bolinha sempre visível enquanto houver seleção.
+3. Somar os selecionados e exibir na barra de métricas superior, em modo "seleção" com botão de limpar.
+4. Remover a barra de ações em massa (marcar como pago / excluir em lote), já que a seleção passa a ser apenas informativa.
 
 ## Detalhes técnicos
 
-- Arquivos tocados: `supabase/functions/payment-link-preview/index.ts`, `supabase/functions/checkout-get-data/index.ts`, nova `supabase/functions/checkout-save-payer/index.ts`, `src/pages/PublicCheckout.tsx` (fatiado em `src/pages/checkout/`), `src/pages/pay/InfinitePayCheckout.tsx`, `src/pages/pay/ShareLinkFallback.tsx`, `index.html`, `src/components/cobranca/payerRequirements.ts`.
-- Nenhuma migração de banco; a gravação usa o helper `_shared/enrich-cliente.ts` já existente.
-- Todas as edges do checkout continuam públicas (`verify_jwt = false`) e só expõem dados públicos da cobrança e do fotógrafo.
-- Sem mudança nos triggers financeiros, na conciliação de webhooks ou na materialização de sessão no Workflow.
+- `FluxoTimelineRow.tsx`: o wrapper da bolinha chama `onToggleSelect` e o `Checkbox` também chama via `onCheckedChange` — o clique alterna duas vezes. Manter apenas um disparo (wrapper com `stopPropagation`, checkbox somente controlado/apresentacional) e adicionar estado visual `selected` na linha.
+- `FluxoFinanceiroView.tsx`: novo `useMemo` `resumoSelecao` (entradas/saídas/saldo/contagem a partir de `linhasVisiveis` filtradas por `selectedIds`); repassar para `FluxoResumoBar`; remover `FluxoBulkBar`, `handleBulkMarkPaid`, `handleBulkDelete` e `selectedFinanceLinhas`.
+- `FluxoResumoBar.tsx`: aceitar `selecao` opcional; quando presente e com contagem > 0, exibir valores da seleção com rótulo indicando o modo e botão "Limpar seleção".
+- Deletar `FluxoBulkBar.tsx` (sem outros consumidores).
+- Nenhuma mudança de dados, hooks de extrato, queries ou banco.
