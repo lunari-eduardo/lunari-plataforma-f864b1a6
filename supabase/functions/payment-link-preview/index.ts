@@ -153,8 +153,12 @@ function renderInvalid(canonicalUrl: string, brandName = "Lunari"): Response {
   return new Response(html, { status: 404, headers: HUMAN_HTML_HEADERS });
 }
 
-function targetPathFor(provedor: string | null | undefined, id: string): string {
-  return provedor === "infinitepay" ? `/pay/ip/${id}` : `/checkout/${id}`;
+/**
+ * Rota única: todos os provedores caem em `/checkout/:id`, que roteia o painel
+ * internamente. `/pay/ip/:id` continua existindo apenas para links antigos.
+ */
+function targetPathFor(_provedor: string | null | undefined, id: string): string {
+  return `/checkout/${id}`;
 }
 
 serve(async (req) => {
