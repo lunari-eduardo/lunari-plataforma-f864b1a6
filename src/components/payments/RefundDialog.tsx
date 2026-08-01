@@ -20,22 +20,27 @@ function classifyProvider(payment: SessionPaymentExtended | null): {
   provider: Provider;
   automatable: boolean;
   label: string;
+  sandbox: boolean;
 } {
-  if (!payment) return { provider: 'manual', automatable: false, label: 'manual' };
+  if (!payment) return { provider: 'manual', automatable: false, label: 'manual', sandbox: false };
 
-  if (payment.origem === 'asaas') return { provider: 'asaas', automatable: true, label: 'Asaas' };
-  if (payment.origem === 'mercadopago') return { provider: 'mercadopago', automatable: true, label: 'Mercado Pago' };
-  if (payment.origem === 'infinitepay') return { provider: 'infinitepay', automatable: false, label: 'InfinitePay' };
+  const sandbox = payment.sandbox === true;
+
+  // Em sandbox o gateway é de testes: o estorno é apenas interno.
+  if (payment.origem === 'asaas') return { provider: 'asaas', automatable: !sandbox, label: 'Asaas', sandbox };
+  if (payment.origem === 'mercadopago') return { provider: 'mercadopago', automatable: !sandbox, label: 'Mercado Pago', sandbox };
+  if (payment.origem === 'infinitepay') return { provider: 'infinitepay', automatable: false, label: 'InfinitePay', sandbox };
 
   // PIX manual detectado por forma_pagamento ou observacoes
   const fp = (payment.forma_pagamento || '').toLowerCase();
   const obs = (payment.observacoes || '').toLowerCase();
   if (fp.includes('pix') || obs.includes('pix manual')) {
-    return { provider: 'pix_manual', automatable: false, label: 'PIX manual' };
+    return { provider: 'pix_manual', automatable: false, label: 'PIX manual', sandbox };
   }
 
-  return { provider: 'manual', automatable: false, label: 'manual' };
+  return { provider: 'manual', automatable: false, label: 'manual', sandbox };
 }
+
 
 interface RefundDialogProps {
   payment: SessionPaymentExtended | null;
