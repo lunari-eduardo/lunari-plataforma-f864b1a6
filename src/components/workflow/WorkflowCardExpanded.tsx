@@ -23,6 +23,8 @@ import { INPUT_GHOST, VALUE_STRONG } from "./details/cardTokens";
 import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
+import { useQuickPaymentScope } from "./details/useQuickPaymentScope";
+import { QuickPaymentScopeDialog } from "./details/QuickPaymentScopeDialog";
 
 
 interface WorkflowCardExpandedProps {
