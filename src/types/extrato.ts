@@ -69,6 +69,7 @@ export interface FiltrosExtrato {
   tipo?: ExtratoTipo | 'todos';
   origem?: ExtratoOrigem | 'todos';
   status?: ExtratoStatus | 'todos';
+  escopo?: ExtratoEscopo | 'todos';
   formaPagamento?: string;
   cliente?: string;
   busca?: string;
