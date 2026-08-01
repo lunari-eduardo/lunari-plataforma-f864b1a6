@@ -54,7 +54,7 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
   const [keepAsCredit, setKeepAsCredit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { automatable, label } = classifyProvider(payment);
+  const { automatable, label, sandbox } = classifyProvider(payment);
 
   // Resetar estado ao abrir novo pagamento
   useEffect(() => {
