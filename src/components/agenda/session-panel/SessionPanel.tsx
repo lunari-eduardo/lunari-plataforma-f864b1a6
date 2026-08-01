@@ -392,13 +392,16 @@ export default function SessionPanel({
               appointment_id: appointment.id,
               data_sessao: formatDateForStorage(form.date),
               hora_sessao: form.time,
-              categoria: packageCategoryName || 'sessao',
+              categoria: packageCategoryName || 'Sessão',
               pacote: (selectedPackage as any)?.nome || null,
-              status: 'agendado',
+              // Mesmo status usado na criação oficial da sessão (WorkflowSupabaseService)
+              status: '',
               valor_total: valorPacote || form.paidAmount || 0,
               valor_base_pacote: valorPacote || 0,
               valor_pago: 0,
+              detalhes: { stub_cobranca: true } as any,
               tipo_registro: 'workflow',
+
             });
             if (insertErr) {
               toast.error('Erro ao preparar cobrança. Tente novamente.');
