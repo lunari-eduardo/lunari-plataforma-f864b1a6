@@ -144,8 +144,24 @@ export function LunariHero() {
             ))}
           </ul>
         </div>
-      </div>
+      </motion.div>
 
+      {/* Indicador de scroll */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 1 }}
+        style={{ opacity: contentOpacity }}
+        className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+      >
+        <TechLabel tone="dark">Explore</TechLabel>
+        <motion.div
+          animate={{ y: [0, 4, 0] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+        >
+          <ChevronDown className="h-4 w-4" style={{ color: TOKENS.gold }} strokeWidth={1.5} />
+        </motion.div>
+      </motion.div>
     </section>
   );
 }
