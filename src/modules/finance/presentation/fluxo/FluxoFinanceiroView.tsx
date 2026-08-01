@@ -20,7 +20,6 @@ import FluxoTimeline from './FluxoTimeline';
 import FluxoResumoBar from './FluxoResumoBar';
 import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
-import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
 import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
 import FinancePageContainer from '@/modules/finance/presentation/shell/FinancePageContainer';
@@ -155,32 +154,20 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Bulk actions — só aplicam a lançamentos de origem "financeiro"
-  const selectedFinanceLinhas = useMemo(
-    () => linhasVisiveis.filter((l) => selectedIds.has(l.id) && l.origem === 'financeiro'),
-    [linhasVisiveis, selectedIds],
-  );
-
-  const handleBulkMarkPaid = async () => {
-    const targets = selectedFinanceLinhas.filter((l) => l.status !== 'Pago');
-    await Promise.all(targets.map((l) => financas.marcarComoPago(l.referenciaId)));
-    clearSelection();
-  };
-
-  const handleBulkDelete = async () => {
-    const ok = await confirm({
-      title: 'Excluir lançamentos',
-      description: `Tem certeza que deseja excluir ${selectedFinanceLinhas.length} lançamento(s)? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
-      variant: 'destructive',
+  // Seleção — apenas informativa: soma nas métricas superiores
+  const resumoSelecao = useMemo(() => {
+    let entradas = 0;
+    let saidas = 0;
+    let count = 0;
+    linhasVisiveis.forEach((l) => {
+      if (!selectedIds.has(l.id)) return;
+      count += 1;
+      if (l.tipo === 'entrada') entradas += l.valor;
+      else saidas += l.valor;
     });
-    if (!ok) return;
-    await Promise.all(
-      selectedFinanceLinhas.map((l) => financas.removerTransacao(l.referenciaId)),
-    );
-    clearSelection();
-  };
+    return { entradas, saidas, saldo: entradas - saidas, count };
+  }, [linhasVisiveis, selectedIds]);
+
 
 
 
@@ -258,7 +245,11 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         entradas={resumo.entradas}
         saidas={resumo.saidas}
         saldo={resumo.saldo}
-        selecionados={selectedIds.size}
+        selecionados={resumoSelecao.count}
+        selecaoEntradas={resumoSelecao.entradas}
+        selecaoSaidas={resumoSelecao.saidas}
+        selecaoSaldo={resumoSelecao.saldo}
+        onClearSelection={clearSelection}
       />
 
       {/* Resumo Financeiro expandível */}
@@ -325,12 +316,8 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onOpenOrigin={extrato.abrirOrigem}
       />
 
-      <FluxoBulkBar
-        count={selectedIds.size}
-        onClear={clearSelection}
-        onMarkPaid={handleBulkMarkPaid}
-        onDelete={handleBulkDelete}
-      />
+
+
 
       <ConfirmDialog
         state={dialogState}
