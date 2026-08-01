@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { TOKENS } from "./primitives";
-import { HeroLoop } from "./mockups/HeroLoop";
 
 /**
  * HeroBackgroundVideo — vídeo em loop como FUNDO da hero (full-bleed).
@@ -99,82 +98,3 @@ export function HeroBackgroundVideo({
 
 /** Compat: nome antigo usado por imports existentes. */
 export const HeroMedia = HeroBackgroundVideo;
-
-/**
- * HeroInterfaceVideo — composição visual da Hero clara.
- *
- * Tenta usar o vídeo cinematográfico da interface (/public/media). Enquanto
- * os arquivos não existirem — ou quando a rede/preferências pedirem economia —
- * renderiza o fallback vivo `HeroLoop`, sem mudança de código.
- */
-export function HeroInterfaceVideo({
-  srcDesktop = "/media/hero-ui-1080.mp4",
-  srcMobile = "/media/hero-ui-720.mp4",
-  poster = "/media/hero-ui-poster.jpg",
-}: {
-  srcDesktop?: string;
-  srcMobile?: string;
-  poster?: string;
-}) {
-  const reduce = useReducedMotion();
-  const [hasVideo, setHasVideo] = useState(false);
-
-  useEffect(() => {
-    if (reduce) return;
-    const conn = (navigator as Navigator & {
-      connection?: { saveData?: boolean; effectiveType?: string };
-    }).connection;
-    if (conn?.saveData) return;
-    if (conn?.effectiveType && /2g|3g/.test(conn.effectiveType)) return;
-
-    let cancelled = false;
-    fetch(srcDesktop, { method: "HEAD" })
-      .then((r) => {
-        if (!cancelled && r.ok && (r.headers.get("content-type") ?? "").includes("video")) {
-          setHasVideo(true);
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [reduce, srcDesktop]);
-
-  if (!hasVideo) return <HeroLoop />;
-
-  return (
-    <div className="relative w-full">
-      <div
-        className="relative overflow-hidden rounded-[16px] border bg-white"
-        style={{
-          aspectRatio: "16 / 10",
-          borderColor: TOKENS.hair,
-          boxShadow: "0 40px 80px -48px rgba(10,10,10,0.28)",
-        }}
-      >
-        <video
-          className="h-full w-full object-cover"
-          poster={poster}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="none"
-        >
-          <source src={srcDesktop} media="(min-width: 768px)" type="video/mp4" />
-          <source src={srcMobile} type="video/mp4" />
-        </video>
-
-        {/* vinheta clara — o vídeo morre no papel, sem corte duro */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(250,250,247,0.55) 100%)",
-          }}
-        />
-      </div>
-    </div>
-  );
-}

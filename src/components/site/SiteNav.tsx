@@ -46,8 +46,8 @@ export function SiteNav() {
     setOpenMenu(null);
   }, [loc.pathname]);
 
-  // Hero da Home agora é clara — nav sempre com texto escuro.
-  const onDark = false;
+  // Home abre sobre o hero dark: nav transparente com texto claro até rolar.
+  const onDark = loc.pathname === "/" && !scrolled && !mobileOpen;
 
   return (
     <nav
