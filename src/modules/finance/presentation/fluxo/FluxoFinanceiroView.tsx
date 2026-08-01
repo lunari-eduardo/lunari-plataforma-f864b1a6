@@ -20,7 +20,6 @@ import FluxoTimeline from './FluxoTimeline';
 import FluxoResumoBar from './FluxoResumoBar';
 import FluxoResumoExpandable from './FluxoResumoExpandable';
 import FluxoFiltersSheet from './FluxoFiltersSheet';
-import FluxoBulkBar from './FluxoBulkBar';
 import FluxoDetailSheet from './FluxoDetailSheet';
 import PeriodActionBar from '@/modules/finance/presentation/shell/PeriodActionBar';
 import FinancePageContainer from '@/modules/finance/presentation/shell/FinancePageContainer';
