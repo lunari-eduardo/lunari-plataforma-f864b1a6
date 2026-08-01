@@ -1,70 +1,59 @@
-# Varredura — Cobrança de confirmação do agendamento (Agenda → pagamento → Workflow)
+# Checkout público — fim do "pisca-pisca" e coleta de dados do cliente em todos os provedores
 
-Fluxo esperado:
-`Nova sessão (sem status) → salvar como Pendente → modal de cobrança → enviar ao cliente → cliente paga → agendamento vira Confirmado → sessão aparece no Workflow hidratada.`
+## O que está acontecendo hoje
 
-## Resultado da varredura
+Fluxo atual do link enviado ao cliente (`/l/{cobrancaId}`):
 
-O fluxo **funciona parcialmente**. As etapas de gerar link e confirmar o agendamento estão corretas para Asaas, Mercado Pago e InfinitePay. As falhas estão em: (1) quem dispara o modal, (2) o vínculo da sessão quando a cobrança nasce antes da sessão, e (3) a entrada no Workflow sem o app aberto.
+```text
+/l/:id  →  edge payment-link-preview  →  302
+                                          ├─ infinitepay → /pay/ip/:id  → (form) → redirect externo InfinitePay
+                                          └─ demais      → /checkout/:id (PublicCheckout, só Asaas)
+```
 
-### O que está correto hoje
-- Provedores disponíveis no modal (`ProviderSelector`): Asaas, Mercado Pago, InfinitePay, PIX manual — com `is_default` respeitado.
-- Auto-confirmação por trigger: `tg_cobranca_confirm_appointment` (cobranca → `pago`) e `auto_confirm_appointment_on_payment` (`clientes_sessoes.valor_pago` sobe) promovem `a confirmar → confirmado`.
-- Webhooks: `asaas-webhook` (parcelas + `reconcile_cobranca_from_parcelas`), `mercadopago-webhook` e `infinitepay-webhook` marcam a cobrança como `pago` e disparam `ensure_transaction_on_cobranca_paid`.
-- Hidratação de stub já existe (`WorkflowSupabaseService.hydrateStubSession`).
+Problemas confirmados na varredura:
 
-### Falhas / lacunas encontradas
+- **P1 — Tela de redirecionamento feia / piscando.** O cliente passa por 3 telas: 302 do edge, boot do SPA (tema escuro por instante, depois forçado para light no `PublicCheckout`), e só então o checkout. No InfinitePay há ainda uma quarta tela ("redirecionando…" + `setTimeout` de 400 ms) antes do site externo.
+- **P2 — Mercado Pago não tem checkout próprio.** Uma cobrança com `provedor = 'mercadopago'` é enviada para `/checkout/:id`, mas `checkout-get-data` só busca integração Asaas e responde `NO_INTEGRATION`. O cliente vê erro; o `init_point` do MP nunca é aberto. Nenhum dado é coletado.
+- **P3 — PIX manual não tem checkout próprio.** Mesmo caminho do MP: cai em `/checkout/:id` e falha. Não existe página com QR/copia-e-cola do PIX manual nem coleta de dados.
+- **P4 — Coleta de dados só existe no Asaas e no InfinitePay.** O Asaas coleta inline e grava no CRM apenas campos vazios (`checkout-process-payment`); o InfinitePay grava via `pay-infinitepay-finalize`. MP e PIX manual não coletam nem gravam nada.
+- **P5 — InfinitePay pula o formulário** quando o CRM já tem nome e telefone, então CPF/CNPJ e e-mail ausentes nunca são preenchidos.
 
-**F1 — O switch "Cobrar ao salvar" não cobre o agendamento já pendente.**
-O comportamento desejado é o atual em criação (abre o modal só com o switch ligado), mas o switch existe apenas quando `!isEdit`. Ao reabrir um agendamento já pendente, o único caminho é o botão "Gerar cobrança" — e ele só aparece quando não há cobrança ou quando a cobrança já está paga. Faltam: switch/ação disponível também em edição de pendente e reemissão quando a cobrança está expirada/cancelada.
+## Objetivo
 
-**F2 — No fluxo "cobrar ao salvar" não existe registro em `clientes_sessoes`.**
-O stub só é criado em `handleGerarCobranca` (modo edição). Na criação, `findCreatedSessionId` pega o `session_id` do appointment e passa ao `ChargeModal`, mas nenhuma linha em `clientes_sessoes` é criada.
-Consequência em cadeia, quando o cliente paga:
-- `ensure_transaction_on_cobranca_paid` não acha a sessão → grava a transação com `session_id = NULL` → **pagamento órfão no extrato** (exatamente os registros limpos na sessão anterior).
-- `auto_confirm_appointment_on_payment` não roda (não há `valor_pago`); só o trigger da cobrança confirma — ok, mas o valor pago não entra no card.
+Uma única experiência de checkout, com a marca do fotógrafo, sem piscar, que sempre pede os dados faltantes (Nome, E-mail, CPF/CNPJ, Telefone) e os grava no CRM — para Asaas, Mercado Pago, InfinitePay e PIX manual.
 
-**F3 — Confirmação por webhook não cria a sessão do Workflow.**
-`createSessionFromAppointment` roda **apenas no cliente** (`appointments.supabase.ts → handleConfirmedSideEffects`, disparado por create/update com `status='confirmado'`). Quando o pagamento chega pelo webhook, o `UPDATE` vem do banco: o appointment fica confirmado, mas **nenhuma sessão de Workflow é criada** até alguém abrir/editar o agendamento no app.
+## Onda 1 — Rota única e fim do pisca
 
-**F4 — `pago_manual` não confirma o agendamento.**
-`tg_cobranca_confirm_appointment` só testa `NEW.status = 'pago'`. PIX manual confirmado e `confirm-payment-manual` gravam `pago_manual` → agendamento continua pendente.
+- `payment-link-preview`: humano passa a receber **302 direto para `/checkout/:id` em todos os provedores** (inclusive InfinitePay), eliminando o salto extra. A rota `/pay/ip/:id` continua existindo para links antigos.
+- `index.html`: script inline anti-flash que aplica tema light e o fundo do checkout antes do React montar quando o path começa com `/checkout`, `/pay` ou `/l`.
+- `PublicCheckout`: skeleton branded (logo/nome do fotógrafo vindos do preview) no lugar do spinner cru, sem troca de fundo entre estados.
+- `ShareLinkFallback`: passa a renderizar o mesmo skeleton branded em vez da linha "Redirecionando…".
 
-**F5 — Trigger só cobre `UPDATE OF status`.**
-Cobranças criadas já como `pago` (INSERT direto, ex.: confirmação manual imediata) não disparam a confirmação.
+## Onda 2 — Bloco único de dados do pagador (todos os provedores)
 
-**F6 — `handleGerarCobranca` exige `appointment.sessionId`.**
-Se o agendamento existir sem `session_id`, o botão abre o modal sem stub e sem vínculo — mesmo efeito do F2.
+- Novo componente `src/pages/checkout/PayerGate.tsx`: formulário compacto com Nome, E-mail, Telefone e CPF/CNPJ, exibindo **apenas os campos faltantes**, com máscaras e validação já existentes (`payerRequirements.ts`, `validateCpfCnpj`).
+- Regras por provedor reaproveitadas de `REQUIRED` em `payerRequirements.ts`, estendidas para MP link e PIX manual (nome + e-mail/telefone; CPF quando o provedor exigir).
+- Nova edge `checkout-save-payer`: recebe os campos e chama `enrichClienteIfMissing` (nunca sobrescreve dado existente, nunca toca `whatsapp`). Usada por MP e PIX manual; Asaas e InfinitePay continuam gravando no fluxo que já têm.
+- InfinitePay deixa de pular o formulário quando faltar CPF/CNPJ ou e-mail (corrige P5).
 
-**F7 — Sem feedback de retorno no painel.**
-Não há realtime/poll do status da cobrança dentro do `SessionPanel`; o usuário não vê o agendamento virar Confirmado sem recarregar.
+## Onda 3 — Checkout multi-provedor
 
-**F8 — Agendamento pendente antigo não tem caminho completo.**
-Para um pendente criado antes (ou sem cobrança emitida), o usuário precisa: abrir o painel → gerar link → enviar → e a automação pagamento → confirmação → Workflow deve valer igual. Hoje isso depende de F2/F3/F6 estarem resolvidos; sem stub e sem trigger server-side, o pagamento confirma o agendamento mas não materializa o card.
+- `checkout-get-data`: deixa de assumir Asaas. Passa a devolver `provedor` e o bloco específico:
+  - `asaas` → comportamento atual (taxas, PIX, cartão);
+  - `mercadopago` → `init_point` salvo em `cobrancas.mp_payment_link`;
+  - `infinitepay` → dados para gerar/recuperar o `checkoutUrl`;
+  - `pix_manual` → QR e copia-e-cola já persistidos.
+  - Sem integração ativa → erro branded, não tela em branco.
+- `PublicCheckout` vira um roteador de provedores: mesma casca visual (logo, valor, descrição, selo de segurança) e, abaixo, o painel do provedor. Para MP e InfinitePay o botão "Pagar" só habilita depois do `PayerGate`, e a ida ao site externo acontece por clique do usuário — sem redirecionamento automático piscando.
+- PIX manual ganha painel com QR, copia-e-cola e aviso de confirmação manual.
 
-## Correções propostas (ondas)
+## Onda 4 — Validação
 
-**Onda 1 — vínculo da sessão antes de qualquer cobrança (crítico)**
-- Extrair um helper único `ensureSessionStub(appointmentId, sessionId, dados)` usado tanto por `handleGerarCobranca` quanto pelo fluxo "cobrar ao salvar", criando o stub (`status: ''`, `detalhes.stub_cobranca = true`) sempre antes de abrir o `ChargeModal`.
-- Remover a dependência de `appointment.sessionId`: gerar/gravar `session_id` no appointment quando ausente.
-
-**Onda 2 — banco: confirmar e materializar**
-- Ampliar `tg_cobranca_confirm_appointment` para `status IN ('pago','pago_manual')` e para `AFTER INSERT OR UPDATE`.
-- Nova função `ensure_workflow_session_on_confirm()` (trigger em `appointments`, `status → confirmado`): cria `clientes_sessoes` a partir do appointment + pacote quando não existir, ou completa o stub (paridade server-side com `hydrateStubSession`). Resolve F3 sem depender do app aberto.
-- Fallback em `ensure_transaction_on_cobranca_paid`: se não achar sessão pelo `session_id`, tentar via `appointments.session_id` antes de zerar o vínculo.
-
-**Onda 3 — UX do painel (criação e pendente existente)**
-- Manter o switch "Cobrar ao salvar" como opt-in: o `ChargeModal` abre ao salvar **apenas** quando ligado. Default permanece desligado.
-- Disponibilizar o mesmo switch em modo edição quando o agendamento estiver "Pendente" e sem cobrança em aberto, de modo que reabrir um pendente antigo → ligar o switch → salvar → abre a cobrança.
-- Ajustar a ação "Gerar cobrança" para também aparecer quando a cobrança existente estiver `cancelado` ou `expirado` (hoje só com nenhuma cobrança ou `pago`).
-- Após gerar o link, exibir ação primária "Enviar ao cliente" (WhatsApp) já presente em `ChargeLinkSection`.
-- Assinatura realtime em `cobrancas` + `appointments` dentro do `SessionPanel` para o chip de status virar "Confirmado" sozinho e mostrar o atalho "Abrir no Workflow".
-
-**Onda 4 — verificação**
-- Matriz de teste por provedor (Asaas PIX/link/parcelado, Mercado Pago PIX/link, InfinitePay link, PIX manual): cobrança criada → sessão stub existe → webhook → cobrança `pago` → transação com `session_id` preenchido → appointment `confirmado` → card no Workflow com pacote e valor pago corretos.
-- Repetir a matriz em dois pontos de partida: (a) sessão nova com switch ligado; (b) agendamento pendente já existente cobrado depois.
+Para cada provedor (Asaas PIX/cartão, Mercado Pago, InfinitePay, PIX manual): abrir `/l/:id` no celular e no desktop e verificar (a) nenhuma tela intermediária visível, (b) campos faltantes solicitados, (c) `clientes` atualizado só nos campos vazios, (d) pagamento conclui e a cobrança muda para `pago`.
 
 ## Detalhes técnicos
-- Arquivos: `src/components/agenda/session-panel/SessionPanel.tsx`, `src/modules/agenda/infrastructure/appointments.supabase.ts`, `src/services/WorkflowSupabaseService.ts`, `src/components/cobranca/ChargeModal.tsx`.
-- Banco: `tg_cobranca_confirm_appointment`, `auto_confirm_appointment_on_payment`, `ensure_transaction_on_cobranca_paid`, nova trigger em `appointments`.
-- Nenhuma alteração nos webhooks é necessária — a correção é no vínculo e nas triggers.
+
+- Arquivos tocados: `supabase/functions/payment-link-preview/index.ts`, `supabase/functions/checkout-get-data/index.ts`, nova `supabase/functions/checkout-save-payer/index.ts`, `src/pages/PublicCheckout.tsx` (fatiado em `src/pages/checkout/`), `src/pages/pay/InfinitePayCheckout.tsx`, `src/pages/pay/ShareLinkFallback.tsx`, `index.html`, `src/components/cobranca/payerRequirements.ts`.
+- Nenhuma migração de banco; a gravação usa o helper `_shared/enrich-cliente.ts` já existente.
+- Todas as edges do checkout continuam públicas (`verify_jwt = false`) e só expõem dados públicos da cobrança e do fotógrafo.
+- Sem mudança nos triggers financeiros, na conciliação de webhooks ou na materialização de sessão no Workflow.
