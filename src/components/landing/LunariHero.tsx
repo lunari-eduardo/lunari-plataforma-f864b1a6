@@ -29,7 +29,7 @@ export function LunariHero() {
 
   return (
     <section
-      className="relative flex w-full items-center overflow-hidden min-h-[85svh] pt-28 pb-20 md:min-h-[100svh] md:pt-32 md:pb-24"
+      className="relative flex w-full flex-col items-center justify-center overflow-hidden min-h-[100svh] pt-32 pb-24 md:pt-40"
       style={{ background: TOKENS.obsidian, color: TOKENS.onDark }}
     >
       <HeroBackgroundVideo />
