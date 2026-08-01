@@ -62,20 +62,21 @@ export function SalesChartsGrid({ monthlyData, categoryData, packageDistribution
   const hasTicketData = monthlyData.some(d => d.averageTicket > 0) || (comparisonActive && mergedMonthly.some(d => d.averageTicketPrevious > 0));
   const hasExtraData = monthlyData.some(d => d.extraPhotoRevenue > 0) || (comparisonActive && mergedMonthly.some(d => d.extraPhotoRevenuePrevious > 0));
 
-  // Transform data for RankedBarList
+  // Transform data for RankedBarList — quebras usam valor contratado (comercial)
   const categoryBarData: RankedBarItem[] = categoryData.map(cat => ({
     name: cat.name,
-    value: cat.revenue,
+    value: (cat as any).contractedRevenue ?? cat.revenue,
     percentage: cat.percentage,
     secondary: `${cat.sessions} sessões`
   }));
 
   const packageBarData: RankedBarItem[] = packageDistributionData.map(pkg => ({
     name: pkg.name,
-    value: pkg.revenue,
+    value: (pkg as any).contractedRevenue ?? pkg.revenue,
     percentage: pkg.percentage,
     secondary: `${pkg.sessions} sessões`
   }));
+
 
   return (
     <div className="space-y-4">

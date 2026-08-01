@@ -23,6 +23,8 @@ import { CardCollapsedModals } from "./details/CardCollapsedModals";
 import { ProductStatusChip } from "./details/ProductStatusChip";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionCreditContext } from "@/hooks/useSessionCreditContext";
+import { useQuickPaymentScope } from "./details/useQuickPaymentScope";
+import { QuickPaymentScopeDialog } from "./details/QuickPaymentScopeDialog";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
@@ -56,7 +58,7 @@ export function WorkflowCardCollapsed({
   const { hasGaleryAccess, accessState } = useMonthAccessControl();
   const { galerias, hasGalerias } = useMonthGalleriasForSession(session.sessionId || session.id);
 
-  const [paymentInput, setPaymentInput] = useState("");
+  
   const [workflowPaymentsOpen, setWorkflowPaymentsOpen] = useState(false);
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -107,35 +109,21 @@ export function WorkflowCardCollapsed({
     fin.pendenteTot,
   ]);
 
-  const paymentSubmittingRef = useRef(false);
-  const handlePaymentAdd = useCallback(async () => {
-    if (paymentSubmittingRef.current) return;
-    const raw = paymentInput.trim();
-    const value = parseFloat(raw.replace(",", "."));
-    if (!raw || isNaN(value) || value <= 0) return;
+  const quickPay = useQuickPaymentScope({
+    sessionId: session.id,
+    pendente: Math.max(0, calculateRestante()),
+    hasGaleria,
+    valorFotoExtra: parseSignedMoney(session.valorFotoExtra),
+    qtdFotosExtraAtual: Number(session.qtdFotosExtra) || 0,
+    addPayment,
+    onFieldUpdate,
+  });
+  const paymentInput = quickPay.paymentInput;
+  const setPaymentInput = quickPay.setPaymentInput;
+  const handlePaymentAdd = quickPay.handlePaymentAdd;
+  const handlePaymentKeyDown = quickPay.handlePaymentKeyDown;
 
-    paymentSubmittingRef.current = true;
-    setPaymentInput("");
-    try {
-      await addPayment(session.id, value);
-    } catch (error) {
-      setPaymentInput(raw);
-      console.error("❌ Erro ao adicionar pagamento:", error);
-    } finally {
-      paymentSubmittingRef.current = false;
-    }
-  }, [paymentInput, addPayment, session.id]);
 
-  const handlePaymentKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (paymentSubmittingRef.current) return;
-        handlePaymentAdd();
-      }
-    },
-    [handlePaymentAdd],
-  );
 
   const handleDescriptionBlur = useCallback(() => {
     if (descriptionValue !== session.descricao) {
@@ -436,6 +424,17 @@ export function WorkflowCardCollapsed({
           Radix Dialog usa Portal (DOM no body), mas eventos React borbulham
           pela árvore de componentes — colocar aqui como irmão do click-area
           impede que cliques dentro do modal disparem expand/collapse do card. */}
+      <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+        <QuickPaymentScopeDialog
+          open={quickPay.scopeOpen}
+          excedente={quickPay.excedente}
+          valorFotoExtra={parseSignedMoney(session.valorFotoExtra)}
+          onCancel={quickPay.cancelScope}
+          onScopeSessao={quickPay.chooseSessao}
+          onScopeExtras={quickPay.chooseExtras}
+        />
+      </div>
+
       <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
         <CardCollapsedModals
           session={session}

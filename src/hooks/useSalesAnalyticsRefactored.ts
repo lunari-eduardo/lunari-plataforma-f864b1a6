@@ -70,6 +70,8 @@ export function useSalesAnalyticsRefactored(
       totalRevenue: 0,
       totalSessions: 0,
       averageTicket: 0,
+      averageTicketReceived: 0,
+      contractedRevenue: 0,
       conversionRate: 0,
       extraPhotosRevenue: 0,
       additionalRevenue: 0,
@@ -79,6 +81,7 @@ export function useSalesAnalyticsRefactored(
       newClients: 0,
       monthlyGoalProgress: 0
     };
+
     
     if (!analyticsResult) return defaultMetrics;
     

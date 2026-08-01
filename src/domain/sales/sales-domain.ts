@@ -4,9 +4,15 @@
  */
 
 export interface SalesDomainMetrics {
+  /** Caixa: soma do valor efetivamente recebido */
   totalRevenue: number;
   totalSessions: number;
+  /** Comercial: valor contratado / sessões */
   averageTicket: number;
+  /** Caixa: valor recebido / sessões */
+  averageTicketReceived?: number;
+  /** Comercial: soma do valor contratado (pacote + extras + adicional − desconto) */
+  contractedRevenue?: number;
   newClients: number;
   monthlyGoalProgress: number;
   conversionRate: number;
@@ -21,8 +27,12 @@ export interface SalesDomainMetrics {
 export interface SalesMonthlyData {
   month: string;
   monthIndex: number;
+  /** Caixa: recebido no mês */
   revenue: number;
+  /** Comercial: contratado no mês */
+  contractedRevenue: number;
   sessions: number;
+  /** Comercial: contratado / sessões */
   averageTicket: number;
   extraPhotoRevenue: number;
   goal: number;
@@ -31,7 +41,10 @@ export interface SalesMonthlyData {
 export interface SalesCategoryData {
   name: string;
   sessions: number;
+  /** Caixa */
   revenue: number;
+  /** Comercial */
+  contractedRevenue: number;
   percentage: number;
   totalExtraPhotos: number;
   packageDistribution: SalesPackageDistribution[];
@@ -47,16 +60,20 @@ export interface SalesPackageData {
   name: string;
   sessions: number;
   revenue: number;
+  contractedRevenue: number;
   percentage: number;
 }
+
 
 export interface SalesOriginData {
   name: string;
   sessions: number;
   revenue: number;
+  contractedRevenue: number;
   percentage: number;
   color: string;
 }
+
 
 export interface SalesMonthlyOriginData {
   month: string;

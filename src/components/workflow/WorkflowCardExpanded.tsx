@@ -23,6 +23,8 @@ import { INPUT_GHOST, VALUE_STRONG } from "./details/cardTokens";
 import { computeProductNextAction } from "@/features/workflow/domain/productNextAction";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionFinancialsWithExtras } from "@/features/workflow/hooks/useSessionFinancialsWithExtras";
+import { useQuickPaymentScope } from "./details/useQuickPaymentScope";
+import { QuickPaymentScopeDialog } from "./details/QuickPaymentScopeDialog";
 
 
 interface WorkflowCardExpandedProps {
@@ -57,7 +59,7 @@ export function WorkflowCardExpanded({
     "extras_only" | "sessao_e_extras"
   >("sessao_e_extras");
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
-  const [paymentInput, setPaymentInput] = useState("");
+  
   
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
@@ -132,35 +134,8 @@ export function WorkflowCardExpanded({
     }
   }, [obsValue, session.observacoes, session.id, onFieldUpdate]);
 
-  const paymentSubmittingRef = useRef(false);
-  const handlePaymentAdd = useCallback(async () => {
-    if (paymentSubmittingRef.current) return;
-    const raw = paymentInput.trim();
-    const value = parseFloat(raw.replace(",", "."));
-    if (!raw || isNaN(value) || value <= 0) return;
+  // Pagamento rápido com escopo do excedente — declarado após `hasGaleria`.
 
-    paymentSubmittingRef.current = true;
-    setPaymentInput("");
-    try {
-      await addPaymentContext(session.id, value);
-    } catch (error) {
-      setPaymentInput(raw);
-      console.error("❌ Erro ao adicionar pagamento:", error);
-    } finally {
-      paymentSubmittingRef.current = false;
-    }
-  }, [paymentInput, addPaymentContext, session.id]);
-
-  const handlePaymentKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (paymentSubmittingRef.current) return;
-        handlePaymentAdd();
-      }
-    },
-    [handlePaymentAdd],
-  );
 
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
 
@@ -204,6 +179,21 @@ export function WorkflowCardExpanded({
   const totalVisual = fin.totalVisual;
   const pendenteVisual = fin.pendenteTot;
   const pendenteSessaoSugerido = fin.pendenteSess;
+
+  // Pagamento rápido com escopo do excedente (sessão vs fotos extras)
+  const quickPay = useQuickPaymentScope({
+    sessionId: session.id,
+    pendente: Math.max(0, pendenteVisual),
+    hasGaleria,
+    valorFotoExtra: parseCurrency(String(session.valorFotoExtra || "0")),
+    qtdFotosExtraAtual: Number(session.qtdFotosExtra) || 0,
+    addPayment: addPaymentContext,
+    onFieldUpdate,
+  });
+  const paymentInput = quickPay.paymentInput;
+  const setPaymentInput = quickPay.setPaymentInput;
+  const handlePaymentAdd = quickPay.handlePaymentAdd;
+  const handlePaymentKeyDown = quickPay.handlePaymentKeyDown;
 
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
@@ -671,6 +661,15 @@ export function WorkflowCardExpanded({
       )}
 
 
+
+      <QuickPaymentScopeDialog
+        open={quickPay.scopeOpen}
+        excedente={quickPay.excedente}
+        valorFotoExtra={parseCurrency(String(session.valorFotoExtra || "0"))}
+        onCancel={quickPay.cancelScope}
+        onScopeSessao={quickPay.chooseSessao}
+        onScopeExtras={quickPay.chooseExtras}
+      />
 
       <OverrideExtrasDialog
         pendingExtraEdit={pendingExtraEdit}

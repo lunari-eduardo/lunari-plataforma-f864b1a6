@@ -105,6 +105,8 @@ export class SalesRepositoryImpl implements SalesRepository {
           monthIndex: cur.monthIndex,
           revenueCurrent: cur.revenue,
           revenuePrevious: prev?.revenue ?? 0,
+          contractedRevenueCurrent: cur.contractedRevenue,
+          contractedRevenuePrevious: prev?.contractedRevenue ?? 0,
           sessionsCurrent: cur.sessions,
           sessionsPrevious: prev?.sessions ?? 0,
           averageTicketCurrent: cur.averageTicket,
@@ -121,6 +123,10 @@ export class SalesRepositoryImpl implements SalesRepository {
         limitMonth: filters.month != null ? filters.month : limitMonth,
         metrics: {
           totalRevenue: computeComparison(baseMetricsLimited.totalRevenue, previousMetrics.totalRevenue),
+          contractedRevenue: computeComparison(
+            baseMetricsLimited.contractedRevenue ?? 0,
+            previousMetrics.contractedRevenue ?? 0
+          ),
           totalSessions: computeComparison(baseMetricsLimited.totalSessions, previousMetrics.totalSessions),
           averageTicket: computeComparison(baseMetricsLimited.averageTicket, previousMetrics.averageTicket),
           extraPhotosRevenue: computeComparison(
@@ -132,6 +138,7 @@ export class SalesRepositoryImpl implements SalesRepository {
             previousMetrics.expectedRevenue ?? 0
           )
         },
+
         monthlyData: monthlyComparative
       };
     }
@@ -166,17 +173,22 @@ export class SalesRepositoryImpl implements SalesRepository {
   }
 
   private async calculateMetrics(sessions: SalesSession[], filters: SalesFilters): Promise<SalesDomainMetrics> {
+    // Caixa (financeiro)
     const totalRevenue = sessions.reduce((sum, session) => sum + session.amountPaid, 0);
     const totalSessions = sessions.length;
-    const averageTicket = totalSessions > 0 ? totalRevenue / totalSessions : 0;
-    
+
+    // Comercial: valor contratado (pacote + extras + adicional − desconto)
+    const contractedRevenue = sessions.reduce((sum, session) => sum + session.total, 0);
+    const averageTicket = totalSessions > 0 ? contractedRevenue / totalSessions : 0;
+    const averageTicketReceived = totalSessions > 0 ? totalRevenue / totalSessions : 0;
+
     // Calculate extended metrics
     const extraPhotosRevenue = sessions.reduce((sum, session) => sum + session.totalExtraPhotoValue, 0);
     const additionalRevenue = sessions.reduce((sum, session) => sum + session.additionalValue, 0);
     const totalDiscount = sessions.reduce((sum, session) => sum + session.discount, 0);
-    
-    // Expected revenue (valor previsto = total das sessões)
-    const expectedRevenue = sessions.reduce((sum, session) => sum + session.total, 0);
+
+    // Expected revenue (valor previsto = total contratado das sessões)
+    const expectedRevenue = contractedRevenue;
     const pendingRevenue = Math.max(0, expectedRevenue - totalRevenue);
     
     // Count unique clients
@@ -213,6 +225,7 @@ export class SalesRepositoryImpl implements SalesRepository {
 
     this.log('📈 Métricas calculadas:', { 
       totalRevenue, 
+      contractedRevenue,
       totalSessions, 
       averageTicket, 
       extraPhotosRevenue,
@@ -226,6 +239,8 @@ export class SalesRepositoryImpl implements SalesRepository {
       totalRevenue,
       totalSessions,
       averageTicket,
+      averageTicketReceived,
+      contractedRevenue,
       newClients: uniqueClients,
       monthlyGoalProgress,
       conversionRate,
@@ -236,6 +251,7 @@ export class SalesRepositoryImpl implements SalesRepository {
       pendingRevenue
     };
   }
+
 
   private async calculateMonthlyData(sessions: SalesSession[], year: number): Promise<SalesMonthlyData[]> {
     const months = [
@@ -258,14 +274,17 @@ export class SalesRepositoryImpl implements SalesRepository {
       );
 
       const revenue = monthSessions.reduce((sum, session) => sum + session.amountPaid, 0);
+      const contractedRevenue = monthSessions.reduce((sum, session) => sum + session.total, 0);
       const sessionCount = monthSessions.length;
-      const averageTicket = sessionCount > 0 ? revenue / sessionCount : 0;
+      // Ticket médio é métrica comercial: valor contratado / sessões
+      const averageTicket = sessionCount > 0 ? contractedRevenue / sessionCount : 0;
       const extraPhotoRevenue = monthSessions.reduce((sum, session) => sum + session.totalExtraPhotoValue, 0);
 
       return {
         month,
         monthIndex: index,
         revenue,
+        contractedRevenue,
         sessions: sessionCount,
         averageTicket,
         extraPhotoRevenue,
@@ -278,6 +297,7 @@ export class SalesRepositoryImpl implements SalesRepository {
     const categoryStats = new Map<string, {
       sessions: number;
       revenue: number;
+      contractedRevenue: number;
       totalExtraPhotos: number;
       packages: Map<string, number>;
     }>();
@@ -287,6 +307,7 @@ export class SalesRepositoryImpl implements SalesRepository {
       const current = categoryStats.get(category) || {
         sessions: 0,
         revenue: 0,
+        contractedRevenue: 0,
         totalExtraPhotos: 0,
         packages: new Map()
       };
@@ -297,13 +318,14 @@ export class SalesRepositoryImpl implements SalesRepository {
       categoryStats.set(category, {
         sessions: current.sessions + 1,
         revenue: current.revenue + session.amountPaid,
+        contractedRevenue: current.contractedRevenue + session.total,
         totalExtraPhotos: current.totalExtraPhotos + session.extraPhotoCount,
         packages: current.packages
       });
     });
 
-    const totalRevenue = Array.from(categoryStats.values())
-      .reduce((sum, cat) => sum + cat.revenue, 0);
+    const totalContracted = Array.from(categoryStats.values())
+      .reduce((sum, cat) => sum + cat.contractedRevenue, 0);
 
     return Array.from(categoryStats.entries()).map(([name, stats]) => {
       const packageValues = Array.from(stats.packages.values());
@@ -318,22 +340,24 @@ export class SalesRepositoryImpl implements SalesRepository {
         name,
         sessions: stats.sessions,
         revenue: stats.revenue,
-        percentage: totalRevenue > 0 ? (stats.revenue / totalRevenue) * 100 : 0,
+        contractedRevenue: stats.contractedRevenue,
+        percentage: totalContracted > 0 ? (stats.contractedRevenue / totalContracted) * 100 : 0,
         totalExtraPhotos: stats.totalExtraPhotos,
         packageDistribution
       };
-    }).sort((a, b) => b.revenue - a.revenue);
+    }).sort((a, b) => b.contractedRevenue - a.contractedRevenue);
   }
 
   private calculatePackageData(sessions: SalesSession[]): SalesPackageData[] {
-    const packageStats = new Map<string, { sessions: number; revenue: number }>();
+    const packageStats = new Map<string, { sessions: number; revenue: number; contractedRevenue: number }>();
     
     sessions.forEach(session => {
       const packageName = session.package || 'Sem pacote';
-      const current = packageStats.get(packageName) || { sessions: 0, revenue: 0 };
+      const current = packageStats.get(packageName) || { sessions: 0, revenue: 0, contractedRevenue: 0 };
       packageStats.set(packageName, {
         sessions: current.sessions + 1,
-        revenue: current.revenue + session.amountPaid
+        revenue: current.revenue + session.amountPaid,
+        contractedRevenue: current.contractedRevenue + session.total
       });
     });
 
@@ -342,19 +366,22 @@ export class SalesRepositoryImpl implements SalesRepository {
       name,
       sessions: stats.sessions,
       revenue: stats.revenue,
+      contractedRevenue: stats.contractedRevenue,
       percentage: totalSessions > 0 ? (stats.sessions / totalSessions) * 100 : 0
     })).sort((a, b) => b.sessions - a.sessions);
   }
 
+
   private calculateOriginData(sessions: SalesSession[]): SalesOriginData[] {
-    const originStats = new Map<string, { sessions: number; revenue: number }>();
+    const originStats = new Map<string, { sessions: number; revenue: number; contractedRevenue: number }>();
     
     sessions.forEach(session => {
       const originKey = session.origin || 'nao-especificado';
-      const current = originStats.get(originKey) || { sessions: 0, revenue: 0 };
+      const current = originStats.get(originKey) || { sessions: 0, revenue: 0, contractedRevenue: 0 };
       originStats.set(originKey, {
         sessions: current.sessions + 1,
-        revenue: current.revenue + session.amountPaid
+        revenue: current.revenue + session.amountPaid,
+        contractedRevenue: current.contractedRevenue + session.total
       });
     });
 
@@ -368,11 +395,13 @@ export class SalesRepositoryImpl implements SalesRepository {
         name,
         sessions: stats.sessions,
         revenue: stats.revenue,
+        contractedRevenue: stats.contractedRevenue,
         percentage: totalSessions > 0 ? (stats.sessions / totalSessions) * 100 : 0,
         color
       };
     }).sort((a, b) => b.sessions - a.sessions);
   }
+
 
   private async calculateMonthlyOriginData(year: number, category: string): Promise<SalesMonthlyOriginData[]> {
     // For now, we'll use the existing RevenueAnalyticsService

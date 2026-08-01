@@ -13,6 +13,8 @@ export interface ComparisonValue {
 
 export interface ComparativeMetrics {
   totalRevenue: ComparisonValue;
+  /** Comercial: valor contratado */
+  contractedRevenue: ComparisonValue;
   totalSessions: ComparisonValue;
   averageTicket: ComparisonValue;
   extraPhotosRevenue: ComparisonValue;
@@ -24,6 +26,8 @@ export interface ComparativeMonthlyDataPoint {
   monthIndex: number;
   revenueCurrent: number;
   revenuePrevious: number;
+  contractedRevenueCurrent: number;
+  contractedRevenuePrevious: number;
   sessionsCurrent: number;
   sessionsPrevious: number;
   averageTicketCurrent: number;
@@ -31,6 +35,7 @@ export interface ComparativeMonthlyDataPoint {
   extraPhotoRevenueCurrent: number;
   extraPhotoRevenuePrevious: number;
 }
+
 
 export function computeComparison(current: number, previous: number): ComparisonValue {
   const diffAbsolute = current - previous;
