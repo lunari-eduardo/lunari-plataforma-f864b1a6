@@ -760,7 +760,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
     const keepAsCredit = options?.keepAsCredit === true;
     // "Manter como crédito" e "Estornar no gateway" são mutuamente exclusivos:
     // se o valor vira crédito interno, o dinheiro NÃO deve voltar ao cliente.
-    const autoRefund = !keepAsCredit && options?.autoRefund === true;
+    // Sandbox: nunca chamar o gateway — o pagamento é de teste e o estorno é interno.
+    const autoRefund = !keepAsCredit && options?.autoRefund === true && payment.sandbox !== true;
 
     // Se auto refund solicitado, tentar API do gateway antes de gravar registro interno
     if (autoRefund && (payment.origem === 'asaas' || payment.origem === 'mercadopago')) {
@@ -768,21 +769,33 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         const { supabase } = await import('@/integrations/supabase/client');
 
         if (payment.origem === 'asaas') {
-          // paymentId pode ser "asaas-parcela-{parcelaId}" ou "asaas-{cobrancaId}"
-          let cobrancaId: string | undefined;
-          let parcelaId: string | undefined;
+          // Resolução robusta: cobrancaId/parcelaId vindos do próprio registro,
+          // com fallback pelos prefixos legados e pela transação (extras da Gallery).
+          let cobrancaId: string | undefined = payment.cobrancaId;
+          let parcelaId: string | undefined = payment.parcelaId;
 
-          if (paymentId.startsWith('asaas-parcela-')) {
+          if (!parcelaId && paymentId.startsWith('asaas-parcela-')) {
             parcelaId = paymentId.replace('asaas-parcela-', '');
-            // Buscar cobranca_id da parcela
+          }
+          if (!cobrancaId && paymentId.startsWith('asaas-') && !paymentId.startsWith('asaas-parcela-')) {
+            cobrancaId = paymentId.replace('asaas-', '');
+          }
+          if (!cobrancaId && parcelaId) {
             const { data: parcela } = await supabase
               .from('cobranca_parcelas')
               .select('cobranca_id')
               .eq('id', parcelaId)
               .maybeSingle();
-            cobrancaId = parcela?.cobranca_id;
-          } else if (paymentId.startsWith('asaas-')) {
-            cobrancaId = paymentId.replace('asaas-', '');
+            cobrancaId = parcela?.cobranca_id || undefined;
+          }
+          if (!cobrancaId && /^[0-9a-f-]{36}$/i.test(paymentId)) {
+            // paymentId é o UUID da transação — buscar a cobrança vinculada
+            const { data: trx } = await supabase
+              .from('clientes_transacoes')
+              .select('cobranca_id')
+              .eq('id', paymentId)
+              .maybeSingle();
+            cobrancaId = (trx as any)?.cobranca_id || undefined;
           }
 
           if (!cobrancaId) {
@@ -790,6 +803,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             toast.error('Não foi possível identificar a cobrança Asaas para estornar');
             return false;
           }
+
 
           const { data, error } = await supabase.functions.invoke('gestao-asaas-refund', {
             body: { cobrancaId, parcelaId, valor: payment.valor, motivo }
