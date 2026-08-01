@@ -88,6 +88,23 @@ const FluxoFiltersSheet = memo(function FluxoFiltersSheet({
         </div>
 
         <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Escopo do pagamento</Label>
+          <Select
+            value={filtros.escopo ?? 'todos'}
+            onValueChange={(v) => onChange({ escopo: v as ExtratoEscopo | 'todos' })}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="sessao">Sessão</SelectItem>
+              <SelectItem value="fotos_extras">Fotos extras</SelectItem>
+              <SelectItem value="sessao_e_extras">Sessão + extras</SelectItem>
+              <SelectItem value="avulso">Avulso</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Cliente</Label>
           <Input
             value={filtros.cliente ?? ''}
