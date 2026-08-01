@@ -69,9 +69,11 @@ export interface SalesOriginData {
   name: string;
   sessions: number;
   revenue: number;
+  contractedRevenue: number;
   percentage: number;
   color: string;
 }
+
 
 export interface SalesMonthlyOriginData {
   month: string;
