@@ -98,6 +98,11 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
                   O estorno pode ser realizado diretamente na sua conta de pagamento
                   e o valor será devolvido ao cliente.
                 </p>
+              ) : sandbox ? (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-foreground">
+                  Pagamento de <strong>teste ({label} sandbox)</strong>. Não existe dinheiro real para devolver,
+                  então o estorno será registrado apenas como <strong>lançamento interno</strong>.
+                </div>
               ) : (
                 <div className="rounded-md border border-orange-500/30 bg-orange-500/10 p-3 text-sm text-foreground">
                   O estorno deste pagamento ({label === 'manual' ? 'lançamento manual' : label}) deve ser
@@ -106,6 +111,7 @@ export function RefundDialog({ payment, onClose, onConfirm }: RefundDialogProps)
                   o dinheiro não será devolvido automaticamente ao cliente.
                 </div>
               )}
+
 
               <p className="text-sm">
                 Valor: <strong>{payment ? formatCurrency(payment.valor) : ''}</strong>.
