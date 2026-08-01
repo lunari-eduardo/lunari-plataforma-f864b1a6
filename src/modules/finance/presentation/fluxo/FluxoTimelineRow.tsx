@@ -154,6 +154,15 @@ const FluxoTimelineRow = memo(function FluxoTimelineRow({
         {subtitulo && subtitulo !== titulo && (
           <div className="text-xs text-muted-foreground truncate">{subtitulo}</div>
         )}
+        <div
+          className={cn(
+            'lg:hidden text-xs font-medium tabular-nums mt-0.5',
+            isReceita ? 'text-lunar-success' : 'text-destructive',
+          )}
+        >
+          {isReceita ? '+ ' : '- '}
+          {formatCurrency(Math.abs(linha.valor))}
+        </div>
       </div>
 
       {/* Categoria */}
@@ -216,18 +225,6 @@ const FluxoTimelineRow = memo(function FluxoTimelineRow({
         <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
 
-      {/* Valor compacto (mobile/tablet) */}
-      <div className="lg:hidden col-start-3 md:col-start-4 justify-self-end">
-        <span
-          className={cn(
-            'text-sm font-medium tabular-nums',
-            isReceita ? 'text-lunar-success' : 'text-destructive',
-          )}
-        >
-          {isReceita ? '+ ' : '- '}
-          {formatCurrency(Math.abs(linha.valor))}
-        </span>
-      </div>
     </div>
   );
 });
