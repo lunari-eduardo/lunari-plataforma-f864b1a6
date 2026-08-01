@@ -1,17 +1,12 @@
 import { LunariHero } from "@/components/landing/LunariHero";
-import { ProblemSection } from "@/components/landing/ProblemSection";
-import { UnifiedFlowSection } from "@/components/landing/UnifiedFlowSection";
-import { GallerySection } from "@/components/landing/GallerySection";
-import { AISection } from "@/components/landing/AISection";
-import { WhatsAppSection } from "@/components/landing/WhatsAppSection";
-import { ProofSection } from "@/components/landing/ProofSection";
-import { PricingSection } from "@/components/landing/PricingSection";
-import { ClosingSection } from "@/components/landing/ClosingSection";
+import { ProblemaSection } from "@/components/landing/problema/ProblemaSection";
 import { SEOHead } from "@/components/seo/SEOHead";
 
 /**
  * HomePage — página inicial do site institucional (rota "/").
  * Vive dentro de <SiteLayout />, então NÃO renderiza LunariNav/LunariFooter.
+ *
+ * A Home está sendo reconstruída seção a seção. Hoje: Hero + Seção 01.
  */
 export default function HomePage() {
   return (
@@ -23,14 +18,7 @@ export default function HomePage() {
         ogType="website"
       />
       <LunariHero />
-      <ProblemSection />
-      <UnifiedFlowSection />
-      <GallerySection />
-      <AISection />
-      <WhatsAppSection />
-      <ProofSection />
-      <PricingSection />
-      <ClosingSection />
+      <ProblemaSection />
     </>
   );
 }
