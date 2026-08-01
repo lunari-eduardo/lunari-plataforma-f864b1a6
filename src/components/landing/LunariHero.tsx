@@ -82,17 +82,17 @@ export function LunariHero() {
           <motion.div {...fadeUp(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
             <button
               onClick={() => nav("/auth")}
-              className="group inline-flex h-12 items-center gap-2 rounded-[10px] px-6 text-[14px] font-medium transition-all duration-300 hover:-translate-y-[1px]"
+              className="group inline-flex h-12 items-center gap-2 rounded-[10px] px-8 text-[14px] font-medium transition-all duration-300 hover:brightness-110"
               style={{
                 ...uiFont,
-                background: TOKENS.gold,
-                color: TOKENS.obsidian,
-                boxShadow: "0 18px 40px -22px rgba(201,168,124,0.9)",
+                background: TOKENS.obsidianStrong,
+                border: `1px solid ${TOKENS.hairDarkStrong}`,
+                color: TOKENS.onDark,
               }}
             >
-              Conhecer a Lunari
+              Começar agora
               <ArrowUpRight
-                className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                className="h-4 w-4 opacity-50 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100"
                 strokeWidth={1.75}
               />
             </button>
@@ -101,15 +101,13 @@ export function LunariHero() {
               onClick={() =>
                 document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" })
               }
-              className="inline-flex h-12 items-center gap-2.5 rounded-[10px] border px-6 text-[14px] font-medium transition-colors"
+              className="inline-flex h-12 items-center gap-2.5 rounded-[10px] px-6 text-[14px] font-medium transition-colors hover:text-white"
               style={{
                 ...uiFont,
-                borderColor: TOKENS.hairDarkStrong,
-                color: TOKENS.onDark,
+                color: TOKENS.onDarkMuted,
               }}
             >
-              <Play className="h-4 w-4" strokeWidth={1.5} style={{ color: TOKENS.gold }} />
-              Ver demonstração
+              Ver o ecossistema
             </button>
           </motion.div>
 
