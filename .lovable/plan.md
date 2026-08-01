@@ -15,8 +15,8 @@ O fluxo **funciona parcialmente**. As etapas de gerar link e confirmar o agendam
 
 ### Falhas / lacunas encontradas
 
-**F1 — O modal não abre sozinho ao salvar como Pendente.**
-`SessionPanel` só abre a cobrança se o switch "Cobrar ao salvar" estiver ligado (default desligado) e apenas em criação (`!isEdit`). O fluxo pedido é: salvou pendente → abre a cobrança.
+**F1 — O switch "Cobrar ao salvar" não cobre o agendamento já pendente.**
+O comportamento desejado é o atual em criação (abre o modal só com o switch ligado), mas o switch existe apenas quando `!isEdit`. Ao reabrir um agendamento já pendente, o único caminho é o botão "Gerar cobrança" — e ele só aparece quando não há cobrança ou quando a cobrança já está paga. Faltam: switch/ação disponível também em edição de pendente e reemissão quando a cobrança está expirada/cancelada.
 
 **F2 — No fluxo "cobrar ao salvar" não existe registro em `clientes_sessoes`.**
 O stub só é criado em `handleGerarCobranca` (modo edição). Na criação, `findCreatedSessionId` pega o `session_id` do appointment e passa ao `ChargeModal`, mas nenhuma linha em `clientes_sessoes` é criada.
