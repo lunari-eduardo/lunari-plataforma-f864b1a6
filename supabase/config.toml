@@ -105,6 +105,9 @@ verify_jwt = false
 [functions.checkout-process-payment]
 verify_jwt = false
 
+[functions.checkout-save-payer]
+verify_jwt = false
+
 [functions.gestao-asaas-anticipation]
 verify_jwt = false
 
