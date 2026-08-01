@@ -32,7 +32,9 @@ export function LunariHero() {
       className="relative flex w-full flex-col items-center justify-center overflow-hidden min-h-[100svh] pt-32 pb-24 md:pt-40"
       style={{ background: TOKENS.obsidian, color: TOKENS.onDark }}
     >
-      <HeroBackgroundVideo />
+      <motion.div style={{ opacity: videoOpacity }} className="absolute inset-0">
+        <HeroBackgroundVideo />
+      </motion.div>
 
       {/* linhas verticais sutis */}
       <div
