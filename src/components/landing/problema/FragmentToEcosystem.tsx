@@ -319,13 +319,13 @@ export function FragmentToEcosystem() {
   const railRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: railRef,
-    offset: ["start 75%", "end 60%"],
+    offset: ["start 70%", "end 90%"],
   });
 
   return (
     <>
       {/* Desktop: trilho de scroll + palco sticky */}
-      <div ref={railRef} className="relative hidden lg:block" style={{ height: "150vh" }}>
+      <div ref={railRef} className="relative hidden lg:block" style={{ height: "115vh" }}>
         <div className="sticky top-[22vh]">
           <Stage p={reduce ? null : scrollYProgress} scrollDriven={!reduce} />
         </div>
