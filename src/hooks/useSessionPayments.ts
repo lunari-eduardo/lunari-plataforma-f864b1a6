@@ -444,6 +444,10 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                   dataCreditoReal: parcela.data_credito_real ? String(parcela.data_credito_real).split('T')[0] : undefined,
                   statusRecebimento,
                   createdAt: parcela.created_at || undefined,
+                  cobrancaId: c.id,
+                  parcelaId: parcela.id,
+                  sandbox: (origem === 'asaas' && asaasSandbox) || undefined,
+
                 });
               }
               continue; // Não adicionar a cobrança agregada
