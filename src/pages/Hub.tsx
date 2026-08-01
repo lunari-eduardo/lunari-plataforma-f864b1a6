@@ -20,6 +20,7 @@ import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
 import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
 import HubAtividade from "@/components/hub/HubAtividade";
 import HubAutomacoes from "@/components/hub/HubAutomacoes";
+import HubConexoesAssistente from "@/components/hub/HubConexoesAssistente";
 
 type TabKey = "contexto" | "aprovacoes" | "automacoes" | "conexoes" | "atividade";
 const VALID: TabKey[] = ["contexto", "aprovacoes", "automacoes", "conexoes", "atividade"];
