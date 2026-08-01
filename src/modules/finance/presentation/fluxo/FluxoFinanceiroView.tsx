@@ -155,32 +155,20 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Bulk actions — só aplicam a lançamentos de origem "financeiro"
-  const selectedFinanceLinhas = useMemo(
-    () => linhasVisiveis.filter((l) => selectedIds.has(l.id) && l.origem === 'financeiro'),
-    [linhasVisiveis, selectedIds],
-  );
-
-  const handleBulkMarkPaid = async () => {
-    const targets = selectedFinanceLinhas.filter((l) => l.status !== 'Pago');
-    await Promise.all(targets.map((l) => financas.marcarComoPago(l.referenciaId)));
-    clearSelection();
-  };
-
-  const handleBulkDelete = async () => {
-    const ok = await confirm({
-      title: 'Excluir lançamentos',
-      description: `Tem certeza que deseja excluir ${selectedFinanceLinhas.length} lançamento(s)? Esta ação não pode ser desfeita.`,
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
-      variant: 'destructive',
+  // Seleção — apenas informativa: soma nas métricas superiores
+  const resumoSelecao = useMemo(() => {
+    let entradas = 0;
+    let saidas = 0;
+    let count = 0;
+    linhasVisiveis.forEach((l) => {
+      if (!selectedIds.has(l.id)) return;
+      count += 1;
+      if (l.tipo === 'entrada') entradas += l.valor;
+      else saidas += l.valor;
     });
-    if (!ok) return;
-    await Promise.all(
-      selectedFinanceLinhas.map((l) => financas.removerTransacao(l.referenciaId)),
-    );
-    clearSelection();
-  };
+    return { entradas, saidas, saldo: entradas - saidas, count };
+  }, [linhasVisiveis, selectedIds]);
+
 
 
 
