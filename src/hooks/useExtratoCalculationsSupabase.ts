@@ -14,6 +14,7 @@ import { LinhaExtrato, ResumoExtrato, DemonstrativoSimplificado, FiltrosExtrato 
 import { RegimeContabil } from '@/hooks/useExtratoSupabase';
 import { calcularSaldoAcumulado } from '@/utils/extratoUtils';
 import { GRUPOS_DESPESAS } from '@/constants/extratoConstants';
+import { useDemonstrativoFinanceiro } from '@/hooks/useDemonstrativoFinanceiro';
 
 export function useExtratoCalculationsSupabase(
   linhasFiltradas: LinhaExtrato[],
