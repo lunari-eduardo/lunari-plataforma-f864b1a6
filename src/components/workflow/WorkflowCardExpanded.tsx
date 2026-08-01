@@ -57,7 +57,7 @@ export function WorkflowCardExpanded({
     "extras_only" | "sessao_e_extras"
   >("sessao_e_extras");
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false);
-  const [paymentInput, setPaymentInput] = useState("");
+  
   
 
   const [descontoValue, setDescontoValue] = useState(session.desconto || "");
