@@ -63,14 +63,11 @@ export function LunariHero() {
             className="mt-9 max-w-[620px] text-[42px] font-medium leading-[1.03] tracking-[-0.035em] md:text-[62px]"
             style={{ ...uiFont, color: TOKENS.onDark }}
           >
-            O primeiro sistema
+            O sistema que administra seu estúdio inteiro.{" "}
             <br />
-            que{" "}
             <span className="italic font-normal" style={{ ...displayFont, color: TOKENS.gold }}>
-              pensa
-            </span>{" "}
-            como
-            <br className="hidden md:block" /> um fotógrafo.
+              Não apenas uma parte dele.
+            </span>
           </motion.h1>
 
           <motion.p
