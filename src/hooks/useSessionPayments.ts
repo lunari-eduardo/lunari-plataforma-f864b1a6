@@ -185,7 +185,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
         console.log('🔍 [useSessionPayments] Session IDs:', { sessionId, textSessionId, clienteId });
 
         // 2. Buscar transações E cobranças MP EM PARALELO
-        const [transacoesResult, cobrancasResult] = await Promise.all([
+        const [transacoesResult, cobrancasResult, asaasIntegResult] = await Promise.all([
           supabase
             .from('clientes_transacoes')
             .select('*')
@@ -200,11 +200,20 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
             .eq('status', 'pago')
             // Extras de galeria vinculada à sessão também são receita da sessão.
             // (Filtro `finalidade='sessao'` removido — vide migration 20260625181941.)
-            .order('data_pagamento', { ascending: false })
+            .order('data_pagamento', { ascending: false }),
+          supabase
+            .from('usuarios_integracoes')
+            .select('dados_extras')
+            .eq('user_id', user.id)
+            .eq('tipo', 'asaas')
+            .maybeSingle()
         ]);
 
         const transacoes = transacoesResult.data;
         const cobrancasPagas = cobrancasResult.data;
+        const asaasExtras: any = asaasIntegResult?.data?.dados_extras || {};
+        const asaasSandbox = (asaasExtras?.environment || 'sandbox') !== 'production';
+
 
         if (transacoesResult.error) {
           console.error('❌ [useSessionPayments] Erro ao buscar transações:', transacoesResult.error);
