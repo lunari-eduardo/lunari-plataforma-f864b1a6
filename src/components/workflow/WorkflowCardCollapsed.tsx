@@ -23,6 +23,8 @@ import { CardCollapsedModals } from "./details/CardCollapsedModals";
 import { ProductStatusChip } from "./details/ProductStatusChip";
 import { SessionCreditBadge } from "@/components/finance/SessionCreditBadge";
 import { useSessionCreditContext } from "@/hooks/useSessionCreditContext";
+import { useQuickPaymentScope } from "./details/useQuickPaymentScope";
+import { QuickPaymentScopeDialog } from "./details/QuickPaymentScopeDialog";
 
 interface WorkflowCardCollapsedProps {
   session: SessionData;
