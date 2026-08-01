@@ -12,7 +12,7 @@ import NotFound from "@/pages/NotFound";
 export function RequireAdmin({ children }: { children: ReactNode }) {
   const { accessState } = useAccessControl();
 
-  if (accessState.isLoading) {
+  if (accessState.status === "loading") {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
