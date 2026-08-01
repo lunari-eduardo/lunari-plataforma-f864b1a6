@@ -1,7 +1,7 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, Play, Sparkles } from "lucide-react";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { ArrowUpRight, Check, Play, Sparkles, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { EASE, TOKENS, displayFont, monoFont, uiFont } from "./primitives";
+import { EASE, TOKENS, displayFont, monoFont, uiFont, TechLabel } from "./primitives";
 import { HeroBackgroundVideo } from "./HeroMedia";
 
 const GUARANTEES = [
@@ -15,6 +15,11 @@ const GUARANTEES = [
 export function LunariHero() {
   const nav = useNavigate();
   const reduce = useReducedMotion();
+  const { scrollY } = useScroll();
+  
+  const contentOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const contentY = useTransform(scrollY, [0, 400], [0, -40]);
+  const videoOpacity = useTransform(scrollY, [0, 600], [0.7, 0.4]);
 
   const fadeUp = (delay: number) => ({
     initial: reduce ? {} : { opacity: 0, y: 20 },
@@ -24,10 +29,12 @@ export function LunariHero() {
 
   return (
     <section
-      className="relative flex w-full items-center overflow-hidden min-h-[85svh] pt-28 pb-20 md:min-h-[100svh] md:pt-32 md:pb-24"
+      className="relative flex w-full flex-col items-center justify-center overflow-hidden min-h-[100svh] pt-32 pb-24 md:pt-40"
       style={{ background: TOKENS.obsidian, color: TOKENS.onDark }}
     >
-      <HeroBackgroundVideo />
+      <motion.div style={{ opacity: videoOpacity }} className="absolute inset-0">
+        <HeroBackgroundVideo />
+      </motion.div>
 
       {/* linhas verticais sutis */}
       <div
@@ -41,8 +48,11 @@ export function LunariHero() {
         }}
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 md:px-8">
-        <div className="max-w-[720px]">
+      <motion.div 
+        style={{ opacity: contentOpacity, y: contentY }}
+        className="relative z-10 mx-auto w-full max-w-[1200px] px-6 md:px-8"
+      >
+        <div className="flex flex-col items-center text-center">
 
           <motion.div {...fadeUp(0)}>
             <span
@@ -63,39 +73,36 @@ export function LunariHero() {
             className="mt-9 max-w-[620px] text-[42px] font-medium leading-[1.03] tracking-[-0.035em] md:text-[62px]"
             style={{ ...uiFont, color: TOKENS.onDark }}
           >
-            O primeiro sistema
+            O sistema que administra seu estúdio inteiro.{" "}
             <br />
-            que{" "}
             <span className="italic font-normal" style={{ ...displayFont, color: TOKENS.gold }}>
-              pensa
-            </span>{" "}
-            como
-            <br className="hidden md:block" /> um fotógrafo.
+              Não apenas uma parte dele.
+            </span>
           </motion.h1>
 
           <motion.p
             {...fadeUp(0.16)}
-            className="mt-7 max-w-[520px] text-[16px] leading-[1.65] md:text-[17px]"
+            className="mt-7 max-w-[540px] text-[16px] leading-[1.65] md:text-[18px]"
             style={{ ...uiFont, color: TOKENS.onDarkMuted }}
           >
-            CRM, contratos, pagamentos, workflow, galerias e IA trabalhando juntos para
-            eliminar tarefas repetitivas e liberar o que realmente importa: fotografar.
+            Construído por quem entende a rotina real de um estúdio profissional. 
+            Uma plataforma unificada para elevar sua fotografia a um novo nível de eficiência.
           </motion.p>
 
           <motion.div {...fadeUp(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
             <button
               onClick={() => nav("/auth")}
-              className="group inline-flex h-12 items-center gap-2 rounded-[10px] px-6 text-[14px] font-medium transition-all duration-300 hover:-translate-y-[1px]"
+              className="group inline-flex h-12 items-center gap-2 rounded-[10px] px-8 text-[14px] font-medium transition-all duration-300 hover:brightness-110"
               style={{
                 ...uiFont,
-                background: TOKENS.gold,
-                color: TOKENS.obsidian,
-                boxShadow: "0 18px 40px -22px rgba(201,168,124,0.9)",
+                background: TOKENS.obsidianSoft,
+                border: `1px solid ${TOKENS.hairDarkStrong}`,
+                color: TOKENS.onDark,
               }}
             >
-              Conhecer a Lunari
+              Começar agora
               <ArrowUpRight
-                className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                className="h-4 w-4 opacity-50 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100"
                 strokeWidth={1.75}
               />
             </button>
@@ -104,22 +111,20 @@ export function LunariHero() {
               onClick={() =>
                 document.getElementById("produto")?.scrollIntoView({ behavior: "smooth" })
               }
-              className="inline-flex h-12 items-center gap-2.5 rounded-[10px] border px-6 text-[14px] font-medium transition-colors"
+              className="inline-flex h-12 items-center gap-2.5 rounded-[10px] px-6 text-[14px] font-medium transition-colors hover:text-white"
               style={{
                 ...uiFont,
-                borderColor: TOKENS.hairDarkStrong,
-                color: TOKENS.onDark,
+                color: TOKENS.onDarkMuted,
               }}
             >
-              <Play className="h-4 w-4" strokeWidth={1.5} style={{ color: TOKENS.gold }} />
-              Ver demonstração
+              Ver o ecossistema
             </button>
           </motion.div>
 
           {/* ---------- Garantias em cascata ---------- */}
           <ul
-            className="mt-12 flex max-w-[560px] flex-col gap-3 border-t pt-8 md:flex-row md:flex-wrap md:gap-x-7 md:gap-y-3"
-            style={{ borderColor: TOKENS.hairDark }}
+            className="mt-14 flex max-w-[560px] flex-col gap-4 border-t pt-10 md:flex-row md:flex-wrap md:gap-x-9 md:gap-y-4"
+            style={{ borderColor: "rgba(255,255,255,0.06)" }}
           >
             {GUARANTEES.map((item, i) => (
               <motion.li
@@ -127,22 +132,36 @@ export function LunariHero() {
                 initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
                 animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: EASE, delay: 0.45 + i * 0.09 }}
-                className="flex items-center gap-2.5 text-[14px]"
-                style={{ ...uiFont, color: TOKENS.onDarkMuted }}
+                className="flex items-center gap-2.5 text-[13px] tracking-wide"
+                style={{ ...monoFont, color: TOKENS.onDarkFaint }}
               >
-                <span
-                  className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border"
-                  style={{ borderColor: "rgba(201,168,124,0.35)" }}
-                >
-                  <Check className="h-3 w-3" strokeWidth={1.75} style={{ color: TOKENS.gold }} />
-                </span>
+                <div
+                  className="h-1 w-1 rounded-full"
+                  style={{ background: TOKENS.gold, opacity: 0.4 }}
+                />
                 {item}
               </motion.li>
             ))}
           </ul>
         </div>
-      </div>
+      </motion.div>
 
+      {/* Indicador de scroll */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5, duration: 1 }}
+        style={{ opacity: contentOpacity }}
+        className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+      >
+        <TechLabel tone="dark">Explore</TechLabel>
+        <motion.div
+          animate={{ y: [0, 4, 0] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+        >
+          <ChevronDown className="h-4 w-4" style={{ color: TOKENS.gold }} strokeWidth={1.5} />
+        </motion.div>
+      </motion.div>
     </section>
   );
 }
