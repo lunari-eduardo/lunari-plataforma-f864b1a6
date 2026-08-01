@@ -68,7 +68,7 @@ export function ProblemaSection() {
                     className="mt-3 text-[16px] leading-[1.7] md:text-[17px]"
                     style={{ ...uiFont, color: "rgba(10,10,10,0.62)" }}
                   >
-                    O Lunari foi criado para que o sistema faça esse trabalho.
+                    Enquanto você fotografa, o Lunari mantém tudo conectado e organizado.
                   </p>
                 </div>
               </Reveal>
