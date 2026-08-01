@@ -9,6 +9,9 @@ import { toast } from 'sonner';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { calcularAntecipacao } from '@/lib/anticipationUtils';
 import { cn } from '@/lib/utils';
+import CheckoutShell, { CheckoutSkeleton } from './checkout/CheckoutShell';
+import ProviderCheckout, { ProviderBlock, Provedor } from './checkout/ProviderCheckout';
+import { PayerValue } from './checkout/PayerGate';
 
 const SUPABASE_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'tlnjspsywycbudhewsfv'}.supabase.co`;
 const POLL_INTERVAL = 15_000;
