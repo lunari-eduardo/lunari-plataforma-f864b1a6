@@ -1,57 +1,98 @@
-# Fluxo Financeiro — alinhamento, origem/escopo do pagamento e demonstrativo por período
+# Home: reset pós-Hero + nova Seção 01 "O problema"
 
-## 1. Alinhar todas as colunas à esquerda
+## Escopo
 
-A timeline hoje usa uma grade `grid-cols-[auto_auto_1.4fr_1fr_auto_auto_auto_auto]` sem larguras estáveis, então categoria, meio de pagamento, status e data "flutuam" entre linhas (é o desalinhamento marcado em vermelho nos prints).
+Duas entregas em um único passo:
 
-Mudanças em `FluxoTimelineRow.tsx` + `FluxoTimeline.tsx`:
-- Grade fixa e idêntica em todas as linhas e no cabeçalho:
-  `[28px_32px_minmax(0,1.6fr)_minmax(0,1fr)_120px_110px_100px_130px_16px]`
-  (seleção, ícone, cliente/descrição, categoria, origem+forma, status, data, valor, chevron).
-- Todas as células com `text-left` e `justify-start`; apenas o valor mantém alinhamento à direita dentro de uma coluna de largura fixa (números tabulares continuam alinhados entre si).
-- Adicionar uma linha de cabeçalho discreta por grupo de mês (Cliente · Categoria · Pagamento · Status · Data · Valor), usando a mesma grade — resolve a leitura das colunas sem poluir.
+1. Remover todas as seções da Home abaixo da Hero.
+2. Criar a nova primeira seção ("O problema") logo abaixo da Hero.
 
-## 2. Mostrar origem do pagamento e se é sessão ou extra
+Preservado sem qualquer alteração: Header (`SiteNav`), Hero (`LunariHero`), Footer (`SiteFooter`), tokens de cor, tipografia, espaçamentos e componentes globais.
 
-Hoje a linha mostra só `meioPagamento` (MANUAL / INFINITEPAY). Falta dizer **de onde veio** e **a que se refere**.
+## 1. Limpeza da Home
 
-Origem do dado (verificado no banco): a view `extrato_unificado` já traz `origem` (workflow/gallery/financeiro/cartao) e `meio_pagamento`, mas não traz o escopo. O escopo existe em `cobrancas.finalidade`, com os valores reais `sessao`, `fotos_extras`, `sessao_e_extras`, `avulso`.
+`src/pages/site/HomePage.tsx` passa a renderizar apenas:
 
-- Migração: recriar `extrato_unificado` adicionando a coluna `escopo`:
-  - `cob.finalidade` quando houver cobrança vinculada;
-  - senão, heurística já usada na view (descrição com "foto extra"/"[extras]" ou galeria vinculada) → `fotos_extras`;
-  - senão `sessao` para pagamentos de workflow; `NULL` para lançamentos financeiros.
-  - Manter todos os `GRANT SELECT` existentes.
-- `src/types/extrato.ts`: novos campos `escopo?: 'sessao' | 'fotos_extras' | 'sessao_e_extras' | 'avulso'` em `LinhaExtrato`.
-- Mapeamento em `useExtratoSupabase` / `extratoRepo` para popular o campo.
-- Na linha: coluna "Pagamento" passa a exibir duas informações empilhadas — forma (`MANUAL`, `INFINITEPAY`, `Cartão`) e um selo discreto de escopo (`Sessão`, `Extras`, `Sessão + Extras`, `Avulso`), com a origem (Workflow/Gallery) já indicada pelo ícone e repetida no detalhe.
-- `FluxoDetailSheet`: bloco "Pagamento" com origem, provedor, escopo e vínculo da cobrança.
-- Filtro novo em `FluxoFiltersSheet`: Escopo (Todos / Sessão / Extras), aplicado server-side junto com os demais.
+```text
+<SEOHead />        (mantido, sem mudança de copy)
+<LunariHero />     (intocado)
+<ProblemaSection />   (nova)
+```
 
-## 3. Demonstrativo preso em agosto e sem opção anual
+Deixam de ser renderizadas na Home:
+`ProblemSection`, `UnifiedFlowSection`, `GallerySection`, `AISection`, `WhatsAppSection`, `ProofSection`, `PricingSection`, `ClosingSection`.
 
-Causa confirmada: `FluxoResumoExpandable` chama `useExtrato()` de novo, criando uma **segunda instância** do hook com seu próprio `periodoFiltro`, que sempre inicia no mês corrente (agosto). O seletor Julho da barra superior altera só a instância da `FluxoFinanceiroView`. Por isso o rodapé mostra "Período: 01/08/2026 a 31/08/2026" enquanto a lista mostra julho.
+Os arquivos das seções antigas permanecem no repositório (não são deletados) porque `PricingSection` e outras podem ser reaproveitadas em `/precos` e nas próximas seções. Apenas os imports da Home saem. A `ProblemSection.tsx` atual é substituída na prática pela nova seção e fica órfã — será removida quando a nova Home estiver fechada.
 
-- `FluxoFinanceiroView` passa `demonstrativo` e `periodo` (e as transações) por props para `FluxoResumoExpandable`; o hook duplicado é removido.
-- Seletor de escopo temporal do demonstrativo dentro do bloco expandido: **Mês** (padrão, segue a barra) ou **Ano inteiro** do ano selecionado — no modo ano, o demonstrativo é calculado para `01/01–31/12` sem alterar a listagem da timeline.
-- O PDF exportado herda o mesmo período (mês ou ano), corrigindo o cabeçalho do documento.
+## 2. Nova seção "O problema"
 
-## 4. Melhorias de usabilidade do fluxo financeiro
+Novos arquivos:
 
-Priorizadas por impacto e baixo risco:
-- **Cabeçalho de mês com subtotais**: cada grupo mostra entradas/saídas/saldo do mês à direita do título.
-- **Contador de resultados** ("128 lançamentos") ao lado da busca, e chips de filtro ativo removíveis com um clique.
-- **Selecionar todos** do grupo/mês pelo cabeçalho, mantendo a seleção apenas informativa como hoje.
-- **Busca com debounce** (250 ms) para não recalcular a lista a cada tecla.
-- **Persistência de preferências** (chip ativo, regime, filtros) por usuário entre sessões.
-- **Exportar CSV** da visão filtrada, além do PDF do demonstrativo.
-- **Atalho de atraso**: chip "Atrasados" derivado do status Faturado com data vencida (a linha já calcula esse estado).
+- `src/components/landing/problema/ProblemaSection.tsx` — casca da seção, grid 2 colunas.
+- `src/components/landing/problema/FragmentToEcosystem.tsx` — composição visual da coluna direita.
+
+### Layout
+
+```text
+desktop (>=1024px)                    mobile
+┌──────────────┬──────────────┐       ┌──────────────┐
+│ texto        │ composição   │       │ texto        │
+│ (5/12)       │ (7/12)       │       ├──────────────┤
+└──────────────┴──────────────┘       │ composição   │
+                                      └──────────────┘
+```
+
+Usa `SectionShell tone="light"` (fundo `#FAFAF7`, container 1200px, py 24/32) — mesmo shell das demais seções, sem alterar o primitivo.
+
+### Coluna esquerda (texto)
+
+- `EyebrowTag index="01"` → "O custo invisível"
+- H2 em Instrument Serif (`displayFont`), 36px mobile / 52-56px desktop, tracking -0.025em:
+  "O problema não é a falta de organização. É ter que organizar tudo sozinho."
+  Com "organizar tudo sozinho" em itálico terracota `#b0632f` (único destaque de accent do bloco de texto).
+- Abaixo, as frases em linhas curtas separadas (não parágrafo corrido), cada uma com `Reveal` em cascata (delay 0.04s), 16-17px, cor `rgba(10,10,10,0.62)`, leading generoso:
+  - Seu atendimento acontece no WhatsApp.
+  - Sua agenda está em outro lugar.
+  - Os contratos ficam em outro sistema.
+  - As cobranças em outro.
+  - As fotos em outro.
+- Separador hairline, e o fecho em peso maior / cor `#0A0A0A`:
+  - "No fim do dia, quem conecta tudo é você."
+  - "O Lunari foi criado para que o sistema faça esse trabalho."
+
+Sem CTA nesta seção (ela não vende — só provoca).
+
+### Coluna direita (composição)
+
+Componente único com dois estados controlados por progresso de scroll (`useScroll` + `useTransform` do framer-motion, já usado no projeto), dentro de um bloco `sticky` no desktop com altura de ~140vh de trilho para permitir a transição sem sensação de "salto".
+
+Estado 1 — Gestão fragmentada
+- 6 mini-cards espalhados em posições levemente irregulares (rotação ±1.5°, offsets Y diferentes): WhatsApp, Agenda, Planilha, Contratos, Banco, Galeria.
+- Cada card: fundo branco, borda `TOKENS.hair`, radius 10px, ícone lucide discreto (mesmo peso, 14px, cor 45% ink), label 12px.
+- Entre eles, segmentos de linha tracejada interrompidos (SVG `stroke-dasharray`, terminando "no vazio") sugerindo conexões que não se completam.
+- Sombra baixa, uniforme.
+
+Estado 2 — Ecossistema Lunari
+- Conforme o progresso avança (0.35 → 0.85), os cards convergem para posições de órbita ao redor de um núcleo central "Lunari".
+- Núcleo: card maior, borda hairline mais forte, wordmark Lunari em Instrument Serif.
+- Labels dos cards trocam por crossfade para: Cliente, Agenda, Financeiro, Workflow, Gallery, Histórico.
+- Linhas: as tracejadas quebradas viram traços contínuos ligando cada módulo ao núcleo, desenhadas via `pathLength` animado; glow apenas como `stroke` terracota a 8-10% de opacidade sob a linha principal.
+
+### Microinterações
+- `EASE = [0.16, 1, 0.3, 1]` (token existente), durações 0.6-0.9s.
+- Fade de entrada via `Reveal`.
+- Movimento de card limitado a translate/scale suave; profundidade só por sombra (`0 8px 24px -16px rgba(10,10,10,0.18)` → `-12px` no estado conectado).
+- Sem parallax agressivo, sem blur/glass, sem gradiente forte, sem neon.
+- `useReducedMotion`: renderiza direto o Estado 2 estático, sem trilho sticky.
+
+### Responsividade
+- <1024px: sem sticky nem scroll-driven. A composição vira um bloco com dois quadros empilhados — "Hoje" (fragmentado) e "Com Lunari" (conectado) — cada um entrando com `Reveal`. Cards em grid 2×3, legibilidade preservada, nenhuma sobreposição.
+- Alturas fixas por breakpoint para evitar CLS.
 
 ## Detalhes técnicos
 
-Arquivos afetados:
-- `src/modules/finance/presentation/fluxo/FluxoTimelineRow.tsx`, `FluxoTimeline.tsx`, `FluxoFinanceiroView.tsx`, `FluxoResumoExpandable.tsx`, `FluxoFiltersSheet.tsx`, `FluxoDetailSheet.tsx`
-- `src/types/extrato.ts`, `src/hooks/useExtratoSupabase.ts`, `src/hooks/useExtrato.ts`, `src/modules/finance/infrastructure/supabase/extratoRepo.ts`, `src/modules/finance/ports/extratoRepo.ts`
-- Nova migração recriando a view `extrato_unificado` com `escopo` (view somente leitura; grants preservados)
-
-Sem mudança em regras de cálculo financeiro: totais, estornos e triggers permanecem como estão.
+- Sem novas dependências: `framer-motion` e `lucide-react` já estão no projeto.
+- Zero mudança em `primitives.tsx`, `SiteLayout.tsx`, `SiteNav`, `SiteFooter`, `LunariHero`.
+- Nenhuma cor nova: apenas `TOKENS.paper`, `TOKENS.ink`, `TOKENS.ember`, `TOKENS.hair`.
+- Linhas em SVG com `viewBox` proporcional para escalar sem recálculo em JS.
+- Sem backend, sem migração, sem mudança de rota.
