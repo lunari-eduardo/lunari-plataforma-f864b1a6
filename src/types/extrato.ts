@@ -26,6 +26,7 @@ export interface LinhaExtrato {
   observacoes?: string;
   cartao?: string; // Nome do cartão se aplicável
   meioPagamento?: string; // Provedor (asaas, mercadopago, infinitepay, manual)
+  escopo?: ExtratoEscopo; // Sessão, fotos extras, sessão + extras ou avulso
   // IDs de referência para drill-down
   referenciaId: string; // ID da transação ou pagamento original
   referenciaOrigem: ExtratoOrigem;
