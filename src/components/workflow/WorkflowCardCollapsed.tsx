@@ -116,7 +116,11 @@ export function WorkflowCardCollapsed({
     addPayment,
     onFieldUpdate,
   });
-  const { paymentInput: quickInput, setPaymentInput: setQuickInput, handlePaymentAdd, handlePaymentKeyDown } = quickPay;
+  const paymentInput = quickPay.paymentInput;
+  const setPaymentInput = quickPay.setPaymentInput;
+  const handlePaymentAdd = quickPay.handlePaymentAdd;
+  const handlePaymentKeyDown = quickPay.handlePaymentKeyDown;
+
 
 
   const handleDescriptionBlur = useCallback(() => {
