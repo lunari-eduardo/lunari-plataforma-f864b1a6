@@ -1,100 +1,72 @@
-# Seção 01 "O custo invisível" — refinamento do hub
+# Home | Nova Hero — duas colunas, fundo claro, vídeo de interface
 
-Escopo: apenas `src/components/landing/problema/FragmentToEcosystem.tsx` e uma linha de copy em `ProblemaSection.tsx`. Hero, Header, Footer, tokens, tipografia e espaçamentos permanecem intocados.
+Escopo: `src/components/landing/LunariHero.tsx` (reescrita), `src/components/landing/HeroMedia.tsx` (novo player claro `HeroInterfaceVideo`) e um novo `src/components/landing/mockups/HeroLoop.tsx` (fallback animado). Nav, Footer, Seção 01 e tokens permanecem intocados.
 
-## 1. Núcleo = símbolo da marca
+## 1. Mudança de tema da Hero
 
-O card central "Lunari / um só sistema" é removido (desktop e mobile).
+A Hero hoje é dark (obsidian + gold, vídeo full-bleed atrás do texto). Passa a ser **clara**, alinhada ao restante da Home:
 
-No lugar entra o símbolo já existente no repositório: `src/assets/branding/lunari-icon-black.png`, importado como asset ES6, renderizado a 44px (desktop) / 36px (mobile), sem card, sem borda, sem texto.
+- fundo `TOKENS.paper` (#FAFAF7), texto `TOKENS.ink`;
+- botão primário grafite (`PrimaryButton` já existente), secundário ghost com borda hairline;
+- terracota (`TOKENS.ember`) só no ponto do eyebrow e num único detalhe da composição;
+- sem gradiente forte, sem glass, sem neon. Muito espaço negativo (padding 128–160px no desktop).
 
-Para que as linhas não passem por trás dele, o símbolo fica sobre um disco do próprio fundo (`#FAFAF7`) de ~72px com halo radial suave — os traços terminam no raio desse disco, nunca no meio da arte.
+O `HeroBackgroundVideo` dark deixa de ser usado na Home (arquivo mantido para não quebrar outros imports).
 
-## 2. Layout de hub
-
-Reescrita da geometria: cada módulo tem um único traço reto que sai da borda do disco central e termina na borda do card. Nenhuma linha cruza o centro; nenhuma linha cruza outra.
+## 2. Estrutura
 
 ```text
-                 Cliente
-                    │
-    Gallery ──── (símbolo) ──── Agenda
-                 ╱     ╲
-          Workflow     Financeiro
-                    │
-                Histórico
+┌───────────────────────────┬──────────────────────────────┐
+│ eyebrow                   │                              │
+│ título (2 linhas)         │   composição visual          │
+│ subtítulo                 │   (vídeo da interface)       │
+│ [Começar teste] [Studio]  │   ~ 56% da largura           │
+│ 30 dias · sem cartão      │                              │
+└───────────────────────────┴──────────────────────────────┘
 ```
 
-Posições finais (% do palco), já com a compactação de ~15% pedida (raio médio cai de ~40% para ~34%):
+- Desktop: grid `44% / 56%`, alinhamento vertical central, `max-w-[1200px]`.
+- Mobile: coluna única — texto primeiro, composição abaixo, ainda visível na primeira dobra parcial.
 
-| Módulo | posição |
-|---|---|
-| Cliente | 50 / 16 (topo, hierarquia) |
-| Agenda | 79 / 37 |
-| Financeiro | 72 / 70 |
-| Histórico | 50 / 84 |
-| Workflow | 28 / 70 |
-| Gallery | 21 / 37 |
+## 3. Copy (exatamente como aprovado)
 
-O cálculo do traço passa a ser feito por trigonometria a partir do centro, com recuo (`inset`) no início (raio do disco) e no fim (borda do card), em vez de `M50 50 L x y` — é isso que elimina a sensação de linha passando por baixo.
+- Eyebrow: PARA FOTÓGRAFOS QUE VIVEM DA FOTOGRAFIA
+- Título: "O sistema que administra seu estúdio inteiro. Não apenas uma parte dele." — a segunda frase em `ink` a 55% de opacidade, criando hierarquia sem mudar tamanho.
+- Subtítulo: parágrafo do primeiro contato à entrega + as três negativas ("Sem retrabalho. / Sem informações espalhadas. / Sem perder tempo procurando o que já deveria estar organizado.") em bloco próprio, menor e mais claro.
+- Primário: Começar teste gratuito → `/auth`
+- Secundário: Conhecer o Studio → `/studio`
+- Abaixo: "30 dias gratuitos. Sem cartão de crédito." em 12px mono, opacidade baixa.
 
-## 3. Conexões mais presentes
+## 4. Composição visual (vídeo)
 
-- Traço principal: `rgba(10,10,10,0.18)` → `rgba(10,10,10,0.21)`, espessura `0.6` → `0.75` (non-scaling-stroke).
-- Halo terracota de apoio reduzido a `0.06` e mantido só como profundidade.
-- Nó de chegada: ponto de 1.6px na borda do card, na cor do traço, reforçando "conexão individual".
+Novo componente `HeroInterfaceVideo`:
 
-## 4. Animação em três estágios
+- moldura clara: card branco, raio 16px, borda hairline, sombra longa e discreta (`0 40px 80px -48px rgba(10,10,10,0.28)`);
+- `<video>` `muted loop playsinline preload="none"`, com `poster` como LCP;
+- fontes esperadas: `/public/media/hero-ui-1080.mp4` (desktop) e `/public/media/hero-ui-720.mp4` (mobile), `poster` `/public/media/hero-ui-poster.jpg`;
+- respeita `prefers-reduced-motion`, `saveData` e redes 2g/3g → mostra só o poster;
+- vinheta branca suave nas bordas para o vídeo "morrer" no papel em vez de terminar em corte duro.
 
-O trilho de scroll sobe de 115vh para 150vh para dar respiro aos três momentos. Progresso `p` normalizado 0→1:
+**Hoje `public/media/` está vazio** — os arquivos ainda não existem. Enquanto não houver vídeo, o componente cai automaticamente num fallback: `HeroLoop`, uma composição da interface renderizada em HTML/CSS (evolução do `HeroMockup` já existente), com uma micro-narrativa em loop lento de ~14s:
 
-| Faixa | Estágio |
-|---|---|
-| 0 → 0.30 | **Independência.** Cards nas posições fragmentadas, rotação ±1.5°, sem nenhuma linha. Os traços tracejados "no vazio" atuais são removidos — independência é dita pela ausência de conexão, não por traços quebrados. |
-| 0.30 → 0.65 | **Aproximação.** Cards migram para a órbita e trocam label por crossfade; as linhas começam a ser desenhadas (`pathLength` 0→1) partindo de fora em direção ao centro, em opacidade baixa (até ~60% do valor final). O símbolo ainda não existe. |
-| 0.65 → 1 | **Unidade.** Símbolo entra com fade de 0→1 e escala 0.92→1 entre 0.72 e 0.95 (curva `EASE = [0.16,1,0.3,1]`), as linhas completam opacidade, os pontos de conexão acendem por último. |
+1. um cliente muda de etapa no workflow;
+2. um contrato passa a "assinado";
+3. um pagamento muda de status;
+4. uma galeria aparece vinculada ao atendimento;
+5. um card discreto da Lu surge e desaparece.
 
-Cada linha recebe um `delay` derivado do índice (stagger via faixas de `useTransform` levemente escalonadas), evitando que as 6 conexões apareçam em bloco.
+Cada passo com fade de 600ms e ~2,4s de permanência. Nenhum movimento brusco, nenhum badge piscando. Assim que os MP4 forem colocados em `public/media/`, o vídeo assume sem nenhuma alteração de código.
 
-## 5. Sistema vivo (pulso)
+## 5. Animações
 
-Depois de montado, um pulso percorre as conexões a cada 6s: um `circle` de 1.2px com `offsetPath`/`motion` animando de centro → módulo, opacidade máxima 0.28, duração 1.6s, stagger de 0.12s entre módulos, `repeatDelay` de ~4.4s. Sem glow, sem neon, sem blink — só um ponto neutro grafite deslizando.
+- Entrada: fade + 20px de subida, stagger 0.08s entre eyebrow, título, subtítulo, botões e nota; composição entra com fade + escala 0.985→1 em 900ms.
+- Nenhuma animação atrelada a scroll na Hero.
+- `useReducedMotion` → tudo estático.
 
-O loop só inicia quando `p >= 0.95` (composição pronta) e pausa fora da viewport (`useInView`) para não custar CPU.
+## 6. Detalhes técnicos
 
-## 6. Microinterações de hover
-
-Ao passar o mouse num módulo:
-- card sobe 2px, sombra vai de `0 8px 24px -16px` para `0 12px 26px -14px`;
-- a linha correspondente sobe para `rgba(10,10,10,0.34)` e espessura 0.95;
-- o símbolo central escala para 1.03;
-- transição 220ms, `EASE`.
-
-Estado gerenciado por um `hovered: string | null` no `Stage`, sem re-render dos demais cards (valores via `motion` props).
-
-## 7. Copy
-
-Em `ProblemaSection.tsx`, apenas a última linha muda:
-
-- de: "O Lunari foi criado para que o sistema faça esse trabalho."
-- para: "Enquanto você fotografa, o Lunari mantém tudo conectado e organizado."
-
-Título, linhas do problema e o fecho "No fim do dia, quem conecta tudo é você." permanecem iguais.
-
-## 8. Mobile e reduced-motion
-
-- Mobile: os dois quadros ("Hoje" / "Com Lunari") continuam, mas o quadro conectado perde o card de texto e passa a mostrar o símbolo centralizado acima do grid 2×3, com traços curtos saindo dele para as duas colunas. Sem scroll-driven, sem pulso.
-- `useReducedMotion`: renderiza o estado final estático (símbolo + linhas completas), sem trilho sticky e sem pulso.
-
-## Detalhes técnicos
-
-- Sem novas dependências: `framer-motion`, `lucide-react` e o PNG do símbolo já existem.
-- Sem mudanças em `primitives.tsx`, `SiteLayout`, `SiteNav`, `SiteFooter`, `LunariHero`.
-- Cores restritas a `TOKENS.paper`, `TOKENS.ink`, `TOKENS.ember`, `TOKENS.hair`.
-- Alturas fixas por breakpoint para evitar CLS; SVG com `viewBox` proporcional.
+- Sem novas dependências (`framer-motion`, `lucide-react`, tokens existentes).
+- Altura: `min-h-[88svh]` desktop / `auto` com padding no mobile; dimensões fixas da moldura (aspect-ratio 16/10) para evitar CLS.
+- `LunariHero` continua exportado com o mesmo nome; `HomePage.tsx` não muda.
 - Sem backend, sem migração, sem mudança de rota.
-
-## Sugestões extras (padrão Apple / Linear) — opcionais
-
-1. **Anel de órbita fantasma**: círculo hairline a 2% de opacidade passando pelos 6 módulos, revelado junto ao símbolo. Reforça "um sistema" sem adicionar ruído. Recomendo incluir.
-2. **Hierarquia por peso, não por tamanho**: "Cliente" com label em `ink` sólido e os demais a 78% de opacidade — comunica o ponto de origem sem aumentar o card.
-3. **Legenda de estágio** ("Hoje" → "Com Lunari") em 10px uppercase no canto do palco, com crossfade no estágio 3 — dá leitura imediata a quem não rola devagar. Fica a seu critério; sem ela a seção é mais silenciosa.
+- SEO: `<h1>` único mantido na Hero; texto do título permanece em DOM (não em imagem/vídeo).
