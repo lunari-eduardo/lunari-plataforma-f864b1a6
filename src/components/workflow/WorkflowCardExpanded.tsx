@@ -178,6 +178,21 @@ export function WorkflowCardExpanded({
   const pendenteVisual = fin.pendenteTot;
   const pendenteSessaoSugerido = fin.pendenteSess;
 
+  // Pagamento rápido com escopo do excedente (sessão vs fotos extras)
+  const quickPay = useQuickPaymentScope({
+    sessionId: session.id,
+    pendente: Math.max(0, pendenteVisual),
+    hasGaleria,
+    valorFotoExtra: parseCurrency(String(session.valorFotoExtra || "0")),
+    qtdFotosExtraAtual: Number(session.qtdFotosExtra) || 0,
+    addPayment: addPaymentContext,
+    onFieldUpdate,
+  });
+  const paymentInput = quickPay.paymentInput;
+  const setPaymentInput = quickPay.setPaymentInput;
+  const handlePaymentAdd = quickPay.handlePaymentAdd;
+  const handlePaymentKeyDown = quickPay.handlePaymentKeyDown;
+
   let valorProdutosTotal = 0;
   if (session.produtosList && session.produtosList.length > 0) {
     valorProdutosTotal = session.produtosList
