@@ -1,50 +1,64 @@
-# Estorno de pagamento de extras (Gallery / Asaas) — plano revisado
+# Varredura — Cobrança de confirmação do agendamento (Agenda → pagamento → Workflow)
 
-## Diagnóstico confirmado no banco
+Fluxo esperado:
+`Nova sessão (sem status) → salvar como Pendente → modal de cobrança → enviar ao cliente → cliente paga → agendamento vira Confirmado → sessão aparece no Workflow hidratada.`
 
-Para a galeria `2fdd500e-…` (sessão de 07/10/2026):
+## Resultado da varredura
 
-- Cobrança de extras `a9a0247d-…`, provedor `asaas`, status `pago`, R$ 80.
-- Transação `d2530663-…` em `clientes_transacoes` com `cobranca_id` preenchido e descrição `Fotos extras (cobranca a9a0247d-…) Asaas`.
-- O `asaas_payment_id` (`pay_n36k894rtmi6h9xb`) está em `cobranca_parcelas` — **não** em `cobrancas.dados_extras`.
+O fluxo **funciona parcialmente**. As etapas de gerar link e confirmar o agendamento estão corretas para Asaas, Mercado Pago e InfinitePay. As falhas estão em: (1) quem dispara o modal, (2) o vínculo da sessão quando a cobrança nasce antes da sessão, e (3) a entrada no Workflow sem o app aberto.
 
-Duas falhas encadeadas:
+### O que está correto hoje
+- Provedores disponíveis no modal (`ProviderSelector`): Asaas, Mercado Pago, InfinitePay, PIX manual — com `is_default` respeitado.
+- Auto-confirmação por trigger: `tg_cobranca_confirm_appointment` (cobranca → `pago`) e `auto_confirm_appointment_on_payment` (`clientes_sessoes.valor_pago` sobe) promovem `a confirmar → confirmado`.
+- Webhooks: `asaas-webhook` (parcelas + `reconcile_cobranca_from_parcelas`), `mercadopago-webhook` e `infinitepay-webhook` marcam a cobrança como `pago` e disparam `ensure_transaction_on_cobranca_paid`.
+- Hidratação de stub já existe (`WorkflowSupabaseService.hydrateStubSession`).
 
-1. **Front:** o pagamento exibido vem da transação, então seu `id` é o UUID da transação. O estorno só sabe extrair a cobrança de ids no formato `asaas-…` / `asaas-parcela-…`; como não bate, aborta com "Não foi possível identificar a cobrança Asaas para estornar" — nem chama o gateway.
-2. **Edge function:** mesmo com o id certo, ela procura o `asaas_payment_id` só em `cobrancas.dados_extras`; ali não existe, então falharia depois.
+### Falhas / lacunas encontradas
 
-## Estratégia aprovada
+**F1 — O modal não abre sozinho ao salvar como Pendente.**
+`SessionPanel` só abre a cobrança se o switch "Cobrar ao salvar" estiver ligado (default desligado) e apenas em criação (`!isEdit`). O fluxo pedido é: salvou pendente → abre a cobrança.
 
-Separar por ambiente: **sandbox = estorno interno (sem gateway)**; **produção = corrigir o caminho real**.
+**F2 — No fluxo "cobrar ao salvar" não existe registro em `clientes_sessoes`.**
+O stub só é criado em `handleGerarCobranca` (modo edição). Na criação, `findCreatedSessionId` pega o `session_id` do appointment e passa ao `ChargeModal`, mas nenhuma linha em `clientes_sessoes` é criada.
+Consequência em cadeia, quando o cliente paga:
+- `ensure_transaction_on_cobranca_paid` não acha a sessão → grava a transação com `session_id = NULL` → **pagamento órfão no extrato** (exatamente os registros limpos na sessão anterior).
+- `auto_confirm_appointment_on_payment` não roda (não há `valor_pago`); só o trigger da cobrança confirma — ok, mas o valor pago não entra no card.
 
-### 1. Sandbox tratado como pagamento manual
+**F3 — Confirmação por webhook não cria a sessão do Workflow.**
+`createSessionFromAppointment` roda **apenas no cliente** (`appointments.supabase.ts → handleConfirmedSideEffects`, disparado por create/update com `status='confirmado'`). Quando o pagamento chega pelo webhook, o `UPDATE` vem do banco: o appointment fica confirmado, mas **nenhuma sessão de Workflow é criada** até alguém abrir/editar o agendamento no app.
 
-- Detectar o ambiente da integração Asaas ativa do usuário (`usuarios_integracoes.dados_extras.environment`), exposto por um hook simples de leitura.
-- Quando o ambiente for sandbox, no modal de estorno:
-  - a opção "Realizar estorno automaticamente no Asaas" fica desligada e desabilitada, com nota "ambiente de teste — estorno registrado apenas no Lunari";
-  - o estorno segue o caminho interno já existente (transação espelhada negativa / crédito do cliente), sem chamar a edge function;
-  - liberar também a exclusão do pagamento, igual a um pagamento manual.
-- Nada muda no comportamento em produção.
+**F4 — `pago_manual` não confirma o agendamento.**
+`tg_cobranca_confirm_appointment` só testa `NEW.status = 'pago'`. PIX manual confirmado e `confirm-payment-manual` gravam `pago_manual` → agendamento continua pendente.
 
-### 2. Produção — resolver a cobrança corretamente
+**F5 — Trigger só cobre `UPDATE OF status`.**
+Cobranças criadas já como `pago` (INSERT direto, ex.: confirmação manual imediata) não disparam a confirmação.
 
-- Propagar `cobrancaId` (e `parcelaId` quando existir) da transação para o objeto de pagamento, usando a coluna `cobranca_id`, em vez de depender de prefixo no id.
-- No estorno, resolver a cobrança nesta ordem: `payment.cobrancaId` → prefixos `asaas-parcela-` / `asaas-` (retrocompatível) → consulta da transação pelo id. Só então mostrar erro.
+**F6 — `handleGerarCobranca` exige `appointment.sessionId`.**
+Se o agendamento existir sem `session_id`, o botão abre o modal sem stub e sem vínculo — mesmo efeito do F2.
 
-### 3. Produção — fallback do `asaas_payment_id` na edge function
+**F7 — Sem feedback de retorno no painel.**
+Não há realtime/poll do status da cobrança dentro do `SessionPanel`; o usuário não vê o agendamento virar Confirmado sem recarregar.
 
-- Quando `cobrancas.dados_extras` não tiver o id, buscar em `cobranca_parcelas` pela `cobranca_id` (parcela paga/confirmada, menor número de parcela). Só depois retornar erro.
-- Registrar em log o ambiente usado (sandbox/produção) para evitar estorno cruzado.
+## Correções propostas (ondas)
 
-### 4. Mensagens de erro
+**Onda 1 — vínculo da sessão antes de qualquer cobrança (crítico)**
+- Extrair um helper único `ensureSessionStub(appointmentId, sessionId, dados)` usado tanto por `handleGerarCobranca` quanto pelo fluxo "cobrar ao salvar", criando o stub (`status: ''`, `detalhes.stub_cobranca = true`) sempre antes de abrir o `ChargeModal`.
+- Remover a dependência de `appointment.sessionId`: gerar/gravar `session_id` no appointment quando ausente.
 
-Exibir a mensagem real devolvida pela edge function/gateway em vez de texto genérico.
+**Onda 2 — banco: confirmar e materializar**
+- Ampliar `tg_cobranca_confirm_appointment` para `status IN ('pago','pago_manual')` e para `AFTER INSERT OR UPDATE`.
+- Nova função `ensure_workflow_session_on_confirm()` (trigger em `appointments`, `status → confirmado`): cria `clientes_sessoes` a partir do appointment + pacote quando não existir, ou completa o stub (paridade server-side com `hydrateStubSession`). Resolve F3 sem depender do app aberto.
+- Fallback em `ensure_transaction_on_cobranca_paid`: se não achar sessão pelo `session_id`, tentar via `appointments.session_id` antes de zerar o vínculo.
 
-## Arquivos afetados
+**Onda 3 — UX do painel**
+- Ao salvar com status "Pendente" (criação ou edição), abrir o `ChargeModal` automaticamente; manter o switch apenas como opt-out ("não cobrar agora").
+- Após gerar o link, exibir ação primária "Enviar ao cliente" (WhatsApp) já presente em `ChargeLinkSection`.
+- Assinatura realtime em `cobrancas` + `appointments` dentro do `SessionPanel` para o chip de status virar "Confirmado" sozinho e mostrar o atalho "Abrir no Workflow".
 
-- `src/hooks/useSessionPayments.ts` — `cobrancaId` na montagem do pagamento, resolução robusta no `refundPayment`, bypass do gateway em sandbox.
-- `src/types/sessionPayments.ts` — campos opcionais `cobrancaId` / `parcelaId`.
-- Modal de estorno (`src/components/payments/…`) — estado do switch e liberação de exclusão em sandbox.
-- `supabase/functions/gestao-asaas-refund/index.ts` — fallback via `cobranca_parcelas` + log de ambiente.
+**Onda 4 — verificação**
+- Matriz de teste por provedor (Asaas PIX/link/parcelado, Mercado Pago PIX/link, InfinitePay link, PIX manual): cobrança criada → sessão stub existe → webhook → cobrança `pago` → transação com `session_id` preenchido → appointment `confirmado` → card no Workflow com pacote e valor pago corretos.
 
-Sem migração de banco; nenhum registro financeiro existente é alterado.
+## Detalhes técnicos
+- Arquivos: `src/components/agenda/session-panel/SessionPanel.tsx`, `src/modules/agenda/infrastructure/appointments.supabase.ts`, `src/services/WorkflowSupabaseService.ts`, `src/components/cobranca/ChargeModal.tsx`.
+- Banco: `tg_cobranca_confirm_appointment`, `auto_confirm_appointment_on_payment`, `ensure_transaction_on_cobranca_paid`, nova trigger em `appointments`.
+- Nenhuma alteração nos webhooks é necessária — a correção é no vínculo e nas triggers.
