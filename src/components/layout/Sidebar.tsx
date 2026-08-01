@@ -173,10 +173,11 @@ export default function Sidebar() {
     leaveTimer.current = window.setTimeout(() => setIsHovered(false), 120);
   }, []);
 
+  // Itens marcados como adminOnly ficam invisíveis para o fotógrafo comum.
   const navItems = [
     { to: "/app", icon: <LayoutGrid size={14} />, label: "Início", end: true },
     { to: "/app/agenda", icon: <CalendarClock size={14} />, label: "Agenda" },
-    { to: "/app/leads", icon: <Filter size={14} />, label: "Leads", isPro: true },
+    { to: "/app/leads", icon: <Filter size={14} />, label: "Leads", isPro: true, adminOnly: true },
     { to: "/app/workflow", icon: <GitBranch size={14} />, label: "Workflow" },
     { to: "/app/tarefas", icon: <CheckSquare size={14} />, label: "Tarefas", isPro: true },
     { to: "/app/financas", icon: <Wallet size={14} />, label: "Finanças", isPro: true },
@@ -186,8 +187,9 @@ export default function Sidebar() {
     
     { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" },
     { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" },
-    { to: "/app/hub", icon: <Brain size={14} />, label: "Hub de IA" },
-  ];
+    { to: "/app/hub", icon: <Brain size={14} />, label: "Hub de IA", adminOnly: true },
+  ].filter(item => !item.adminOnly || accessState.isAdmin);
+
 
   const isStarterPlan = accessState.planCode?.startsWith('starter') &&
     !accessState.isAdmin && !accessState.isVip && !accessState.isAuthorized;
