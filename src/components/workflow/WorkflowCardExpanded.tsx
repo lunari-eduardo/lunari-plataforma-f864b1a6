@@ -132,35 +132,8 @@ export function WorkflowCardExpanded({
     }
   }, [obsValue, session.observacoes, session.id, onFieldUpdate]);
 
-  const paymentSubmittingRef = useRef(false);
-  const handlePaymentAdd = useCallback(async () => {
-    if (paymentSubmittingRef.current) return;
-    const raw = paymentInput.trim();
-    const value = parseFloat(raw.replace(",", "."));
-    if (!raw || isNaN(value) || value <= 0) return;
+  // Pagamento rápido com escopo do excedente — declarado após `hasGaleria`.
 
-    paymentSubmittingRef.current = true;
-    setPaymentInput("");
-    try {
-      await addPaymentContext(session.id, value);
-    } catch (error) {
-      setPaymentInput(raw);
-      console.error("❌ Erro ao adicionar pagamento:", error);
-    } finally {
-      paymentSubmittingRef.current = false;
-    }
-  }, [paymentInput, addPaymentContext, session.id]);
-
-  const handlePaymentKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (paymentSubmittingRef.current) return;
-        handlePaymentAdd();
-      }
-    },
-    [handlePaymentAdd],
-  );
 
   const valorPacoteDisplay = formatCurrency(parseCurrency(String(session.valorPacote || "0")));
 
