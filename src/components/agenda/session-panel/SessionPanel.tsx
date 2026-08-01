@@ -709,8 +709,13 @@ export default function SessionPanel({
                 </div>
               ) : !cobranca ? (
                 <p className="text-xs text-muted-foreground">Nenhuma cobrança criada.</p>
-              ) : cobranca.status === 'pago' ? (
+              ) : ['pago', 'pago_manual'].includes(cobranca.status) ? (
                 <p className="text-sm text-lunar-success">✓ Pago</p>
+              ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) ? (
+                <p className="text-xs text-muted-foreground">
+                  Cobrança {cobranca.status}. Gere uma nova cobrança para reenviar ao cliente.
+                </p>
+
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-xs text-muted-foreground">
