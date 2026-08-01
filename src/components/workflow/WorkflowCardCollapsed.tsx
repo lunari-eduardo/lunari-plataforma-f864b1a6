@@ -107,35 +107,17 @@ export function WorkflowCardCollapsed({
     fin.pendenteTot,
   ]);
 
-  const paymentSubmittingRef = useRef(false);
-  const handlePaymentAdd = useCallback(async () => {
-    if (paymentSubmittingRef.current) return;
-    const raw = paymentInput.trim();
-    const value = parseFloat(raw.replace(",", "."));
-    if (!raw || isNaN(value) || value <= 0) return;
+  const quickPay = useQuickPaymentScope({
+    sessionId: session.id,
+    pendente: Math.max(0, calculateRestante()),
+    hasGaleria,
+    valorFotoExtra: parseSignedMoney(session.valorFotoExtra),
+    qtdFotosExtraAtual: Number(session.qtdFotosExtra) || 0,
+    addPayment,
+    onFieldUpdate,
+  });
+  const { paymentInput: quickInput, setPaymentInput: setQuickInput, handlePaymentAdd, handlePaymentKeyDown } = quickPay;
 
-    paymentSubmittingRef.current = true;
-    setPaymentInput("");
-    try {
-      await addPayment(session.id, value);
-    } catch (error) {
-      setPaymentInput(raw);
-      console.error("❌ Erro ao adicionar pagamento:", error);
-    } finally {
-      paymentSubmittingRef.current = false;
-    }
-  }, [paymentInput, addPayment, session.id]);
-
-  const handlePaymentKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (paymentSubmittingRef.current) return;
-        handlePaymentAdd();
-      }
-    },
-    [handlePaymentAdd],
-  );
 
   const handleDescriptionBlur = useCallback(() => {
     if (descriptionValue !== session.descricao) {
