@@ -106,7 +106,20 @@ Deno.serve(async (req) => {
 
       const extras = (cobranca.dados_extras || {}) as any;
       asaasPaymentId = extras.asaas_payment_id || extras.paymentId || null;
+
+      // Fallback: extras de galeria guardam o id apenas em cobranca_parcelas
+      if (!asaasPaymentId) {
+        const { data: parcelas } = await supabase
+          .from('cobranca_parcelas')
+          .select('asaas_payment_id')
+          .eq('cobranca_id', cobrancaId)
+          .not('asaas_payment_id', 'is', null)
+          .order('numero_parcela', { ascending: true })
+          .limit(1);
+        asaasPaymentId = parcelas?.[0]?.asaas_payment_id || null;
+      }
     }
+
 
     if (!asaasPaymentId) {
       return new Response(
