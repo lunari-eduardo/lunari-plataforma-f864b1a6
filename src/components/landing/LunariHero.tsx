@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, Play, Sparkles } from "lucide-react";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { ArrowUpRight, Check, Play, Sparkles, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { EASE, TOKENS, displayFont, monoFont, uiFont } from "./primitives";
 import { HeroBackgroundVideo } from "./HeroMedia";
