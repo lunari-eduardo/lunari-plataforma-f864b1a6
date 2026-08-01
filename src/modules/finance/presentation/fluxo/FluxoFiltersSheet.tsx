@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal } from 'lucide-react';
-import type { FiltrosExtrato, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
+import type { FiltrosExtrato, ExtratoOrigem, ExtratoStatus, ExtratoEscopo } from '@/types/extrato';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 
 interface FluxoFiltersSheetProps {
