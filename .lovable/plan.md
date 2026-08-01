@@ -1,26 +1,57 @@
-# Ocultar Hub de IA, Leads e Assistente para usuários comuns
+# Fluxo Financeiro — alinhamento, origem/escopo do pagamento e demonstrativo por período
 
-Hoje `Hub de IA` e `Leads` aparecem no menu de todos os usuários, e `Integrações` tem uma aba "Assistente" duplicando o que já vive no Hub. Objetivo: tudo isso passa a ser visível somente para admin, e a aba Assistente deixa de existir em Integrações (seu conteúdo já está no Hub).
+## 1. Alinhar todas as colunas à esquerda
 
-## O que muda
+A timeline hoje usa uma grade `grid-cols-[auto_auto_1.4fr_1fr_auto_auto_auto_auto]` sem larguras estáveis, então categoria, meio de pagamento, status e data "flutuam" entre linhas (é o desalinhamento marcado em vermelho nos prints).
 
-### 1. Menu lateral
-- Itens `Leads` e `Hub de IA` só aparecem quando a conta é admin (desktop, tablet e menu "Mais" do mobile).
-- Usuário comum não vê nem o ícone nem o atalho.
+Mudanças em `FluxoTimelineRow.tsx` + `FluxoTimeline.tsx`:
+- Grade fixa e idêntica em todas as linhas e no cabeçalho:
+  `[28px_32px_minmax(0,1.6fr)_minmax(0,1fr)_120px_110px_100px_130px_16px]`
+  (seleção, ícone, cliente/descrição, categoria, origem+forma, status, data, valor, chevron).
+- Todas as células com `text-left` e `justify-start`; apenas o valor mantém alinhamento à direita dentro de uma coluna de largura fixa (números tabulares continuam alinhados entre si).
+- Adicionar uma linha de cabeçalho discreta por grupo de mês (Cliente · Categoria · Pagamento · Status · Data · Valor), usando a mesma grade — resolve a leitura das colunas sem poluir.
 
-### 2. Rotas protegidas
-- `/app/leads`, `/app/hub` e as telas do assistente (`/app/assistente/mcp`, `/app/assistente/aprovacoes`, `/app/configuracoes/assistente-mcp`) passam a exigir admin.
-- Acesso direto pela URL por não-admin cai em "página não encontrada" (mesmo comportamento de rota inexistente, para não revelar o recurso).
+## 2. Mostrar origem do pagamento e se é sessão ou extra
 
-### 3. Integrações
-- Remoção da aba "Assistente" (gatilho + conteúdo). Integrações fica com Pagamentos, Assinatura e Calendar.
-- O card "Assistente Lu · MCP" e seus botões passam a viver no Hub de IA, dentro da aba **Conexões**, acima da lista de tokens — nada de funcionalidade é perdida.
+Hoje a linha mostra só `meioPagamento` (MANUAL / INFINITEPAY). Falta dizer **de onde veio** e **a que se refere**.
+
+Origem do dado (verificado no banco): a view `extrato_unificado` já traz `origem` (workflow/gallery/financeiro/cartao) e `meio_pagamento`, mas não traz o escopo. O escopo existe em `cobrancas.finalidade`, com os valores reais `sessao`, `fotos_extras`, `sessao_e_extras`, `avulso`.
+
+- Migração: recriar `extrato_unificado` adicionando a coluna `escopo`:
+  - `cob.finalidade` quando houver cobrança vinculada;
+  - senão, heurística já usada na view (descrição com "foto extra"/"[extras]" ou galeria vinculada) → `fotos_extras`;
+  - senão `sessao` para pagamentos de workflow; `NULL` para lançamentos financeiros.
+  - Manter todos os `GRANT SELECT` existentes.
+- `src/types/extrato.ts`: novos campos `escopo?: 'sessao' | 'fotos_extras' | 'sessao_e_extras' | 'avulso'` em `LinhaExtrato`.
+- Mapeamento em `useExtratoSupabase` / `extratoRepo` para popular o campo.
+- Na linha: coluna "Pagamento" passa a exibir duas informações empilhadas — forma (`MANUAL`, `INFINITEPAY`, `Cartão`) e um selo discreto de escopo (`Sessão`, `Extras`, `Sessão + Extras`, `Avulso`), com a origem (Workflow/Gallery) já indicada pelo ícone e repetida no detalhe.
+- `FluxoDetailSheet`: bloco "Pagamento" com origem, provedor, escopo e vínculo da cobrança.
+- Filtro novo em `FluxoFiltersSheet`: Escopo (Todos / Sessão / Extras), aplicado server-side junto com os demais.
+
+## 3. Demonstrativo preso em agosto e sem opção anual
+
+Causa confirmada: `FluxoResumoExpandable` chama `useExtrato()` de novo, criando uma **segunda instância** do hook com seu próprio `periodoFiltro`, que sempre inicia no mês corrente (agosto). O seletor Julho da barra superior altera só a instância da `FluxoFinanceiroView`. Por isso o rodapé mostra "Período: 01/08/2026 a 31/08/2026" enquanto a lista mostra julho.
+
+- `FluxoFinanceiroView` passa `demonstrativo` e `periodo` (e as transações) por props para `FluxoResumoExpandable`; o hook duplicado é removido.
+- Seletor de escopo temporal do demonstrativo dentro do bloco expandido: **Mês** (padrão, segue a barra) ou **Ano inteiro** do ano selecionado — no modo ano, o demonstrativo é calculado para `01/01–31/12` sem alterar a listagem da timeline.
+- O PDF exportado herda o mesmo período (mês ou ano), corrigindo o cabeçalho do documento.
+
+## 4. Melhorias de usabilidade do fluxo financeiro
+
+Priorizadas por impacto e baixo risco:
+- **Cabeçalho de mês com subtotais**: cada grupo mostra entradas/saídas/saldo do mês à direita do título.
+- **Contador de resultados** ("128 lançamentos") ao lado da busca, e chips de filtro ativo removíveis com um clique.
+- **Selecionar todos** do grupo/mês pelo cabeçalho, mantendo a seleção apenas informativa como hoje.
+- **Busca com debounce** (250 ms) para não recalcular a lista a cada tecla.
+- **Persistência de preferências** (chip ativo, regime, filtros) por usuário entre sessões.
+- **Exportar CSV** da visão filtrada, além do PDF do demonstrativo.
+- **Atalho de atraso**: chip "Atrasados" derivado do status Faturado com data vencida (a linha já calcula esse estado).
 
 ## Detalhes técnicos
 
-- Novo guard `RequireAdmin` (padrão do `RequireAssistantAccess`), usando `useAccessControl().accessState.isAdmin`; enquanto carrega mostra spinner, se não for admin renderiza `NotFound`.
-- `PhotographerApp.tsx`: envolver as rotas `leads`, `hub`, `assistente/*` e `configuracoes/assistente-mcp` com `RequireAdmin` (mantendo o `PlanRestrictionGuard` do Leads por dentro).
-- `Sidebar.tsx`: `navItems` passa a ser um `useMemo` filtrado por `accessState.isAdmin` via flag `adminOnly` nos itens de Leads e Hub. Como o mobile usa `navItems.slice(0,4)`, a grade continua com 4 itens + "Mais" após a filtragem.
-- `IntegracoesTab.tsx`: remover `TabsTrigger`/`TabsContent` de `assistente`, o `useAssistantAccess` e imports órfãos; ajustar `grid-cols` da `TabsList` para 3.
-- Novo componente `src/components/hub/HubConexoesAssistente.tsx` com o card MCP movido; renderizado na aba `conexoes` do `Hub.tsx` antes de `<AssistenteMcpTokens />`.
-- Sem mudanças de banco, RLS ou Edge Functions: é ocultação de superfície de UI; as permissões reais do assistente continuam regidas por `assistant_access` / grants existentes.
+Arquivos afetados:
+- `src/modules/finance/presentation/fluxo/FluxoTimelineRow.tsx`, `FluxoTimeline.tsx`, `FluxoFinanceiroView.tsx`, `FluxoResumoExpandable.tsx`, `FluxoFiltersSheet.tsx`, `FluxoDetailSheet.tsx`
+- `src/types/extrato.ts`, `src/hooks/useExtratoSupabase.ts`, `src/hooks/useExtrato.ts`, `src/modules/finance/infrastructure/supabase/extratoRepo.ts`, `src/modules/finance/ports/extratoRepo.ts`
+- Nova migração recriando a view `extrato_unificado` com `escopo` (view somente leitura; grants preservados)
+
+Sem mudança em regras de cálculo financeiro: totais, estornos e triggers permanecem como estão.
