@@ -474,6 +474,40 @@ export default function PublicCheckout() {
     );
   }
 
+  const provedorAtual = (data.provedor ?? 'asaas') as string;
+
+  // ——— Provedores não-Asaas: mesma casca, painel próprio ———
+  if (provedorAtual !== 'asaas') {
+    const payerValue: PayerValue = {
+      nome: payerName,
+      email: payerEmail,
+      telefone: payerPhone,
+      cpfCnpj: payerCpf,
+    };
+    return (
+      <CheckoutShell
+        photographer={data.photographer}
+        valor={data.cobranca.valor}
+        descricao={data.cobranca.descricao}
+      >
+        <Sonner />
+        <ProviderCheckout
+          provedor={provedorAtual as Provedor}
+          cobrancaId={data.cobranca.id}
+          provider={data.provider || {}}
+          payer={payerValue}
+          onPayerChange={(v) => {
+            setPayerName(v.nome);
+            setPayerEmail(v.email);
+            setPayerPhone(v.telefone);
+            setPayerCpf(v.cpfCnpj);
+          }}
+          onPaid={() => setPixConfirmed(true)}
+        />
+      </CheckoutShell>
+    );
+  }
+
   const { cobranca, photographer, settings } = data;
   const bothTabs = settings.habilitarPix && settings.habilitarCartao;
 
