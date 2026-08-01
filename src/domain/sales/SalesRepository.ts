@@ -105,6 +105,8 @@ export class SalesRepositoryImpl implements SalesRepository {
           monthIndex: cur.monthIndex,
           revenueCurrent: cur.revenue,
           revenuePrevious: prev?.revenue ?? 0,
+          contractedRevenueCurrent: cur.contractedRevenue,
+          contractedRevenuePrevious: prev?.contractedRevenue ?? 0,
           sessionsCurrent: cur.sessions,
           sessionsPrevious: prev?.sessions ?? 0,
           averageTicketCurrent: cur.averageTicket,
@@ -121,6 +123,10 @@ export class SalesRepositoryImpl implements SalesRepository {
         limitMonth: filters.month != null ? filters.month : limitMonth,
         metrics: {
           totalRevenue: computeComparison(baseMetricsLimited.totalRevenue, previousMetrics.totalRevenue),
+          contractedRevenue: computeComparison(
+            baseMetricsLimited.contractedRevenue ?? 0,
+            previousMetrics.contractedRevenue ?? 0
+          ),
           totalSessions: computeComparison(baseMetricsLimited.totalSessions, previousMetrics.totalSessions),
           averageTicket: computeComparison(baseMetricsLimited.averageTicket, previousMetrics.averageTicket),
           extraPhotosRevenue: computeComparison(
@@ -132,6 +138,7 @@ export class SalesRepositoryImpl implements SalesRepository {
             previousMetrics.expectedRevenue ?? 0
           )
         },
+
         monthlyData: monthlyComparative
       };
     }
