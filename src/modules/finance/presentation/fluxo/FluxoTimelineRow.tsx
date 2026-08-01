@@ -67,21 +67,25 @@ const FluxoTimelineRow = memo(function FluxoTimelineRow({
 
   return (
     <div
-      className="group grid grid-cols-[auto_auto_1.4fr_1fr_auto_auto_auto_auto] items-center gap-3 px-2 py-2.5 rounded-md hover:bg-muted/40 transition-colors cursor-pointer"
+      className={cn(
+        'group grid grid-cols-[auto_auto_1.4fr_1fr_auto_auto_auto_auto] items-center gap-3 px-2 py-2.5 rounded-md transition-colors cursor-pointer',
+        selected ? 'bg-muted/60' : 'hover:bg-muted/40',
+      )}
       onClick={() => onOpen(linha)}
     >
       {/* Checkbox */}
       <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleSelect(linha.id);
-        }}
+        onClick={(e) => e.stopPropagation()}
         className={cn(
           'flex items-center justify-center w-6 transition-opacity',
           selected || anySelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
         )}
       >
-        <Checkbox checked={selected} onCheckedChange={() => onToggleSelect(linha.id)} />
+        <Checkbox
+          checked={selected}
+          aria-label={selected ? 'Remover da seleção' : 'Selecionar lançamento'}
+          onCheckedChange={() => onToggleSelect(linha.id)}
+        />
       </div>
 
       {/* Ícone */}
