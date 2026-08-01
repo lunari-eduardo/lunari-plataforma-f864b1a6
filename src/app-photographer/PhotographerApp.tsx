@@ -160,10 +160,11 @@ export default function PhotographerApp() {
                   <PlanRestrictionGuard requiredPlan="pro"><AnaliseVendas /></PlanRestrictionGuard>
                 } />
                 <Route path="configuracoes" element={<Configuracoes />} />
-                <Route path="configuracoes/assistente-mcp" element={<RequireAssistantAccess><AssistenteMcpTokens /></RequireAssistantAccess>} />
-                <Route path="assistente/mcp" element={<RequireAssistantAccess><AssistenteMcpTokens /></RequireAssistantAccess>} />
-                <Route path="assistente/aprovacoes" element={<RequireAssistantAccess><AssistenteAprovacoes /></RequireAssistantAccess>} />
-                <Route path="hub" element={<Hub />} />
+                <Route path="configuracoes/assistente-mcp" element={<RequireAdmin><RequireAssistantAccess><AssistenteMcpTokens /></RequireAssistantAccess></RequireAdmin>} />
+                <Route path="assistente/mcp" element={<RequireAdmin><RequireAssistantAccess><AssistenteMcpTokens /></RequireAssistantAccess></RequireAdmin>} />
+                <Route path="assistente/aprovacoes" element={<RequireAdmin><RequireAssistantAccess><AssistenteAprovacoes /></RequireAssistantAccess></RequireAdmin>} />
+                <Route path="hub" element={<RequireAdmin><Hub /></RequireAdmin>} />
+
                 <Route path="inteligencia" element={<Navigate to="/app/hub" replace />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
                 <Route path="integracoes" element={<Integracoes />} />
