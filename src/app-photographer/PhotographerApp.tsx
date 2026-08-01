@@ -10,6 +10,7 @@ import Precificacao from "@/pages/Precificacao";
 import Configuracoes from "@/pages/Configuracoes";
 import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
 import { RequireAssistantAccess } from "@/modules/assistant/runtime/RequireAssistantAccess";
+import { RequireAdmin } from "@/components/auth/RequireAdmin";
 import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
 import Hub from "@/pages/Hub";
 import ClienteDetalhe from "@/pages/ClienteDetalhe";
