@@ -15,6 +15,11 @@ const GUARANTEES = [
 export function LunariHero() {
   const nav = useNavigate();
   const reduce = useReducedMotion();
+  const { scrollY } = useScroll();
+  
+  const contentOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const contentY = useTransform(scrollY, [0, 400], [0, -40]);
+  const videoOpacity = useTransform(scrollY, [0, 600], [0.7, 0.4]);
 
   const fadeUp = (delay: number) => ({
     initial: reduce ? {} : { opacity: 0, y: 20 },
