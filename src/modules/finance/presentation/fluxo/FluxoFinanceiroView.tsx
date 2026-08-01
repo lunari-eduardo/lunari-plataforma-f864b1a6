@@ -313,12 +313,8 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onOpenOrigin={extrato.abrirOrigem}
       />
 
-      <FluxoBulkBar
-        count={selectedIds.size}
-        onClear={clearSelection}
-        onMarkPaid={handleBulkMarkPaid}
-        onDelete={handleBulkDelete}
-      />
+
+
 
       <ConfirmDialog
         state={dialogState}
