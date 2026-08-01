@@ -98,6 +98,8 @@ interface PayerMissing {
 }
 
 interface CheckoutData {
+  provedor?: string;
+  provider?: ProviderBlock;
   cobranca: { id: string; valor: number; descricao: string; status: string };
   photographer: { name: string | null; logoUrl: string | null; userId: string };
   settings: {
