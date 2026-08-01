@@ -1,16 +1,12 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CreditCard, Calendar, Crown, FileSignature, Bot } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { CreditCard, Calendar, Crown, FileSignature } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { PaymentSettings } from '@/components/integracoes/PaymentSettings';
 import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
 import { AutentiqueCard } from '@/components/integracoes/AutentiqueCard';
 import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
 import { useAccessControl } from '@/hooks/useAccessControl';
-import { useAssistantAccess } from '@/modules/assistant/runtime/useAssistantAccess';
 import { toast } from 'sonner';
 import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT } from '@/components/layout/PageTabs';
 
@@ -18,7 +14,6 @@ export function IntegracoesTab() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { refetch: refetchGoogleCalendar } = useGoogleCalendarIntegration();
   const { hasPro } = useAccessControl();
-  const { allowed: assistantAllowed } = useAssistantAccess();
 
   // Handle Google Calendar OAuth callbacks
   useEffect(() => {
