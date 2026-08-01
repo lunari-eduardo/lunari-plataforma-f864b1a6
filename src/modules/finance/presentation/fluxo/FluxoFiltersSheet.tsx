@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal } from 'lucide-react';
-import type { FiltrosExtrato, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
+import type { FiltrosExtrato, ExtratoOrigem, ExtratoStatus, ExtratoEscopo } from '@/types/extrato';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 
 interface FluxoFiltersSheetProps {
@@ -83,6 +83,23 @@ const FluxoFiltersSheet = memo(function FluxoFiltersSheet({
               <SelectItem value="Pago">Pago</SelectItem>
               <SelectItem value="Faturado">Faturado</SelectItem>
               <SelectItem value="Agendado">Agendado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Escopo do pagamento</Label>
+          <Select
+            value={filtros.escopo ?? 'todos'}
+            onValueChange={(v) => onChange({ escopo: v as ExtratoEscopo | 'todos' })}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="sessao">Sessão</SelectItem>
+              <SelectItem value="fotos_extras">Fotos extras</SelectItem>
+              <SelectItem value="sessao_e_extras">Sessão + extras</SelectItem>
+              <SelectItem value="avulso">Avulso</SelectItem>
             </SelectContent>
           </Select>
         </div>

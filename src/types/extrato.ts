@@ -1,6 +1,8 @@
 export type ExtratoTipo = 'entrada' | 'saida';
 export type ExtratoOrigem = 'workflow' | 'financeiro' | 'cartao' | 'gallery';
 export type ExtratoStatus = 'Pago' | 'Faturado' | 'Agendado';
+// Escopo do pagamento (a que se refere o valor recebido)
+export type ExtratoEscopo = 'sessao' | 'fotos_extras' | 'sessao_e_extras' | 'avulso';
 
 // Regime contábil
 export type RegimeContabil = 'caixa' | 'competencia';
@@ -24,6 +26,7 @@ export interface LinhaExtrato {
   observacoes?: string;
   cartao?: string; // Nome do cartão se aplicável
   meioPagamento?: string; // Provedor (asaas, mercadopago, infinitepay, manual)
+  escopo?: ExtratoEscopo; // Sessão, fotos extras, sessão + extras ou avulso
   // IDs de referência para drill-down
   referenciaId: string; // ID da transação ou pagamento original
   referenciaOrigem: ExtratoOrigem;
@@ -66,6 +69,7 @@ export interface FiltrosExtrato {
   tipo?: ExtratoTipo | 'todos';
   origem?: ExtratoOrigem | 'todos';
   status?: ExtratoStatus | 'todos';
+  escopo?: ExtratoEscopo | 'todos';
   formaPagamento?: string;
   cliente?: string;
   busca?: string;

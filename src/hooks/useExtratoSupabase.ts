@@ -6,7 +6,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LinhaExtrato, ExtratoTipo, ExtratoStatus, ExtratoOrigem } from '@/types/extrato';
+import { LinhaExtrato, ExtratoTipo, ExtratoStatus, ExtratoOrigem, ExtratoEscopo } from '@/types/extrato';
 
 export type RegimeContabil = 'caixa' | 'competencia';
 
@@ -36,6 +36,7 @@ function mapLinhasExtrato(data: any[], regime: RegimeContabil): LinhaExtrato[] {
       observacoes: row.observacoes || undefined,
       cartao: row.cartao || undefined,
       meioPagamento: row.meio_pagamento || undefined,
+      escopo: (row.escopo as ExtratoEscopo) || undefined,
       referenciaId: row.id,
       referenciaOrigem: row.origem,
       // Datas auxiliares para indicação visual na tabela
@@ -54,6 +55,7 @@ interface UseExtratoSupabaseParams {
   tipo?: ExtratoTipo | 'todos';
   origem?: ExtratoOrigem | 'todos';
   status?: ExtratoStatus | 'todos';
+  escopo?: ExtratoEscopo | 'todos';
 }
 
 export function useExtratoSupabase({
@@ -64,7 +66,8 @@ export function useExtratoSupabase({
   regime = 'caixa',
   tipo,
   origem,
-  status
+  status,
+  escopo
 }: UseExtratoSupabaseParams = {}) {
   const queryClient = useQueryClient();
 
@@ -73,7 +76,7 @@ export function useExtratoSupabase({
 
   // ============= QUERY PAGINADA COM FILTROS SERVER-SIDE =============
   const { data: resultado, isLoading } = useQuery({
-    queryKey: ['extrato-unificado', regime, dataInicio, dataFim, page, pageSize, tipo, origem, status],
+    queryKey: ['extrato-unificado', regime, dataInicio, dataFim, page, pageSize, tipo, origem, status, escopo],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -102,6 +105,11 @@ export function useExtratoSupabase({
       }
       if (status && status !== 'todos') {
         query = query.eq('status', status);
+      }
+      if (escopo && escopo !== 'todos') {
+        query = escopo === 'fotos_extras'
+          ? query.in('escopo', ['fotos_extras', 'sessao_e_extras'])
+          : query.eq('escopo', escopo);
       }
 
       query = query.range(from, to);

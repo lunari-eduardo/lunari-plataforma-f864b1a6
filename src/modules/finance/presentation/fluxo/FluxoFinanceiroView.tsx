@@ -154,6 +154,19 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
+  const toggleGroup = (ids: string[], selecionarTodos: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (selecionarTodos ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  };
+
+  // Marcar como pago direto na linha (sem abrir o painel)
+  const handleMarkPaidRow = async (linha: LinhaExtrato) => {
+    await financas.marcarComoPago(linha.referenciaId);
+  };
+
   // Seleção — apenas informativa: soma nas métricas superiores
   const resumoSelecao = useMemo(() => {
     let entradas = 0;
@@ -174,6 +187,7 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
   // Filtros aplicados totalizados
   const filtrosAtivos =
     (extrato.filtros.origem && extrato.filtros.origem !== 'todos' ? 1 : 0) +
+    (extrato.filtros.escopo && extrato.filtros.escopo !== 'todos' ? 1 : 0) +
     (extrato.filtros.cliente ? 1 : 0) +
     (extrato.filtros.formaPagamento ? 1 : 0) +
     (valorMin ? 1 : 0) +
@@ -253,21 +267,25 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
       />
 
       {/* Resumo Financeiro expandível */}
-      <FluxoResumoExpandable
-        receita={resumo.entradas}
-        despesas={resumo.saidas}
-        lucro={resumo.saldo}
-        resultadoAcumulado={extrato.resumo?.saldoEfetivo ?? resumo.saldo}
-        saldoPrevisto={extrato.resumo?.saldoProjetado ?? resumo.saldo}
-      />
+      <FluxoResumoExpandable ano={filtroMesAno.ano} mes={filtroMesAno.mes} />
 
       {/* Timeline */}
       <div className="pt-4 pb-24">
+        {!extrato.isLoading && (
+          <div className="pb-2 text-[11px] text-muted-foreground">
+            {linhasVisiveis.length === 1
+              ? '1 lançamento'
+              : `${linhasVisiveis.length} lançamentos`}
+            {extrato.filtros.escopo && extrato.filtros.escopo !== 'todos' ? ' · filtrado por escopo' : ''}
+          </div>
+        )}
         <FluxoTimeline
           linhas={linhasVisiveis}
           isLoading={extrato.isLoading}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
+          onToggleGroup={toggleGroup}
+          onMarkPaid={handleMarkPaidRow}
           onOpen={setDetailLinha}
           highlightId={highlightId}
         />

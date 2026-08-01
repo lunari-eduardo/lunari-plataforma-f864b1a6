@@ -1,26 +1,35 @@
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { useExtrato } from '@/hooks/useExtrato';
+import { useDemonstrativoFinanceiro } from '@/hooks/useDemonstrativoFinanceiro';
+import { useRegimeContabil } from '@/hooks/useRegimeContabil';
 import DemonstrativoSimplificado from '@/components/financas/DemonstrativoSimplificado';
 
 interface FluxoResumoExpandableProps {
-  receita: number;
-  despesas: number;
-  lucro: number;
-  resultadoAcumulado: number;
-  saldoPrevisto: number;
+  /** Período atualmente selecionado no Fluxo (mês/ano) */
+  ano: number;
+  mes: number;
 }
 
-const FluxoResumoExpandable = memo(function FluxoResumoExpandable(_props: FluxoResumoExpandableProps) {
-  const [open, setOpen] = useState(false);
-  const extrato = useExtrato();
+type Escopo = 'mes' | 'ano';
 
-  const demonstrativo = extrato.demonstrativo;
-  const inicio = extrato.filtros?.dataInicio || '';
-  const fim = extrato.filtros?.dataFim || '';
-  const transactions = (extrato as any).transacoesRaw || [];
+const FluxoResumoExpandable = memo(function FluxoResumoExpandable({ ano, mes }: FluxoResumoExpandableProps) {
+  const [open, setOpen] = useState(false);
+  const [escopo, setEscopo] = useState<Escopo>('mes');
+  const { regime } = useRegimeContabil();
+
+  // O demonstrativo acompanha o período do Fluxo (ou o ano inteiro, se escolhido)
+  const { inicio, fim } = useMemo(() => {
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (escopo === 'ano') {
+      return { inicio: `${ano}-01-01`, fim: `${ano}-12-31` };
+    }
+    return { inicio: fmt(new Date(ano, mes - 1, 1)), fim: fmt(new Date(ano, mes, 0)) };
+  }, [ano, mes, escopo]);
+
+  const { demonstrativo, isLoading } = useDemonstrativoFinanceiro(inicio, fim, regime, open);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -30,16 +39,32 @@ const FluxoResumoExpandable = memo(function FluxoResumoExpandable(_props: FluxoR
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="py-6 px-2">
-          {demonstrativo ? (
+          <div className="flex items-center justify-center gap-1 pb-4">
+            {(['mes', 'ano'] as Escopo[]).map((op) => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => setEscopo(op)}
+                className={cn(
+                  'h-7 px-3 rounded-full text-xs font-medium transition-colors',
+                  escopo === op
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                )}
+              >
+                {op === 'mes' ? 'Mês selecionado' : `Ano ${ano}`}
+              </button>
+            ))}
+          </div>
+
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground text-center py-8">Calculando demonstrativo…</div>
+          ) : (
             <DemonstrativoSimplificado
               demonstrativo={demonstrativo}
               periodo={{ inicio, fim }}
-              transactions={transactions}
+              transactions={[]}
             />
-          ) : (
-            <div className="text-sm text-muted-foreground text-center py-8">
-              Sem dados suficientes para o demonstrativo neste período.
-            </div>
           )}
         </div>
       </CollapsibleContent>

@@ -4,7 +4,7 @@
  */
 
 import { useExtratoSupabase, RegimeContabil } from './useExtratoSupabase';
-import { ExtratoTipo, ExtratoOrigem, ExtratoStatus } from '@/types/extrato';
+import { ExtratoTipo, ExtratoOrigem, ExtratoStatus, ExtratoEscopo } from '@/types/extrato';
 
 interface UseExtratoDataParams {
   dataInicio?: string;
@@ -15,6 +15,7 @@ interface UseExtratoDataParams {
   tipo?: ExtratoTipo | 'todos';
   origem?: ExtratoOrigem | 'todos';
   status?: ExtratoStatus | 'todos';
+  escopo?: ExtratoEscopo | 'todos';
 }
 
 export function useExtratoData({
@@ -25,14 +26,15 @@ export function useExtratoData({
   regime,
   tipo,
   origem,
-  status
+  status,
+  escopo
 }: UseExtratoDataParams = {}) {
   const { 
     linhasExtrato, 
     totalCount, 
     totalPages, 
     isLoading 
-  } = useExtratoSupabase({ dataInicio, dataFim, page, pageSize, regime, tipo, origem, status });
+  } = useExtratoSupabase({ dataInicio, dataFim, page, pageSize, regime, tipo, origem, status, escopo });
 
   return {
     linhasExtrato,
