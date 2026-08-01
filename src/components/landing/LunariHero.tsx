@@ -72,11 +72,11 @@ export function LunariHero() {
 
           <motion.p
             {...fadeUp(0.16)}
-            className="mt-7 max-w-[520px] text-[16px] leading-[1.65] md:text-[17px]"
+            className="mt-7 max-w-[540px] text-[16px] leading-[1.65] md:text-[18px]"
             style={{ ...uiFont, color: TOKENS.onDarkMuted }}
           >
-            CRM, contratos, pagamentos, workflow, galerias e IA trabalhando juntos para
-            eliminar tarefas repetitivas e liberar o que realmente importa: fotografar.
+            Construído por quem entende a rotina real de um estúdio profissional. 
+            Uma plataforma unificada para elevar sua fotografia a um novo nível de eficiência.
           </motion.p>
 
           <motion.div {...fadeUp(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
