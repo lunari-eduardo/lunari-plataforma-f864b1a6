@@ -286,7 +286,8 @@ export default function PublicCheckout() {
   // Auto-gerar PIX quando o CRM já enviou todos os dados necessários
   useEffect(() => {
     if (autoPixRef.current) return;
-    if (!data || tab !== 'pix' || !data.settings.habilitarPix) return;
+    if (!data || (data.provedor ?? 'asaas') !== 'asaas') return;
+    if (tab !== 'pix' || !data.settings.habilitarPix) return;
     if (pixCopiaECola || pixLoading || pixError) return;
     if (!noMissingFields) return;
     if (!validateCpfCnpj(payerCpf)) return;
