@@ -497,6 +497,9 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
               valorLiquido: valorLiq,
               taxaTotal,
+              cobrancaId: c.id,
+              sandbox: (origem === 'asaas' && asaasSandbox) || undefined,
+
             });
           }
         }
