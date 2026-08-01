@@ -662,6 +662,15 @@ export function WorkflowCardExpanded({
 
 
 
+      <QuickPaymentScopeDialog
+        open={quickPay.scopeOpen}
+        excedente={quickPay.excedente}
+        valorFotoExtra={parseCurrency(String(session.valorFotoExtra || "0"))}
+        onCancel={quickPay.cancelScope}
+        onScopeSessao={quickPay.chooseSessao}
+        onScopeExtras={quickPay.chooseExtras}
+      />
+
       <OverrideExtrasDialog
         pendingExtraEdit={pendingExtraEdit}
         onConfirm={confirmExtraEdit}
