@@ -246,7 +246,11 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         entradas={resumo.entradas}
         saidas={resumo.saidas}
         saldo={resumo.saldo}
-        selecionados={selectedIds.size}
+        selecionados={resumoSelecao.count}
+        selecaoEntradas={resumoSelecao.entradas}
+        selecaoSaidas={resumoSelecao.saidas}
+        selecaoSaldo={resumoSelecao.saldo}
+        onClearSelection={clearSelection}
       />
 
       {/* Resumo Financeiro expandível */}
