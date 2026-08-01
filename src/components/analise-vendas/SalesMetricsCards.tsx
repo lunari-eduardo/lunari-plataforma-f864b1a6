@@ -41,23 +41,24 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
     }).format(value);
   };
 
-  const expectedRevenue = (metrics as any).expectedRevenue ?? 0;
+  const expectedRevenue = (metrics as any).contractedRevenue ?? (metrics as any).expectedRevenue ?? 0;
   const pendingRevenue = (metrics as any).pendingRevenue ?? 0;
+  const averageTicketReceived = (metrics as any).averageTicketReceived ?? 0;
 
   const metricsCards = [
     {
-      title: 'Receita Total',
+      title: 'Receita Recebida',
       value: formatCurrency(metrics.totalRevenue),
       icon: TrendingUp,
-      subtitle: undefined as string | undefined,
+      subtitle: 'Caixa no período' as string | undefined,
       comparison: comparison?.metrics.totalRevenue,
     },
     {
-      title: 'Valor Previsto',
+      title: 'Valor Contratado',
       value: formatCurrency(expectedRevenue),
       icon: Wallet,
-      subtitle: pendingRevenue > 0 ? `A receber: ${formatCurrency(pendingRevenue)}` : undefined,
-      comparison: comparison?.metrics.expectedRevenue,
+      subtitle: pendingRevenue > 0 ? `A receber: ${formatCurrency(pendingRevenue)}` : 'Pacote + extras − desconto',
+      comparison: comparison?.metrics.contractedRevenue ?? comparison?.metrics.expectedRevenue,
     },
     {
       title: 'Sessões',
@@ -70,11 +71,11 @@ export function SalesMetricsCards({ metrics, comparison }: SalesMetricsCardsProp
       title: 'Ticket Médio',
       value: formatCurrency(metrics.averageTicket),
       icon: Receipt,
-
-      subtitle: undefined,
+      subtitle: `Recebido: ${formatCurrency(averageTicketReceived)}`,
       comparison: comparison?.metrics.averageTicket,
     }
   ];
+
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
