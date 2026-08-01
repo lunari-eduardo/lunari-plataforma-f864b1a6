@@ -37,6 +37,7 @@ export function useExtrato() {
     tipo: filtersState.filtros.tipo,
     origem: filtersState.filtros.origem,
     status: filtersState.filtros.status,
+    escopo: filtersState.filtros.escopo,
   });
 
   // Aplicar filtros client-side restantes (busca/cliente/ordenação) sobre página atual

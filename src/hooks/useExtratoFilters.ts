@@ -90,6 +90,13 @@ export function aplicarFiltrosClientSide(
   if (filtros.status && filtros.status !== 'todos') {
     resultado = resultado.filter(l => l.status === filtros.status);
   }
+  if (filtros.escopo && filtros.escopo !== 'todos') {
+    resultado = resultado.filter(l =>
+      filtros.escopo === 'fotos_extras'
+        ? l.escopo === 'fotos_extras' || l.escopo === 'sessao_e_extras'
+        : l.escopo === filtros.escopo
+    );
+  }
 
   if (filtros.cliente) {
     resultado = resultado.filter(l =>
