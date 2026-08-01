@@ -304,6 +304,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        provedor: 'asaas',
         cobranca: {
           id: cobranca.id,
           valor: cobranca.valor,
