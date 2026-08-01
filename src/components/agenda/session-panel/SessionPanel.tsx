@@ -295,11 +295,11 @@ export default function SessionPanel({
    * Localiza o session_id do agendamento recém-criado (fluxo "cobrar ao salvar").
    * Faz algumas tentativas curtas porque a criação é assíncrona.
    */
-  const findCreatedSessionId = async (
+  const findCreatedSession = async (
     clienteId: string,
     date: Date,
     time: string,
-  ): Promise<string | null> => {
+  ): Promise<{ sessionId: string; appointmentId: string } | null> => {
     const dateStr = formatDateForStorage(date);
     for (let attempt = 0; attempt < 6; attempt++) {
       try {
@@ -308,15 +308,17 @@ export default function SessionPanel({
         if (userId) {
           const { data } = await supabase
             .from('appointments')
-            .select('session_id, created_at')
+            .select('id, session_id, created_at')
             .eq('user_id', userId)
             .eq('cliente_id', clienteId)
             .eq('date', dateStr)
             .eq('time', time)
             .order('created_at', { ascending: false })
             .limit(1);
-          const sid = (data as any[])?.[0]?.session_id;
-          if (sid) return sid as string;
+          const row = (data as any[])?.[0];
+          if (row?.session_id) {
+            return { sessionId: row.session_id as string, appointmentId: row.id as string };
+          }
         }
       } catch {
         /* tenta de novo */
@@ -324,6 +326,55 @@ export default function SessionPanel({
       await new Promise(r => setTimeout(r, 500));
     }
     return null;
+  };
+
+  /**
+   * Garante que exista uma linha em `clientes_sessoes` para o agendamento antes de
+   * qualquer cobrança — evita transações órfãs quando o pagamento é confirmado.
+   * Idempotente.
+   */
+  const ensureSessionStub = async (
+    sessionId: string,
+    appointmentId: string | undefined,
+    clienteId: string,
+    date: Date,
+    time: string,
+  ): Promise<boolean> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { data: existing } = await supabase
+        .from('clientes_sessoes')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) return true;
+
+      const { error: insertErr } = await supabase.from('clientes_sessoes').insert({
+        user_id: user.id,
+        cliente_id: clienteId,
+        session_id: sessionId,
+        appointment_id: appointmentId ?? null,
+        data_sessao: formatDateForStorage(date),
+        hora_sessao: time,
+        categoria: packageCategoryName || 'Sessão',
+        pacote: (selectedPackage as any)?.nome || null,
+        // Mesmo status usado na criação oficial da sessão (WorkflowSupabaseService)
+        status: '',
+        valor_total: valorPacote || form.paidAmount || 0,
+        valor_base_pacote: valorPacote || 0,
+        valor_pago: 0,
+        detalhes: { stub_cobranca: true } as any,
+        tipo_registro: 'workflow',
+      });
+      if (insertErr) return false;
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const handleSave = async () => {
@@ -348,8 +399,23 @@ export default function SessionPanel({
 
           // Fluxo "Cobrar ao salvar": abre o modal de cobrança logo após criar
           if (!isEdit && cobrarAoSalvar && resolved.clienteId) {
-            const sid = await findCreatedSessionId(resolved.clienteId, parsedDate, finalTime);
-            setChargeSessionId(sid);
+            const created = await findCreatedSession(resolved.clienteId, parsedDate, finalTime);
+            if (!created) {
+              toast.error('Não foi possível preparar a cobrança. Abra a sessão e tente novamente.');
+              return;
+            }
+            const ok = await ensureSessionStub(
+              created.sessionId,
+              created.appointmentId,
+              resolved.clienteId,
+              parsedDate,
+              finalTime,
+            );
+            if (!ok) {
+              toast.error('Erro ao preparar cobrança. Abra a sessão e tente novamente.');
+              return;
+            }
+            setChargeSessionId(created.sessionId);
             setShowCharge(true);
           }
         },
@@ -374,43 +440,15 @@ export default function SessionPanel({
 
     // Garantir vínculo da sessão antes da cobrança (idempotente)
     if (appointment?.sessionId) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: existing } = await supabase
-            .from('clientes_sessoes')
-            .select('id')
-            .eq('session_id', appointment.sessionId)
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (!existing) {
-            const { error: insertErr } = await supabase.from('clientes_sessoes').insert({
-              user_id: user.id,
-              cliente_id: form.clienteId,
-              session_id: appointment.sessionId,
-              appointment_id: appointment.id,
-              data_sessao: formatDateForStorage(form.date),
-              hora_sessao: form.time,
-              categoria: packageCategoryName || 'Sessão',
-              pacote: (selectedPackage as any)?.nome || null,
-              // Mesmo status usado na criação oficial da sessão (WorkflowSupabaseService)
-              status: '',
-              valor_total: valorPacote || form.paidAmount || 0,
-              valor_base_pacote: valorPacote || 0,
-              valor_pago: 0,
-              detalhes: { stub_cobranca: true } as any,
-              tipo_registro: 'workflow',
-
-            });
-            if (insertErr) {
-              toast.error('Erro ao preparar cobrança. Tente novamente.');
-              return;
-            }
-          }
-        }
-      } catch {
-        toast.error('Erro ao preparar cobrança.');
+      const ok = await ensureSessionStub(
+        appointment.sessionId,
+        appointment.id,
+        form.clienteId,
+        form.date,
+        form.time,
+      );
+      if (!ok) {
+        toast.error('Erro ao preparar cobrança. Tente novamente.');
         return;
       }
 
@@ -426,6 +464,7 @@ export default function SessionPanel({
 
     setShowCharge(true);
   };
+
 
   const statusMeta = STATUS_META[form.status];
   const contextLine = [
