@@ -85,8 +85,10 @@ export default function Hub() {
           <HubAutomacoes />
         </TabsContent>
         <TabsContent value="conexoes" className="mt-4">
+          <HubConexoesAssistente />
           <AssistenteMcpTokens />
         </TabsContent>
+
         <TabsContent value="atividade" className="mt-4">
           <HubAtividade />
         </TabsContent>
