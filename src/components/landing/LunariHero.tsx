@@ -113,8 +113,8 @@ export function LunariHero() {
 
           {/* ---------- Garantias em cascata ---------- */}
           <ul
-            className="mt-12 flex max-w-[560px] flex-col gap-3 border-t pt-8 md:flex-row md:flex-wrap md:gap-x-7 md:gap-y-3"
-            style={{ borderColor: TOKENS.hairDark }}
+            className="mt-14 flex max-w-[560px] flex-col gap-4 border-t pt-10 md:flex-row md:flex-wrap md:gap-x-9 md:gap-y-4"
+            style={{ borderColor: "rgba(255,255,255,0.06)" }}
           >
             {GUARANTEES.map((item, i) => (
               <motion.li
@@ -122,15 +122,13 @@ export function LunariHero() {
                 initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
                 animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: EASE, delay: 0.45 + i * 0.09 }}
-                className="flex items-center gap-2.5 text-[14px]"
-                style={{ ...uiFont, color: TOKENS.onDarkMuted }}
+                className="flex items-center gap-2.5 text-[13px] tracking-wide"
+                style={{ ...monoFont, color: TOKENS.onDarkFaint }}
               >
-                <span
-                  className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border"
-                  style={{ borderColor: "rgba(201,168,124,0.35)" }}
-                >
-                  <Check className="h-3 w-3" strokeWidth={1.75} style={{ color: TOKENS.gold }} />
-                </span>
+                <div
+                  className="h-1 w-1 rounded-full"
+                  style={{ background: TOKENS.gold, opacity: 0.4 }}
+                />
                 {item}
               </motion.li>
             ))}
