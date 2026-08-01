@@ -436,11 +436,7 @@ export default function PublicCheckout() {
 
   // ═══════════════════ RENDER ═══════════════════
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(30,20%,97%)]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <CheckoutSkeleton />;
   }
 
   if (error || !data) {
