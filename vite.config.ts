@@ -58,7 +58,7 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'lovable-uploads/caa859cc-c72e-4964-b21b-1cad68a4a9a5.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       manifest: {
         name: 'Lunari Studio',
         short_name: 'Lunari Studio',
