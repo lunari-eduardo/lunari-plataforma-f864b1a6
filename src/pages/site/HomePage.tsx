@@ -18,7 +18,7 @@ export default function HomePage() {
         ogType="website"
       />
       <LunariHero />
-      <ProblemaSection />
+      <RotinaSection />
     </>
   );
 }
