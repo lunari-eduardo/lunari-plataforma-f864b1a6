@@ -1,5 +1,5 @@
 import { LunariHero } from "@/components/landing/LunariHero";
-import { ProblemaSection } from "@/components/landing/problema/ProblemaSection";
+import { RotinaSection } from "@/components/landing/rotina/RotinaSection";
 import { SEOHead } from "@/components/seo/SEOHead";
 
 /**
@@ -18,7 +18,7 @@ export default function HomePage() {
         ogType="website"
       />
       <LunariHero />
-      <ProblemaSection />
+      <RotinaSection />
     </>
   );
 }
