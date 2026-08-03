@@ -24,7 +24,7 @@ export function ProblemSection() {
           style={displayFont}
         >
           Você não tem problema de clientes.{" "}
-          <span className="italic text-[#b0632f]">Tem problema de sistema.</span>
+          <span className="italic" style={{ color: "#C9A87C" }}>Tem problema de sistema.</span>
         </h2>
       </Reveal>
 
@@ -59,8 +59,8 @@ export function ProblemSection() {
             <Stat n="0" label="visão real" />
           </div>
           <p
-            className="mt-10 text-[20px] italic text-[#b0632f] md:text-[24px]"
-            style={displayFont}
+            className="mt-10 text-[20px] italic md:text-[24px]"
+            style={{ ...displayFont, color: "#C9A87C" }}
           >
             Isso não é organização. É sobrevivência.
           </p>
