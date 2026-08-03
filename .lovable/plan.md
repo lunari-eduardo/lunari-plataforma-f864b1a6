@@ -1,50 +1,42 @@
-# Home | Seção 03 — "Uma única linha. Do primeiro contato à entrega."
+# Home | Seção 03 — Timeline em scroll travado (sem imagem)
 
-## Correção de DNA (antes da seção)
+## Objetivo
 
-O DNA do site cita "terracota" como acento. Isso é revogado: o único acento do site passa a ser **dourado fosco `#C9A87C`** (token `TOKENS.gold`), com preto `#0B0B0B`, off-white `#F7F5F2` e branco.
+Remover a imagem editorial da Seção 03 e transformar a seção em um bloco de leitura guiada: título fixo à esquerda, timeline à direita, e a página só avança para a próxima seção depois que o último item da timeline for revelado.
 
-- Atualizar `docs/constitution/DESIGN_DNA_SITE.md`: seção "Cores" passa a listar escuro, claro, dourado fosco; remover qualquer menção a terracota.
-- Atualizar a memória `mem://constitution/design-dna-site-v1` com a mesma regra.
-- Trocar o `TOKENS.ember` remanescente no eyebrow da Seção 02 (`RotinaSection.tsx`) por `TOKENS.gold`.
+## Mudanças
 
-Também fica registrado que o ritmo escuro→claro admite exceção narrativa: Seção 02 e 03 compartilham o mesmo fundo claro, porque a mudança é de conteúdo, não de cor (regra explícita deste briefing). Isso será anotado no DNA para não gerar conflito futuro.
+### 1. Remover o visual
+- Deletar a coluna da direita com `fluxoImg` em `FluxoSection.tsx`.
+- Remover o import e o asset `src/assets/home-fluxo.jpg`.
 
-## Nova seção
+### 2. Estrutura sticky (desktop)
+- A seção vira um container alto (`height: 260vh`) que serve de "trilho" de scroll.
+- Dentro dele, um bloco `sticky top-0 h-screen` centraliza o conteúdo: enquanto o usuário rola esses 260vh, a tela permanece na Seção 03 — só libera para a Seção 04 quando a timeline chega ao item 07.
+- Grid interno: 40–45% texto (esquerda) / 55–60% timeline (direita), mantendo a alternância do DNA (Seção 02 teve visual à esquerda).
 
-Novo arquivo `src/components/landing/fluxo/FluxoSection.tsx`, montado em `HomePage.tsx` logo após `RotinaSection`.
+### 3. Coluna esquerda (fixa)
+- Eyebrow `• O FLUXO`, título em duas linhas e subtítulo, sem alteração de copy.
+- Fica visualmente parado durante todo o trecho sticky (não é sticky isolado: o pai já está travado).
 
-- Fundo `#F7F5F2`, texto `#0B0B0B`, sem contraste de cor com a seção anterior.
-- Desktop: grid 45% (texto + timeline) / 55% (composição visual), coluna de texto à esquerda — mantém a alternância do DNA (Seção 02 teve visual à esquerda).
-- Mobile: título → subtítulo → timeline → imagem.
-- Padding generoso (`py-28 md:py-40`), sem cards, caixas, sombras, ícones ou setas.
+### 4. Coluna direita — timeline
+- Ocupa 90% da altura da seção visível (`h-[90vh]`, com `max-h` de segurança), com os 7 itens distribuídos verticalmente (`justify-between`) — respiro proporcional em vez de gap fixo.
+- Linha vertical de 1px `rgba(11,11,11,0.14)` percorrendo toda a coluna.
+- Ponto dourado 7px derivado de `scrollYProgress` do trilho, indo de 0% a 100% da linha.
+- Progresso mapeado para o índice ativo: item atinge contraste pleno (título 100%, descrição fade-in) quando o ponto o alcança. Nenhum outro efeito.
+- Descrições permanecem curtas (1–2 linhas) para caber em 90vh sem scroll interno.
 
-### Copy
+### 5. Mobile
+- Sem sticky e sem trilho de 260vh: a seção volta ao fluxo normal, título → subtítulo → timeline empilhados, altura automática e espaçamento fixo entre itens.
+- O ponto dourado continua acompanhando o scroll da lista.
 
-- Eyebrow: `• O FLUXO` (sem numeração), mono, tracking largo, ponto em dourado.
-- Título (h2, cor explícita `#0B0B0B`): "Uma única linha." / "Do primeiro contato à entrega." em duas linhas.
-- Subtítulo: "Cada etapa continua exatamente de onde a anterior terminou."
-
-### Timeline
-
-Sete itens (01 Lead, 02 Agenda, 03 Contrato, 04 Sessão, 05 Galeria de seleção, 06 Pagamentos, 07 Entrega) com número, título e descrição curta exatamente como na copy enviada.
-
-- Só texto. Número em mono 11px dourado-neutro, título 16–17px, descrição 14–15px em `rgba(11,11,11,0.55)`.
-- Respiro alto entre itens (`gap` ~40px desktop), mas altura total contida: descrições em uma ou duas linhas.
-- Linha vertical única de 1px preta (`rgba(11,11,11,0.14)`) percorrendo todos os itens à esquerda.
-- Um único ponto dourado fosco (6px) sobre a linha, cuja posição é derivada do progresso de scroll da seção (`useScroll` + `useTransform`).
-- Conforme o ponto passa por cada etapa, aquele item ganha contraste (título vai de 45% para 100% de opacidade; descrição faz fade-in). Nenhum outro efeito.
-- `useReducedMotion`: ponto fica estático no topo e todos os itens ficam em contraste pleno.
-
-### Visual (coluna direita)
-
-Uma única composição editorial, gerada como imagem em `src/assets/home-fluxo.jpg`, retrato 4:5, sem moldura e sem sombra: uma sequência limpa e vertical de fragmentos de interface do Lunari (cliente → agenda → contrato → pagamento → sessão → galeria) sobre off-white, apenas preto/off-white/dourado, muito espaço negativo. Nada de dashboard, screenshot ou múltiplas janelas. Sticky discreto no desktop para acompanhar a leitura da timeline; parallax mínimo.
+### 6. Acessibilidade e motion
+- `useReducedMotion`: sem sticky travado (altura natural), ponto estático no topo e todos os itens em contraste pleno.
+- Semântica mantida: `<ol>` com um `<li>` por etapa, h2 único na seção.
 
 ## Arquivos
 
-- Novo: `src/components/landing/fluxo/FluxoSection.tsx`
-- Novo asset: `src/assets/home-fluxo.jpg`
-- Editar: `src/pages/site/HomePage.tsx`, `src/components/landing/rotina/RotinaSection.tsx` (acento dourado)
-- Editar docs/memória: `docs/constitution/DESIGN_DNA_SITE.md`, `.lovable/memory/constitution/design-dna-site-v1.md`
+- Editar: `src/components/landing/fluxo/FluxoSection.tsx`
+- Remover: `src/assets/home-fluxo.jpg`
 
-Sem backend, sem dependências novas. SEO: apenas `alt` descritivo na imagem; h2 único na seção (h1 continua na Hero).
+Sem backend, sem dependências novas, sem mudanças de copy.
