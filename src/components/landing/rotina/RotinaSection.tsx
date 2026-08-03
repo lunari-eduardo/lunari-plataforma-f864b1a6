@@ -65,14 +65,14 @@ export function RotinaSection() {
                 className="text-[11px] uppercase tracking-[0.26em] md:text-[12px]"
                 style={{ ...monoFont, color: "rgba(11,11,11,0.45)" }}
               >
-                01 <span style={{ color: TOKENS.ember }}>•</span> UMA ROTINA QUE CRESCE
+                <span style={{ color: TOKENS.ember }}>•</span> UMA ROTINA QUE CRESCE
               </p>
             </Fade>
 
             <Fade delay={0.08}>
               <h2
                 className="mt-8 max-w-[520px] text-[34px] leading-[1.06] tracking-[-0.03em] md:text-[52px]"
-                style={{ ...uiFont, fontWeight: 600 }}
+                style={{ ...uiFont, fontWeight: 600, color: SITE_DARK }}
               >
                 Administrar um estúdio nunca foi apenas fotografar.
               </h2>
