@@ -50,7 +50,7 @@ const SidebarItem = memo(({
 export default function MinhaConta() {
   const [activeTab, setActiveTab] = useState('perfil');
   const { user } = useAuth();
-  const { profile, saveProfile, getProfileOrDefault, uploadLogo, deleteLogo, isLoading } = useUserProfile();
+  const { profile, saveProfile, getProfileOrDefault, uploadLogo, deleteLogo, loading: isLoading } = useUserProfile();
   const [formData, setFormData] = useState<Partial<UserProfile>>(() => getProfileOrDefault());
   const validation = useFormValidation(formData);
 
