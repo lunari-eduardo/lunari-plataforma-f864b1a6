@@ -62,7 +62,7 @@ export function ProductSection({
   return (
     <section
       id={id}
-      className="relative w-full overflow-hidden py-24 md:py-36"
+      className="relative w-full overflow-hidden py-20 md:py-36"
       style={{ background: bg, color: fg }}
     >
       {softTop && (
