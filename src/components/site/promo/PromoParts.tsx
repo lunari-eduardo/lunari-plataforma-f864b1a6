@@ -53,7 +53,7 @@ export function PromoStrip({ promo }: { promo: SitePromotion }) {
               className="hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] md:inline-block"
               style={{
                 ...monoFont,
-                background: TOKENS.emberOnDark,
+                background: "#C9A87C",
                 color: TOKENS.paper,
               }}
             >
@@ -76,7 +76,7 @@ export function PromoStrip({ promo }: { promo: SitePromotion }) {
             className="rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors hover:opacity-80"
             style={{
               ...uiFont,
-              background: TOKENS.emberOnDark,
+              background: "#C9A87C",
               color: TOKENS.paper,
             }}
           >
@@ -110,7 +110,7 @@ export function PromoBadge({
       className="rounded-full px-2.5 py-1 text-[9px] uppercase tracking-[0.16em]"
       style={{
         ...monoFont,
-        background: tone === "dark" ? TOKENS.emberOnDark : TOKENS.ember,
+        background: "#C9A87C",
         color: "#FFFFFF",
         boxShadow:
           tone === "dark"
@@ -146,7 +146,7 @@ export function PromoPriceLabel({
       </span>
       <span
         className="text-[11px] font-medium uppercase tracking-[0.12em]"
-        style={{ color: tone === "dark" ? TOKENS.emberOnDark : TOKENS.ember }}
+        style={{ color: "#C9A87C" }}
       >
         promoção
       </span>
