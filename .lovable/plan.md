@@ -1,63 +1,45 @@
-# Home | Seções 04, 05 e 06 — Studio, Gallery e Lunari
+# Home | Seção Lunari Studio — ilustração como protagonista
 
-## Ritmo e continuidade
+## Situação
 
-Seção 03 (O fluxo) é clara. A sequência fica:
+A seção hoje é textual demais: chips de funcionalidades à esquerda e uma timeline desenhada em JSX à direita. O ajuste substitui tudo isso por uma única ilustração premium.
 
-```text
-04 Studio   escuro  #0B0B0B   texto esquerda (40) / visual direita (60)
-05 Gallery  claro   #F7F5F2   visual esquerda (60) / texto direita (40)
-06 Lunari   escuro  #0B0B0B   texto esquerda (40) / visual direita (60)
-```
+## Etapa 1 — Imagem
 
-Alternância de fundo e de lado respeitada. Acento único: dourado fosco `#C9A87C`.
+A imagem enviada nesta mensagem **não pôde ser lida** pelo ambiente (erro de leitura no arquivo). Preciso que seja reenviada antes da implementação.
 
-Observação sobre a copy: pela regra já registrada do site, eyebrows não recebem numeração. Serão renderizados como `• LUNARI STUDIO`, `• LUNARI GALLERY`, `• LUNARI`. Todo o resto da copy entra exatamente como enviado.
+Ao receber, ela vira um asset do projeto (ponteiro CDN em `src/assets/`), importado direto na seção. Sem cópia de binário no repositório.
 
-## Etapa 1 — Primitivas compartilhadas
-
-Novo arquivo `src/components/landing/shared/ProductSection.tsx` com três peças reutilizadas pelas três seções:
-
-- `ProductSection` — casca com fundo (`dark`/`light`), padding vertical generoso, grid 40/60 com `order` invertível, empilhamento mobile texto → visual, tudo alinhado à esquerda.
-- `Chips` — lista de rótulos em tipografia pura: texto pequeno, tracking largo, separador por espaçamento (sem caixa, sem ícone, sem borda). Hover: cor sobe para dourado, transição 200ms.
-- `ProductCTA` — link em texto com seta `→`; hover desloca a seta 4px e sublinha em dourado.
-
-Fade + translate Y de 12px na entrada via `Reveal` existente. Nenhuma animação dependente de scroll.
-
-Transição suave entre seção clara e escura: faixa de 96px no topo da seção escura com gradiente vertical do tom claro anterior para `#0B0B0B` (apenas transição de fundo, não é elemento decorativo).
-
-## Etapa 2 — Seção 04, Studio
+## Etapa 2 — Lado esquerdo (45%)
 
 Arquivo: `src/components/landing/studio/StudioSection.tsx`
 
-- Texto (40%): eyebrow, headline em Instrument Serif italic dourada, título em duas linhas (Geist 600), parágrafos curtos com respiro, chips, CTA para `/studio`.
-- Visual (60%): composição ilustrativa única em SVG/React — **"a linha do atendimento"**: uma coluna vertical de finas linhas horizontais de larguras diferentes representando marcos de um mesmo atendimento (agenda, contrato, pagamento, seleção, entrega), com rótulos discretos em mono e um único ponto dourado marcando o estado atual. Ocupa quase toda a altura da seção, sem moldura, sem card, sem sombra, fundindo-se ao fundo. Não repete a composição da Hero nem o hub da Seção 01.
+- Tag: `• LUNARI STUDIO` (sem numeração, conforme regra do site).
+- Headline serif dourada: "Fotografar já dá trabalho suficiente."
+- Título em duas linhas: "Seu estúdio muda todos os dias. / O sistema precisa acompanhar."
+- Texto: bloco de linhas curtas ("Clientes chegam. / Pagamentos são confirmados. / Contratos são assinados. / Fotos são selecionadas. / Novos pedidos aparecem."), depois "Nada disso acontece separado." e o parágrafo de fechamento.
+- CTA: "Conheça o Studio →" para `/studio`.
+- **Removidos**: os chips CRM / Agenda / Contratos / Financeiro / Workflow / Análise de Vendas.
 
-## Etapa 3 — Seção 05, Gallery
+## Etapa 3 — Lado direito (55%)
 
-Arquivo: `src/components/landing/gallery/GallerySectionHome.tsx`
+- Remoção completa do componente `AtendimentoLine` (timeline, eixo, marcadores, rótulos).
+- Só a ilustração, ocupando praticamente toda a metade direita.
+- Apresentação: `border-radius` grande (~24px), sombra externa suave, halo dourado muito discreto atrás da imagem, fundo preto absoluto por baixo, respiro generoso ao redor. Sem moldura, sem card, sem borda.
 
-- Fundo claro, visual à esquerda, texto à direita, tudo alinhado à esquerda.
-- Copy conforme enviada, chips e CTA para `/gallery`.
-- Visual (60%): composição editorial única — uma folha de contato em tons de papel (grade irregular de retângulos em tons `#E8DFCF`→`#C9B99A`), com dois quadros marcados por um traço fino dourado no canto. Sugere seleção sem desenhar interface. Sem molduras pesadas, sem janela de browser, sem cards flutuantes.
+## Etapa 4 — Grid e animação
 
-## Etapa 4 — Seção 06, Lunari
+- `ProductSection` passa a aceitar proporção 45/55 (hoje 40/60) via prop opcional, sem quebrar Gallery e Lunari.
+- Mobile: texto → imagem (ordem já garantida pelo empilhamento).
+- Entrada da imagem: `opacity 0 → 1`, `translateX 40px → 0`, ~700ms, ease-out, uma única vez. Sem parallax.
 
-Arquivo: `src/components/landing/assistente/LunariAgentSection.tsx`
+## Etapa 5 — Verificação
 
-- Fundo escuro, texto à esquerda, visual à direita.
-- Copy conforme enviada; nenhuma linguagem de chatbot.
-- Visual (60%): composição de **comando → ação**: uma frase de comando em tipografia display, e abaixo dela três linhas finas que se desdobram em resultados objetivos em mono (`agendamento criado`, `pagamento registrado`, `tarefa concluída`), ligadas por traços dourados de 1px. Sem balões, sem avatar, sem interface de chat.
-
-## Etapa 5 — Montagem e verificação
-
-- Registrar as três seções em `src/pages/site/HomePage.tsx`, na ordem 04 → 05 → 06.
-- Conferir contraste, alinhamento à esquerda, ordem mobile e ausência de glassmorphism/gradiente exagerado.
-- Revisão em viewport mobile e desktop com screenshot.
+- Screenshot desktop e mobile (iOS/Safari incluído no check de viewport).
+- Conferir contraste no fundo escuro, ausência de elementos textuais à direita e peso visual da ilustração.
 
 ## Notas técnicas
 
-- Sem dependências novas; `framer-motion` e as primitivas de `landing/primitives.tsx` já cobrem o necessário.
-- Cores sempre explícitas nas seções (regra `.site-scope`), nunca tokens do app.
-- Composições visuais são SVG/JSX — sem geração de imagem, sem vídeo (limite de 4 vídeos, todos em heros).
-- Sem backend, sem mudanças de rota além dos links de CTA já existentes.
+- Sem dependências novas; `framer-motion` já cobre a animação.
+- Cores explícitas (regra `.site-scope`), nunca tokens do app.
+- Alternância de fundo do site preservada: Studio segue escuro, Gallery clara, Lunari escura.
