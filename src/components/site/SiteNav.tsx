@@ -117,8 +117,8 @@ export function SiteNav() {
                           to={c.to}
                           className={({ isActive }) =>
                             `block px-4 py-3 transition-colors ${
-                              isActive
-                                ? "bg-[rgba(176,99,47,0.06)]"
+                                isActive
+                                  ? "bg-[rgba(201,168,124,0.06)]"
                                 : "hover:bg-[rgba(10,10,10,0.03)]"
                             }`
                           }

@@ -563,7 +563,7 @@ export function ComparisonTable({
               <th
                 key={p.key}
                 className={`py-5 px-4 text-[13px] ${
-                  p.highlight ? "text-[#b0632f]" : "text-[#0A0A0A]"
+                  p.highlight ? "text-[#C9A87C]" : "text-[#0A0A0A]"
                 }`}
               >
                 {p.name}
@@ -594,7 +594,7 @@ export function ComparisonTable({
                     return (
                       <td key={p.key} className="py-4 px-4 text-[13px] text-[#0A0A0A]/80">
                         {v === true ? (
-                          <Check className="h-4 w-4 text-[#b0632f]" strokeWidth={2.5} />
+                          <Check className="h-4 w-4 text-[#C9A87C]" strokeWidth={2.5} />
                         ) : v === false || v === undefined ? (
                           <Minus className="h-4 w-4 text-[#0A0A0A]/25" />
                         ) : (
