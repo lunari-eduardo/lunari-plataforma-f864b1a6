@@ -53,7 +53,7 @@ export function ProductSection({
   /** faixa de transição suave a partir do tom da seção anterior */
   softTop?: false | "fromLight" | "fromDark";
   /** proporção do grid no desktop */
-  ratio?: "40/60" | "45/55";
+  ratio?: "40/60" | "45/55" | "35/65";
 }) {
   const isDark = tone === "dark";
   const bg = isDark ? SITE_DARK : SITE_LIGHT;
@@ -82,7 +82,9 @@ export function ProductSection({
           className={`grid grid-cols-1 items-center gap-14 md:gap-16 ${
             ratio === "45/55"
               ? "md:grid-cols-[minmax(0,45fr)_minmax(0,55fr)]"
-              : "md:grid-cols-[minmax(0,40fr)_minmax(0,60fr)]"
+              : ratio === "35/65"
+                ? "md:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]"
+                : "md:grid-cols-[minmax(0,40fr)_minmax(0,60fr)]"
           }`}
         >
           <div className={visualSide === "left" ? "md:order-2" : ""}>{text}</div>
