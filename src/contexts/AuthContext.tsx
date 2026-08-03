@@ -41,13 +41,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // 1) Listener — NÃO toca em `loading` enquanto o boot inicial não decidir.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, nextSession) => {
+      async (event, nextSession) => {
         console.log('🔐 Auth event:', event, 'User:', nextSession?.user?.id || 'none');
+        
+        // Bloqueio de acesso para contas em período de retenção
+        if (nextSession?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('account_status')
+            .eq('id', nextSession.user.id)
+            .single();
+
+          if (profile?.account_status === 'pending_deletion') {
+            console.log('🚫 Conta em período de retenção. Acesso negado.');
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            if (!window.location.pathname.includes('/login')) {
+              window.location.href = '/login?error=account_pending_deletion';
+            }
+            return;
+          }
+        }
+
         setSession(nextSession);
         setUser(nextSession?.user ?? null);
         if (bootDoneRef.current) {
-          // Mantém `loading=false` após boot. Não voltamos a `true` em
-          // TOKEN_REFRESHED para não esconder a UI durante refreshes normais.
           if (event === 'SIGNED_OUT') {
             console.log('👋 Usuário deslogado');
           }
@@ -60,6 +79,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (async () => {
       try {
         const { session: fresh } = await ensureFreshSession();
+        
+        if (fresh?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('account_status')
+            .eq('id', fresh.user.id)
+            .single();
+
+          if (profile?.account_status === 'pending_deletion') {
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+        }
+
         setSession(fresh);
         setUser(fresh?.user ?? null);
       } finally {
