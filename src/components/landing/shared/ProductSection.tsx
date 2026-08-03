@@ -78,7 +78,13 @@ export function ProductSection({
       )}
 
       <div className="relative mx-auto w-full max-w-[1200px] px-6 md:px-8">
-        <div className="grid grid-cols-1 items-center gap-14 md:grid-cols-[minmax(0,40fr)_minmax(0,60fr)] md:gap-16">
+        <div
+          className={`grid grid-cols-1 items-center gap-14 md:gap-16 ${
+            ratio === "45/55"
+              ? "md:grid-cols-[minmax(0,45fr)_minmax(0,55fr)]"
+              : "md:grid-cols-[minmax(0,40fr)_minmax(0,60fr)]"
+          }`}
+        >
           <div className={visualSide === "left" ? "md:order-2" : ""}>{text}</div>
           <div className={visualSide === "left" ? "md:order-1" : ""}>{visual}</div>
         </div>
