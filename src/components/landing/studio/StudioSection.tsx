@@ -24,7 +24,7 @@ export function StudioSection() {
       tone="dark"
       visualSide="right"
       softTop="fromLight"
-      ratio="35/65"
+      ratio="45/55"
       text={
         <div className="relative z-10 text-left">
           <SoftReveal>
@@ -102,7 +102,7 @@ function StudioComposition() {
   const reduce = useReducedMotion();
 
   return (
-    <div className="relative w-full md:-ml-8 md:w-[calc(100%+2rem)]">
+    <div className="relative w-full md:w-[calc(100%+4rem)]">
       {/* halo dourado extremamente discreto */}
       <div
         aria-hidden
@@ -119,7 +119,7 @@ function StudioComposition() {
         whileInView={reduce ? undefined : { opacity: 1, x: 0 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.7, ease: EASE }}
-        className="relative mx-auto max-w-[480px] md:mx-0 md:max-w-none"
+        className="relative mx-auto max-w-[480px] md:ml-auto md:mr-0 md:max-w-none"
         style={{
           WebkitMaskImage:
             "linear-gradient(to right, transparent 0%, #000 16%, #000 100%), linear-gradient(to bottom, #000 82%, transparent 100%)",
@@ -134,7 +134,7 @@ function StudioComposition() {
           alt="Painel do Lunari Studio conectando agenda, sessão, cliente e financeiro em um único fluxo"
           loading="lazy"
           decoding="async"
-          className="block h-auto w-full select-none rounded-[20px] md:max-h-[520px] md:object-contain md:object-left"
+          className="block h-auto w-full select-none rounded-[20px] md:max-h-[560px] md:object-contain md:object-right"
           style={{ filter: "drop-shadow(0 20px 50px rgba(0,0,0,0.45))" }}
         />
       </motion.div>
