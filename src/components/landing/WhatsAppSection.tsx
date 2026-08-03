@@ -15,7 +15,7 @@ export function WhatsAppSection() {
           style={displayFont}
         >
           Onde seu cliente já está.{" "}
-          <span className="italic text-[#b0632f]">Sem trocar de app.</span>
+          <span className="italic" style={{ color: "#C9A87C" }}>Sem trocar de app.</span>
         </h2>
       </Reveal>
 
@@ -32,7 +32,7 @@ export function WhatsAppSection() {
               ["Cobrança e comprovante", "PIX gerado direto do chat"],
               ["Régua automática", "mensagem certa, na hora certa, sem robô"],
             ].map(([t, s]) => (
-              <li key={t} className="border-l-2 border-[#b0632f] pl-4">
+              <li key={t} className="border-l-2 border-[#C9A87C] pl-4">
                 <div className="text-[16px] font-semibold text-[#0A0A0A]">{t}</div>
                 <div className="mt-1 text-[14px] text-[#0A0A0A]/55">{s}</div>
               </li>
@@ -88,7 +88,7 @@ function ChatMockup() {
                 </div>
               )}
               {m.pix && (
-                <div className="mt-2 flex items-center gap-2 rounded-[8px] bg-[#b0632f]/10 px-2.5 py-2 text-[11px] text-[#b0632f]">
+                <div className="mt-2 flex items-center gap-2 rounded-[8px] bg-[#C9A87C]/10 px-2.5 py-2 text-[11px] text-[#C9A87C]">
                   <span className="font-semibold">PIX</span>
                   <span>copiar código</span>
                 </div>

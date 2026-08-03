@@ -50,7 +50,7 @@ function GradientHalo({ tone = "light" }: { tone?: Tone }) {
 
 function NoiseLayer() {
   // SVG noise inline (baixo custo, sem asset externo)
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.25 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`;
   return (
     <div
       aria-hidden
@@ -150,7 +150,7 @@ export function ProductHero({
                     {" "}
                     <span
                       className="italic"
-                      style={{ ...displayFont, color: TOKENS.ember, fontWeight: 400 }}
+                      style={{ ...displayFont, color: "#C9A87C", fontWeight: 400 }}
                     >
                       {emphasis}
                     </span>
