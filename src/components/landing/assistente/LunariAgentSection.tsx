@@ -43,12 +43,6 @@ export function LunariAgentSection() {
           <SoftReveal>
             <ProductEyebrow tone="dark">Lunari</ProductEyebrow>
           </SoftReveal>
-          <SoftReveal delay={0.05}>
-            <ProductHeadline tone="dark">
-              Se você ainda precisa procurar informações, talvez quem esteja
-              trabalhando seja você.
-            </ProductHeadline>
-          </SoftReveal>
           <SoftReveal delay={0.1}>
             <ProductTitle tone="dark">
               Converse.
