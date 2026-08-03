@@ -28,7 +28,7 @@ export function AccountDeletionFlow() {
 
     setIsDeleting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('account-destruction');
+      const { error } = await supabase.functions.invoke('account-destruction');
       
       if (error) throw error;
 
@@ -59,14 +59,14 @@ export function AccountDeletionFlow() {
       </div>
 
       <div className="flex items-center justify-between p-4 rounded-lg border border-border/40 bg-card/40">
-        <div>
+        <div className="min-w-0 pr-4">
           <h5 className="font-medium">Excluir minha conta</h5>
           <p className="text-sm text-muted-foreground">Exclua permanentemente sua conta e todos os dados associados.</p>
         </div>
         
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" className="gap-2">
+            <Button variant="destructive" size="sm" className="gap-2 shrink-0">
               <Trash2 className="w-4 h-4" />
               Excluir Conta
             </Button>
@@ -91,7 +91,7 @@ export function AccountDeletionFlow() {
             <AlertDialogFooter>
               <AlertDialogCancel className="bg-card/50">Cancelar</AlertDialogCancel>
               <AlertDialogAction
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent) => {
                   e.preventDefault();
                   handleDeleteAccount();
                 }}
