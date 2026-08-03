@@ -1,6 +1,8 @@
 import { LunariHero } from "@/components/landing/LunariHero";
 import { RotinaSection } from "@/components/landing/rotina/RotinaSection";
+import { FluxoSection } from "@/components/landing/fluxo/FluxoSection";
 import { SEOHead } from "@/components/seo/SEOHead";
+
 
 /**
  * HomePage — página inicial do site institucional (rota "/").

@@ -65,7 +65,7 @@ export function RotinaSection() {
                 className="text-[11px] uppercase tracking-[0.26em] md:text-[12px]"
                 style={{ ...monoFont, color: "rgba(11,11,11,0.45)" }}
               >
-                <span style={{ color: TOKENS.ember }}>•</span> UMA ROTINA QUE CRESCE
+                <span style={{ color: TOKENS.gold }}>•</span> UMA ROTINA QUE CRESCE
               </p>
             </Fade>
 

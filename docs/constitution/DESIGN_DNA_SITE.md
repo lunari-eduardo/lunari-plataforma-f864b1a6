@@ -28,7 +28,7 @@ Escuro → Claro → Escuro → Claro
 
 Cada mudança de cor representa um novo capítulo.
 
-Nunca utilizar duas seções consecutivas com o mesmo fundo.
+Nunca utilizar duas seções consecutivas com o mesmo fundo — exceção narrativa: quando duas seções formam um mesmo capítulo (ex.: Seção 02 e 03 da Home), o fundo se mantém e a mudança acontece pelo conteúdo.
 
 ---
 
@@ -94,11 +94,14 @@ A copy sempre conduz o olhar antes do elemento visual.
 
 ## Cores
 
+Tema oficial: Silent Luxury.
+
 - Escuro `#0B0B0B`
 - Claro `#F7F5F2`
-- Terracota — apenas para detalhes e destaques.
+- Dourado fosco `#C9A87C` — único acento, apenas para detalhes e destaques.
 
-Nunca utilizar grandes áreas coloridas.
+Nunca utilizar terracota nem qualquer outra cor de acento. Nunca utilizar grandes áreas coloridas.
+
 
 ---
 
