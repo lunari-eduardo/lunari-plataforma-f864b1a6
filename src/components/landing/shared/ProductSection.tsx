@@ -43,6 +43,7 @@ export function ProductSection({
   text,
   visual,
   softTop = false,
+  ratio = "40/60",
 }: {
   id?: string;
   tone: "dark" | "light";
