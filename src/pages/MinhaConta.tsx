@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, User, Image, Shield, ArrowRight } from 'lucide-react';
+import { Loader2, User, Image, Shield, ArrowRight, LucideIcon } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
@@ -28,7 +27,7 @@ const SidebarItem = memo(({
   value: string; 
   active: boolean; 
   onClick: (val: string) => void;
-  icon: any;
+  icon: LucideIcon;
 }) => (
   <button
     onClick={() => onClick(value)}
@@ -67,7 +66,7 @@ export default function MinhaConta() {
   const handleSaveProfile = useCallback(async () => {
     if (!validation.isValid) {
       const firstError = Object.values(validation.errors)[0];
-      toast.error(firstError);
+      toast.error(firstError as string);
       return;
     }
 
@@ -82,8 +81,8 @@ export default function MinhaConta() {
       cpf_cnpj: formData.cpf_cnpj || null,
       email: formData.email || null,
       endereco_comercial: formData.endereco_comercial || null,
-      telefones: (formData.telefones || []).filter(tel => tel.trim() !== ''),
-      site_redes_sociais: (formData.site_redes_sociais || []).filter(site => site.trim() !== '')
+      telefones: (formData.telefones || []).filter((tel: string) => tel.trim() !== ''),
+      site_redes_sociais: (formData.site_redes_sociais || []).filter((site: string) => site.trim() !== '')
     };
     
     await saveProfile(cleanedData);
@@ -151,8 +150,8 @@ export default function MinhaConta() {
                 {activeTab === 'perfil' && (
                   <div className="space-y-10">
                     <section>
-                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Informações Básicas</h3>
-                      <div className="glass-1 p-6 space-y-6">
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Informações Básicas</h3>
+                      <div className="glass-1 p-6 space-y-6 bg-card/40">
                         <PersonalInfoForm
                           formData={formData}
                           onChange={handleInputChange}
@@ -163,13 +162,13 @@ export default function MinhaConta() {
                     </section>
                     
                     <section>
-                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Canais de Contato</h3>
-                      <div className="glass-1 p-6">
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Canais de Contato</h3>
+                      <div className="glass-1 p-6 bg-card/40">
                         <ContactInfoSection
                           telefones={formData.telefones || []}
                           siteRedesSociais={formData.site_redes_sociais || []}
-                          onTelefonesChange={(telefones) => setFormData(prev => ({ ...prev, telefones }))}
-                          onSitesChange={(sites) => setFormData(prev => ({ ...prev, site_redes_sociais: sites }))}
+                          onTelefonesChange={(telefones: string[]) => setFormData(prev => ({ ...prev, telefones }))}
+                          onSitesChange={(sites: string[]) => setFormData(prev => ({ ...prev, site_redes_sociais: sites }))}
                         />
                       </div>
                     </section>
@@ -188,8 +187,8 @@ export default function MinhaConta() {
 
                 {activeTab === 'marca' && (
                   <section>
-                    <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Logotipo do Estúdio</h3>
-                    <div className="glass-1 p-6">
+                    <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Logotipo do Estúdio</h3>
+                    <div className="glass-1 p-6 bg-card/40">
                       <LogoUploadSection
                         logoUrl={profile?.logo_url || undefined}
                         onLogoSave={handleLogoSave}
@@ -205,16 +204,16 @@ export default function MinhaConta() {
                 {activeTab === 'seguranca' && (
                   <div className="space-y-10">
                     <section>
-                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Alterar Senha</h3>
-                      <div className="glass-1 p-6">
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Alterar Senha</h3>
+                      <div className="glass-1 p-6 bg-card/40">
                         <SecuritySection />
                       </div>
                     </section>
 
                     <section className="pt-6 border-t border-border/40">
-                      <h3 className="text-[15px] font-semibold mb-1 text-destructive">Privacidade e Dados</h3>
+                      <h3 className="text-[15px] font-semibold mb-1 text-destructive font-heading">Privacidade e Dados</h3>
                       <p className="text-xs text-muted-foreground mb-4">Gerencie a retenção de seus dados e o status de sua conta.</p>
-                      <div className="glass-1 border-destructive/20 p-6">
+                      <div className="glass-1 border-destructive/20 p-6 bg-card/40">
                         <AccountDeletionFlow />
                       </div>
                     </section>
