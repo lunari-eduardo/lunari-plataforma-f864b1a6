@@ -880,3 +880,23 @@ a,
   }
 }
 
+
+/* ============================================================
+   SITE INSTITUCIONAL (lunarihub.com) — escopo isolado do app
+   O app define color/background globais via tokens (--foreground)
+   que mudam com o tema dark. O site é sempre claro/escuro por seção,
+   então headings e textos devem SEMPRE herdar a cor da seção.
+   ============================================================ */
+.site-scope,
+.site-scope h1,
+.site-scope h2,
+.site-scope h3,
+.site-scope h4,
+.site-scope h5,
+.site-scope h6,
+.site-scope p,
+.site-scope li,
+.site-scope span,
+.site-scope a {
+  color: inherit;
+}
