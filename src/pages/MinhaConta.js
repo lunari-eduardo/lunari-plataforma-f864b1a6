@@ -53,8 +53,8 @@ export default function MinhaConta() {
             cpf_cnpj: formData.cpf_cnpj || null,
             email: formData.email || null,
             endereco_comercial: formData.endereco_comercial || null,
-            telefones: (formData.telefones || []).filter(tel => tel.trim() !== ''),
-            site_redes_sociais: (formData.site_redes_sociais || []).filter(site => site.trim() !== '')
+            telefones: (formData.telefones || []).filter((tel) => tel.trim() !== ''),
+            site_redes_sociais: (formData.site_redes_sociais || []).filter((site) => site.trim() !== '')
         };
         await saveProfile(cleanedData);
     }, [formData, validation, saveProfile]);
@@ -93,15 +93,15 @@ export default function MinhaConta() {
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {activeTab === 'perfil' && (<div className="space-y-10">
                     <section>
-                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Informações Básicas</h3>
-                      <div className="glass-1 p-6 space-y-6">
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Informações Básicas</h3>
+                      <div className="glass-1 p-6 space-y-6 bg-card/40">
                         <PersonalInfoForm formData={formData} onChange={handleInputChange} errors={validation.errors} userEmail={user?.email || ''}/>
                       </div>
                     </section>
                     
                     <section>
-                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Canais de Contato</h3>
-                      <div className="glass-1 p-6">
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Canais de Contato</h3>
+                      <div className="glass-1 p-6 bg-card/40">
                         <ContactInfoSection telefones={formData.telefones || []} siteRedesSociais={formData.site_redes_sociais || []} onTelefonesChange={(telefones) => setFormData(prev => ({ ...prev, telefones }))} onSitesChange={(sites) => setFormData(prev => ({ ...prev, site_redes_sociais: sites }))}/>
                       </div>
                     </section>
@@ -114,8 +114,8 @@ export default function MinhaConta() {
                   </div>)}
 
                 {activeTab === 'marca' && (<section>
-                    <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Logotipo do Estúdio</h3>
-                    <div className="glass-1 p-6">
+                    <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Logotipo do Estúdio</h3>
+                    <div className="glass-1 p-6 bg-card/40">
                       <LogoUploadSection logoUrl={profile?.logo_url || undefined} onLogoSave={handleLogoSave} onLogoRemove={handleLogoRemove}/>
                       <p className="mt-4 text-xs text-muted-foreground">
                         Este logotipo será utilizado em galerias, contratos e links de cobrança enviados aos clientes.
@@ -125,16 +125,16 @@ export default function MinhaConta() {
 
                 {activeTab === 'seguranca' && (<div className="space-y-10">
                     <section>
-                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90">Alterar Senha</h3>
-                      <div className="glass-1 p-6">
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Alterar Senha</h3>
+                      <div className="glass-1 p-6 bg-card/40">
                         <SecuritySection />
                       </div>
                     </section>
 
                     <section className="pt-6 border-t border-border/40">
-                      <h3 className="text-[15px] font-semibold mb-1 text-destructive">Privacidade e Dados</h3>
+                      <h3 className="text-[15px] font-semibold mb-1 text-destructive font-heading">Privacidade e Dados</h3>
                       <p className="text-xs text-muted-foreground mb-4">Gerencie a retenção de seus dados e o status de sua conta.</p>
-                      <div className="glass-1 border-destructive/20 p-6">
+                      <div className="glass-1 border-destructive/20 p-6 bg-card/40">
                         <AccountDeletionFlow />
                       </div>
                     </section>
