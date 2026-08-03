@@ -1,1 +1,2 @@
 - [UI Audit Silent Luxury 2026-07-29](docs/handoff/UI_AUDIT_SILENT_LUXURY_2026-07-29.md) — Auditoria UI de Agenda/Tarefas/Clientes/Precificação/Configurações/Integrações + plano por ondas (Onda 0 concluída)
+- [Design DNA SITE](mem://constitution/design-dna-site-v1) — Regras do site institucional: ritmo escuro/claro, layout dividido alternado 40/60, vídeos só em heros, imagens editoriais
