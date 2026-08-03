@@ -1,6 +1,9 @@
 import { LunariHero } from "@/components/landing/LunariHero";
 import { RotinaSection } from "@/components/landing/rotina/RotinaSection";
 import { FluxoSection } from "@/components/landing/fluxo/FluxoSection";
+import { StudioSection } from "@/components/landing/studio/StudioSection";
+import { GalleryHomeSection } from "@/components/landing/gallery/GalleryHomeSection";
+import { LunariAgentSection } from "@/components/landing/assistente/LunariAgentSection";
 import { SEOHead } from "@/components/seo/SEOHead";
 
 
@@ -22,7 +25,9 @@ export default function HomePage() {
       <LunariHero />
       <RotinaSection />
       <FluxoSection />
-
+      <StudioSection />
+      <GalleryHomeSection />
+      <LunariAgentSection />
     </>
   );
 }
