@@ -28,17 +28,30 @@ serve(async (req) => {
 
     const userId = user.id
 
-    console.log(`Iniciando destruicao da conta para o usuario: ${userId}`)
+    console.log(`Solicitação de exclusão recebida para o usuário: ${userId}. Iniciando período de retenção de 30 dias.`)
 
-    // Deletar o usuario do Auth (isso dispara os cascades no banco se configurado)
-    const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId)
-    if (deleteError) {
-        console.error("Erro ao deletar usuario:", deleteError)
-        throw deleteError
+    // Em vez de deletar, marcamos o perfil como 'pending_deletion'
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({ 
+        account_status: 'pending_deletion',
+        deletion_requested_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+
+    if (updateError) {
+        console.error("Erro ao atualizar status do perfil:", updateError)
+        throw updateError
     }
 
+    // Opcional: Deslogar o usuário ou invalidar sessões se necessário, 
+    // mas o frontend lidará com o logout após a resposta de sucesso.
+
     return new Response(
-      JSON.stringify({ message: 'Conta excluida com sucesso' }),
+      JSON.stringify({ 
+        message: 'Solicitação de exclusão registrada. A conta entrará em retenção por 30 dias.',
+        retention_days: 30
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
