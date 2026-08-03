@@ -25,8 +25,9 @@ const COLS: { title: string; links: { label: string; to: string; external?: bool
     links: [
       { label: "Termos de uso", to: "/legal/termos" },
       { label: "Privacidade", to: "/legal/privacidade" },
-      { label: "LGPD", to: "/legal/lgpd" },
+      { label: "Exclusão de dados", to: "/legal/exclusao-dados" },
       { label: "Segurança", to: "/legal/seguranca" },
+
     ],
   },
 ];

@@ -47,6 +47,12 @@ import CentroAjuda from "@/pages/CentroAjuda";
 import ArtigoAjuda from "@/pages/ArtigoAjuda";
 import OAuthConsent from "@/pages/OAuthConsent";
 import FormularioPublico from "@/pages/FormularioPublico";
+import PrivacidadePage from "@/pages/legal/PrivacidadePage";
+import TermosPage from "@/pages/legal/TermosPage";
+import ExclusaoDadosPage from "@/pages/legal/ExclusaoDadosPage";
+import CookiesPage from "@/pages/legal/CookiesPage";
+import SegurancaPage from "@/pages/legal/SegurancaPage";
+
 
 import { AppProvider } from "@/contexts/AppContext";
 
@@ -104,6 +110,13 @@ export default function PhotographerApp() {
                 <Route path="/precos" element={<PrecosPage />} />
                 <Route path="/sobre" element={<SobrePage />} />
                 <Route path="/contato" element={<ContatoPage />} />
+                <Route path="/legal/privacidade" element={<PrivacidadePage />} />
+                <Route path="/legal/termos" element={<TermosPage />} />
+                <Route path="/legal/exclusao-dados" element={<ExclusaoDadosPage />} />
+                <Route path="/legal/cookies" element={<CookiesPage />} />
+                <Route path="/legal/seguranca" element={<SegurancaPage />} />
+                <Route path="/legal/lgpd" element={<PrivacidadePage />} />
+
               </Route>
 
               <Route path="/auth" element={<Auth />} />
