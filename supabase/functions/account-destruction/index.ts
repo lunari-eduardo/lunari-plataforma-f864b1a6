@@ -30,7 +30,23 @@ serve(async (req) => {
 
     console.log(`Solicitação de exclusão recebida para o usuário: ${userId}. Iniciando período de retenção de 30 dias.`)
 
-    // Em vez de deletar, marcamos o perfil como 'pending_deletion'
+    console.log(`Solicitação de exclusão recebida para o usuário: ${userId}. Iniciando período de retenção de 30 dias.`)
+
+    // Registrar no audit_log antes de alterar o status
+    await supabaseClient
+      .from('audit_log')
+      .insert({
+        action: 'account_deletion_requested',
+        actor_id: userId,
+        actor_type: 'user',
+        metadata: { 
+          reason: 'User requested account deletion via settings',
+          retention_days: 30,
+          requested_at: new Date().toISOString()
+        }
+      })
+
+    // Marcamos o perfil como 'pending_deletion'
     const { error: updateError } = await supabaseClient
       .from('profiles')
       .update({ 
@@ -43,9 +59,6 @@ serve(async (req) => {
         console.error("Erro ao atualizar status do perfil:", updateError)
         throw updateError
     }
-
-    // Opcional: Deslogar o usuário ou invalidar sessões se necessário, 
-    // mas o frontend lidará com o logout após a resposta de sucesso.
 
     return new Response(
       JSON.stringify({ 
