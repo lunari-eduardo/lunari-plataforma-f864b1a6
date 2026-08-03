@@ -52,6 +52,8 @@ export function ProductSection({
   visual: ReactNode;
   /** faixa de transição suave a partir do tom da seção anterior */
   softTop?: false | "fromLight" | "fromDark";
+  /** proporção do grid no desktop */
+  ratio?: "40/60" | "45/55";
 }) {
   const isDark = tone === "dark";
   const bg = isDark ? SITE_DARK : SITE_LIGHT;
