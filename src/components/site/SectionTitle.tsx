@@ -2,8 +2,7 @@
  * SectionTitle — título de seção institucional com contraste forte.
  *
  * Regra: h2 usa Geist 600 (peso real, não serifada fina). A palavra-âncora
- * `emphasis` fica em Instrument Serif italic + terra (`#b0632f` sobre paper,
- * `#c47a3f` sobre navy/deep).
+ * `emphasis` fica em Instrument Serif italic + ouro champagne (`#C9A87C`).
  */
 import { ReactNode } from "react";
 import { TOKENS, displayFont, uiFont } from "@/components/landing/primitives";
@@ -33,7 +32,7 @@ export function SectionTitle({
         : "text-[32px] leading-[1.05] md:text-[48px]";
 
   const color = tone === "dark" ? "#FAFAF7" : "#0A0A0A";
-  const accent = tone === "dark" ? TOKENS.emberOnDark : TOKENS.ember;
+  const accent = TOKENS.gold;
 
   const Tag = as;
   return (

@@ -24,7 +24,7 @@ export function LunariFooter() {
 
         <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-[#0A0A0A]/8 pt-8 text-[12px] text-[#0A0A0A]/45 md:flex-row md:items-center" style={uiFont}>
           <span>© 2026 Lunari · Feito para fotógrafos, no Brasil.</span>
-          <span>hello@lunari.studio</span>
+          <span>hello@lunarihub.com</span>
         </div>
       </div>
     </footer>

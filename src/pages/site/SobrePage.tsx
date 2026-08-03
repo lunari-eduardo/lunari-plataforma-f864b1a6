@@ -34,7 +34,7 @@ export default function SobrePage() {
                 className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[68px]"
                 style={displayFont}
               >
-                Fotógrafo não deveria virar <span className="italic text-[#b0632f]">planilheiro.</span>
+                Fotógrafo não deveria virar <span className="italic" style={{ color: "#C9A87C" }}>planilheiro.</span>
               </h1>
             </Reveal>
             <Reveal delay={0.1}>

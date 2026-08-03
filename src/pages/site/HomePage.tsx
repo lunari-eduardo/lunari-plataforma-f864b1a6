@@ -10,8 +10,6 @@ import { SEOHead } from "@/components/seo/SEOHead";
 /**
  * HomePage — página inicial do site institucional (rota "/").
  * Vive dentro de <SiteLayout />, então NÃO renderiza LunariNav/LunariFooter.
- *
- * A Home está sendo reconstruída seção a seção. Hoje: Hero + Seção 01.
  */
 export default function HomePage() {
   return (
