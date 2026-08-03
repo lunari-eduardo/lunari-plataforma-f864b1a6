@@ -64,7 +64,7 @@ export function LunariHero() {
               }}
             >
               <Sparkles className="h-3 w-3" strokeWidth={1.5} style={{ color: TOKENS.gold }} />
-              O novo padrão para fotógrafos profissionais
+              ECOSISTEMA PARA FOTÓGRAFOS
             </span>
           </motion.div>
 
@@ -73,10 +73,10 @@ export function LunariHero() {
             className="mt-9 max-w-[620px] text-[42px] font-medium leading-[1.03] tracking-[-0.035em] md:text-[62px]"
             style={{ ...uiFont, color: TOKENS.onDark }}
           >
-            O sistema que administra seu estúdio inteiro.{" "}
+            Feito para fotógrafos.
             <br />
             <span className="italic font-normal" style={{ ...displayFont, color: TOKENS.gold }}>
-              Não apenas uma parte dele.
+              Não, adaptado.
             </span>
           </motion.h1>
 
@@ -86,7 +86,7 @@ export function LunariHero() {
             style={{ ...uiFont, color: TOKENS.onDarkMuted }}
           >
             Construído por quem entende a rotina real de um estúdio profissional. 
-            Uma plataforma unificada para elevar sua fotografia a um novo nível de eficiência.
+            Uma plataforma unificada para elevar seu negócio a um novo nível de eficiência.
           </motion.p>
 
           <motion.div {...fadeUp(0.24)} className="mt-9 flex flex-wrap items-center gap-3">
