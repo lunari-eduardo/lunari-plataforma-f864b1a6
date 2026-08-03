@@ -79,27 +79,15 @@
       } catch (e) {}
 
 
-      // Manifest PWA por subdomínio: admin.* recebe manifest próprio
+      // Manifest PWA
       try {
-        var host = location.hostname.toLowerCase();
-        var isAdmin = host.indexOf('admin.') === 0;
-        if (isAdmin) {
-          var apply = function () {
-            var link = document.querySelector('link[rel="manifest"]');
-            if (!link) {
-              link = document.createElement('link');
-              link.rel = 'manifest';
-              document.head.appendChild(link);
-            }
-            link.href = '/manifest.json';
-            var title = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-            if (title) title.setAttribute('content', 'Lunari Admin');
-          };
-          apply();
-          // vite-plugin-pwa injeta o link após o boot — reaplicar
-          window.addEventListener('DOMContentLoaded', apply);
-          setTimeout(apply, 500);
+        var link = document.querySelector('link[rel="manifest"]');
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'manifest';
+          document.head.appendChild(link);
         }
+        link.href = '/manifest.json';
       } catch (e) {}
     </script>
 
