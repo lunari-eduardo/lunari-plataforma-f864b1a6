@@ -12,42 +12,38 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { auth: { persistSession: false } }
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    })
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('No authorization header')
     
+    // Validate JWT
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''))
     if (authError || !user) throw new Error('Unauthorized')
 
     const userId = user.id
 
-    console.log(\`Iniciando destruição da conta para o usuário: \${userId}\`)
+    console.log(`Iniciando destruicao da conta para o usuario: ${userId}`)
 
-    // 1. Marcar perfil como em exclusão (soft-ish para auditoria rápida antes do delete)
-    await supabaseClient
-      .from('profiles')
-      .update({ suspected_duplicate: true }) // Reusando coluna para flag de "em processo"
-      .eq('user_id', userId)
-
-    // 2. O banco de dados deve ter ON DELETE CASCADE na maioria das tabelas vinculadas a auth.users.
-    // Vamos garantir a remoção de arquivos no R2 antes de deletar o usuário.
-    // TODO: Adicionar chamada para r2-delete-all-user-files se necessário
-
-    // 3. Deletar o usuário do Auth (isso deve disparar os cascades no banco)
+    // Deletar o usuario do Auth (isso dispara os cascades no banco se configurado)
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId)
-    if (deleteError) throw deleteError
+    if (deleteError) {
+        console.error("Erro ao deletar usuario:", deleteError)
+        throw deleteError
+    }
 
     return new Response(
-      JSON.stringify({ message: 'Conta excluída com sucesso' }),
+      JSON.stringify({ message: 'Conta excluida com sucesso' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
   } catch (error) {
+    console.error("Erro na funcao account-destruction:", error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
