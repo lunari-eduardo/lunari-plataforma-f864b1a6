@@ -212,7 +212,6 @@ export function FluxoSection() {
       <div
         ref={trackRef}
         className="relative h-[220vh] md:h-[260vh]"
-        style={{ height: undefined }}
       >
         <div className="sticky top-0 mx-auto flex h-[100svh] w-full max-w-[1180px] flex-col justify-center gap-6 px-6 py-8 md:h-screen md:flex-row md:items-center md:gap-20 md:px-10 md:py-0 lg:gap-24">
           <div className="md:w-[42%] md:shrink-0">{header}</div>
