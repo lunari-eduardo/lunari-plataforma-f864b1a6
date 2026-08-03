@@ -8,7 +8,7 @@ Fonte de verdade: `docs/constitution/DESIGN_DNA_SITE.md`. Aplica-se APENAS ao si
 
 Regras-núcleo:
 - Cada seção = capítulo. Muito espaço negativo, poucos elementos, tipografia protagonista. Nunca landing SaaS nem catálogo de funcionalidades.
-- Ritmo obrigatório de fundos: escuro → claro → escuro → claro. Proibido duas seções seguidas com o mesmo fundo. Escuro `#0B0B0B`, claro `#F7F5F2`, terracota só em detalhes.
+- Ritmo de fundos: escuro → claro → escuro → claro. Exceção narrativa: seções que formam o mesmo capítulo (Home 02 e 03) mantêm o fundo claro. Escuro `#0B0B0B`, claro `#F7F5F2`. Único acento = dourado fosco `#C9A87C` (`TOKENS.gold`). Terracota/ember PROIBIDO no site.
 - Layout dividido em TODAS as seções. Desktop: 40–45% texto / 55–60% visual, alternando lado a cada seção (01 texto à esquerda, 02 visual à esquerda, 03 texto à esquerda...). Mobile sempre texto → visual.
 - Vídeos só em heros: Home, Studio, Gallery Select, Gallery Transfer. Máximo 4 no site. Atmosfera premium (macro, foco lento, profundidade), nunca screenshot/tutorial.
 - Imagens sempre editoriais fine art (papel, luz natural, materiais nobres). Proibido stock, pessoas com notebook, mockups genéricos.
