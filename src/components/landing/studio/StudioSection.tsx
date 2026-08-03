@@ -1,20 +1,21 @@
+import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { EASE } from "../primitives";
+import { EASE, uiFont } from "../primitives";
 import studioHub from "@/assets/site/studio-hub.png.asset.json";
 import {
-  ProductBody,
-  ProductCTA,
   ProductEyebrow,
   ProductHeadline,
   ProductSection,
   ProductTitle,
   SoftReveal,
+  SITE_GOLD,
 } from "../shared/ProductSection";
 
+const TOOLS = ["CRM", "Agenda", "Orçamentos AI", "Contratos", "Financeiro", "Workflow"];
+
 /**
- * Seção 04 — Lunari Studio.
- * Texto à esquerda (45%), ilustração premium à direita (55%),
- * fundida ao fundo preto absoluto da seção.
+ * Seção — Lunari Studio.
+ * Texto mínimo à esquerda (35%), ilustração protagonista à direita (65%).
  */
 export function StudioSection() {
   return (
@@ -23,7 +24,7 @@ export function StudioSection() {
       tone="dark"
       visualSide="right"
       softTop="fromLight"
-      ratio="45/55"
+      ratio="35/65"
       text={
         <div className="relative z-10 text-left">
           <SoftReveal>
@@ -31,29 +32,29 @@ export function StudioSection() {
           </SoftReveal>
           <SoftReveal delay={0.05}>
             <ProductHeadline tone="dark">
-              Fotografar já dá trabalho suficiente.
+              Fotografar já dá
+              <br />
+              trabalho suficiente.
             </ProductHeadline>
           </SoftReveal>
           <SoftReveal delay={0.1}>
             <ProductTitle tone="dark">
-              Seu estúdio muda todos os dias.
-              <br />O sistema precisa acompanhar.
+              Seu sistema
+              <br />
+              precisa te ajudar.
             </ProductTitle>
           </SoftReveal>
-          <SoftReveal delay={0.15}>
-            <ProductBody
-              tone="dark"
-              paragraphs={[
-                "Clientes chegam. Pagamentos são confirmados. Contratos são assinados. Fotos são selecionadas. Novos pedidos aparecem.",
-                "Nada disso acontece separado.",
-                "O Studio conecta agenda, clientes, contratos, financeiro e workflow para que cada atendimento continue completo do início ao fim.",
-              ]}
-            />
-          </SoftReveal>
-          <SoftReveal delay={0.25}>
-            <ProductCTA tone="dark" to="/studio">
-              Conheça o Studio
-            </ProductCTA>
+
+          <ul className="mt-10 flex flex-col gap-[14px]">
+            {TOOLS.map((tool, i) => (
+              <SoftReveal key={tool} delay={0.16 + i * 0.04}>
+                <ToolItem label={tool} />
+              </SoftReveal>
+            ))}
+          </ul>
+
+          <SoftReveal delay={0.45}>
+            <StudioCTA />
           </SoftReveal>
         </div>
       }
@@ -62,11 +63,46 @@ export function StudioSection() {
   );
 }
 
+function ToolItem({ label }: { label: string }) {
+  return (
+    <li
+      className="group inline-flex cursor-default items-center gap-3 text-[18px] leading-none transition-colors duration-200 md:text-[20px]"
+      style={{ ...uiFont, fontWeight: 500, color: "rgba(245,241,234,0.86)" }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = SITE_GOLD)}
+      onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(245,241,234,0.86)")}
+    >
+      <span
+        aria-hidden
+        className="inline-block text-[14px] transition-transform duration-200 group-hover:translate-x-[2px]"
+        style={{ color: SITE_GOLD, opacity: 0.7 }}
+      >
+        →
+      </span>
+      {label}
+    </li>
+  );
+}
+
+function StudioCTA() {
+  return (
+    <Link
+      to="/studio"
+      className="group mt-11 inline-flex items-center gap-2 text-[15px] no-underline transition-colors duration-200 hover:underline"
+      style={{ ...uiFont, color: "#F5F1EA", textUnderlineOffset: "6px" }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = SITE_GOLD)}
+      onMouseLeave={(e) => (e.currentTarget.style.color = "#F5F1EA")}
+    >
+      Conheça o Studio
+      <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+    </Link>
+  );
+}
+
 function StudioComposition() {
   const reduce = useReducedMotion();
 
   return (
-    <div className="relative w-full md:-ml-[3.5rem] md:-mr-10 md:w-[calc(100%+3.5rem+2.5rem)]">
+    <div className="relative w-full md:-ml-[4.5rem] md:-mr-16 md:w-[calc(100%+4.5rem+4rem)]">
       {/* halo dourado extremamente discreto */}
       <div
         aria-hidden
@@ -85,7 +121,6 @@ function StudioComposition() {
         transition={{ duration: 0.7, ease: EASE }}
         className="relative"
         style={{
-          // dissolve nas bordas para fundir com o #0B0B0B da seção
           WebkitMaskImage:
             "linear-gradient(to right, transparent 0%, #000 16%, #000 100%), linear-gradient(to bottom, #000 82%, transparent 100%)",
           maskImage:
