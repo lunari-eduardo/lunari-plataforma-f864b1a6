@@ -48,17 +48,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (nextSession?.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('account_status')
+            .select('*')
             .eq('id', nextSession.user.id)
-            .single();
+            .maybeSingle();
 
-          if (profile?.account_status === 'pending_deletion') {
+          const accountStatus = (profile as any)?.account_status;
+
+          if (accountStatus === 'pending_deletion') {
             console.log('🚫 Conta em período de retenção. Acesso negado.');
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
-            if (!window.location.pathname.includes('/login')) {
-              window.location.href = '/login?error=account_pending_deletion';
+            if (!window.location.pathname.includes('/auth')) {
+              window.location.href = '/auth?error=account_pending_deletion';
             }
             return;
           }
@@ -83,11 +85,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (fresh?.user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('account_status')
+            .select('*')
             .eq('id', fresh.user.id)
-            .single();
+            .maybeSingle();
 
-          if (profile?.account_status === 'pending_deletion') {
+          const accountStatus = (profile as any)?.account_status;
+
+          if (accountStatus === 'pending_deletion') {
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
