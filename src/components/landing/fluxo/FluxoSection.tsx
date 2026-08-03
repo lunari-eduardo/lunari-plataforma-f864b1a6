@@ -109,7 +109,7 @@ export function FluxoSection() {
 
       <Fade delay={0.08}>
         <h2
-          className="mt-4 max-w-[520px] text-[26px] leading-[1.08] tracking-[-0.03em] md:mt-8 md:text-[48px]"
+          className="mt-3 max-w-[520px] text-[22px] leading-[1.08] tracking-[-0.03em] md:mt-8 md:text-[48px]"
           style={{ ...uiFont, fontWeight: 600, color: SITE_DARK }}
         >
           Uma única linha.
@@ -120,7 +120,7 @@ export function FluxoSection() {
 
       <Fade delay={0.14}>
         <p
-          className="mt-3 max-w-[430px] text-[14px] leading-[1.6] md:mt-6 md:text-[18px] md:leading-[1.7]"
+          className="mt-3 hidden max-w-[430px] text-[14px] md:block leading-[1.6] md:mt-6 md:text-[18px] md:leading-[1.7]"
           style={{ ...uiFont, color: "rgba(11,11,11,0.6)" }}
         >
           Cada etapa continua exatamente de onde a anterior terminou.
@@ -213,7 +213,7 @@ export function FluxoSection() {
         ref={trackRef}
         className="relative h-[220vh] md:h-[260vh]"
       >
-        <div className="sticky top-0 mx-auto flex h-[100svh] w-full max-w-[1180px] flex-col justify-center gap-6 px-6 py-8 md:h-screen md:flex-row md:items-center md:gap-20 md:px-10 md:py-0 lg:gap-24">
+        <div className="sticky top-0 mx-auto flex h-[100svh] w-full max-w-[1180px] flex-col justify-center gap-5 px-6 pb-8 pt-20 md:h-screen md:flex-row md:items-center md:gap-20 md:px-10 md:py-0 lg:gap-24">
           <div className="md:w-[42%] md:shrink-0">{header}</div>
           <div className="min-h-0 flex-1 md:h-[90vh] md:max-h-[820px] md:flex-none md:w-[58%]">
             {timeline}
