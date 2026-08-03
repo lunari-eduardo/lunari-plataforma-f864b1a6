@@ -1,50 +1,54 @@
-# Home | Seção Lunari Studio — ilustração como protagonista
+# Seção Lunari Studio — texto mínimo, ilustração protagonista
 
-## Situação
+## Objetivo
 
-A seção hoje é textual demais: chips de funcionalidades à esquerda e uma timeline desenhada em JSX à direita. O ajuste substitui tudo isso pela ilustração enviada (composição escura com Agenda, Sessão, Cliente e Financeiro ligados por fios dourados).
+Reduzir a seção a: frase serif → título curto → lista de ferramentas → CTA. Toda a carga de venda passa para a ilustração, que ocupa 65% da largura.
 
-Imagem recebida e legível. Ela será registrada como asset do projeto (ponteiro CDN em `src/assets/`), importada direto na seção.
+## Etapa 1 — Grid 35/65
 
-## Etapa 1 — Lado esquerdo (45%)
+Arquivo: `src/components/landing/shared/ProductSection.tsx`
+
+- A prop `ratio` passa a aceitar `"35/65"` além de `"40/60"` e `"45/55"`.
+- `md:grid-cols-[minmax(0,35fr)_minmax(0,65fr)]`.
+- Gallery e Lunari não são afetadas.
+
+## Etapa 2 — Coluna de texto enxuta
 
 Arquivo: `src/components/landing/studio/StudioSection.tsx`
 
-- Tag: `• LUNARI STUDIO` (sem numeração, conforme regra do site).
-- Headline serif dourada: "Fotografar já dá trabalho suficiente."
-- Título em duas linhas: "Seu estúdio muda todos os dias. / O sistema precisa acompanhar."
-- Texto: linhas curtas ("Clientes chegam. / Pagamentos são confirmados. / Contratos são assinados. / Fotos são selecionadas. / Novos pedidos aparecem."), depois "Nada disso acontece separado." e o parágrafo de fechamento.
-- CTA: "Conheça o Studio →" para `/studio`.
-- **Removidos**: os chips CRM / Agenda / Contratos / Financeiro / Workflow / Análise de Vendas.
+- Tag: `• LUNARI STUDIO`.
+  Observação: o pedido traz "03 •", mas a regra do site (DESIGN_DNA_SITE) proíbe numeração nas seções. Mantenho sem número; se preferir com "03", confirmo e aplico.
+- Frase serif dourada em duas linhas: "Fotografar já dá / trabalho suficiente."
+- Título em duas linhas, maior que hoje (~34px mobile / ~52px desktop): "Seu sistema / precisa te ajudar."
+- **Removidos**: todos os parágrafos abaixo do título (`ProductBody` sai da seção).
 
-## Etapa 2 — Lado direito (55%)
+## Etapa 3 — Lista de ferramentas
 
-- Remoção completa do componente `AtendimentoLine` (timeline, eixo, marcadores, rótulos).
-- Só a ilustração, ocupando praticamente toda a metade direita.
-- Como a arte já tem fundo preto absoluto, ela é fundida ao fundo da seção: sem moldura, sem card, sem borda visível, `border-radius` grande apenas nas bordas onde encosta no conteúdo, e máscara de fade suave nas bordas esquerda e inferior para que dissolva no `#0B0B0B` da seção.
-- Halo dourado extremamente discreto por trás, sombra externa suave.
+Nova lista vertical logo abaixo do título, dentro do próprio `StudioSection.tsx`:
 
-## Etapa 3 — Sobreposição sutil
+- Itens: CRM, Agenda, Orçamentos AI, Contratos, Financeiro, Workflow.
+- Cada item com uma seta fina dourada (`→`, opacidade baixa) como marcador — sem caixa, chip, bullet ou check.
+- Tipografia 18–20px, peso médio, cor clara sobre o preto; espaçamento vertical ~14px.
+- Hover: item ganha cor dourada e a seta desliza 2px.
+- Entrada em cascata discreta (stagger ~40ms) reaproveitando `SoftReveal`.
 
-Conforme pedido, a imagem invade levemente a coluna de texto para parecer parte do ambiente:
+## Etapa 4 — CTA
 
-- Desktop: a imagem estende ~40–60px para dentro da coluna esquerda (margem negativa), atrás do texto (`z-index` menor), com fade lateral para que nada de texto perca legibilidade.
-- Escala levemente maior que a coluna (~105%) e leve sangria para a direita, reforçando a sensação de cena contínua em vez de print recortado.
-- Mobile: sem sobreposição. Texto → imagem, largura total com fade nas bordas.
+- "Conheça o Studio →" apenas texto, sem borda inferior fixa; underline só no hover.
+- Como o `ProductCTA` compartilhado tem borda permanente (usada por Gallery e Lunari), a seção Studio passa a usar uma variante local com `text-decoration` no hover, sem alterar o componente compartilhado.
 
-## Etapa 4 — Grid e animação
+## Etapa 5 — Ilustração
 
-- `ProductSection` passa a aceitar proporção 45/55 (hoje 40/60) via prop opcional, sem alterar Gallery e Lunari.
-- Entrada da imagem: `opacity 0 → 1`, `translateX 40px → 0`, ~700ms, ease-out, uma única vez. Sem parallax, sem outros efeitos.
+- Mantém a arte atual, agora em 65%: leve aumento de sangria para a direita e sobreposição sutil sobre a coluna de texto no desktop, preservando as máscaras de fade e o halo dourado.
+- Mobile: sem sobreposição, largura total.
 
-## Etapa 5 — Verificação
+## Etapa 6 — Verificação
 
-- Screenshot desktop e mobile (checagem de viewport iOS/Safari incluída).
-- Conferir legibilidade do texto na área de sobreposição, ausência de qualquer elemento textual à direita e peso visual da ilustração.
+- Screenshots desktop e mobile.
+- Conferir hierarquia de leitura em menos de 5 segundos, ausência de parágrafos e alinhamento à esquerda perfeito.
 
 ## Notas técnicas
 
-- Sem dependências novas; `framer-motion` já cobre a animação.
-- Cores explícitas (regra `.site-scope`), nunca tokens do app.
-- Alternância de fundo do site preservada: Studio escuro, Gallery clara, Lunari escura.
-- Imagem com `loading="lazy"` e `alt` descritivo para SEO/acessibilidade.
+- Sem novas dependências.
+- Cores explícitas (`.site-scope`), nunca tokens do app.
+- Nenhuma mudança em Gallery/Lunari além da nova opção de `ratio`.
