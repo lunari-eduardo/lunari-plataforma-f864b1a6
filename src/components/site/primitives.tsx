@@ -29,7 +29,7 @@ const toneMutedSoft = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.62)" : "rgba(255,255,255,0.55)";
 const toneHair = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.08)" : "rgba(255,255,255,0.08)";
-const toneAccent = (t: Tone) => (t === "light" ? TOKENS.ember : TOKENS.emberOnDark);
+const toneAccent = (t: Tone) => "#C9A87C";
 const asTitleTone = (t: Tone): "light" | "dark" => (t === "light" ? "light" : "dark");
 
 /* =========================================================
