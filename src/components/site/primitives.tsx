@@ -29,7 +29,7 @@ const toneMutedSoft = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.62)" : "rgba(255,255,255,0.55)";
 const toneHair = (t: Tone) =>
   t === "light" ? "rgba(10,10,10,0.08)" : "rgba(255,255,255,0.08)";
-const toneAccent = (t: Tone) => (t === "light" ? TOKENS.ember : TOKENS.emberOnDark);
+const toneAccent = (t: Tone) => "#C9A87C";
 const asTitleTone = (t: Tone): "light" | "dark" => (t === "light" ? "light" : "dark");
 
 /* =========================================================
@@ -50,7 +50,7 @@ function GradientHalo({ tone = "light" }: { tone?: Tone }) {
 
 function NoiseLayer() {
   // SVG noise inline (baixo custo, sem asset externo)
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.25 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>`;
   return (
     <div
       aria-hidden
@@ -150,7 +150,7 @@ export function ProductHero({
                     {" "}
                     <span
                       className="italic"
-                      style={{ ...displayFont, color: TOKENS.ember, fontWeight: 400 }}
+                      style={{ ...displayFont, color: "#C9A87C", fontWeight: 400 }}
                     >
                       {emphasis}
                     </span>
@@ -563,7 +563,7 @@ export function ComparisonTable({
               <th
                 key={p.key}
                 className={`py-5 px-4 text-[13px] ${
-                  p.highlight ? "text-[#b0632f]" : "text-[#0A0A0A]"
+                  p.highlight ? "text-[#C9A87C]" : "text-[#0A0A0A]"
                 }`}
               >
                 {p.name}
@@ -594,7 +594,7 @@ export function ComparisonTable({
                     return (
                       <td key={p.key} className="py-4 px-4 text-[13px] text-[#0A0A0A]/80">
                         {v === true ? (
-                          <Check className="h-4 w-4 text-[#b0632f]" strokeWidth={2.5} />
+                          <Check className="h-4 w-4 text-[#C9A87C]" strokeWidth={2.5} />
                         ) : v === false || v === undefined ? (
                           <Minus className="h-4 w-4 text-[#0A0A0A]/25" />
                         ) : (

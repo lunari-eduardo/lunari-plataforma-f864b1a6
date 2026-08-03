@@ -70,7 +70,7 @@ export function SiteNav() {
             style={
               onDark
                 ? { background: "#C9A87C", boxShadow: "0 0 0 3px rgba(201,168,124,0.16)" }
-                : { background: "#b0632f", boxShadow: "0 0 0 3px rgba(176,99,47,0.12)" }
+                : { background: "#C9A87C", boxShadow: "0 0 0 3px rgba(201,168,124,0.14)" }
             }
           />
           lunari
@@ -117,8 +117,8 @@ export function SiteNav() {
                           to={c.to}
                           className={({ isActive }) =>
                             `block px-4 py-3 transition-colors ${
-                              isActive
-                                ? "bg-[rgba(176,99,47,0.06)]"
+                                isActive
+                                  ? "bg-[rgba(201,168,124,0.06)]"
                                 : "hover:bg-[rgba(10,10,10,0.03)]"
                             }`
                           }

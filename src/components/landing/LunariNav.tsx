@@ -29,7 +29,7 @@ export function LunariNav() {
         >
           <span
             className="inline-block h-[7px] w-[7px] rounded-full"
-            style={{ background: "#b0632f", boxShadow: "0 0 0 3px rgba(176,99,47,0.12)" }}
+                    style={{ background: "#C9A87C", boxShadow: "0 0 0 3px rgba(201,168,124,0.14)" }}
           />
           lunari
           <span className="ml-1 text-[10px] font-normal uppercase tracking-[0.18em] text-[rgba(10,10,10,0.4)]" style={{ fontFamily: '"Geist Mono", monospace' }}>

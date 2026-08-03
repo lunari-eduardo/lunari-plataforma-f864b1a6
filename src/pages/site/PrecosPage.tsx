@@ -149,7 +149,7 @@ function PlanCard({
           >
             <Check
               className="mt-0.5 h-4 w-4 flex-shrink-0"
-              style={{ color: isDark ? TOKENS.emberOnDark : TOKENS.ember }}
+              style={{ color: isDark ? "#C9A87C" : "#C9A87C" }}
               strokeWidth={2.5}
             />
             {f}
@@ -219,7 +219,7 @@ function GallerySelectCard({
           <li key={f} className="flex items-start gap-2.5 text-[13.5px] leading-[1.5] text-[#0A0A0A]/85">
             <Check
               className="mt-0.5 h-4 w-4 flex-shrink-0"
-              style={{ color: TOKENS.ember }}
+              style={{ color: "#C9A87C" }}
               strokeWidth={2.5}
             />
             {f}
@@ -266,7 +266,7 @@ function GallerySelectCard({
                   </td>
                   <td
                     className="px-4 py-2.5 text-right text-[13px] font-medium tabular-nums"
-                    style={{ color: TOKENS.ember }}
+                    style={{ color: "#C9A87C" }}
                   >
                     {fmtBRL(p.price_cents)}
                   </td>
@@ -398,7 +398,7 @@ export default function PrecosPage() {
               style={{ ...displayFont }}
             >
               Um preço que{" "}
-              <span className="italic" style={{ color: TOKENS.ember }}>
+              <span className="italic" style={{ color: "#C9A87C" }}>
                 cabe.
               </span>
             </h1>
@@ -409,7 +409,7 @@ export default function PrecosPage() {
               style={uiFont}
             >
               Comece pelo Studio. Só adicione Select ou Deliver{" "}
-              <em style={{ ...displayFont, color: TOKENS.ember }}>se precisar</em>. Sem taxa por
+              <em style={{ ...displayFont, color: "#C9A87C" }}>se precisar</em>. Sem taxa por
               transação. Sem cobrar por foto.
             </p>
           </Reveal>
@@ -538,7 +538,7 @@ function SectionSeparator({ text }: { text: string }) {
           />
           <span
             className="text-[15px] italic md:text-[17px]"
-            style={{ ...displayFont, color: TOKENS.ember }}
+            style={{ ...displayFont, color: "#C9A87C" }}
           >
             {text}
           </span>

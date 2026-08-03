@@ -73,10 +73,10 @@ export function LunariHero() {
             className="mt-9 max-w-[620px] text-[42px] font-medium leading-[1.03] tracking-[-0.035em] md:text-[62px]"
             style={{ ...uiFont, color: TOKENS.onDark }}
           >
-            Feito para fotógrafos.
+            A primeira plataforma que
             <br />
             <span className="italic font-normal" style={{ ...displayFont, color: TOKENS.gold }}>
-              Não, adaptado.
+              pensa como você.
             </span>
           </motion.h1>
 
@@ -85,8 +85,7 @@ export function LunariHero() {
             className="mt-7 max-w-[540px] text-[16px] leading-[1.65] md:text-[18px]"
             style={{ ...uiFont, color: TOKENS.onDarkMuted }}
           >
-            Construído por quem entende a rotina real de um estúdio profissional. 
-            Uma plataforma unificada para elevar seu negócio a um novo nível de eficiência.
+            Studio + Gallery operando como um cérebro só. Onde o financeiro sabe da agenda, a galeria sabe do contrato e você sabe de tudo.
           </motion.p>
 
           <motion.div {...fadeUp(0.24)} className="mt-9 flex flex-wrap items-center gap-3">

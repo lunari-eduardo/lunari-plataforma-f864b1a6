@@ -33,7 +33,7 @@ export function HeroMockup() {
           {[
             { name: "CRM", count: 12, color: "#0A0A0A" },
             { name: "Agenda", count: 8, color: "#0A0A0A" },
-            { name: "Contrato", count: 5, color: "#b0632f", highlight: true },
+            { name: "Contrato", count: 5, color: "#C9A87C", highlight: true },
             { name: "Financeiro", count: 3, color: "#0A0A0A" },
           ].map((c, i) => (
             <div
@@ -112,15 +112,15 @@ function MockCard({
   return (
     <div
       className={`rounded-[8px] border bg-white p-2.5 ${
-        accent ? "border-[#b0632f]/50" : "border-[#0A0A0A]/8"
+        accent ? "border-[#C9A87C]/50" : "border-[#0A0A0A]/8"
       }`}
     >
       <div className="text-[12px] font-medium text-[#0A0A0A]">{name}</div>
       <div className="mt-0.5 text-[11px] text-[#0A0A0A]/50">{sub}</div>
       {accent && (
         <div className="mt-2 flex items-center gap-1.5">
-          <span className="h-1 w-1 rounded-full bg-[#b0632f]" />
-          <span className="text-[10px] uppercase tracking-wider text-[#b0632f]">
+          <span className="h-1 w-1 rounded-full bg-[#C9A87C]" />
+          <span className="text-[10px] uppercase tracking-wider text-[#C9A87C]">
             aguardando assinatura
           </span>
         </div>
@@ -141,7 +141,7 @@ function MetricInline({
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-[#0A0A0A]/50">{label}</span>
-      <span className={amber ? "font-semibold text-[#b0632f]" : "font-semibold text-[#0A0A0A]"}>
+      <span className={amber ? "font-semibold text-[#C9A87C]" : "font-semibold text-[#0A0A0A]"}>
         {value}
       </span>
     </div>
