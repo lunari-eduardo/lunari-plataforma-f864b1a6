@@ -138,19 +138,16 @@ function AtendimentoLine() {
             {/* traço proporcional — peso do marco no atendimento */}
             <div className="mt-3 h-px w-full" style={{ background: "rgba(245,241,234,0.06)" }}>
               <motion.div
-                className="h-px"
+                className="h-px origin-left"
                 style={{
+                  width: `${m.w * 100}%`,
                   background: m.active ? SITE_GOLD : "rgba(245,241,234,0.20)",
                 }}
                 initial={reduce ? undefined : { scaleX: 0 }}
                 whileInView={reduce ? undefined : { scaleX: 1 }}
                 viewport={{ once: true, amount: 0.4 }}
                 transition={{ duration: 0.9, ease: EASE, delay: 0.08 * i }}
-                // largura relativa ao marco
-                {...{ "data-w": m.w }}
-              >
-                <div style={{ width: `${m.w * 100}%` }} className="h-px" />
-              </motion.div>
+              />
             </div>
           </motion.div>
         ))}
