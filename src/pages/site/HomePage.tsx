@@ -25,7 +25,9 @@ export default function HomePage() {
       <LunariHero />
       <RotinaSection />
       <FluxoSection />
-
+      <StudioSection />
+      <GalleryHomeSection />
+      <LunariAgentSection />
     </>
   );
 }
