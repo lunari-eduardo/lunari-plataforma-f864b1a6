@@ -11,6 +11,7 @@ export function PrimaryButton({
   children, 
   to, 
   href,
+  className,
   tone = "light",
   onClick 
 }: { 
