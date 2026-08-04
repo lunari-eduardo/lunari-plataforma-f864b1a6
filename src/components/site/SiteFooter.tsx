@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { displayFont, uiFont } from "@/components/landing/primitives";
+import { cn } from "@/lib/utils";
 
-const COLS: { title: string; links: { label: string; to: string; external?: boolean }[] }[] = [
+const COLS = [
   {
     title: "Produtos",
     links: [
@@ -17,7 +17,6 @@ const COLS: { title: string; links: { label: string; to: string; external?: bool
       { label: "Sobre", to: "/sobre" },
       { label: "Contato", to: "/contato" },
       { label: "Blog", to: "/conteudos" },
-      { label: "Central de ajuda", to: "/app/ajuda" },
     ],
   },
   {
@@ -27,55 +26,35 @@ const COLS: { title: string; links: { label: string; to: string; external?: bool
       { label: "Privacidade", to: "/legal/privacidade" },
       { label: "Exclusão de dados", to: "/legal/exclusao-dados" },
       { label: "Segurança", to: "/legal/seguranca" },
-
+      { label: "Cookies", to: "/legal/cookies" },
     ],
   },
 ];
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-white/8 bg-[#0A0A0A] py-16">
-      <div className="mx-auto max-w-[1200px] px-6 md:px-8">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
-          <div>
-            <NavLink
-              to="/"
-              className="inline-flex items-center gap-2 text-[22px] font-medium text-[#F5F1EA]"
-              style={{ fontFamily: '"Geist", sans-serif', letterSpacing: "-0.02em" }}
-            >
-              <span
-                className="inline-block h-[7px] w-[7px] rounded-full"
-                style={{ background: "#C9A87C", boxShadow: "0 0 0 3px rgba(201,168,124,0.14)" }}
-              />
-              lunari
-              <span
-                className="ml-1 text-[10px] font-normal uppercase tracking-[0.18em] text-[rgba(245,241,234,0.42)]"
-                style={{ fontFamily: '"Geist Mono", monospace' }}
-              >
-                hub
-              </span>
+    <footer className="bg-site-offwhite py-20 border-t border-site-lineLight">
+      <div className="mx-auto max-w-7xl px-6 lg:px-10">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <NavLink to="/" className="text-site-ink text-2xl font-semibold tracking-tight flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-site-gold" />
+              lunari<span className="text-site-ink/40 font-mono text-xs uppercase tracking-widest ml-0.5">hub</span>
             </NavLink>
-            <p
-              className="mt-4 max-w-[240px] text-[13px] leading-[1.55] text-[#F5F1EA]/60"
-              style={uiFont}
-            >
-              O primeiro sistema que pensa como um fotógrafo. Studio + Gallery em um cérebro só.
+            <p className="mt-6 max-w-xs text-site-inkMuted leading-relaxed">
+              O primeiro ecossistema de gestão que pensa como um fotógrafo profissional. 
+              Studio e Gallery operando como um só cérebro.
             </p>
           </div>
 
           {COLS.map((col) => (
-            <div key={col.title} style={uiFont}>
-              <div className="text-[11px] uppercase tracking-[0.18em] text-[#F5F1EA]/50">
-                {col.title}
-              </div>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l.to}>
-                    <NavLink
-                      to={l.to}
-                      className="text-[13px] text-[#F5F1EA]/70 transition-colors hover:text-[#C9A87C]"
-                    >
-                      {l.label}
+            <div key={col.title}>
+              <h4 className="text-[11px] uppercase tracking-widest font-mono text-site-inkMuted mb-6">{col.title}</h4>
+              <ul className="space-y-4">
+                {col.links.map((link) => (
+                  <li key={link.to}>
+                    <NavLink to={link.to} className="text-sm text-site-ink/70 hover:text-site-gold transition-colors">
+                      {link.label}
                     </NavLink>
                   </li>
                 ))}
@@ -84,14 +63,9 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div
-          className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-white/8 pt-8 text-[12px] text-[#F5F1EA]/45 md:flex-row md:items-center"
-          style={uiFont}
-        >
-          <span>© {new Date().getFullYear()} Lunari · Feito para fotógrafos, no Brasil.</span>
-          <a href="mailto:hello@lunarihub.com" className="hover:text-[#C9A87C]">
-            hello@lunarihub.com
-          </a>
+        <div className="mt-20 pt-8 border-t border-site-lineLight flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-site-inkMuted uppercase tracking-wider">
+          <p>© {new Date().getFullYear()} LUNARI HUB • FEITO PARA FOTÓGRAFOS</p>
+          <a href="mailto:hello@lunarihub.com" className="hover:text-site-gold transition-colors">hello@lunarihub.com</a>
         </div>
       </div>
     </footer>

@@ -1,31 +1,28 @@
-import { LunariHero } from "@/components/landing/LunariHero";
-import { RotinaSection } from "@/components/landing/rotina/RotinaSection";
-import { FluxoSection } from "@/components/landing/fluxo/FluxoSection";
-import { StudioSection } from "@/components/landing/studio/StudioSection";
-import { GalleryHomeSection } from "@/components/landing/gallery/GalleryHomeSection";
-import { LunariAgentSection } from "@/components/landing/assistente/LunariAgentSection";
+import { Hero } from "@/components/home/Hero";
+import { Modules } from "@/components/home/Modules";
+import { Tour } from "@/components/home/Tour";
+import { LuSection } from "@/components/home/LuSection";
+import { Pricing } from "@/components/home/Pricing";
+import { Switching } from "@/components/home/Switching";
 import { SEOHead } from "@/components/seo/SEOHead";
 
-
-/**
- * HomePage — página inicial do site institucional (rota "/").
- * Vive dentro de <SiteLayout />, então NÃO renderiza LunariNav/LunariFooter.
- */
 export default function HomePage() {
   return (
     <>
       <SEOHead
-        title="Lunari · O primeiro sistema que pensa como um fotógrafo"
+        title="Lunari · O primeiro ecossistema que pensa como um fotógrafo"
         description="CRM, agenda, contratos, financeiro, galeria e IA operando como um só cérebro. Enquanto os outros vendem 6 ferramentas, a Lunari entrega um estúdio inteiro."
         canonical="https://lunarihub.com/"
         ogType="website"
       />
-      <LunariHero />
-      <RotinaSection />
-      <FluxoSection />
-      <StudioSection />
-      <GalleryHomeSection />
-      <LunariAgentSection />
+      <div className="bg-site-graphite">
+        <Hero />
+        <Modules />
+        <Tour />
+        <LuSection />
+        <Pricing />
+        <Switching />
+      </div>
     </>
   );
 }
