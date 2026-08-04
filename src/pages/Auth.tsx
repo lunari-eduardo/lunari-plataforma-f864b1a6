@@ -72,7 +72,7 @@ export default function Auth() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#C97A4A]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#C9A87C]" />
       </div>
     );
   }
@@ -142,7 +142,7 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setMode(isSignup ? 'login' : 'signup')}
-                className="text-[#C97A4A] hover:text-[#E08B5A] font-medium transition-colors"
+                className="text-[#C9A87C] hover:text-[#E4CFA8] font-medium transition-colors"
               >
                 {isSignup ? 'Entrar' : 'Criar conta'}
               </button>
@@ -150,8 +150,8 @@ export default function Auth() {
 
             <p className="text-xs text-center text-white/40 mt-6 font-light leading-relaxed">
               Ao continuar, você concorda com nossos{' '}
-              <a href="https://www.lunarihub.com/legal/termos" target="_blank" rel="noopener noreferrer" className="text-[#C97A4A] hover:underline">Termos de Serviço</a> e{' '}
-              <a href="https://www.lunarihub.com/legal/privacidade" target="_blank" rel="noopener noreferrer" className="text-[#C97A4A] hover:underline">Política de Privacidade</a>
+              <a href="https://www.lunarihub.com/legal/termos" target="_blank" rel="noopener noreferrer" className="text-[#C9A87C] hover:underline">Termos de Serviço</a> e{' '}
+              <a href="https://www.lunarihub.com/legal/privacidade" target="_blank" rel="noopener noreferrer" className="text-[#C9A87C] hover:underline">Política de Privacidade</a>
             </p>
           </>
         )}

@@ -50,7 +50,7 @@ export function EmailSignupForm() {
   if (success) {
     return (
       <div className="text-center py-6 space-y-4">
-        <CheckCircle className="h-16 w-16 text-[#C97A4A] mx-auto" />
+        <CheckCircle className="h-16 w-16 text-[#C9A87C] mx-auto" />
         <h3 className="text-xl font-medium text-white">Verifique seu email</h3>
         <p className="text-white/60 text-sm">
           Enviamos um link de confirmação para<br />

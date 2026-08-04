@@ -68,14 +68,14 @@ export function EmailLoginForm({ onForgotPassword }: EmailLoginFormProps) {
           <Checkbox
             checked={remember}
             onCheckedChange={(v) => setRemember(!!v)}
-            className="border-white/30 data-[state=checked]:bg-[#C97A4A] data-[state=checked]:border-[#C97A4A]"
+            className="border-white/30 data-[state=checked]:bg-[#C9A87C] data-[state=checked]:border-[#C9A87C]"
           />
           <span className="text-sm text-white/70">Lembrar de mim</span>
         </label>
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-sm text-[#C97A4A] hover:text-[#E08B5A] transition-colors"
+          className="text-sm text-[#C9A87C] hover:text-[#E4CFA8] transition-colors"
         >
           Esqueci minha senha
         </button>

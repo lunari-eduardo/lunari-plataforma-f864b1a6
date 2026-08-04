@@ -36,13 +36,13 @@ export function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
   if (success) {
     return (
       <div className="text-center py-6 space-y-4">
-        <CheckCircle className="h-16 w-16 text-[#C97A4A] mx-auto" />
+        <CheckCircle className="h-16 w-16 text-[#C9A87C] mx-auto" />
         <h3 className="text-xl font-medium text-white">Email enviado!</h3>
         <p className="text-white/60 text-sm">
           Enviamos um link de recuperação para<br />
           <span className="text-white font-medium">{email}</span>
         </p>
-        <button onClick={onBack} className="inline-flex items-center gap-2 text-[#C97A4A] hover:text-[#E08B5A] text-sm">
+        <button onClick={onBack} className="inline-flex items-center gap-2 text-[#C9A87C] hover:text-[#E4CFA8] text-sm">
           <ArrowLeft className="h-4 w-4" /> Voltar ao login
         </button>
       </div>
