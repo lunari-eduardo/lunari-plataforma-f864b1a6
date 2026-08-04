@@ -1,4 +1,5 @@
 import { Hero } from "@/components/home/Hero";
+import { Modules } from "@/components/home/Modules";
 import { SEOHead } from "@/components/seo/SEOHead";
 
 export default function HomePage() {
@@ -12,8 +13,9 @@ export default function HomePage() {
       />
       <div className="bg-site-graphite">
         <Hero />
-        {/* Próximas seções (Modules, Tour, Lu, etc.) virão na sequência */}
-        <section className="py-40 flex items-center justify-center text-site-on-dark/20 uppercase tracking-widest font-mono text-xs">
+        <Modules />
+        {/* Próximas seções (Tour, Lu, etc.) virão na sequência */}
+        <section className="py-20 flex items-center justify-center text-site-on-dark/10 uppercase tracking-widest font-mono text-[10px]">
           Portando seções do Remix...
         </section>
       </div>

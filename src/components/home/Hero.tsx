@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { SiteH1, SiteLead, SiteReveal } from "./typography";
+import { SiteH1, SiteLead, SiteReveal } from "../site/typography";
 
 export function Hero() {
   return (

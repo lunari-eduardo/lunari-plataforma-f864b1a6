@@ -8,11 +8,16 @@ export function SectionTitle({
   emphasis,
   tone = "light",
   className = "",
+  // Mapeamos props legadas para não quebrar componentes existentes
+  size,
+  as,
 }: {
   children: ReactNode;
   emphasis?: string;
   tone?: Tone;
   className?: string;
+  size?: "sm" | "md" | "lg";
+  as?: "h1" | "h2" | "h3";
 }) {
   return (
     <SiteH2 tone={tone} className={className}>
