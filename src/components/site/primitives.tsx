@@ -21,7 +21,7 @@ export function PrimaryButton({
   onClick?: () => void;
 }) {
   const baseCls = cn(
-    "inline-flex items-center justify-center px-8 py-4 rounded-full font-bold text-sm transition-all hover:-translate-y-1",
+    "inline-flex items-center justify-center px-8 py-4 rounded-full font-bold text-sm transition-all hover:-translate-y-1 cursor-pointer",
     tone === "light" 
       ? "bg-site-gold text-site-graphite hover:bg-site-goldPale shadow-[0_10px_20px_-10px_rgba(201,168,124,0.3)]" 
       : "bg-site-on-dark text-site-graphite hover:bg-white",
@@ -30,7 +30,7 @@ export function PrimaryButton({
 
   if (onClick) {
     return (
-      <button onClick={onClick} className={baseCls}>
+      <button onClick={onClick} className={baseCls} type="button">
         {children}
       </button>
     );
@@ -57,7 +57,7 @@ export function GhostLink({
   onClick?: () => void;
 }) {
   const baseCls = cn(
-    "inline-flex items-center justify-center px-8 py-4 rounded-full font-bold text-sm border transition-all",
+    "inline-flex items-center justify-center px-8 py-4 rounded-full font-bold text-sm border transition-all cursor-pointer",
     tone === "light"
       ? "border-site-line-light text-site-ink hover:border-site-gold"
       : "border-site-line-dark text-site-on-dark hover:border-site-on-dark",
@@ -66,7 +66,7 @@ export function GhostLink({
 
   if (onClick) {
     return (
-      <button onClick={onClick} className={baseCls}>
+      <button onClick={onClick} className={baseCls} type="button">
         {children}
       </button>
     );
@@ -88,7 +88,7 @@ export function SectionShell({
   children: ReactNode;
   className?: string;
   id?: string;
-  tone?: any; // flexível para tipos legados ("light" | "dark")
+  tone?: any;
 }) {
   const isDark = tone === "dark";
   const toneCls = isDark
@@ -125,10 +125,32 @@ export function GridLines({
 
 // Re-exports/shims para compatibilidade legada
 export { SectionTitle };
-export function EyebrowTag({ children, className, index, tone }: { children: ReactNode; className?: string; index?: string; tone?: any }) {
+export function EyebrowTag({ 
+  children, 
+  className, 
+  index, 
+  tone 
+}: { 
+  children: ReactNode; 
+  className?: string; 
+  index?: string; 
+  tone?: any; 
+}) {
   return <SiteEyebrow className={className}>{children}</SiteEyebrow>;
 }
-export function Reveal({ children, className, delay, y, tone }: { children: ReactNode; className?: string; delay?: number; y?: number; tone?: any }) {
+export function Reveal({ 
+  children, 
+  className, 
+  delay, 
+  y, 
+  tone 
+}: { 
+  children: ReactNode; 
+  className?: string; 
+  delay?: number; 
+  y?: any; 
+  tone?: any; 
+}) {
   return <SiteReveal className={className} delay={delay}>{children}</SiteReveal>;
 }
 
