@@ -88,10 +88,10 @@ export function SectionShell({
   children: ReactNode;
   className?: string;
   id?: string;
-  tone?: "light" | "dark";
+  tone?: any; // flexível para tipos legados ("light" | "dark")
 }) {
-  const toneCls =
-    tone === "dark"
+  const isDark = tone === "dark";
+  const toneCls = isDark
       ? "bg-site-graphite text-site-on-dark"
       : "bg-site-warmwhite text-site-ink";
   return (
@@ -105,7 +105,7 @@ export function GridLines({
   tone = "light",
   className = "",
 }: {
-  tone?: "light" | "dark";
+  tone?: any;
   className?: string;
 }) {
   const color = tone === "dark" ? "rgba(255,255,255,0.04)" : "rgba(10,10,10,0.04)";
@@ -125,10 +125,10 @@ export function GridLines({
 
 // Re-exports/shims para compatibilidade legada
 export { SectionTitle };
-export function EyebrowTag({ children, className, index, tone }: { children: ReactNode; className?: string; index?: string; tone?: string }) {
+export function EyebrowTag({ children, className, index, tone }: { children: ReactNode; className?: string; index?: string; tone?: any }) {
   return <SiteEyebrow className={className}>{children}</SiteEyebrow>;
 }
-export function Reveal({ children, className, delay, y, tone }: { children: ReactNode; className?: string; delay?: number; y?: number; tone?: string }) {
+export function Reveal({ children, className, delay, y, tone }: { children: ReactNode; className?: string; delay?: number; y?: number; tone?: any }) {
   return <SiteReveal className={className} delay={delay}>{children}</SiteReveal>;
 }
 
