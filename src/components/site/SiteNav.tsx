@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logoSiteAsset from "@/assets/logo-header-v3.png.asset.json";
 
 const GALLERY_LINKS = [
   { to: "/gallery", label: "Visão geral" },
@@ -56,8 +55,9 @@ export function SiteNav() {
           className="flex items-center gap-2"
         >
           <img 
-            src={logoSiteAsset.url} 
+            src="/branding/logo-site-gold.png" 
             alt="Lunari" 
+
             className="h-6 w-auto object-contain md:h-7" 
           />
         </NavLink>
