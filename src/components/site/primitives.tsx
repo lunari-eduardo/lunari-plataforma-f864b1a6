@@ -285,14 +285,15 @@ export function ProductHero({
   );
 }
 
-export function MetricsStrip({ items = [] }: { items: { value: string; label: string }[] }) {
+export function MetricsStrip({ items = [], tone = "dark" }: { items: { value: string; label: string }[]; tone?: any }) {
+  const dark = tone !== "light";
   return (
-    <section data-tone="dark" className="border-y border-site-line-dark bg-site-graphiteSoft py-12 md:py-16">
+    <section data-tone={dark ? "dark" : "light"} className={cn("py-12 md:py-16 border-y", dark ? "border-site-line-dark bg-site-graphiteSoft" : "border-site-line-light bg-site-offwhite")}>
       <div className="mx-auto grid max-w-[1200px] gap-8 px-6 sm:grid-cols-2 md:px-10 lg:grid-cols-4">
         {items.map((m) => (
           <div key={m.label}>
             <p className="text-2xl font-semibold text-site-gold md:text-3xl">{m.value}</p>
-            <p className="mt-2 text-sm leading-relaxed text-site-on-dark-muted">{m.label}</p>
+            <p className={cn("mt-2 text-sm leading-relaxed", dark ? "text-site-on-dark-muted" : "text-site-ink-muted")}>{m.label}</p>
           </div>
         ))}
       </div>
