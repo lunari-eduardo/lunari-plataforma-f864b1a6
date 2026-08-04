@@ -102,7 +102,7 @@ export function Hero() {
         <SiteReveal delay={300} className="relative">
           <StudioMockup />
 
-          <div className="absolute -bottom-6 -left-6 hidden rounded-2xl border border-site-line-dark bg-site-graphiteSoft/95 p-5 shadow-xl backdrop-blur lg:block">
+          <div className="absolute -bottom-10 -left-8 hidden rounded-2xl border border-site-line-dark bg-site-graphiteSoft/95 p-5 shadow-xl backdrop-blur lg:block">
             <div className="flex items-center gap-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-site-gold/20">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-site-gold" />
