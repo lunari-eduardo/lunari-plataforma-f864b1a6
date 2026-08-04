@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { SiteNav } from "./SiteNav";
 import { SiteFooter } from "./SiteFooter";
+import { WhatsAppWidget } from "./WhatsAppWidget";
+import { cn } from "@/lib/utils";
 
 /**
  * Layout público de lunarihub.com — envelopa toda rota institucional
@@ -23,10 +25,11 @@ export function SiteLayout() {
       style={{ fontFamily: '"Geist", "Inter Tight", sans-serif', letterSpacing: "-0.005em" }}
     >
       <SiteNav />
-      <main>
+      <main className={cn(loc.pathname !== "/" && "pt-[68px] md:pt-[76px]")}>
         <Outlet />
       </main>
       <SiteFooter />
+      <WhatsAppWidget />
     </div>
   );
 }

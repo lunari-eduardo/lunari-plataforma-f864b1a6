@@ -385,7 +385,7 @@ export default function PrecosPage() {
       />
 
       {/* Hero */}
-      <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-20 bg-site-warmwhite text-site-ink">
+      <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-20 bg-site-warmwhite text-site-ink border-b border-site-line-light">
         <GridLines tone="light" />
         <div className="relative mx-auto max-w-[900px] px-6 text-center md:px-8">
           <BreadcrumbTrail items={[{ label: "Início", to: "/" }, { label: "Preços" }]} />

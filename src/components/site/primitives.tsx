@@ -207,7 +207,7 @@ export function BreadcrumbTrail({ items = [] }: { items: { label: string; to?: s
   return (
     <nav
       aria-label="Trilha de navegação"
-      className="pt-28 md:pt-32"
+      className="pt-2"
     >
       <ol className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-2 px-6 font-mono text-[10px] uppercase tracking-[0.18em] text-inherit opacity-60 md:px-10">
         {items.map((item, i) => (
