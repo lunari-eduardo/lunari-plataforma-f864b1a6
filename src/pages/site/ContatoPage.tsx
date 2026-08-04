@@ -12,9 +12,9 @@ import {
 } from "@/components/site/primitives";
 import { Mail, MessageCircle, Instagram } from "lucide-react";
 
-const WA = "5511999999999"; // TODO(contato): substituir pelo número oficial da Lunari
-const EMAIL = "ola@lunarihub.com";
-const IG = "https://instagram.com/lunarihub";
+const WA = "5551998287948";
+const EMAIL = "contato@lunarihub.com";
+const IG = "https://instagram.com/app.lunari";
 
 export default function ContatoPage() {
   const waHref = `https://wa.me/${WA}?text=${encodeURIComponent(
@@ -47,7 +47,7 @@ export default function ContatoPage() {
             </Reveal>
             <Reveal delay={0.1}>
               <p
-                className="mt-6 max-w-[560px] text-[17px] leading-[1.55] text-[#0A0A0A]/70 md:text-[19px]"
+                className="mt-6 max-w-[560px] text-[17px] leading-[1.55] text-[#0A0A0A]/85 md:text-[19px]"
                 style={uiFont}
               >
                 Sem formulário chato. Escolhe o canal que preferir. Respondemos rápido em horário comercial (SP).
@@ -76,7 +76,7 @@ export default function ContatoPage() {
             },
             {
               icon: Instagram,
-              label: "@lunarihub",
+              label: "@app.lunari",
               hint: "DM aberto, bastidores e novidades",
               action: "Abrir Instagram",
               href: IG,
@@ -97,7 +97,7 @@ export default function ContatoPage() {
                     <Icon className="h-5 w-5" />
                   </span>
                   <p
-                    className="mt-6 text-[10px] uppercase tracking-[0.18em] text-[#0A0A0A]/45"
+                    className="mt-6 text-[10px] uppercase tracking-[0.18em] text-[#0A0A0A]/60"
                     style={monoFont}
                   >
                     {c.hint}
