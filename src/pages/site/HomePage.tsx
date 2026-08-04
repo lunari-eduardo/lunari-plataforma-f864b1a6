@@ -2,6 +2,8 @@ import { Hero } from "@/components/home/Hero";
 import { Modules } from "@/components/home/Modules";
 import { Tour } from "@/components/home/Tour";
 import { LuSection } from "@/components/home/LuSection";
+import { Pricing } from "@/components/home/Pricing";
+import { Switching } from "@/components/home/Switching";
 import { SEOHead } from "@/components/seo/SEOHead";
 
 export default function HomePage() {
@@ -18,10 +20,8 @@ export default function HomePage() {
         <Modules />
         <Tour />
         <LuSection />
-        {/* Próximas seções virão na sequência */}
-        <section className="py-20 flex items-center justify-center text-site-on-dark/10 uppercase tracking-widest font-mono text-[10px]">
-          Portando seções do Remix...
-        </section>
+        <Pricing />
+        <Switching />
       </div>
     </>
   );
