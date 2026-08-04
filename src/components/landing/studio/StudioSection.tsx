@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { EASE, uiFont } from "../primitives";
-import studioHub from "@/assets/site/studio-hub.png.asset.json";
 import {
   ProductEyebrow,
   ProductHeadline,
@@ -130,8 +129,9 @@ function StudioComposition() {
         }}
       >
         <img
-          src={studioHub.url}
+          src="/site/studio-hub-illustration.png"
           alt="Painel do Lunari Studio conectando agenda, sessão, cliente e financeiro em um único fluxo"
+
           loading="lazy"
           decoding="async"
           className="block h-auto w-full select-none rounded-[20px] md:max-h-[560px] md:object-contain md:object-right"
