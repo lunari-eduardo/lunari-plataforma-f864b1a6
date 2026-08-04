@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
@@ -14,6 +14,7 @@ import {
   displayFont,
   uiFont,
   monoFont,
+  CTABlock,
 } from "@/components/site/primitives";
 import { SectionTitle, SectionKicker } from "@/components/site/SectionTitle";
 import { PromoBadge, PromoPriceLabel } from "@/components/site/promo/PromoParts";
@@ -478,6 +479,105 @@ export default function PrecosPage() {
           <div className="mx-auto max-w-[900px] text-center">
             <button
               onClick={() => setComboOpen((o) => !o)}
+              className="group flex w-full items-center justify-between py-8"
+            >
+              <div className="text-left">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#0A0A0A]/40" style={monoFont}>
+                  Economize até 25%
+                </p>
+                <h2 className="text-3xl font-medium tracking-tight md:text-4xl" style={displayFont}>
+                  Ver pacotes combo
+                </h2>
+              </div>
+              <ChevronDown
+                className={`h-6 w-6 transition-transform duration-300 ${
+                  comboOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {comboOpen && (
+              <div className="mt-12 grid gap-6 md:grid-cols-3">
+                {orderedCombos.map((p) => (
+                  <PlanCard key={p.id} plan={p} cadence="annual" />
+                ))}
+              </div>
+            )}
+          </div>
+        </SectionShell>
+      )}
+
+      {/* FAQ */}
+      <FAQBlock items={PRICING_FAQ} />
+
+      {/* CTA Final */}
+      <CTABlock
+        tone="dark"
+        title="Pronto para elevar o nível?"
+        description="Junte-se a centenas de fotógrafos que trocaram o caos pela clareza da Lunari."
+      />
+    </>
+  );
+}
+
+function SkeletonCard({ compact }: { compact?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "animate-pulse rounded-[16px] bg-[rgba(10,10,10,0.03)]",
+        compact ? "h-[200px]" : "h-[480px]"
+      )}
+    />
+  );
+}
+
+function SectionSeparator({ text }: { text: string }) {
+  return (
+    <div className="bg-site-warmwhite py-12 text-center md:py-20">
+      <span
+        className="text-[11px] uppercase tracking-[0.3em] text-[#0A0A0A]/30"
+        style={monoFont}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
+function DeliverCard({ plan, cadence }: { plan: SiteUnifiedPlan; cadence: Cadence }) {
+  const nav = useNavigate();
+  const price = cadence === "monthly" ? plan.monthly_price_cents : plan.yearly_price_cents / 12;
+
+  return (
+    <div className="flex flex-col rounded-[16px] border border-[rgba(10,10,10,0.08)] bg-white p-6 transition-all hover:border-[#C9A87C]/30 hover:shadow-xl">
+      <div className="flex-1">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-[#0A0A0A]/40" style={monoFont}>
+          {plan.name}
+        </h3>
+        <div className="mt-4 flex items-baseline gap-1">
+          <span className="text-3xl font-semibold tracking-tight" style={displayFont}>
+            {fmtBRL(price)}
+          </span>
+          <span className="text-[11px] text-[#0A0A0A]/40" style={uiFont}>
+            /mês
+          </span>
+        </div>
+        <p className="mt-3 text-[13px] leading-relaxed text-[#0A0A0A]/60" style={uiFont}>
+          {plan.description}
+        </p>
+      </div>
+      <button
+        onClick={() =>
+          nav(`/auth?plan=${plan.code}&period=${cadence === "annual" ? "annual" : "monthly"}`)
+        }
+        className="mt-6 w-full rounded-full border border-[rgba(10,10,10,0.1)] py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors hover:bg-site-gold hover:text-site-graphite hover:border-site-gold"
+        style={monoFont}
+      >
+        Selecionar
+      </button>
+    </div>
+  );
+}
               className="inline-flex items-center gap-2 rounded-full border border-[rgba(10,10,10,0.12)] px-5 py-2.5 text-[13px] text-[#0A0A0A] transition-colors hover:bg-[rgba(10,10,10,0.03)]"
               style={uiFont}
             >

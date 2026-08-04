@@ -133,10 +133,10 @@ export function SectionShell({
   children: ReactNode;
   className?: string;
   id?: string;
-  tone?: any;
+  tone?: SiteTone;
 }) {
   return (
-    <SiteSection id={id} tone={tone === "dark" ? "dark" : "light"} className={className}>
+    <SiteSection id={id} tone={tone || "light"} className={className}>
       {children}
     </SiteSection>
   );
