@@ -149,6 +149,7 @@ export default function PhotographerApp() {
               </Route>
 
               <Route path="/auth" element={<AuthRouteWrapper />} />
+              <Route path="/auth/google/callback" element={<Navigate to="/app/integracoes" replace />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/oauth/consent" element={<OAuthConsent />} />
               <Route path="/conteudos" element={<Conteudos />} />
