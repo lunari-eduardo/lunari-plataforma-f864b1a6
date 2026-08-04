@@ -60,8 +60,8 @@ export default defineConfig(({ mode }) => ({
       injectRegister: 'auto',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       manifest: {
-        name: 'Lunari Studio',
-        short_name: 'Lunari Studio',
+        name: 'Lunari',
+        short_name: 'Lunari',
         description: 'Sistema de gestão completo para fotógrafos e estúdios fotográficos',
         theme_color: '#6B7280',
         background_color: '#0A0A0A',
