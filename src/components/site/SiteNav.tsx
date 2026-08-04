@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoSiteAsset from "@/assets/logo-site.png.asset.json";
 
 const GALLERY_LINKS = [
   { to: "/gallery", label: "Visão geral" },
@@ -43,18 +44,20 @@ export function SiteNav() {
       className={cn(
         "fixed inset-x-0 top-0 z-[100] transition-all duration-300",
         scrolled || mobileOpen
-          ? "bg-site-graphite/92 backdrop-blur-md border-b border-site-line-dark py-3"
-          : "py-5 bg-gradient-to-b from-site-graphite/70 to-transparent"
+          ? "bg-site-graphite/95 backdrop-blur-xl border-b border-site-line-dark py-3"
+          : "py-5 bg-gradient-to-b from-site-graphite/90 to-transparent"
       )}
     >
       <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 md:px-10">
         <NavLink
           to="/"
-          className="flex items-center gap-2 text-xl font-semibold tracking-tight text-site-on-dark"
+          className="flex items-center gap-2"
         >
-          <span className="h-2 w-2 rounded-full bg-site-gold shadow-[0_0_12px_rgba(201,168,124,0.4)]" />
-          lunari
-          <span className="ml-0.5 font-mono text-xs uppercase tracking-widest text-site-on-dark/40">hub</span>
+          <img 
+            src={logoSiteAsset.url} 
+            alt="Lunari" 
+            className="h-6 w-auto object-contain md:h-7" 
+          />
         </NavLink>
 
         <div className="hidden items-center gap-8 md:flex">

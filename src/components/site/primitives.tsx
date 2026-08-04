@@ -133,10 +133,10 @@ export function SectionShell({
   children: ReactNode;
   className?: string;
   id?: string;
-  tone?: any;
+  tone?: SiteTone;
 }) {
   return (
-    <SiteSection id={id} tone={tone === "dark" ? "dark" : "light"} className={className}>
+    <SiteSection id={id} tone={tone || "light"} className={className}>
       {children}
     </SiteSection>
   );
@@ -207,10 +207,9 @@ export function BreadcrumbTrail({ items = [] }: { items: { label: string; to?: s
   return (
     <nav
       aria-label="Trilha de navegação"
-      data-tone="dark"
-      className="bg-site-graphite pt-28 md:pt-32"
+      className="pt-28 md:pt-32"
     >
-      <ol className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-2 px-6 font-mono text-[10px] uppercase tracking-[0.18em] text-site-on-dark-muted md:px-10">
+      <ol className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-2 px-6 font-mono text-[10px] uppercase tracking-[0.18em] text-inherit opacity-60 md:px-10">
         {items.map((item, i) => (
           <li key={item.label} className="flex items-center gap-2">
             {item.to ? (

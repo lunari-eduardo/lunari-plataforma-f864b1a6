@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
+import { cn } from "@/lib/utils";
 import {
   SectionShell,
   EyebrowTag,
@@ -14,6 +15,7 @@ import {
   displayFont,
   uiFont,
   monoFont,
+  CTABlock,
 } from "@/components/site/primitives";
 import { SectionTitle, SectionKicker } from "@/components/site/SectionTitle";
 import { PromoBadge, PromoPriceLabel } from "@/components/site/promo/PromoParts";
@@ -383,8 +385,8 @@ export default function PrecosPage() {
       />
 
       {/* Hero */}
-      <section className="relative overflow-hidden pt-36 pb-16 md:pt-44 md:pb-20">
-        <GridLines />
+      <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-20 bg-site-warmwhite text-site-ink">
+        <GridLines tone="light" />
         <div className="relative mx-auto max-w-[900px] px-6 text-center md:px-8">
           <BreadcrumbTrail items={[{ label: "Início", to: "/" }, { label: "Preços" }]} />
           <Reveal>
@@ -394,7 +396,7 @@ export default function PrecosPage() {
           </Reveal>
           <Reveal delay={0.05}>
             <h1
-              className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] text-[#0A0A0A] md:text-[76px]"
+              className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[76px]"
               style={{ ...displayFont }}
             >
               Um preço que{" "}
@@ -405,7 +407,7 @@ export default function PrecosPage() {
           </Reveal>
           <Reveal delay={0.1}>
             <p
-              className="mx-auto mt-6 max-w-[600px] text-[17px] leading-[1.55] text-[#0A0A0A]/70 md:text-[19px]"
+              className="mx-auto mt-6 max-w-[600px] text-[17px] leading-[1.55] opacity-70 md:text-[19px]"
               style={uiFont}
             >
               Comece pelo Studio. Só adicione Select ou Deliver{" "}
@@ -478,55 +480,58 @@ export default function PrecosPage() {
           <div className="mx-auto max-w-[900px] text-center">
             <button
               onClick={() => setComboOpen((o) => !o)}
-              className="inline-flex items-center gap-2 rounded-full border border-[rgba(10,10,10,0.12)] px-5 py-2.5 text-[13px] text-[#0A0A0A] transition-colors hover:bg-[rgba(10,10,10,0.03)]"
-              style={uiFont}
+              className="group flex w-full items-center justify-between py-8"
             >
-              <span>Prefere um combo com desconto?</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${comboOpen ? "rotate-180" : ""}`} />
+              <div className="text-left">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#0A0A0A]/40" style={monoFont}>
+                  Economize até 25%
+                </p>
+                <h2 className="text-3xl font-medium tracking-tight md:text-4xl" style={displayFont}>
+                  Ver pacotes combo
+                </h2>
+              </div>
+              <ChevronDown
+                className={`h-6 w-6 transition-transform duration-300 ${
+                  comboOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
+
+            {comboOpen && (
+              <div className="mt-12 grid gap-6 md:grid-cols-3">
+                {orderedCombos.map((p) => (
+                  <PlanCard key={p.id} plan={p} cadence="annual" />
+                ))}
+              </div>
+            )}
           </div>
-          {comboOpen && (
-            <div className="mt-10 grid gap-5 md:grid-cols-2">
-              {orderedCombos.map((p) => (
-                <PlanCard key={p.id} plan={p} cadence="monthly" />
-              ))}
-            </div>
-          )}
         </SectionShell>
       )}
 
       {/* FAQ */}
       <FAQBlock items={PRICING_FAQ} />
 
-      {/* CTA final */}
-      <SectionShell className="text-center">
-        <Reveal>
-          <SectionTitle emphasis="dúvida?" size="lg" as="h2">
-            Ainda em
-          </SectionTitle>
-        </Reveal>
-        <Reveal delay={0.05}>
-          <p
-            className="mx-auto mt-4 max-w-[480px] text-[16px] text-[#0A0A0A]/70"
-            style={uiFont}
-          >
-            Fale com a gente. 15 minutos, sem enrolação, sem venda.
-          </p>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <PrimaryButton onClick={() => nav("/auth")}>Testar 30 dias grátis</PrimaryButton>
-            <GhostLink onClick={() => nav("/contato")}>Falar com a Lunari →</GhostLink>
-          </div>
-        </Reveal>
-      </SectionShell>
+      {/* CTA Final */}
+      <CTABlock
+        tone="dark"
+        title="Pronto para elevar o nível?"
+        description="Junte-se a centenas de fotógrafos que trocaram o caos pela clareza da Lunari."
+      />
     </>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Separator entre camadas — frase-âncora
-   ───────────────────────────────────────────────────────────── */
+function SkeletonCard({ compact }: { compact?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "animate-pulse rounded-[16px] bg-[rgba(10,10,10,0.03)]",
+        compact ? "h-[200px]" : "h-[480px]"
+      )}
+    />
+  );
+}
+
 function SectionSeparator({ text }: { text: string }) {
   return (
     <div className="relative py-6 md:py-10">
@@ -552,9 +557,6 @@ function SectionSeparator({ text }: { text: string }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Card compacto para Gallery Deliver
-   ───────────────────────────────────────────────────────────── */
 function DeliverCard({ plan, cadence }: { plan: SiteUnifiedPlan; cadence: Cadence }) {
   const nav = useNavigate();
   const { byPlanCode } = usePromotions();
@@ -607,25 +609,6 @@ function DeliverCard({ plan, cadence }: { plan: SiteUnifiedPlan; cadence: Cadenc
       >
         Assinar →
       </button>
-    </div>
-  );
-}
-
-/* Skeleton simples pra loading */
-function SkeletonCard({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      className={`animate-pulse rounded-[16px] border border-[rgba(10,10,10,0.08)] bg-white ${
-        compact ? "p-5" : "p-8"
-      }`}
-    >
-      <div className="h-3 w-24 rounded bg-[rgba(10,10,10,0.06)]" />
-      <div className={`mt-4 h-8 w-40 rounded bg-[rgba(10,10,10,0.06)] ${compact ? "h-6 w-24" : ""}`} />
-      <div className="mt-6 space-y-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-3 w-full rounded bg-[rgba(10,10,10,0.05)]" />
-        ))}
-      </div>
     </div>
   );
 }

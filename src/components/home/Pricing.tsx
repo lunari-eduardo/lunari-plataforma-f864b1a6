@@ -23,8 +23,8 @@ export function Pricing() {
         <div className="text-center max-w-3xl mx-auto mb-20">
           <SiteReveal>
             <SiteEyebrow>Assinatura</SiteEyebrow>
-            <SiteH2>Um preço que cabe no seu crescimento.</SiteH2>
-            <SiteLead className="mt-6">
+            <SiteH2 tone="light">Um preço que cabe no seu crescimento.</SiteH2>
+            <SiteLead tone="light" className="mt-6">
               Comece pelo Studio Starter e evolua conforme seu fluxo cresce. 
               Sem taxas ocultas, sem cobrança por foto.
             </SiteLead>
