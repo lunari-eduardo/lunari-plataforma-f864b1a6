@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { SiteH2, SiteEyebrow, SiteLead, SiteBody, SiteReveal } from "./typography";
 import { NavLink } from "react-router-dom";
 import { TOKENS as LANDING_TOKENS } from "@/components/landing/primitives";
+import { SectionTitle } from "./SectionTitle";
 
 export const TOKENS = LANDING_TOKENS;
 
@@ -123,6 +124,7 @@ export function GridLines({
 }
 
 // Re-exports/shims para compatibilidade legada
+export { SectionTitle };
 export { SiteReveal as Reveal, SiteEyebrow as EyebrowTag };
 export const displayFont = { fontFamily: '"Instrument Serif", serif' };
 export const uiFont = { fontFamily: '"Geist", sans-serif' };
