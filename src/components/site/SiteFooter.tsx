@@ -43,8 +43,8 @@ export function SiteFooter() {
               lunari<span className="text-site-ink/40 font-mono text-xs uppercase tracking-widest ml-0.5">hub</span>
             </NavLink>
             <p className="mt-6 max-w-xs text-site-ink-muted leading-relaxed">
-              O primeiro ecossistema de gestão que pensa como um fotógrafo profissional. 
-              Studio e Gallery operando como um só cérebro.
+              Lunari é uma plataforma SaaS de gestão completa que pensa como um fotógrafo profissional. 
+              Studio e Gallery operando como um só cérebro para simplificar seu negócio.
             </p>
           </div>
 

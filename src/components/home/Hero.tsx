@@ -69,8 +69,13 @@ export function Hero() {
       <div className="relative mx-auto grid max-w-[1200px] items-center gap-14 px-6 md:grid-cols-[1fr_1.05fr] md:gap-16 md:px-10">
         <div>
           <SiteReveal>
+            <div className="mb-6 inline-flex items-center rounded-full border border-site-gold/20 bg-site-gold/5 px-3 py-1">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-site-gold">
+                PLATAFORMA SAAS DE GESTÃO
+              </span>
+            </div>
             <SiteH1 tone="dark" emphasis="Não adaptado.">
-              Feito para fotógrafo.
+              Lunari: O sistema de gestão completo para fotógrafos.
             </SiteH1>
           </SiteReveal>
 
