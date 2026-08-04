@@ -41,7 +41,7 @@ export function SiteEyebrow({ children, className }: { children: ReactNode; clas
 export function SiteH1({ 
   children, 
   className, 
-  tone = "dark",
+  tone,
   emphasis 
 }: { 
   children: ReactNode; 
@@ -68,7 +68,7 @@ export function SiteH1({
   );
 }
 
-export function SiteH2({ children, className, tone = "dark", emphasis }: { children: ReactNode; className?: string; tone?: Tone; emphasis?: string }) {
+export function SiteH2({ children, className, tone, emphasis }: { children: ReactNode; className?: string; tone?: Tone; emphasis?: string }) {
   return (
     <h2 className={cn(
       "text-[32px] md:text-[52px] leading-[1.06] tracking-[-0.028em] font-medium",
@@ -88,7 +88,7 @@ export function SiteH2({ children, className, tone = "dark", emphasis }: { child
   );
 }
 
-export function SiteLead({ children, className, tone = "dark" }: { children: ReactNode; className?: string; tone?: Tone }) {
+export function SiteLead({ children, className, tone }: { children: ReactNode; className?: string; tone?: Tone }) {
   return (
     <p className={cn(
       "text-[17px] md:text-[19px] leading-[1.55]",
@@ -100,7 +100,7 @@ export function SiteLead({ children, className, tone = "dark" }: { children: Rea
   );
 }
 
-export function SiteBody({ children, className, tone = "dark" }: { children: ReactNode; className?: string; tone?: Tone }) {
+export function SiteBody({ children, className, tone }: { children: ReactNode; className?: string; tone?: Tone }) {
   return (
     <p className={cn(
       "text-[16px] md:text-[17px] leading-[1.6]",

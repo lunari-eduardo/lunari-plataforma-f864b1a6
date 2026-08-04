@@ -383,8 +383,8 @@ export default function PrecosPage() {
       />
 
       {/* Hero */}
-      <section className="relative overflow-hidden pt-36 pb-16 md:pt-44 md:pb-20">
-        <GridLines />
+      <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-20 bg-site-warmwhite text-site-ink">
+        <GridLines tone="light" />
         <div className="relative mx-auto max-w-[900px] px-6 text-center md:px-8">
           <BreadcrumbTrail items={[{ label: "Início", to: "/" }, { label: "Preços" }]} />
           <Reveal>
@@ -394,7 +394,7 @@ export default function PrecosPage() {
           </Reveal>
           <Reveal delay={0.05}>
             <h1
-              className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] text-[#0A0A0A] md:text-[76px]"
+              className="mt-6 text-[44px] leading-[1.02] tracking-[-0.03em] md:text-[76px]"
               style={{ ...displayFont }}
             >
               Um preço que{" "}
@@ -405,7 +405,7 @@ export default function PrecosPage() {
           </Reveal>
           <Reveal delay={0.1}>
             <p
-              className="mx-auto mt-6 max-w-[600px] text-[17px] leading-[1.55] text-[#0A0A0A]/70 md:text-[19px]"
+              className="mx-auto mt-6 max-w-[600px] text-[17px] leading-[1.55] opacity-70 md:text-[19px]"
               style={uiFont}
             >
               Comece pelo Studio. Só adicione Select ou Deliver{" "}
