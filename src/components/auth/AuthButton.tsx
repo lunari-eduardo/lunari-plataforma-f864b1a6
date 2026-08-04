@@ -18,7 +18,7 @@ export const AuthButton = forwardRef<HTMLButtonElement, AuthButtonProps>(
           'flex items-center justify-center gap-2',
           'disabled:opacity-60 disabled:cursor-not-allowed',
           variant === 'primary' &&
-            'bg-gradient-to-b from-[#C97A4A] to-[#A8633A] text-white shadow-[0_8px_24px_-8px_rgba(201,122,74,0.6)] hover:from-[#D4845A] hover:to-[#B66E40] active:scale-[0.99]',
+            'bg-gradient-to-b from-[#C9A87C] to-[#9A7F52] text-white shadow-[0_8px_24px_-8px_rgba(201,168,124,0.4)] hover:from-[#D4B892] hover:to-[#A88B5D] active:scale-[0.99]',
           variant === 'outline' &&
             'bg-white/[0.04] border border-white/10 text-white hover:bg-white/[0.08]',
           className,
