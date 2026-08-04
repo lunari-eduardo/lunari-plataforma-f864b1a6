@@ -16,11 +16,12 @@ export function SiteReveal({
   delay?: number;
   as?: any;
 }) {
-  const { ref, visible } = useReveal<HTMLDivElement>();
+  const { ref, visible, armed } = useReveal<HTMLDivElement>();
   return (
     <Tag
       ref={ref}
       className={cn("site-reveal", className)}
+      data-reveal-armed={armed}
       data-visible={visible}
       style={{ transitionDelay: `${delay}ms` }}
     >
