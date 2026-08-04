@@ -125,7 +125,13 @@ export function GridLines({
 
 // Re-exports/shims para compatibilidade legada
 export { SectionTitle };
-export { SiteReveal as Reveal, SiteEyebrow as EyebrowTag };
+export function EyebrowTag({ children, className, index, tone }: { children: ReactNode; className?: string; index?: string; tone?: string }) {
+  return <SiteEyebrow className={className}>{children}</SiteEyebrow>;
+}
+export function Reveal({ children, className, delay, y, tone }: { children: ReactNode; className?: string; delay?: number; y?: number; tone?: string }) {
+  return <SiteReveal className={className} delay={delay}>{children}</SiteReveal>;
+}
+
 export const displayFont = { fontFamily: '"Instrument Serif", serif' };
 export const uiFont = { fontFamily: '"Geist", sans-serif' };
 export const monoFont = { fontFamily: '"Geist Mono", monospace' };
