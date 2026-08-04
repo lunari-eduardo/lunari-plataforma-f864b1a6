@@ -111,15 +111,15 @@ export function SiteNav() {
         </div>
 
         <div className="flex items-center gap-4">
-          <NavLink to="/auth" className={cn(linkCls, "hidden sm:inline")}>
+          <a href="https://app.lunarihub.com/auth" className={cn(linkCls, "hidden sm:inline")}>
             Entrar
-          </NavLink>
-          <NavLink
-            to="/auth"
+          </a>
+          <a
+            href="https://app.lunarihub.com/auth"
             className="rounded-full bg-site-gold px-5 py-2.5 text-xs font-bold text-site-graphite transition-all hover:-translate-y-0.5 hover:bg-site-goldPale"
           >
             TESTAR GRÁTIS
-          </NavLink>
+          </a>
           <button
             type="button"
             aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
@@ -148,9 +148,9 @@ export function SiteNav() {
             <NavLink to="/precos" className="mt-4 block py-3 text-base font-medium text-site-on-dark">
               Preços
             </NavLink>
-            <NavLink to="/auth" className="mt-4 block py-3 text-base font-medium text-site-gold">
+            <a href="https://app.lunarihub.com/auth" className="mt-4 block py-3 text-base font-medium text-site-gold">
               Entrar
-            </NavLink>
+            </a>
           </div>
         </div>
       )}

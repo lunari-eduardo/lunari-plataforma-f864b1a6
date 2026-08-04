@@ -83,6 +83,13 @@ function RedirectToAdminHost({ to }: { to: string }) {
   );
 }
 
+function RedirectToAuthHost() {
+  React.useEffect(() => {
+    window.location.replace("https://app.lunarihub.com/auth" + window.location.search);
+  }, []);
+  return null;
+}
+
 function PhotographerInit() {
   // Workflow cache/realtime agora é gerido por <WorkflowRealtimeBridge> + workflowStore.
   // Sync de appointments→sessões é feito pelo trigger DB; capability `workflow.syncFromAgenda` cobre re-sync manual.
@@ -119,7 +126,7 @@ export default function PhotographerApp() {
 
               </Route>
 
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth" element={<RedirectToAuthHost />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/oauth/consent" element={<OAuthConsent />} />
               <Route path="/conteudos" element={<Conteudos />} />
