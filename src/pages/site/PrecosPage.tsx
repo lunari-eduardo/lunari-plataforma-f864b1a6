@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-range";
 import { SEOHead } from "@/components/seo/SEOHead";
+import { cn } from "@/lib/utils";
 import {
   SectionShell,
   EyebrowTag,
