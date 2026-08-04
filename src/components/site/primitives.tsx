@@ -79,6 +79,51 @@ export function GhostLink({
   );
 }
 
+export type SiteTone = "dark" | "light";
+
+/**
+ * Contrato único de seção do site.
+ * O tom define fundo + cor de texto + cor de borda. Nenhuma seção
+ * deve declarar fundo solto — assim a alternância claro/escuro nunca
+ * gera texto ilegível.
+ */
+export function SiteSection({
+  children,
+  className = "",
+  innerClassName = "",
+  id,
+  tone = "light",
+  bleed = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  innerClassName?: string;
+  id?: string;
+  tone?: SiteTone;
+  bleed?: boolean;
+}) {
+  const toneCls =
+    tone === "dark"
+      ? "bg-site-graphite text-site-on-dark"
+      : "bg-site-warmwhite text-site-ink";
+
+  return (
+    <section
+      id={id}
+      data-tone={tone}
+      className={cn("relative w-full overflow-hidden py-16 md:py-32", toneCls, className)}
+    >
+      {bleed ? (
+        children
+      ) : (
+        <div className={cn("relative mx-auto w-full max-w-[1200px] px-6 md:px-10", innerClassName)}>
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function SectionShell({
   children,
   className = "",
@@ -90,14 +135,10 @@ export function SectionShell({
   id?: string;
   tone?: any;
 }) {
-  const isDark = tone === "dark";
-  const toneCls = isDark
-      ? "bg-site-graphite text-site-on-dark"
-      : "bg-site-warmwhite text-site-ink";
   return (
-    <section id={id} className={cn("relative w-full py-24 md:py-32", toneCls, className)}>
-      <div className="mx-auto w-full max-w-[1200px] px-6 md:px-8">{children}</div>
-    </section>
+    <SiteSection id={id} tone={tone === "dark" ? "dark" : "light"} className={className}>
+      {children}
+    </SiteSection>
   );
 }
 
