@@ -889,48 +889,56 @@ a,
    ============================================================ */
 .site-scope {
   --site-gold: #C9A87C;
+  --site-gold-pale: #E4CFA8;
   --site-graphite: #262421;
+  --site-graphite-soft: #2E2B27;
+  --site-offwhite: #F4F1EA;
+  --site-warmwhite: #FBFAF7;
   --site-on-dark: #F2EDE4;
+  --site-on-dark-muted: #B9B1A4;
   --site-ink: #2A2724;
+  --site-ink-muted: #7C766D;
+  color: var(--site-ink);
 }
 
-.site-scope,
-.site-scope h1,
-.site-scope h2,
-.site-scope h3,
-.site-scope h4,
-.site-scope h5,
-.site-scope h6,
-.site-scope p,
-.site-scope li,
-.site-scope span,
-.site-scope a {
-  color: inherit;
+/* Tom da seção define a cor base. Nunca herança cega. */
+.site-scope [data-tone="light"] {
+  color: var(--site-ink);
+}
+
+.site-scope [data-tone="dark"] {
+  color: var(--site-on-dark);
 }
 
 .site-eyebrow {
-  font-family: "Geist Mono", monospace;
+  font-family: "Geist Mono", ui-monospace, monospace;
   font-size: 0.6875rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--site-gold);
 }
 
+/* Reveal só "arma" quando o JS confirma que vai controlar o estado.
+   Sem JS / sem IntersectionObserver o conteúdo permanece visível. */
 .site-reveal {
-  opacity: 0;
-  transform: translateY(18px);
   transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.site-reveal[data-visible="true"] {
+.site-reveal[data-reveal-armed="true"] {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.site-reveal[data-reveal-armed="true"][data-visible="true"] {
   opacity: 1;
   transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .site-reveal {
+  .site-reveal[data-reveal-armed="true"] {
     opacity: 1;
     transform: none;
     transition: none;
   }
 }
+
