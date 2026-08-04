@@ -103,14 +103,9 @@ export default function Auth() {
             draggable={false}
           />
           {!isForgot && (
-            <>
-              <h1 className="text-white text-xl font-light tracking-wide">
-                {isSignup ? 'Crie sua conta' : 'Gestão completa'}
-              </h1>
-              <p className="text-white/60 text-sm mt-1 font-light">
-                {isSignup ? 'Comece a usar o Lunari Studio' : 'para fotógrafos'}
-              </p>
-            </>
+            <h1 className="text-white text-xl font-light tracking-wide mt-2">
+              {isSignup ? 'Crie sua conta' : 'Ecossistema completo para fotógrafos'}
+            </h1>
           )}
         </div>
 
