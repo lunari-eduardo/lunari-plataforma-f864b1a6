@@ -83,7 +83,7 @@ export function Pricing() {
                     </ul>
 
                     <PrimaryButton 
-                      to={`/auth?plan=${plan.code}`} 
+                      href={`https://app.lunarihub.com/auth?plan=${plan.code}`} 
                       tone={isPro ? "dark" : "light"}
                       className="w-full"
                     >

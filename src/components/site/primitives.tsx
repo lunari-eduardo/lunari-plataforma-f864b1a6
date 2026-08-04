@@ -10,12 +10,14 @@ export const TOKENS = LANDING_TOKENS;
 export function PrimaryButton({ 
   children, 
   to, 
+  href,
   className,
   tone = "light",
   onClick 
 }: { 
   children: ReactNode; 
   to?: string; 
+  href?: string;
   className?: string;
   tone?: "light" | "dark";
   onClick?: () => void;
@@ -33,6 +35,14 @@ export function PrimaryButton({
       <button onClick={onClick} className={baseCls} type="button">
         {children}
       </button>
+    );
+  }
+
+  if (href) {
+    return (
+      <a href={href} className={baseCls}>
+        {children}
+      </a>
     );
   }
 
@@ -234,7 +244,8 @@ export function ProductHero({
   description,
   mockup,
   primaryLabel = "TESTAR GRÁTIS",
-  primaryTo = "/auth",
+  primaryHref = "https://app.lunarihub.com/auth",
+  primaryTo,
 }: {
   eyebrow?: string;
   title: ReactNode;
@@ -242,6 +253,7 @@ export function ProductHero({
   description?: string;
   mockup?: ReactNode;
   primaryLabel?: string;
+  primaryHref?: string;
   primaryTo?: string;
 }) {
   return (
@@ -267,7 +279,7 @@ export function ProductHero({
           )}
           <SiteReveal delay={200}>
             <div className="mt-9 flex flex-wrap gap-4">
-              <PrimaryButton to={primaryTo}>{primaryLabel}</PrimaryButton>
+              <PrimaryButton to={primaryTo} href={primaryHref}>{primaryLabel}</PrimaryButton>
               <GhostLink to="/precos" tone="dark">
                 Ver planos
               </GhostLink>
@@ -375,7 +387,8 @@ export function CTABlock({
   emphasis,
   description,
   primaryLabel = "TESTAR GRÁTIS",
-  primaryTo = "/auth",
+  primaryHref = "https://app.lunarihub.com/auth",
+  primaryTo,
   secondaryLabel,
   secondaryTo,
   tone = "dark",
@@ -384,6 +397,7 @@ export function CTABlock({
   emphasis?: string;
   description?: string;
   primaryLabel?: string;
+  primaryHref?: string;
   primaryTo?: string;
   secondaryLabel?: string;
   secondaryTo?: string;
@@ -413,7 +427,7 @@ export function CTABlock({
         )}
         <SiteReveal delay={180}>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <PrimaryButton to={primaryTo}>{primaryLabel}</PrimaryButton>
+            <PrimaryButton to={primaryTo} href={primaryHref}>{primaryLabel}</PrimaryButton>
             {secondaryLabel && (
               <GhostLink to={secondaryTo} tone={dark ? "dark" : "light"}>
                 {secondaryLabel}

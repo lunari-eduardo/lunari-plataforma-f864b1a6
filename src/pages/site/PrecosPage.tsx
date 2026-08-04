@@ -162,7 +162,7 @@ function PlanCard({
       <div className="mt-8">
         <PrimaryButton
           onClick={() =>
-            nav(`/auth?plan=${plan.code}&period=${cadence === "annual" ? "annual" : "monthly"}`)
+            window.location.href = `https://app.lunarihub.com/auth?plan=${plan.code}&period=${cadence === "annual" ? "annual" : "monthly"}`
           }
           tone={isDark ? "dark" : "light"}
         >
@@ -280,7 +280,7 @@ function GallerySelectCard({
       )}
 
       <div className="mt-8">
-        <PrimaryButton onClick={() => nav("/auth?product=gallery_select")}>
+        <PrimaryButton href="https://app.lunarihub.com/auth?product=gallery_select">
           Começar sem mensalidade
         </PrimaryButton>
       </div>

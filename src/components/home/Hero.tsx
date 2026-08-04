@@ -89,7 +89,7 @@ export function Hero() {
           <SiteReveal delay={220}>
             <div className="mt-10 flex flex-wrap gap-4">
               <a
-                href="/auth"
+                href="https://app.lunarihub.com/auth"
                 className="rounded-full bg-site-gold px-8 py-4 text-sm font-bold tracking-wide text-site-graphite transition-all hover:-translate-y-0.5 hover:bg-site-goldPale"
               >
                 TESTAR GRÁTIS
