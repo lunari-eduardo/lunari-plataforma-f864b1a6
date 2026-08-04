@@ -150,8 +150,8 @@ export default function Auth() {
 
             <p className="text-xs text-center text-white/40 mt-6 font-light leading-relaxed">
               Ao continuar, você concorda com nossos{' '}
-              <a href="#" className="text-[#C97A4A] hover:underline">Termos de Serviço</a> e{' '}
-              <a href="#" className="text-[#C97A4A] hover:underline">Política de Privacidade</a>
+              <a href="https://www.lunarihub.com/legal/termos" target="_blank" rel="noopener noreferrer" className="text-[#C97A4A] hover:underline">Termos de Serviço</a> e{' '}
+              <a href="https://www.lunarihub.com/legal/privacidade" target="_blank" rel="noopener noreferrer" className="text-[#C97A4A] hover:underline">Política de Privacidade</a>
             </p>
           </>
         )}

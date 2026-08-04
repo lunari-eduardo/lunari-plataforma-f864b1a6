@@ -38,9 +38,9 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <NavLink to="/" className="text-site-ink text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <NavLink to="/" className="text-site-ink text-2xl font-semibold tracking-[0.2em] flex items-center gap-2 uppercase">
               <div className="w-2 h-2 rounded-full bg-site-gold" />
-              lunari<span className="text-site-ink/40 font-mono text-xs uppercase tracking-widest ml-0.5">hub</span>
+              LUNARI
             </NavLink>
             <p className="mt-6 max-w-xs text-site-ink-muted leading-relaxed">
               Lunari é uma plataforma SaaS de gestão completa que pensa como um fotógrafo profissional. 
@@ -65,7 +65,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-site-line-light flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-site-ink-muted uppercase tracking-wider">
-          <p>© {new Date().getFullYear()} LUNARI HUB • FEITO PARA FOTÓGRAFOS</p>
+          <p>© {new Date().getFullYear()} LUNARI - SEU NEGÓCIO EM PERFEITA ÓRBITA</p>
           <a href="mailto:contato@lunarihub.com" className="hover:text-site-gold transition-colors lowercase font-sans">contato@lunarihub.com</a>
         </div>
       </div>
