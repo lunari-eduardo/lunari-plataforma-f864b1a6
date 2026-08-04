@@ -10,8 +10,8 @@ export default function HomePage() {
   return (
     <>
       <SEOHead
-        title="Lunari · O primeiro ecossistema que pensa como um fotógrafo"
-        description="CRM, agenda, contratos, financeiro, galeria e IA operando como um só cérebro. Enquanto os outros vendem 6 ferramentas, a Lunari entrega um estúdio inteiro."
+        title="Lunari: O sistema de gestão completo para fotógrafos"
+        description="Lunari é uma plataforma SaaS de gestão que une CRM, agenda, contratos, financeiro, galeria e IA em um só lugar. Feito exclusivamente para fotógrafos profissionais."
         canonical="https://lunarihub.com/"
         ogType="website"
       />
