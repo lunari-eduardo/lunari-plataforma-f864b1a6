@@ -887,6 +887,13 @@ a,
    que mudam com o tema dark. O site é sempre claro/escuro por seção,
    então headings e textos devem SEMPRE herdar a cor da seção.
    ============================================================ */
+.site-scope {
+  --site-gold: #C9A87C;
+  --site-graphite: #262421;
+  --site-on-dark: #F2EDE4;
+  --site-ink: #2A2724;
+}
+
 .site-scope,
 .site-scope h1,
 .site-scope h2,
@@ -899,4 +906,31 @@ a,
 .site-scope span,
 .site-scope a {
   color: inherit;
+}
+
+.site-eyebrow {
+  font-family: "Geist Mono", monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--site-gold);
+}
+
+.site-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.site-reveal[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
