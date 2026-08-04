@@ -98,14 +98,21 @@ export default function Auth() {
         <div className="flex flex-col items-center text-center mb-8">
           <img
             src={lunariLogo}
-            alt="Lunari Studio"
+            alt="Lunari"
             className="w-[200px] md:w-[220px] h-auto object-contain mb-6 select-none"
             draggable={false}
           />
           {!isForgot && (
-            <h1 className="text-white text-xl font-light tracking-wide mt-2">
-              {isSignup ? 'Crie sua conta' : 'Ecossistema completo para fotógrafos'}
-            </h1>
+            <div className="flex flex-col items-center gap-1 mt-2">
+              {!isSignup && (
+                <span className="text-white/40 text-[10px] font-medium tracking-[0.3em] uppercase">
+                  Lunari
+                </span>
+              )}
+              <h1 className="text-white text-base font-light tracking-wide">
+                {isSignup ? 'Crie sua conta' : 'Ecossistema completo para fotógrafos'}
+              </h1>
+            </div>
           )}
         </div>
 
