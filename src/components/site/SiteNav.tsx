@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logoSiteAsset from "@/assets/logo-site.png.asset.json";
+import logoSiteAsset from "@/assets/logo-header-v3.png.asset.json";
 
 const GALLERY_LINKS = [
   { to: "/gallery", label: "Visão geral" },
