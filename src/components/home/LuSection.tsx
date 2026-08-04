@@ -23,7 +23,7 @@ export function LuSection() {
   }, []);
 
   return (
-    <section id="lu" className="bg-site-graphite py-32 overflow-hidden relative">
+    <section id="lu" data-tone="dark" className="bg-site-graphite py-20 md:py-32 overflow-hidden relative">
       {/* Background glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-site-gold/5 blur-[120px] rounded-full pointer-events-none" />
 

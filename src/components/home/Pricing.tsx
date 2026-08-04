@@ -18,7 +18,7 @@ export function Pricing() {
   }, [studioPlans]);
 
   return (
-    <section id="pricing" className="bg-site-warmwhite py-32 relative overflow-hidden">
+    <section id="pricing" data-tone="light" className="bg-site-warmwhite py-20 md:py-32 relative overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <SiteReveal>

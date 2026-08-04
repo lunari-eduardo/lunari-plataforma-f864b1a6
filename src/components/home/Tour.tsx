@@ -13,7 +13,7 @@ export function Tour() {
   ];
 
   return (
-    <section id="tour" className="bg-site-graphite py-32 overflow-hidden">
+    <section id="tour" data-tone="dark" className="bg-site-graphite py-20 md:py-32 overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <SiteReveal>
           <SiteEyebrow>O fluxo perfeito</SiteEyebrow>

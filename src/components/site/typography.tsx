@@ -16,11 +16,12 @@ export function SiteReveal({
   delay?: number;
   as?: any;
 }) {
-  const { ref, visible } = useReveal<HTMLDivElement>();
+  const { ref, visible, armed } = useReveal<HTMLDivElement>();
   return (
     <Tag
       ref={ref}
       className={cn("site-reveal", className)}
+      data-reveal-armed={armed}
       data-visible={visible}
       style={{ transitionDelay: `${delay}ms` }}
     >
@@ -67,14 +68,22 @@ export function SiteH1({
   );
 }
 
-export function SiteH2({ children, className, tone = "dark" }: { children: ReactNode; className?: string; tone?: Tone }) {
+export function SiteH2({ children, className, tone = "dark", emphasis }: { children: ReactNode; className?: string; tone?: Tone; emphasis?: string }) {
   return (
     <h2 className={cn(
-      "text-[36px] md:text-[52px] leading-[1.06] tracking-[-0.028em] font-medium",
+      "text-[32px] md:text-[52px] leading-[1.06] tracking-[-0.028em] font-medium",
       tone === "dark" ? "text-site-on-dark" : "text-site-ink",
       className
     )} style={{ fontFamily: SITE_THEME.fonts.ui }}>
       {children}
+      {emphasis && (
+        <>
+          <br />
+          <span className="text-site-gold italic" style={{ fontFamily: SITE_THEME.fonts.display, fontWeight: 400 }}>
+            {emphasis}
+          </span>
+        </>
+      )}
     </h2>
   );
 }

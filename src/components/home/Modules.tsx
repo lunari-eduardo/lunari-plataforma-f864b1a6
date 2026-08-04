@@ -38,7 +38,7 @@ export function Modules() {
   ];
 
   return (
-    <section id="modulos" className="bg-site-offwhite py-32">
+    <section id="modulos" data-tone="light" className="bg-site-offwhite py-20 md:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <SiteReveal>
           <SiteEyebrow>O ecossistema completo</SiteEyebrow>

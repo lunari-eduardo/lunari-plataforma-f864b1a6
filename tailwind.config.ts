@@ -82,7 +82,11 @@ export default {
 						li: {
 							marginTop: '0.5em',
 							marginBottom: '0.5em',
+						},
+					},
 				},
+			},
+			colors: {
 				site: {
 					gold: "#C9A87C",
 					goldPale: "#E4CFA8",
@@ -98,10 +102,7 @@ export default {
 					ink: "#2A2724",
 					'ink-muted': "#7C766D",
 				},
-			},
-				},
-			},
-			colors: {
+
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				
