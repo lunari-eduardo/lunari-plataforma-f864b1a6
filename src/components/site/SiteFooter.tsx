@@ -16,6 +16,7 @@ const COLS = [
     links: [
       { label: "Sobre", to: "/sobre" },
       { label: "Contato", to: "/contato" },
+      { label: "WhatsApp", to: "https://wa.me/5551998287948" },
       { label: "Blog", to: "/conteudos" },
     ],
   },
@@ -65,7 +66,7 @@ export function SiteFooter() {
 
         <div className="mt-16 pt-8 border-t border-site-line-light flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-site-ink-muted uppercase tracking-wider">
           <p>© {new Date().getFullYear()} LUNARI HUB • FEITO PARA FOTÓGRAFOS</p>
-          <a href="mailto:hello@lunarihub.com" className="hover:text-site-gold transition-colors">hello@lunarihub.com</a>
+          <a href="mailto:contato@lunarihub.com" className="hover:text-site-gold transition-colors lowercase font-sans">contato@lunarihub.com</a>
         </div>
       </div>
     </footer>

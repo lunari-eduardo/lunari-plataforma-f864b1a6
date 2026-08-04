@@ -16,6 +16,8 @@ export function SiteNav() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const loc = useLocation();
 
+  const isHome = loc.pathname === "/";
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     handleScroll();
@@ -43,8 +45,8 @@ export function SiteNav() {
       data-tone="dark"
       className={cn(
         "fixed inset-x-0 top-0 z-[100] transition-all duration-300",
-        scrolled || mobileOpen
-          ? "bg-site-graphite/95 backdrop-blur-xl border-b border-site-line-dark py-3"
+        !isHome || scrolled || mobileOpen
+          ? "bg-site-graphite border-b border-site-line-dark py-3 shadow-lg shadow-black/20"
           : "py-5 bg-gradient-to-b from-site-graphite/90 to-transparent"
       )}
     >
