@@ -91,6 +91,7 @@ export function SEOHead({
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "Lunari",
+      "url": "https://lunarihub.com",
       "operatingSystem": "Web",
       "applicationCategory": "BusinessApplication",
       "description": description || "Lunari: O sistema de gestão completo para fotógrafos profissionais.",
