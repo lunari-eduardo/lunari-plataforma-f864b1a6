@@ -533,102 +533,6 @@ function SkeletonCard({ compact }: { compact?: boolean }) {
 
 function SectionSeparator({ text }: { text: string }) {
   return (
-    <div className="bg-site-warmwhite py-12 text-center md:py-20">
-      <span
-        className="text-[11px] uppercase tracking-[0.3em] text-[#0A0A0A]/30"
-        style={monoFont}
-      >
-        {text}
-      </span>
-    </div>
-  );
-}
-
-function DeliverCard({ plan, cadence }: { plan: SiteUnifiedPlan; cadence: Cadence }) {
-  const nav = useNavigate();
-  const price = cadence === "monthly" ? plan.monthly_price_cents : plan.yearly_price_cents / 12;
-
-  return (
-    <div className="flex flex-col rounded-[16px] border border-[rgba(10,10,10,0.08)] bg-white p-6 transition-all hover:border-[#C9A87C]/30 hover:shadow-xl">
-      <div className="flex-1">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-[#0A0A0A]/40" style={monoFont}>
-          {plan.name}
-        </h3>
-        <div className="mt-4 flex items-baseline gap-1">
-          <span className="text-3xl font-semibold tracking-tight" style={displayFont}>
-            {fmtBRL(price)}
-          </span>
-          <span className="text-[11px] text-[#0A0A0A]/40" style={uiFont}>
-            /mês
-          </span>
-        </div>
-        <p className="mt-3 text-[13px] leading-relaxed text-[#0A0A0A]/60" style={uiFont}>
-          {plan.description}
-        </p>
-      </div>
-      <button
-        onClick={() =>
-          nav(`/auth?plan=${plan.code}&period=${cadence === "annual" ? "annual" : "monthly"}`)
-        }
-        className="mt-6 w-full rounded-full border border-[rgba(10,10,10,0.1)] py-2.5 text-[11px] font-bold uppercase tracking-widest transition-colors hover:bg-site-gold hover:text-site-graphite hover:border-site-gold"
-        style={monoFont}
-      >
-        Selecionar
-      </button>
-    </div>
-  );
-}
-              className="inline-flex items-center gap-2 rounded-full border border-[rgba(10,10,10,0.12)] px-5 py-2.5 text-[13px] text-[#0A0A0A] transition-colors hover:bg-[rgba(10,10,10,0.03)]"
-              style={uiFont}
-            >
-              <span>Prefere um combo com desconto?</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${comboOpen ? "rotate-180" : ""}`} />
-            </button>
-          </div>
-          {comboOpen && (
-            <div className="mt-10 grid gap-5 md:grid-cols-2">
-              {orderedCombos.map((p) => (
-                <PlanCard key={p.id} plan={p} cadence="monthly" />
-              ))}
-            </div>
-          )}
-        </SectionShell>
-      )}
-
-      {/* FAQ */}
-      <FAQBlock items={PRICING_FAQ} />
-
-      {/* CTA final */}
-      <SectionShell className="text-center">
-        <Reveal>
-          <SectionTitle emphasis="dúvida?" size="lg" as="h2">
-            Ainda em
-          </SectionTitle>
-        </Reveal>
-        <Reveal delay={0.05}>
-          <p
-            className="mx-auto mt-4 max-w-[480px] text-[16px] text-[#0A0A0A]/70"
-            style={uiFont}
-          >
-            Fale com a gente. 15 minutos, sem enrolação, sem venda.
-          </p>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <PrimaryButton onClick={() => nav("/auth")}>Testar 30 dias grátis</PrimaryButton>
-            <GhostLink onClick={() => nav("/contato")}>Falar com a Lunari →</GhostLink>
-          </div>
-        </Reveal>
-      </SectionShell>
-    </>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Separator entre camadas — frase-âncora
-   ───────────────────────────────────────────────────────────── */
-function SectionSeparator({ text }: { text: string }) {
-  return (
     <div className="relative py-6 md:py-10">
       <div className="mx-auto max-w-[1200px] px-6 md:px-8">
         <div className="flex items-center justify-center gap-4">
@@ -652,9 +556,6 @@ function SectionSeparator({ text }: { text: string }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Card compacto para Gallery Deliver
-   ───────────────────────────────────────────────────────────── */
 function DeliverCard({ plan, cadence }: { plan: SiteUnifiedPlan; cadence: Cadence }) {
   const nav = useNavigate();
   const { byPlanCode } = usePromotions();
@@ -707,25 +608,6 @@ function DeliverCard({ plan, cadence }: { plan: SiteUnifiedPlan; cadence: Cadenc
       >
         Assinar →
       </button>
-    </div>
-  );
-}
-
-/* Skeleton simples pra loading */
-function SkeletonCard({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      className={`animate-pulse rounded-[16px] border border-[rgba(10,10,10,0.08)] bg-white ${
-        compact ? "p-5" : "p-8"
-      }`}
-    >
-      <div className="h-3 w-24 rounded bg-[rgba(10,10,10,0.06)]" />
-      <div className={`mt-4 h-8 w-40 rounded bg-[rgba(10,10,10,0.06)] ${compact ? "h-6 w-24" : ""}`} />
-      <div className="mt-6 space-y-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-3 w-full rounded bg-[rgba(10,10,10,0.05)]" />
-        ))}
-      </div>
     </div>
   );
 }
