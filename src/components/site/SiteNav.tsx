@@ -52,14 +52,16 @@ export function SiteNav() {
       <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 md:px-10">
         <NavLink
           to="/"
-          className="flex items-center gap-2"
+          className="flex items-center gap-3"
         >
           <img 
             src="/branding/logo-site-gold.png" 
             alt="Lunari" 
-
             className="h-6 w-auto object-contain md:h-7" 
           />
+          <span className="text-xl font-semibold tracking-tight text-site-on-dark md:text-2xl">
+            Lunari
+          </span>
         </NavLink>
 
         <div className="hidden items-center gap-8 md:flex">

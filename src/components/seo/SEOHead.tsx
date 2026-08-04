@@ -34,6 +34,9 @@ export function SEOHead({
       meta.content = content;
     };
 
+    // Update document title
+    document.title = title;
+
     // Description
     if (description) {
       setMeta('description', description);
@@ -74,6 +77,30 @@ export function SEOHead({
     if (canonical) {
       setMeta('og:url', canonical, true);
     }
+
+    // JSON-LD Structured Data for OAuth Compliance & SEO
+    let script = document.getElementById('json-ld-software') as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = 'json-ld-software';
+      script.type = 'application/ld+json';
+      document.head.appendChild(script);
+    }
+    
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Lunari",
+      "operatingSystem": "Web",
+      "applicationCategory": "BusinessApplication",
+      "description": description || "Lunari: O sistema de gestão completo para fotógrafos profissionais.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "BRL"
+      }
+    };
+    script.textContent = JSON.stringify(structuredData);
 
   }, [title, description, canonical, noindex, ogImage, ogType]);
 
