@@ -26,7 +26,7 @@ export const AuthInput = forwardRef<HTMLInputElement, AuthInputProps>(
             'w-full h-12 rounded-xl bg-white/[0.04] border border-white/10',
             'text-white placeholder:text-white/40 text-sm',
             'transition-colors duration-150',
-            'focus:outline-none focus:border-[#C97A4A]/60 focus:bg-white/[0.06]',
+            'focus:outline-none focus:border-[#C9A87C]/60 focus:bg-white/[0.06]',
             'disabled:opacity-50',
             Icon ? 'pl-11' : 'pl-4',
             isPassword || rightSlot ? 'pr-11' : 'pr-4',
