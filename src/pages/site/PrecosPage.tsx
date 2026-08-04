@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown } from "lucide-range";
+import { Check, ChevronDown } from "lucide-react";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { cn } from "@/lib/utils";
 import {
