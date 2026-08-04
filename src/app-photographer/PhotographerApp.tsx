@@ -83,11 +83,33 @@ function RedirectToAdminHost({ to }: { to: string }) {
   );
 }
 
-function RedirectToAuthHost() {
-  React.useEffect(() => {
-    window.location.replace("https://app.lunarihub.com/auth" + window.location.search);
+function AuthRouteWrapper() {
+  const isApp = React.useMemo(() => {
+    const hostname = window.location.hostname;
+    return hostname === 'app.lunarihub.com' || 
+           hostname.includes('lovable.app') || 
+           hostname.includes('localhost');
   }, []);
-  return null;
+
+  React.useEffect(() => {
+    // Se NÃO estiver no domínio do app nem em dev, redireciona para a URL canônica do Auth
+    if (!isApp) {
+      console.log("🔄 Redirecionando para host de autenticação oficial...");
+      window.location.replace("https://app.lunarihub.com/auth" + window.location.search);
+    }
+  }, [isApp]);
+
+  // Se já estiver no host correto, renderiza o componente de Auth real
+  if (isApp) {
+    return <Auth />;
+  }
+
+  // Enquanto redireciona
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
+      Redirecionando para o ambiente seguro…
+    </div>
+  );
 }
 
 function PhotographerInit() {
@@ -126,7 +148,7 @@ export default function PhotographerApp() {
 
               </Route>
 
-              <Route path="/auth" element={<RedirectToAuthHost />} />
+              <Route path="/auth" element={<AuthRouteWrapper />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/oauth/consent" element={<OAuthConsent />} />
               <Route path="/conteudos" element={<Conteudos />} />

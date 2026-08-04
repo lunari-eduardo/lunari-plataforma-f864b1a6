@@ -11,9 +11,22 @@ const CANONICAL_PRODUCTION_URL = import.meta.env.VITE_SITE_URL || 'https://app.l
  */
 export function isProductionDomain(): boolean {
   const hostname = window.location.hostname;
-  return hostname.includes('lunarihub') || 
+  return hostname === 'app.lunarihub.com' || 
+         hostname === 'lunarihub.com' ||
          hostname.includes('lunariplataforma') ||
          hostname.includes('lovable.app');
+}
+
+/**
+ * Detecta se o domínio atual é o domínio oficial da aplicação (Gestão)
+ * ou um ambiente de desenvolvimento permitido.
+ */
+export function isAppHost(): boolean {
+  const hostname = window.location.hostname;
+  return hostname === 'app.lunarihub.com' || 
+         hostname.includes('lovable.app') || 
+         hostname.includes('localhost') ||
+         hostname.includes('127.0.0.1');
 }
 
 /**
