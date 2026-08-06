@@ -113,7 +113,7 @@ serve(async (req) => {
       expira_em: expiresAt,
       refresh_token: tokenData.refresh_token || existing?.refresh_token || null,
       conectado_em: new Date().toISOString(),
-      status: 'ativo',
+      status: (tokenData.refresh_token || existing?.refresh_token) ? 'ativo' : 'pendente',
       dados_extras: {
         calendar_id: calendarId,
         sync_enabled: true,
