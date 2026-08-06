@@ -23,7 +23,12 @@ export function IntegracoesTab() {
     if (googleSuccess) {
       toast.success('Google Calendar conectado com sucesso');
       refetchGoogleCalendar();
-      setSearchParams({ tab: 'integracoes' });
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', 'calendar');
+        next.delete('google_success');
+        return next;
+      });
       return;
     }
 
@@ -35,7 +40,12 @@ export function IntegracoesTab() {
         'database_error': 'Erro ao salvar integração',
       };
       toast.error(errorMessages[googleError] || 'Erro ao conectar Google Calendar');
-      setSearchParams({ tab: 'integracoes' });
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', 'calendar');
+        next.delete('google_error');
+        return next;
+      });
       return;
     }
   }, [searchParams, setSearchParams, refetchGoogleCalendar]);
