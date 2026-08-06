@@ -90,23 +90,40 @@ serve(async (req) => {
     // Save to database using service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    const { error: upsertError } = await supabase
+    const { data: existing } = await supabase
       .from('usuarios_integracoes')
-      .upsert({
-        user_id: stateData.userId,
-        provedor: 'google_calendar',
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expira_em: expiresAt,
-        conectado_em: new Date().toISOString(),
-        status: 'ativo',
-        dados_extras: {
-          calendar_id: calendarId,
-          sync_enabled: true,
-        },
-      }, {
-        onConflict: 'user_id,provedor',
-      });
+      .select('id')
+      .eq('user_id', stateData.userId)
+      .eq('provedor', 'google_calendar')
+      .maybeSingle();
+
+    const integrationPayload = {
+      user_id: stateData.userId,
+      provedor: 'google_calendar',
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expira_em: expiresAt,
+      conectado_em: new Date().toISOString(),
+      status: 'ativo',
+      dados_extras: {
+        calendar_id: calendarId,
+        sync_enabled: true,
+      },
+    };
+
+    let upsertError = null;
+    if (existing) {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .update(integrationPayload)
+        .eq('id', existing.id);
+      upsertError = error;
+    } else {
+      const { error } = await supabase
+        .from('usuarios_integracoes')
+        .insert(integrationPayload);
+      upsertError = error;
+    }
 
     if (upsertError) {
       console.error('[google-calendar-callback] Database error:', upsertError);
