@@ -99,6 +99,11 @@ export function GoogleCalendarCard() {
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     Reconexão necessária
                   </Badge>
+                ) : status === 'pendente' ? (
+                  <Badge variant="outline" className="text-xs font-normal border-amber-500 text-amber-600 bg-amber-50">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Conexão incompleta
+                  </Badge>
                 ) : isConnected ? (
                   <span className="text-xs font-normal px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
                     Conectado
@@ -126,7 +131,7 @@ export function GoogleCalendarCard() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {!isConnected && !hasError ? (
+        {!isConnected && !hasError && status !== 'pendente' ? (
           <>
             {/* Estado não conectado */}
             <p className="text-sm text-muted-foreground">
@@ -150,18 +155,23 @@ export function GoogleCalendarCard() {
               )}
             </Button>
           </>
-        ) : hasError ? (
+        ) : hasError || status === 'pendente' ? (
           <>
-            {/* Estado com erro - precisa reconectar */}
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            {/* Estado com erro ou pendente - precisa reconectar */}
+            <div className={cn(
+              "rounded-lg p-4",
+              hasError ? "bg-destructive/10 border border-destructive/20" : "bg-amber-50 border border-amber-200"
+            )}>
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+                <AlertTriangle className={cn("h-5 w-5 mt-0.5", hasError ? "text-destructive" : "text-amber-500")} />
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-destructive">
-                    Conexão perdida com o Google Calendar
+                  <p className={cn("text-sm font-medium", hasError ? "text-destructive" : "text-amber-700")}>
+                    {hasError ? "Conexão perdida com o Google Calendar" : "Conexão incompleta"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    O token de acesso expirou ou foi revogado. Isso pode acontecer se você removeu a permissão do app nas configurações do Google.
+                    {hasError 
+                      ? "O token de acesso expirou ou foi revogado. Isso pode acontecer se você removeu a permissão do app nas configurações do Google."
+                      : "A conexão não forneceu todas as permissões necessárias (refresh token). Por favor, reconecte clicando no botão abaixo."}
                   </p>
                   {pendingCount > 0 && (
                     <p className="text-sm text-muted-foreground">

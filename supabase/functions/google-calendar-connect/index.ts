@@ -41,9 +41,9 @@ serve(async (req) => {
 
     const { redirectUri } = await req.json();
 
-    if (!GOOGLE_CLIENT_ID) {
-      console.error('GOOGLE_CALENDAR_CLIENT_ID not configured');
-      return new Response(JSON.stringify({ error: 'Google Calendar not configured' }), {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com')) {
+      console.error('GOOGLE_CALENDAR_CLIENT_ID not configured or invalid');
+      return new Response(JSON.stringify({ error: 'Google Calendar not configured correctly (Invalid Client ID)' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -73,6 +73,7 @@ serve(async (req) => {
     authUrl.searchParams.set('scope', scopes.join(' '));
     authUrl.searchParams.set('access_type', 'offline');
     authUrl.searchParams.set('prompt', 'consent');
+    authUrl.searchParams.set('include_granted_scopes', 'true');
     authUrl.searchParams.set('state', state);
 
     console.log('[google-calendar-connect] Generated auth URL for user:', user.id);
