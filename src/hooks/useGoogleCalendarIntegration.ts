@@ -103,6 +103,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     if (integration.status === 'ativo') return 'conectado';
     if (integration.status === 'pendente') return 'pendente';
     if (integration.status === 'erro') return 'erro';
+    // Se tem registro mas não é ativo/erro, mostramos como pendente para forçar reconexão
     return 'pendente';
   })();
 

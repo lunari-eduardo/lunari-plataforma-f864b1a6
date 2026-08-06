@@ -13,6 +13,8 @@ serve(async (req) => {
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
 
+    console.log(`[google-calendar-callback] Incoming callback: code=${!!code}, state=${!!state}, error=${error}`);
+
     // Parse state to get user info and redirect
     let stateData: { userId: string; redirectUri: string } | null = null;
     try {
@@ -98,12 +100,17 @@ serve(async (req) => {
     // Save to database using service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    const { data: existing } = await supabase
+    console.log('[google-calendar-callback] Checking existing integration for user:', stateData.userId);
+    const { data: existing, error: fetchError } = await supabase
       .from('usuarios_integracoes')
-      .select('id')
+      .select('id, refresh_token, dados_extras')
       .eq('user_id', stateData.userId)
       .eq('provedor', 'google_calendar')
       .maybeSingle();
+
+    if (fetchError) {
+      console.error('[google-calendar-callback] Error fetching existing integration:', fetchError);
+    }
 
     const integrationPayload = {
       user_id: stateData.userId,
@@ -111,10 +118,10 @@ serve(async (req) => {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token || existing?.refresh_token || null,
       expira_em: expiresAt,
-      refresh_token: tokenData.refresh_token || existing?.refresh_token || null,
       conectado_em: new Date().toISOString(),
       status: (tokenData.refresh_token || existing?.refresh_token) ? 'ativo' : 'pendente',
       dados_extras: {
+        ...(existing?.dados_extras || {}),
         calendar_id: calendarId,
         sync_enabled: true,
       },
