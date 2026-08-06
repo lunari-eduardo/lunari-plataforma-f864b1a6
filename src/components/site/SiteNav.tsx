@@ -59,7 +59,7 @@ export function SiteNav() {
             alt="Lunari" 
             className="h-6 w-auto object-contain md:h-7" 
           />
-          <span className="text-xl font-semibold tracking-tight text-site-on-dark md:text-2xl">
+          <span className="hidden">
             Lunari
           </span>
         </NavLink>
@@ -118,7 +118,7 @@ export function SiteNav() {
             href="https://app.lunarihub.com/auth"
             className="rounded-full bg-site-gold px-5 py-2.5 text-xs font-bold text-site-graphite transition-all hover:-translate-y-0.5 hover:bg-site-goldPale"
           >
-            TESTAR GRÁTIS
+            TESTAR 30 DIAS GRÁTIS
           </a>
           <button
             type="button"
