@@ -4077,6 +4077,33 @@ export type Database = {
         }
         Relationships: []
       }
+      google_oauth_debug: {
+        Row: {
+          created_at: string
+          detalhe: Json
+          etapa: string
+          id: string
+          sucesso: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detalhe?: Json
+          etapa: string
+          id?: string
+          sucesso?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detalhe?: Json
+          etapa?: string
+          id?: string
+          sucesso?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       intelligence_signals: {
         Row: {
           computed_at: string
