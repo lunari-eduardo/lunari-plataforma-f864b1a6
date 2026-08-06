@@ -17,18 +17,19 @@ serve(async (req) => {
     let stateData: { userId: string; redirectUri: string } | null = null;
     try {
       if (state) {
-        stateData = JSON.parse(atob(state));
+        // Use URL-safe base64 decoding
+        const base64 = state.replace(/-/g, '+').replace(/_/g, '/');
+        stateData = JSON.parse(atob(base64));
       }
     } catch (e) {
-      console.error('[google-calendar-callback] Failed to parse state:', e);
+      console.error('[google-calendar-callback] Failed to parse state:', e, 'State:', state);
     }
 
     // Use absolute URL for redirect - fallback to production
-    const defaultRedirect = 'https://app.lunarihub.com/app/integracoes';
+    const defaultRedirect = 'https://app.lunarihub.com/app/integracoes?tab=calendar';
     let redirectUri = stateData?.redirectUri || defaultRedirect;
 
-    // Fix: If redirectUri is using the old canonical 'lunarihub.com' without 'app.', 
-    // it might cause session loss if the user is logged into 'app.lunarihub.com'.
+    // Fix: Ensure we are always on app.lunarihub.com for session persistence
     if (redirectUri.includes('lunarihub.com') && !redirectUri.includes('app.lunarihub.com')) {
       redirectUri = redirectUri.replace('lunarihub.com', 'app.lunarihub.com');
     }
@@ -90,8 +91,9 @@ serve(async (req) => {
       console.warn('[google-calendar-callback] Could not create calendar, using primary');
     }
 
-    // Calculate expiration
-    const expiresAt = new Date(Date.now() + ((tokenData.expires_in || 3600) * 1000)).toISOString();
+    // Calculate expiration (standard 3600s if not provided)
+    const expiresIn = Number(tokenData.expires_in) || 3600;
+    const expiresAt = new Date(Date.now() + (expiresIn * 1000)).toISOString();
 
     // Save to database using service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);

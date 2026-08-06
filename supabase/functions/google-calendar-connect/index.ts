@@ -60,10 +60,11 @@ serve(async (req) => {
     const callbackUrl = 'https://app.lunarihub.com/auth/google/callback';
     
     // Store state with user info for callback
+    // Use URL-safe base64 encoding
     const state = btoa(JSON.stringify({ 
       userId: user.id, 
       redirectUri 
-    }));
+    })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
