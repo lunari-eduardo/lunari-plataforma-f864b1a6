@@ -100,7 +100,8 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
 
   const status: GoogleCalendarStatus = (() => {
     if (!integration) return 'desconectado';
-    if (integration.status === 'ativo' || integration.status === 'pendente') return 'conectado';
+    if (integration.status === 'ativo') return 'conectado';
+    if (integration.status === 'pendente') return 'pendente';
     if (integration.status === 'erro') return 'erro';
     return 'pendente';
   })();

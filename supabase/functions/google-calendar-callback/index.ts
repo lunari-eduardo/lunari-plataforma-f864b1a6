@@ -66,7 +66,7 @@ serve(async (req) => {
       return Response.redirect(`${redirectUri}?google_error=token_exchange_failed`, 302);
     }
 
-    console.log('[google-calendar-callback] Token exchange successful');
+    console.log('[google-calendar-callback] Token exchange successful, scopes:', tokenData.scope);
 
     // Create Lunari calendar in Google Calendar
     const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars', {
@@ -111,6 +111,7 @@ serve(async (req) => {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token || existing?.refresh_token || null,
       expira_em: expiresAt,
+      refresh_token: tokenData.refresh_token || existing?.refresh_token || null,
       conectado_em: new Date().toISOString(),
       status: 'ativo',
       dados_extras: {
