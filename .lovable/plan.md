@@ -1,86 +1,77 @@
-# Google Calendar — Auditoria completa e plano de correção
+# Google Calendar — Auditoria do callback e correção
 
-## O que a auditoria encontrou (verificado agora, não suposição)
+## O que foi verificado agora (com evidência)
 
-1. **Nenhuma conexão jamais foi gravada.** Consulta em `usuarios_integracoes` com `provedor = 'google_calendar'`: **0 linhas**, para qualquer usuário.
-2. **A função de callback nunca foi executada por um usuário real.** Os logs de `google-calendar-callback` contêm apenas as duas chamadas de teste que acabei de disparar. Nenhuma execução vinda do Google, em nenhum momento.
-3. **A rota de callback está viva e funcionando.** `GET https://app.lunarihub.com/auth/google/callback?error=test` retorna 302 para `.../app/integracoes?tab=calendar&google_error=test`. O rewrite do Vercel e o deploy da Edge Function estão corretos.
-4. **A função de início do fluxo funciona.** `google-calendar-connect` logou "Generated auth URL for user: db0ca3d8…" várias vezes hoje. Ou seja: o sistema gera a URL, o navegador vai para o Google — e **o Google nunca devolve o usuário para nós**.
-5. Secrets `GOOGLE_CALENDAR_CLIENT_ID` e `GOOGLE_CALENDAR_CLIENT_SECRET` existem. RLS de `usuarios_integracoes` está correta (`auth.uid() = user_id`). Colunas `access_token`, `refresh_token`, `expira_em`, `status`, `dados_extras` existem e são nuláveis.
+1. **A rota `/auth/google/callback` NÃO é servida pela SPA.** Chamada real a
+   `https://app.lunarihub.com/auth/google/callback?code=TEST&state=abc` respondeu **302** com
+   headers `x-served-by: supabase-edge-runtime` e `sb-project-ref: tlnjspsywycbudhewsfv`.
+   O rewrite do `vercel.json` funciona e a Edge Function executa.
+2. **O `code` e o `state` chegam.** Log da função no mesmo instante:
+   `Incoming callback: code=true, state=true, error=null`.
+3. **A troca de código por tokens existe** (`POST https://oauth2.googleapis.com/token`) e a
+   gravação em `usuarios_integracoes` existe (update se já houver registro, insert caso contrário).
+4. **Nenhuma integração Google jamais foi gravada.** Consulta em `usuarios_integracoes`
+   com `provedor ilike '%google%'` retorna **zero linhas**.
+5. **A tabela e o RLS estão corretos.** Política `auth.uid() = user_id` para `authenticated`;
+   a gravação é feita com service role (ignora RLS). RLS não é a causa.
+6. **Bug real confirmado: o erro nunca chega à interface.** Três retornos de erro montam a URL com
+   `?` fixo. Como o `redirectUri` já contém `?tab=calendar`, sai
+   `.../app/integracoes?tab=calendar?google_error=missing_params` — parâmetro inválido, ignorado
+   pelo navegador. Além disso, **o frontend não lê `google_error` nem `google_success` em lugar nenhum**.
+   Resultado: qualquer falha volta para a tela de integrações exatamente como estava, sem aviso.
+   Foi isso que você observou.
+7. **Os logs da Edge Function têm retenção curta** — as suas tentativas de hoje já não existem.
+   Por isso ainda não é possível afirmar *qual* etapa falha (token exchange, criação de calendário
+   ou gravação). Diagnóstico: não confirmado. A primeira onda resolve isso de forma permanente.
 
-### Conclusão do diagnóstico
+## Plano
 
-O ponto exato da falha **não está no nosso código de persistência** — ele nunca é alcançado. A falha ocorre entre "usuário clica em Conectar" e "Google redireciona de volta". Com 100% dos fluxos morrendo nesse trecho e zero callbacks registrados, a causa esmagadoramente provável é **configuração do cliente OAuth no Google Cloud Console**: o `redirect_uri` que enviamos (`https://app.lunarihub.com/auth/google/callback`) não está cadastrado como *Authorized redirect URI*, ou o app está em modo Testing sem o seu e-mail na lista de test users, ou os escopos sensíveis de Calendar não estão declarados na tela de consentimento.
+### Onda 1 — Tornar a falha visível e rastreável (obrigatória)
 
-Isso é verificável em 2 minutos com a checklist manual abaixo. Só depois disso faz sentido mexer em código — por isso a Onda 0 é obrigatória e vem primeiro.
+- Criar tabela `google_oauth_debug` (service role grava, usuário lê os próprios registros):
+  `user_id`, `etapa`, `sucesso`, `detalhe` (jsonb sem tokens), `created_at`.
+- No `google-calendar-callback`, gravar uma linha em cada etapa:
+  callback recebido → state decodificado → resposta do token endpoint (status, `error`,
+  `has_access_token`, `has_refresh_token`, `scope`) → criação do calendário → resultado do
+  insert/update (com mensagem e código do erro Postgres) → redirect final.
+  Nenhum token bruto é gravado.
+- Corrigir a montagem das URLs de retorno: usar sempre um helper que verifica se já existe `?`
+  (hoje quebrado em `missing_params`, `token_exchange_failed`, `database_error`).
+- Deixar de engolir a exceção: o `catch` final passa a gravar a mensagem real e a devolver
+  `google_error=unknown&detail=<mensagem curta>`.
 
-Independente disso, a auditoria encontrou **defeitos reais no código** que causariam problemas assim que o Google voltar a redirecionar. Eles estão nas Ondas 1–3 e serão corrigidos de qualquer forma.
+### Onda 2 — Feedback honesto na interface
 
----
+- `useGoogleCalendarIntegration` passa a ler `google_success` / `google_error` da URL ao montar:
+  sucesso → refetch e confirmação; erro → toast com o motivo traduzido
+  (token recusado, banco, permissão negada, parâmetros ausentes) e limpeza dos parâmetros da URL.
+- O card mostra estado `pendente` (conectado sem `refresh_token`) com botão "Reconectar" em vez de
+  aparentar desconectado.
 
-## O que você precisa conferir manualmente (Onda 0 — bloqueante)
+### Onda 3 — Correção definitiva
 
-No Google Cloud Console, no projeto que possui o Client ID usado pelo Lunari:
+Após uma tentativa real com os logs persistidos, a etapa exata que falha fica identificada em
+`google_oauth_debug` e a correção é aplicada nela (por exemplo: `redirect_uri` divergente no token
+exchange, escopo insuficiente para criar calendário, ou conflito de chave na gravação). Sem essa
+evidência qualquer correção seria chute.
 
-**A. Credentials → OAuth 2.0 Client ID (tipo Web application)**
-- Em **Authorized redirect URIs**, deve existir exatamente, sem barra final:
-  `https://app.lunarihub.com/auth/google/callback`
-- Em **Authorized JavaScript origins**: `https://app.lunarihub.com`
-- Confirme que o **Client ID exibido ali é o mesmo** que está no secret `GOOGLE_CALENDAR_CLIENT_ID` (compare os primeiros 12 caracteres).
+## O que você precisa conferir manualmente
 
-**B. OAuth consent screen**
-- **Publishing status**: se estiver "Testing", o seu e-mail precisa estar em **Test users**. Sem isso, o Google bloqueia antes do redirect.
-- **Scopes**: precisam estar declarados `.../auth/calendar` e `.../auth/calendar.events` (são escopos sensíveis).
-- **Authorized domains**: `lunarihub.com`.
+1. **Google Cloud Console → Credenciais → Client OAuth (Web)**
+   - *URIs de redirecionamento autorizados* deve conter **exatamente**
+     `https://app.lunarihub.com/auth/google/callback` (sem barra final, sem `www`).
+   - *Origens JavaScript autorizadas*: `https://app.lunarihub.com`.
+2. **Tela de consentimento** — escopos `.../auth/calendar` e `.../auth/calendar.events`;
+   app em produção ou seu e-mail listado como usuário de teste.
+3. **Supabase → Edge Functions → Secrets** — `GOOGLE_CALENDAR_CLIENT_ID` (terminando em
+   `.apps.googleusercontent.com`) e `GOOGLE_CALENDAR_CLIENT_SECRET` do **mesmo** client.
+   Um secret de outro client é a causa clássica de `invalid_client` silencioso.
+4. **Faça o teste sempre a partir de `https://app.lunarihub.com`**, nunca do preview do Lovable —
+   o rewrite do callback só existe no domínio de produção.
 
-**C. Teste manual decisivo (30 segundos)**
-1. Clique em "Conectar Google Calendar" no Lunari.
-2. Na tela do Google que aparecer, **tire um print da mensagem de erro** (ou copie o texto). As três respostas possíveis identificam a causa de forma definitiva:
-   - `Erro 400: redirect_uri_mismatch` → item A errado.
-   - `Erro 403: access_denied` / "O Lunari não concluiu o processo de verificação" → item B (Testing sem test user).
-   - Tela de consentimento normal com "App não verificado" e link "Avançado" → configuração OK; clique em Avançado → Prosseguir, e a conexão deve gravar (aí a falha é nossa e as ondas 1–3 resolvem).
+## Detalhes técnicos
 
-Me envie qual das três apareceu. Isso fecha o diagnóstico com certeza.
-
----
-
-## Ondas de correção no código
-
-### Onda 1 — Corrigir a gravação da integração (bug real confirmado)
-
-Arquivo: `supabase/functions/google-calendar-callback/index.ts`
-
-- O `select` do registro existente busca **apenas `id`**, mas o código depois lê `existing?.refresh_token` — que é sempre `undefined`. Resultado: numa reconexão em que o Google não devolve `refresh_token` (comum quando o usuário já autorizou antes), o token de refresh existente é **apagado** e o status cai para `pendente` para sempre. Correção: `select('id, refresh_token')`.
-- O objeto `integrationPayload` tem a chave **`refresh_token` duplicada** (linhas 112 e 114). Remover a duplicata.
-- Não há tratamento de erro do `Response.redirect` quando `stateData.redirectUri` vem malformado. Passar a validar que a URL é `https://app.lunarihub.com/...` antes de redirecionar; caso contrário usar o padrão.
-- Adicionar logs explícitos de entrada (`code presente`, `state decodificado`, `userId`) para que qualquer falha futura apareça nos logs em vez de silenciar.
-
-### Onda 2 — Reconexão sem perder o refresh token
-
-Arquivo: `supabase/functions/google-calendar-connect/index.ts`
-
-- Hoje enviamos sempre `prompt=consent`, o que força nova tela toda vez. Isso é correto para garantir refresh token, mas combinado com o bug da Onda 1 causava perda de estado. Manter `prompt=consent` + `access_type=offline` (garante refresh token) e passar `include_granted_scopes=true`.
-- Validar no início se `GOOGLE_CALENDAR_CLIENT_ID` termina com `.apps.googleusercontent.com` e retornar erro claro se não, evitando o fluxo morrer no Google sem explicação.
-
-### Onda 3 — Feedback honesto na interface
-
-Arquivos: `src/hooks/useGoogleCalendarIntegration.ts`, `src/components/integracoes/GoogleCalendarCard.tsx`, `src/components/preferencias/IntegracoesTab.tsx`
-
-- Hoje, se o usuário volta do Google sem sucesso, a tela simplesmente reaparece como "Conectar" sem explicar nada — foi exatamente a sua experiência. Passar a exibir o motivo do erro vindo de `google_error` em um estado persistente no card (não só um toast que some).
-- Tratar o estado `pendente` (integração salva sem refresh token) com um aviso "Conexão incompleta — reconecte" e botão de reconectar, em vez de mostrar como conectado.
-- Após o retorno com `google_success`, refazer o fetch com um pequeno retry (2 tentativas) para cobrir latência de replicação, em vez de um único fetch.
-
-### Onda 4 — Validação fim a fim
-
-- Conectar pela interface e confirmar nos logs de `google-calendar-callback` a linha "Integration saved for user: …".
-- Confirmar em `usuarios_integracoes` uma linha com `status = 'ativo'` e `refresh_token` preenchido.
-- Desconectar e reconectar uma segunda vez, confirmando que `refresh_token` continua preenchido (é o cenário que a Onda 1 conserta).
-- Criar um agendamento confirmado e verificar `google_event_id` preenchido em `appointments`.
-
----
-
-## Notas técnicas
-
-- Nada do fluxo de **Login com Google via Supabase Auth** é tocado em nenhuma onda; a integração de Calendar usa um cliente OAuth próprio e a tabela `usuarios_integracoes`.
-- O rewrite do Vercel (`/auth/google/callback` → Edge Function) e a rota SPA de fallback já estão corretos e verificados; não serão alterados.
-- Se a Onda 0 revelar `redirect_uri_mismatch`, nenhuma alteração de código resolve — é cadastro no Google Cloud Console. As Ondas 1–3 continuam valendo por serem defeitos reais.
+- Arquivos alterados: `supabase/functions/google-calendar-callback/index.ts`,
+  `src/hooks/useGoogleCalendarIntegration.ts`, `src/components/integracoes/GoogleCalendarCard.tsx`.
+- Migração: nova tabela `google_oauth_debug` com GRANTs e RLS (leitura própria, escrita service role).
+- As Edge Functions precisam ser publicadas para as mudanças valerem em produção.
