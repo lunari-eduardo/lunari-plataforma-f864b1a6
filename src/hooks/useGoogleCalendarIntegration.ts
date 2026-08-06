@@ -113,7 +113,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     setConnecting(true);
     try {
       // Usar helper para suportar novos e antigos domínios
-      const redirectUri = getOAuthRedirectUri();
+      const redirectUri = `${getAppBaseUrl()}/app/integracoes?tab=calendar`;
 
       const { data, error } = await supabase.functions.invoke('google-calendar-connect', {
         body: { redirectUri },

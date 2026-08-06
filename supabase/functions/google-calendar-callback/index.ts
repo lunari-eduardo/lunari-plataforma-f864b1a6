@@ -142,6 +142,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('[google-calendar-callback] Error:', error);
-    return Response.redirect('https://app.lunarihub.com/app/integracoes?google_error=unknown', 302);
+    const fallback = 'https://app.lunarihub.com/app/integracoes?tab=calendar&google_error=unknown';
+    return Response.redirect(fallback, 302);
   }
 });
