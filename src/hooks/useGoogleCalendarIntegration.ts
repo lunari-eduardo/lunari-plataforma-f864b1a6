@@ -98,6 +98,45 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     fetchIntegration();
   }, [fetchIntegration]);
 
+  // Lê o resultado do callback OAuth (google_success / google_error) e dá feedback honesto
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('google_success');
+    const errorCode = params.get('google_error');
+    const detail = params.get('detail');
+
+    if (!success && !errorCode) return;
+
+    if (success) {
+      toast.success('Google Calendar conectado com sucesso');
+      fetchIntegration();
+    } else if (errorCode) {
+      const messages: Record<string, string> = {
+        access_denied: 'Você recusou as permissões no Google.',
+        missing_params: 'O Google não retornou os dados necessários. Tente novamente.',
+        missing_credentials: 'Credenciais do Google não configuradas no servidor.',
+        token_exchange_failed: 'O Google recusou a troca de credenciais. Verifique o Client ID/Secret e o URI de redirecionamento.',
+        database_error: 'Falha ao salvar a integração no banco de dados.',
+        unknown: 'Erro inesperado ao concluir a conexão.',
+      };
+      const base = messages[errorCode] || `Erro na conexão: ${errorCode}`;
+      toast.error(base, { description: detail ? `Detalhe: ${detail}` : undefined, duration: 10000 });
+      console.error('[useGoogleCalendarIntegration] Callback error:', errorCode, detail);
+      fetchIntegration();
+    }
+
+    // Limpa os parâmetros da URL preservando os demais
+    params.delete('google_success');
+    params.delete('google_error');
+    params.delete('detail');
+    const query = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}`
+    );
+  }, [fetchIntegration]);
+
   const status: GoogleCalendarStatus = (() => {
     if (!integration) return 'desconectado';
     if (integration.status === 'ativo') return 'conectado';
