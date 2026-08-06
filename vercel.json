@@ -12,6 +12,10 @@
       "source": "/sitemap.xml",
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/sitemap"
     },
+    {
+      "source": "/homepageapp",
+      "destination": "/homepageapp.html"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
