@@ -101,7 +101,7 @@ serve(async (req) => {
       user_id: stateData.userId,
       provedor: 'google_calendar',
       access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
+      refresh_token: tokenData.refresh_token || existing?.refresh_token || null,
       expira_em: expiresAt,
       conectado_em: new Date().toISOString(),
       status: 'ativo',
