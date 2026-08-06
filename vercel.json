@@ -8,6 +8,10 @@
       "source": "/l/:cobrancaId",
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/payment-link-preview?id=:cobrancaId"
     },
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/sitemap"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

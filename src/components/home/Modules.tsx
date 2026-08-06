@@ -12,8 +12,8 @@ export function Modules() {
     },
     { 
       title: "Agenda", 
-      desc: "Sincronização com Google e reserva online por link.",
-      tags: ["Slots", "Google Sync", "Prazos"]
+      desc: "Sincronização bidirecional com Google Calendar: o Lunari lê seus compromissos para evitar conflitos de horários e grava os novos ensaios diretamente na sua agenda.",
+      tags: ["Google Calendar", "Sync", "Slots"]
     },
     { 
       title: "Financeiro", 

@@ -51,7 +51,19 @@ export default function PrivacidadePage() {
 
           <section>
             <h2 className="text-xl mt-8 mb-4">7. Integrações com terceiros</h2>
-            <p>Mediante autorização, integramos com Google, Mercado Pago, Asaas, InfinitePay e WhatsApp. Cada integração acessa apenas as permissões autorizadas e pode ser revogada a qualquer momento.</p>
+            <p>Mediante autorização explícita, a Lunari pode se integrar a serviços de terceiros como Google, Mercado Pago, Asaas, InfinitePay e WhatsApp. Cada integração acessa apenas as permissões estritamente necessárias e pode ser revogada pelo usuário a qualquer momento.</p>
+            
+            <h3 className="text-lg mt-6 mb-2 font-semibold">7.1. Integração com o Google Calendar</h3>
+            <p>Para fornecer a funcionalidade de "Agenda Inteligente", a Lunari solicita acesso ao seu Google Calendar. As informações acessadas são utilizadas exclusivamente para:</p>
+            <ul className="list-disc pl-5 space-y-2 mt-4 mb-4">
+              <li>Ler os horários ocupados no seu calendário para prevenir conflitos de agenda na plataforma.</li>
+              <li>Gravar novos compromissos, ensaios e reuniões agendados diretamente no seu calendário.</li>
+            </ul>
+            
+            <div className="bg-site-gold/10 border-l-4 border-site-gold p-4 my-6 rounded-r-md">
+              <h4 className="font-semibold text-site-on-dark mb-2">Conformidade de Uso Limitado (Limited Use)</h4>
+              <p className="text-sm">O uso e a transferência de informações recebidas das APIs do Google para qualquer outro aplicativo pela Lunari obedecerão integralmente à <strong>Google API Services User Data Policy</strong>, incluindo os requisitos de <strong>Uso Limitado (Limited Use Requirements)</strong>.</p>
+            </div>
           </section>
 
           <section>

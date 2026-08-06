@@ -81,8 +81,8 @@ export function Hero() {
 
           <SiteReveal delay={120}>
             <SiteLead tone="dark" className="mt-7 max-w-xl">
-              CRM, agenda, contratos, financeiro, galeria e um assistente de IA — todos os módulos do
-              seu estúdio, rodando em tempo real, na mesma base de dados.
+              O software desenvolvido exclusivamente para o fotógrafo profissional gerenciar seu negócio. 
+              CRM, agenda, contratos, financeiro, galeria e inteligência artificial — todos os processos do estúdio em uma única ferramenta.
             </SiteLead>
           </SiteReveal>
 
