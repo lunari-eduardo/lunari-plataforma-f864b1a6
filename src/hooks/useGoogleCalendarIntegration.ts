@@ -100,7 +100,8 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
 
   const status: GoogleCalendarStatus = (() => {
     if (!integration) return 'desconectado';
-    if (integration.status === 'ativo' || integration.status === 'pendente') return 'conectado';
+    if (integration.status === 'ativo') return 'conectado';
+    if (integration.status === 'pendente') return 'pendente';
     if (integration.status === 'erro') return 'erro';
     return 'pendente';
   })();
@@ -126,15 +127,9 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
       }
 
       if (data?.authUrl) {
-        // Clear potential error states before redirecting
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase
-            .from('usuarios_integracoes')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('provedor', 'google_calendar');
-        }
+        // We no longer delete the integration here to prevent UI flicker
+        // if the user cancels or closes the window.
+        // The callback function handles the clean upsert.
         window.location.href = data.authUrl;
       } else {
         toast.error('URL de autenticação não recebida');
