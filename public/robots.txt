@@ -25,4 +25,4 @@ Disallow: /l/
 Disallow: /pay/
 Disallow: /checkout/
 
-Sitemap: https://lunarihub.com/sitemap.xml
+Sitemap: https://www.lunarihub.com/sitemap.xml

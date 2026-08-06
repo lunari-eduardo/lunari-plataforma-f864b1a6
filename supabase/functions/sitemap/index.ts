@@ -29,14 +29,14 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    const baseUrl = 'https://app.lunarihub.com';
+    const baseUrl = 'https://www.lunarihub.com';
     const today = new Date().toISOString().split('T')[0];
 
     // Build sitemap XML with all public pages
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>${baseUrl}/landing</loc>
+    <loc>${baseUrl}/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
@@ -80,9 +80,9 @@ Deno.serve(async (req) => {
       `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://app.lunarihub.com/conteudos</loc>
+    <loc>https://www.lunarihub.com/</loc>
     <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
-    <priority>0.8</priority>
+    <priority>1.0</priority>
   </url>
 </urlset>`,
       { headers: corsHeaders }
