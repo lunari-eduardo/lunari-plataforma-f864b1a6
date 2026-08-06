@@ -71,18 +71,18 @@ export function Hero() {
           <SiteReveal>
             <div className="mb-6 inline-flex items-center rounded-full border border-site-gold/20 bg-site-gold/5 px-3 py-1">
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-site-gold">
-                PLATAFORMA SAAS DE GESTÃO
+                ECOSISTEMA PARA FOTÓGRAFOS
               </span>
             </div>
             <SiteH1 tone="dark" emphasis="Não adaptado.">
-              Lunari: O sistema de gestão completo para fotógrafos.
+              Sistema<br />feito para fotógrafos.
             </SiteH1>
           </SiteReveal>
 
           <SiteReveal delay={120}>
             <SiteLead tone="dark" className="mt-7 max-w-xl">
               O software desenvolvido exclusivamente para o fotógrafo profissional gerenciar seu negócio. 
-              CRM, agenda, contratos, financeiro, galeria e inteligência artificial — todos os processos do estúdio em uma única ferramenta.
+              CRM, agenda, contratos, financeiro, galeria e inteligência artificial — todos os processos do seu negócio em uma única ferramenta.
             </SiteLead>
           </SiteReveal>
 
