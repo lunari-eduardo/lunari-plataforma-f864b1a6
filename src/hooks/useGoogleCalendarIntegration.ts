@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { getOAuthRedirectUri } from '@/utils/domainUtils';
+import { getOAuthRedirectUri, getAppBaseUrl } from '@/utils/domainUtils';
 
 type GoogleCalendarStatus = 'conectado' | 'desconectado' | 'pendente' | 'erro';
 
@@ -75,7 +75,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
       setIntegration(data as GoogleCalendarIntegration | null);
 
       // Fetch count of pending appointments
-      if (data?.status === 'ativo') {
+      if (data?.status === 'ativo' || data?.status === 'pendente') {
         const today = new Date().toISOString().split('T')[0];
         const { count } = await supabase
           .from('appointments')
@@ -100,7 +100,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
 
   const status: GoogleCalendarStatus = (() => {
     if (!integration) return 'desconectado';
-    if (integration.status === 'ativo') return 'conectado';
+    if (integration.status === 'ativo' || integration.status === 'pendente') return 'conectado';
     if (integration.status === 'erro') return 'erro';
     return 'pendente';
   })();
@@ -113,7 +113,7 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
     setConnecting(true);
     try {
       // Usar helper para suportar novos e antigos domínios
-      const redirectUri = getOAuthRedirectUri();
+      const redirectUri = `${getAppBaseUrl()}/app/integracoes?tab=calendar`;
 
       const { data, error } = await supabase.functions.invoke('google-calendar-connect', {
         body: { redirectUri },
@@ -126,6 +126,15 @@ export function useGoogleCalendarIntegration(): UseGoogleCalendarReturn {
       }
 
       if (data?.authUrl) {
+        // Clear potential error states before redirecting
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('usuarios_integracoes')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('provedor', 'google_calendar');
+        }
         window.location.href = data.authUrl;
       } else {
         toast.error('URL de autenticação não recebida');

@@ -23,13 +23,19 @@ serve(async (req) => {
       console.error('[google-calendar-callback] Failed to parse state:', e);
     }
 
-    // Use absolute URL for redirect - fallback to new production URL
+    // Use absolute URL for redirect - fallback to production
     const defaultRedirect = 'https://app.lunarihub.com/app/integracoes';
-    const redirectUri = stateData?.redirectUri || defaultRedirect;
+    let redirectUri = stateData?.redirectUri || defaultRedirect;
+
+    // Fix: If redirectUri is using the old canonical 'lunarihub.com' without 'app.', 
+    // it might cause session loss if the user is logged into 'app.lunarihub.com'.
+    if (redirectUri.includes('lunarihub.com') && !redirectUri.includes('app.lunarihub.com')) {
+      redirectUri = redirectUri.replace('lunarihub.com', 'app.lunarihub.com');
+    }
 
     if (error) {
       console.error('[google-calendar-callback] OAuth error:', error);
-      return Response.redirect(`${redirectUri}?google_error=${error}`, 302);
+      return Response.redirect(`${redirectUri}${redirectUri.includes('?') ? '&' : '?'}google_error=${error}`, 302);
     }
 
     if (!code || !stateData?.userId) {
@@ -132,10 +138,11 @@ serve(async (req) => {
 
     console.log('[google-calendar-callback] Integration saved for user:', stateData.userId);
 
-    return Response.redirect(`${redirectUri}?google_success=true`, 302);
+    return Response.redirect(`${redirectUri}${redirectUri.includes('?') ? '&' : '?'}google_success=true`, 302);
 
   } catch (error) {
     console.error('[google-calendar-callback] Error:', error);
-    return Response.redirect('https://app.lunarihub.com/app/integracoes?google_error=unknown', 302);
+    const fallback = 'https://app.lunarihub.com/app/integracoes?tab=calendar&google_error=unknown';
+    return Response.redirect(fallback, 302);
   }
 });
