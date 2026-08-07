@@ -20,6 +20,7 @@ import MinhaConta from "@/pages/MinhaConta";
 import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
 import MateriaisComerciaisPage from "@/pages/materiais-comerciais/MateriaisComerciaisPage";
+import EditorMaterialPage from "@/pages/materiais-comerciais/EditorMaterialPage";
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -195,6 +196,11 @@ export default function PhotographerApp() {
                 <Route path="materiais" element={
                   <RequireAdmin>
                     <MateriaisComerciaisPage />
+                  </RequireAdmin>
+                } />
+                <Route path="materiais/editor/:id" element={
+                  <RequireAdmin>
+                    <EditorMaterialPage />
                   </RequireAdmin>
                 } />
 
