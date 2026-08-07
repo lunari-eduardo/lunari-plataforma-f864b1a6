@@ -1,91 +1,142 @@
 import React from 'react';
+import { BlockData } from '@/hooks/useMaterialEditor';
+import { cn } from '@/lib/utils';
 import { 
   Image as ImageIcon, 
   AlignLeft, 
-  Briefcase, 
   DollarSign, 
+  Briefcase, 
   HelpCircle, 
   MessageSquare,
-  Plus,
-  GripVertical
+  ChevronUp,
+  ChevronDown,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
 
-export interface SectionDef {
-  id: string;
-  type: 'cover' | 'about' | 'portfolio' | 'package' | 'faq' | 'contact';
-  title: string;
-  isOptional?: boolean;
-  isHidden?: boolean;
+export interface EditorSidebarProps {
+  blocks: BlockData[];
+  activeIndex: number;
+  onSelectBlock: (index: number) => void;
+  onAddBlock: (type: string) => void;
+  onRemoveBlock: (index: number) => void;
+  onMoveBlock: (index: number, direction: 'up' | 'down') => void;
 }
 
-export const MOCK_SECTIONS: SectionDef[] = [
-  { id: 'sec_1', type: 'cover', title: 'Capa Principal' },
-  { id: 'sec_2', type: 'about', title: 'Sobre o Estúdio' },
-  { id: 'sec_3', type: 'portfolio', title: 'Portfólio Resumido' },
-  { id: 'sec_4', type: 'package', title: 'Pacote Ouro' },
-  { id: 'sec_5', type: 'package', title: 'Pacote Prata' },
-  { id: 'sec_6', type: 'faq', title: 'Dúvidas Frequentes', isOptional: true },
-  { id: 'sec_7', type: 'contact', title: 'Como Contratar' },
-];
-
-const iconMap = {
-  cover: ImageIcon,
-  about: AlignLeft,
-  portfolio: Briefcase,
-  package: DollarSign,
-  faq: HelpCircle,
-  contact: MessageSquare,
+const getBlockIcon = (type: string) => {
+  switch (type) {
+    case 'cover': return ImageIcon;
+    case 'about': return AlignLeft;
+    case 'package': return DollarSign;
+    case 'portfolio': return Briefcase;
+    case 'faq': return HelpCircle;
+    case 'cta': return MessageSquare;
+    case 'text': return AlignLeft;
+    default: return AlignLeft;
+  }
 };
 
-interface EditorSidebarProps {
-  sections: SectionDef[];
-  activeSectionId: string;
-  onSelectSection: (id: string) => void;
-}
+const getBlockName = (type: string) => {
+  switch (type) {
+    case 'cover': return 'Capa';
+    case 'about': return 'Sobre';
+    case 'package': return 'Pacote / Preço';
+    case 'portfolio': return 'Portfólio';
+    case 'faq': return 'FAQ';
+    case 'cta': return 'Call to Action';
+    case 'text': return 'Texto Livre';
+    default: return 'Seção';
+  }
+};
 
-export function EditorSidebar({ sections, activeSectionId, onSelectSection }: EditorSidebarProps) {
+const blockTypes = ['cover', 'about', 'package', 'portfolio', 'faq', 'cta', 'text'];
+
+export function EditorSidebar({
+  blocks,
+  activeIndex,
+  onSelectBlock,
+  onAddBlock,
+  onRemoveBlock,
+  onMoveBlock
+}: EditorSidebarProps) {
   return (
-    <div className="flex h-full w-64 flex-col border-r border-border bg-background">
-      <div className="flex flex-col p-4">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-          Estrutura (Preview)
-        </h2>
-        
-        <div className="flex flex-col space-y-1">
-          {sections.map((sec) => {
-            const Icon = iconMap[sec.type] || AlignLeft;
-            const isActive = sec.id === activeSectionId;
+    <div className="flex h-full flex-col">
+      <div className="p-4 text-sm font-semibold uppercase tracking-wider text-gray-500">
+        Conteúdo
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-2 pb-4">
+        <div className="space-y-1">
+          {blocks.map((block, index) => {
+            const Icon = getBlockIcon(block.type);
+            const isActive = index === activeIndex;
             
             return (
-              <button
-                key={sec.id}
-                onClick={() => onSelectSection(sec.id)}
+              <div 
+                key={`${block.id || block.type}-${index}`}
                 className={cn(
-                  "group flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors",
-                  isActive 
-                    ? "bg-primary/10 text-primary font-medium" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  "group flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}
+                onClick={() => onSelectBlock(index)}
               >
-                <GripVertical className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-30 cursor-grab active:cursor-grabbing" />
-                <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
-                <span className="flex-1 text-left truncate">{sec.title}</span>
-                {sec.isHidden && (
-                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground uppercase">
-                    Oculto
-                  </span>
-                )}
-              </button>
+                <div className="flex items-center gap-3">
+                  <Icon className="h-4 w-4 text-gray-400" />
+                  <span>{block.data?.title || getBlockName(block.type)}</span>
+                </div>
+                
+                <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={() => onMoveBlock(index, 'up')}
+                    disabled={index === 0}
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={() => onMoveBlock(index, 'down')}
+                    disabled={index === blocks.length - 1}
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
             );
           })}
         </div>
-
-        <Button variant="outline" className="w-full mt-6 gap-2 text-muted-foreground border-dashed">
-          <Plus className="h-4 w-4" />
-          Adicionar Seção
-        </Button>
+        
+        <div className="mt-6 px-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full gap-2" size="sm">
+                <Plus className="h-4 w-4" />
+                Adicionar Seção
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-48">
+              {blockTypes.map((type) => {
+                const Icon = getBlockIcon(type);
+                return (
+                  <DropdownMenuItem key={type} onClick={() => onAddBlock(type)} className="gap-2">
+                    <Icon className="h-4 w-4 text-gray-500" />
+                    {getBlockName(type)}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

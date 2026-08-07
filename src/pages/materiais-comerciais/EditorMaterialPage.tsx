@@ -1,97 +1,106 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Eye, LayoutTemplate } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useMaterialEditor, BlockData } from '@/hooks/useMaterialEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { EditorSidebar, MOCK_SECTIONS, SectionDef } from './components/editor/EditorSidebar';
+import { EditorSidebar } from './components/editor/EditorSidebar';
 import { EditorCanvas } from './components/editor/EditorCanvas';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function EditorMaterialPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { id } = useParams();
+  const editor = useMaterialEditor(id || '');
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  if (editor.isLoading || !editor.state) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const { state } = editor;
+  const handleSelectBlock = (index: number) => setActiveIndex(index);
   
-  // Estado
-  const [materialName, setMaterialName] = useState('Proposta de Casamento Premium');
-  const [sections, setSections] = useState<SectionDef[]>(MOCK_SECTIONS);
-  const [activeSectionId, setActiveSectionId] = useState<string>(MOCK_SECTIONS[0].id);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Derivando a seção ativa
-  const activeSection = sections.find(s => s.id === activeSectionId) || sections[0];
-
-  const handlePublish = () => {
-    setIsSaving(true);
-    // Simular API request
-    setTimeout(() => {
-      setIsSaving(false);
-    }, 1000);
+  const handleAddBlock = (type: string) => {
+    editor.addBlock(type);
+    setActiveIndex(state.blocks.length);
   };
 
-  return (
-    <div className="flex flex-col h-screen w-full bg-background overflow-hidden absolute inset-0 z-50">
-      
-      {/* 1. Topbar Imersiva */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4">
-        
-        {/* Esquerda: Voltar e Nome */}
-        <div className="flex items-center gap-4 flex-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-foreground gap-1.5 -ml-2"
-            onClick={() => navigate('/app/materiais')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Biblioteca</span>
-          </Button>
-          
-          <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
-          
-          <div className="flex items-center gap-2 flex-1 max-w-sm">
-            <LayoutTemplate className="h-4 w-4 text-primary shrink-0" />
-            <Input 
-              value={materialName}
-              onChange={(e) => setMaterialName(e.target.value)}
-              className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:bg-background px-2 text-sm font-medium shadow-none focus-visible:ring-1"
-              placeholder="Nome do Material"
-            />
-          </div>
-        </div>
+  const activeBlock = state.blocks[activeIndex];
 
-        {/* Direita: Status e Ações */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground mr-2">
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-500/80" />
-            Salvo
-          </div>
-          
-          <Button variant="outline" size="sm" className="gap-2 hidden md:flex">
-            <Eye className="h-4 w-4" />
-            Preview
+  return (
+    <div className="flex h-screen w-full flex-col bg-gray-50">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b bg-white px-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/app/materiais')} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Biblioteca
           </Button>
+          <div className="h-4 w-px bg-gray-200" />
+          <Input
+            value={state.title}
+            onChange={(e) => editor.updateTitle(e.target.value)}
+            className="w-64 border-transparent bg-transparent px-2 shadow-none hover:border-gray-200 focus-visible:ring-0"
+            placeholder="Título do Material"
+          />
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <span className={cn("text-sm", {
+            "text-gray-400": editor.saveStatus === 'idle',
+            "text-yellow-600": editor.saveStatus === 'saving',
+            "text-green-600": editor.saveStatus === 'saved',
+            "text-red-600": editor.saveStatus === 'error'
+          })}>
+            {editor.saveStatus === 'saving' && 'Salvando...'}
+            {editor.saveStatus === 'saved' && 'Salvo'}
+            {editor.saveStatus === 'error' && 'Erro'}
+          </span>
           
-          <Button size="sm" className="gap-2" onClick={handlePublish} disabled={isSaving}>
-            {isSaving ? "Publicando..." : "Publicar Versão"}
+          <Button size="sm" onClick={() => editor.publish()}>
+            Publicar Versão
           </Button>
         </div>
       </header>
 
-      {/* 2. Área Principal de Edição */}
-      <div className="flex flex-1 overflow-hidden">
+      <main className="flex flex-1 overflow-hidden">
+        <div className="w-64 shrink-0 border-r bg-white">
+          <EditorSidebar
+            blocks={state.blocks}
+            activeIndex={activeIndex}
+            onSelectBlock={handleSelectBlock}
+            onAddBlock={handleAddBlock}
+            onRemoveBlock={editor.removeBlock}
+            onMoveBlock={editor.moveBlock}
+          />
+        </div>
         
-        {/* Sidebar Esquerda (Navegação de Seções) */}
-        <EditorSidebar 
-          sections={sections}
-          activeSectionId={activeSectionId}
-          onSelectSection={setActiveSectionId}
-        />
-
-        {/* Canvas Central (Formulário Dinâmico) */}
-        <EditorCanvas 
-          section={activeSection}
-        />
-
-      </div>
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
+          <div className="mx-auto max-w-3xl">
+            {activeBlock ? (
+              <EditorCanvas
+                block={activeBlock}
+                blockIndex={activeIndex}
+                onUpdateBlock={editor.updateBlock}
+                onRemoveBlock={(index) => {
+                  editor.removeBlock(index);
+                  if (activeIndex >= state.blocks.length - 1) {
+                    setActiveIndex(Math.max(0, state.blocks.length - 2));
+                  }
+                }}
+              />
+            ) : (
+              <div className="flex h-[400px] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white text-gray-400">
+                Adicione um bloco para começar a editar
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

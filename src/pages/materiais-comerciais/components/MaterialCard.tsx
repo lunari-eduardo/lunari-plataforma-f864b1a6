@@ -9,9 +9,7 @@ import {
   BarChart2,
   Copy as CopyIcon,
   Archive,
-  Trash2,
-  Eye,
-  TrendingUp
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,32 +25,31 @@ import { toast } from 'sonner';
 
 export interface MaterialCardProps {
   id: string;
-  categoryName: string;
+  title: string;
   lastUpdated: string;
   isActive: boolean;
-  coverUrl?: string;
+  isPublished: boolean;
+  coverUrl?: string | null;
   onOpen: (id: string) => void;
-  // Métricas mockadas para mostrar a estrutura de Analytics no código (podem vir do BD futuramente)
-  metrics?: {
-    views: number;
-    shares: number;
-    conversionRate: number;
-  };
+  onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export function MaterialCard({
   id,
-  categoryName,
+  title,
   lastUpdated,
   isActive,
+  isPublished,
   coverUrl,
   onOpen,
-  metrics
+  onArchive,
+  onDelete
 }: MaterialCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleCopyLink = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evita abrir o editor
+    e.stopPropagation();
     navigator.clipboard.writeText(`https://lunarihub.com/m/${id}`);
     toast.success('Link oficial copiado!');
   };
@@ -72,7 +69,7 @@ export function MaterialCard({
         {coverUrl ? (
           <img 
             src={coverUrl} 
-            alt={categoryName}
+            alt={title}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -93,21 +90,23 @@ export function MaterialCard({
           </div>
         )}
 
-        {/* Quick Action Hover: Copiar Link (Botão flutuante para atrito zero) */}
-        <div className={cn(
-          "absolute right-2 top-2 transition-all duration-200",
-          isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
-        )}>
-          <Button 
-            variant="secondary" 
-            size="icon"
-            className="h-8 w-8 rounded-full shadow-lg border border-white/10 hover:scale-110 bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition-all"
-            onClick={handleCopyLink}
-            title="Copiar Link Rápido"
-          >
-            <LinkIcon className="h-4 w-4" />
-          </Button>
-        </div>
+        {/* Quick Action Hover: Copiar Link (Botão flutuante para atrito zero, apenas se publicado) */}
+        {isPublished && (
+          <div className={cn(
+            "absolute right-2 top-2 transition-all duration-200",
+            isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
+          )}>
+            <Button 
+              variant="secondary" 
+              size="icon"
+              className="h-8 w-8 rounded-full shadow-lg border border-white/10 hover:scale-110 bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition-all"
+              onClick={handleCopyLink}
+              title="Copiar Link Rápido"
+            >
+              <LinkIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Footer Info */}
@@ -115,7 +114,7 @@ export function MaterialCard({
         {/* Linha 1: Título e Menu */}
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
-            <h3 className="font-semibold text-foreground text-sm line-clamp-1">{categoryName}</h3>
+            <h3 className="font-semibold text-foreground text-sm line-clamp-1">{title}</h3>
             <p className="text-xs text-muted-foreground">
               {lastUpdated}
             </p>
@@ -140,56 +139,37 @@ export function MaterialCard({
                 Editar Material
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <History className="mr-2 h-4 w-4 text-muted-foreground" />
+              <DropdownMenuItem disabled>
+                <History className="mr-2 h-4 w-4" />
                 Histórico de Versões
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Share2 className="mr-2 h-4 w-4 text-muted-foreground" />
+              <DropdownMenuItem disabled>
+                <Share2 className="mr-2 h-4 w-4" />
                 Compartilhamentos
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BarChart2 className="mr-2 h-4 w-4 text-muted-foreground" />
+              <DropdownMenuItem disabled>
+                <BarChart2 className="mr-2 h-4 w-4" />
                 Analytics
               </DropdownMenuItem>
               
               <DropdownMenuSeparator />
               
               {/* Ações Administrativas */}
-              <DropdownMenuItem>
-                <CopyIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <DropdownMenuItem disabled>
+                <CopyIcon className="mr-2 h-4 w-4" />
                 Duplicar
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Archive className="mr-2 h-4 w-4 text-muted-foreground" />
+              <DropdownMenuItem onClick={() => onArchive(id)}>
+                <Archive className="mr-2 h-4 w-4" />
                 Arquivar
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+              <DropdownMenuItem onClick={() => onDelete(id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Excluir
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-
-        {/* Linha 2 (Futuro): Analytics Placeholder */}
-        {/* Renderizado apenas quando os dados de Analytics passarem a existir ou para fins de MVP visual */}
-        {metrics && (
-          <div className="flex items-center gap-3 pt-1 border-t border-border/50 mt-1">
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground" title="Visualizações">
-              <Eye className="h-3 w-3" />
-              <span>{metrics.views}</span>
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground" title="Compartilhamentos">
-              <LinkIcon className="h-3 w-3" />
-              <span>{metrics.shares}</span>
-            </div>
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground" title="Taxa de Conversão">
-              <TrendingUp className="h-3 w-3 text-green-500/80" />
-              <span className="text-green-500/80 font-medium">{metrics.conversionRate}%</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
