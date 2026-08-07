@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FollowUpConfig } from '@/types/leadInteractions';
 import {
@@ -9,6 +10,46 @@ import {
 } from '@/utils/leadTransformers';
 
 const QUERY_KEY = 'follow-up-config';
+
+// Singleton Realtime channel por usuário com refcount
+// Evita múltiplas subscriptions no mesmo topic e crashes ("cannot add postgres_changes... after subscribe")
+type FollowUpChannelEntry = { channel: RealtimeChannel; refCount: number };
+const FOLLOW_UP_CHANNEL_REGISTRY = new Map<string, FollowUpChannelEntry>();
+
+function acquireFollowUpChannel(userId: string, queryClient: QueryClient) {
+  const existing = FOLLOW_UP_CHANNEL_REGISTRY.get(userId);
+  if (existing) {
+    existing.refCount += 1;
+    return;
+  }
+  const channel = supabase
+    .channel(`follow-up-config-changes:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'lead_follow_up_config',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => {
+        console.log('🔄 [FollowUpConfig] Mudança detectada, atualizando...');
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY, userId] });
+      }
+    )
+    .subscribe();
+  FOLLOW_UP_CHANNEL_REGISTRY.set(userId, { channel, refCount: 1 });
+}
+
+function releaseFollowUpChannel(userId: string) {
+  const entry = FOLLOW_UP_CHANNEL_REGISTRY.get(userId);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount <= 0) {
+    supabase.removeChannel(entry.channel);
+    FOLLOW_UP_CHANNEL_REGISTRY.delete(userId);
+  }
+}
 
 export function useSupabaseFollowUpConfig() {
   const { user } = useAuth();
@@ -79,28 +120,9 @@ export function useSupabaseFollowUpConfig() {
   // Real-time subscription
   useEffect(() => {
     if (!userId) return;
-
-    const channel = supabase
-      .channel('follow-up-config-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'lead_follow_up_config',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => {
-          console.log('🔄 [FollowUpConfig] Mudança detectada, atualizando...');
-          refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId, refetch]);
+    acquireFollowUpChannel(userId, queryClient);
+    return () => releaseFollowUpChannel(userId);
+  }, [userId, queryClient]);
 
   // Update config mutation - usar UPSERT para garantir que a config existe
   const updateConfigMutation = useMutation({
