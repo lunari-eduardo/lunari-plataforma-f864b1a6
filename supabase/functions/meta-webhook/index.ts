@@ -26,20 +26,8 @@ serve(async (req) => {
       const token = url.searchParams.get("hub.verify_token");
       const challenge = url.searchParams.get("hub.challenge");
 
-      if (mode === "subscribe" && token) {
-        // Find if this token exists in any of our user integrations
-        const { data: integration, error } = await supabaseClient
-          .from("meta_integrations")
-          .select("id")
-          .eq("webhook_verify_token", token)
-          .single();
-
-        if (error || !integration) {
-          console.error("Webhook Verification Failed: Invalid Token", token);
-          return new Response("Forbidden", { status: 403 });
-        }
-
-        console.log("Webhook Verified!");
+      if (mode === "subscribe" && token === "lunari_whatsapp_secret_2026") {
+        console.log("Webhook Verified via GET!");
         return new Response(challenge, { status: 200 });
       }
 
@@ -56,33 +44,56 @@ serve(async (req) => {
           for (const change of entry.changes) {
             if (change.field === "messages") {
               const value = change.value;
-              const metadata = value.metadata;
               
-              // Find the user integration by phone_number_id
-              const { data: integration, error } = await supabaseClient
-                .from("meta_integrations")
-                .select("user_id")
-                .eq("phone_number_id", metadata.phone_number_id)
-                .single();
-
-              if (error || !integration) {
-                console.error("Unknown phone number ID", metadata.phone_number_id);
-                continue;
-              }
-
-              const userId = integration.user_id;
-
-              // Process messages
               if (value.messages) {
                 for (const msg of value.messages) {
-                  const fromPhone = msg.from; // Customer phone
+                  const fromPhone = msg.from; // Customer phone (e.g. 5511999999999)
                   const text = msg.text?.body || "";
 
-                  console.log(`[WhatsApp] User: ${userId} | From: ${fromPhone} | Msg: ${text}`);
+                  console.log(`[WhatsApp] Recebido de ${fromPhone}: ${text}`);
 
-                  // 1. Find lead by phone
-                  // 2. Insert interaction
-                  // 3. (Optional) Trigger AI assistant via background task or pg_net if it needs to draft a reply
+                  if (!text) continue;
+
+                  // 1. Encontrar o Lead pelo telefone
+                  // Usamos um ilike para permitir variações de DDI/DDD
+                  const { data: leads, error: findError } = await supabaseClient
+                    .from("leads")
+                    .select("id, interacoes")
+                    .or(`telefone.ilike.%${fromPhone.substring(2)}%,whatsapp.ilike.%${fromPhone.substring(2)}%`)
+                    .limit(1);
+
+                  if (findError || !leads || leads.length === 0) {
+                    console.log(`Nenhum lead encontrado para o número: ${fromPhone}`);
+                    continue;
+                  }
+
+                  const lead = leads[0];
+                  
+                  // 2. Criar a interação
+                  const novaInteracao = {
+                    id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                    data: new Date().toISOString(),
+                    tipo: "whatsapp",
+                    descricao: `Mensagem recebida: "${text}"`,
+                    automatica: true
+                  };
+
+                  const interacoes = Array.isArray(lead.interacoes) ? lead.interacoes : [];
+                  
+                  // 3. Atualizar o Lead no banco
+                  const { error: updateError } = await supabaseClient
+                    .from("leads")
+                    .update({ 
+                      interacoes: [novaInteracao, ...interacoes],
+                      status_timestamp: new Date().toISOString()
+                    })
+                    .eq("id", lead.id);
+
+                  if (updateError) {
+                    console.error("Erro ao atualizar interações do lead:", updateError);
+                  } else {
+                    console.log("Interação salva com sucesso no lead:", lead.id);
+                  }
                 }
               }
             }
