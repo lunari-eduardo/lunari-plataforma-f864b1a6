@@ -135,7 +135,7 @@ export default function LeadCard({
   const schedulingBadge = getSchedulingBadge();
   const handleStartConversation = () => {
     try {
-      const telefone = lead.telefone.replace(/\D/g, "");
+      const telefone = lead.telefone?.replace(/\D/g, "") || "";
       const mensagem = `Olá ${lead.nome}! 😊\n\nVi que você demonstrou interesse em nossos serviços. Como posso ajudá-lo(a)?`;
       const mensagemCodificada = encodeURIComponent(mensagem);
       const link = `https://wa.me/55${telefone}?text=${mensagemCodificada}`;

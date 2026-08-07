@@ -41,7 +41,7 @@ export default function LeadActionButtons({ lead }: LeadActionButtonsProps) {
     }
 
     // Create WhatsApp link with simple message
-    const telefone = lead.whatsapp || lead.telefone;
+    const telefone = lead.whatsapp || lead.telefone || "";
     const cleanPhone = telefone.replace(/\D/g, "");
     const message = encodeURIComponent(`Olá ${lead.nome}! Tudo bem?`);
     const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${message}`;

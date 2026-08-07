@@ -100,18 +100,6 @@ export default function LeadFormModal({
       // Force close any open dropdowns
       setOpenDropdowns({});
       dropdownContext?.setHasOpenDropdown(false);
-      
-      // Aggressive cleanup of Radix Select portals
-      document.querySelectorAll('[data-radix-select-content]').forEach(el => {
-        if (el.parentNode) {
-          el.parentNode.removeChild(el);
-        }
-      });
-      
-      // Reset pointer events on any stuck overlays
-      document.querySelectorAll('[data-radix-select-trigger]').forEach(el => {
-        (el as HTMLElement).style.pointerEvents = '';
-      });
     };
   }, [dropdownContext]);
 
@@ -120,15 +108,6 @@ export default function LeadFormModal({
       // Force close all dropdowns before closing modal
       setOpenDropdowns({});
       dropdownContext?.setHasOpenDropdown(false);
-      
-      // Cleanup portal elements immediately
-      setTimeout(() => {
-        document.querySelectorAll('[data-radix-select-content]').forEach(el => {
-          if (el.parentNode) {
-            el.parentNode.removeChild(el);
-          }
-        });
-      }, 50);
       
       if (!isSubmitting) {
         setFormData(getInitialFormData());

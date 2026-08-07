@@ -75,9 +75,9 @@ export default function LeadsKanban({
     return leads.filter((lead) => {
       const matchesSearch =
         !searchTerm.trim() ||
-        lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.telefone.includes(searchTerm);
+        lead.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.telefone?.includes(searchTerm);
 
       const matchesOrigem = originFilter === "all" || lead.origem === originFilter;
 
