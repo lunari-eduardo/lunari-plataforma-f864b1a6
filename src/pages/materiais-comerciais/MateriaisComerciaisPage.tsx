@@ -1,0 +1,173 @@
+import React, { useState } from 'react';
+import { Plus, Search, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { MaterialCard } from './components/MaterialCard';
+
+// Dados simulados temporários (Mock)
+const MOCK_MATERIALS = [
+  {
+    id: 'mat_1',
+    categoryName: 'Ensaio Gestante',
+    versionStr: 'Versão 3.0',
+    lastUpdated: 'Atualizado hoje',
+    isActive: true,
+    coverUrl: 'https://images.unsplash.com/photo-1518063063544-236b2bb6f0b4?q=80&w=600&auto=format&fit=crop'
+  },
+  {
+    id: 'mat_2',
+    categoryName: 'Newborn Completo',
+    versionStr: 'Versão 1.2 (Rascunho)',
+    lastUpdated: 'Editado há 2 dias',
+    isActive: false,
+    coverUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?q=80&w=600&auto=format&fit=crop'
+  },
+  {
+    id: 'mat_3',
+    categoryName: 'Casamento Mini-Wedding',
+    versionStr: 'Versão 1.0',
+    lastUpdated: 'Atualizado mês passado',
+    isActive: true,
+  },
+  {
+    id: 'mat_4',
+    categoryName: 'Ensaio Corporativo',
+    versionStr: 'Versão 2.1',
+    lastUpdated: 'Atualizado há 3 meses',
+    isActive: true,
+    coverUrl: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=600&auto=format&fit=crop'
+  }
+];
+
+export default function MateriaisComerciaisPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Handlers Fictícios por enquanto
+  const handleEdit = (id: string) => {
+    console.log('Abrindo editor para:', id);
+  };
+  
+  const handleView = (id: string) => {
+    console.log('Visualizando material:', id);
+  };
+
+  // Lógica de Filtro
+  const filteredMaterials = MOCK_MATERIALS.filter(m => {
+    const matchName = m.categoryName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = statusFilter === 'all' 
+      ? true 
+      : statusFilter === 'active' 
+        ? m.isActive 
+        : !m.isActive;
+    return matchName && matchStatus;
+  });
+
+  return (
+    <div className="flex h-full flex-col space-y-6 p-4 md:p-8 max-w-[85rem] mx-auto w-full">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Materiais Comerciais</h1>
+            <Badge variant="outline" className="bg-lunar-accent/10 text-lunar-accent border-lunar-accent/20">
+              Admin Only
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gerencie o catálogo de ofertas e portfólios dinâmicos do seu estúdio.
+          </p>
+        </div>
+        
+        <Button className="gap-2 shadow-sm shrink-0">
+          <Plus size={16} />
+          Novo Material
+        </Button>
+      </div>
+
+      {/* Toolbar / Filtros */}
+      <div className="flex flex-col sm:flex-row items-center gap-3 bg-card p-2 rounded-xl border border-border shadow-sm">
+        <div className="relative w-full sm:w-[300px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar material..." 
+            className="pl-9 bg-transparent border-none shadow-none focus-visible:ring-0"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="h-6 w-px bg-border hidden sm:block" />
+        
+        <div className="flex w-full sm:w-auto gap-2">
+          <Select defaultValue="all">
+            <SelectTrigger className="w-full sm:w-[160px] border-none shadow-none bg-transparent focus:ring-0 text-sm">
+              <SelectValue placeholder="Categorias" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              <SelectItem value="gestante">Gestante</SelectItem>
+              <SelectItem value="casamento">Casamento</SelectItem>
+              <SelectItem value="infantil">Infantil</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[140px] border-none shadow-none bg-transparent focus:ring-0 text-sm">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos status</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="draft">Rascunhos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Grid de Materiais */}
+      {filteredMaterials.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500">
+          {filteredMaterials.map((material) => (
+            <MaterialCard 
+              key={material.id}
+              id={material.id}
+              categoryName={material.categoryName}
+              versionStr={material.versionStr}
+              lastUpdated={material.lastUpdated}
+              isActive={material.isActive}
+              coverUrl={material.coverUrl}
+              onEdit={handleEdit}
+              onView={handleView}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center animate-in fade-in duration-500">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
+            <BookOpen className="h-8 w-8 text-primary opacity-80" />
+          </div>
+          <h2 className="text-lg font-semibold mb-2">Nenhum material encontrado</h2>
+          <p className="text-sm text-muted-foreground max-w-sm mb-6">
+            Atraia e converta mais. Crie materiais comerciais oficiais com design focado em vendas para seus clientes.
+          </p>
+          <Button variant="outline" className="gap-2">
+            <Plus size={16} />
+            Criar meu primeiro material
+          </Button>
+        </div>
+      )}
+
+    </div>
+  );
+}

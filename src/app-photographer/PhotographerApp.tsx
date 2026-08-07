@@ -19,6 +19,7 @@ import AnaliseVendas from "@/pages/AnaliseVendas";
 import MinhaConta from "@/pages/MinhaConta";
 import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
+import MateriaisComerciaisPage from "@/pages/materiais-comerciais/MateriaisComerciaisPage";
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -189,6 +190,11 @@ export default function PhotographerApp() {
                 <Route path="leads" element={
                   <RequireAdmin>
                     <PlanRestrictionGuard requiredPlan="pro"><Leads /></PlanRestrictionGuard>
+                  </RequireAdmin>
+                } />
+                <Route path="materiais" element={
+                  <RequireAdmin>
+                    <MateriaisComerciaisPage />
                   </RequireAdmin>
                 } />
 
