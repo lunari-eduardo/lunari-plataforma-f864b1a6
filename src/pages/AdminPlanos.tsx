@@ -23,6 +23,7 @@ interface UnifiedPlan {
   includes_studio: boolean;
   includes_select: boolean;
   includes_transfer: boolean;
+  includes_materials: boolean;
   select_credits_monthly: number;
   transfer_storage_bytes: number;
   sort_order: number;
@@ -303,6 +304,7 @@ export default function AdminPlanos() {
                       <th className="text-right px-3 py-2 font-medium">Anual (R$)</th>
                       {family === 'transfer' && <th className="text-right px-3 py-2 font-medium">GB</th>}
                       {family === 'combo' && <th className="text-right px-3 py-2 font-medium">Créditos</th>}
+                      {(family === 'studio' || family === 'combo') && <th className="text-center px-3 py-2 font-medium">Materiais</th>}
                       <th className="text-center px-3 py-2 font-medium">Ativo</th>
                     </tr>
                   </thead>
@@ -327,6 +329,11 @@ export default function AdminPlanos() {
                         {family === 'combo' && (
                           <td className="px-3 py-2 text-right">
                             <IntegerInput value={getFieldValue(plan, 'select_credits_monthly') as number} onChange={(n) => updateField(plan.id, 'select_credits_monthly', n)} className="h-7 text-xs w-20 text-right ml-auto" min={0} />
+                          </td>
+                        )}
+                        {(family === 'studio' || family === 'combo') && (
+                          <td className="px-3 py-2 text-center">
+                            <Switch checked={getFieldValue(plan, 'includes_materials') as boolean} onCheckedChange={v => updateField(plan.id, 'includes_materials', v)} />
                           </td>
                         )}
                         <td className="px-3 py-2 text-center">
@@ -511,6 +518,7 @@ export default function AdminPlanos() {
                 <th className="text-center px-3 py-2 font-medium">Studio</th>
                 <th className="text-center px-3 py-2 font-medium">Select</th>
                 <th className="text-center px-3 py-2 font-medium">Transfer</th>
+                <th className="text-center px-3 py-2 font-medium">Materiais</th>
                 <th className="text-right px-3 py-2 font-medium">Créditos/mês</th>
                 <th className="text-right px-3 py-2 font-medium">Storage</th>
               </tr>
@@ -522,6 +530,7 @@ export default function AdminPlanos() {
                   <td className="px-3 py-2 text-center">{plan.includes_studio ? '✓' : '—'}</td>
                   <td className="px-3 py-2 text-center">{plan.includes_select ? '✓' : '—'}</td>
                   <td className="px-3 py-2 text-center">{plan.includes_transfer ? '✓' : '—'}</td>
+                  <td className="px-3 py-2 text-center">{plan.includes_materials ? '✓' : '—'}</td>
                   <td className="px-3 py-2 text-right">{plan.select_credits_monthly || '—'}</td>
                   <td className="px-3 py-2 text-right">{plan.transfer_storage_bytes ? `${bytesToGB(plan.transfer_storage_bytes)} GB` : '—'}</td>
                 </tr>
