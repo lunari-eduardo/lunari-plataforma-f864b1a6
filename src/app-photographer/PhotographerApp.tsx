@@ -19,8 +19,13 @@ import AnaliseVendas from "@/pages/AnaliseVendas";
 import MinhaConta from "@/pages/MinhaConta";
 import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
-import MateriaisComerciaisPage from "@/pages/materiais-comerciais/MateriaisComerciaisPage";
-import EditorMaterialPage from "@/pages/materiais-comerciais/EditorMaterialPage";
+import ComercialOverviewPage from "@/pages/comercial/ComercialOverviewPage";
+import BibliotecaComercialPage from "@/pages/comercial/BibliotecaComercialPage";
+import ConstrutorComercialPage from "@/pages/comercial/ConstrutorComercialPage";
+import EditorPropostaPage from "@/pages/comercial/EditorPropostaPage";
+import EstrategiaComercialPage from "@/pages/comercial/EstrategiaComercialPage";
+import CompartilhamentosComercialPage from "@/pages/comercial/CompartilhamentosComercialPage";
+import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -193,16 +198,15 @@ export default function PhotographerApp() {
                     <PlanRestrictionGuard requiredPlan="pro"><Leads /></PlanRestrictionGuard>
                   </RequireAdmin>
                 } />
-                <Route path="materiais" element={
-                  <RequireAdmin>
-                    <MateriaisComerciaisPage />
-                  </RequireAdmin>
-                } />
-                <Route path="materiais/editor/:id" element={
-                  <RequireAdmin>
-                    <EditorMaterialPage />
-                  </RequireAdmin>
-                } />
+                <Route path="comercial">
+                  <Route index element={<RequireAdmin><ComercialOverviewPage /></RequireAdmin>} />
+                  <Route path="biblioteca" element={<RequireAdmin><BibliotecaComercialPage /></RequireAdmin>} />
+                  <Route path="construtor" element={<RequireAdmin><ConstrutorComercialPage /></RequireAdmin>} />
+                  <Route path="construtor/:id" element={<RequireAdmin><EditorPropostaPage /></RequireAdmin>} />
+                  <Route path="estrategia" element={<RequireAdmin><EstrategiaComercialPage /></RequireAdmin>} />
+                  <Route path="compartilhamentos" element={<RequireAdmin><CompartilhamentosComercialPage /></RequireAdmin>} />
+                  <Route path="relatorios" element={<RequireAdmin><RelatoriosComercialPage /></RequireAdmin>} />
+                </Route>
 
                 <Route path="financas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><NovaFinancas /></PlanRestrictionGuard>

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInputMode } from '@/hooks/useInputMode';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, PenTool, Target, Send, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
@@ -26,32 +26,58 @@ interface NavItemProps {
   showProBadge?: boolean;
   end?: boolean;
   onNavigate?: () => void;
+  subItems?: { to: string; label: string; icon: React.ReactNode }[];
 }
 
 // Mobile/drawer variant — always shows label
-const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate }: NavItemProps) => (
-  <NavLink
-    to={to}
-    end={end}
-    onClick={onNavigate}
-    className={({ isActive }) =>
-      cn(
-        "nav-item-lunar mb-1 flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
-        isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
-      )
-    }
-  >
-    <span className="text-sm flex-shrink-0 relative text-[hsl(var(--sidebar-icon))]">
-      {icon}
-      {isPro && showProBadge && (
-        <span className="absolute -top-1 -right-1">
-          <ProCrown />
+const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate, subItems }: NavItemProps) => {
+  const isComercial = to === '/app/comercial';
+  return (
+    <div className="flex flex-col">
+      <NavLink
+        to={to}
+        end={end || isComercial}
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          cn(
+            "nav-item-lunar mb-1 flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
+            isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
+          )
+        }
+      >
+        <span className="text-sm flex-shrink-0 relative text-[hsl(var(--sidebar-icon))]">
+          {icon}
+          {isPro && showProBadge && (
+            <span className="absolute -top-1 -right-1">
+              <ProCrown />
+            </span>
+          )}
         </span>
+        <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+      </NavLink>
+      {subItems && (
+        <div className="flex flex-col ml-8 mt-1 space-y-1 mb-2 border-l border-[hsl(var(--sidebar-border))] pl-2">
+          {subItems.map(sub => (
+            <NavLink
+              key={sub.to}
+              to={sub.to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "text-xs py-1.5 px-2 rounded-md transition-all duration-200 text-[hsl(var(--sidebar-fg))] hover:bg-white/5 flex items-center gap-2 opacity-80 hover:opacity-100",
+                  isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))] opacity-100 font-medium"
+                )
+              }
+            >
+              <span className="text-[hsl(var(--sidebar-icon))]">{sub.icon}</span>
+              {sub.label}
+            </NavLink>
+          ))}
+        </div>
       )}
-    </span>
-    <span className="text-xs font-medium whitespace-nowrap">{label}</span>
-  </NavLink>
-);
+    </div>
+  );
+};
 
 // Desktop variant — icon always visible, label fades in when expanded
 const DesktopNavItem = ({
@@ -62,42 +88,66 @@ const DesktopNavItem = ({
   showProBadge,
   end,
   expanded,
+  subItems,
 }: NavItemProps & { expanded: boolean }) => {
+  const isComercial = to === '/app/comercial';
   const link = (
-    <NavLink
-      to={to}
-      end={end}
-      className={({ isActive }) =>
-        cn(
-          "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
-          isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
-        )
-      }
-    >
-      <span
-        className={cn(
-          "flex items-center justify-center w-12 h-10 flex-shrink-0 relative transition-colors duration-200",
-          expanded
-            ? "text-[hsl(var(--sidebar-icon))]"
-            : "text-[hsl(var(--sidebar-icon-collapsed))] group-hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]"
-        )}
+    <div className="flex flex-col">
+      <NavLink
+        to={to}
+        end={end || isComercial}
+        className={({ isActive }) =>
+          cn(
+            "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
+            isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
+          )
+        }
       >
-        {icon}
-        {isPro && showProBadge && (
-          <span className="absolute top-1.5 right-1.5">
-            <ProCrown />
-          </span>
-        )}
-      </span>
-      <span
-        className={cn(
-          "text-xs font-medium whitespace-nowrap transition-opacity duration-150 ease-out",
-          expanded ? "opacity-100 delay-[60ms]" : "opacity-0 pointer-events-none"
-        )}
-      >
-        {label}
-      </span>
-    </NavLink>
+        <span
+          className={cn(
+            "flex items-center justify-center w-12 h-10 flex-shrink-0 relative transition-colors duration-200",
+            expanded
+              ? "text-[hsl(var(--sidebar-icon))]"
+              : "text-[hsl(var(--sidebar-icon-collapsed))] group-hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]"
+          )}
+        >
+          {icon}
+          {isPro && showProBadge && (
+            <span className="absolute top-1.5 right-1.5">
+              <ProCrown />
+            </span>
+          )}
+        </span>
+        <span
+          className={cn(
+            "text-xs font-medium whitespace-nowrap transition-opacity duration-150 ease-out",
+            expanded ? "opacity-100 delay-[60ms]" : "opacity-0 pointer-events-none"
+          )}
+        >
+          {label}
+        </span>
+      </NavLink>
+      
+      {subItems && expanded && (
+        <div className="flex flex-col ml-[2.75rem] mt-1 space-y-1 mb-2 animate-in fade-in duration-300">
+          {subItems.map(sub => (
+            <NavLink
+              key={sub.to}
+              to={sub.to}
+              className={({ isActive }) =>
+                cn(
+                  "text-[10px] py-1.5 px-2 rounded-md transition-colors text-[hsl(var(--sidebar-icon-collapsed))] hover:bg-white/10 hover:text-[hsl(var(--sidebar-fg))] flex items-center gap-2",
+                  isActive && "text-[hsl(var(--sidebar-fg))] bg-white/10 font-medium"
+                )
+              }
+            >
+              {sub.icon}
+              {sub.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
   if (expanded) return link;
@@ -181,7 +231,19 @@ export default function Sidebar() {
     { to: "/app/workflow", icon: <GitBranch size={14} />, label: "Workflow" },
     { to: "/app/tarefas", icon: <CheckSquare size={14} />, label: "Tarefas", isPro: true },
     { to: "/app/financas", icon: <Wallet size={14} />, label: "Finanças", isPro: true },
-    { to: "/app/materiais", icon: <BookOpen size={14} />, label: "Materiais Comerciais", adminOnly: true },
+    { 
+      to: "/app/comercial", 
+      icon: <Briefcase size={14} />, 
+      label: "Comercial", 
+      adminOnly: true,
+      subItems: [
+        { to: "/app/comercial/biblioteca", label: "Biblioteca", icon: <BookOpen size={12} /> },
+        { to: "/app/comercial/construtor", label: "Construtor", icon: <PenTool size={12} /> },
+        { to: "/app/comercial/estrategia", label: "Estratégia / Estilo", icon: <Target size={12} /> },
+        { to: "/app/comercial/compartilhamentos", label: "Compartilhamentos", icon: <Send size={12} /> },
+        { to: "/app/comercial/relatorios", label: "Relatórios", icon: <BarChart size={12} /> }
+      ]
+    },
     { to: "/app/clientes", icon: <UserCheck size={14} />, label: "Clientes" },
     { to: "/app/precificacao", icon: <Tag size={14} />, label: "Precificação", isPro: true },
     { to: "/app/analise-vendas", icon: <PieChart size={14} />, label: "Análise de Vendas", isPro: true },

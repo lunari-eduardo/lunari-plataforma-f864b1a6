@@ -21,7 +21,7 @@ const MOCK_AI_CONTENT = [
   { type: 'faq', data: { title: 'Dúvidas Comuns', content: 'Posso levar acompanhante? Sim.' } }
 ];
 
-export default function MateriaisComerciaisPage() {
+export default function BibliotecaComercialPage() {
   const navigate = useNavigate();
   const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial } = useMaterials();
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +31,7 @@ export default function MateriaisComerciaisPage() {
   const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | null>(null);
 
   const handleOpenEditor = (id: string) => {
-    navigate(`/app/materiais/editor/${id}`);
+    navigate(`/app/comercial/construtor/${id}`);
   };
 
   const handleCreate = () => {
@@ -46,7 +46,7 @@ export default function MateriaisComerciaisPage() {
           setIsCreateModalOpen(false);
           setNewMaterialTitle('');
           setCreationMethod(null);
-          navigate(`/app/materiais/editor/${data.id}`);
+          navigate(`/app/comercial/construtor/${data.id}`);
         }
       }
     );
