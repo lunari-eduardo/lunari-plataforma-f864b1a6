@@ -33,6 +33,7 @@ export interface MaterialCardProps {
   onOpen: (id: string) => void;
   onArchive: (id: string) => void;
   onDelete: (id: string) => void;
+  onSend: (id: string) => void;
 }
 
 export function MaterialCard({
@@ -44,7 +45,8 @@ export function MaterialCard({
   coverUrl,
   onOpen,
   onArchive,
-  onDelete
+  onDelete,
+  onSend
 }: MaterialCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -138,6 +140,10 @@ export function MaterialCard({
                 <FileText className="mr-2 h-4 w-4" />
                 Editar Material
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSend(id)} className="text-primary font-medium">
+                <Share2 className="mr-2 h-4 w-4" />
+                Enviar Orçamento
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <History className="mr-2 h-4 w-4" />
@@ -170,6 +176,22 @@ export function MaterialCard({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        
+        {/* Nova Linha 2: Ação Rápida */}
+        {isActive && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full mt-2 gap-2 text-primary border-primary/20 hover:bg-primary/5 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSend(id);
+            }}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Enviar Orçamento
+          </Button>
+        )}
       </div>
     </div>
   );

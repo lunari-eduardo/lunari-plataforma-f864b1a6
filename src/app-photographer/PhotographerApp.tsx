@@ -25,6 +25,7 @@ import EditorPropostaPage from "@/pages/comercial/EditorPropostaPage";
 import EstrategiaComercialPage from "@/pages/comercial/EstrategiaComercialPage";
 import CompartilhamentosComercialPage from "@/pages/comercial/CompartilhamentosComercialPage";
 import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
+import PublicProposalViewer from "@/pages/comercial/PublicProposalViewer";
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -252,6 +253,10 @@ export default function PhotographerApp() {
                 <Route path="*" element={<NotFound />} />
               </Route>
 
+              {/* Rotas Públicas do Comercial */}
+              <Route path="/p/:token" element={<PublicProposalViewer mode="tracked" />} />
+              <Route path="/:slug" element={<PublicProposalViewer mode="public" />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppProvider>

@@ -6,10 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { MaterialCard } from './components/MaterialCard';
 import { useMaterials } from '@/hooks/useMaterials';
+import { useMaterialShares } from '@/hooks/useMaterialShares';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +47,15 @@ export default function BibliotecaComercialPage() {
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
   const [customTitle, setCustomTitle] = useState('');
   const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | null>(null);
+
+  // Send Modal state
+  const [sendModalMaterialId, setSendModalMaterialId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string>('none');
+  const [customMessage, setCustomMessage] = useState('');
+  const [generatedShare, setGeneratedShare] = useState<any>(null);
+
+  const { leads, isLoading: isLoadingLeads } = useSupabaseLeads();
+  const { createShare } = useMaterialShares(sendModalMaterialId || undefined);
 
   // Busca categorias reais do usuário
   const { data: categorias = [], isLoading: isLoadingCategorias } = useQuery({
@@ -93,6 +107,28 @@ export default function BibliotecaComercialPage() {
         onSuccess: (data) => {
           handleCloseModal();
           navigate(`/app/comercial/construtor/${data.id}`);
+        }
+      }
+    );
+  };
+
+  const handleOpenSendModal = (id: string) => {
+    setSendModalMaterialId(id);
+    setSelectedLeadId('none');
+    setCustomMessage('');
+    setGeneratedShare(null);
+  };
+
+  const handleCreateShare = () => {
+    if (!sendModalMaterialId) return;
+    createShare.mutate(
+      { 
+        lead_id: selectedLeadId === 'none' ? undefined : selectedLeadId, 
+        custom_message: customMessage 
+      },
+      {
+        onSuccess: (data) => {
+          setGeneratedShare(data);
         }
       }
     );
@@ -165,6 +201,7 @@ export default function BibliotecaComercialPage() {
               onOpen={handleOpenEditor}
               onArchive={() => archiveMaterial.mutate(material.id)}
               onDelete={() => deleteMaterial.mutate(material.id)}
+              onSend={handleOpenSendModal}
             />
           ))}
         </div>
@@ -346,6 +383,112 @@ export default function BibliotecaComercialPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* ===================== MODAL ENVIAR ORÇAMENTO (SHARE) ===================== */}
+      <Dialog 
+        open={!!sendModalMaterialId} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setSendModalMaterialId(null);
+            setGeneratedShare(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Enviar Orçamento</DialogTitle>
+            <DialogDescription>
+              Crie um link rastreável para enviar esta proposta. A versão atual será travada para garantir a integridade do que foi enviado.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            {!generatedShare ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Vincular a um Lead (Opcional)</label>
+                  <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um lead..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não vincular a nenhum lead</SelectItem>
+                      {!isLoadingLeads && leads.map(lead => (
+                        <SelectItem key={lead.id} value={lead.id}>
+                          {lead.nome} {lead.whatsapp && `(${lead.whatsapp})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Vinculando a um lead, o Kanban será avançado automaticamente quando ele interagir com a proposta.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Mensagem Personalizada (Opcional)</label>
+                  <Textarea 
+                    placeholder="Deixe uma mensagem que será exibida no início da proposta..."
+                    value={customMessage}
+                    onChange={e => setCustomMessage(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex flex-col items-center justify-center text-center gap-2">
+                  <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mb-1">
+                    <Sparkles className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-green-800">Orçamento pronto para envio!</h3>
+                  <p className="text-sm text-green-700 mb-4">
+                    Copie o link abaixo e envie para o seu cliente.
+                  </p>
+                  
+                  <div className="flex w-full items-center gap-2">
+                    <Input 
+                      readOnly 
+                      value={`${window.location.origin}/p/${generatedShare.token}`} 
+                      className="bg-white border-green-200 text-sm h-10"
+                    />
+                    <Button 
+                      variant="secondary"
+                      className="shrink-0 bg-white hover:bg-green-100 text-green-700 border-green-200"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/p/${generatedShare.token}`);
+                        toast.success('Link copiado!');
+                      }}
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            {!generatedShare ? (
+              <>
+                <Button variant="ghost" onClick={() => setSendModalMaterialId(null)}>Cancelar</Button>
+                <Button 
+                  onClick={handleCreateShare} 
+                  disabled={createShare.isPending}
+                  className="gap-2"
+                >
+                  {createShare.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Gerar Link Rastreável
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setSendModalMaterialId(null)} className="w-full">
+                Concluir
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

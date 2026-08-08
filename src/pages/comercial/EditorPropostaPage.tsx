@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMaterialEditor } from '@/hooks/useMaterialEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, Link as LinkIcon, Share2, Globe, Settings2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { EditorSidebar } from './components/editor/EditorSidebar';
 import { PropertiesSidebar } from './components/editor/PropertiesSidebar';
 import { VisualRenderer } from './components/editor/VisualRenderer';
@@ -15,6 +16,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useMaterialPublicLink } from '@/hooks/useMaterialPublicLink';
 
 export default function EditorMaterialPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +26,10 @@ export default function EditorMaterialPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  const publicLink = useMaterialPublicLink(id);
+  const [isSlugModalOpen, setIsSlugModalOpen] = useState(false);
+  const [slugInput, setSlugInput] = useState('');
 
   if (editor.isLoading || !editor.state) {
     return (
@@ -107,6 +114,48 @@ export default function EditorMaterialPage() {
               <span className="hidden sm:inline">Pré-visualizar</span>
               <Maximize className="h-3.5 w-3.5" />
             </Button>
+
+            {/* Novo Menu de Compartilhar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Compartilhar</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {!publicLink.data ? (
+                  <DropdownMenuItem 
+                    onClick={() => publicLink.generateLink.mutate()} 
+                    disabled={publicLink.generateLink.isPending}
+                  >
+                    <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Ativar Link Público
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/${publicLink.data.slug}`);
+                        toast.success('Link público copiado!');
+                      }}
+                    >
+                      <LinkIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                      Copiar Link Público
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        setSlugInput(publicLink.data.slug);
+                        setIsSlugModalOpen(true);
+                      }}
+                    >
+                      <Settings2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                      Personalizar Link
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Novo botão de Salvar Rascunho explícito quando há mudanças */}
             {hasChanges && (
@@ -235,6 +284,48 @@ export default function EditorMaterialPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL PERSONALIZAR SLUG */}
+      <Dialog open={isSlugModalOpen} onOpenChange={setIsSlugModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Personalizar Link Público</DialogTitle>
+            <DialogDescription>
+              Crie um endereço amigável para este material. O endereço atual continuará funcionando.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="slug" className="text-sm font-medium">Link personalizado</label>
+              <div className="flex items-center rounded-md border border-input bg-transparent px-3 py-1 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                <span className="text-muted-foreground text-sm select-none truncate max-w-[120px]">{window.location.host}/</span>
+                <input
+                  id="slug"
+                  value={slugInput}
+                  onChange={(e) => setSlugInput(e.target.value)}
+                  className="flex h-8 w-full rounded-md bg-transparent text-sm shadow-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="ex: gestante-maria"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsSlugModalOpen(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => {
+                publicLink.updateSlug.mutate(slugInput, {
+                  onSuccess: () => setIsSlugModalOpen(false)
+                });
+              }}
+              disabled={!slugInput.trim() || publicLink.updateSlug.isPending || slugInput === publicLink.data?.slug}
+              className="gap-2"
+            >
+              {publicLink.updateSlug.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Salvar Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
