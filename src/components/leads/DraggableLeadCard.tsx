@@ -14,6 +14,7 @@ export default function DraggableLeadCard(props: {
   onMarkAsScheduled: () => void;
   onViewAppointment: () => void;
   onDirectScheduling?: () => void;
+  onSendProposal?: () => void;
 }) {
   const { lead, activeId, ...rest } = props;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id, data: { lead } });
@@ -32,6 +33,7 @@ export default function DraggableLeadCard(props: {
       onMarkAsScheduled={rest.onMarkAsScheduled}
       onViewAppointment={rest.onViewAppointment}
       onDirectScheduling={rest.onDirectScheduling}
+      onSendProposal={rest.onSendProposal}
       dndRef={setNodeRef as any}
       dndListeners={listeners}
       dndAttributes={attributes}

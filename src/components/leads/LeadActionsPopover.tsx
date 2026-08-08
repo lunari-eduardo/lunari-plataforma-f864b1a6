@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { MessageCircle, Eye, Trash2, FileText, Calendar, CheckCircle, ExternalLink, Link2 } from 'lucide-react';
+import { MessageCircle, Eye, Trash2, FileText, Calendar, CheckCircle, ExternalLink, Link2, Send } from 'lucide-react';
 import type { Lead } from '@/types/leads';
 import { useAppContext } from '@/contexts/AppContext';
 import { linkLeadToClient, getAvailableClientsForLinking } from '@/utils/leadClientSync';
@@ -16,6 +16,7 @@ interface LeadActionsPopoverProps {
   onScheduleClient?: () => void;
   onMarkAsScheduled?: () => void;
   onViewAppointment?: () => void;
+  onSendProposal?: () => void;
   children: React.ReactNode;
 }
 
@@ -28,6 +29,7 @@ export default function LeadActionsPopover({
   onScheduleClient,
   onMarkAsScheduled,
   onViewAppointment,
+  onSendProposal,
   children
 }: LeadActionsPopoverProps) {
   const [open, setOpen] = useState(false);
@@ -134,6 +136,18 @@ export default function LeadActionsPopover({
                 <MessageCircle className="h-4 w-4" />
                 Iniciar Conversa
               </Button>
+
+              {onSendProposal && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-8"
+                  onClick={() => handleAction(onSendProposal)}
+                >
+                  <Send className="h-4 w-4" />
+                  Enviar Orçamento
+                </Button>
+              )}
 
               {!isLost && onConvert && (
                 <Button

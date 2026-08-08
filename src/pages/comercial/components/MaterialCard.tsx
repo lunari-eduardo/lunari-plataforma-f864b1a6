@@ -32,8 +32,8 @@ export interface MaterialCardProps {
   coverUrl?: string | null;
   onOpen: (id: string) => void;
   onArchive: (id: string) => void;
-  onDelete: (id: string) => void;
   onSend: (id: string) => void;
+  onDuplicate: (id: string) => void;
 }
 
 export function MaterialCard({
@@ -46,7 +46,8 @@ export function MaterialCard({
   onOpen,
   onArchive,
   onDelete,
-  onSend
+  onSend,
+  onDuplicate
 }: MaterialCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -161,7 +162,7 @@ export function MaterialCard({
               <DropdownMenuSeparator />
               
               {/* Ações Administrativas */}
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => onDuplicate(id)}>
                 <CopyIcon className="mr-2 h-4 w-4" />
                 Duplicar
               </DropdownMenuItem>

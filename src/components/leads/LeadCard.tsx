@@ -29,6 +29,7 @@ interface LeadCardProps {
   onMarkAsScheduled?: () => void;
   onViewAppointment?: () => void;
   onDirectScheduling?: () => void;
+  onSendProposal?: () => void;
   dndRef?: (node: HTMLElement | null) => void;
   dndListeners?: any;
   dndAttributes?: any;
@@ -45,6 +46,7 @@ export default function LeadCard({
   onMarkAsScheduled,
   onViewAppointment,
   onDirectScheduling,
+  onSendProposal,
   dndRef,
   dndListeners,
   dndAttributes,
@@ -197,6 +199,7 @@ export default function LeadCard({
           onScheduleClient={onScheduleClient}
           onMarkAsScheduled={onMarkAsScheduled}
           onViewAppointment={onViewAppointment}
+          onSendProposal={onSendProposal}
         >
           <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1 -mr-1" title="Mais opções" data-no-drag="true">
             <MoreVertical className="h-4 w-4" />

@@ -20,12 +20,14 @@ import { useLeads } from "@/hooks/useLeads";
 import { useLeadStatuses } from "@/hooks/useLeadStatuses";
 import { useLeadInteractions } from "@/hooks/useLeadInteractions";
 import { useAppContext } from "@/contexts/AppContext";
+import { useMaterials } from "@/hooks/useMaterials";
 import LeadCard from "./LeadCard";
 import LeadFormModal from "./LeadFormModal";
 import DraggableLeadCard from "./DraggableLeadCard";
 import FollowUpConfigModal from "./FollowUpConfigModal";
 import LeadSchedulingModal from "./LeadSchedulingModal";
 import LeadLossReasonModal from "./LeadLossReasonModal";
+import { DynamicShareModal } from "./LeadCommercialSection";
 import type { Lead } from "@/types/leads";
 import type { PeriodFilter } from "@/hooks/useLeadMetrics";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,7 @@ export default function LeadsKanban({
 }: LeadsKanbanProps) {
   const navigate = useNavigate();
   const { leads, addLead, updateLead, deleteLead, convertToClient } = useLeads();
+  const { materials } = useMaterials();
   const { statuses, getConvertedKey } = useLeadStatuses();
   const { addInteraction } = useLeadInteractions();
   const { origens, setSelectedClientForScheduling } = useAppContext();
@@ -57,6 +60,12 @@ export default function LeadsKanban({
   const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
   const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
   const [leadForLossReason, setLeadForLossReason] = useState<Lead | null>(null);
+  
+  // Envio de orçamento
+  const [sendProposalModalOpen, setSendProposalModalOpen] = useState(false);
+  const [leadForProposal, setLeadForProposal] = useState<Lead | null>(null);
+  const activeMaterials = useMemo(() => materials.filter(m => m.status === 'active' && !!m.current_version?.published_at), [materials]);
+
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
       distance: 8,
@@ -401,6 +410,10 @@ export default function LeadsKanban({
                   onMarkAsScheduled={() => handleMarkAsScheduled(lead.id)}
                   onViewAppointment={() => handleViewAppointment(lead)}
                   onDirectScheduling={() => handleDirectScheduling(lead)}
+                  onSendProposal={() => {
+                    setLeadForProposal(lead);
+                    setSendProposalModalOpen(true);
+                  }}
                 />
               ))}
 
@@ -570,6 +583,21 @@ export default function LeadsKanban({
         onConfirm={handleLossReasonConfirm}
         onSkip={handleLossReasonSkip}
       />
+
+      {/* Share Proposal Modal */}
+      {leadForProposal && (
+        <DynamicShareModal
+          isOpen={sendProposalModalOpen}
+          onClose={() => {
+            setSendProposalModalOpen(false);
+            setLeadForProposal(null);
+          }}
+          leadId={leadForProposal.id}
+          leadName={leadForProposal.nome}
+          leadPhone={leadForProposal.telefone}
+          materials={activeMaterials}
+        />
+      )}
     </div>
   );
 }

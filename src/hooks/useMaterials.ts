@@ -131,6 +131,65 @@ export function useMaterials() {
     },
   });
 
+  const duplicateMaterial = useMutation({
+    mutationFn: async (id: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Não autenticado');
+
+      // 1. Buscar material original
+      const { data: original, error: origError } = await (supabase as any)
+        .from('commercial_materials')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (origError) throw origError;
+
+      // 2. Buscar a última versão
+      const { data: versions, error: verError } = await (supabase as any)
+        .from('material_versions')
+        .select('*')
+        .eq('material_id', id)
+        .order('version_number', { ascending: false })
+        .limit(1);
+      if (verError) throw verError;
+      
+      const lastVersion = versions?.[0];
+      if (!lastVersion) throw new Error('Material original não possui versão.');
+
+      // 3. Criar novo material
+      const { data: newMaterial, error: createError } = await (supabase as any)
+        .from('commercial_materials')
+        .insert({
+          user_id: user.id,
+          title: `Cópia de ${original.title}`,
+          categoria_id: original.categoria_id,
+          cover_image_url: original.cover_image_url,
+        })
+        .select()
+        .single();
+      if (createError) throw createError;
+
+      // 4. Inserir a versão clonada
+      const { error: cloneVerError } = await (supabase as any)
+        .from('material_versions')
+        .insert({
+          material_id: newMaterial.id,
+          version_number: 1,
+          content: lastVersion.content,
+        });
+      if (cloneVerError) throw cloneVerError;
+
+      return newMaterial;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-materials'] });
+      toast.success('Material duplicado com sucesso!');
+    },
+    onError: (err: any) => {
+      toast.error('Erro ao duplicar material: ' + (err.message || 'Tente novamente'));
+    }
+  });
+
   return {
     materials: query.data || [],
     isLoading: query.isLoading,
@@ -138,5 +197,6 @@ export function useMaterials() {
     createMaterial,
     archiveMaterial,
     deleteMaterial,
+    duplicateMaterial,
   };
 }

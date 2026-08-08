@@ -122,7 +122,7 @@ export default function LeadCommercialSection({ leadId, leadName, leadPhone }: L
 }
 
 // Criado separado para poder injetar o selectedMaterialId no hook
-function DynamicShareModal({ isOpen, onClose, leadId, leadName, leadPhone, materials }: any) {
+export function DynamicShareModal({ isOpen, onClose, leadId, leadName, leadPhone, materials }: any) {
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
   const [customMessage, setCustomMessage] = useState('');
   const [generatedShare, setGeneratedShare] = useState<any>(null);

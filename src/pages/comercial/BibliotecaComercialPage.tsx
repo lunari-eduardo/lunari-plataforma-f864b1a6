@@ -37,7 +37,7 @@ type Step = 'category' | 'method';
 export default function BibliotecaComercialPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial } = useMaterials();
+  const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial, duplicateMaterial } = useMaterials();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -202,6 +202,7 @@ export default function BibliotecaComercialPage() {
               onArchive={() => archiveMaterial.mutate(material.id)}
               onDelete={() => deleteMaterial.mutate(material.id)}
               onSend={handleOpenSendModal}
+              onDuplicate={(id) => duplicateMaterial.mutate(id)}
             />
           ))}
         </div>
