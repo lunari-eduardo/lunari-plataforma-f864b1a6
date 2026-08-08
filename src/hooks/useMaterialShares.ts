@@ -122,3 +122,75 @@ export function useMaterialShares(materialId: string | undefined) {
     createShare
   };
 }
+
+export function useAllMaterialShares() {
+  const queryKey = ['all-material-shares'];
+  const { data: { user } } = supabase.auth.getSession() as any; // Note: In hooks, we should get user from context or async. Better to let RLS handle it.
+
+  const query = useQuery({
+    queryKey,
+    queryFn: async () => {
+      // 1. Fetch shares with joined material and lead
+      const { data, error } = await (supabase as any)
+        .from('material_shares')
+        .select(`
+          *,
+          material:commercial_materials(title),
+          lead:leads(nome, email, whatsapp),
+          version:material_versions(version_number)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) return [];
+
+      // 2. Fetch session aggregations to calculate status
+      // Get all session counts per share_id
+      const shareIds = data.map((d: any) => d.id);
+      const { data: sessionsData, error: sessErr } = await (supabase as any)
+        .from('material_share_sessions')
+        .select('share_id, started_at, duration_seconds')
+        .in('share_id', shareIds);
+
+      if (sessErr) throw sessErr;
+
+      // Group sessions by share_id
+      const sessionsByShare: Record<string, any[]> = {};
+      if (sessionsData) {
+        sessionsData.forEach((s: any) => {
+          if (!s.share_id) return;
+          if (!sessionsByShare[s.share_id]) sessionsByShare[s.share_id] = [];
+          sessionsByShare[s.share_id].push(s);
+        });
+      }
+
+      // Map back to shares
+      return data.map((share: any) => {
+        const sessions = sessionsByShare[share.id] || [];
+        
+        let first_open = null;
+        let last_open = null;
+        
+        if (sessions.length > 0) {
+          const sorted = [...sessions].sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
+          first_open = sorted[0].started_at;
+          last_open = sorted[sorted.length - 1].started_at;
+        }
+
+        return {
+          ...share,
+          sessions_count: sessions.length,
+          first_open,
+          last_open
+        };
+      });
+    }
+  });
+
+  return {
+    shares: query.data || [],
+    isLoading: query.isLoading,
+    refetch: query.refetch
+  };
+}
