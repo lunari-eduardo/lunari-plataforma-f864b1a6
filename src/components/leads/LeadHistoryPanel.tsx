@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, MessageCircle, TrendingUp, FileText, UserPlus, Plus } from 'lucide-react';
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
+import { useLeadShares } from '@/hooks/useLeadShares';
 import type { Lead } from '@/types/leads';
 import type { LeadInteraction } from '@/types/leadInteractions';
 
@@ -54,10 +55,51 @@ const InteractionBadge = ({ tipo, automatica }: { tipo: LeadInteraction['tipo'];
 
 export default function LeadHistoryPanel({ lead }: LeadHistoryPanelProps) {
   const { addInteraction, getInteractionsForLead } = useLeadInteractions();
+  const { shares } = useLeadShares(lead.id);
+  
   const [newInteraction, setNewInteraction] = useState('');
   const [isAddingInteraction, setIsAddingInteraction] = useState(false);
 
-  const interactions = getInteractionsForLead(lead);
+  // Combina as interações do Kanban com os eventos reais de envio de orçamentos
+  const interactions = useMemo(() => {
+    const baseInteractions = getInteractionsForLead(lead);
+    
+    // Converte os envios de orçamentos em "interações falsas" para a timeline
+    const shareInteractions: LeadInteraction[] = shares.flatMap(share => {
+      const events: LeadInteraction[] = [];
+      
+      // Evento de envio
+      events.push({
+        id: `share-${share.id}`,
+        leadId: lead.id,
+        tipo: 'orcamento',
+        descricao: `Orçamento enviado: ${share.material?.title || 'Proposta'}`,
+        detalhes: share.custom_message ? `Mensagem: "${share.custom_message}"` : 'Enviado link rastreável exclusivo',
+        timestamp: share.created_at,
+        automatica: true
+      });
+      
+      // Eventos de visualização (pega o primeiro acesso de cada sessão)
+      if (share.sessions && share.sessions.length > 0) {
+        share.sessions.forEach((session: any) => {
+          events.push({
+            id: `session-${session.id}`,
+            leadId: lead.id,
+            tipo: 'conversa', // Usando conversa como ícone genérico de interação do lead
+            descricao: 'O cliente abriu o orçamento',
+            detalhes: `Proposta: ${share.material?.title || 'Proposta'}`,
+            timestamp: session.created_at,
+            automatica: true
+          });
+        });
+      }
+      
+      return events;
+    });
+
+    const all = [...baseInteractions, ...shareInteractions];
+    return all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [lead, getInteractionsForLead, shares]);
 
   const handleAddManualInteraction = () => {
     if (!newInteraction.trim()) return;

@@ -7,6 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { useMemo } from "react";
 import type { Lead } from "@/types/leads";
 import LeadHistoryPanel from "./LeadHistoryPanel";
+import LeadCommercialSection from "./LeadCommercialSection";
 
 interface LeadDetailsModalProps {
   lead: Lead;
@@ -106,9 +107,19 @@ export default function LeadDetailsModal({ lead, open, onOpenChange, onConvert, 
           </div>
 
           {/* Histórico de interações */}
-          <div>
-            <h3 className="font-medium text-lunar-text mb-3">Histórico de Interações</h3>
-            <LeadHistoryPanel lead={lead} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <LeadCommercialSection 
+                leadId={lead.id} 
+                leadName={lead.nome} 
+                leadPhone={lead.telefone} 
+              />
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-lunar-text mb-3">Histórico de Interações</h3>
+              <LeadHistoryPanel lead={lead} />
+            </div>
           </div>
 
           {/* Ações */}
