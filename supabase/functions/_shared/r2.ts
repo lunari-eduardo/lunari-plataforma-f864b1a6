@@ -207,7 +207,8 @@ export type GestaoContext =
   | "client-document"
   | "contrato-assinado"
   | "support-ticket"
-  | "support-faq";
+  | "support-faq"
+  | "proposals";
 
 interface ContextRule {
   prefix: (userId: string, entityId?: string) => string;
@@ -290,6 +291,13 @@ export const GESTAO_RULES: Record<GestaoContext, ContextRule> = {
       "image/jpeg", "image/png", "image/webp", "image/gif",
       "video/mp4", "video/webm",
     ],
+  },
+  proposals: {
+    prefix: (u) => `gestao/proposals/${u}`,
+    isPublic: true,
+    bucket: R2_PUBLIC_BUCKET,
+    maxBytes: 10 * 1024 * 1024,
+    allowedTypes: ["image/jpeg", "image/png", "image/webp"],
   },
 };
 

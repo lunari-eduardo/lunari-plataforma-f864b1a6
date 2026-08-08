@@ -118,7 +118,7 @@ export function PropertiesSidebar({
       handleChange('image_url', url);
     } catch (err) {
       console.error(err);
-      alert('Erro ao fazer upload da imagem. Certifique-se que o bucket commercial_media existe.');
+      alert('Erro ao enviar imagem para a nuvem. Verifique sua conexão e tente novamente.');
     } finally {
       setIsUploading(false);
     }
