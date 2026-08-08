@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { DEFAULT_LEAD_STATUSES } from '@/utils/leadTransformers';
 
 export function useMaterialShares(materialId: string | undefined) {
   const queryClient = useQueryClient();
@@ -56,6 +57,54 @@ export function useMaterialShares(materialId: string | undefined) {
         .single();
 
       if (error) throw error;
+
+      // Automação: Avançar status do lead (Fase 6)
+      if (lead_id) {
+        try {
+          // 1. Pega ou cria config de automação via RPC
+          const { data: config } = await (supabase as any)
+            .rpc('get_or_create_automation_config', { p_user_id: material.user_id })
+            .single();
+
+          if (config && config.auto_advance_stage_on_share) {
+            const targetStage = config.target_stage_key;
+
+            // 2. Busca status atual e histórico do lead
+            const { data: lead } = await (supabase as any)
+              .from('leads')
+              .select('status, historico_status')
+              .eq('id', lead_id)
+              .single();
+
+            if (lead) {
+              const currentStatusOrder = DEFAULT_LEAD_STATUSES.find(s => s.key === lead.status)?.order || 0;
+              const targetStatusOrder = DEFAULT_LEAD_STATUSES.find(s => s.key === targetStage)?.order || 0;
+
+              // 3. Regra de Não-Regressão: só avança se a ordem atual for menor que a do alvo
+              if (currentStatusOrder < targetStatusOrder) {
+                const now = new Date().toISOString();
+                const currentHistory = lead.historico_status || [];
+                const newHistory = [...currentHistory, { status: targetStage, data: now }];
+
+                await (supabase as any)
+                  .from('leads')
+                  .update({
+                    status: targetStage,
+                    status_timestamp: now,
+                    historico_status: newHistory
+                  })
+                  .eq('id', lead_id);
+                  
+                toast.success(`Lead movido automaticamente para "${DEFAULT_LEAD_STATUSES.find(s => s.key === targetStage)?.name}"`);
+              }
+            }
+          }
+        } catch (automationErr) {
+          console.error('Erro na automação do lead:', automationErr);
+          // Não falha a criação do link se a automação falhar
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
