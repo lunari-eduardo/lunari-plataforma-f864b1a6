@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 export interface BlockData {
   type: string;
   data: Record<string, any>;
+  id?: string;
 }
 
 export interface MaterialEditorState {
@@ -22,99 +23,74 @@ export function useMaterialEditor(materialId: string | undefined) {
   const [state, setState] = useState<MaterialEditorState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'idle'>('idle');
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestContent = useRef<BlockData[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const originalState = useRef<MaterialEditorState | null>(null);
 
-  // Carregar o material e sua versão corrente
-  useEffect(() => {
+  const fetchMaterial = useCallback(async () => {
     if (!materialId) return;
+    setIsLoading(true);
+    try {
+      const { data: material, error: matErr } = await (supabase as any)
+        .from('commercial_materials')
+        .select('*')
+        .eq('id', materialId)
+        .single();
 
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        // Carregar material
-        const { data: material, error: matErr } = await (supabase as any)
-          .from('commercial_materials')
-          .select('*')
-          .eq('id', materialId)
-          .single();
+      if (matErr) throw matErr;
 
-        if (matErr) throw matErr;
+      const { data: versions, error: verErr } = await (supabase as any)
+        .from('material_versions')
+        .select('*')
+        .eq('material_id', materialId)
+        .order('version_number', { ascending: false })
+        .limit(1);
 
-        // Carregar a versão mais recente (draft primeiro, senão a última publicada)
-        const { data: versions, error: verErr } = await (supabase as any)
-          .from('material_versions')
-          .select('*')
-          .eq('material_id', materialId)
-          .order('version_number', { ascending: false })
-          .limit(1);
+      if (verErr) throw verErr;
 
-        if (verErr) throw verErr;
+      const version = versions?.[0];
+      if (!version) throw new Error('Nenhuma versão encontrada');
 
-        const version = versions?.[0];
-        if (!version) throw new Error('Nenhuma versão encontrada');
+      const blocks = Array.isArray(version.content) ? version.content : [];
 
-        const blocks = Array.isArray(version.content) ? version.content : [];
-        latestContent.current = blocks;
+      const newState = {
+        materialId: material.id,
+        title: material.title,
+        versionId: version.id,
+        versionNumber: version.version_number,
+        isPublished: !!version.published_at,
+        blocks,
+      };
 
-        setState({
-          materialId: material.id,
-          title: material.title,
-          versionId: version.id,
-          versionNumber: version.version_number,
-          isPublished: !!version.published_at,
-          blocks,
-        });
-        setSaveStatus('saved');
-      } catch (err: any) {
-        console.error('Erro ao carregar material:', err);
-        toast.error('Erro ao carregar material');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
+      setState(newState);
+      originalState.current = JSON.parse(JSON.stringify(newState)); // Deep copy para descarte
+      setHasChanges(false);
+      setSaveStatus('saved');
+    } catch (err: any) {
+      console.error('Erro ao carregar material:', err);
+      toast.error('Erro ao carregar material');
+    } finally {
+      setIsLoading(false);
+    }
   }, [materialId]);
 
-  // Auto-save debounced
-  const persistContent = useCallback(async (versionId: string, content: BlockData[]) => {
-    setSaveStatus('saving');
-    try {
-      const { error } = await (supabase as any)
-        .from('material_versions')
-        .update({ content })
-        .eq('id', versionId);
+  useEffect(() => {
+    fetchMaterial();
+  }, [fetchMaterial]);
 
-      if (error) throw error;
-
-      // Atualizar updated_at no material pai
-      await (supabase as any)
-        .from('commercial_materials')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', state?.materialId);
-
-      setSaveStatus('saved');
-    } catch {
-      setSaveStatus('error');
-    }
-  }, [state?.materialId]);
+  // Modifica o estado local e marca que há mudanças pendentes
+  const updateState = useCallback((updater: (prev: MaterialEditorState) => MaterialEditorState) => {
+    setState(prev => {
+      if (!prev) return prev;
+      const newState = updater(prev);
+      setHasChanges(true);
+      setSaveStatus('idle'); // Muda de "saved" para editável
+      return newState;
+    });
+  }, []);
 
   const updateBlocks = useCallback((newBlocks: BlockData[]) => {
-    if (!state) return;
-    latestContent.current = newBlocks;
-    setState(prev => prev ? { ...prev, blocks: newBlocks } : null);
-
-    // Debounce auto-save
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      persistContent(state.versionId, newBlocks);
-    }, 2000);
-  }, [state, persistContent]);
+    updateState(prev => ({ ...prev, blocks: newBlocks }));
+  }, [updateState]);
 
   const updateBlock = useCallback((index: number, data: Record<string, any>) => {
     if (!state) return;
@@ -135,7 +111,13 @@ export function useMaterialEditor(materialId: string | undefined) {
       text: { title: '', body: '' },
     };
 
-    const newBlock: BlockData = { type, data: defaultData[type] || {} };
+    // Gera ID simples para o drag-and-drop
+    const newBlock: BlockData = { 
+      type, 
+      data: defaultData[type] || {},
+      id: `${type}-${Math.random().toString(36).substr(2, 9)}`
+    };
+    
     const newBlocks = [...state.blocks];
     const insertAt = afterIndex !== undefined ? afterIndex + 1 : newBlocks.length;
     newBlocks.splice(insertAt, 0, newBlock);
@@ -157,27 +139,81 @@ export function useMaterialEditor(materialId: string | undefined) {
     updateBlocks(newBlocks);
   }, [state, updateBlocks]);
 
-  const updateTitle = useCallback(async (newTitle: string) => {
+  // Usado para drag and drop index flexível
+  const reorderBlocks = useCallback((startIndex: number, endIndex: number) => {
     if (!state) return;
-    setState(prev => prev ? { ...prev, title: newTitle } : null);
-    await (supabase as any)
-      .from('commercial_materials')
-      .update({ title: newTitle })
-      .eq('id', state.materialId);
-  }, [state]);
+    const newBlocks = Array.from(state.blocks);
+    const [removed] = newBlocks.splice(startIndex, 1);
+    newBlocks.splice(endIndex, 0, removed);
+    updateBlocks(newBlocks);
+  }, [state, updateBlocks]);
+
+  const updateTitle = useCallback((newTitle: string) => {
+    updateState(prev => ({ ...prev, title: newTitle }));
+  }, [updateState]);
+
+  // Salva no banco explicitamente
+  const saveDraft = useCallback(async () => {
+    if (!state || !hasChanges) return;
+    setSaveStatus('saving');
+    try {
+      // 1. Salvar conteúdo na versão
+      const { error: verErr } = await (supabase as any)
+        .from('material_versions')
+        .update({ content: state.blocks })
+        .eq('id', state.versionId);
+
+      if (verErr) throw verErr;
+
+      // 2. Salvar título no material pai
+      if (state.title !== originalState.current?.title) {
+        const { error: matErr } = await (supabase as any)
+          .from('commercial_materials')
+          .update({ title: state.title, updated_at: new Date().toISOString() })
+          .eq('id', state.materialId);
+        if (matErr) throw matErr;
+      }
+
+      setHasChanges(false);
+      setSaveStatus('saved');
+      originalState.current = JSON.parse(JSON.stringify(state)); // Atualiza o ponto de restauração
+      toast.success('Rascunho salvo com sucesso!');
+    } catch {
+      setSaveStatus('error');
+      toast.error('Erro ao salvar rascunho');
+    }
+  }, [state, hasChanges]);
+
+  // Descarta as mudanças e volta ao último estado salvo
+  const discardChanges = useCallback(() => {
+    if (originalState.current) {
+      setState(JSON.parse(JSON.stringify(originalState.current)));
+      setHasChanges(false);
+      setSaveStatus('saved');
+      toast.info('Alterações não salvas foram descartadas.');
+    }
+  }, []);
 
   const publish = useCallback(async () => {
     if (!state) return;
     setSaveStatus('saving');
     try {
-      // Salvar conteúdo final
+      // Salvar tudo e publicar
+      await (supabase as any)
+        .from('commercial_materials')
+        .update({ title: state.title, updated_at: new Date().toISOString() })
+        .eq('id', state.materialId);
+
       await (supabase as any)
         .from('material_versions')
-        .update({ content: latestContent.current, published_at: new Date().toISOString() })
+        .update({ content: state.blocks, published_at: new Date().toISOString() })
         .eq('id', state.versionId);
 
       setState(prev => prev ? { ...prev, isPublished: true } : null);
+      setHasChanges(false);
       setSaveStatus('saved');
+      originalState.current = JSON.parse(JSON.stringify(state));
+      
       queryClient.invalidateQueries({ queryKey: ['commercial-materials'] });
       toast.success(`Versão ${state.versionNumber} publicada com sucesso!`);
     } catch {
@@ -190,11 +226,15 @@ export function useMaterialEditor(materialId: string | undefined) {
     state,
     isLoading,
     saveStatus,
+    hasChanges,
     updateBlock,
     addBlock,
     removeBlock,
     moveBlock,
+    reorderBlocks,
     updateTitle,
+    saveDraft,
+    discardChanges,
     publish,
   };
 }

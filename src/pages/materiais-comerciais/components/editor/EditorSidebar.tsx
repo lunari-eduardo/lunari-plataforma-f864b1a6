@@ -18,6 +18,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export interface EditorSidebarProps {
   blocks: BlockData[];
@@ -25,6 +42,7 @@ export interface EditorSidebarProps {
   onSelectBlock: (index: number) => void;
   onAddBlock: (type: string) => void;
   onMoveBlock: (index: number, direction: 'up' | 'down') => void;
+  onReorderBlocks: (oldIndex: number, newIndex: number) => void;
 }
 
 const getBlockIcon = (type: string) => {
@@ -68,13 +86,105 @@ const getBlockDesc = (type: string) => {
 
 const blockTypes = ['cover', 'about', 'package', 'portfolio', 'faq', 'cta', 'text'];
 
+// Item sortable extraído para o dnd-kit
+function SortableSidebarItem({ block, index, isActive, onSelect }: { block: BlockData, index: number, isActive: boolean, onSelect: () => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: block.id || `${block.type}-${index}` }); // IMPORTANTE: blocos agora precisam de ID único. O hook já gera `id`.
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const Icon = getBlockIcon(block.type);
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all bg-background",
+        isActive 
+          ? "border-primary/20 bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+          : "border-transparent hover:bg-muted/50"
+      )}
+      onClick={onSelect}
+    >
+      <div className="mt-0.5 shrink-0">
+        <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
+      </div>
+      
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <span className={cn("text-sm font-semibold leading-tight", isActive ? "text-foreground" : "text-foreground/80")}>
+          {block.data?.title || getBlockName(block.type)}
+        </span>
+        <span className="text-[11px] text-muted-foreground truncate mt-0.5">
+          {getBlockDesc(block.type)}
+        </span>
+      </div>
+      
+      {/* Botão de Grip para Drag and Drop */}
+      <div 
+        className="absolute right-2 top-2 flex flex-col opacity-0 transition-opacity group-hover:opacity-100 cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+        {...attributes} 
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
 export function EditorSidebar({
   blocks,
   activeIndex,
   onSelectBlock,
   onAddBlock,
-  onMoveBlock
+  onReorderBlocks
 }: EditorSidebarProps) {
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Só ativa o drag se mover 5px (previne conflito com o click)
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = blocks.findIndex(b => (b.id || `${b.type}-${blocks.indexOf(b)}`) === active.id);
+      const newIndex = blocks.findIndex(b => (b.id || `${b.type}-${blocks.indexOf(b)}`) === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        onReorderBlocks(oldIndex, newIndex);
+        
+        // Se arrastar o bloco ativo, manter ele ativo no novo índice
+        if (oldIndex === activeIndex) {
+          onSelectBlock(newIndex);
+        } else if (oldIndex < activeIndex && newIndex >= activeIndex) {
+          onSelectBlock(activeIndex - 1); // Empurrou o ativo pra cima
+        } else if (oldIndex > activeIndex && newIndex <= activeIndex) {
+          onSelectBlock(activeIndex + 1); // Empurrou o ativo pra baixo
+        }
+      }
+    }
+  };
+
+  const itemIds = blocks.map((b, i) => b.id || `${b.type}-${i}`);
+
   return (
     <div className="flex h-full flex-col">
       <div className="p-4 pt-6 pb-2">
@@ -84,42 +194,26 @@ export function EditorSidebar({
       </div>
       
       <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-2 pt-2 custom-scrollbar">
-        {blocks.map((block, index) => {
-          const Icon = getBlockIcon(block.type);
-          const isActive = index === activeIndex;
-          
-          return (
-            <div 
-              key={`${block.id || block.type}-${index}`}
-              className={cn(
-                "group relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all",
-                isActive 
-                  ? "border-primary/20 bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                  : "border-transparent bg-transparent hover:bg-muted/50"
-              )}
-              onClick={() => onSelectBlock(index)}
-            >
-              {/* Grip Indicator - Visible on hover or active */}
-              <div className="mt-0.5 shrink-0">
-                <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-muted-foreground")} />
-              </div>
-              
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <span className={cn("text-sm font-semibold leading-tight", isActive ? "text-foreground" : "text-foreground/80")}>
-                  {block.data?.title || getBlockName(block.type)}
-                </span>
-                <span className="text-[11px] text-muted-foreground truncate mt-0.5">
-                  {getBlockDesc(block.type)}
-                </span>
-              </div>
-              
-              {/* Opções (mover) só aparece no hover */}
-              <div className="absolute right-2 top-2 flex flex-col opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
-              </div>
-            </div>
-          );
-        })}
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={itemIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {blocks.map((block, index) => (
+              <SortableSidebarItem 
+                key={itemIds[index]}
+                block={block}
+                index={index}
+                isActive={index === activeIndex}
+                onSelect={() => onSelectBlock(index)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
         
         <div className="pt-2">
           <DropdownMenu>
