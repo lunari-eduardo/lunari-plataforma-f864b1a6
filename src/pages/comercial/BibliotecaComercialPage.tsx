@@ -489,6 +489,6 @@ export default function BibliotecaComercialPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
