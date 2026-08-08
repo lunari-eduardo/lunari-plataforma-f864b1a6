@@ -64,7 +64,7 @@ export function useMaterials() {
   });
 
   const createMaterial = useMutation({
-    mutationFn: async ({ title, categoria_id }: { title: string; categoria_id?: string }) => {
+    mutationFn: async ({ title, categoria_id, initialContent }: { title: string; categoria_id?: string, initialContent?: any[] }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
@@ -81,13 +81,13 @@ export function useMaterials() {
 
       if (matError) throw matError;
 
-      // 2. Criar a versão 1 com template padrão
+      // 2. Criar a versão 1 com template
       const { error: verError } = await (supabase as any)
         .from('material_versions')
         .insert({
           material_id: material.id,
           version_number: 1,
-          content: DEFAULT_TEMPLATE,
+          content: initialContent || DEFAULT_TEMPLATE,
         });
 
       if (verError) throw verError;
