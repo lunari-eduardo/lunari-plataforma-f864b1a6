@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useConfigurationContext } from '@/contexts/ConfigurationContext';
-import { supabase } from '@/integrations/supabase/client';
+import { gestaoR2Upload } from '@/lib/gestaoR2Upload';
 
 export interface PropertiesSidebarProps {
   block: BlockData;
@@ -34,7 +34,7 @@ const getBlockName = (type: string) => {
   }
 };
 
-// --- Função de Resize e Upload simulando a arquitetura R2 ---
+// --- Função de Resize e Upload para a Arquitetura Cloudflare R2 ---
 const uploadAndResizeImage = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -70,21 +70,17 @@ const uploadAndResizeImage = async (file: File): Promise<string> => {
           const filename = `${crypto.randomUUID()}.${ext}`;
           
           try {
-            const { data, error } = await (supabase as any).storage
-              .from('commercial_media')
-              .upload(`proposals/${filename}`, blob, {
-                cacheControl: '3600',
-                upsert: false
-              });
-
-            if (error) throw error;
+            const resizedFile = new File([blob], filename, { type: blob.type || 'image/jpeg' });
             
-            // Tenta pegar a URL pública (ajuste o nome do bucket e path conforme seu env)
-            const { data: publicUrlData } = (supabase as any).storage
-              .from('commercial_media')
-              .getPublicUrl(`proposals/${filename}`);
-              
-            resolve(publicUrlData.publicUrl);
+            // Upload nativo via R2 usando a Edge Function do Studio
+            const response = await gestaoR2Upload({
+              file: resizedFile,
+              context: 'proposals'
+            });
+
+            // Retorna a URL pública do R2 ou o path de fallback
+            const finalUrl = response.url || `https://media.lunarihub.com/${response.storagePath}`;
+            resolve(finalUrl);
           } catch (err) {
             console.error(err);
             reject(err);
