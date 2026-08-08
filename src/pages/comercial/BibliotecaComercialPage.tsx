@@ -1,64 +1,110 @@
 import React, { useState } from 'react';
-import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate } from 'lucide-react';
+import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { MaterialCard } from './components/MaterialCard';
 import { useMaterials } from '@/hooks/useMaterials';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-// Mock de JSON gerado por IA para simular a criação mágica
+// Mock de conteúdo inicial gerado por IA (MVP — será substituído por IA real)
 const MOCK_AI_CONTENT = [
-  { type: 'cover', data: { title: 'Proposta Exclusiva - Mariana', subtitle: 'Registrando a doce espera do seu maior amor.', image_url: 'https://images.unsplash.com/photo-1518063063544-236b2bb6f0b4?q=80&w=1000&auto=format&fit=crop', btnText: 'Vamos começar' } },
-  { type: 'about', data: { title: 'Por que escolher a Lunari', content: 'Minha fotografia não é apenas sobre o click, mas sobre a experiência...' } },
+  { type: 'cover', data: { title: 'Proposta Exclusiva', subtitle: 'Registrando momentos únicos da sua história.', btnText: 'Vamos começar' } },
+  { type: 'about', data: { title: 'Por que me escolher', content: 'Minha fotografia não é apenas sobre o click, mas sobre a experiência...' } },
   { type: 'package', data: { title: 'Pacote Essencial', price_cents: 189000, description: '1h de ensaio\n20 fotos digitais\nGaleria online' } },
   { type: 'package', data: { title: 'Pacote Premium', price_cents: 249000, description: '2h de ensaio\nTodas as fotos digitais\nÁlbum 20x20', highlight: true } },
   { type: 'faq', data: { title: 'Dúvidas Comuns', content: 'Posso levar acompanhante? Sim.' } }
 ];
 
+type Categoria = { id: string; nome: string; cor: string | null };
+
+// Etapas do wizard de criação
+type Step = 'category' | 'method';
+
 export default function BibliotecaComercialPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial } = useMaterials();
+
   const [searchTerm, setSearchTerm] = useState('');
-  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newMaterialTitle, setNewMaterialTitle] = useState('');
+
+  // Wizard state
+  const [step, setStep] = useState<Step>('category');
+  const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
+  const [customTitle, setCustomTitle] = useState('');
   const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | null>(null);
+
+  // Busca categorias reais do usuário
+  const { data: categorias = [], isLoading: isLoadingCategorias } = useQuery({
+    queryKey: ['categorias-for-material', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('id, nome, cor')
+        .eq('user_id', user.id)
+        .order('nome');
+      if (error) throw error;
+      return (data || []) as Categoria[];
+    },
+    enabled: !!user?.id && isCreateModalOpen,
+  });
 
   const handleOpenEditor = (id: string) => {
     navigate(`/app/comercial/construtor/${id}`);
   };
 
+  const resetModal = () => {
+    setStep('category');
+    setSelectedCategoria(null);
+    setCustomTitle('');
+    setCreationMethod(null);
+  };
+
+  const handleCloseModal = () => {
+    setIsCreateModalOpen(false);
+    resetModal();
+  };
+
+  // O título final: personalizado prevalece; senão, nome da categoria
+  const resolvedTitle = customTitle.trim() || selectedCategoria?.nome || '';
+
   const handleCreate = () => {
-    if (!newMaterialTitle.trim() || !creationMethod) return;
-    
-    const initialContent = creationMethod === 'ai' ? MOCK_AI_CONTENT : undefined; // undefined usa o DEFAULT do hook
-    
+    if (!resolvedTitle || !creationMethod) return;
+
+    const initialContent = creationMethod === 'ai' ? MOCK_AI_CONTENT : undefined;
+
     createMaterial.mutate(
-      { title: newMaterialTitle, initialContent },
+      {
+        title: resolvedTitle,
+        categoria_id: selectedCategoria?.id,
+        initialContent,
+      },
       {
         onSuccess: (data) => {
-          setIsCreateModalOpen(false);
-          setNewMaterialTitle('');
-          setCreationMethod(null);
+          handleCloseModal();
           navigate(`/app/comercial/construtor/${data.id}`);
         }
       }
     );
   };
 
-  const filteredMaterials = (materials || []).filter(m => {
-    return m.title.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const filteredMaterials = (materials || []).filter(m =>
+    m.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-4rem)]">
-      
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -72,19 +118,19 @@ export default function BibliotecaComercialPage() {
             Acompanhe o desempenho de suas propostas, contratos e portfólios compartilhados com seus clientes.
           </p>
         </div>
-        
+
         <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2 shadow-sm shrink-0 bg-primary">
           <Plus size={16} />
           Nova Proposta
         </Button>
       </div>
 
-      {/* Toolbar / Filtros */}
+      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-center gap-3 bg-card p-2 rounded-xl border border-border shadow-sm">
         <div className="relative w-full sm:flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar material pelo título..." 
+          <Input
+            placeholder="Buscar material pelo título..."
             className="pl-9 bg-transparent border-none shadow-none focus-visible:ring-0"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -108,7 +154,7 @@ export default function BibliotecaComercialPage() {
       ) : filteredMaterials.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500">
           {filteredMaterials.map((material) => (
-            <MaterialCard 
+            <MaterialCard
               key={material.id}
               id={material.id}
               title={material.title}
@@ -138,99 +184,165 @@ export default function BibliotecaComercialPage() {
         </div>
       )}
 
-      {/* Modal Nova Proposta */}
-      <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
-        setIsCreateModalOpen(open);
-        if (!open) {
-          setNewMaterialTitle('');
-          setCreationMethod(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-[600px]">
+      {/* ===================== MODAL NOVA PROPOSTA ===================== */}
+      <Dialog open={isCreateModalOpen} onOpenChange={(open) => { if (!open) handleCloseModal(); }}>
+        <DialogContent className="sm:max-w-[580px]">
           <DialogHeader>
             <DialogTitle className="text-xl">Nova Proposta</DialogTitle>
             <DialogDescription>
-              Como você deseja iniciar a criação deste material comercial?
+              {step === 'category'
+                ? 'Selecione a categoria para este material comercial.'
+                : 'Escolha como deseja iniciar a criação.'}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Card IA */}
-              <button
-                type="button"
-                onClick={() => setCreationMethod('ai')}
-                className={cn(
-                  "flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all",
-                  creationMethod === 'ai' 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
-                )}
-              >
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-primary" />
+          {/* ─── PASSO 1: Selecionar Categoria ─── */}
+          {step === 'category' && (
+            <div className="py-4 space-y-4">
+              {isLoadingCategorias ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
                 </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">Gerar com IA</h3>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    A inteligência artificial cria a estrutura inicial para você baseada no perfil do cliente.
+              ) : categorias.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <Tag className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Você ainda não cadastrou categorias.<br />
+                    Acesse <strong>Configurações</strong> para criar sua primeira categoria.
                   </p>
                 </div>
-              </button>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                  {categorias.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectedCategoria(cat)}
+                      className={cn(
+                        'flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all',
+                        selectedCategoria?.id === cat.id
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-card hover:border-primary/40 hover:bg-muted/40'
+                      )}
+                    >
+                      <span
+                        className="h-3 w-3 rounded-full shrink-0"
+                        style={{ backgroundColor: cat.cor || '#6b7280' }}
+                      />
+                      <span className="font-medium text-sm text-foreground truncate">{cat.nome}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-              {/* Card Template */}
-              <button
-                type="button"
-                onClick={() => setCreationMethod('template')}
-                className={cn(
-                  "flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all",
-                  creationMethod === 'template' 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
-                )}
-              >
-                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                  <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">Usar Modelo Padrão</h3>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Comece com uma estrutura limpa e preencha as informações manualmente.
+              {/* Nome personalizado (opcional) */}
+              {selectedCategoria && (
+                <div className="space-y-2 animate-in slide-in-from-top-2 fade-in duration-200 pt-1">
+                  <label className="text-sm font-medium text-foreground">
+                    Nome personalizado <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </label>
+                  <Input
+                    placeholder={`Ex: Proposta ${selectedCategoria.nome} — Maria Fernanda`}
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    className="h-11"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && selectedCategoria) setStep('method'); }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se não informado, o título será <strong>"{selectedCategoria.nome}"</strong>.
                   </p>
                 </div>
-              </button>
+              )}
             </div>
+          )}
 
-            {/* Input de Titulo aparece depois de selecionar o metodo */}
-            {creationMethod && (
-              <div className="space-y-3 animate-in slide-in-from-top-2 fade-in duration-300">
-                <label className="text-sm font-medium text-foreground">
-                  Título da Proposta
-                </label>
-                <Input
-                  placeholder="Ex: Proposta Premium de Casamento..."
-                  value={newMaterialTitle}
-                  onChange={(e) => setNewMaterialTitle(e.target.value)}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreate();
-                  }}
-                  className="h-11"
-                />
+          {/* ─── PASSO 2: Escolher Modo de Criação ─── */}
+          {step === 'method' && (
+            <div className="py-4 space-y-4 animate-in slide-in-from-right-4 fade-in duration-200">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('category')}
+                  className="hover:text-foreground transition-colors underline underline-offset-2"
+                >
+                  ← Voltar
+                </button>
+                <span>·</span>
+                <span>Título: <strong className="text-foreground">{resolvedTitle}</strong></span>
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Card IA */}
+                <button
+                  type="button"
+                  onClick={() => setCreationMethod('ai')}
+                  className={cn(
+                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all',
+                    creationMethod === 'ai'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
+                  )}
+                >
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Gerar com IA</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      A inteligência artificial cria a estrutura inicial para você.
+                    </p>
+                  </div>
+                </button>
+
+                {/* Card Template */}
+                <button
+                  type="button"
+                  onClick={() => setCreationMethod('template')}
+                  className={cn(
+                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all',
+                    creationMethod === 'template'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
+                  )}
+                >
+                  <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                    <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Usar Modelo Padrão</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Comece com uma estrutura limpa e preencha manualmente.
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="border-t pt-4">
-            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
-            <Button 
-              onClick={handleCreate} 
-              disabled={!newMaterialTitle.trim() || !creationMethod || createMaterial.isPending}
-              className="gap-2"
-            >
-              {createMaterial.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              {creationMethod === 'ai' ? 'Gerar Proposta' : 'Criar Proposta'}
-            </Button>
+            <Button variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
+
+            {step === 'category' && (
+              <Button
+                onClick={() => setStep('method')}
+                disabled={!selectedCategoria}
+                className="gap-2"
+              >
+                Continuar
+                <ChevronRight size={16} />
+              </Button>
+            )}
+
+            {step === 'method' && (
+              <Button
+                onClick={handleCreate}
+                disabled={!resolvedTitle || !creationMethod || createMaterial.isPending}
+                className="gap-2"
+              >
+                {createMaterial.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {creationMethod === 'ai' ? 'Gerar Proposta' : 'Criar Proposta'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

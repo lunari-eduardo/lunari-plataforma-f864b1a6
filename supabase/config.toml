@@ -169,3 +169,25 @@ entrypoint = "./functions/leads-ai-assistant/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/leads-ai-assistant/*.html" ]
+
+[functions.assemble-context]
+enabled = true
+verify_jwt = false
+import_map = "./functions/assemble-context/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/assemble-context/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/assemble-context/*.html" ]
+
+[functions.validate-proposal]
+enabled = true
+verify_jwt = false
+import_map = "./functions/validate-proposal/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/validate-proposal/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/validate-proposal/*.html" ]

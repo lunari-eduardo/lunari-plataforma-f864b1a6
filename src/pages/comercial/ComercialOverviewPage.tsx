@@ -2,7 +2,7 @@ import React from 'react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, PenTool, Target, Send, BarChart } from 'lucide-react';
+import { BookOpen, Target, Send, BarChart } from 'lucide-react';
 
 export default function ComercialOverviewPage() {
   const navigate = useNavigate();
@@ -10,15 +10,9 @@ export default function ComercialOverviewPage() {
   const cards = [
     {
       title: "Biblioteca",
-      description: "Seus materiais e recursos comerciais",
+      description: "Crie e gerencie seus materiais e propostas comerciais",
       icon: <BookOpen className="w-8 h-8 mb-4 text-primary" />,
       path: "/app/comercial/biblioteca"
-    },
-    {
-      title: "Construtor",
-      description: "Crie e edite propostas e documentos",
-      icon: <PenTool className="w-8 h-8 mb-4 text-primary" />,
-      path: "/app/comercial/construtor"
     },
     {
       title: "Estratégia / Estilo",
@@ -28,7 +22,7 @@ export default function ComercialOverviewPage() {
     },
     {
       title: "Compartilhamentos",
-      description: "Acompanhe materiais enviados aos clientes",
+      description: "Acompanhe materiais enviados e abertos pelos clientes",
       icon: <Send className="w-8 h-8 mb-4 text-primary" />,
       path: "/app/comercial/compartilhamentos"
     },
@@ -39,6 +33,7 @@ export default function ComercialOverviewPage() {
       path: "/app/comercial/relatorios"
     }
   ];
+
 
   return (
     <PageContainer>

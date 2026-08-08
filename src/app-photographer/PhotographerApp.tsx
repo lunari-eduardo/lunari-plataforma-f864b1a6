@@ -21,7 +21,6 @@ import Integracoes from "@/pages/Integracoes";
 import Tarefas from "@/pages/Tarefas";
 import ComercialOverviewPage from "@/pages/comercial/ComercialOverviewPage";
 import BibliotecaComercialPage from "@/pages/comercial/BibliotecaComercialPage";
-import ConstrutorComercialPage from "@/pages/comercial/ConstrutorComercialPage";
 import EditorPropostaPage from "@/pages/comercial/EditorPropostaPage";
 import EstrategiaComercialPage from "@/pages/comercial/EstrategiaComercialPage";
 import CompartilhamentosComercialPage from "@/pages/comercial/CompartilhamentosComercialPage";
@@ -201,7 +200,6 @@ export default function PhotographerApp() {
                 <Route path="comercial">
                   <Route index element={<RequireAdmin><ComercialOverviewPage /></RequireAdmin>} />
                   <Route path="biblioteca" element={<RequireAdmin><BibliotecaComercialPage /></RequireAdmin>} />
-                  <Route path="construtor" element={<RequireAdmin><ConstrutorComercialPage /></RequireAdmin>} />
                   <Route path="construtor/:id" element={<RequireAdmin><EditorPropostaPage /></RequireAdmin>} />
                   <Route path="estrategia" element={<RequireAdmin><EstrategiaComercialPage /></RequireAdmin>} />
                   <Route path="compartilhamentos" element={<RequireAdmin><CompartilhamentosComercialPage /></RequireAdmin>} />

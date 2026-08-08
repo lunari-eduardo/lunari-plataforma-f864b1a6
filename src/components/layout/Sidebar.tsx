@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInputMode } from '@/hooks/useInputMode';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, PenTool, Target, Send, BarChart } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, Target, Send, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
@@ -238,7 +238,6 @@ export default function Sidebar() {
       adminOnly: true,
       subItems: [
         { to: "/app/comercial/biblioteca", label: "Biblioteca", icon: <BookOpen size={12} /> },
-        { to: "/app/comercial/construtor", label: "Construtor", icon: <PenTool size={12} /> },
         { to: "/app/comercial/estrategia", label: "Estratégia / Estilo", icon: <Target size={12} /> },
         { to: "/app/comercial/compartilhamentos", label: "Compartilhamentos", icon: <Send size={12} /> },
         { to: "/app/comercial/relatorios", label: "Relatórios", icon: <BarChart size={12} /> }

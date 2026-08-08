@@ -49,7 +49,7 @@ export default function EditorMaterialPage() {
         <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-4">
           {/* Esquerda: Navegação e Status */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/app/comercial/construtor')} title="Voltar para o Construtor">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/app/comercial/biblioteca')} title="Voltar para a Biblioteca">
               <ArrowLeft className="h-4 w-4" />
             </Button>
             
@@ -57,7 +57,7 @@ export default function EditorMaterialPage() {
             
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground font-medium hidden sm:inline-block">Comercial / Construtor /</span>
+                <span className="text-sm text-muted-foreground font-medium hidden sm:inline-block">Comercial / Biblioteca /</span>
                 <Input
                   value={state.title}
                   onChange={(e) => editor.updateTitle(e.target.value)}
