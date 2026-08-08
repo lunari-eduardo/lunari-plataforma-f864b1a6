@@ -125,7 +125,6 @@ export function useMaterialShares(materialId: string | undefined) {
 
 export function useAllMaterialShares() {
   const queryKey = ['all-material-shares'];
-  const { data: { user } } = supabase.auth.getSession() as any; // Note: In hooks, we should get user from context or async. Better to let RLS handle it.
 
   const query = useQuery({
     queryKey,
