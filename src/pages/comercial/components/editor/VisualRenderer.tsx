@@ -8,6 +8,7 @@ interface VisualRendererProps {
   activeIndex: number;
   onSelectBlock: (index: number) => void;
   viewMode: 'desktop' | 'mobile';
+  onSectionView?: (blockId: string, blockType: string, position: number) => void;
 }
 
 // ---------------------------------------------------------
@@ -89,10 +90,45 @@ function DefaultRenderer({ block }: { block: BlockData }) {
 }
 
 // ---------------------------------------------------------
+// Observer de Blocos para Rastreio
+// ---------------------------------------------------------
+function BlockObserver({ 
+  children, 
+  blockId, 
+  blockType, 
+  position, 
+  onView 
+}: { 
+  children: React.ReactNode, 
+  blockId: string, 
+  blockType: string, 
+  position: number, 
+  onView?: (blockId: string, blockType: string, position: number) => void 
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [viewed, setViewed] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!ref.current || viewed || !onView) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        onView(blockId, blockType, position);
+        setViewed(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.5 });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [viewed, onView, blockId, blockType, position]);
+
+  return <div ref={ref} className="h-full w-full">{children}</div>;
+}
+
+// ---------------------------------------------------------
 // Orquestrador Principal
 // ---------------------------------------------------------
 
-export function VisualRenderer({ blocks, activeIndex, onSelectBlock, viewMode }: VisualRendererProps) {
+export function VisualRenderer({ blocks, activeIndex, onSelectBlock, viewMode, onSectionView }: VisualRendererProps) {
   return (
     <div className="w-full h-full p-4 md:p-8 flex items-start justify-center transition-all duration-300">
       <div 
@@ -118,11 +154,18 @@ export function VisualRenderer({ blocks, activeIndex, onSelectBlock, viewMode }:
                 !isActive && "group-hover:bg-primary/5"
               )} />
               
-              {/* Renderização condicional por tipo */}
+              {/* Renderização condicional por tipo com Observer para Analytics */}
               <div className="pointer-events-none">
-                {block.type === 'cover' && <CoverRenderer data={block.data} />}
-                {block.type === 'package' && <PackageRenderer data={block.data} />}
-                {block.type !== 'cover' && block.type !== 'package' && <DefaultRenderer block={block} />}
+                <BlockObserver 
+                  blockId={block.id} 
+                  blockType={block.type} 
+                  position={index} 
+                  onView={onSectionView}
+                >
+                  {block.type === 'cover' && <CoverRenderer data={block.data} />}
+                  {block.type === 'package' && <PackageRenderer data={block.data} />}
+                  {block.type !== 'cover' && block.type !== 'package' && <DefaultRenderer block={block} />}
+                </BlockObserver>
               </div>
             </div>
           );

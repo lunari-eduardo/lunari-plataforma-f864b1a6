@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { usePublicMaterial } from '@/hooks/usePublicMaterial';
 import { useTrackedMaterial } from '@/hooks/useTrackedMaterial';
+import { useShareTracking } from '@/hooks/useShareTracking';
 import { VisualRenderer } from './components/editor/VisualRenderer';
 import { Loader2, MessageCircle } from 'lucide-react';
 
@@ -15,19 +15,30 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   const activeQuery = mode === 'public' ? publicData : trackedData;
   const { data: result, isLoading, error } = activeQuery;
 
-  // Registrar view_start quando carregar a proposta rastreável
+  // Iniciar SDK de rastreio
+  const { trackEvent } = useShareTracking({
+    token: mode === 'tracked' ? token : undefined,
+    slug: mode === 'public' ? slug : undefined
+  });
+
+  const ctaRef = useRef<HTMLButtonElement>(null);
+  const [ctaViewTracked, setCtaViewTracked] = useState(false);
+
+  // Rastrear visualização do CTA
   useEffect(() => {
-    if (mode === 'tracked' && result?.type === 'active' && result.shareLinkId) {
-      supabase.functions.invoke('track-share-event', {
-        body: {
-          share_id: result.shareLinkId,
-          event_type: 'view_start'
-        }
-      }).catch(err => {
-        console.error('Falha ao registrar view_start:', err);
-      });
-    }
-  }, [mode, result?.type, result?.shareLinkId]);
+    if (!ctaRef.current || ctaViewTracked || !result) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        trackEvent('cta_view');
+        setCtaViewTracked(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.5 });
+
+    observer.observe(ctaRef.current);
+    return () => observer.disconnect();
+  }, [ctaViewTracked, trackEvent, result]);
 
   if (isLoading) {
     return (
@@ -54,7 +65,8 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   // Lógica do CTA WhatsApp
   const handleWhatsAppClick = () => {
-    // TODO: Registrar evento cta_click via Edge Function na Fase 7
+    trackEvent('cta_click', { cta_type: 'whatsapp' });
+    
     if (!userProfile?.whatsapp) {
       alert('O fotógrafo ainda não configurou um número de WhatsApp.');
       return;
@@ -74,11 +86,15 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
         activeIndex={-1}
         onSelectBlock={() => {}}
         viewMode="desktop"
+        onSectionView={(blockId, blockType, position) => {
+          trackEvent('section_view', { block_id: blockId, block_type: blockType, position });
+        }}
       />
 
       {/* Floating CTA WhatsApp */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent flex justify-center z-50 pointer-events-none">
         <button 
+          ref={ctaRef}
           onClick={handleWhatsAppClick}
           className="pointer-events-auto shadow-2xl bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-full font-medium flex items-center gap-3 transition-transform hover:scale-105 active:scale-95"
         >
