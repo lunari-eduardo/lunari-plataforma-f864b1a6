@@ -51,12 +51,6 @@ export function MaterialCard({
 }: MaterialCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleCopyLink = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(`https://lunarihub.com/m/${id}`);
-    toast.success('Link oficial copiado!');
-  };
-
   return (
     <div 
       className={cn(
@@ -93,23 +87,7 @@ export function MaterialCard({
           </div>
         )}
 
-        {/* Quick Action Hover: Copiar Link (Botão flutuante para atrito zero, apenas se publicado) */}
-        {isPublished && (
-          <div className={cn(
-            "absolute right-2 top-2 transition-all duration-200",
-            isHovered ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
-          )}>
-            <Button 
-              variant="secondary" 
-              size="icon"
-              className="h-8 w-8 rounded-full shadow-lg border border-white/10 hover:scale-110 bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition-all"
-              onClick={handleCopyLink}
-              title="Copiar Link Rápido"
-            >
-              <LinkIcon className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        {/* Quick Action removida provisoriamente pois o slug vem de outra tabela */}
       </div>
 
       {/* Footer Info */}
