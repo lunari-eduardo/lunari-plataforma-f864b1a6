@@ -2,10 +2,12 @@ import React from 'react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Target, Send, BarChart } from 'lucide-react';
+import { BookOpen, Target, Send, BarChart, Loader2 } from 'lucide-react';
+import { useComercialIntelligence } from '@/hooks/useComercialIntelligence';
 
 export default function ComercialOverviewPage() {
   const navigate = useNavigate();
+  const { data, isLoading } = useComercialIntelligence();
 
   const cards = [
     {
@@ -60,20 +62,32 @@ export default function ComercialOverviewPage() {
 
       <div className="mt-12">
         <h3 className="text-lg font-semibold mb-4 border-b border-border pb-2">Resumo Contextual</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-muted/30 rounded-lg border border-border">
-            <div className="text-sm text-muted-foreground mb-1">Propostas Criadas</div>
-            <div className="text-2xl font-bold">12</div>
+        
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8 text-muted-foreground">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            Carregando indicadores...
           </div>
-          <div className="p-4 bg-muted/30 rounded-lg border border-border">
-            <div className="text-sm text-muted-foreground mb-1">Taxa de Aprovação</div>
-            <div className="text-2xl font-bold text-green-600">68%</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-muted/30 rounded-lg border border-border">
+              <div className="text-sm text-muted-foreground mb-1">Propostas Criadas</div>
+              <div className="text-2xl font-bold">{data?.propostasCriadas || 0}</div>
+            </div>
+            <div className="p-4 bg-muted/30 rounded-lg border border-border">
+              <div className="text-sm text-muted-foreground mb-1">Envios (Leads)</div>
+              <div className="text-2xl font-bold">{data?.compartilhamentosEnviados || 0}</div>
+            </div>
+            <div className="p-4 bg-muted/30 rounded-lg border border-border">
+              <div className="text-sm text-muted-foreground mb-1">Taxa de Abertura</div>
+              <div className="text-2xl font-bold text-primary">{data?.taxaAbertura.toFixed(1)}%</div>
+            </div>
+            <div className="p-4 bg-muted/30 rounded-lg border border-border">
+              <div className="text-sm text-muted-foreground mb-1">Conversão de Leads</div>
+              <div className="text-2xl font-bold text-green-600">{data?.taxaConversaoLead.toFixed(1)}%</div>
+            </div>
           </div>
-          <div className="p-4 bg-muted/30 rounded-lg border border-border">
-            <div className="text-sm text-muted-foreground mb-1">Último Envio</div>
-            <div className="text-lg font-semibold mt-1">Hoje, 14:30</div>
-          </div>
-        </div>
+        )}
       </div>
     </PageContainer>
   );

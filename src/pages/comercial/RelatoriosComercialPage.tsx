@@ -3,8 +3,11 @@ import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { Link } from 'react-router-dom';
+import { useComercialIntelligence } from '@/hooks/useComercialIntelligence';
+import { Loader2 } from 'lucide-react';
 
 export default function RelatoriosComercialPage() {
+  const { data, isLoading } = useComercialIntelligence();
   return (
     <PageContainer>
       <div className="mb-6">
@@ -26,36 +29,47 @@ export default function RelatoriosComercialPage() {
         description="Analise o desempenho das suas propostas e a taxa de conversão." 
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-        <div className="p-4 border border-border rounded-xl bg-card">
-          <div className="text-sm text-muted-foreground mb-1">Enviadas</div>
-          <div className="text-2xl font-bold">42</div>
+      {isLoading ? (
+        <div className="flex items-center justify-center p-12 text-muted-foreground mt-8">
+          <Loader2 className="w-8 h-8 animate-spin mr-3" />
+          Carregando relatórios...
         </div>
-        <div className="p-4 border border-border rounded-xl bg-card">
-          <div className="text-sm text-muted-foreground mb-1">Visualizadas</div>
-          <div className="text-2xl font-bold">35</div>
-        </div>
-        <div className="p-4 border border-border rounded-xl bg-card">
-          <div className="text-sm text-muted-foreground mb-1">Aprovadas</div>
-          <div className="text-2xl font-bold text-green-600">18</div>
-        </div>
-        <div className="p-4 border border-border rounded-xl bg-card">
-          <div className="text-sm text-muted-foreground mb-1">Taxa de Aprovação</div>
-          <div className="text-2xl font-bold text-primary">51,4%</div>
-        </div>
-        <div className="p-4 border border-border rounded-xl bg-card col-span-2">
-          <div className="text-sm text-muted-foreground mb-1">Valor Potencial</div>
-          <div className="text-2xl font-bold">R$ 24.800</div>
-        </div>
-        <div className="p-4 border border-border rounded-xl bg-card col-span-2">
-          <div className="text-sm text-muted-foreground mb-1">Valor Aprovado</div>
-          <div className="text-2xl font-bold text-green-600">R$ 13.200</div>
-        </div>
-      </div>
-      
-      <div className="mt-8 p-8 border border-border border-dashed rounded-xl flex items-center justify-center bg-muted/20 text-muted-foreground text-sm">
-        Gráficos de Funil e Desempenho por Categoria em construção...
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <div className="p-4 border border-border rounded-xl bg-card">
+              <div className="text-sm text-muted-foreground mb-1">Total de Propostas</div>
+              <div className="text-2xl font-bold">{data?.propostasCriadas || 0}</div>
+            </div>
+            <div className="p-4 border border-border rounded-xl bg-card">
+              <div className="text-sm text-muted-foreground mb-1">Leads Acionados</div>
+              <div className="text-2xl font-bold">{data?.leadsComProposta || 0}</div>
+            </div>
+            <div className="p-4 border border-border rounded-xl bg-card">
+              <div className="text-sm text-muted-foreground mb-1">Aberturas Únicas</div>
+              <div className="text-2xl font-bold text-primary">{data?.aberturasUnicas || 0}</div>
+            </div>
+            <div className="p-4 border border-border rounded-xl bg-card">
+              <div className="text-sm text-muted-foreground mb-1">Taxa de Abertura</div>
+              <div className="text-2xl font-bold text-primary">{data?.taxaAbertura.toFixed(1)}%</div>
+            </div>
+            
+            <div className="p-4 border border-border rounded-xl bg-card col-span-2">
+              <div className="text-sm text-muted-foreground mb-1">Cliques no WhatsApp</div>
+              <div className="text-2xl font-bold">{data?.ctasClicados || 0}</div>
+            </div>
+            <div className="p-4 border border-border rounded-xl bg-card col-span-2">
+              <div className="text-sm text-muted-foreground mb-1">Leads Convertidos</div>
+              <div className="text-2xl font-bold text-green-600">{data?.leadsConvertidos || 0} ({data?.taxaConversaoLead.toFixed(1)}%)</div>
+            </div>
+          </div>
+          
+          <div className="mt-8 p-8 border border-border border-dashed rounded-xl flex flex-col items-center justify-center bg-muted/20 text-muted-foreground text-sm">
+            <h3 className="font-semibold text-lg text-foreground mb-2">Gráficos de Funil</h3>
+            <p>Os gráficos detalhados de desempenho por categoria estarão disponíveis na próxima atualização.</p>
+          </div>
+        </>
+      )}
     </PageContainer>
   );
 }
