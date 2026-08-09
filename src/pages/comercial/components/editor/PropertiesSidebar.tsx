@@ -141,7 +141,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Título</Label>
               <Textarea 
-                value={block.data.title || ''} 
+                value={(block.data || {}).title || ''} 
                 onChange={(e) => handleChange('title', e.target.value)} 
                 placeholder="Seu momento merece ser vivido e lembrado para sempre."
                 className="resize-none min-h-[80px]"
@@ -150,7 +150,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Subtítulo</Label>
               <Textarea 
-                value={block.data.subtitle || ''} 
+                value={(block.data || {}).subtitle || ''} 
                 onChange={(e) => handleChange('subtitle', e.target.value)} 
                 placeholder="Fotografias que eternizam a espera do seu maior amor..." 
                 className="resize-none min-h-[80px]"
@@ -163,7 +163,7 @@ export function PropertiesSidebar({
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Texto</Label>
                   <Input 
-                    value={block.data.btnText || ''} 
+                    value={(block.data || {}).btnText || ''} 
                     onChange={(e) => handleChange('btnText', e.target.value)} 
                     placeholder="Quero viver essa experiência" 
                   />
@@ -171,7 +171,7 @@ export function PropertiesSidebar({
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Link (Ex: WhatsApp)</Label>
                   <Input 
-                    value={block.data.btnLink || ''} 
+                    value={(block.data || {}).btnLink || ''} 
                     onChange={(e) => handleChange('btnLink', e.target.value)} 
                     placeholder="https://wa.me/5511999999999" 
                   />
@@ -196,7 +196,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Nome do Pacote</Label>
               <Input 
-                value={block.data.title || ''} 
+                value={(block.data || {}).title || ''} 
                 onChange={(e) => handleChange('title', e.target.value)} 
                 placeholder="Ex: Essencial"
               />
@@ -205,14 +205,14 @@ export function PropertiesSidebar({
               <Label className="text-xs text-muted-foreground">Preço (R$)</Label>
               <Input 
                 type="number"
-                value={block.data.price_cents ? block.data.price_cents / 100 : ''} 
+                value={(block.data || {}).price_cents ? (block.data || {}).price_cents / 100 : ''} 
                 onChange={(e) => handleChange('price_cents', Number(e.target.value) * 100)} 
               />
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Descrição / Itens Inclusos</Label>
               <Textarea 
-                value={block.data.description || ''} 
+                value={(block.data || {}).description || ''} 
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="10 fotos digitais&#10;1h de ensaio..."
                 className="min-h-[150px]"
@@ -230,7 +230,7 @@ export function PropertiesSidebar({
              <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Título Chamada</Label>
               <Input 
-                value={block.data.title || ''} 
+                value={(block.data || {}).title || ''} 
                 onChange={(e) => handleChange('title', e.target.value)} 
                 placeholder="Vamos conversar?"
               />
@@ -238,7 +238,7 @@ export function PropertiesSidebar({
              <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Texto do Botão (WhatsApp)</Label>
               <Input 
-                value={block.data.btnText || ''} 
+                value={(block.data || {}).btnText || ''} 
                 onChange={(e) => handleChange('btnText', e.target.value)} 
                 placeholder="Chamar no WhatsApp"
               />
@@ -252,7 +252,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Rótulo Superior (Eyebrow)</Label>
               <Input 
-                value={block.data.eyebrow || block.content?.eyebrow || ''} 
+                value={(block.data || {}).eyebrow || block.content?.eyebrow || ''} 
                 onChange={(e) => handleChange('eyebrow', e.target.value)} 
                 placeholder="Como funciona"
               />
@@ -260,7 +260,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Título Principal</Label>
               <Input 
-                value={block.data.title || block.content?.title || ''} 
+                value={(block.data || {}).title || block.content?.title || ''} 
                 onChange={(e) => handleChange('title', e.target.value)} 
                 placeholder="Uma tarde"
               />
@@ -268,7 +268,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Título em Itálico</Label>
               <Input 
-                value={block.data.title_italic || block.content?.title_italic || ''} 
+                value={(block.data || {}).title_italic || block.content?.title_italic || ''} 
                 onChange={(e) => handleChange('title_italic', e.target.value)} 
                 placeholder="só sua."
               />
@@ -276,7 +276,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Texto (Corpo)</Label>
               <Textarea 
-                value={block.data.body || block.content?.body || ''} 
+                value={(block.data || {}).body || block.content?.body || ''} 
                 onChange={(e) => handleChange('body', e.target.value)} 
                 placeholder="Cada sessão começa com uma conversa..."
                 className="min-h-[100px]"
@@ -285,7 +285,7 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Assinatura Vertical</Label>
               <Input 
-                value={block.data.vertical_label || block.content?.vertical_label || ''} 
+                value={(block.data || {}).vertical_label || block.content?.vertical_label || ''} 
                 onChange={(e) => handleChange('vertical_label', e.target.value)} 
                 placeholder="Camila Ramos · Fotografias"
               />
@@ -298,7 +298,7 @@ export function PropertiesSidebar({
                   size="sm" 
                   className="h-7 text-[10px]"
                   onClick={() => {
-                    const currentDetails = block.data.details || block.content?.details || [];
+                    const currentDetails = (block.data || {}).details || block.content?.details || [];
                     handleChange('details', [...currentDetails, { id: Date.now().toString(), label: '', value: '' }]);
                   }}
                 >
@@ -306,14 +306,14 @@ export function PropertiesSidebar({
                 </Button>
               </div>
               
-              {(block.data.details || block.content?.details || []).map((detail: any, idx: number) => (
+              {((block.data || {}).details || block.content?.details || []).map((detail: any, idx: number) => (
                 <div key={detail.id || idx} className="flex gap-2 items-start bg-muted/30 p-2 rounded-md border border-border/50">
                   <div className="flex-1 space-y-2">
                     <Input 
                       placeholder="Rótulo (ex: Duração)" 
                       value={detail.label || ''}
                       onChange={(e) => {
-                        const newDetails = [...(block.data.details || block.content?.details || [])];
+                        const newDetails = [...((block.data || {}).details || block.content?.details || [])];
                         newDetails[idx] = { ...newDetails[idx], label: e.target.value };
                         handleChange('details', newDetails);
                       }}
@@ -323,7 +323,7 @@ export function PropertiesSidebar({
                       placeholder="Valor (ex: 2 a 8 horas)" 
                       value={detail.value || ''}
                       onChange={(e) => {
-                        const newDetails = [...(block.data.details || block.content?.details || [])];
+                        const newDetails = [...((block.data || {}).details || block.content?.details || [])];
                         newDetails[idx] = { ...newDetails[idx], value: e.target.value };
                         handleChange('details', newDetails);
                       }}
@@ -335,7 +335,7 @@ export function PropertiesSidebar({
                     size="icon" 
                     className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
                     onClick={() => {
-                      const newDetails = [...(block.data.details || block.content?.details || [])];
+                      const newDetails = [...((block.data || {}).details || block.content?.details || [])];
                       newDetails.splice(idx, 1);
                       handleChange('details', newDetails);
                     }}
@@ -354,14 +354,14 @@ export function PropertiesSidebar({
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Título</Label>
               <Input 
-                value={block.data.title || ''} 
+                value={(block.data || {}).title || ''} 
                 onChange={(e) => handleChange('title', e.target.value)} 
               />
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Conteúdo</Label>
               <Textarea 
-                value={block.data.content || ''} 
+                value={(block.data || {}).content || ''} 
                 onChange={(e) => handleChange('content', e.target.value)}
                 className="min-h-[150px]"
               />
@@ -512,8 +512,8 @@ export function PropertiesSidebar({
                   <div className="space-y-3">
                     <div className="flex gap-3 items-center">
                       <div className="h-20 w-32 shrink-0 rounded-lg border border-border bg-muted flex items-center justify-center overflow-hidden">
-                        {block.data.image_url ? (
-                          <img src={block.data.image_url} alt="Cover" className="h-full w-full object-cover" />
+                        {(block.data || {}).image_url ? (
+                          <img src={(block.data || {}).image_url} alt="Cover" className="h-full w-full object-cover" />
                         ) : (
                           <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
                         )}
