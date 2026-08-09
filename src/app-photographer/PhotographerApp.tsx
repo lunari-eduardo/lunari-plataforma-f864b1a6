@@ -24,6 +24,7 @@ import BibliotecaComercialPage from "@/pages/comercial/BibliotecaComercialPage";
 import EditorPropostaPage from "@/pages/comercial/EditorPropostaPage";
 import EstrategiaComercialPage from "@/pages/comercial/EstrategiaComercialPage";
 import CompartilhamentosComercialPage from "@/pages/comercial/CompartilhamentosComercialPage";
+import ShareAnalysisPage from "@/pages/comercial/ShareAnalysisPage";
 import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
 import PublicProposalViewer from "@/pages/comercial/PublicProposalViewer";
 
@@ -204,6 +205,7 @@ export default function PhotographerApp() {
                   <Route path="construtor/:id" element={<RequireAdmin><EditorPropostaPage /></RequireAdmin>} />
                   <Route path="estrategia" element={<RequireAdmin><EstrategiaComercialPage /></RequireAdmin>} />
                   <Route path="compartilhamentos" element={<RequireAdmin><CompartilhamentosComercialPage /></RequireAdmin>} />
+                  <Route path="compartilhamentos/:shareId" element={<RequireAdmin><ShareAnalysisPage /></RequireAdmin>} />
                   <Route path="relatorios" element={<RequireAdmin><RelatoriosComercialPage /></RequireAdmin>} />
                 </Route>
 
