@@ -8,6 +8,7 @@ export interface PublicMaterialData {
   userProfile?: any; // The photographer info
   redirectSlug?: string;
   shareLinkId?: string;
+  customMessage?: string;
 }
 
 export function usePublicMaterial(slug: string | undefined) {

@@ -11,7 +11,7 @@ export function useTrackedMaterial(token: string | undefined) {
       // 1. Buscar o share rastreável
       const { data: share, error: shareErr } = await (supabase as any)
         .from('material_shares')
-        .select('id, material_id, version_id, user_id')
+        .select('id, material_id, version_id, user_id, custom_message')
         .eq('token', token)
         .single();
 
@@ -55,7 +55,8 @@ export function useTrackedMaterial(token: string | undefined) {
           version_number: version.version_number
         },
         userProfile: profile,
-        shareLinkId: share.id // Usamos a propriedade shareLinkId para armazenar o ID do share para facilitar eventos depois
+        shareLinkId: share.id, // Usamos a propriedade shareLinkId para armazenar o ID do share para facilitar eventos depois
+        customMessage: share.custom_message
       };
     },
     enabled: !!token,

@@ -23,6 +23,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   const ctaRef = useRef<HTMLButtonElement>(null);
   const [ctaViewTracked, setCtaViewTracked] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Rastrear visualização do CTA
   useEffect(() => {
@@ -78,6 +79,41 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
     
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
+
+  const handleStart = () => {
+    setHasStarted(true);
+    // Aqui garantimos que qualquer mídia autoplay possa iniciar após a interação do usuário
+  };
+
+  if (!hasStarted && result.customMessage) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-black/5">
+          {userProfile?.avatar_url && (
+            <img src={userProfile.avatar_url} alt="Fotógrafo" className="w-20 h-20 rounded-full mx-auto mb-6 object-cover" />
+          )}
+          <h2 className="text-2xl font-serif text-[#2C2825] mb-4">
+            Mensagem para você
+          </h2>
+          <p className="text-[#6D655E] mb-8 whitespace-pre-wrap italic">
+            "{result.customMessage}"
+          </p>
+          <button 
+            onClick={handleStart}
+            className="w-full bg-[#2C2825] hover:bg-black text-white px-6 py-4 rounded-xl font-medium transition-all"
+          >
+            Acessar Proposta
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não tem mensagem, e ainda não marcou started, marca direto (pode causar render extra, mas simplifica a lógica)
+  if (!hasStarted && !result.customMessage) {
+    setHasStarted(true);
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col relative pb-24">
