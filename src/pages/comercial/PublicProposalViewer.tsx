@@ -65,9 +65,9 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   const { data: contentData, materialInfo, userProfile } = result;
   
   // Detecção de formato
-  const isHtmlFormat = contentData && !Array.isArray(contentData) && contentData.type === 'html';
-  const htmlSource = isHtmlFormat ? contentData.source : '';
-  const blocks = isHtmlFormat ? [] : (contentData || []);
+  const isPdfFormat = contentData && !Array.isArray(contentData) && contentData.type === 'pdf';
+  const pdfUrl = isPdfFormat ? contentData.url : '';
+  const blocks = isPdfFormat ? [] : (contentData || []);
 
   // Lógica do CTA WhatsApp
   const handleWhatsAppClick = () => {
@@ -122,15 +122,15 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col relative pb-24">
-      {isHtmlFormat ? (
+      {isPdfFormat ? (
         <iframe
           className="w-full h-screen border-none bg-white"
-          title="Proposta Comercial"
-          srcDoc={htmlSource}
-          sandbox="allow-same-origin allow-scripts allow-popups"
+          title="Proposta Comercial PDF"
+          src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+          sandbox="allow-same-origin allow-scripts"
           onLoad={() => {
-            // Track initial view for HTML templates
-            trackEvent('section_view', { block_id: 'html-template', block_type: 'html', position: 0 });
+            // Track initial view for PDF templates
+            trackEvent('section_view', { block_id: 'pdf-template', block_type: 'pdf', position: 0 });
           }}
         />
       ) : (

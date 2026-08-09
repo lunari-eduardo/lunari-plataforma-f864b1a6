@@ -9,8 +9,7 @@ import { toast } from 'sonner';
 import { EditorSidebar } from './components/editor/EditorSidebar';
 import { PropertiesSidebar } from './components/editor/PropertiesSidebar';
 import { VisualRenderer } from './components/editor/VisualRenderer';
-import { HtmlLiveEditor } from './components/editor/HtmlLiveEditor';
-import {
+import { FileText } from 'lucide-react';
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -243,12 +242,21 @@ export default function EditorMaterialPage() {
               </div>
             </>
           ) : (
-            <div className="flex-1 w-full h-full">
-              <HtmlLiveEditor
-                htmlContent={state.htmlContent || ''}
-                onChange={editor.updateHtmlContent}
-                viewMode={viewMode}
-              />
+            <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-8 bg-muted/20">
+              <div className="bg-background border border-border rounded-xl p-8 max-w-md text-center shadow-sm">
+                <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                  <FileText className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Proposta em PDF</h3>
+                <p className="text-muted-foreground mb-6">
+                  Este material é um arquivo PDF estático. Você não pode editá-lo pelo construtor de blocos.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button variant="outline" onClick={() => window.open(state.pdfUrl, '_blank')}>
+                    Abrir PDF
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </main>
@@ -296,15 +304,11 @@ export default function EditorMaterialPage() {
                 viewMode={viewMode}
               />
             ) : (
-              <div className={cn(
-                "bg-white shadow-sm overflow-hidden h-full flex flex-col transition-all duration-300 relative",
-                viewMode === 'mobile' ? 'w-[400px] h-[800px] rounded-[2rem] shadow-2xl border-8 border-border' : 'w-full max-w-[1200px]'
-              )}>
+              <div className="w-full h-full flex items-center justify-center bg-background">
                 <iframe
-                  className="w-full flex-1 border-none bg-white"
-                  title="Live HTML Editor Preview"
-                  sandbox="allow-same-origin allow-scripts"
-                  srcDoc={state.htmlContent}
+                  className="w-full h-full max-w-[1200px] border-none bg-white shadow-xl"
+                  title="PDF Preview"
+                  src={`${state.pdfUrl}#toolbar=0&navpanes=0&scrollbar=0`}
                 />
               </div>
             )}

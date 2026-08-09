@@ -81,10 +81,100 @@ function PackageRenderer({ data }: { data: any }) {
 function DefaultRenderer({ block }: { block: BlockData }) {
   return (
     <section className="py-16 px-8 bg-white text-center">
-      <h2 className="text-3xl font-serif text-[#2C2825] mb-4">{block.data?.title || block.type}</h2>
+      <h2 className="text-3xl font-serif text-[#2C2825] mb-4">{block.data?.title || block.content?.title || block.type}</h2>
       <p className="text-[#6D655E] max-w-2xl mx-auto whitespace-pre-line">
-        {block.data?.content || block.data?.description || 'Conteúdo da seção será exibido aqui.'}
+        {block.data?.content || block.data?.description || block.content?.body || 'Conteúdo da seção será exibido aqui.'}
       </p>
+    </section>
+  );
+}
+
+function EditorialRenderer({ data, content, props }: { data?: any, content?: any, props?: any }) {
+  // Use `content` e `props` do novo formato (bloco v2) ou `data` (fallback v1)
+  const c = content || data || {};
+  const p = props || {};
+  
+  const bgClass = p.background === 'dark' ? 'bg-[#1A1714] text-white' : p.background === 'cream' ? 'bg-[#F3F0EA] text-[#1A1714]' : 'bg-white text-[#1A1714]';
+  const textColor = p.background === 'dark' ? 'text-white' : 'text-[#1A1714]';
+  const mutedTextColor = p.background === 'dark' ? 'text-white/40' : 'text-[#8C7B6E]';
+  const borderColor = p.background === 'dark' ? 'border-white/10' : 'border-[#1A1714]/10';
+
+  return (
+    <section className={cn("py-16 md:py-28 px-6 md:px-14 overflow-hidden", bgClass)}>
+      <div className="max-w-[900px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-24 items-center">
+          
+          {/* Visual (Photos) */}
+          <div className="relative h-[280px] md:h-[520px]">
+            {/* Photo A */}
+            <div 
+              className="absolute top-0 left-0 rounded-[3px] overflow-hidden"
+              style={{
+                width: `${p.photo_a?.width_pct || 72}%`,
+                height: `${p.photo_a?.height_pct || 80}%`,
+                background: p.photo_a?.image_ref 
+                  ? `url(${p.photo_a.image_ref}) center/cover` 
+                  : `linear-gradient(${p.photo_a?.placeholder_gradient?.angle_deg || 148}deg, ${p.photo_a?.placeholder_gradient?.from || '#96724e'} 0%, ${p.photo_a?.placeholder_gradient?.to || '#3d2010'} 100%)`
+              }}
+            />
+            {/* Photo B */}
+            <div 
+              className="absolute bottom-0 right-0 rounded-[3px] overflow-hidden mix-blend-screen"
+              style={{
+                width: `${p.photo_b?.width_pct || 62}%`,
+                height: `${p.photo_b?.height_pct || 66}%`,
+                background: p.photo_b?.image_ref 
+                  ? `url(${p.photo_b.image_ref}) center/cover` 
+                  : `linear-gradient(${p.photo_b?.placeholder_gradient?.angle_deg || 148}deg, ${p.photo_b?.placeholder_gradient?.from || '#e8d0a8'} 0%, ${p.photo_b?.placeholder_gradient?.to || '#8c6040'} 100%)`
+              }}
+            />
+            {c.vertical_label && (
+              <p 
+                className="hidden md:block absolute bottom-8 -left-5 text-[10px] tracking-[0.35em] uppercase text-white/20 uppercase"
+                style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)' }}
+              >
+                {c.vertical_label}
+              </p>
+            )}
+          </div>
+
+          {/* Text Content */}
+          <div className="flex flex-col">
+            {c.eyebrow && (
+              <span className="text-[10px] font-medium tracking-[0.28em] uppercase text-white/30 mb-4 block font-sans">
+                {c.eyebrow}
+              </span>
+            )}
+            
+            <h2 className="text-4xl md:text-5xl lg:text-[4rem] font-serif font-light leading-[1.02] tracking-[0.03em] mb-10">
+              {c.title}
+              {c.title_italic && <><br /><em className="italic text-white/45">{c.title_italic}</em></>}
+            </h2>
+
+            {c.details && c.details.length > 0 && (
+              <div className="flex flex-col gap-0 mb-9">
+                {c.details.map((detail: any, idx: number) => (
+                  <div key={detail.id || idx} className={cn("flex justify-between items-baseline gap-6 py-3 border-b", borderColor, idx === 0 && "border-t")}>
+                    <span className="font-sans text-[10px] font-medium tracking-[0.24em] uppercase text-white/30 whitespace-nowrap">
+                      {detail.label}
+                    </span>
+                    <span className="font-serif text-base font-light text-white/75 text-right">
+                      {detail.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {c.body && (
+              <p className="font-serif italic text-base md:text-[1.1rem] font-light leading-[1.7] text-white/40">
+                {c.body}
+              </p>
+            )}
+          </div>
+          
+        </div>
+      </div>
     </section>
   );
 }
@@ -164,7 +254,8 @@ export function VisualRenderer({ blocks, activeIndex, onSelectBlock, viewMode, o
                 >
                   {block.type === 'cover' && <CoverRenderer data={block.data} />}
                   {block.type === 'package' && <PackageRenderer data={block.data} />}
-                  {block.type !== 'cover' && block.type !== 'package' && <DefaultRenderer block={block} />}
+                  {block.type === 'EditorialBlock' && <EditorialRenderer content={block.content} data={block.data} props={block.props} />}
+                  {block.type !== 'cover' && block.type !== 'package' && block.type !== 'EditorialBlock' && <DefaultRenderer block={block} />}
                 </BlockObserver>
               </div>
             </div>

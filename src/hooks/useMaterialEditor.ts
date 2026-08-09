@@ -15,9 +15,9 @@ export interface MaterialEditorState {
   versionId: string;
   versionNumber: number;
   isPublished: boolean;
-  format: 'blocks' | 'html';
+  format: 'blocks' | 'pdf';
   blocks: BlockData[];
-  htmlContent?: string;
+  pdfUrl?: string;
 }
 
 export function useMaterialEditor(materialId: string | undefined) {
@@ -52,13 +52,13 @@ export function useMaterialEditor(materialId: string | undefined) {
       const version = versions?.[0];
       if (!version) throw new Error('Nenhuma versão encontrada');
 
-      let format: 'blocks' | 'html' = 'blocks';
+      let format: 'blocks' | 'pdf' = 'blocks';
       let blocks: BlockData[] = [];
-      let htmlContent: string | undefined = undefined;
+      let pdfUrl: string | undefined = undefined;
 
-      if (version.content && typeof version.content === 'object' && !Array.isArray(version.content) && version.content.type === 'html') {
-        format = 'html';
-        htmlContent = version.content.source;
+      if (version.content && typeof version.content === 'object' && !Array.isArray(version.content) && version.content.type === 'pdf') {
+        format = 'pdf';
+        pdfUrl = version.content.url;
       } else {
         blocks = Array.isArray(version.content) ? version.content : [];
       }
@@ -71,7 +71,7 @@ export function useMaterialEditor(materialId: string | undefined) {
         isPublished: !!version.published_at,
         format,
         blocks,
-        htmlContent,
+        pdfUrl,
       };
 
       setState(newState);
@@ -105,8 +105,8 @@ export function useMaterialEditor(materialId: string | undefined) {
     updateState(prev => ({ ...prev, blocks: newBlocks }));
   }, [updateState]);
 
-  const updateHtmlContent = useCallback((html: string) => {
-    updateState(prev => ({ ...prev, htmlContent: html }));
+  const updatePdfUrl = useCallback((url: string) => {
+    updateState(prev => ({ ...prev, pdfUrl: url }));
   }, [updateState]);
 
   const updateBlock = useCallback((index: number, data: Record<string, any>) => {
@@ -175,8 +175,8 @@ export function useMaterialEditor(materialId: string | undefined) {
     setSaveStatus('saving');
     try {
       // 1. Salvar conteúdo na versão
-      const contentToSave = state.format === 'html' 
-        ? { type: 'html', source: state.htmlContent }
+      const contentToSave = state.format === 'pdf' 
+        ? { type: 'pdf', url: state.pdfUrl }
         : state.blocks;
 
       const { error: verErr } = await (supabase as any)
@@ -225,8 +225,8 @@ export function useMaterialEditor(materialId: string | undefined) {
         .update({ title: state.title, updated_at: new Date().toISOString() })
         .eq('id', state.materialId);
 
-      const contentToSave = state.format === 'html' 
-        ? { type: 'html', source: state.htmlContent }
+      const contentToSave = state.format === 'pdf' 
+        ? { type: 'pdf', url: state.pdfUrl }
         : state.blocks;
 
       await (supabase as any)
@@ -253,7 +253,7 @@ export function useMaterialEditor(materialId: string | undefined) {
     saveStatus,
     hasChanges,
     updateBlock,
-    updateHtmlContent,
+    updatePdfUrl,
     addBlock,
     removeBlock,
     moveBlock,

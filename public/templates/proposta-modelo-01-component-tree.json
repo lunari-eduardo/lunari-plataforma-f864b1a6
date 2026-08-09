@@ -1,0 +1,295 @@
+{
+  "_meta": {
+    "schema_version": "2026-08-lunari-v1",
+    "template_id": "proposta-modelo-01",
+    "template_name": "Editorial Sofisticado",
+    "description": "Layout escuro com efeito foto-sobre-foto, carrossel de depoimentos e tabela de pacotes em linha. Adequado para fotógrafas de ensaio com posicionamento premium.",
+    "created_at": "2026-08-09",
+    "tags": ["sofisticado", "editorial", "premium", "escuro"],
+    "preview_image_ref": null
+  },
+
+  "design_tokens": {
+    "colors": {
+      "cream":  "#F3F0EA",
+      "linen":  "#E8E3DA",
+      "stone":  "#C9BFB2",
+      "taupe":  "#8C7B6E",
+      "accent": "#7A5C42",
+      "ink":    "#1A1714",
+      "white":  "#FFFFFF"
+    },
+    "typography": {
+      "display": "Cormorant Garamond",
+      "body":    "Jost"
+    },
+    "spacing": {
+      "section_padding": "clamp(4rem, 8vw, 7rem)",
+      "max_width": "900px",
+      "inner_pad": "clamp(1.25rem, 5vw, 3.5rem)"
+    }
+  },
+
+  "blocks": [
+
+    {
+      "id": "block_cover",
+      "type": "CoverBlock",
+      "variant": "gradient_parallax",
+      "props": {
+        "gradient_stops": ["#201510", "#3d2b1b", "#7d5c3a", "#c29b6e", "#e8cfa8"],
+        "overlay_intensity": "medium",
+        "typography_scale_token": "impactante",
+        "alignment": "center",
+        "show_scroll_hint": true,
+        "effect": "parallax_kenburns"
+      },
+      "content": {
+        "eyebrow":           "Pacotes & Preços · 2026",
+        "title_regular":     "Foto",
+        "title_italic":      "grafia",
+        "photographer_name": "Camila Ramos — Fotografias"
+      },
+      "editable_fields": ["eyebrow", "title_regular", "title_italic", "photographer_name"]
+    },
+
+    {
+      "id": "block_portfolio",
+      "type": "Gallery",
+      "variant": "editorial_grid_asymmetric",
+      "props": {
+        "gap_px": 7,
+        "grid_layout": "3col_tall_left_wide_right",
+        "mobile_layout": "2col_equal"
+      },
+      "content": {
+        "eyebrow":  "Nosso trabalho",
+        "title":    "Portfólio",
+        "caption":  "Momentos que ficam para sempre",
+        "images": [
+          { "slot": "gi-a", "span": "tall_2rows", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#2f2318" },
+          { "slot": "gi-b", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#967255" },
+          { "slot": "gi-c", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#b0906e" },
+          { "slot": "gi-d", "span": "wide_2cols", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#4a3628" },
+          { "slot": "gi-e", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#7e6047" },
+          { "slot": "gi-f", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#2a1e14" },
+          { "slot": "gi-g", "image_ref": null, "focal_point": {"x": 50, "y": 40}, "placeholder_hex": "#3d2e20" }
+        ]
+      },
+      "editable_fields": ["eyebrow", "title", "caption", "images[*].image_ref", "images[*].focal_point"]
+    },
+
+    {
+      "id": "block_editorial",
+      "type": "EditorialBlock",
+      "variant": "photo_over_photo_split",
+      "props": {
+        "background": "dark",
+        "blend_mode": "screen",
+        "reveal_animation": true,
+        "stagger_delays_ms": [0, 80, 130, 180, 230, 280, 330, 200],
+        "photo_a": {
+          "position":    "top_left",
+          "width_pct":   72,
+          "height_pct":  80,
+          "image_ref":   null,
+          "focal_point": {"x": 50, "y": 40},
+          "placeholder_gradient": { "from": "#96724e", "to": "#3d2010", "angle_deg": 148 }
+        },
+        "photo_b": {
+          "position":    "bottom_right",
+          "width_pct":   62,
+          "height_pct":  66,
+          "image_ref":   null,
+          "focal_point": {"x": 50, "y": 40},
+          "placeholder_gradient": { "from": "#e8d0a8", "to": "#8c6040", "angle_deg": 148 }
+        }
+      },
+      "content": {
+        "eyebrow":        "Como funciona",
+        "title":          "Uma tarde",
+        "title_italic":   "só sua.",
+        "details": [
+          { "id": "d1", "label": "Duração",       "value": "2 a 8 horas" },
+          { "id": "d2", "label": "Local",          "value": "Estúdio ou externo" },
+          { "id": "d3", "label": "Entrega",        "value": "7 a 15 dias úteis" },
+          { "id": "d4", "label": "Fotos editadas", "value": "20 a 100 imagens" }
+        ],
+        "body":           "Cada sessão começa com uma conversa sobre o que você quer guardar. Sem pressa, sem poses ensaiadas — apenas o seu momento e a luz certa para ele.",
+        "vertical_label": "Camila Ramos · Fotografias · 2026"
+      },
+      "editable_fields": [
+        "eyebrow", "title", "title_italic", "body", "vertical_label",
+        "details[*].label", "details[*].value",
+        "photo_a.image_ref", "photo_a.focal_point",
+        "photo_b.image_ref", "photo_b.focal_point"
+      ]
+    },
+
+    {
+      "id": "block_pricing",
+      "type": "PricingTable",
+      "variant": "row_list_with_photo",
+      "props": {
+        "background": "white",
+        "photo_aspect_ratio": "3/4",
+        "show_photo": true
+      },
+      "content": {
+        "eyebrow": "Tabela de Valores",
+        "title":   "Pacotes",
+        "packages": [
+          {
+            "id":         "pkg_essencial",
+            "name":       "Pacote Essencial",
+            "price":      "R$ 890",
+            "price_unit": "sessão",
+            "badge":      "Ideal para ensaios rápidos",
+            "features": [
+              "2 horas de cobertura",
+              "1 fotógrafa",
+              "20 fotos editadas",
+              "Galeria online privada",
+              "Entrega em 15 dias úteis",
+              "1 impressão 20×30 cm"
+            ],
+            "image_ref": null,
+            "placeholder_gradient": { "from": "#c9a67a", "to": "#8c6441" }
+          },
+          {
+            "id":         "pkg_classico",
+            "name":       "Pacote Clássico",
+            "price":      "R$ 1.490",
+            "price_unit": "sessão",
+            "badge":      "O mais escolhido",
+            "features": [
+              "4 horas de cobertura",
+              "1 fotógrafa",
+              "50 fotos editadas",
+              "Galeria online privada",
+              "Entrega em 10 dias úteis",
+              "2 impressões 30×40 cm"
+            ],
+            "image_ref": null,
+            "placeholder_gradient": { "from": "#7a5432", "to": "#3d2010" }
+          },
+          {
+            "id":         "pkg_premium",
+            "name":       "Pacote Premium",
+            "price":      "R$ 2.800",
+            "price_unit": "sessão",
+            "badge":      "Experiência completa",
+            "features": [
+              "8 horas de cobertura",
+              "2 fotógrafas",
+              "100 fotos editadas",
+              "Galeria online + pendrive",
+              "Entrega em 7 dias úteis",
+              "Álbum impresso 30×30 cm"
+            ],
+            "image_ref": null,
+            "placeholder_gradient": { "from": "#3d2b18", "to": "#b0886a" }
+          }
+        ]
+      },
+      "editable_fields": [
+        "eyebrow", "title",
+        "packages[*].name", "packages[*].price", "packages[*].price_unit",
+        "packages[*].badge", "packages[*].features[*]",
+        "packages[*].image_ref"
+      ],
+      "list_operations": {
+        "packages":             { "add": true, "remove": true, "reorder": true },
+        "packages[*].features": { "add": true, "remove": true, "reorder": true }
+      }
+    },
+
+    {
+      "id": "block_testimonials",
+      "type": "TestimonialBlock",
+      "variant": "carousel_centered",
+      "props": {
+        "background":              "cream",
+        "show_navigation_dots":    true,
+        "show_navigation_arrows":  true,
+        "quote_mark_style":        "large_decorative",
+        "reveal_animation":        true,
+        "reveal_delay_ms":         100
+      },
+      "content": {
+        "eyebrow": "O que dizem",
+        "title":   "Depoimentos",
+        "items": [
+          {
+            "id":      "t1",
+            "quote":   "Nunca imaginei que fotos poderiam me fazer chorar de emoção. A Camila capturou exatamente o que eu sentia, sem precisar pedir nada.",
+            "author":  "Mariana Oliveira",
+            "service": "Ensaio de Gestante"
+          },
+          {
+            "id":      "t2",
+            "quote":   "A experiência foi incrível do início ao fim. Ficamos completamente à vontade. As fotos ficaram além do que a gente esperava.",
+            "author":  "Rafael & Juliana Costa",
+            "service": "Ensaio de Casal"
+          },
+          {
+            "id":      "t3",
+            "quote":   "Nossa filha mal nasceu e já temos lembranças para a vida inteira. Sensibilidade, cuidado e um olhar que só ela tem.",
+            "author":  "Letícia & Pedro Mendes",
+            "service": "Ensaio Newborn"
+          },
+          {
+            "id":      "t4",
+            "quote":   "Contratei para o aniversário da minha mãe. Ela chorou quando viu as fotos. Obrigada por transformar um dia comum em algo eterno.",
+            "author":  "Fernanda Alves",
+            "service": "Ensaio de Família"
+          }
+        ]
+      },
+      "editable_fields": [
+        "eyebrow", "title",
+        "items[*].quote", "items[*].author", "items[*].service"
+      ],
+      "list_operations": {
+        "items": { "add": true, "remove": true, "reorder": true }
+      }
+    },
+
+    {
+      "id": "block_contact",
+      "type": "CTABlock",
+      "variant": "split_contact",
+      "props": {
+        "background":    "white",
+        "show_divider":  true
+      },
+      "content": {
+        "cta_text": "Vamos criar\nalgo lindo\njuntos?",
+        "phone":    "+55 (51) 98765-4321",
+        "links": [
+          { "id": "l1", "label": "contato@camilaramos.foto",          "href": "mailto:contato@camilaramos.foto",                 "type": "email" },
+          { "id": "l2", "label": "@camilaramosfoto",                   "href": "https://www.instagram.com/camilaramosfoto",       "type": "instagram" },
+          { "id": "l3", "label": "www.camilaramos.foto",               "href": "https://www.camilaramos.foto",                   "type": "website" }
+        ]
+      },
+      "editable_fields": [
+        "cta_text", "phone",
+        "links[*].label", "links[*].href"
+      ]
+    },
+
+    {
+      "id": "block_footer",
+      "type": "FooterTerms",
+      "variant": "minimal_copyright",
+      "props": {
+        "background": "cream"
+      },
+      "content": {
+        "copyright": "© 2026 Camila Ramos Fotografias · Todos os direitos reservados"
+      },
+      "editable_fields": ["copyright"]
+    }
+
+  ]
+}

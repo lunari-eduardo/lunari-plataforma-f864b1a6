@@ -246,6 +246,108 @@ export function PropertiesSidebar({
           </>
         );
 
+      case 'EditorialBlock':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Rótulo Superior (Eyebrow)</Label>
+              <Input 
+                value={block.data.eyebrow || block.content?.eyebrow || ''} 
+                onChange={(e) => handleChange('eyebrow', e.target.value)} 
+                placeholder="Como funciona"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Título Principal</Label>
+              <Input 
+                value={block.data.title || block.content?.title || ''} 
+                onChange={(e) => handleChange('title', e.target.value)} 
+                placeholder="Uma tarde"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Título em Itálico</Label>
+              <Input 
+                value={block.data.title_italic || block.content?.title_italic || ''} 
+                onChange={(e) => handleChange('title_italic', e.target.value)} 
+                placeholder="só sua."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Texto (Corpo)</Label>
+              <Textarea 
+                value={block.data.body || block.content?.body || ''} 
+                onChange={(e) => handleChange('body', e.target.value)} 
+                placeholder="Cada sessão começa com uma conversa..."
+                className="min-h-[100px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Assinatura Vertical</Label>
+              <Input 
+                value={block.data.vertical_label || block.content?.vertical_label || ''} 
+                onChange={(e) => handleChange('vertical_label', e.target.value)} 
+                placeholder="Camila Ramos · Fotografias"
+              />
+            </div>
+            <div className="space-y-4 pt-4 border-t border-border mt-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-xs font-bold uppercase text-foreground tracking-wider">Detalhes</Label>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-7 text-[10px]"
+                  onClick={() => {
+                    const currentDetails = block.data.details || block.content?.details || [];
+                    handleChange('details', [...currentDetails, { id: Date.now().toString(), label: '', value: '' }]);
+                  }}
+                >
+                  + Adicionar
+                </Button>
+              </div>
+              
+              {(block.data.details || block.content?.details || []).map((detail: any, idx: number) => (
+                <div key={detail.id || idx} className="flex gap-2 items-start bg-muted/30 p-2 rounded-md border border-border/50">
+                  <div className="flex-1 space-y-2">
+                    <Input 
+                      placeholder="Rótulo (ex: Duração)" 
+                      value={detail.label || ''}
+                      onChange={(e) => {
+                        const newDetails = [...(block.data.details || block.content?.details || [])];
+                        newDetails[idx] = { ...newDetails[idx], label: e.target.value };
+                        handleChange('details', newDetails);
+                      }}
+                      className="h-8 text-xs bg-background"
+                    />
+                    <Input 
+                      placeholder="Valor (ex: 2 a 8 horas)" 
+                      value={detail.value || ''}
+                      onChange={(e) => {
+                        const newDetails = [...(block.data.details || block.content?.details || [])];
+                        newDetails[idx] = { ...newDetails[idx], value: e.target.value };
+                        handleChange('details', newDetails);
+                      }}
+                      className="h-8 text-xs bg-background font-serif italic"
+                    />
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
+                    onClick={() => {
+                      const newDetails = [...(block.data.details || block.content?.details || [])];
+                      newDetails.splice(idx, 1);
+                      handleChange('details', newDetails);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+
       default:
         return (
           <>
@@ -269,7 +371,24 @@ export function PropertiesSidebar({
     }
   };
 
-  const hasImageField = ['cover', 'about', 'portfolio'].includes(block.type);
+  const hasImageField = ['cover', 'about', 'portfolio', 'EditorialBlock'].includes(block.type);
+
+  const handlePropImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, propName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const url = await uploadAndResizeImage(file);
+      const newProps = { ...(block.props || block.data?.props || {}) };
+      newProps[propName] = { ...(newProps[propName] || {}), image_ref: url };
+      handleChange('props', newProps);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao enviar imagem para a nuvem. Verifique sua conexão e tente novamente.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <>
@@ -302,42 +421,131 @@ export function PropertiesSidebar({
                 <ChevronDown className="h-4 w-4" />
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4 pt-2 pb-4">
-                <div className="space-y-3">
-                  <div className="flex gap-3 items-center">
-                    <div className="h-20 w-32 shrink-0 rounded-lg border border-border bg-muted flex items-center justify-center overflow-hidden">
-                      {block.data.image_url ? (
-                        <img src={block.data.image_url} alt="Cover" className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2 flex-1">
-                      <Label htmlFor={`upload-${blockIndex}`} className="cursor-pointer">
-                        <div className="flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
-                          {isUploading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
-                          Trocar imagem
+                
+                {block.type === 'EditorialBlock' ? (
+                  <div className="space-y-6">
+                    {/* Photo A */}
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold">Foto Principal (Plano de fundo)</Label>
+                      <div className="flex gap-3 items-center">
+                        <div className="h-20 w-32 shrink-0 rounded-lg border border-border bg-muted flex items-center justify-center overflow-hidden">
+                          {(block.props?.photo_a?.image_ref || block.data?.props?.photo_a?.image_ref) ? (
+                            <img src={block.props?.photo_a?.image_ref || block.data?.props?.photo_a?.image_ref} alt="Photo A" className="h-full w-full object-cover" />
+                          ) : (
+                            <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                          )}
                         </div>
-                        <input 
-                          type="file" 
-                          id={`upload-${blockIndex}`}
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          disabled={isUploading}
-                        />
-                      </Label>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full text-xs h-8 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleChange('image_url', '')}
-                      >
-                        Remover
-                      </Button>
+                        <div className="flex flex-col gap-2 flex-1">
+                          <Label htmlFor={`upload-photoa-${blockIndex}`} className="cursor-pointer">
+                            <div className="flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
+                              {isUploading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                              Trocar imagem
+                            </div>
+                            <input 
+                              type="file" 
+                              id={`upload-photoa-${blockIndex}`}
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={(e) => handlePropImageUpload(e, 'photo_a')}
+                              disabled={isUploading}
+                            />
+                          </Label>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full text-xs h-8 text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const newProps = { ...(block.props || block.data?.props || {}) };
+                              newProps.photo_a = { ...newProps.photo_a, image_ref: null };
+                              handleChange('props', newProps);
+                            }}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
                     </div>
+                    {/* Photo B */}
+                    <div className="space-y-3 pt-2 border-t border-border">
+                      <Label className="text-xs font-bold">Foto Sobreposta (Blend)</Label>
+                      <div className="flex gap-3 items-center">
+                        <div className="h-20 w-32 shrink-0 rounded-lg border border-border bg-muted flex items-center justify-center overflow-hidden">
+                          {(block.props?.photo_b?.image_ref || block.data?.props?.photo_b?.image_ref) ? (
+                            <img src={block.props?.photo_b?.image_ref || block.data?.props?.photo_b?.image_ref} alt="Photo B" className="h-full w-full object-cover" />
+                          ) : (
+                            <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 flex-1">
+                          <Label htmlFor={`upload-photob-${blockIndex}`} className="cursor-pointer">
+                            <div className="flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
+                              {isUploading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                              Trocar imagem
+                            </div>
+                            <input 
+                              type="file" 
+                              id={`upload-photob-${blockIndex}`}
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={(e) => handlePropImageUpload(e, 'photo_b')}
+                              disabled={isUploading}
+                            />
+                          </Label>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full text-xs h-8 text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const newProps = { ...(block.props || block.data?.props || {}) };
+                              newProps.photo_b = { ...newProps.photo_b, image_ref: null };
+                              handleChange('props', newProps);
+                            }}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">As imagens serão redimensionadas e otimizadas automaticamente.</p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">A imagem será redimensionada e otimizada (Max 1920px).</p>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex gap-3 items-center">
+                      <div className="h-20 w-32 shrink-0 rounded-lg border border-border bg-muted flex items-center justify-center overflow-hidden">
+                        {block.data.image_url ? (
+                          <img src={block.data.image_url} alt="Cover" className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 flex-1">
+                        <Label htmlFor={`upload-${blockIndex}`} className="cursor-pointer">
+                          <div className="flex h-8 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground">
+                            {isUploading ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                            Trocar imagem
+                          </div>
+                          <input 
+                            type="file" 
+                            id={`upload-${blockIndex}`}
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            disabled={isUploading}
+                          />
+                        </Label>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-xs h-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleChange('image_url', '')}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">A imagem será redimensionada e otimizada (Max 1920px).</p>
+                  </div>
+                )}
               </CollapsibleContent>
             </Collapsible>
           )}

@@ -48,6 +48,7 @@ export default function CompartilhamentosComercialPage() {
 
       // 4. Period
       if (periodFilter !== 'all') {
+        if (!share.sent_at) return false;
         const sentAt = new Date(share.sent_at);
         if (periodFilter === '7d' && !isAfter(sentAt, subDays(new Date(), 7))) return false;
         if (periodFilter === '30d' && !isAfter(sentAt, subDays(new Date(), 30))) return false;
@@ -180,7 +181,10 @@ export default function CompartilhamentosComercialPage() {
                         {share.lead?.nome || <span className="text-muted-foreground italic">Sem lead associado</span>}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                        {format(new Date(share.sent_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {share.sent_at 
+                          ? format(new Date(share.sent_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                          : <span className="italic">Data não disponível</span>
+                        }
                       </td>
                       <td className="px-6 py-4">
                         {share.sessions_count > 0 ? (
