@@ -91,6 +91,22 @@ export default function LeadHistoryPanel({ lead }: LeadHistoryPanelProps) {
             timestamp: session.created_at,
             automatica: true
           });
+
+          if (session.events && session.events.length > 0) {
+            session.events.forEach((evt: any) => {
+              if (evt.event_type === 'cta_click') {
+                events.push({
+                  id: `event-${evt.id}`,
+                  leadId: lead.id,
+                  tipo: 'conversa',
+                  descricao: 'O cliente clicou no WhatsApp',
+                  detalhes: `A partir da proposta: ${share.material?.title || 'Proposta'}`,
+                  timestamp: evt.created_at,
+                  automatica: true
+                });
+              }
+            });
+          }
         });
       }
       

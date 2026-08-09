@@ -18,7 +18,7 @@ export function useLeadShares(leadId: string | undefined) {
           sessions:material_share_sessions(
             id, 
             created_at, 
-            events:material_share_events(event_type, created_at)
+            events:material_share_events(id, event_type, created_at)
           )
         `)
         .eq('lead_id', leadId)
