@@ -122,18 +122,24 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // 4. Se for view_end, atualizar sessão
-    if (event_type === 'view_end') {
+    // 4. Se for view_end ou heartbeat ou qualquer evento que estenda a sessão, atualizar a duração
+    if (event_type === 'view_end' || event_type === 'heartbeat' || event_type === 'scroll_depth' || event_type === 'section_view') {
       const endedAt = new Date();
       const startedAt = new Date(session.started_at);
       const duration = Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000);
       
+      const updateData: any = {
+        duration_seconds: duration > 0 ? duration : 0
+      };
+      
+      // Apenas marca como finalizado no view_end explícito
+      if (event_type === 'view_end') {
+        updateData.ended_at = endedAt.toISOString();
+      }
+
       await supabaseClient
         .from("material_share_sessions")
-        .update({
-          ended_at: endedAt.toISOString(),
-          duration_seconds: duration > 0 ? duration : 0
-        })
+        .update(updateData)
         .eq('id', session.id);
     }
 

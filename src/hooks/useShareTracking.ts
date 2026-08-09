@@ -9,9 +9,9 @@ interface TrackShareEventParams {
 }
 
 export function useShareTracking({ token, slug }: { token?: string, slug?: string }) {
-  // Session token efêmero gerado na montagem e mantido em memória
   const sessionTokenRef = useRef<string>(crypto.randomUUID());
   const maxScrollRef = useRef<number>(0);
+  const heartbeatIntervalRef = useRef<any>(null);
   const trackedScrollLevels = useRef(new Set<number>());
   const viewStartFired = useRef(false);
 
@@ -77,7 +77,15 @@ export function useShareTracking({ token, slug }: { token?: string, slug?: strin
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Heartbeat: Atualiza a duração no servidor a cada 10s caso a aba seja fechada de forma anormal
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        trackEvent('heartbeat' as any); // edge function will just update session duration on any event if we want, or we can add it explicitly
+      }
+    }, 10000);
+
     return () => {
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       trackEvent('view_end');
