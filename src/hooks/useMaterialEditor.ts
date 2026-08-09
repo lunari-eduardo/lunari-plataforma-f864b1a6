@@ -15,7 +15,9 @@ export interface MaterialEditorState {
   versionId: string;
   versionNumber: number;
   isPublished: boolean;
+  format: 'blocks' | 'html';
   blocks: BlockData[];
+  htmlContent?: string;
 }
 
 export function useMaterialEditor(materialId: string | undefined) {
@@ -50,15 +52,26 @@ export function useMaterialEditor(materialId: string | undefined) {
       const version = versions?.[0];
       if (!version) throw new Error('Nenhuma versão encontrada');
 
-      const blocks = Array.isArray(version.content) ? version.content : [];
+      let format: 'blocks' | 'html' = 'blocks';
+      let blocks: BlockData[] = [];
+      let htmlContent: string | undefined = undefined;
 
-      const newState = {
+      if (version.content && typeof version.content === 'object' && !Array.isArray(version.content) && version.content.type === 'html') {
+        format = 'html';
+        htmlContent = version.content.source;
+      } else {
+        blocks = Array.isArray(version.content) ? version.content : [];
+      }
+
+      const newState: MaterialEditorState = {
         materialId: material.id,
         title: material.title,
         versionId: version.id,
         versionNumber: version.version_number,
         isPublished: !!version.published_at,
+        format,
         blocks,
+        htmlContent,
       };
 
       setState(newState);
@@ -90,6 +103,10 @@ export function useMaterialEditor(materialId: string | undefined) {
 
   const updateBlocks = useCallback((newBlocks: BlockData[]) => {
     updateState(prev => ({ ...prev, blocks: newBlocks }));
+  }, [updateState]);
+
+  const updateHtmlContent = useCallback((html: string) => {
+    updateState(prev => ({ ...prev, htmlContent: html }));
   }, [updateState]);
 
   const updateBlock = useCallback((index: number, data: Record<string, any>) => {
@@ -158,9 +175,13 @@ export function useMaterialEditor(materialId: string | undefined) {
     setSaveStatus('saving');
     try {
       // 1. Salvar conteúdo na versão
+      const contentToSave = state.format === 'html' 
+        ? { type: 'html', source: state.htmlContent }
+        : state.blocks;
+
       const { error: verErr } = await (supabase as any)
         .from('material_versions')
-        .update({ content: state.blocks })
+        .update({ content: contentToSave })
         .eq('id', state.versionId);
 
       if (verErr) throw verErr;
@@ -204,9 +225,13 @@ export function useMaterialEditor(materialId: string | undefined) {
         .update({ title: state.title, updated_at: new Date().toISOString() })
         .eq('id', state.materialId);
 
+      const contentToSave = state.format === 'html' 
+        ? { type: 'html', source: state.htmlContent }
+        : state.blocks;
+
       await (supabase as any)
         .from('material_versions')
-        .update({ content: state.blocks, published_at: new Date().toISOString() })
+        .update({ content: contentToSave, published_at: new Date().toISOString() })
         .eq('id', state.versionId);
 
       setState(prev => prev ? { ...prev, isPublished: true } : null);
@@ -228,6 +253,7 @@ export function useMaterialEditor(materialId: string | undefined) {
     saveStatus,
     hasChanges,
     updateBlock,
+    updateHtmlContent,
     addBlock,
     removeBlock,
     moveBlock,

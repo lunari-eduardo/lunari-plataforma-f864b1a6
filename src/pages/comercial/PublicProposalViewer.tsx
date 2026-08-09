@@ -62,7 +62,12 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
     return <Navigate to={`/${result.redirectSlug}`} replace />;
   }
 
-  const { data: blocks, materialInfo, userProfile } = result;
+  const { data: contentData, materialInfo, userProfile } = result;
+  
+  // Detecção de formato
+  const isHtmlFormat = contentData && !Array.isArray(contentData) && contentData.type === 'html';
+  const htmlSource = isHtmlFormat ? contentData.source : '';
+  const blocks = isHtmlFormat ? [] : (contentData || []);
 
   // Lógica do CTA WhatsApp
   const handleWhatsAppClick = () => {
@@ -117,15 +122,28 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col relative pb-24">
-      <VisualRenderer 
-        blocks={blocks || []}
-        activeIndex={-1}
-        onSelectBlock={() => {}}
-        viewMode="desktop"
-        onSectionView={(blockId, blockType, position) => {
-          trackEvent('section_view', { block_id: blockId, block_type: blockType, position });
-        }}
-      />
+      {isHtmlFormat ? (
+        <iframe
+          className="w-full h-screen border-none bg-white"
+          title="Proposta Comercial"
+          srcDoc={htmlSource}
+          sandbox="allow-same-origin allow-scripts allow-popups"
+          onLoad={() => {
+            // Track initial view for HTML templates
+            trackEvent('section_view', { block_id: 'html-template', block_type: 'html', position: 0 });
+          }}
+        />
+      ) : (
+        <VisualRenderer 
+          blocks={blocks}
+          activeIndex={-1}
+          onSelectBlock={() => {}}
+          viewMode="desktop"
+          onSectionView={(blockId, blockType, position) => {
+            trackEvent('section_view', { block_id: blockId, block_type: blockType, position });
+          }}
+        />
+      )}
 
       {/* Floating CTA WhatsApp */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent flex justify-center z-50 pointer-events-none">

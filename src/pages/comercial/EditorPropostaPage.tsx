@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { EditorSidebar } from './components/editor/EditorSidebar';
 import { PropertiesSidebar } from './components/editor/PropertiesSidebar';
 import { VisualRenderer } from './components/editor/VisualRenderer';
+import { HtmlLiveEditor } from './components/editor/HtmlLiveEditor';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -193,51 +194,63 @@ export default function EditorMaterialPage() {
           </div>
         </header>
 
-        {/* WORKSPACE (3 COLUNAS) */}
+        {/* WORKSPACE (3 COLUNAS ou 1 COLUNA dependendo do formato) */}
         <main className="flex flex-1 overflow-hidden relative">
           
-          {/* COLUNA ESQUERDA: ESTRUTURA */}
-          <div className="w-[280px] shrink-0 border-r bg-background flex flex-col z-10">
-            <EditorSidebar
-              blocks={state.blocks}
-              activeIndex={activeIndex}
-              onSelectBlock={handleSelectBlock}
-              onAddBlock={handleAddBlock}
-              onMoveBlock={editor.moveBlock}
-              onReorderBlocks={editor.reorderBlocks}
-            />
-          </div>
-          
-          {/* COLUNA CENTRAL: RENDERIZADOR VISUAL */}
-          <div className="flex-1 overflow-y-auto bg-muted/30 relative flex justify-center custom-scrollbar">
-            <VisualRenderer 
-              blocks={state.blocks}
-              activeIndex={activeIndex}
-              onSelectBlock={handleSelectBlock}
-              viewMode={viewMode}
-            />
-          </div>
-
-          {/* COLUNA DIREITA: PROPRIEDADES (EDIÇÃO CONTEXTUAL) */}
-          <div className="w-[340px] shrink-0 border-l bg-background flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10">
-            {activeBlock ? (
-               <PropertiesSidebar
-                  block={activeBlock}
-                  blockIndex={activeIndex}
-                  onUpdateBlock={editor.updateBlock}
-                  onRemoveBlock={(index) => {
-                    editor.removeBlock(index);
-                    if (activeIndex >= state.blocks.length - 1) {
-                      setActiveIndex(Math.max(0, state.blocks.length - 2));
-                    }
-                  }}
-               />
-            ) : (
-              <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-muted-foreground">
-                Selecione uma seção para editar suas propriedades.
+          {state.format === 'blocks' ? (
+            <>
+              {/* COLUNA ESQUERDA: ESTRUTURA */}
+              <div className="w-[280px] shrink-0 border-r bg-background flex flex-col z-10">
+                <EditorSidebar
+                  blocks={state.blocks}
+                  activeIndex={activeIndex}
+                  onSelectBlock={handleSelectBlock}
+                  onAddBlock={handleAddBlock}
+                  onMoveBlock={editor.moveBlock}
+                  onReorderBlocks={editor.reorderBlocks}
+                />
               </div>
-            )}
-          </div>
+              
+              {/* COLUNA CENTRAL: RENDERIZADOR VISUAL */}
+              <div className="flex-1 overflow-y-auto bg-muted/30 relative flex justify-center custom-scrollbar">
+                <VisualRenderer 
+                  blocks={state.blocks}
+                  activeIndex={activeIndex}
+                  onSelectBlock={handleSelectBlock}
+                  viewMode={viewMode}
+                />
+              </div>
+
+              {/* COLUNA DIREITA: PROPRIEDADES (EDIÇÃO CONTEXTUAL) */}
+              <div className="w-[340px] shrink-0 border-l bg-background flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10">
+                {activeBlock ? (
+                   <PropertiesSidebar
+                      block={activeBlock}
+                      blockIndex={activeIndex}
+                      onUpdateBlock={editor.updateBlock}
+                      onRemoveBlock={(index) => {
+                        editor.removeBlock(index);
+                        if (activeIndex >= state.blocks.length - 1) {
+                          setActiveIndex(Math.max(0, state.blocks.length - 2));
+                        }
+                      }}
+                   />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-muted-foreground">
+                    Selecione uma seção para editar suas propriedades.
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 w-full h-full">
+              <HtmlLiveEditor
+                htmlContent={state.htmlContent || ''}
+                onChange={editor.updateHtmlContent}
+                viewMode={viewMode}
+              />
+            </div>
+          )}
         </main>
       </div>
 
@@ -273,14 +286,28 @@ export default function EditorMaterialPage() {
             </Button>
           </div>
           
-          {/* Reutiliza o VisualRenderer em modo fullscreen */}
+          {/* Renderiza VisualRenderer ou Iframe para Preview */}
           <div className="flex-1 overflow-y-auto bg-muted/30 flex justify-center py-8">
-             <VisualRenderer 
-              blocks={state.blocks}
-              activeIndex={-1} // Sem bloco selecionado no preview
-              onSelectBlock={() => {}}
-              viewMode={viewMode}
-            />
+            {state.format === 'blocks' ? (
+               <VisualRenderer 
+                blocks={state.blocks}
+                activeIndex={-1}
+                onSelectBlock={() => {}}
+                viewMode={viewMode}
+              />
+            ) : (
+              <div className={cn(
+                "bg-white shadow-sm overflow-hidden h-full flex flex-col transition-all duration-300 relative",
+                viewMode === 'mobile' ? 'w-[400px] h-[800px] rounded-[2rem] shadow-2xl border-8 border-border' : 'w-full max-w-[1200px]'
+              )}>
+                <iframe
+                  className="w-full flex-1 border-none bg-white"
+                  title="Live HTML Editor Preview"
+                  sandbox="allow-same-origin allow-scripts"
+                  srcDoc={state.htmlContent}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

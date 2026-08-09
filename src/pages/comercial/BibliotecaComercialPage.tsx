@@ -31,8 +31,16 @@ const MOCK_AI_CONTENT = [
 
 type Categoria = { id: string; nome: string; cor: string | null };
 
+export type HtmlTemplateManifest = {
+  id: string;
+  name: string;
+  description: string;
+  file: string;
+  thumbnail: string;
+};
+
 // Etapas do wizard de criação
-type Step = 'category' | 'method';
+type Step = 'category' | 'method' | 'template-gallery';
 
 export default function BibliotecaComercialPage() {
   const navigate = useNavigate();
@@ -46,7 +54,8 @@ export default function BibliotecaComercialPage() {
   const [step, setStep] = useState<Step>('category');
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
   const [customTitle, setCustomTitle] = useState('');
-  const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | null>(null);
+  const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | 'html-template' | null>(null);
+  const [selectedHtmlTemplate, setSelectedHtmlTemplate] = useState<HtmlTemplateManifest | null>(null);
 
   // Send Modal state
   const [sendModalMaterialId, setSendModalMaterialId] = useState<string | null>(null);
@@ -73,6 +82,17 @@ export default function BibliotecaComercialPage() {
     enabled: !!user?.id && isCreateModalOpen,
   });
 
+  // Busca templates HTML manifest
+  const { data: htmlTemplates = [], isLoading: isLoadingHtmlTemplates } = useQuery({
+    queryKey: ['html-templates-manifest'],
+    queryFn: async () => {
+      const res = await fetch('/templates/manifest.json');
+      if (!res.ok) return [];
+      return (await res.json()) as HtmlTemplateManifest[];
+    },
+    enabled: isCreateModalOpen,
+  });
+
   const handleOpenEditor = (id: string) => {
     navigate(`/app/comercial/construtor/${id}`);
   };
@@ -82,6 +102,7 @@ export default function BibliotecaComercialPage() {
     setSelectedCategoria(null);
     setCustomTitle('');
     setCreationMethod(null);
+    setSelectedHtmlTemplate(null);
   };
 
   const handleCloseModal = () => {
@@ -92,10 +113,24 @@ export default function BibliotecaComercialPage() {
   // O título final: personalizado prevalece; senão, nome da categoria
   const resolvedTitle = customTitle.trim() || selectedCategoria?.nome || '';
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!resolvedTitle || !creationMethod) return;
 
-    const initialContent = creationMethod === 'ai' ? MOCK_AI_CONTENT : undefined;
+    let initialContent: any = undefined;
+    
+    if (creationMethod === 'ai') {
+      initialContent = MOCK_AI_CONTENT;
+    } else if (creationMethod === 'html-template' && selectedHtmlTemplate) {
+      try {
+        const res = await fetch(`/templates/${selectedHtmlTemplate.file}`);
+        if (!res.ok) throw new Error('Falha ao carregar o template HTML');
+        const html = await res.text();
+        initialContent = { type: 'html', source: html };
+      } catch (err) {
+        toast.error('Não foi possível carregar o template selecionado.');
+        return;
+      }
+    }
 
     createMaterial.mutate(
       {
@@ -228,9 +263,9 @@ export default function BibliotecaComercialPage() {
           <DialogHeader>
             <DialogTitle className="text-xl">Nova Proposta</DialogTitle>
             <DialogDescription>
-              {step === 'category'
-                ? 'Selecione a categoria para este material comercial.'
-                : 'Escolha como deseja iniciar a criação.'}
+              {step === 'category' && 'Selecione a categoria para este material comercial.'}
+              {step === 'method' && 'Escolha como deseja iniciar a criação.'}
+              {step === 'template-gallery' && 'Escolha um template da comunidade para iniciar.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -309,13 +344,13 @@ export default function BibliotecaComercialPage() {
                 <span>Título: <strong className="text-foreground">{resolvedTitle}</strong></span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Card IA */}
                 <button
                   type="button"
                   onClick={() => setCreationMethod('ai')}
                   className={cn(
-                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all',
+                    'flex flex-col items-start gap-3 p-4 rounded-xl border-2 text-left transition-all',
                     creationMethod === 'ai'
                       ? 'border-primary bg-primary/5'
                       : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
@@ -325,19 +360,19 @@ export default function BibliotecaComercialPage() {
                     <Sparkles className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Gerar com IA</h3>
+                    <h3 className="font-semibold text-foreground text-sm">Gerar com IA</h3>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      A inteligência artificial cria a estrutura inicial para você.
+                      A inteligência artificial cria a estrutura.
                     </p>
                   </div>
                 </button>
 
-                {/* Card Template */}
+                {/* Card Template Visual */}
                 <button
                   type="button"
                   onClick={() => setCreationMethod('template')}
                   className={cn(
-                    'flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all',
+                    'flex flex-col items-start gap-3 p-4 rounded-xl border-2 text-left transition-all',
                     creationMethod === 'template'
                       ? 'border-primary bg-primary/5'
                       : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
@@ -347,13 +382,78 @@ export default function BibliotecaComercialPage() {
                     <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">Usar Modelo Padrão</h3>
+                    <h3 className="font-semibold text-foreground text-sm">Em Branco (Blocos)</h3>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Comece com uma estrutura limpa e preencha manualmente.
+                      Comece com uma estrutura limpa em blocos.
+                    </p>
+                  </div>
+                </button>
+                
+                {/* Card Template HTML da Comunidade */}
+                <button
+                  type="button"
+                  onClick={() => setCreationMethod('html-template')}
+                  className={cn(
+                    'flex flex-col items-start gap-3 p-4 rounded-xl border-2 text-left transition-all',
+                    creationMethod === 'html-template'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:border-primary/40 hover:bg-muted/50'
+                  )}
+                >
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <LayoutTemplate className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm">Templates HTML</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Use modelos premium visuais da comunidade.
                     </p>
                   </div>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* ─── PASSO 3: Galeria de Templates HTML ─── */}
+          {step === 'template-gallery' && (
+            <div className="py-4 space-y-4 animate-in slide-in-from-right-4 fade-in duration-200">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                <button
+                  type="button"
+                  onClick={() => setStep('method')}
+                  className="hover:text-foreground transition-colors underline underline-offset-2"
+                >
+                  ← Voltar
+                </button>
+              </div>
+
+              {isLoadingHtmlTemplates ? (
+                <div className="flex justify-center p-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
+              ) : htmlTemplates.length === 0 ? (
+                <div className="text-center p-8 text-muted-foreground">Nenhum template encontrado.</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-1">
+                  {htmlTemplates.map(template => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => setSelectedHtmlTemplate(template)}
+                      className={cn(
+                        'flex flex-col rounded-xl border-2 overflow-hidden text-left transition-all',
+                        selectedHtmlTemplate?.id === template.id
+                          ? 'border-primary ring-2 ring-primary/20'
+                          : 'border-border hover:border-primary/50'
+                      )}
+                    >
+                      <img src={template.thumbnail} alt={template.name} className="w-full h-32 object-cover" />
+                      <div className="p-3 bg-card">
+                        <h4 className="font-medium text-sm text-foreground">{template.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -373,12 +473,29 @@ export default function BibliotecaComercialPage() {
 
             {step === 'method' && (
               <Button
-                onClick={handleCreate}
+                onClick={() => {
+                  if (creationMethod === 'html-template') {
+                    setStep('template-gallery');
+                  } else {
+                    handleCreate();
+                  }
+                }}
                 disabled={!resolvedTitle || !creationMethod || createMaterial.isPending}
                 className="gap-2"
               >
                 {createMaterial.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                {creationMethod === 'ai' ? 'Gerar Proposta' : 'Criar Proposta'}
+                {creationMethod === 'html-template' ? 'Avançar' : (creationMethod === 'ai' ? 'Gerar Proposta' : 'Criar Proposta')}
+              </Button>
+            )}
+
+            {step === 'template-gallery' && (
+              <Button
+                onClick={handleCreate}
+                disabled={!selectedHtmlTemplate || createMaterial.isPending}
+                className="gap-2"
+              >
+                {createMaterial.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Usar Template Selecionado
               </Button>
             )}
           </DialogFooter>

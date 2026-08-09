@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacotes & Preços — Camila Ramos Fotografia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ─── RESET & TOKENS ─────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cream:  #F3F0EA;
+  --linen:  #E8E3DA;
+  --stone:  #C9BFB2;
+  --taupe:  #8C7B6E;
+  --sienna: #7A5C42;
+  --ink:    #1A1714;
+  --white:  #FFFFFF;
+
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans:  'Jost', system-ui, sans-serif;
+
+  --max: 900px;
+  --pad: clamp(1.25rem, 5vw, 3.5rem);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 300;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── COVER ─────────────────────────────────────── */
+.cover {
+  position: relative;
+  height: 100svh;
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: clip;
+}
+
+.cover__bg {
+  position: absolute;
+  inset: -30% 0;
+  will-change: transform;
+  background:
+    linear-gradient(180deg,
+      #201510 0%,
+      #3d2b1b 30%,
+      #7d5c3a 58%,
+      #c29b6e 80%,
+      #e8cfa8 100%);
+}
+
+@keyframes kenburns {
+  0%   { transform: translateY(0)   scale(1);    }
+  50%  { transform: translateY(-4%) scale(1.06); }
+  100% { transform: translateY(0)   scale(1);    }
+}
+
+.cover__bg { animation: kenburns 18s ease-in-out infinite; }
+
+@supports (animation-timeline: scroll()) {
+  @keyframes parallax-bg {
+    from { transform: translateY(0)   scale(1.06); }
+    to   { transform: translateY(28%) scale(1.06); }
+  }
+  .cover__bg {
+    animation: parallax-bg linear;
+    animation-timeline: scroll(root);
+    animation-range: 0px 100vh;
+  }
+}
+
+.cover__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom,
+      rgba(15,9,4,.45) 0%,
+      rgba(15,9,4,.10) 40%,
+      rgba(15,9,4,.55) 100%),
+    radial-gradient(ellipse 80% 70% at 50% 55%,
+      transparent 30%, rgba(15,9,4,.4) 100%);
+}
+
+.cover__content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform;
+}
+
+@supports (animation-timeline: scroll()) {
+  @keyframes parallax-fg {
+    from { transform: translateY(0);    opacity: 1; }
+    to   { transform: translateY(-18%); opacity: 0; }
+  }
+  .cover__content {
+    animation: parallax-fg linear;
+    animation-timeline: scroll(root);
+    animation-range: 0px 70vh;
+  }
+}
+
+.cover__label {
+  font-family: var(--sans);
+  font-size: .65rem;
+  font-weight: 500;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  margin-bottom: 1.8rem;
+}
+
+.cover__title {
+  font-family: var(--serif);
+  font-size: clamp(3.5rem, 14vw, 9rem);
+  font-weight: 300;
+  line-height: .92;
+  letter-spacing: .03em;
+  color: #fff;
+}
+
+.cover__title i {
+  font-style: italic;
+  color: rgba(255,255,255,.65);
+}
+
+.cover__scroll-hint {
+  margin-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  opacity: .45;
+  animation: bounce-arrow 2s ease-in-out infinite;
+}
+
+@keyframes bounce-arrow {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(6px); }
+}
+
+.cover__scroll-hint span {
+  font-family: var(--sans);
+  font-size: .55rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.cover__scroll-hint svg { stroke: #fff; }
+
+.cover__name {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1rem;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.45);
+  white-space: nowrap;
+}
+
+.cover__bg.js-parallax {
+  animation: kenburns 18s ease-in-out infinite;
+  transition: transform .05s linear;
+}
+
+/* ─── SECTION WRAPPER ───────────────────────────── */
+.section { padding: clamp(4rem, 8vw, 7rem) var(--pad); }
+.section--white { background: var(--white); }
+.section--cream { background: var(--cream); }
+.section--dark  { background: var(--ink); }
+
+.section__inner {
+  max-width: var(--max);
+  margin: 0 auto;
+}
+
+/* ─── SECTION HEADER ────────────────────────────── */
+.s-header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.s-header__eye {
+  display: block;
+  font-family: var(--sans);
+  font-size: .62rem;
+  font-weight: 500;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--taupe);
+  margin-bottom: .9rem;
+}
+
+.s-header__title {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 7vw, 5rem);
+  font-weight: 300;
+  letter-spacing: .03em;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.s-header__rule {
+  width: 36px;
+  height: 1px;
+  background: var(--sienna);
+  margin: 1.2rem auto 0;
+  opacity: .6;
+}
+
+/* ─── PORTFOLIO GRID ────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 220px 200px 200px;
+  gap: 7px;
+}
+
+.grid__item { overflow: hidden; border-radius: 2px; }
+
+.gi-a { grid-column: 1; grid-row: 1 / 3; }
+.gi-b { grid-column: 2; grid-row: 1; }
+.gi-c { grid-column: 3; grid-row: 1; }
+.gi-d { grid-column: 2 / 4; grid-row: 2; }
+.gi-e { grid-column: 1; grid-row: 3; }
+.gi-f { grid-column: 2; grid-row: 3; }
+.gi-g { grid-column: 3; grid-row: 3; }
+
+.grid__ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--sans);
+  font-size: .55rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  transition: filter .35s;
+}
+
+.grid__ph:hover { filter: brightness(1.08); }
+.grid__ph span { color: rgba(255,255,255,.35); }
+
+.ph1 { background: #2f2318; }
+.ph2 { background: #3d2e20; }
+.ph3 { background: #967255; }
+.ph4 { background: #4a3628; }
+.ph5 { background: #7e6047; }
+.ph6 { background: #2a1e14; }
+.ph7 { background: #b0906e; }
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(4, 160px);
+  }
+  .gi-a { grid-column: 1; grid-row: 1; }
+  .gi-b { grid-column: 2; grid-row: 1; }
+  .gi-c { grid-column: 1; grid-row: 2; }
+  .gi-d { grid-column: 2; grid-row: 2; }
+  .gi-e { grid-column: 1; grid-row: 3; }
+  .gi-f { grid-column: 2; grid-row: 3; }
+  .gi-g { grid-column: 1 / 3; grid-row: 4; }
+}
+
+/* ─── DIVIDER ───────────────────────────────────── */
+.pulse-line {
+  display: block;
+  width: 1px;
+  height: 72px;
+  background: linear-gradient(to bottom, transparent, var(--stone), transparent);
+  margin: 0 auto;
+}
+
+/* ─── PACKAGE LIST ───────────────────────────────── */
+.pkg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pkg {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: start;
+  gap: 2rem;
+  padding: 2.4rem 0;
+  border-top: 1px solid var(--linen);
+}
+
+.pkg:last-child { border-bottom: 1px solid var(--linen); }
+
+.pkg__name {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+  font-weight: 400;
+  color: var(--sienna);
+  letter-spacing: .01em;
+}
+
+.pkg__price {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+  font-weight: 300;
+  color: var(--ink);
+  line-height: 1.1;
+  margin-top: .3rem;
+}
+
+.pkg__price small {
+  font-family: var(--sans);
+  font-size: .7em;
+  font-weight: 300;
+  color: var(--taupe);
+  letter-spacing: .04em;
+}
+
+.pkg__badge {
+  display: inline-block;
+  margin-top: .7rem;
+  font-family: var(--sans);
+  font-size: .58rem;
+  font-weight: 500;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--taupe);
+  background: var(--linen);
+  padding: .25rem .65rem;
+  border-radius: 2px;
+}
+
+.pkg__features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.pkg__features li {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  font-size: .78rem;
+  color: var(--taupe);
+  letter-spacing: .03em;
+}
+
+.pkg__features li::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 1px;
+  background: var(--stone);
+  flex-shrink: 0;
+  margin-top: .55em;
+}
+
+.pkg__photo {
+  width: clamp(100px, 16vw, 150px);
+  aspect-ratio: 3 / 4;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pkg__photo div { width: 100%; height: 100%; }
+
+.pp1 { background: linear-gradient(160deg, #c9a67a 0%, #8c6441 100%); }
+.pp2 { background: linear-gradient(160deg, #7a5432 0%, #3d2010 100%); }
+.pp3 { background: linear-gradient(160deg, #3d2b18 0%, #b0886a 100%); }
+
+@media (max-width: 680px) {
+  .pkg {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+  .pkg__photo { width: 100%; aspect-ratio: 16/9; }
+}
+
+/* ─── CONTACT ────────────────────────────────────── */
+.contact {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 3rem;
+  align-items: center;
+  padding: clamp(3rem, 6vw, 5rem) 0;
+  border-top: 1px solid var(--linen);
+  border-bottom: 1px solid var(--linen);
+}
+
+.contact__divider {
+  width: 1px;
+  height: 100%;
+  min-height: 80px;
+  background: var(--linen);
+}
+
+@media (max-width: 580px) {
+  .contact {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .contact__divider { display: none; }
+}
+
+.contact__cta {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.contact__details {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.contact__phone {
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: .08em;
+  color: var(--ink);
+}
+
+.contact__links {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  margin-top: .2rem;
+}
+
+.contact__links a {
+  font-family: var(--sans);
+  font-size: .7rem;
+  font-weight: 300;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--taupe);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color .2s, border-color .2s;
+  width: fit-content;
+}
+
+.contact__links a:hover {
+  color: var(--sienna);
+  border-color: var(--sienna);
+}
+
+/* ─── FOOTER ─────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 2rem var(--pad) 3rem;
+}
+
+footer p {
+  font-size: .6rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+/* ═══════════════════════════════════════════════════
+   NOVOS ESTILOS ABAIXO
+   ═══════════════════════════════════════════════════ */
+
+/* ─── REVEAL ON SCROLL ──────────────────────────── */
+/* Só ativa se JS rodou (evita conteúdo invisível sem JS) */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .75s ease, transform .75s ease;
+}
+
+.js .reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── EDITORIAL: SOBRE A SESSÃO ─────────────────── */
+.editorial__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2.5rem, 6vw, 6rem);
+  align-items: center;
+}
+
+/* Composição "foto sobre foto" */
+.editorial__visual {
+  position: relative;
+  height: clamp(360px, 48vw, 520px);
+}
+
+/* Foto A — plano de fundo, tom quente médio */
+.editorial__photo--a {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 72%;
+  height: 80%;
+  border-radius: 3px;
+  background: linear-gradient(148deg, #96724e 0%, #5c3720 50%, #3d2010 100%);
+}
+
+/* Foto B — sobreposta, canto inferior direito, screen blend */
+.editorial__photo--b {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 62%;
+  height: 66%;
+  border-radius: 3px;
+  background: linear-gradient(148deg, #e8d0a8 0%, #c29870 40%, #8c6040 100%);
+  mix-blend-mode: screen;
+}
+
+/* Rótulo vertical editorial — sutil, quase invisível */
+.editorial__vertical-label {
+  position: absolute;
+  bottom: 2rem;
+  left: -1.2rem;
+  font-family: var(--sans);
+  font-size: .5rem;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.2);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  user-select: none;
+}
+
+/* Painel de texto da sessão */
+.editorial__eye {
+  display: block;
+  font-family: var(--sans);
+  font-size: .6rem;
+  font-weight: 500;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.3);
+  margin-bottom: 1rem;
+}
+
+.editorial__title {
+  font-family: var(--serif);
+  font-size: clamp(2.2rem, 5.5vw, 4rem);
+  font-weight: 300;
+  line-height: 1.02;
+  letter-spacing: .03em;
+  color: #fff;
+  margin-bottom: 2.4rem;
+}
+
+.editorial__title em {
+  font-style: italic;
+  color: rgba(255,255,255,.45);
+}
+
+/* Detalhes da sessão em linhas */
+.editorial__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 2.2rem;
+}
+
+.editorial__detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding: .7rem 0;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.editorial__detail:first-child { border-top: 1px solid rgba(255,255,255,.07); }
+
+.editorial__detail-label {
+  font-family: var(--sans);
+  font-size: .58rem;
+  font-weight: 500;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.3);
+  white-space: nowrap;
+}
+
+.editorial__detail-value {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 300;
+  color: rgba(255,255,255,.75);
+  text-align: right;
+}
+
+.editorial__body {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(.95rem, 2.2vw, 1.1rem);
+  font-weight: 300;
+  line-height: 1.7;
+  color: rgba(255,255,255,.4);
+}
+
+@media (max-width: 680px) {
+  .editorial__grid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+  .editorial__visual { height: 280px; }
+  .editorial__vertical-label { display: none; }
+}
+
+/* ─── DEPOIMENTOS ───────────────────────────────── */
+.testimonials__wrapper { position: relative; }
+
+.testimonials-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.testimonials-track::-webkit-scrollbar { display: none; }
+
+.testimonial {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  padding: clamp(1rem, 4vw, 2.5rem) 0;
+  text-align: center;
+}
+
+/* Aspas decorativas */
+.testimonial blockquote::before {
+  content: '\201C';
+  display: block;
+  font-family: var(--serif);
+  font-size: clamp(3rem, 8vw, 5rem);
+  line-height: .8;
+  color: var(--linen);
+  margin-bottom: .5rem;
+  pointer-events: none;
+}
+
+.testimonial blockquote p {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.25rem, 3vw, 1.85rem);
+  font-weight: 300;
+  line-height: 1.55;
+  color: var(--ink);
+  max-width: 640px;
+  margin: 0 auto 2rem;
+}
+
+.testimonial figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+}
+
+/* Linha ornamental antes do nome */
+.testimonial figcaption::before {
+  content: '';
+  display: block;
+  width: 28px;
+  height: 1px;
+  background: var(--sienna);
+  opacity: .5;
+  margin-bottom: .5rem;
+}
+
+.testimonial__name {
+  font-family: var(--sans);
+  font-size: .65rem;
+  font-weight: 500;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--sienna);
+}
+
+.testimonial__service {
+  font-family: var(--sans);
+  font-size: .58rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--stone);
+}
+
+/* Navegação do carrossel */
+.testimonials-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.tc-btn {
+  background: none;
+  border: 1px solid var(--linen);
+  color: var(--taupe);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+  flex-shrink: 0;
+}
+
+.tc-btn:hover { border-color: var(--sienna); color: var(--sienna); }
+.tc-btn:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; }
+
+.testimonials-dots { display: flex; gap: .55rem; align-items: center; }
+
+.tc-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--stone);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background .25s, transform .25s;
+  flex-shrink: 0;
+}
+
+.tc-dot.active {
+  background: var(--sienna);
+  transform: scale(1.5);
+}
+
+.tc-dot:focus-visible { outline: 2px solid var(--sienna); outline-offset: 3px; border-radius: 50%; }
+
+/* ─── A11Y ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .cover__bg { inset: 0; transform: none !important; }
+  .cover__content { transform: none !important; opacity: 1 !important; }
+  .cover__scroll-hint { animation: none !important; }
+  /* Mostra tudo imediatamente em prefer-reduced */
+  .js .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--sienna);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+
+<!-- ════════════════════════════ COVER ══ -->
+<header class="cover">
+  <div class="cover__bg" id="cover-bg" aria-hidden="true"></div>
+
+  <div class="cover__content">
+    <p class="cover__label">Pacotes &amp; Preços · 2026</p>
+    <h1 class="cover__title">Foto<i>grafia</i></h1>
+
+    <div class="cover__scroll-hint" aria-hidden="true">
+      <span>scroll</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke-width="1.5">
+        <path d="M8 3v10M4 9l4 4 4-4"/>
+      </svg>
+    </div>
+  </div>
+
+  <p class="cover__name">Camila Ramos — Fotografias</p>
+</header>
+
+
+<!-- ════════════════════════ PORTFOLIO ══ -->
+<section class="section section--cream" aria-label="Portfólio">
+  <div class="section__inner">
+
+    <header class="s-header">
+      <span class="s-header__eye">Nosso trabalho</span>
+      <h2 class="s-header__title">Portfólio</h2>
+      <p style="font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--taupe);margin-top:.6rem;">
+        Momentos que ficam para sempre
+      </p>
+      <div class="s-header__rule"></div>
+    </header>
+
+    <div class="grid" role="list" aria-label="Galeria de trabalhos">
+      <div class="grid__item gi-a" role="listitem"><div class="grid__ph ph1"><span>foto</span></div></div>
+      <div class="grid__item gi-b" role="listitem"><div class="grid__ph ph3"><span>foto</span></div></div>
+      <div class="grid__item gi-c" role="listitem"><div class="grid__ph ph7"><span>foto</span></div></div>
+      <div class="grid__item gi-d" role="listitem"><div class="grid__ph ph4"><span>foto</span></div></div>
+      <div class="grid__item gi-e" role="listitem"><div class="grid__ph ph5"><span>foto</span></div></div>
+      <div class="grid__item gi-f" role="listitem"><div class="grid__ph ph6"><span>foto</span></div></div>
+      <div class="grid__item gi-g" role="listitem"><div class="grid__ph ph2"><span>foto</span></div></div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════ EDITORIAL · SOBRE A SESSÃO ══ -->
+<!-- Seção escura com efeito "foto sobre foto" (mix-blend-mode: screen) -->
+<section class="section section--dark" aria-label="Sobre a sessão">
+  <div class="section__inner">
+    <div class="editorial__grid">
+
+      <!-- Composição visual: duas fotos sobrepostas com blend -->
+      <div class="editorial__visual reveal" data-delay="0">
+        <div class="editorial__photo editorial__photo--a" aria-hidden="true"></div>
+        <div class="editorial__photo editorial__photo--b" aria-hidden="true"></div>
+        <p class="editorial__vertical-label" aria-hidden="true">Camila Ramos · Fotografias · 2026</p>
+      </div>
+
+      <!-- Informações da sessão -->
+      <div class="editorial__text">
+
+        <span class="editorial__eye reveal" data-delay="80">Como funciona</span>
+        <h2 class="editorial__title reveal" data-delay="130">
+          Uma tarde<br><em>só sua.</em>
+        </h2>
+
+        <div class="editorial__details">
+          <div class="editorial__detail reveal" data-delay="180">
+            <span class="editorial__detail-label">Duração</span>
+            <span class="editorial__detail-value">2 a 8 horas</span>
+          </div>
+          <div class="editorial__detail reveal" data-delay="230">
+            <span class="editorial__detail-label">Local</span>
+            <span class="editorial__detail-value">Estúdio ou externo</span>
+          </div>
+          <div class="editorial__detail reveal" data-delay="280">
+            <span class="editorial__detail-label">Entrega</span>
+            <span class="editorial__detail-value">7 a 15 dias úteis</span>
+          </div>
+          <div class="editorial__detail reveal" data-delay="330">
+            <span class="editorial__detail-label">Fotos editadas</span>
+            <span class="editorial__detail-value">20 a 100 imagens</span>
+          </div>
+        </div>
+
+        <p class="editorial__body reveal" data-delay="200">
+          Cada sessão começa com uma conversa sobre o que você quer guardar.
+          Sem pressa, sem poses ensaiadas — apenas o seu momento
+          e a luz certa para ele.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════ PRICING ══ -->
+<section class="section section--white" aria-label="Tabela de preços">
+  <div class="section__inner">
+
+    <header class="s-header">
+      <span class="s-header__eye">Tabela de Valores</span>
+      <h2 class="s-header__title">Pacotes</h2>
+    </header>
+
+    <div class="pkg-list">
+
+      <article class="pkg">
+        <div class="pkg__identity">
+          <h3 class="pkg__name">Pacote Essencial</h3>
+          <p class="pkg__price">R$ 890 <small>/ sessão</small></p>
+          <span class="pkg__badge">Ideal para ensaios rápidos</span>
+        </div>
+        <ul class="pkg__features" aria-label="O que está incluído">
+          <li>2 horas de cobertura</li>
+          <li>1 fotógrafa</li>
+          <li>20 fotos editadas</li>
+          <li>Galeria online privada</li>
+          <li>Entrega em 15 dias úteis</li>
+          <li>1 impressão 20×30 cm</li>
+        </ul>
+        <div class="pkg__photo" aria-hidden="true"><div class="pp1"></div></div>
+      </article>
+
+      <article class="pkg">
+        <div class="pkg__identity">
+          <h3 class="pkg__name">Pacote Clássico</h3>
+          <p class="pkg__price">R$ 1.490 <small>/ sessão</small></p>
+          <span class="pkg__badge">O mais escolhido</span>
+        </div>
+        <ul class="pkg__features" aria-label="O que está incluído">
+          <li>4 horas de cobertura</li>
+          <li>1 fotógrafa</li>
+          <li>50 fotos editadas</li>
+          <li>Galeria online privada</li>
+          <li>Entrega em 10 dias úteis</li>
+          <li>2 impressões 30×40 cm</li>
+        </ul>
+        <div class="pkg__photo" aria-hidden="true"><div class="pp2"></div></div>
+      </article>
+
+      <article class="pkg">
+        <div class="pkg__identity">
+          <h3 class="pkg__name">Pacote Premium</h3>
+          <p class="pkg__price">R$ 2.800 <small>/ sessão</small></p>
+          <span class="pkg__badge">Experiência completa</span>
+        </div>
+        <ul class="pkg__features" aria-label="O que está incluído">
+          <li>8 horas de cobertura</li>
+          <li>2 fotógrafas</li>
+          <li>100 fotos editadas</li>
+          <li>Galeria online + pendrive</li>
+          <li>Entrega em 7 dias úteis</li>
+          <li>Álbum impresso 30×30 cm</li>
+        </ul>
+        <div class="pkg__photo" aria-hidden="true"><div class="pp3"></div></div>
+      </article>
+
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════ DEPOIMENTOS ══ -->
+<!-- Carrossel CSS (scroll-snap) + navegação leve via JS -->
+<section class="section section--cream" aria-label="Depoimentos de clientes">
+  <div class="section__inner">
+
+    <header class="s-header reveal" data-delay="0">
+      <span class="s-header__eye">O que dizem</span>
+      <h2 class="s-header__title">Depoimentos</h2>
+      <div class="s-header__rule"></div>
+    </header>
+
+    <div class="testimonials__wrapper reveal" data-delay="100">
+
+      <div class="testimonials-track" id="tc-track" role="list" aria-label="Depoimentos de clientes">
+
+        <figure class="testimonial" role="listitem">
+          <blockquote>
+            <p>Nunca imaginei que fotos poderiam me fazer chorar de emoção. A Camila capturou exatamente o que eu sentia, sem precisar pedir nada.</p>
+          </blockquote>
+          <figcaption>
+            <span class="testimonial__name">Mariana Oliveira</span>
+            <span class="testimonial__service">Ensaio de Gestante</span>
+          </figcaption>
+        </figure>
+
+        <figure class="testimonial" role="listitem">
+          <blockquote>
+            <p>A experiência foi incrível do início ao fim. Ficamos completamente à vontade. As fotos ficaram além do que a gente esperava.</p>
+          </blockquote>
+          <figcaption>
+            <span class="testimonial__name">Rafael & Juliana Costa</span>
+            <span class="testimonial__service">Ensaio de Casal</span>
+          </figcaption>
+        </figure>
+
+        <figure class="testimonial" role="listitem">
+          <blockquote>
+            <p>Nossa filha mal nasceu e já temos lembranças para a vida inteira. Sensibilidade, cuidado e um olhar que só ela tem.</p>
+          </blockquote>
+          <figcaption>
+            <span class="testimonial__name">Letícia & Pedro Mendes</span>
+            <span class="testimonial__service">Ensaio Newborn</span>
+          </figcaption>
+        </figure>
+
+        <figure class="testimonial" role="listitem">
+          <blockquote>
+            <p>Contratei para o aniversário da minha mãe. Ela chorou quando viu as fotos. Obrigada por transformar um dia comum em algo eterno.</p>
+          </blockquote>
+          <figcaption>
+            <span class="testimonial__name">Fernanda Alves</span>
+            <span class="testimonial__service">Ensaio de Família</span>
+          </figcaption>
+        </figure>
+
+      </div>
+
+      <!-- Navegação: setas + pontos -->
+      <nav class="testimonials-nav" aria-label="Navegação de depoimentos">
+        <button class="tc-btn" id="tc-prev" aria-label="Depoimento anterior">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M8 2L3 6.5 8 11"/>
+          </svg>
+        </button>
+        <div class="testimonials-dots" id="tc-dots" role="tablist" aria-label="Escolher depoimento"></div>
+        <button class="tc-btn" id="tc-next" aria-label="Próximo depoimento">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M5 2l5 4.5L5 11"/>
+          </svg>
+        </button>
+      </nav>
+
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════ DIVIDER ══ -->
+<div aria-hidden="true" style="padding: 1.5rem 0; background: var(--white);">
+  <span class="pulse-line"></span>
+</div>
+
+
+<!-- ════════════════════════ CONTACT ══ -->
+<section class="section section--white" style="padding-top: 0;" aria-label="Contato">
+  <div class="section__inner">
+    <div class="contact">
+
+      <h2 class="contact__cta">
+        Vamos criar<br>algo lindo<br>juntos?
+      </h2>
+
+      <div class="contact__divider" aria-hidden="true"></div>
+
+      <div class="contact__details">
+        <p class="contact__phone">+55 (51) 98765-4321</p>
+        <div class="contact__links">
+          <a href="mailto:contato@camilaramos.foto">contato@camilaramos.foto</a>
+          <a href="https://www.instagram.com/camilaramosfoto" target="_blank" rel="noopener">@camilaramosfoto</a>
+          <a href="https://www.camilaramos.foto" target="_blank" rel="noopener">www.camilaramos.foto</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ════════════════════════ FOOTER ══ -->
+<footer>
+  <p>© 2026 Camila Ramos Fotografias · Todos os direitos reservados</p>
+</footer>
+
+
+<script>
+/* ──────────────────────────────────────────
+   Ativa animações de reveal via classe no body
+   (sem JS = elementos ficam visíveis normalmente)
+─────────────────────────────────────────── */
+document.body.classList.add('js');
+
+/* ── Reveal on Scroll (IntersectionObserver) ──
+   Leve: zero bibliotecas, uma única instância.
+   Dispara uma vez por elemento e para de observar. */
+(function () {
+  const els = document.querySelectorAll('.reveal');
+  if (!els.length || !('IntersectionObserver' in window)) {
+    // Fallback: mostra tudo imediatamente
+    els.forEach(el => el.classList.add('is-visible'));
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const delay = parseInt(entry.target.dataset.delay || '0', 10);
+      setTimeout(() => {
+        entry.target.classList.add('is-visible');
+      }, delay);
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.12 });
+
+  els.forEach(el => observer.observe(el));
+})();
+
+/* ── Parallax fallback (iOS Safari, Firefox sem flag) ──
+   Só roda se scroll-driven CSS não está disponível.   */
+(function () {
+  const supportsScrollTimeline = CSS.supports('animation-timeline', 'scroll()');
+  if (supportsScrollTimeline) return;
+
+  const bg = document.getElementById('cover-bg');
+  if (!bg) return;
+
+  bg.classList.add('js-parallax');
+  const SPEED = 0.35;
+  let ticking = false;
+
+  function update() {
+    bg.style.transform = `translateY(${window.scrollY * SPEED}px) scale(1.06)`;
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(update); ticking = true; }
+  }, { passive: true });
+})();
+
+/* ── Carrossel de Depoimentos ──────────────────────
+   CSS scroll-snap cuida do comportamento visual.
+   JS só gerencia estado (qual slide está ativo)
+   e os botões/pontos de navegação.               */
+(function () {
+  const track  = document.getElementById('tc-track');
+  const dotsEl = document.getElementById('tc-dots');
+  const btnPrev = document.getElementById('tc-prev');
+  const btnNext = document.getElementById('tc-next');
+
+  if (!track || !dotsEl) return;
+
+  const slides = Array.from(track.querySelectorAll('.testimonial'));
+  let current = 0;
+
+  /* Cria os pontos de navegação dinamicamente */
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'tc-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', `Depoimento ${i + 1} de ${slides.length}`);
+    dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    dot.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(dot);
+  });
+
+  function goTo(index) {
+    current = ((index % slides.length) + slides.length) % slides.length;
+    /* Scroll preciso: usa offsetWidth do track para calcular posição */
+    track.scrollTo({ left: current * track.offsetWidth, behavior: 'smooth' });
+    updateDots();
+  }
+
+  function updateDots() {
+    const dots = dotsEl.querySelectorAll('.tc-dot');
+    dots.forEach((d, i) => {
+      const active = i === current;
+      d.classList.toggle('active', active);
+      d.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  btnPrev?.addEventListener('click', () => goTo(current - 1));
+  btnNext?.addEventListener('click', () => goTo(current + 1));
+
+  /* Detecta swipe/scroll manual e sincroniza o ponto ativo */
+  let scrollTimer;
+  track.addEventListener('scroll', () => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const snapped = Math.round(track.scrollLeft / track.offsetWidth);
+      if (snapped !== current) { current = snapped; updateDots(); }
+    }, 80);
+  }, { passive: true });
+})();
+</script>
+
+</body>
+</html>
