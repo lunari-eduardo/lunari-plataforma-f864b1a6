@@ -32,8 +32,10 @@ export interface MaterialCardProps {
   coverUrl?: string | null;
   onOpen: (id: string) => void;
   onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
   onSend: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onViewShares: () => void;
 }
 
 export function MaterialCard({
@@ -47,7 +49,8 @@ export function MaterialCard({
   onArchive,
   onDelete,
   onSend,
-  onDuplicate
+  onDuplicate,
+  onViewShares
 }: MaterialCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -126,15 +129,15 @@ export function MaterialCard({
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <History className="mr-2 h-4 w-4" />
-                Histórico de Versões
+                Histórico de Versões <span className="ml-2 text-[10px] text-muted-foreground">(Em breve)</span>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => onViewShares()} className="font-medium">
                 <Share2 className="mr-2 h-4 w-4" />
                 Compartilhamentos
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <BarChart2 className="mr-2 h-4 w-4" />
-                Analytics
+                Analytics <span className="ml-2 text-[10px] text-muted-foreground">(Em breve)</span>
               </DropdownMenuItem>
               
               <DropdownMenuSeparator />

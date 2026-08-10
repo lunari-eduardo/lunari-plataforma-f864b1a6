@@ -142,6 +142,13 @@ export function useMaterials() {
       queryClient.invalidateQueries({ queryKey: ['commercial-materials'] });
       toast.success('Material excluído permanentemente.');
     },
+    onError: (err: any) => {
+      if (err?.code === '23503' || err?.message?.includes('violates foreign key constraint') || err?.status === 409) {
+        toast.error('Esta proposta possui histórico e não pode ser apagada. Tente arquivá-la.', { duration: 6000 });
+      } else {
+        toast.error('Erro ao excluir material: ' + (err.message || 'Tente novamente'));
+      }
+    }
   });
 
   const duplicateMaterial = useMutation({

@@ -49,6 +49,7 @@ export default function BibliotecaComercialPage() {
   const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial, duplicateMaterial } = useMaterials();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Wizard state
@@ -213,9 +214,11 @@ export default function BibliotecaComercialPage() {
     );
   };
 
-  const filteredMaterials = (materials || []).filter(m =>
-    m.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMaterials = (materials || []).filter(m => {
+    if (!showArchived && m.status === 'archived') return false;
+    if (showArchived && m.status !== 'archived') return false;
+    return m.title.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-4rem)]">
@@ -251,6 +254,17 @@ export default function BibliotecaComercialPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        <div className="flex items-center">
+          <Button 
+            variant={showArchived ? "secondary" : "ghost"} 
+            size="sm"
+            onClick={() => setShowArchived(!showArchived)}
+            className={showArchived ? "bg-muted" : "text-muted-foreground hover:text-foreground"}
+          >
+            <Archive className="mr-2 h-4 w-4" />
+            {showArchived ? 'Ocultar Arquivadas' : 'Ver Arquivadas'}
+          </Button>
+        </div>
       </div>
 
       {/* Conteúdo */}
@@ -269,20 +283,21 @@ export default function BibliotecaComercialPage() {
       ) : filteredMaterials.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-in fade-in duration-500">
           {filteredMaterials.map((material) => (
-            <MaterialCard
-              key={material.id}
-              id={material.id}
-              title={material.title}
-              lastUpdated={`Atualizado há ${formatDistanceToNow(new Date(material.updated_at), { locale: ptBR })}`}
-              isActive={material.status === 'active'}
-              isPublished={!!material.current_version?.published_at}
-              coverUrl={material.cover_image_url}
-              onOpen={handleOpenEditor}
-              onArchive={() => archiveMaterial.mutate(material.id)}
-              onDelete={() => deleteMaterial.mutate(material.id)}
-              onSend={handleOpenSendModal}
-              onDuplicate={(id) => duplicateMaterial.mutate(id)}
-            />
+              <MaterialCard
+                key={material.id}
+                id={material.id}
+                title={material.title}
+                lastUpdated={`Atualizado há ${formatDistanceToNow(new Date(material.updated_at), { locale: ptBR })}`}
+                isActive={material.status === 'active'}
+                isPublished={!!material.current_version?.published_at}
+                coverUrl={material.cover_image_url}
+                onOpen={handleOpenEditor}
+                onArchive={() => archiveMaterial.mutate(material.id)}
+                onDelete={() => deleteMaterial.mutate(material.id)}
+                onSend={handleOpenSendModal}
+                onDuplicate={(id) => duplicateMaterial.mutate(id)}
+                onViewShares={() => navigate(`/app/comercial/compartilhamentos?material=${encodeURIComponent(material.title)}`)}
+              />
           ))}
         </div>
       ) : (

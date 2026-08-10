@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAllMaterialShares } from '@/hooks/useMaterialShares';
 import { format, subDays, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,10 +15,11 @@ import { Button } from '@/components/ui/button';
 export default function CompartilhamentosComercialPage() {
   const { shares, isLoading } = useAllMaterialShares();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Filter States
   const [leadSearch, setLeadSearch] = useState('');
-  const [materialFilter, setMaterialFilter] = useState('all');
+  const [materialFilter, setMaterialFilter] = useState(searchParams.get('material') || 'all');
   const [statusFilter, setStatusFilter] = useState('all'); // all, opened, not_opened
   const [periodFilter, setPeriodFilter] = useState('all'); // all, 7d, 30d
 
