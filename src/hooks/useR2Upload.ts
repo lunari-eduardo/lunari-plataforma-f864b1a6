@@ -10,6 +10,7 @@ export type R2Context =
   | 'task'
   | 'client-document'
   | 'contrato-assinado'
+  | 'proposals-pdf'
   | 'general';
 
 export interface R2UploadResult {

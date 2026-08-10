@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialPublicLink } from '@/hooks/useMaterialPublicLink';
+import { useR2Upload } from '@/hooks/useR2Upload';
 
 export default function EditorMaterialPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,34 +33,22 @@ export default function EditorMaterialPage() {
   const publicLink = useMaterialPublicLink(id);
   const [isSlugModalOpen, setIsSlugModalOpen] = useState(false);
   const [slugInput, setSlugInput] = useState('');
-  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
+  const { uploadFile, uploading: isUploadingPdf } = useR2Upload({
+    context: 'proposals-pdf',
+    onSuccess: (result) => {
+      editor.updatePdfUrl(result.url);
+      toast.success('PDF atualizado! Lembre-se de salvar o rascunho.');
+    }
+  });
 
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    try {
-      setIsUploadingPdf(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('proposals_pdfs')
-        .upload(fileName, file);
-      
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('proposals_pdfs')
-        .getPublicUrl(fileName);
-
-      editor.updatePdfUrl(publicUrl);
-      toast.success('PDF atualizado! Lembre-se de salvar o rascunho.');
-    } catch (err) {
-      toast.error('Erro ao fazer upload do novo PDF.');
-    } finally {
-      setIsUploadingPdf(false);
-    }
+    await uploadFile(file);
+    // Limpa o input
+    e.target.value = '';
   };
 
   if (editor.isLoading || !editor.state) {
@@ -146,60 +135,24 @@ export default function EditorMaterialPage() {
               <Maximize className="h-3.5 w-3.5" />
             </Button>
 
-            {/* Novo Menu de Compartilhar */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200">
-                  <Share2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Compartilhar</span>
+            {hasChanges ? (
+              <>
+                <Button variant="default" size="sm" onClick={editor.saveDraft} className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm gap-2">
+                  <Save className="h-3.5 w-3.5" />
+                  Salvar Rascunho
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {!publicLink.data ? (
-                  <DropdownMenuItem 
-                    onClick={() => publicLink.generateLink.mutate()} 
-                    disabled={publicLink.generateLink.isPending}
-                  >
-                    <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Ativar Link Público
-                  </DropdownMenuItem>
-                ) : (
-                  <>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/${publicLink.data.slug}`);
-                        toast.success('Link público copiado!');
-                      }}
-                    >
-                      <LinkIcon className="h-4 w-4 mr-2 text-muted-foreground" />
-                      Copiar Link Público
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setSlugInput(publicLink.data.slug);
-                        setIsSlugModalOpen(true);
-                      }}
-                    >
-                      <Settings2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                      Personalizar Link
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Novo botão de Salvar Rascunho explícito quando há mudanças */}
-            {hasChanges && (
-              <Button variant="default" size="sm" onClick={editor.saveDraft} className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm gap-2">
-                <Save className="h-3.5 w-3.5" />
-                Salvar Rascunho
-              </Button>
-            )}
-
-            {!hasChanges && (
-              <Button size="sm" onClick={editor.publish} className="gap-2 bg-primary">
-                Publicar Versão
-              </Button>
+                <Button size="sm" onClick={editor.publish} className="gap-2 bg-primary">
+                  <UploadCloud className="h-3.5 w-3.5" />
+                  Publicar Versão
+                </Button>
+              </>
+            ) : (
+              !state.isPublished && (
+                <Button size="sm" onClick={editor.publish} className="gap-2 bg-primary">
+                  <UploadCloud className="h-3.5 w-3.5" />
+                  Publicar Versão
+                </Button>
+              )
             )}
 
             <DropdownMenu>

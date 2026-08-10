@@ -15,7 +15,8 @@ export function useMaterialShares(materialId: string | undefined) {
         .from('material_shares')
         .select(`
           *,
-          lead:leads(nome, email, whatsapp)
+          lead:leads(nome, email, whatsapp),
+          cliente:clientes(nome, email, whatsapp)
         `)
         .eq('material_id', materialId)
         .order('created_at', { ascending: false });
@@ -27,7 +28,7 @@ export function useMaterialShares(materialId: string | undefined) {
   });
 
   const createShare = useMutation({
-    mutationFn: async ({ lead_id, custom_message }: { lead_id?: string; custom_message?: string }) => {
+    mutationFn: async ({ lead_id, cliente_id, custom_message }: { lead_id?: string; cliente_id?: string; custom_message?: string }) => {
       if (!materialId) throw new Error('Material não informado');
 
       // Primeiro, pegar o active_version_id do material
@@ -50,6 +51,7 @@ export function useMaterialShares(materialId: string | undefined) {
           version_id: material.active_version_id,
           user_id: material.user_id,
           lead_id: lead_id || null,
+          cliente_id: cliente_id || null,
           token,
           custom_message: custom_message || null
         })
@@ -136,6 +138,7 @@ export function useAllMaterialShares() {
           *,
           material:commercial_materials(title),
           lead:leads(nome, email, whatsapp),
+          cliente:clientes(nome, email, whatsapp),
           version:material_versions(version_number)
         `)
         .order('created_at', { ascending: false });

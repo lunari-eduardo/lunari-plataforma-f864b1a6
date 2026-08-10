@@ -13,6 +13,7 @@ import {
   R2_CDN_BASE,
   GESTAO_RULES,
   GestaoContext,
+  getCdnUrl,
 } from "../_shared/r2.ts";
 
 Deno.serve(async (req) => {
@@ -101,13 +102,26 @@ Deno.serve(async (req) => {
     }
 
     try {
-      await r2Put(creds, storagePath, fileData, file.type || "application/octet-stream", rule.bucket);
+      const isPdf = context === "proposals-pdf";
+      await r2Put(
+        creds,
+        storagePath,
+        fileData,
+        file.type || "application/octet-stream",
+        rule.bucket,
+        isPdf
+          ? {
+              cacheControl: "public, max-age=31536000, immutable",
+              contentDisposition: `inline; filename="${file.name}"`,
+            }
+          : undefined
+      );
     } catch (e) {
       console.error(`[${requestId}] r2Put error`, e);
       return json({ error: e instanceof Error ? e.message : "Falha ao enviar para R2" }, 502);
     }
 
-    const url = rule.isPublic ? `${R2_CDN_BASE}/${storagePath}` : "";
+    const url = rule.isPublic ? getCdnUrl(storagePath, rule.bucket) : "";
     console.log(`[${requestId}] ok ${storagePath}`);
     return json(
       {

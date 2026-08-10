@@ -10,6 +10,7 @@ export const R2_PUBLIC_BUCKET = "lunari-previews";
 export const R2_PRIVATE_BUCKET = "lunari-private";
 export const R2_BUCKET = R2_PUBLIC_BUCKET; // compat
 export const R2_CDN_BASE = "https://media.lunarihub.com";
+export const R2_COMMERCIAL_CDN_BASE = "https://documents.lunarihub.com"; // Assumindo este domínio para o bucket comercial
 
 export interface R2Creds {
   accountId: string;
@@ -71,7 +72,8 @@ export async function r2Put(
   key: string,
   body: ArrayBuffer,
   contentType: string,
-  bucket = R2_PUBLIC_BUCKET
+  bucket = R2_PUBLIC_BUCKET,
+  extraHeaders?: { cacheControl?: string; contentDisposition?: string }
 ): Promise<void> {
   const host = `${creds.accountId}.r2.cloudflarestorage.com`;
   const url = `https://${host}/${bucket}/${key}`;
@@ -82,14 +84,21 @@ export async function r2Put(
   const service = "s3";
   const canonicalUri = `/${bucket}/${key}`;
   const payloadHash = await sha256Hex(body);
-  const canonicalHeaders =
-    [
-      `content-type:${contentType}`,
-      `host:${host}`,
-      `x-amz-content-sha256:${payloadHash}`,
-      `x-amz-date:${amzDate}`,
-    ].join("\n") + "\n";
-  const signedHeaders = "content-type;host;x-amz-content-sha256;x-amz-date";
+  
+  const headersMap: Record<string, string> = {
+    "content-type": contentType,
+    "host": host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzDate,
+  };
+  
+  if (extraHeaders?.cacheControl) headersMap["cache-control"] = extraHeaders.cacheControl;
+  if (extraHeaders?.contentDisposition) headersMap["content-disposition"] = extraHeaders.contentDisposition;
+
+  const sortedHeaderKeys = Object.keys(headersMap).sort();
+  const canonicalHeaders = sortedHeaderKeys.map(k => `${k}:${headersMap[k]}`).join("\n") + "\n";
+  const signedHeaders = sortedHeaderKeys.join(";");
+  
   const canonicalRequest = ["PUT", canonicalUri, "", canonicalHeaders, signedHeaders, payloadHash].join("\n");
   const algorithm = "AWS4-HMAC-SHA256";
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
@@ -98,14 +107,18 @@ export async function r2Put(
   const signature = await hmacHex(signingKey, stringToSign);
   const authorization = `${algorithm} Credential=${creds.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
+  const reqHeaders: Record<string, string> = {
+    "Content-Type": contentType,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzDate,
+    Authorization: authorization,
+  };
+  if (extraHeaders?.cacheControl) reqHeaders["Cache-Control"] = extraHeaders.cacheControl;
+  if (extraHeaders?.contentDisposition) reqHeaders["Content-Disposition"] = extraHeaders.contentDisposition;
+
   const response = await fetch(url, {
     method: "PUT",
-    headers: {
-      "Content-Type": contentType,
-      "x-amz-content-sha256": payloadHash,
-      "x-amz-date": amzDate,
-      Authorization: authorization,
-    },
+    headers: reqHeaders,
     body,
   });
   if (!response.ok) {
@@ -208,7 +221,8 @@ export type GestaoContext =
   | "contrato-assinado"
   | "support-ticket"
   | "support-faq"
-  | "proposals";
+  | "proposals"
+  | "proposals-pdf";
 
 interface ContextRule {
   prefix: (userId: string, entityId?: string) => string;
@@ -299,6 +313,13 @@ export const GESTAO_RULES: Record<GestaoContext, ContextRule> = {
     maxBytes: 10 * 1024 * 1024,
     allowedTypes: ["image/jpeg", "image/png", "image/webp"],
   },
+  "proposals-pdf": {
+    prefix: (u, e) => `propostas/${u}${e ? "/" + e : ""}`,
+    isPublic: true,
+    bucket: "lunari-commercial-documents",
+    maxBytes: 50 * 1024 * 1024, // 50MB max for PDF proposals
+    allowedTypes: ["application/pdf"],
+  },
 };
 
 /** Decide qual bucket usar a partir do storagePath. */
@@ -312,5 +333,15 @@ export function bucketForPath(storagePath: string): string {
   ) {
     return R2_PRIVATE_BUCKET;
   }
+  if (storagePath.startsWith("propostas/")) {
+    return "lunari-commercial-documents";
+  }
   return R2_PUBLIC_BUCKET;
+}
+
+export function getCdnUrl(storagePath: string, bucket: string): string {
+  if (bucket === "lunari-commercial-documents") {
+    return `${R2_COMMERCIAL_CDN_BASE}/${storagePath}`;
+  }
+  return `${R2_CDN_BASE}/${storagePath}`;
 }

@@ -12,6 +12,7 @@ import { MaterialCard } from './components/MaterialCard';
 import { useMaterials } from '@/hooks/useMaterials';
 import { useMaterialShares } from '@/hooks/useMaterialShares';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -71,6 +72,7 @@ export default function BibliotecaComercialPage() {
   const [generatedShare, setGeneratedShare] = useState<any>(null);
 
   const { leads, isLoading: isLoadingLeads } = useSupabaseLeads();
+  const { clientes, isLoading: isLoadingClientes } = useClientesRealtime();
   const { createShare } = useMaterialShares(sendModalMaterialId || undefined);
 
   // Busca categorias reais do usuário
@@ -200,18 +202,29 @@ export default function BibliotecaComercialPage() {
   };
 
   const handleCreateShare = () => {
-    if (!sendModalMaterialId) return;
-    createShare.mutate(
-      { 
-        lead_id: selectedLeadId === 'none' ? undefined : selectedLeadId, 
-        custom_message: customMessage 
-      },
-      {
-        onSuccess: (data) => {
-          setGeneratedShare(data);
-        }
+    let lead_id: string | undefined;
+    let cliente_id: string | undefined;
+
+    if (selectedLeadId !== 'none') {
+      if (selectedLeadId.startsWith('lead_')) {
+        lead_id = selectedLeadId.replace('lead_', '');
+      } else if (selectedLeadId.startsWith('cliente_')) {
+        cliente_id = selectedLeadId.replace('cliente_', '');
+      } else {
+        // Fallback for any old value that might be just a UUID
+        lead_id = selectedLeadId;
       }
-    );
+    }
+
+    createShare.mutate({ 
+      lead_id, 
+      cliente_id,
+      custom_message: customMessage 
+    }, {
+      onSuccess: (data) => {
+        setGeneratedShare(data);
+      }
+    });
   };
 
   const filteredMaterials = (materials || []).filter(m => {
@@ -694,16 +707,25 @@ export default function BibliotecaComercialPage() {
             {!generatedShare ? (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Vincular a um Lead (Opcional)</label>
+                  <label className="text-sm font-medium text-foreground">Vincular a um Cliente ou Lead (Opcional)</label>
                   <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um lead..." />
+                      <SelectValue placeholder="Selecione um contato..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Não vincular a nenhum lead</SelectItem>
+                      <SelectItem value="none">Não vincular a ninguém</SelectItem>
+                      
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Leads (CRM)</div>
                       {!isLoadingLeads && leads.map(lead => (
-                        <SelectItem key={lead.id} value={lead.id}>
+                        <SelectItem key={`lead_${lead.id}`} value={`lead_${lead.id}`}>
                           {lead.nome} {lead.whatsapp && `(${lead.whatsapp})`}
+                        </SelectItem>
+                      ))}
+
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Clientes da Base</div>
+                      {!isLoadingClientes && clientes.map(cliente => (
+                        <SelectItem key={`cliente_${cliente.id}`} value={`cliente_${cliente.id}`}>
+                          {cliente.nome} {cliente.whatsapp && `(${cliente.whatsapp})`}
                         </SelectItem>
                       ))}
                     </SelectContent>
