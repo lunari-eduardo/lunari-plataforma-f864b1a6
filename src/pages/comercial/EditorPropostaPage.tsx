@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMaterialEditor } from '@/hooks/useMaterialEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, Link as LinkIcon, Share2, Globe, Settings2, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, Link as LinkIcon, Share2, Globe, Settings2, CheckCircle2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { EditorSidebar } from './components/editor/EditorSidebar';
 import { PropertiesSidebar } from './components/editor/PropertiesSidebar';
 import { VisualRenderer } from './components/editor/VisualRenderer';
@@ -31,6 +32,35 @@ export default function EditorMaterialPage() {
   const publicLink = useMaterialPublicLink(id);
   const [isSlugModalOpen, setIsSlugModalOpen] = useState(false);
   const [slugInput, setSlugInput] = useState('');
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingPdf(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('proposals_pdfs')
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('proposals_pdfs')
+        .getPublicUrl(fileName);
+
+      editor.updatePdfUrl(publicUrl);
+      toast.success('PDF atualizado! Lembre-se de salvar o rascunho.');
+    } catch (err) {
+      toast.error('Erro ao fazer upload do novo PDF.');
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
 
   if (editor.isLoading || !editor.state) {
     return (
@@ -254,7 +284,18 @@ export default function EditorMaterialPage() {
                 </p>
                 <div className="flex gap-4 justify-center">
                   <Button variant="outline" onClick={() => window.open(state.pdfUrl, '_blank')}>
-                    Abrir PDF
+                    Ver Arquivo Atual
+                  </Button>
+                  <Button className="relative" disabled={isUploadingPdf}>
+                    {isUploadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    Substituir Arquivo
+                    <input 
+                      type="file" 
+                      accept=".pdf" 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                      onChange={handlePdfUpload}
+                      disabled={isUploadingPdf}
+                    />
                   </Button>
                 </div>
               </div>
