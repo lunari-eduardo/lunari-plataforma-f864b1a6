@@ -179,6 +179,131 @@ function EditorialRenderer({ data, content, props }: { data?: any, content?: any
   );
 }
 
+function PricingTableRenderer({ content, data }: { content?: any, data?: any }) {
+  const c = content || data || {};
+  return (
+    <section className="py-16 md:py-24 px-6 md:px-14 bg-white text-center">
+      <div className="max-w-[900px] mx-auto">
+        {c.eyebrow && <p className="text-[10px] font-medium tracking-[0.28em] uppercase text-[#8C7B6E] mb-4">{c.eyebrow}</p>}
+        <h2 className="text-4xl md:text-5xl font-serif text-[#1A1714] mb-12">{c.title || 'Pacotes'}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+          {(c.packages || []).map((pkg: any, idx: number) => (
+            <div key={pkg.id || idx} className="border border-[#E8E3DA] p-8 rounded-sm bg-[#FDFBF7] flex flex-col relative overflow-hidden">
+              {pkg.badge && (
+                <div className="absolute top-0 right-0 bg-[#F3F0EA] text-[10px] font-medium tracking-[0.28em] uppercase text-[#8C7B6E] px-3 py-1 border-b border-l border-[#E8E3DA]">
+                  {pkg.badge}
+                </div>
+              )}
+              <h3 className="text-2xl font-serif text-[#1A1714] mb-2 pr-6">{pkg.name}</h3>
+              <p className="text-xl text-[#7A5C42] mb-6">{pkg.price} <span className="text-sm text-[#8C7B6E] font-light">/{pkg.price_unit}</span></p>
+              <ul className="space-y-3 flex-1 mb-8">
+                {(pkg.features || []).map((feat: string, i: number) => (
+                  <li key={i} className="text-sm font-light text-[#1A1714]/70 border-b border-[#E8E3DA] pb-2 last:border-0">{feat}</li>
+                ))}
+              </ul>
+              {pkg.image_ref && (
+                <div className="h-32 w-full mt-auto mb-6 rounded-sm bg-cover bg-center" style={{ backgroundImage: `url(${pkg.image_ref})` }} />
+              )}
+              <Button variant="outline" className="w-full border-[#1A1714] text-[#1A1714] rounded-none hover:bg-[#1A1714] hover:text-white transition-colors">
+                Selecionar
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TestimonialRenderer({ content, data }: { content?: any, data?: any }) {
+  const c = content || data || {};
+  return (
+    <section className="py-16 md:py-24 px-6 md:px-14 bg-[#F3F0EA] text-center">
+      <div className="max-w-[900px] mx-auto">
+        {c.eyebrow && <p className="text-[10px] font-medium tracking-[0.28em] uppercase text-[#8C7B6E] mb-4">{c.eyebrow}</p>}
+        <h2 className="text-4xl md:text-5xl font-serif text-[#1A1714] mb-12">{c.title || 'Depoimentos'}</h2>
+        <div className="flex flex-nowrap overflow-x-auto gap-8 pb-8 snap-x">
+          {(c.items || []).map((item: any, idx: number) => (
+            <div key={item.id || idx} className="min-w-[80%] md:min-w-[400px] snap-center bg-white p-8 rounded-sm text-left flex flex-col shadow-sm">
+              <span className="text-4xl text-[#C9BFB2] font-serif leading-none mb-4">"</span>
+              <p className="font-serif italic text-[#1A1714]/80 text-lg leading-relaxed mb-6 flex-1">
+                {item.quote}
+              </p>
+              <div>
+                <p className="font-bold text-sm text-[#1A1714] uppercase tracking-wider">{item.author}</p>
+                <p className="text-xs text-[#8C7B6E] uppercase tracking-widest mt-1">{item.service}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CTABlockRenderer({ content, data }: { content?: any, data?: any }) {
+  const c = content || data || {};
+  return (
+    <section className="py-24 md:py-32 px-6 md:px-14 bg-white text-center flex flex-col items-center">
+      <h2 className="text-4xl md:text-6xl font-serif text-[#1A1714] mb-12 max-w-2xl whitespace-pre-line leading-tight">
+        {c.cta_text || 'Vamos conversar?'}
+      </h2>
+      <Button className="bg-[#1A1714] hover:bg-[#1A1714]/90 text-white rounded-none px-12 py-6 text-sm font-bold tracking-widest uppercase mb-12">
+        Entrar em Contato
+      </Button>
+      <div className="flex flex-wrap justify-center gap-6">
+        {(c.links || []).map((link: any, idx: number) => (
+          <a key={link.id || idx} href={link.href} className="text-xs font-medium tracking-widest uppercase text-[#8C7B6E] hover:text-[#1A1714] transition-colors">
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GalleryRenderer({ content, data }: { content?: any, data?: any }) {
+  const c = content || data || {};
+  return (
+    <section className="py-16 md:py-24 px-6 md:px-14 bg-[#1A1714] text-center text-white">
+      <div className="max-w-[900px] mx-auto">
+        {c.eyebrow && <p className="text-[10px] font-medium tracking-[0.28em] uppercase text-white/40 mb-4">{c.eyebrow}</p>}
+        <h2 className="text-4xl md:text-5xl font-serif mb-4">{c.title || 'Portfólio'}</h2>
+        {c.caption && <p className="font-serif italic text-white/50 mb-12">{c.caption}</p>}
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 auto-rows-[150px] md:auto-rows-[250px]">
+          {(c.images || []).map((img: any, idx: number) => (
+            <div 
+              key={idx} 
+              className={cn(
+                "rounded-sm overflow-hidden bg-white/5",
+                img.span === 'tall_2rows' && "row-span-2",
+                img.span === 'wide_2cols' && "col-span-2",
+              )}
+            >
+              {img.image_ref ? (
+                <img src={img.image_ref} alt="Gallery" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full" style={{ backgroundColor: img.placeholder_hex || '#2f2318' }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FooterTermsRenderer({ content, data }: { content?: any, data?: any }) {
+  const c = content || data || {};
+  return (
+    <footer className="py-8 px-6 bg-[#F3F0EA] text-center text-[#8C7B6E] text-[10px] font-medium tracking-widest uppercase border-t border-[#E8E3DA]">
+      {c.copyright || '© Todos os direitos reservados'}
+    </footer>
+  );
+}
+
+
 // ---------------------------------------------------------
 // Observer de Blocos para Rastreio
 // ---------------------------------------------------------
@@ -253,9 +378,15 @@ export function VisualRenderer({ blocks, activeIndex, onSelectBlock, viewMode, o
                   onView={onSectionView}
                 >
                   {block.type === 'cover' && <CoverRenderer data={block.data} />}
+                  {block.type === 'CoverBlock' && <CoverRenderer data={block.content || block.data} />}
                   {block.type === 'package' && <PackageRenderer data={block.data} />}
                   {block.type === 'EditorialBlock' && <EditorialRenderer content={block.content} data={block.data} props={block.props} />}
-                  {block.type !== 'cover' && block.type !== 'package' && block.type !== 'EditorialBlock' && <DefaultRenderer block={block} />}
+                  {block.type === 'PricingTable' && <PricingTableRenderer content={block.content} data={block.data} />}
+                  {block.type === 'TestimonialBlock' && <TestimonialRenderer content={block.content} data={block.data} />}
+                  {block.type === 'Gallery' && <GalleryRenderer content={block.content} data={block.data} />}
+                  {block.type === 'CTABlock' && <CTABlockRenderer content={block.content} data={block.data} />}
+                  {block.type === 'FooterTerms' && <FooterTermsRenderer content={block.content} data={block.data} />}
+                  {block.type !== 'cover' && block.type !== 'CoverBlock' && block.type !== 'package' && block.type !== 'EditorialBlock' && block.type !== 'PricingTable' && block.type !== 'TestimonialBlock' && block.type !== 'Gallery' && block.type !== 'CTABlock' && block.type !== 'FooterTerms' && <DefaultRenderer block={block} />}
                 </BlockObserver>
               </div>
             </div>

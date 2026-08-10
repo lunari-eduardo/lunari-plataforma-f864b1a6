@@ -105,7 +105,19 @@ export function PropertiesSidebar({
   const [isUploading, setIsUploading] = useState(false);
   
   const handleChange = (field: string, value: any) => {
-    onUpdateBlock(blockIndex, { [field]: value });
+    // Para arquitetura V2: se for props, content ou data explicitamente, repassa
+    if (field === 'props' || field === 'content' || field === 'data') {
+      onUpdateBlock(blockIndex, { [field]: value });
+    } 
+    // Se o bloco é V2 (tem content) e estamos editando um campo solto (ex: 'title'), injeta no content
+    else if (block.content !== undefined) {
+      const newContent = { ...block.content, [field]: value };
+      onUpdateBlock(blockIndex, { content: newContent });
+    } 
+    // Comportamento padrão V1
+    else {
+      onUpdateBlock(blockIndex, { [field]: value });
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

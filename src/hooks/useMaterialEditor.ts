@@ -7,6 +7,8 @@ export interface BlockData {
   type: string;
   data: Record<string, any>;
   id?: string;
+  content?: Record<string, any>;
+  props?: Record<string, any>;
 }
 
 export interface MaterialEditorState {
@@ -63,7 +65,7 @@ export function useMaterialEditor(materialId: string | undefined) {
         blocks = Array.isArray(version.content) ? version.content : [];
       }
 
-      const newState: MaterialEditorState = {
+      const loadedState = {
         materialId: material.id,
         title: material.title,
         versionId: version.id,
@@ -71,16 +73,17 @@ export function useMaterialEditor(materialId: string | undefined) {
         isPublished: !!version.published_at,
         format,
         blocks,
-        pdfUrl,
+        pdfUrl
       };
-
-      setState(newState);
-      originalState.current = JSON.parse(JSON.stringify(newState)); // Deep copy para descarte
+      
+      originalState.current = JSON.parse(JSON.stringify(loadedState));
+      setState(loadedState);
       setHasChanges(false);
       setSaveStatus('saved');
-    } catch (err: any) {
-      console.error('Erro ao carregar material:', err);
-      toast.error('Erro ao carregar material');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao carregar proposta');
+      setSaveStatus('error');
     } finally {
       setIsLoading(false);
     }
@@ -90,13 +93,17 @@ export function useMaterialEditor(materialId: string | undefined) {
     fetchMaterial();
   }, [fetchMaterial]);
 
-  // Modifica o estado local e marca que há mudanças pendentes
   const updateState = useCallback((updater: (prev: MaterialEditorState) => MaterialEditorState) => {
     setState(prev => {
       if (!prev) return prev;
       const newState = updater(prev);
-      setHasChanges(true);
-      setSaveStatus('idle'); // Muda de "saved" para editável
+      
+      const isDifferent = JSON.stringify(newState.blocks) !== JSON.stringify(originalState.current?.blocks) ||
+                          newState.title !== originalState.current?.title ||
+                          newState.pdfUrl !== originalState.current?.pdfUrl;
+      setHasChanges(isDifferent);
+      if (isDifferent) setSaveStatus('idle');
+      
       return newState;
     });
   }, []);
@@ -109,10 +116,19 @@ export function useMaterialEditor(materialId: string | undefined) {
     updateState(prev => ({ ...prev, pdfUrl: url }));
   }, [updateState]);
 
-  const updateBlock = useCallback((index: number, data: Record<string, any>) => {
+  const updateBlock = useCallback((index: number, dataOrUpdates: Record<string, any>) => {
     if (!state) return;
     const newBlocks = [...state.blocks];
-    newBlocks[index] = { ...newBlocks[index], data: { ...newBlocks[index].data, ...data } };
+    
+    // Verifica se é uma atualização de root (V2: content/props/data) ou V1 (tudo em data)
+    // Se conter 'props', 'content' ou 'data' explicitamente, assumimos que é um update root.
+    // Caso contrário (retrocompatibilidade V1), injetamos no data.
+    if ('props' in dataOrUpdates || 'content' in dataOrUpdates || 'data' in dataOrUpdates) {
+      newBlocks[index] = { ...newBlocks[index], ...dataOrUpdates };
+    } else {
+      newBlocks[index] = { ...newBlocks[index], data: { ...newBlocks[index].data, ...dataOrUpdates } };
+    }
+    
     updateBlocks(newBlocks);
   }, [state, updateBlocks]);
 

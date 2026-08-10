@@ -47,44 +47,65 @@ export interface EditorSidebarProps {
 
 const getBlockIcon = (type: string) => {
   switch (type) {
-    case 'cover': return ImageIcon;
-    case 'about': return AlignLeft;
-    case 'package': return DollarSign;
-    case 'portfolio': return Briefcase;
-    case 'faq': return HelpCircle;
-    case 'cta': return MessageSquare;
-    case 'text': return AlignLeft;
+    case 'cover': 
+    case 'CoverBlock': return ImageIcon;
+    case 'about': 
+    case 'EditorialBlock': return AlignLeft;
+    case 'package': 
+    case 'PricingTable': return DollarSign;
+    case 'portfolio': 
+    case 'Gallery': return Briefcase;
+    case 'faq': 
+    case 'TestimonialBlock': return HelpCircle; // Testimonials will use HelpCircle or MessageSquare, let's use MessageSquare
+    case 'cta': 
+    case 'CTABlock': return MessageSquare;
+    case 'text': 
+    case 'FooterTerms': return AlignLeft;
     default: return AlignLeft;
   }
 };
 
 const getBlockName = (type: string) => {
   switch (type) {
-    case 'cover': return 'Capa';
+    case 'cover': 
+    case 'CoverBlock': return 'Capa';
     case 'about': return 'Apresentação';
-    case 'package': return 'Investimento';
-    case 'portfolio': return 'Portfólio';
+    case 'EditorialBlock': return 'Editorial';
+    case 'package': 
+    case 'PricingTable': return 'Tabela de Preços';
+    case 'portfolio': 
+    case 'Gallery': return 'Galeria';
     case 'faq': return 'Perguntas Frequentes';
-    case 'cta': return 'Chamada para ação';
+    case 'TestimonialBlock': return 'Depoimentos';
+    case 'cta': 
+    case 'CTABlock': return 'Chamada para ação';
     case 'text': return 'Texto Livre';
+    case 'FooterTerms': return 'Rodapé';
     default: return 'Seção';
   }
 };
 
 const getBlockDesc = (type: string) => {
   switch (type) {
-    case 'cover': return 'Seção de abertura';
+    case 'cover': 
+    case 'CoverBlock': return 'Seção de abertura';
     case 'about': return 'Sobre você e seu trabalho';
-    case 'package': return 'Pacotes e valores';
-    case 'portfolio': return 'Mostre seus resultados';
+    case 'EditorialBlock': return 'Bloco de conteúdo com imagens';
+    case 'package': 
+    case 'PricingTable': return 'Pacotes e valores';
+    case 'portfolio': 
+    case 'Gallery': return 'Mostre seus resultados';
     case 'faq': return 'Dúvidas comuns';
-    case 'cta': return 'Botão de contato';
+    case 'TestimonialBlock': return 'O que dizem sobre você';
+    case 'cta': 
+    case 'CTABlock': return 'Botão de contato e links';
     case 'text': return 'Conteúdo customizado';
+    case 'FooterTerms': return 'Direitos autorais e termos';
     default: return '';
   }
 };
 
-const blockTypes = ['cover', 'about', 'package', 'portfolio', 'faq', 'cta', 'text'];
+const blockTypes = ['CoverBlock', 'EditorialBlock', 'PricingTable', 'Gallery', 'TestimonialBlock', 'CTABlock', 'FooterTerms', 'text'];
 
 // Item sortable extraído para o dnd-kit
 function SortableSidebarItem({ block, index, isActive, onSelect }: { block: BlockData, index: number, isActive: boolean, onSelect: () => void }) {
@@ -124,7 +145,7 @@ function SortableSidebarItem({ block, index, isActive, onSelect }: { block: Bloc
       
       <div className="flex flex-1 flex-col overflow-hidden">
         <span className={cn("text-sm font-semibold leading-tight", isActive ? "text-foreground" : "text-foreground/80")}>
-          {block.data?.title || getBlockName(block.type)}
+          {block.content?.title || block.content?.eyebrow || block.data?.title || getBlockName(block.type)}
         </span>
         <span className="text-[11px] text-muted-foreground truncate mt-0.5">
           {getBlockDesc(block.type)}
