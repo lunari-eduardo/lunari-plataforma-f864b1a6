@@ -4,6 +4,7 @@ import { usePublicMaterial } from '@/hooks/usePublicMaterial';
 import { useTrackedMaterial } from '@/hooks/useTrackedMaterial';
 import { useShareTracking } from '@/hooks/useShareTracking';
 import { VisualRenderer } from './components/editor/VisualRenderer';
+import { NativePdfViewer } from './components/editor/NativePdfViewer';
 import { Loader2, MessageCircle } from 'lucide-react';
 
 export default function PublicProposalViewer({ mode }: { mode: 'public' | 'tracked' }) {
@@ -123,25 +124,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col relative pb-24">
       {isPdfFormat ? (
-        <div className="w-full flex-1 flex flex-col items-center justify-center p-6 text-center h-full min-h-[60vh]">
-          <div className="bg-white p-8 md:p-12 rounded-3xl shadow-2xl shadow-black/5 border border-black/5 max-w-md w-full mt-10">
-            <h3 className="text-3xl font-serif text-[#2C2825] mb-4">Proposta (PDF)</h3>
-            <p className="text-[#6D655E] mb-8 text-sm">
-              Para a melhor experiência de leitura e qualidade, abra o documento diretamente no seu dispositivo.
-            </p>
-            <a 
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                trackEvent('section_view', { block_id: 'pdf-open', block_type: 'pdf', position: 0 });
-              }}
-              className="inline-flex w-full justify-center bg-[#2C2825] hover:bg-black text-white px-6 py-4 rounded-xl font-medium transition-all shadow-md"
-            >
-              Abrir Proposta
-            </a>
-          </div>
-        </div>
+        <NativePdfViewer url={pdfUrl} />
       ) : (
         <VisualRenderer 
           blocks={blocks}
