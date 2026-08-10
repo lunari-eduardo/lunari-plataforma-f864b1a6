@@ -132,6 +132,13 @@ export function useMaterials() {
 
   const deleteMaterial = useMutation({
     mutationFn: async (id: string) => {
+      // 1. Excluir compartilhamentos explicitamente para contornar o ON DELETE RESTRICT durante testes
+      await (supabase as any)
+        .from('material_shares')
+        .delete()
+        .eq('material_id', id);
+
+      // 2. Excluir o material principal (cascata cuidará do resto: links, versões)
       const { error } = await (supabase as any)
         .from('commercial_materials')
         .delete()
@@ -140,14 +147,10 @@ export function useMaterials() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commercial-materials'] });
-      toast.success('Material excluído permanentemente.');
+      toast.success('Proposta e todo seu histórico foram excluídos permanentemente.');
     },
     onError: (err: any) => {
-      if (err?.code === '23503' || err?.message?.includes('violates foreign key constraint') || err?.status === 409) {
-        toast.error('Esta proposta possui histórico e não pode ser apagada. Tente arquivá-la.', { duration: 6000 });
-      } else {
-        toast.error('Erro ao excluir material: ' + (err.message || 'Tente novamente'));
-      }
+      toast.error('Erro ao excluir proposta: ' + (err.message || 'Tente novamente'));
     }
   });
 
