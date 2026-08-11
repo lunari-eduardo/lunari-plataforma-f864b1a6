@@ -120,9 +120,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
           >
             Acessar Proposta
           </button>
-      </div>
-      </>
-    )}
+        </div>
       </div>
     );
   }
@@ -162,6 +160,8 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
           Quero falar com o fotógrafo
         </button>
       </div>
+        </>
+      )}
     </div>
   );
 }
