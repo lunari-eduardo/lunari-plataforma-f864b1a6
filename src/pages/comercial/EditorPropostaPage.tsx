@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMaterialEditor } from '@/hooks/useMaterialEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, UploadCloud, Upload, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, UploadCloud, Upload, CheckCircle2, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialPublicLink } from '@/hooks/useMaterialPublicLink';
@@ -168,6 +169,15 @@ export default function EditorMaterialPage() {
                 <DropdownMenuItem className="gap-2 text-muted-foreground" disabled>
                   Duplicar Proposta
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={!state.globalSettings?.hideWhatsApp}
+                  onCheckedChange={(checked) => editor.updateGlobalSettings({ hideWhatsApp: !checked })}
+                  className="gap-2 cursor-pointer"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2 text-green-600" />
+                  Botão Flutuante do WhatsApp
+                </DropdownMenuCheckboxItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={editor.discardChanges} disabled={!hasChanges} className="gap-2 text-destructive">
                   Descartar Alterações

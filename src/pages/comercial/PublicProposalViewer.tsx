@@ -68,7 +68,17 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   // Detecção de formato
   const isPdfFormat = contentData && !Array.isArray(contentData) && contentData.type === 'pdf';
   const pdfUrl = isPdfFormat ? contentData.url : '';
-  const blocks = isPdfFormat ? [] : (contentData || []);
+  let blocks = isPdfFormat ? [] : (contentData || []);
+  let hideWhatsApp = false;
+  if (isPdfFormat && contentData?.settings) {
+    hideWhatsApp = contentData.settings.hideWhatsApp;
+  } else if (!isPdfFormat) {
+    const settingsBlock = blocks.find((b: any) => b.type === 'global_settings');
+    if (settingsBlock) {
+      hideWhatsApp = settingsBlock.data?.hideWhatsApp;
+      blocks = blocks.filter((b: any) => b.type !== 'global_settings');
+    }
+  }
 
   // Lógica do CTA WhatsApp
   const handleWhatsAppClick = () => {
@@ -110,7 +120,9 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
           >
             Acessar Proposta
           </button>
-        </div>
+      </div>
+      </>
+    )}
       </div>
     );
   }
@@ -137,7 +149,9 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
         />
       )}
 
-      {/* Floating CTA WhatsApp */}
+      {!hideWhatsApp && (
+        <>
+          {/* Floating CTA WhatsApp */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent flex justify-center z-50 pointer-events-none">
         <button 
           ref={ctaRef}

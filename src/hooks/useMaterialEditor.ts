@@ -20,6 +20,7 @@ export interface MaterialEditorState {
   format: 'blocks' | 'pdf';
   blocks: BlockData[];
   pdfUrl?: string;
+  globalSettings: Record<string, any>;
 }
 
 export function useMaterialEditor(materialId: string | undefined) {
@@ -57,12 +58,19 @@ export function useMaterialEditor(materialId: string | undefined) {
       let format: 'blocks' | 'pdf' = 'blocks';
       let blocks: BlockData[] = [];
       let pdfUrl: string | undefined = undefined;
+      let globalSettings: Record<string, any> = {};
 
       if (version.content && typeof version.content === 'object' && !Array.isArray(version.content) && version.content.type === 'pdf') {
         format = 'pdf';
         pdfUrl = version.content.url;
+        globalSettings = version.content.settings || {};
       } else {
         blocks = Array.isArray(version.content) ? version.content : [];
+        const settingsBlockIndex = blocks.findIndex(b => b.type === 'global_settings');
+        if (settingsBlockIndex !== -1) {
+          globalSettings = blocks[settingsBlockIndex].data || {};
+          blocks.splice(settingsBlockIndex, 1);
+        }
       }
 
       const loadedState = {
@@ -100,7 +108,8 @@ export function useMaterialEditor(materialId: string | undefined) {
       
       const isDifferent = JSON.stringify(newState.blocks) !== JSON.stringify(originalState.current?.blocks) ||
                           newState.title !== originalState.current?.title ||
-                          newState.pdfUrl !== originalState.current?.pdfUrl;
+                          newState.pdfUrl !== originalState.current?.pdfUrl ||
+                          JSON.stringify(newState.globalSettings) !== JSON.stringify(originalState.current?.globalSettings);
       setHasChanges(isDifferent);
       if (isDifferent) setSaveStatus('idle');
       
@@ -114,6 +123,10 @@ export function useMaterialEditor(materialId: string | undefined) {
 
   const updatePdfUrl = useCallback((url: string) => {
     updateState(prev => ({ ...prev, pdfUrl: url }));
+  }, [updateState]);
+
+  const updateGlobalSettings = useCallback((updates: Record<string, any>) => {
+    updateState(prev => ({ ...prev, globalSettings: { ...prev.globalSettings, ...updates } }));
   }, [updateState]);
 
   const updateBlock = useCallback((index: number, dataOrUpdates: Record<string, any>) => {
@@ -192,58 +205,8 @@ export function useMaterialEditor(materialId: string | undefined) {
     try {
       // 1. Salvar conteúdo na versão
       const contentToSave = state.format === 'pdf' 
-        ? { type: 'pdf', url: state.pdfUrl }
-        : state.blocks;
-
-      const { error: verErr } = await (supabase as any)
-        .from('material_versions')
-        .update({ content: contentToSave })
-        .eq('id', state.versionId);
-
-      if (verErr) throw verErr;
-
-      // 2. Salvar título no material pai
-      if (state.title !== originalState.current?.title) {
-        const { error: matErr } = await (supabase as any)
-          .from('commercial_materials')
-          .update({ title: state.title, updated_at: new Date().toISOString() })
-          .eq('id', state.materialId);
-        if (matErr) throw matErr;
-      }
-
-      setHasChanges(false);
-      setSaveStatus('saved');
-      originalState.current = JSON.parse(JSON.stringify(state)); // Atualiza o ponto de restauração
-      toast.success('Rascunho salvo com sucesso!');
-    } catch {
-      setSaveStatus('error');
-      toast.error('Erro ao salvar rascunho');
-    }
-  }, [state, hasChanges]);
-
-  // Descarta as mudanças e volta ao último estado salvo
-  const discardChanges = useCallback(() => {
-    if (originalState.current) {
-      setState(JSON.parse(JSON.stringify(originalState.current)));
-      setHasChanges(false);
-      setSaveStatus('saved');
-      toast.info('Alterações não salvas foram descartadas.');
-    }
-  }, []);
-
-  const publish = useCallback(async () => {
-    if (!state) return;
-    setSaveStatus('saving');
-    try {
-      // Salvar tudo e publicar
-      await (supabase as any)
-        .from('commercial_materials')
-        .update({ title: state.title, updated_at: new Date().toISOString() })
-        .eq('id', state.materialId);
-
-      const contentToSave = state.format === 'pdf' 
-        ? { type: 'pdf', url: state.pdfUrl }
-        : state.blocks;
+        ? { type: 'pdf', url: state.pdfUrl, settings: state.globalSettings }
+        : [...state.blocks, { type: 'global_settings', data: state.globalSettings }];
 
       await (supabase as any)
         .from('material_versions')
@@ -270,6 +233,7 @@ export function useMaterialEditor(materialId: string | undefined) {
     hasChanges,
     updateBlock,
     updatePdfUrl,
+    updateGlobalSettings,
     addBlock,
     removeBlock,
     moveBlock,
