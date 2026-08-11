@@ -21,14 +21,37 @@ export default function Auth() {
 
   useEffect(() => {
     const reason = searchParams.get('reason');
-    const error = searchParams.get('error');
+    let error = searchParams.get('error');
+    let errorDescription = searchParams.get('error_description');
+
+    // Tentar capturar também do hash (caso fluxo OAuth/PKCE falhe na raiz)
+    if (window.location.hash) {
+      try {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        if (!error && hashParams.get('error')) error = hashParams.get('error');
+        if (!errorDescription && hashParams.get('error_description')) {
+          errorDescription = hashParams.get('error_description');
+        }
+      } catch (e) {
+        // Ignora erros de parsing
+      }
+    }
+
     if (reason === 'suspended') toast.error('Sua assinatura está inativa ou expirada. Entre em contato com o suporte.');
     else if (reason === 'session_expired') toast.info('Sua sessão expirou. Por favor, faça login novamente.');
-    else if (error === 'access_denied') toast.error('Acesso negado. Seu e-mail não está autorizado.');
     else if (error === 'account_pending_deletion') {
       toast.error('Sua conta está em período de retenção para exclusão. Para recuperar o acesso, entre em contato com o suporte.', {
         duration: 8000,
       });
+    } else if (errorDescription) {
+      const decoded = decodeURIComponent(errorDescription).replace(/\+/g, ' ');
+      toast.error(`Falha de autenticação: ${decoded}`, { duration: 8000 });
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (error === 'access_denied') {
+      toast.error('Acesso negado. Seu e-mail não está autorizado.');
+    } else if (error) {
+      toast.error(`Falha de autenticação: ${error}`, { duration: 8000 });
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, [searchParams]);
 
