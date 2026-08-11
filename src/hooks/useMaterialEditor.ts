@@ -210,8 +210,46 @@ export function useMaterialEditor(materialId: string | undefined) {
 
       await (supabase as any)
         .from('material_versions')
+        .update({ content: contentToSave })
+        .eq('id', state.versionId);
+        
+      if (originalState.current?.title !== state.title) {
+        await (supabase as any)
+          .from('commercial_materials')
+          .update({ title: state.title })
+          .eq('id', state.materialId);
+      }
+
+      setHasChanges(false);
+      setSaveStatus('saved');
+      originalState.current = JSON.parse(JSON.stringify(state));
+      
+      toast.success('Rascunho salvo com sucesso!');
+    } catch {
+      setSaveStatus('error');
+      toast.error('Erro ao salvar rascunho');
+    }
+  }, [state]);
+
+  const publish = useCallback(async () => {
+    if (!state) return;
+    setSaveStatus('saving');
+    try {
+      const contentToSave = state.format === 'pdf' 
+        ? { type: 'pdf', url: state.pdfUrl, settings: state.globalSettings }
+        : [...state.blocks, { type: 'global_settings', data: state.globalSettings }];
+
+      await (supabase as any)
+        .from('material_versions')
         .update({ content: contentToSave, published_at: new Date().toISOString() })
         .eq('id', state.versionId);
+
+      if (originalState.current?.title !== state.title) {
+        await (supabase as any)
+          .from('commercial_materials')
+          .update({ title: state.title })
+          .eq('id', state.materialId);
+      }
 
       setState(prev => prev ? { ...prev, isPublished: true } : null);
       setHasChanges(false);
@@ -225,6 +263,14 @@ export function useMaterialEditor(materialId: string | undefined) {
       toast.error('Erro ao publicar versão');
     }
   }, [state, queryClient]);
+
+  const discardChanges = useCallback(() => {
+    if (originalState.current) {
+      setState(JSON.parse(JSON.stringify(originalState.current)));
+      setHasChanges(false);
+      setSaveStatus('saved');
+    }
+  }, []);
 
   return {
     state,
