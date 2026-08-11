@@ -599,7 +599,7 @@ export default function BibliotecaComercialPage() {
                   <>
                     <h3 className="font-medium text-sm mb-1">Selecione o arquivo PDF</h3>
                     <p className="text-xs text-muted-foreground text-center max-w-[250px] mb-4">
-                      Tamanho máximo: 10MB. O arquivo será otimizado para carregamento rápido.
+                      Tamanho máximo: 50MB. O arquivo será otimizado para carregamento rápido.
                     </p>
                     <Button onClick={() => fileInputRef.current?.click()} variant="secondary">
                       Procurar Arquivo
@@ -615,8 +615,8 @@ export default function BibliotecaComercialPage() {
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
                       const file = e.target.files[0];
-                      if (file.size > 10 * 1024 * 1024) {
-                        toast.error('O arquivo é muito grande. O limite é 10MB.');
+                      if (file.size > 50 * 1024 * 1024) {
+                        toast.error('O arquivo é muito grande. O limite é 50MB.');
                         return;
                       }
                       setSelectedPdf(file);
