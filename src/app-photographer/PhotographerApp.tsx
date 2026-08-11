@@ -103,7 +103,7 @@ function AuthRouteWrapper() {
     // Se NÃO estiver no domínio do app nem em dev, redireciona para a URL canônica do Auth
     if (!isApp) {
       console.log("🔄 Redirecionando para host de autenticação oficial...");
-      window.location.replace("https://app.lunarihub.com/auth" + window.location.search);
+      window.location.replace("https://app.lunarihub.com/auth" + window.location.search + window.location.hash);
     }
   }, [isApp]);
 

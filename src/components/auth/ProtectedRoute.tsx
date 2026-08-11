@@ -65,7 +65,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return (
+      <Navigate 
+        to={{ pathname: '/auth', search: location.search, hash: location.hash }} 
+        state={{ from: location }} 
+        replace 
+      />
+    );
   }
 
   // 2. Verificar conectividade - ANTES de verificar subscription
