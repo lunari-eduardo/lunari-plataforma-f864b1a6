@@ -68,8 +68,8 @@ export function NativePdfViewer({ url }: NativePdfViewerProps) {
           {numPages && Array.from(new Array(numPages), (el, index) => (
             <div 
               key={`page_${index + 1}`} 
-              className="mb-6 shadow-xl rounded-md overflow-hidden bg-white mx-auto transition-transform hover:shadow-2xl"
-              style={{ width: 'fit-content', minHeight: '800px' }}
+              className="mb-6 shadow-xl rounded-md overflow-hidden bg-white mx-auto transition-transform hover:shadow-2xl flex flex-col"
+              style={{ width: 'fit-content' }}
             >
               {index + 1 <= renderedUpToPage ? (
                 <Page 
@@ -83,13 +83,13 @@ export function NativePdfViewer({ url }: NativePdfViewerProps) {
                     }
                   }}
                   loading={
-                    <div className="flex justify-center items-center h-[800px] bg-white w-full max-w-3xl">
+                    <div className="flex justify-center items-center min-h-[400px] bg-white w-full max-w-3xl aspect-[1/1.414]">
                       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/30" />
                     </div>
                   }
                 />
               ) : (
-                <div className="flex justify-center items-center h-[800px] bg-white w-full max-w-3xl">
+                <div className="flex justify-center items-center min-h-[400px] bg-white w-full max-w-3xl aspect-[1/1.414]">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/30" />
                 </div>
               )}
