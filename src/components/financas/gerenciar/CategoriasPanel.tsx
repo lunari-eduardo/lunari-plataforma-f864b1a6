@@ -251,11 +251,7 @@ export default function CategoriasPanel({ onBack }: Props) {
                     className="w-full flex items-center gap-3 px-2 py-3 rounded-md hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                   >
                     <span className="size-8 rounded-full bg-muted grid place-items-center text-xs font-medium text-muted-foreground shrink-0">
-                      {item.icone ? (
-                        <span className="text-sm">{item.icone}</span>
-                      ) : (
-                        initialOf(item.nome)
-                      )}
+                      {initialOf(item.nome)}
                     </span>
                     <span className="text-sm text-foreground flex-1 truncate">{item.nome}</span>
                     <ChevronRight className="size-4 text-muted-foreground/70 shrink-0" />
@@ -280,10 +276,6 @@ export default function CategoriasPanel({ onBack }: Props) {
         onCreateNameChange={(v) => itemsManagement.updateItemState({ novoNome: v })}
         editName={itemsManagement.itemState.nomeEditando}
         onEditNameChange={(v) => itemsManagement.updateItemState({ nomeEditando: v })}
-        createIcone={itemsManagement.itemState.novoIcone}
-        onCreateIconeChange={(v) => itemsManagement.updateItemState({ novoIcone: v })}
-        editIcone={itemsManagement.itemState.iconeEditando}
-        onEditIconeChange={(v) => itemsManagement.updateItemState({ iconeEditando: v })}
         onSubmitCreate={itemsManagement.handleAdicionarItem}
         onSubmitEdit={itemsManagement.handleSalvarEdicao}
         onDelete={handleDelete}

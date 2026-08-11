@@ -12,6 +12,8 @@ import logoIconWhite from '@/assets/branding/lunari-icon-white.png';
 import logoIconBlack from '@/assets/branding/lunari-icon-black.png';
 import logoFullWhite from '@/assets/branding/lunari-full-white.png';
 import logoFullBlack from '@/assets/branding/lunari-full-black.png';
+import { useActiveModule } from '@/contexts/ModuleContext';
+import { ProductSwitcher } from './ProductSwitcher';
 
 // Crown badge component for PRO features
 const ProCrown = ({ className }: { className?: string }) => (
@@ -190,6 +192,7 @@ export default function Sidebar() {
   const isMobile = useIsMobile();
   const inputMode = useInputMode();
   const { accessState } = useAccessControl();
+  const { activeModule } = useActiveModule();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const enterTimer = useRef<number | null>(null);
@@ -252,6 +255,12 @@ export default function Sidebar() {
     { to: "/app/hub", icon: <Brain size={14} />, label: "Hub de IA", adminOnly: true },
   ].filter(item => !item.adminOnly || accessState.isAdmin);
 
+  const galleryNavItems = [
+    { to: "/app/gallery", icon: <LayoutGrid size={14} />, label: "Início", end: true },
+    { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" }
+  ];
+
+  const currentNavItems = activeModule === 'gallery' ? galleryNavItems : navItems;
 
   const isStarterPlan = accessState.planCode?.startsWith('starter') &&
     !accessState.isAdmin && !accessState.isVip && !accessState.isAuthorized;
@@ -269,7 +278,7 @@ export default function Sidebar() {
         >
 
           <div className="grid grid-cols-5 h-12 gap-1">
-            {navItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
+            {currentNavItems.slice(0, 4).map(item => <NavLink key={item.to} to={item.to} className={({
             isActive
           }) => cn("flex flex-col items-center justify-center py-1 rounded-md text-lunar-text transition-all duration-150 text-center", isActive ? "text-lunar-accent bg-lunar-surface shadow-sm" : "hover:bg-lunar-surface/30 hover:shadow-lunar-sm hover:translate-y-[-1px]")}>
                 <div className="mb-0.5 relative">
@@ -304,8 +313,13 @@ export default function Sidebar() {
                 <X size={14} />
               </Button>
             </div>
+            
+            <div className="pt-3 pb-1 border-b border-[hsl(var(--sidebar-border))] border-dashed mb-2">
+              <ProductSwitcher expanded={true} />
+            </div>
+
             <div className="p-3 space-y-1">
-              {navItems.map(item => <DrawerNavItem key={item.to} {...item} showProBadge={isStarterPlan} onNavigate={closeSidebar} />)}
+              {currentNavItems.map(item => <DrawerNavItem key={item.to} {...item} showProBadge={isStarterPlan} onNavigate={closeSidebar} />)}
             </div>
           </div>
         </div>
@@ -329,9 +343,13 @@ export default function Sidebar() {
             />
           </div>
 
-          <div className="flex-1 pt-2 overflow-y-auto scrollbar-elegant">
+          <div className="mb-2 mt-2">
+            <ProductSwitcher expanded={false} />
+          </div>
+
+          <div className="flex-1 pt-2 overflow-y-auto scrollbar-elegant border-t border-[hsl(var(--sidebar-border))] border-dashed">
             <div className="space-y-1">
-              {navItems.map(item => (
+              {currentNavItems.map(item => (
                 <RailNavItem
                   key={item.to}
                   {...item}
@@ -387,9 +405,13 @@ export default function Sidebar() {
             />
           </div>
 
-          <div className="flex-1 pt-2">
+          <div className="mt-2 mb-2">
+            <ProductSwitcher expanded={isHovered} />
+          </div>
+
+          <div className="flex-1 pt-2 border-t border-[hsl(var(--sidebar-border))] border-dashed">
             <div className="space-y-1">
-              {navItems.map(item => (
+              {currentNavItems.map(item => (
                 <DesktopNavItem
                   key={item.to}
                   {...item}

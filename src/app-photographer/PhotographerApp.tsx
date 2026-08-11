@@ -60,8 +60,8 @@ import TermosPage from "@/pages/legal/TermosPage";
 import ExclusaoDadosPage from "@/pages/legal/ExclusaoDadosPage";
 import CookiesPage from "@/pages/legal/CookiesPage";
 import SegurancaPage from "@/pages/legal/SegurancaPage";
-
-
+import GalleryPlaceholder from "@/pages/gallery/GalleryPlaceholder";
+import { ModuleProvider } from "@/contexts/ModuleContext";
 import { AppProvider } from "@/contexts/AppContext";
 
 import { ConfigurationProvider } from "@/contexts/ConfigurationContext";
@@ -134,9 +134,10 @@ export default function PhotographerApp() {
       <ProdutoEtiquetasProvider>
         <WorkflowCacheProvider>
           <PhotographerInit />
-          <AppProvider>
-            <BuildMonitor />
-            <Routes>
+          <ModuleProvider>
+            <AppProvider>
+              <BuildMonitor />
+              <Routes>
               {/* ============ PUBLIC INSTITUTIONAL SITE (SiteLayout) ============ */}
               <Route element={<SiteLayout />}>
                 <Route path="/" element={<HomePage />} />
@@ -209,6 +210,9 @@ export default function PhotographerApp() {
                   <Route path="relatorios" element={<RequireAdmin><RelatoriosComercialPage /></RequireAdmin>} />
                 </Route>
 
+                {/* Módulo Gallery */}
+                <Route path="gallery" element={<GalleryPlaceholder />} />
+
                 <Route path="financas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><NovaFinancas /></PlanRestrictionGuard>
                 } />
@@ -262,8 +266,8 @@ export default function PhotographerApp() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppProvider>
-
-        </WorkflowCacheProvider>
+        </ModuleProvider>
+      </WorkflowCacheProvider>
       </ProdutoEtiquetasProvider>
     </ConfigurationProvider>
   );
