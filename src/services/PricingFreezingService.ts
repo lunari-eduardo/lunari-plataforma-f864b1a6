@@ -146,8 +146,23 @@ class PricingFreezingService {
    * Congela regras específicas de precificação de foto extra (VERSÃO ASSÍNCRONA)
    */
   private async congelarRegrasPrecoFotoExtraAsync(categoria?: string, categoriaId?: string, pacoteDados?: any) {
-    const config = obterConfiguracaoPrecificacao();
+    let config = obterConfiguracaoPrecificacao();
     
+    // 🆕 Tentar carregar a configuração de forma assíncrona para garantir que não estamos
+    // usando o fallback 'fixo' se o cache do adapter ainda não foi populado.
+    try {
+      const { PricingConfigurationService } = await import('@/services/PricingConfigurationService');
+      const adapter = (PricingConfigurationService as any).adapter;
+      if (adapter && typeof adapter.loadConfigurationAsync === 'function') {
+        const asyncConfig = await adapter.loadConfigurationAsync();
+        if (asyncConfig) {
+          config = asyncConfig;
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Não foi possível carregar configuração assíncrona, usando cache');
+    }
+
     const regras: any = {
       modelo: config.modelo
     };
@@ -159,7 +174,21 @@ class PricingFreezingService {
         break;
       
       case 'global':
-        const tabelaGlobal = obterTabelaGlobal();
+        let tabelaGlobal = obterTabelaGlobal();
+        
+        // 🆕 Tentar carregar tabela global de forma assíncrona se não estiver no cache
+        if (!tabelaGlobal) {
+          try {
+            const { PricingConfigurationService } = await import('@/services/PricingConfigurationService');
+            const adapter = (PricingConfigurationService as any).adapter;
+            if (adapter && typeof adapter.loadGlobalTableAsync === 'function') {
+              tabelaGlobal = await adapter.loadGlobalTableAsync();
+            }
+          } catch (e) {
+            console.warn('⚠️ Erro ao carregar tabela global assíncrona', e);
+          }
+        }
+        
         regras.tabelaGlobal = tabelaGlobal;
         console.log('📊 Tabela global congelada:', tabelaGlobal?.nome);
         break;
