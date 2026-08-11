@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag, FileText, UploadCloud, Archive } from 'lucide-react';
+import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag, FileText, UploadCloud, Archive, Check, ChevronsUpDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MaterialCard } from './components/MaterialCard';
 import { useMaterials } from '@/hooks/useMaterials';
 import { useMaterialShares } from '@/hooks/useMaterialShares';
@@ -20,6 +22,22 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+export function formatWhatsAppNumber(phone: string): string {
+  if (!phone) return '';
+  let numbers = phone.replace(/\D/g, '');
+  if (numbers.length === 0) return '';
+  if (!numbers.startsWith('55') && numbers.length <= 11) {
+    numbers = '55' + numbers;
+  }
+  const dddStr = numbers.substring(2, 4);
+  const localNumber = numbers.substring(4);
+  const ddd = parseInt(dddStr, 10);
+  if (ddd > 28 && localNumber.length === 9 && localNumber.startsWith('9')) {
+    return '55' + dddStr + localNumber.substring(1);
+  }
+  return numbers;
+}
 
 // Mock de conteúdo inicial gerado por IA (MVP — será substituído por IA real)
 const MOCK_AI_CONTENT = [
@@ -68,6 +86,7 @@ export default function BibliotecaComercialPage() {
 
   // Send Modal state
   const [sendModalMaterialId, setSendModalMaterialId] = useState<string | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string>('none');
   const [customMessage, setCustomMessage] = useState('');
   const [generatedShare, setGeneratedShare] = useState<any>(null);
@@ -704,28 +723,100 @@ export default function BibliotecaComercialPage() {
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Vincular a um Cliente ou Lead (Opcional)</label>
-                  <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um contato..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Não vincular a ninguém</SelectItem>
-                      
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Leads (CRM)</div>
-                      {!isLoadingLeads && leads.map(lead => (
-                        <SelectItem key={`lead_${lead.id}`} value={`lead_${lead.id}`}>
-                          {lead.nome} {lead.whatsapp && `(${lead.whatsapp})`}
-                        </SelectItem>
-                      ))}
+                  <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={popoverOpen}
+                        className="w-full justify-between font-normal h-11"
+                      >
+                        {selectedLeadId !== 'none' && selectedLeadId !== ''
+                          ? selectedLeadId.startsWith('lead_')
+                            ? leads.find((lead) => `lead_${lead.id}` === selectedLeadId)?.nome
+                            : clientes.find((cliente) => `cliente_${cliente.id}` === selectedLeadId)?.nome
+                          : 'Não vincular a ninguém'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[450px] p-0" align="start">
+                      <Command
+                        filter={(value, search) => {
+                          const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                          if (normalize(value).includes(normalize(search))) return 1;
+                          return 0;
+                        }}
+                      >
+                        <CommandInput placeholder="Buscar por nome ou número..." className="h-10" />
+                        <CommandList>
+                          <CommandEmpty>Nenhum contato encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            <CommandItem
+                              value="Nao vincular a ninguem"
+                              onSelect={() => {
+                                setSelectedLeadId('none');
+                                setPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedLeadId === 'none' ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              Não vincular a ninguém
+                            </CommandItem>
+                          </CommandGroup>
+                          
+                          {(leads && leads.length > 0) && (
+                            <CommandGroup heading="Leads (CRM)">
+                              {leads.map((lead) => (
+                                <CommandItem
+                                  key={`lead_${lead.id}`}
+                                  value={`${lead.nome} ${lead.whatsapp || ''}`}
+                                  onSelect={() => {
+                                    setSelectedLeadId(`lead_${lead.id}`);
+                                    setPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedLeadId === `lead_${lead.id}` ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {lead.nome} {lead.whatsapp && `(${lead.whatsapp})`}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
 
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Clientes da Base</div>
-                      {!isLoadingClientes && clientes.map(cliente => (
-                        <SelectItem key={`cliente_${cliente.id}`} value={`cliente_${cliente.id}`}>
-                          {cliente.nome} {cliente.whatsapp && `(${cliente.whatsapp})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          {(clientes && clientes.length > 0) && (
+                            <CommandGroup heading="Clientes da Base">
+                              {clientes.map((cliente) => (
+                                <CommandItem
+                                  key={`cliente_${cliente.id}`}
+                                  value={`${cliente.nome} ${cliente.whatsapp || ''}`}
+                                  onSelect={() => {
+                                    setSelectedLeadId(`cliente_${cliente.id}`);
+                                    setPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedLeadId === `cliente_${cliente.id}` ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {cliente.nome} {cliente.whatsapp && `(${cliente.whatsapp})`}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="text-xs text-muted-foreground">
                     Vinculando a um lead, o Kanban será avançado automaticamente quando ele interagir com a proposta.
                   </p>
@@ -752,22 +843,55 @@ export default function BibliotecaComercialPage() {
                     Copie o link abaixo e envie para o seu cliente.
                   </p>
                   
-                  <div className="flex w-full items-center gap-2">
-                    <Input 
-                      readOnly 
-                      value={`${window.location.origin}/p/${generatedShare.token}`} 
-                      className="bg-white border-green-200 text-sm h-10"
-                    />
-                    <Button 
-                      variant="secondary"
-                      className="shrink-0 bg-white hover:bg-green-100 text-green-700 border-green-200"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/p/${generatedShare.token}`);
-                        toast.success('Link copiado!');
-                      }}
-                    >
-                      Copiar
-                    </Button>
+                  <div className="flex flex-col w-full gap-2 mt-4">
+                    <div className="flex w-full items-center gap-2">
+                      <Input 
+                        readOnly 
+                        value={`${window.location.origin}/p/${generatedShare.token}`} 
+                        className="bg-white border-green-200 text-sm h-11"
+                      />
+                      <Button 
+                        variant="secondary"
+                        className="shrink-0 bg-white hover:bg-green-100 text-green-700 border-green-200 h-11 px-4"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/p/${generatedShare.token}`);
+                          toast.success('Link copiado!');
+                        }}
+                      >
+                        Copiar
+                      </Button>
+                    </div>
+                    
+                    {(() => {
+                      let phone = '';
+                      if (selectedLeadId && selectedLeadId !== 'none') {
+                        if (selectedLeadId.startsWith('lead_')) {
+                          const lead = leads.find(l => `lead_${l.id}` === selectedLeadId);
+                          if (lead?.whatsapp) phone = lead.whatsapp;
+                        } else {
+                          const cli = clientes.find(c => `cliente_${c.id}` === selectedLeadId);
+                          if (cli?.whatsapp) phone = cli.whatsapp;
+                        }
+                      }
+                      
+                      if (!phone) return null;
+                      
+                      const formattedPhone = formatWhatsAppNumber(phone);
+                      const linkText = encodeURIComponent(
+                        (customMessage ? customMessage + "\n\n" : "") +
+                        "Acesse sua proposta aqui: " +
+                        `${window.location.origin}/p/${generatedShare.token}`
+                      );
+                      const wpUrl = `https://wa.me/${formattedPhone}?text=${linkText}`;
+
+                      return (
+                        <a href={wpUrl} target="_blank" rel="noreferrer" className="w-full">
+                          <Button className="w-full bg-[#25D366] hover:bg-[#20b858] text-white h-11 font-medium gap-2">
+                            Enviar no WhatsApp
+                          </Button>
+                        </a>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

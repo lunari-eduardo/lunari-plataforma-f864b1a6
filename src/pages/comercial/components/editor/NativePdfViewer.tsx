@@ -13,6 +13,7 @@ interface NativePdfViewerProps {
 
 export function NativePdfViewer({ url }: NativePdfViewerProps) {
   const [numPages, setNumPages] = useState<number>();
+  const [renderedUpToPage, setRenderedUpToPage] = useState<number>(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -68,19 +69,30 @@ export function NativePdfViewer({ url }: NativePdfViewerProps) {
             <div 
               key={`page_${index + 1}`} 
               className="mb-6 shadow-xl rounded-md overflow-hidden bg-white mx-auto transition-transform hover:shadow-2xl"
-              style={{ width: 'fit-content' }}
+              style={{ width: 'fit-content', minHeight: '800px' }}
             >
-              <Page 
-                pageNumber={index + 1} 
-                width={containerWidth ? Math.min(containerWidth - 32, 1024) : undefined}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                loading={
-                  <div className="flex justify-center items-center h-[800px] bg-white w-full max-w-3xl">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/30" />
-                  </div>
-                }
-              />
+              {index + 1 <= renderedUpToPage ? (
+                <Page 
+                  pageNumber={index + 1} 
+                  width={containerWidth ? Math.min(containerWidth - 32, 1024) : undefined}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                  onRenderSuccess={() => {
+                    if (index + 1 === renderedUpToPage && index + 1 < numPages) {
+                      setRenderedUpToPage(prev => prev + 1);
+                    }
+                  }}
+                  loading={
+                    <div className="flex justify-center items-center h-[800px] bg-white w-full max-w-3xl">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/30" />
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="flex justify-center items-center h-[800px] bg-white w-full max-w-3xl">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/30" />
+                </div>
+              )}
             </div>
           ))}
         </Document>
