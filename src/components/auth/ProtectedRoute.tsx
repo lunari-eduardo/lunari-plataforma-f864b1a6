@@ -30,11 +30,33 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isOnline, lastOnlineAt, isInitializing } = useOnlineStatus();
   const location = useLocation();
 
-  // 1. Verificar autenticação. Também aguardamos enquanto há erro recuperável
-  // de profile (ex.: 401 transitório durante refresh de JWT no boot). Sem
-  // isso, o `profile=undefined` cairia em needsOnboarding e geraria
-  // redirect indevido para /onboarding.
-  if (authLoading || profileLoading || accessLoading || (user && isProfileError && !profile)) {
+  // Guarda o estado indicando que estamos num callback OAuth
+  // (evita Race Condition entre React Router limando a URL e Supabase pegando o PKCE code)
+  const isOauthPending = React.useRef(
+    location.search.includes('code=') || location.hash.includes('access_token=')
+  );
+
+  React.useEffect(() => {
+    // Quando o usuário for finalmente carregado (ou se soubermos que falhou definitivamente)
+    // a trava é liberada para fluxos normais operarem.
+    if (user || (!authLoading && !user)) {
+      // Pequeno timeout garantindo que qualquer processamento asíncrono finalizou
+      const timer = setTimeout(() => {
+        isOauthPending.current = false;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, authLoading]);
+
+  // 1. Verificar autenticação. 
+  // Seguramos no Spinner se a trava de OAuth estiver ativa (isOauthPending.current === true)
+  if (
+    authLoading || 
+    profileLoading || 
+    accessLoading || 
+    (user && isProfileError && !profile) ||
+    isOauthPending.current
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
