@@ -19,6 +19,7 @@ export interface ItemFinanceiro {
   grupo_principal: GrupoPrincipal;
   userId: string;
   ativo: boolean;
+  icone?: string;
   criadoEm: string;
 }
 

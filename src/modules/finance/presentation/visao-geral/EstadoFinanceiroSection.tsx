@@ -15,6 +15,7 @@ import { MetricIconBadge } from '@/components/ui/metric-icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { computeHealth, type Health } from '@/modules/finance/domain/healthScore';
 import type { PeriodoEfetivo } from '@/modules/finance/domain/periodoEfetivo';
+import { ConfigurarMetasModal } from './ConfigurarMetasModal';
 
 interface KPIs {
   totalReceita: number;
@@ -159,6 +160,9 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
   const lucroColor = lucroPositivo ? 'hsl(var(--finance-positive))' : 'hsl(var(--finance-negative))';
 
   const hintReceber = (() => {
+    if (qtdAReceber === 0) {
+      return kpis.valorPrevisto > 0 ? `Previsto ${formatCurrency(kpis.valorPrevisto)}` : undefined;
+    }
     const base = `${qtdAReceber} ${qtdAReceber === 1 ? 'recebimento pendente' : 'recebimentos pendentes'}`;
     return kpis.valorPrevisto > 0 ? `Previsto ${formatCurrency(kpis.valorPrevisto)} · ${base}` : base;
   })();
@@ -175,9 +179,12 @@ export const EstadoFinanceiroSection = memo(function EstadoFinanceiroSection({
 
   return (
     <section aria-labelledby="secao-estado" className="space-y-4">
-      <header>
-        <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Estado Financeiro</div>
-        <h2 id="secao-estado" className="mt-1 text-lg font-semibold tracking-tight text-foreground">Como está o negócio agora</h2>
+      <header className="flex items-start justify-between">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Estado Financeiro</div>
+          <h2 id="secao-estado" className="mt-1 text-lg font-semibold tracking-tight text-foreground">Como está o negócio agora</h2>
+        </div>
+        <ConfigurarMetasModal />
       </header>
 
       <div className="grid grid-cols-2 min-[380px]:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-2.5 sm:gap-4 auto-rows-fr">

@@ -459,6 +459,52 @@ export function useDashboardFinanceiro() {
     };
   }, [transacoesDoAno, workflowMetricsByYear]);
 
+  // ============= QUERY DEDICADA PARA TRANSAÇÕES DO PERÍODO ANTERIOR =============
+  const { data: transacoesAnterior = [] } = useQuery({
+    queryKey: ['dashboard-transactions-period-anterior', dashUserId, periodoAnterior.ano],
+    enabled: !!dashUserId && !!periodoAnterior.ano,
+    queryFn: async () => {
+      const startDateAnt = `${periodoAnterior.ano}-01-01`;
+      const endDateAnt = `${periodoAnterior.ano}-12-31`;
+
+      const { data, error } = await supabase
+        .from('fin_transactions')
+        .select(`
+          id,
+          item_id,
+          valor,
+          data_vencimento,
+          status,
+          observacoes,
+          fin_items_master (
+            id,
+            nome,
+            grupo_principal
+          )
+        `)
+        .eq('user_id', dashUserId!)
+        .gte('data_vencimento', startDateAnt)
+        .lte('data_vencimento', endDateAnt);
+
+      if (error) return [];
+
+      return (data || []).map((t: any) => ({
+        id: t.id,
+        itemId: t.item_id,
+        valor: t.valor,
+        dataVencimento: t.data_vencimento,
+        status: t.status,
+        observacoes: t.observacoes,
+        item: t.fin_items_master ? {
+          id: (t.fin_items_master as any).id,
+          nome: (t.fin_items_master as any).nome,
+          grupo_principal: (t.fin_items_master as any).grupo_principal
+        } : null
+      })) as TransacaoComItem[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
   // ============= COMPARAÇÕES PERÍODO ANTERIOR =============
   
   const comparisonData = useMemo(() => {
@@ -470,35 +516,50 @@ export function useDashboardFinanceiro() {
       labelComparacao = 'em comparação ao ano anterior';
     }
     
-    let receitaAnterior = isYearMode
-      ? (workflowMetricsByYearAnterior.totalAnual.receita || 0)
-      : workflowMetricsAnterior.receita;
+    let limitMonth = 12;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    if (isYearMode && parseInt(anoSelecionado) === currentYear) {
+      limitMonth = currentMonth;
+    }
+
+    let receitaAnterior = 0;
+    
+    if (isYearMode) {
+      receitaAnterior = workflowMetricsByYearAnterior.metricsPorMes
+        .filter(m => m.mes <= limitMonth)
+        .reduce((sum, m) => sum + m.receita, 0);
+    } else {
+      receitaAnterior = workflowMetricsAnterior.receita;
+    }
+    
     let despesasAnterior = 0;
     
-    // Transações do período anterior (buscar da query de transações do ano)
-    const transacoesAnterior = transacoesDoAno.filter(transacao => {
+    // Filtrar transações do período anterior correspondente
+    const transacoesAnteriorFiltradas = transacoesAnterior.filter(transacao => {
       if (!transacao.dataVencimento) return false;
       const [anoTransacao, mesTransacao] = transacao.dataVencimento.split('-').map(Number);
       
       if (periodoAnterior.mes) {
-        return anoTransacao === periodoAnterior.ano && mesTransacao === periodoAnterior.mes;
+        return mesTransacao === periodoAnterior.mes;
       } else {
-        return anoTransacao === periodoAnterior.ano;
+        return mesTransacao <= limitMonth;
       }
     });
     
-    const receitasExtrasAnterior = transacoesAnterior
+    const receitasExtrasAnterior = transacoesAnteriorFiltradas
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Não Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
-    const receitaOpManualAnterior = transacoesAnterior
+    const receitaOpManualAnterior = transacoesAnteriorFiltradas
       .filter(t => t.status === 'Pago' && t.item?.grupo_principal === 'Receita Operacional')
       .reduce((sum, t) => sum + t.valor, 0);
 
     receitaAnterior += receitasExtrasAnterior + receitaOpManualAnterior;
 
     
-    despesasAnterior = transacoesAnterior
+    despesasAnterior = transacoesAnteriorFiltradas
       .filter(t => t.status === 'Pago' && t.item && ['Despesa Fixa', 'Despesa Variável', 'Investimento'].includes(t.item.grupo_principal))
       .reduce((sum, t) => sum + t.valor, 0);
     

@@ -64,7 +64,7 @@ export const NovoLancamentoMenu = memo(function NovoLancamentoMenu({
                 className={cn(
                   "group flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left",
                   "transition-colors duration-150",
-                  "hover:bg-accent/40 focus:bg-accent/40 focus:outline-none",
+                  "hover:bg-muted/50 focus:bg-muted/50 focus:outline-none",
                 )}
               >
                 <span

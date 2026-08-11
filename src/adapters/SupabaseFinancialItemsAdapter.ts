@@ -12,9 +12,9 @@ export interface ItemFinanceiroSupabase extends ItemFinanceiro {
   updated_at?: string;
   user_id?: string;
   is_default?: boolean;
-  group_code?: string | null;
   is_system?: boolean;
   archived_at?: string | null;
+  icone?: string | null;
 }
 
 // Itens padrão que são inseridos automaticamente para novos usuários
@@ -132,10 +132,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: item.created_at,
         updated_at: item.updated_at,
         user_id: item.user_id,
-        is_default: item.is_default,
         group_code: (item as any).group_code ?? null,
         is_system: (item as any).is_system ?? false,
         archived_at: (item as any).archived_at ?? null,
+        icone: item.icone ?? null,
       }));
     } catch (error) {
       console.error('Erro ao buscar itens financeiros:', error);
@@ -175,6 +175,7 @@ export class SupabaseFinancialItemsAdapter {
         group_code: (item as any).group_code ?? null,
         is_system: (item as any).is_system ?? false,
         archived_at: (item as any).archived_at ?? null,
+        icone: item.icone ?? null,
       }));
     } catch (error) {
       console.error('Erro ao buscar itens (incl. arquivados):', error);
@@ -188,7 +189,7 @@ export class SupabaseFinancialItemsAdapter {
    * - Se existir arquivado (ativo=false) → reativa em vez de inserir (evita 409 no índice único).
    * - Caso contrário → INSERT normal.
    */
-  static async createItem(nome: string, grupo_principal: GrupoPrincipal): Promise<ItemFinanceiroSupabase> {
+  static async createItem(nome: string, grupo_principal: GrupoPrincipal, icone?: string): Promise<ItemFinanceiroSupabase> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -221,7 +222,7 @@ export class SupabaseFinancialItemsAdapter {
         // Reativa item arquivado (mesmo grupo e nome equivalente)
         const { data: updated, error: upErr } = await supabase
           .from('fin_items_master')
-          .update({ ativo: true, nome: nomeTrim })
+          .update({ ativo: true, nome: nomeTrim, icone: icone || null })
           .eq('id', existente.id)
           .select()
           .single();
@@ -232,10 +233,10 @@ export class SupabaseFinancialItemsAdapter {
           .from('fin_items_master')
           .insert({
             user_id: user.id,
-            nome: nomeTrim,
             grupo_principal,
             ativo: true,
-            is_default: false
+            is_default: false,
+            icone: icone || null
           })
           .select()
           .single();
@@ -253,10 +254,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: data.created_at,
         updated_at: data.updated_at,
         user_id: data.user_id,
-        is_default: data.is_default,
         group_code: (data as any).group_code ?? null,
         is_system: (data as any).is_system ?? false,
         archived_at: (data as any).archived_at ?? null,
+        icone: data.icone ?? null,
       };
     } catch (error) {
       console.error('Erro ao criar item financeiro:', error);
@@ -267,7 +268,7 @@ export class SupabaseFinancialItemsAdapter {
   /**
    * Atualizar item financeiro
    */
-  static async updateItem(id: string, updates: { nome?: string; ativo?: boolean }): Promise<ItemFinanceiroSupabase> {
+  static async updateItem(id: string, updates: { nome?: string; ativo?: boolean; icone?: string }): Promise<ItemFinanceiroSupabase> {
     try {
       const { data, error } = await supabase
         .from('fin_items_master')
@@ -288,10 +289,10 @@ export class SupabaseFinancialItemsAdapter {
         created_at: data.created_at,
         updated_at: data.updated_at,
         user_id: data.user_id,
-        is_default: data.is_default,
         group_code: (data as any).group_code ?? null,
         is_system: (data as any).is_system ?? false,
         archived_at: (data as any).archived_at ?? null,
+        icone: data.icone ?? null,
       };
     } catch (error) {
       console.error('Erro ao atualizar item financeiro:', error);
@@ -367,7 +368,8 @@ export class SupabaseFinancialItemsAdapter {
         is_default: item.is_default || false,
         group_code: (item as any).group_code ?? null,
         is_system: (item as any).is_system ?? false,
-        archived_at: (item as any).archived_at ?? null
+        archived_at: (item as any).archived_at ?? null,
+        icone: item.icone ?? null,
       }));
     } catch (error) {
       console.error('Erro ao buscar itens por grupo:', error);

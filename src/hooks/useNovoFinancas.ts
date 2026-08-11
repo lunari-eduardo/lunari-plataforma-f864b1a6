@@ -119,9 +119,9 @@ export function useNovoFinancas() {
 
   // ============= GERENCIAMENTO DE ITENS FINANCEIROS =============
   
-  const adicionarItemFinanceiro = async (nome: string, grupo: GrupoPrincipal) => {
+  const adicionarItemFinanceiro = async (nome: string, grupo: GrupoPrincipal, icone?: string) => {
     try {
-      const novoItem = await supabaseFinancialItemsService.createItem(nome, grupo);
+      const novoItem = await supabaseFinancialItemsService.createItem(nome, grupo, icone);
       const itemCompativel: ItemFinanceiroCompativel = {
         ...novoItem,
         grupoPrincipal: novoItem.grupo_principal,
@@ -148,12 +148,10 @@ export function useNovoFinancas() {
     }
   };
 
-  const atualizarItemFinanceiro = async (id: string, updates: Partial<ItemFinanceiroCompativel>) => {
+  const atualizarItemFinanceiro = async (id: string, dadosAtualizados: Partial<ItemFinanceiro>) => {
     try {
-      const itemAtualizado = await supabaseFinancialItemsService.updateItem(id, {
-        nome: updates.nome,
-        ativo: updates.ativo,
-      });
+      const { nome, ativo, icone } = dadosAtualizados;
+      const itemAtualizado = await supabaseFinancialItemsService.updateItem(id, { nome, ativo, icone });
       const itemCompativel: ItemFinanceiroCompativel = {
         ...itemAtualizado,
         grupoPrincipal: itemAtualizado.grupo_principal,

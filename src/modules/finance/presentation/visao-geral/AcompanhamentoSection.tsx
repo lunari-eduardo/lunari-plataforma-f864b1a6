@@ -41,6 +41,13 @@ function diasAte(iso: string) {
   return Math.round((alvo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+function getDisplayName(t: Tx) {
+  if (t.observacoes === 'Recorrente - Valor Fixo' || t.observacoes === 'Recorrente - Editar Valor') {
+    return t.item?.nome || t.observacoes;
+  }
+  return t.observacoes || t.item?.nome || 'Lançamento';
+}
+
 export const AcompanhamentoSection = memo(function AcompanhamentoSection({ transacoes }: Props) {
   const hojeStr = new Date().toISOString().slice(0, 10);
 
@@ -109,7 +116,7 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-foreground truncate">
-                          {t.observacoes || t.item?.nome || 'Lançamento'}
+                          {getDisplayName(t)}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {dias === 0 ? 'Hoje' : dias === 1 ? 'Amanhã' : `em ${dias} dias`}
@@ -177,7 +184,7 @@ export const AcompanhamentoSection = memo(function AcompanhamentoSection({ trans
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-foreground truncate">
-                          {t.observacoes || t.item?.nome || 'Lançamento'}
+                          {getDisplayName(t)}
                         </div>
                         <div className="text-xs" style={{ color: 'hsl(var(--finance-warning))' }}>
                           {dias === 1 ? 'vence há 1 dia' : `vence há ${dias} dias`}

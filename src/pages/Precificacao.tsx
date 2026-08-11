@@ -17,7 +17,6 @@ const ETAPAS = [
   { value: 'custos', label: 'Custos' },
   { value: 'equipamentos', label: 'Equipamentos' },
   { value: 'calculadora', label: 'Calculadora' },
-  { value: 'metas', label: 'Metas' },
 ] as const;
 
 type EtapaValue = (typeof ETAPAS)[number]['value'];
@@ -113,10 +112,6 @@ export default function Precificacao() {
               metaFaturamentoMensal={metaFaturamentoMensal}
               onPrecoFinalChange={setPrecoFinalServico}
             />
-          </TabsContent>
-
-          <TabsContent value="metas" className={PAGE_TABS_CONTENT}>
-            <EtapaMetas custosFixosTotal={custosFixosTotal} />
           </TabsContent>
         </Tabs>
 

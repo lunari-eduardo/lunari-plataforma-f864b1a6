@@ -7,13 +7,15 @@ import { FINANCIAL_GROUPS, TOAST_MESSAGES } from '@/constants/financialConstants
 interface ItemState {
   novoNome: string;
   novoGrupo: GrupoPrincipal;
+  novoIcone?: string;
   editandoId: string | null;
   nomeEditando: string;
+  iconeEditando?: string;
 }
 
 interface UseFinancialItemsManagementProps {
   itensFinanceiros: ItemFinanceiro[];
-  adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal) => Promise<any>;
+  adicionarItemFinanceiro: (nome: string, grupo: GrupoPrincipal, icone?: string) => Promise<any>;
   removerItemFinanceiro: (id: string) => Promise<void>;
   atualizarItemFinanceiro: (id: string, dadosAtualizados: Partial<ItemFinanceiro>) => Promise<any>;
 }
@@ -25,11 +27,12 @@ export function useFinancialItemsManagement({
   atualizarItemFinanceiro
 }: UseFinancialItemsManagementProps) {
   // Consolidated state management
-  const [itemState, setItemState] = useState<ItemState>({
     novoNome: '',
     novoGrupo: 'Despesa Fixa',
+    novoIcone: '',
     editandoId: null,
-    nomeEditando: ''
+    nomeEditando: '',
+    iconeEditando: ''
   });
 
   const { validateAndShowError, showSuccessToast, showErrorToast } = useFinancialValidation(itensFinanceiros);
@@ -47,8 +50,8 @@ export function useFinancialItemsManagement({
     }
     
     try {
-      await adicionarItemFinanceiro(itemState.novoNome.trim(), itemState.novoGrupo);
-      setItemState(prev => ({ ...prev, novoNome: '' }));
+      await adicionarItemFinanceiro(itemState.novoNome.trim(), itemState.novoGrupo, itemState.novoIcone);
+      setItemState(prev => ({ ...prev, novoNome: '', novoIcone: '' }));
       showSuccessToast(TOAST_MESSAGES.SUCCESS_ADD);
     } catch (error: any) {
       if (error?.code === 'DUPLICATE_ACTIVE') {
@@ -57,13 +60,14 @@ export function useFinancialItemsManagement({
         showErrorToast(TOAST_MESSAGES.ERROR_GENERIC_ADD);
       }
     }
-  }, [itemState.novoNome, itemState.novoGrupo, adicionarItemFinanceiro, validateAndShowError, showSuccessToast, showErrorToast]);
+  }, [itemState.novoNome, itemState.novoGrupo, itemState.novoIcone, adicionarItemFinanceiro, validateAndShowError, showSuccessToast, showErrorToast]);
 
   const handleEditarItem = useCallback((item: ItemFinanceiro) => {
     setItemState(prev => ({
       ...prev,
       editandoId: item.id,
-      nomeEditando: item.nome
+      nomeEditando: item.nome,
+      iconeEditando: item.icone || ''
     }));
   }, []);
 
@@ -74,24 +78,27 @@ export function useFinancialItemsManagement({
     
     try {
       await atualizarItemFinanceiro(id, {
-        nome: itemState.nomeEditando.trim()
+        nome: itemState.nomeEditando.trim(),
+        icone: itemState.iconeEditando || undefined
       });
       setItemState(prev => ({
         ...prev,
         editandoId: null,
-        nomeEditando: ''
+        nomeEditando: '',
+        iconeEditando: ''
       }));
       showSuccessToast(TOAST_MESSAGES.SUCCESS_UPDATE);
     } catch (error) {
       showErrorToast(TOAST_MESSAGES.ERROR_GENERIC_UPDATE);
     }
-  }, [itemState.nomeEditando, atualizarItemFinanceiro, validateAndShowError, showSuccessToast, showErrorToast]);
+  }, [itemState.nomeEditando, itemState.iconeEditando, atualizarItemFinanceiro, validateAndShowError, showSuccessToast, showErrorToast]);
 
   const handleCancelarEdicao = useCallback(() => {
     setItemState(prev => ({
       ...prev,
       editandoId: null,
-      nomeEditando: ''
+      nomeEditando: '',
+      iconeEditando: ''
     }));
   }, []);
 

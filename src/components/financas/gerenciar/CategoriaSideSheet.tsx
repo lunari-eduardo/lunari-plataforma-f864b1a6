@@ -14,9 +14,13 @@ interface Props {
   item?: ItemFinanceiro | null;
 
   createName: string;
-  onCreateNameChange: (v: string) => void;
   editName: string;
   onEditNameChange: (v: string) => void;
+
+  createIcone?: string;
+  onCreateIconeChange?: (v: string) => void;
+  editIcone?: string;
+  onEditIconeChange?: (v: string) => void;
 
   onSubmitCreate: () => Promise<void> | void;
   onSubmitEdit: (id: string) => Promise<void> | void;
@@ -37,6 +41,10 @@ export default function CategoriaSideSheet({
   onCreateNameChange,
   editName,
   onEditNameChange,
+  createIcone = '',
+  onCreateIconeChange,
+  editIcone = '',
+  onEditIconeChange,
   onSubmitCreate,
   onSubmitEdit,
   onDelete,
@@ -48,6 +56,7 @@ export default function CategoriaSideSheet({
   }, [open]);
 
   const displayName = mode === 'edit' ? editName : createName;
+  const displayIcone = mode === 'edit' ? editIcone : createIcone;
 
   async function handleSave() {
     setSaving(true);
@@ -105,8 +114,12 @@ export default function CategoriaSideSheet({
     >
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-muted grid place-items-center text-sm font-medium text-muted-foreground">
-            {initialOf(displayName || (mode === 'create' ? 'N' : item?.nome ?? '·'))}
+          <div className="size-10 rounded-lg bg-muted grid place-items-center text-sm font-medium text-muted-foreground overflow-hidden">
+            {displayIcone ? (
+              <span className="text-lg">{displayIcone}</span>
+            ) : (
+              initialOf(displayName || (mode === 'create' ? 'N' : item?.nome ?? '·'))
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
@@ -135,6 +148,27 @@ export default function CategoriaSideSheet({
               }
             }}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cat-icone" className="text-xs font-medium text-muted-foreground">
+            Ícone (Emoji)
+          </Label>
+          <Input
+            id="cat-icone"
+            value={displayIcone}
+            maxLength={2}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (mode === 'create') {
+                onCreateIconeChange?.(val);
+              } else {
+                onEditIconeChange?.(val);
+              }
+            }}
+            placeholder="Ex.: 💰, 🛒, 🏠"
+          />
+          <p className="text-[10px] text-muted-foreground">Cole um emoji ou deixe em branco para usar apenas as iniciais.</p>
         </div>
 
         <div className="space-y-2">
