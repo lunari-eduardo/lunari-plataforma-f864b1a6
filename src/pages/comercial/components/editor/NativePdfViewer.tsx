@@ -9,9 +9,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 
 interface NativePdfViewerProps {
   url: string;
+  logoUrl?: string;
 }
 
-export function NativePdfViewer({ url }: NativePdfViewerProps) {
+export function NativePdfViewer({ url, logoUrl }: NativePdfViewerProps) {
   const [numPages, setNumPages] = useState<number>();
   const [renderedUpToPage, setRenderedUpToPage] = useState<number>(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -50,9 +51,13 @@ export function NativePdfViewer({ url }: NativePdfViewerProps) {
           file={url}
           onLoadSuccess={onDocumentLoadSuccess}
           loading={
-            <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-4">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              <p>Carregando proposta...</p>
+            <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-3 min-h-[50vh]">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-16 h-16 object-contain rounded-full mb-2 animate-pulse" />
+              ) : (
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground/50 mb-2" />
+              )}
+              <p className="text-xs uppercase tracking-widest opacity-60">carregando...</p>
             </div>
           }
           error={

@@ -134,7 +134,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex flex-col relative pb-24">
       {isPdfFormat ? (
-        <NativePdfViewer url={pdfUrl} />
+        <NativePdfViewer url={pdfUrl} logoUrl={userProfile?.avatar_url} />
       ) : (
         <VisualRenderer 
           blocks={blocks}

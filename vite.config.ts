@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => ({
         name: 'Lunari',
         short_name: 'Lunari',
         description: 'Sistema de gestão completo para fotógrafos e estúdios fotográficos',
-        theme_color: '#6B7280',
+        theme_color: '#2C2825',
         background_color: '#0A0A0A',
         display: 'standalone',
         orientation: 'portrait',
