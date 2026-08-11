@@ -27,6 +27,7 @@ export function useFinancialItemsManagement({
   atualizarItemFinanceiro
 }: UseFinancialItemsManagementProps) {
   // Consolidated state management
+  const [itemState, setItemState] = useState<ItemState>({
     novoNome: '',
     novoGrupo: 'Despesa Fixa',
     novoIcone: '',
