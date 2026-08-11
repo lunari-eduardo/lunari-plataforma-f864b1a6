@@ -25,7 +25,7 @@ const ALLOWED = [
   "text/plain",
 ];
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 50 * 1024 * 1024;
 
 export function useTaskAttachmentsV2(taskId: string | null | undefined) {
   // assina o store para re-render em mudanças.
@@ -49,7 +49,7 @@ export function useTaskAttachmentsV2(taskId: string | null | undefined) {
         return null;
       }
       if (file.size > MAX_BYTES) {
-        toast.error("Arquivo excede 10MB.");
+        toast.error("Arquivo excede 50MB.");
         return null;
       }
       const res = await run(addTaskAttachment, { taskId, file });

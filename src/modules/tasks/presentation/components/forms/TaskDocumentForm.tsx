@@ -93,7 +93,7 @@ export default function TaskDocumentForm({
               </div>
               <div>
                 <p className="text-sm font-medium">Clique para fazer upload</p>
-                <p className="text-xs text-lunar-textSecondary">PDF, DOC, imagens até 10MB</p>
+                <p className="text-xs text-lunar-textSecondary">PDF, DOC, imagens até 50MB</p>
               </div>
             </div>
           </label>

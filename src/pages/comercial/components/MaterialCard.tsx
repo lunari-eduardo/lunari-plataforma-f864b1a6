@@ -27,6 +27,7 @@ export interface MaterialCardProps {
   id: string;
   title: string;
   lastUpdated: string;
+  categoryName?: string;
   isActive: boolean;
   isPublished: boolean;
   coverUrl?: string | null;
@@ -42,6 +43,7 @@ export function MaterialCard({
   id,
   title,
   lastUpdated,
+  categoryName,
   isActive,
   isPublished,
   coverUrl,
@@ -97,9 +99,21 @@ export function MaterialCard({
       <div className="flex flex-col gap-2 px-1">
         {/* Linha 1: Título e Menu */}
         <div className="flex items-start justify-between">
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-0.5">
             <h3 className="font-semibold text-foreground text-sm line-clamp-1">{title}</h3>
-            <p className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {categoryName && (
+                <>
+                  <span>{categoryName}</span>
+                  <span className="opacity-50">·</span>
+                </>
+              )}
+              <div className="flex items-center gap-1">
+                <div className={cn("w-1.5 h-1.5 rounded-full", isPublished ? "bg-emerald-500" : "bg-amber-500")} />
+                <span>{isPublished ? 'Publicada' : 'Rascunho'}</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">
               {lastUpdated}
             </p>
           </div>
@@ -127,17 +141,9 @@ export function MaterialCard({
                 Enviar Orçamento
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                <History className="mr-2 h-4 w-4" />
-                Histórico de Versões <span className="ml-2 text-[10px] text-muted-foreground">(Em breve)</span>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onViewShares()} className="font-medium">
                 <Share2 className="mr-2 h-4 w-4" />
                 Compartilhamentos
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <BarChart2 className="mr-2 h-4 w-4" />
-                Analytics <span className="ml-2 text-[10px] text-muted-foreground">(Em breve)</span>
               </DropdownMenuItem>
               
               <DropdownMenuSeparator />
@@ -167,11 +173,24 @@ export function MaterialCard({
             className="w-full mt-2 gap-2 text-primary border-primary/20 hover:bg-primary/5 transition-colors"
             onClick={(e) => {
               e.stopPropagation();
-              onSend(id);
+              if (isPublished) {
+                onSend(id);
+              } else {
+                onOpen(id);
+              }
             }}
           >
-            <Share2 className="h-3.5 w-3.5" />
-            Enviar Orçamento
+            {isPublished ? (
+              <>
+                <Share2 className="h-3.5 w-3.5" />
+                Compartilhar
+              </>
+            ) : (
+              <>
+                <FileText className="h-3.5 w-3.5" />
+                Continuar Edição
+              </>
+            )}
           </Button>
         )}
       </div>

@@ -113,8 +113,8 @@ export function useFileUpload() {
       toast.error('Tipo de arquivo não permitido. Use PDF, JPG, PNG ou DOC');
       return null;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Arquivo muito grande. Tamanho máximo: 10MB');
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Tamanho máximo: 50MB');
       return null;
     }
 

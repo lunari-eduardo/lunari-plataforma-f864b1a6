@@ -48,7 +48,7 @@ export function FileUploadZone({
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: 50 * 1024 * 1024 // 50MB
   });
 
   const existingFiles = showExisting 
@@ -111,7 +111,7 @@ export function FileUploadZone({
                   Arraste arquivos aqui ou clique para selecionar
                 </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Suportamos PDF, JPG, PNG e DOC (máx. 10MB)
+                  Suportamos PDF, JPG, PNG e DOC (máx. 50MB)
                 </p>
                 <Button variant="outline" disabled={uploading}>
                   {uploading ? 'Enviando...' : 'Selecionar Arquivos'}

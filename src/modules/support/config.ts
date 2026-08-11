@@ -7,7 +7,7 @@ export const SUPPORT_WHATSAPP_NUMBER = "5551998287948"; // +55 51 99828-7948
 
 export const SUPPORT_LIMITS = {
   maxFilesPerMessage: 5,
-  imageMaxBytes: 10 * 1024 * 1024,
+  imageMaxBytes: 50 * 1024 * 1024,
   videoMaxBytes: 50 * 1024 * 1024,
   acceptedImageMimes: ["image/png", "image/jpeg", "image/webp", "image/gif"],
   acceptedVideoMimes: ["video/mp4", "video/webm", "video/quicktime"],

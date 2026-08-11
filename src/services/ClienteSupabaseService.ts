@@ -32,8 +32,8 @@ export class ClienteSupabaseService {
       if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) {
         throw new Error('Tipo de arquivo não permitido. Apenas PDF, imagens e documentos Office são aceitos.');
       }
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Arquivo muito grande. Tamanho máximo: 10MB');
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('Arquivo muito grande. Tamanho máximo: 50MB');
       }
       const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx', 'xls', 'xlsx'];
       const fileExt = file.name.split('.').pop()?.toLowerCase();

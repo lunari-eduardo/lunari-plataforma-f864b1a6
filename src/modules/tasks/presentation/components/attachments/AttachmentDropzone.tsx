@@ -37,7 +37,7 @@ export function AttachmentDropzone({ taskId }: Props) {
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
       "text/plain": [".txt"],
     },
-    maxSize: 10 * 1024 * 1024,
+    maxSize: 50 * 1024 * 1024,
     disabled: !taskId || busy,
   });
 
@@ -67,7 +67,7 @@ export function AttachmentDropzone({ taskId }: Props) {
         ) : (
           <>
             <Upload className="h-4 w-4" />
-            {isDragActive ? "Solte aqui" : "Clique ou arraste arquivos (até 10MB)"}
+            {isDragActive ? "Solte aqui" : "Clique ou arraste arquivos (até 50MB)"}
           </>
         )}
       </div>

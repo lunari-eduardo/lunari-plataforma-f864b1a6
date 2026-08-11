@@ -22,9 +22,9 @@ export function useTaskAttachments(task: Task, onUpdateTask: (updates: Partial<T
       return;
     }
 
-    // Validar tamanho (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Arquivo muito grande. Tamanho máximo: 10MB');
+    // Validar tamanho (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Tamanho máximo: 50MB');
       return;
     }
 

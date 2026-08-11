@@ -64,7 +64,7 @@ export function AttachmentsUploader({
           Anexar
         </Button>
         <span className="text-[11px] text-muted-foreground">
-          {pending.length}/{SUPPORT_LIMITS.maxFilesPerMessage} — imagens até 10MB, vídeos até 50MB
+          {pending.length}/{SUPPORT_LIMITS.maxFilesPerMessage} — imagens até 50MB, vídeos até 50MB
         </span>
       </div>
       <input

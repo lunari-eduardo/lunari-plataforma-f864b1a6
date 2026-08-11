@@ -48,13 +48,14 @@ export default function BibliotecaComercialPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial, duplicateMaterial } = useMaterials();
+  const isPendingCreate = createMaterial.isPending;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Wizard state
-  const [step, setStep] = useState<Step>('category');
+  const [step, setStep] = useState<Step>('method');
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
   const [customTitle, setCustomTitle] = useState('');
   const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | 'db-template' | 'pdf' | null>(null);
@@ -113,7 +114,7 @@ export default function BibliotecaComercialPage() {
   };
 
   const resetModal = () => {
-    setStep('category');
+    setStep('method');
     setSelectedCategoria(null);
     setCustomTitle('');
     setCreationMethod(null);
@@ -240,7 +241,7 @@ export default function BibliotecaComercialPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Biblioteca de Materiais</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Propostas</h1>
             <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 hidden sm:inline-flex">
               Admin Only
             </Badge>
@@ -301,6 +302,7 @@ export default function BibliotecaComercialPage() {
                 id={material.id}
                 title={material.title}
                 lastUpdated={`Atualizado há ${formatDistanceToNow(new Date(material.updated_at), { locale: ptBR })}`}
+                categoryName={material.categoria?.nome}
                 isActive={material.status === 'active'}
                 isPublished={!!material.current_version?.published_at}
                 coverUrl={material.cover_image_url}
@@ -335,87 +337,16 @@ export default function BibliotecaComercialPage() {
           <DialogHeader>
             <DialogTitle className="text-xl">Nova Proposta</DialogTitle>
             <DialogDescription>
-              {step === 'category' && 'Selecione a categoria para este material comercial.'}
               {step === 'method' && 'Escolha como deseja iniciar a criação.'}
               {step === 'template-gallery' && 'Escolha um modelo premium para iniciar.'}
               {step === 'pdf-upload' && 'Faça o upload do seu arquivo PDF estático.'}
+              {step === 'category' && 'Selecione a categoria para este material comercial.'}
             </DialogDescription>
           </DialogHeader>
 
-          {/* ─── PASSO 1: Selecionar Categoria ─── */}
-          {step === 'category' && (
-            <div className="py-4 space-y-4">
-              {isLoadingCategorias ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
-                </div>
-              ) : categorias.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <Tag className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Você ainda não cadastrou categorias.<br />
-                    Acesse <strong>Configurações</strong> para criar sua primeira categoria.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
-                  {categorias.map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedCategoria(cat)}
-                      className={cn(
-                        'flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all',
-                        selectedCategoria?.id === cat.id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border bg-card hover:border-primary/40 hover:bg-muted/40'
-                      )}
-                    >
-                      <span
-                        className="h-3 w-3 rounded-full shrink-0"
-                        style={{ backgroundColor: cat.cor || '#6b7280' }}
-                      />
-                      <span className="font-medium text-sm text-foreground truncate">{cat.nome}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Nome personalizado (opcional) */}
-              {selectedCategoria && (
-                <div className="space-y-2 animate-in slide-in-from-top-2 fade-in duration-200 pt-1">
-                  <label className="text-sm font-medium text-foreground">
-                    Nome personalizado <span className="text-muted-foreground font-normal">(opcional)</span>
-                  </label>
-                  <Input
-                    placeholder={`Ex: Proposta ${selectedCategoria.nome} — Maria Fernanda`}
-                    value={customTitle}
-                    onChange={(e) => setCustomTitle(e.target.value)}
-                    className="h-11"
-                    onKeyDown={(e) => { if (e.key === 'Enter' && selectedCategoria) setStep('method'); }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Se não informado, o título será <strong>"{selectedCategoria.nome}"</strong>.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── PASSO 2: Escolher Modo de Criação ─── */}
+          {/* ─── PASSO 1: Escolher Modo de Criação ─── */}
           {step === 'method' && (
             <div className="py-4 space-y-4 animate-in slide-in-from-right-4 fade-in duration-200">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <button
-                  type="button"
-                  onClick={() => setStep('category')}
-                  className="hover:text-foreground transition-colors underline underline-offset-2"
-                >
-                  ← Voltar
-                </button>
-                <span>·</span>
-                <span>Título: <strong className="text-foreground">{resolvedTitle}</strong></span>
-              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Card IA */}
@@ -477,7 +408,7 @@ export default function BibliotecaComercialPage() {
                     <FileText className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm">Upload de PDF</h3>
+                    <h3 className="font-semibold text-foreground text-sm">Importar PDF</h3>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       Envie um PDF estático para ser rastreado.
                     </p>
@@ -499,7 +430,7 @@ export default function BibliotecaComercialPage() {
                     <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm">Em Branco</h3>
+                    <h3 className="font-semibold text-foreground text-sm">Começar do zero</h3>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       Comece com uma estrutura limpa.
                     </p>
@@ -627,13 +558,87 @@ export default function BibliotecaComercialPage() {
             </div>
           )}
 
+          {/* ─── PASSO FINAL: Selecionar Categoria ─── */}
+          {step === 'category' && (
+            <div className="py-4 space-y-6 animate-in slide-in-from-right-4 fade-in duration-200">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (creationMethod === 'db-template') setStep('template-gallery');
+                    else if (creationMethod === 'pdf') setStep('pdf-upload');
+                    else setStep('method');
+                  }}
+                  className="hover:text-foreground transition-colors underline underline-offset-2"
+                >
+                  ← Voltar
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-foreground">
+                  Selecione a Categoria
+                </label>
+                {isLoadingCategorias ? (
+                  <Skeleton className="h-11 w-full rounded-md" />
+                ) : categorias.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-4 text-center">
+                    <Tag className="h-6 w-6 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Você ainda não cadastrou categorias.</p>
+                  </div>
+                ) : (
+                  <Select
+                    value={selectedCategoria?.id || ''}
+                    onValueChange={(val) => setSelectedCategoria(categorias.find(c => c.id === val) || null)}
+                  >
+                    <SelectTrigger className="h-11 w-full bg-card">
+                      <SelectValue placeholder="Escolha uma categoria..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categorias.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.cor || '#6b7280' }} />
+                            <span>{cat.nome}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {selectedCategoria && (
+                <div className="space-y-2 pt-2 border-t border-border animate-in slide-in-from-top-2 fade-in duration-200">
+                  <label className="text-sm font-medium text-foreground">
+                    Nome personalizado <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </label>
+                  <Input
+                    placeholder={`Ex: Proposta ${selectedCategoria.nome} — Maria Fernanda`}
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    className="h-11"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && selectedCategoria) handleCreate(); }}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se não informado, o título será <strong>"{selectedCategoria.nome}"</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter className="border-t pt-4">
             <Button variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
 
-            {step === 'category' && (
+            {step === 'method' && (
               <Button
-                onClick={() => setStep('method')}
-                disabled={!selectedCategoria}
+                onClick={() => {
+                  if (creationMethod === 'db-template') setStep('template-gallery');
+                  else if (creationMethod === 'pdf') setStep('pdf-upload');
+                  else setStep('category');
+                }}
+                disabled={!creationMethod}
                 className="gap-2"
               >
                 Continuar
@@ -641,44 +646,35 @@ export default function BibliotecaComercialPage() {
               </Button>
             )}
 
-            {step === 'method' && (
-              <Button
-                onClick={() => {
-                  if (creationMethod === 'db-template') {
-                    setStep('template-gallery');
-                  } else if (creationMethod === 'pdf') {
-                    setStep('pdf-upload');
-                  } else {
-                    handleCreate();
-                  }
-                }}
-                disabled={!resolvedTitle || !creationMethod || createMaterial.isPending}
-                className="gap-2"
-              >
-                {createMaterial.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                {['db-template', 'pdf'].includes(creationMethod || '') ? 'Avançar' : (creationMethod === 'ai' ? 'Gerar Proposta' : 'Criar Proposta')}
-              </Button>
-            )}
-
             {step === 'template-gallery' && (
               <Button
-                onClick={handleCreate}
-                disabled={!selectedDbTemplate || createMaterial.isPending}
+                onClick={() => setStep('category')}
+                disabled={!selectedDbTemplate}
                 className="gap-2"
               >
-                {createMaterial.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Usar Modelo Selecionado
+                Continuar
+                <ChevronRight size={16} />
               </Button>
             )}
 
             {step === 'pdf-upload' && (
               <Button
-                onClick={handleCreate}
-                disabled={!selectedPdf || createMaterial.isPending || isUploadingPdf}
+                onClick={() => setStep('category')}
+                disabled={!selectedPdf}
                 className="gap-2"
               >
-                {(createMaterial.isPending || isUploadingPdf) && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isUploadingPdf ? 'Enviando PDF...' : 'Concluir Criação'}
+                Continuar
+                <ChevronRight size={16} />
+              </Button>
+            )}
+
+            {step === 'category' && (
+              <Button
+                onClick={handleCreate}
+                disabled={!selectedCategoria || isPendingCreate}
+                className="gap-2"
+              >
+                {isPendingCreate ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar Proposta'}
               </Button>
             )}
           </DialogFooter>

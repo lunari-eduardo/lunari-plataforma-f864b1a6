@@ -30,8 +30,8 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
       toast.error('Por favor, selecione apenas imagens');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('A imagem deve ter no máximo 10MB');
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 50MB');
       return;
     }
     await uploadFile(file);
@@ -143,7 +143,7 @@ export function ImageBlock({ imageUrl, imageCaption, imageAlt, onUpdate }: Image
                 Arraste uma imagem ou clique para selecionar
               </span>
               <span className="text-xs text-muted-foreground">
-                PNG, JPG ou WebP até 10MB
+                PNG, JPG ou WebP até 50MB
               </span>
             </div>
           )}

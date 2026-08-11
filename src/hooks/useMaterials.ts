@@ -20,6 +20,7 @@ export interface CommercialMaterial {
   created_at: string;
   updated_at: string;
   // Joined
+  categoria?: { nome: string };
   current_version?: {
     id: string;
     version_number: number;
@@ -37,7 +38,7 @@ export function useMaterials() {
       // Buscar materiais com a versão mais recente
       const { data: materials, error } = await (supabase as any)
         .from('commercial_materials')
-        .select('*')
+        .select('*, categoria:categorias(nome)')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
