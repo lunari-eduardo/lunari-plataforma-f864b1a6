@@ -303,7 +303,7 @@ export default function Dashboard() {
     : 'Gerencie suas entregas finais.';
 
   return (
-    <div className="max-w-[1100px] mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-5xl mx-auto px-2 sm:px-4 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

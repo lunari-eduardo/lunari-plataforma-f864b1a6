@@ -10,6 +10,7 @@ import {
   Loader2,
   HelpCircle
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface StatusBadgeProps {
   status: GalleryStatus | SelectionStatus | string;
@@ -51,21 +52,21 @@ const statusTranslation: Record<string, GalleryStatus | SelectionStatus> = {
 };
 
 const galleryStatusConfig: Record<GalleryStatus, { label: string; className: string; icon: React.ElementType }> = {
-  created: { label: 'Criada', className: 'status-created', icon: Circle },
-  sent: { label: 'Enviada', className: 'status-sent', icon: Send },
-  selection_started: { label: 'Em seleção', className: 'status-in-progress', icon: MousePointer },
-  selection_completed: { label: 'Concluída', className: 'status-completed', icon: CheckCircle },
-  expired: { label: 'Expirada', className: 'status-expired', icon: Clock },
-  cancelled: { label: 'Cancelada', className: 'status-cancelled', icon: XCircle },
+  created: { label: 'Criada', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/10', icon: Circle },
+  sent: { label: 'Enviada', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/10', icon: Send },
+  selection_started: { label: 'Em seleção', className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 hover:bg-orange-500/10', icon: MousePointer },
+  selection_completed: { label: 'Concluída', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10', icon: CheckCircle },
+  expired: { label: 'Expirada', className: 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/10', icon: Clock },
+  cancelled: { label: 'Cancelada', className: 'bg-muted text-muted-foreground border-border hover:bg-muted', icon: XCircle },
 };
 
 const selectionStatusConfig: Record<SelectionStatus, { label: string; className: string; icon: React.ElementType }> = {
-  in_progress: { label: 'Em andamento', className: 'status-in-progress', icon: Loader2 },
-  confirmed: { label: 'Confirmada', className: 'status-completed', icon: CheckCircle },
-  blocked: { label: 'Aguardando Pagamento', className: 'status-expired', icon: Clock },
+  in_progress: { label: 'Em andamento', className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20 hover:bg-orange-500/10', icon: Loader2 },
+  confirmed: { label: 'Confirmada', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10', icon: CheckCircle },
+  blocked: { label: 'Aguardando Pagamento', className: 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/10', icon: Clock },
 };
 
-const defaultConfig = { label: 'Desconhecido', className: 'status-created', icon: HelpCircle };
+const defaultConfig = { label: 'Desconhecido', className: 'bg-muted text-muted-foreground border-border', icon: HelpCircle };
 
 export function StatusBadge({ status, type = 'gallery', className }: StatusBadgeProps) {
   // Normalizar status usando mapeamento
@@ -78,9 +79,9 @@ export function StatusBadge({ status, type = 'gallery', className }: StatusBadge
   const Icon = config.icon;
 
   return (
-    <span className={cn('status-badge', config.className, className)}>
+    <Badge variant="outline" className={cn('gap-1.5 font-medium whitespace-nowrap', config.className, className)}>
       <Icon className="h-3 w-3" />
       {config.label}
-    </span>
+    </Badge>
   );
 }

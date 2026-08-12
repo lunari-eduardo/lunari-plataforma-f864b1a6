@@ -267,7 +267,7 @@ export default function DeliverDetail() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-24">
+    <div className="max-w-5xl mx-auto px-2 sm:px-4 space-y-6 animate-fade-in pb-24">
       {/* Header */}
       <div className="flex flex-col gap-4">
         <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate('/app/gallery/list')}>

@@ -557,7 +557,7 @@ export default function GalleryDetail() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="max-w-5xl mx-auto px-2 sm:px-4 space-y-6 animate-fade-in">
       {/* Header — Identificação + Informações + Ações */}
       {(() => {
         const vendido = supabaseGallery.valorTotalVendido || 0;
@@ -631,7 +631,7 @@ export default function GalleryDetail() {
         const menuItems = (
           <>
             <DropdownMenuItem asChild>
-              <Link to={`/gallery/${supabaseGallery.id}/edit`}>
+              <Link to=\{`/app/gallery/select/\$\{supabaseGallery.id\}/edit`\}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Editar
               </Link>
@@ -650,7 +650,7 @@ export default function GalleryDetail() {
         const sheetMenuItems = (
           <div className="flex flex-col gap-1 mt-2">
             <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileMenuOpen(false)}>
-              <Link to={`/gallery/${supabaseGallery.id}/edit`}>
+              <Link to=\{`/app/gallery/select/\$\{supabaseGallery.id\}/edit`\}>
                 <Pencil className="h-4 w-4 mr-2" /> Editar
               </Link>
             </Button>
