@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInputMode } from '@/hooks/useInputMode';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, Target, Send, BarChart } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, Target, Send, BarChart, Home, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
@@ -34,31 +34,53 @@ interface NavItemProps {
 // Mobile/drawer variant — always shows label
 const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate, subItems }: NavItemProps) => {
   const isComercial = to === '/app/comercial';
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
     <div className="flex flex-col">
-      <NavLink
-        to={to}
-        end={end || isComercial}
-        onClick={onNavigate}
-        className={({ isActive }) =>
-          cn(
-            "nav-item-lunar mb-1 flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
-            isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
-          )
-        }
-      >
-        <span className="text-sm flex-shrink-0 relative text-[hsl(var(--sidebar-icon))]">
-          {icon}
-          {isPro && showProBadge && (
-            <span className="absolute -top-1 -right-1">
-              <ProCrown />
-            </span>
+      <div className="flex w-full mb-1 group">
+        <NavLink
+          to={to}
+          end={end || isComercial}
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            cn(
+              "nav-item-lunar flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-white/5 flex-1",
+              isActive 
+                ? "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--accent-gold))]" 
+                : "text-[hsl(var(--sidebar-fg))]"
+            )
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <span className={cn(
+                "text-sm flex-shrink-0 relative transition-colors duration-200",
+                isActive ? "text-[hsl(var(--accent-gold))]" : "text-[hsl(var(--sidebar-icon))]"
+              )}>
+                {icon}
+                {isPro && showProBadge && (
+                  <span className="absolute -top-1 -right-1">
+                    <ProCrown />
+                  </span>
+                )}
+              </span>
+              <span className="text-xs font-medium whitespace-nowrap">{label}</span>
+            </>
           )}
-        </span>
-        <span className="text-xs font-medium whitespace-nowrap">{label}</span>
-      </NavLink>
-      {subItems && (
-        <div className="flex flex-col ml-8 mt-1 space-y-1 mb-2 border-l border-[hsl(var(--sidebar-border))] pl-2">
+        </NavLink>
+        {subItems && (
+          <button
+            onClick={(e) => { e.preventDefault(); setIsOpen(!isOpen); }}
+            className="flex items-center justify-center px-2 text-[hsl(var(--sidebar-fg))]/50 hover:text-[hsl(var(--sidebar-fg))] transition-colors"
+          >
+            <ChevronDown size={14} className={cn("transition-transform duration-200", isOpen && "rotate-180")} />
+          </button>
+        )}
+      </div>
+
+      {subItems && isOpen && (
+        <div className="flex flex-col ml-8 mt-1 space-y-1 mb-2 border-l border-[hsl(var(--sidebar-border))] pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
           {subItems.map(sub => (
             <NavLink
               key={sub.to}
@@ -66,13 +88,21 @@ const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate, 
               onClick={onNavigate}
               className={({ isActive }) =>
                 cn(
-                  "text-xs py-1.5 px-2 rounded-md transition-all duration-200 text-[hsl(var(--sidebar-fg))] hover:bg-white/5 flex items-center gap-2 opacity-80 hover:opacity-100",
-                  isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))] opacity-100 font-medium"
+                  "text-xs py-1.5 px-2 rounded-md transition-all duration-200 flex items-center gap-2",
+                  isActive 
+                    ? "bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--accent-gold))] font-medium opacity-100" 
+                    : "text-[hsl(var(--sidebar-fg))] hover:bg-white/5 opacity-80 hover:opacity-100"
                 )
               }
             >
-              <span className="text-[hsl(var(--sidebar-icon))]">{sub.icon}</span>
-              {sub.label}
+              {({ isActive }) => (
+                <>
+                  <span className={cn("transition-colors", isActive ? "text-[hsl(var(--accent-gold))]" : "text-[hsl(var(--sidebar-icon))]")}>
+                    {sub.icon}
+                  </span>
+                  {sub.label}
+                </>
+              )}
             </NavLink>
           ))}
         </div>
@@ -93,58 +123,94 @@ const DesktopNavItem = ({
   subItems,
 }: NavItemProps & { expanded: boolean }) => {
   const isComercial = to === '/app/comercial';
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Se a sidebar for colapsada, a sanfona recolhe automaticamente
+  useEffect(() => {
+    if (!expanded) setIsOpen(false);
+  }, [expanded]);
+
   const link = (
     <div className="flex flex-col">
-      <NavLink
-        to={to}
-        end={end || isComercial}
-        className={({ isActive }) =>
-          cn(
-            "nav-item-lunar mb-1 flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden text-[hsl(var(--sidebar-fg))] hover:bg-white/5",
-            isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
-          )
-        }
-      >
-        <span
-          className={cn(
-            "flex items-center justify-center w-12 h-10 flex-shrink-0 relative transition-colors duration-200",
-            expanded
-              ? "text-[hsl(var(--sidebar-icon))]"
-              : "text-[hsl(var(--sidebar-icon-collapsed))] group-hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]"
-          )}
+      <div className="flex w-full mb-1 group relative">
+        <NavLink
+          to={to}
+          end={end || isComercial}
+          className={({ isActive }) =>
+            cn(
+              "nav-item-lunar flex items-center h-10 rounded-lg transition-colors duration-200 overflow-hidden hover:bg-white/5 flex-1",
+              isActive 
+                ? "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--accent-gold))]" 
+                : "text-[hsl(var(--sidebar-fg))]"
+            )
+          }
         >
-          {icon}
-          {isPro && showProBadge && (
-            <span className="absolute top-1.5 right-1.5">
-              <ProCrown />
-            </span>
+          {({ isActive }) => (
+            <>
+              <span
+                className={cn(
+                  "flex items-center justify-center w-12 h-10 flex-shrink-0 relative transition-colors duration-200",
+                  isActive 
+                    ? "text-[hsl(var(--accent-gold))]" 
+                    : expanded
+                      ? "text-[hsl(var(--sidebar-icon))]"
+                      : "text-[hsl(var(--sidebar-icon-collapsed))] group-hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]"
+                )}
+              >
+                {icon}
+                {isPro && showProBadge && (
+                  <span className="absolute top-1.5 right-1.5">
+                    <ProCrown />
+                  </span>
+                )}
+              </span>
+              <span
+                className={cn(
+                  "text-xs font-medium whitespace-nowrap transition-opacity duration-150 ease-out",
+                  expanded ? "opacity-100 delay-[60ms]" : "opacity-0 pointer-events-none"
+                )}
+              >
+                {label}
+              </span>
+            </>
           )}
-        </span>
-        <span
-          className={cn(
-            "text-xs font-medium whitespace-nowrap transition-opacity duration-150 ease-out",
-            expanded ? "opacity-100 delay-[60ms]" : "opacity-0 pointer-events-none"
-          )}
-        >
-          {label}
-        </span>
-      </NavLink>
+        </NavLink>
+        {subItems && (
+          <button
+            onClick={(e) => { e.preventDefault(); expanded && setIsOpen(!isOpen); }}
+            className={cn(
+              "absolute right-2 top-0 bottom-0 flex items-center justify-center px-1 text-[hsl(var(--sidebar-fg))]/50 hover:text-[hsl(var(--sidebar-fg))] transition-opacity duration-150 ease-out",
+              expanded ? "opacity-100 delay-[60ms]" : "opacity-0 pointer-events-none"
+            )}
+          >
+            <ChevronDown size={14} className={cn("transition-transform duration-200", isOpen && "rotate-180")} />
+          </button>
+        )}
+      </div>
       
-      {subItems && expanded && (
-        <div className="flex flex-col ml-[2.75rem] mt-1 space-y-1 mb-2 animate-in fade-in duration-300">
+      {subItems && expanded && isOpen && (
+        <div className="flex flex-col ml-[2.75rem] mt-1 space-y-1 mb-2 animate-in fade-in slide-in-from-top-1 duration-200">
           {subItems.map(sub => (
             <NavLink
               key={sub.to}
               to={sub.to}
               className={({ isActive }) =>
                 cn(
-                  "text-[10px] py-1.5 px-2 rounded-md transition-colors text-[hsl(var(--sidebar-icon-collapsed))] hover:bg-white/10 hover:text-[hsl(var(--sidebar-fg))] flex items-center gap-2",
-                  isActive && "text-[hsl(var(--sidebar-fg))] bg-white/10 font-medium"
+                  "text-[10px] py-1.5 px-2 rounded-md transition-colors hover:bg-white/10 flex items-center gap-2",
+                  isActive 
+                    ? "text-[hsl(var(--accent-gold))] bg-white/10 font-medium" 
+                    : "text-[hsl(var(--sidebar-fg))] opacity-80 hover:opacity-100"
                 )
               }
             >
-              {sub.icon}
-              {sub.label}
+              {({ isActive }) => (
+                <>
+                  <span className={cn("transition-colors", isActive ? "text-[hsl(var(--accent-gold))]" : "text-[hsl(var(--sidebar-icon-collapsed))]")}>
+                    {sub.icon}
+                  </span>
+                  {sub.label}
+                </>
+              )}
             </NavLink>
           ))}
         </div>
@@ -173,18 +239,20 @@ const RailNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps
     className={({ isActive }) =>
       cn(
         "nav-item-lunar mb-1 flex items-center h-11 rounded-lg transition-colors duration-200 overflow-hidden text-[hsl(var(--sidebar-icon-collapsed))] hover:bg-white/5 hover:text-[hsl(var(--sidebar-icon-collapsed-hover))]",
-        isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-active-fg))]"
+        isActive && "active bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--accent-gold))]"
       )
     }
   >
-    <span className="flex items-center justify-center w-12 h-11 flex-shrink-0 relative">
-      {icon}
-      {isPro && showProBadge && (
-        <span className="absolute top-2 right-1.5">
-          <ProCrown />
-        </span>
-      )}
-    </span>
+    {({ isActive }) => (
+      <span className={cn("flex items-center justify-center w-12 h-11 flex-shrink-0 relative transition-colors duration-200", isActive && "text-[hsl(var(--accent-gold))]")}>
+        {icon}
+        {isPro && showProBadge && (
+          <span className="absolute top-2 right-1.5">
+            <ProCrown />
+          </span>
+        )}
+      </span>
+    )}
   </NavLink>
 );
 
@@ -228,7 +296,7 @@ export default function Sidebar() {
 
   // Itens marcados como adminOnly ficam invisíveis para o fotógrafo comum.
   const navItems = [
-    { to: "/app", icon: <LayoutGrid size={14} />, label: "Início", end: true },
+    { to: "/app", icon: <Home size={14} />, label: "Início", end: true },
     { to: "/app/agenda", icon: <CalendarClock size={14} />, label: "Agenda" },
     { to: "/app/leads", icon: <Filter size={14} />, label: "Leads", isPro: true, adminOnly: true },
     { to: "/app/workflow", icon: <GitBranch size={14} />, label: "Workflow" },
@@ -256,7 +324,7 @@ export default function Sidebar() {
   ].filter(item => !item.adminOnly || accessState.isAdmin);
 
   const galleryNavItems = [
-    { to: "/app/gallery", icon: <LayoutGrid size={14} />, label: "Início", end: true },
+    { to: "/app/gallery", icon: <Home size={14} />, label: "Início", end: true },
     { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" }
   ];
 
