@@ -86,7 +86,7 @@ export function PaymentSettings() {
     updateMercadoPagoSettings,
     getMercadoPagoOAuthUrl,
     mpAppId,
-    migrateFromGestao,
+    migrateFromGallery,
   } = usePaymentIntegration();
 
   // Drawer state
@@ -449,11 +449,11 @@ export function PaymentSettings() {
         // Migration
         asaasDadosExtrasRaw={asaasIntegration?.dadosExtrasRaw}
         mpDadosExtrasRaw={mpIntegration?.dadosExtrasRaw}
-        onMigrateFromGestao={async (provedor) => {
-          await migrateFromGestao.mutateAsync(provedor);
+        onmigrateFromGallery={async (provedor) => {
+          await migrateFromGallery.mutateAsync(provedor);
           setDrawerOpen(false);
         }}
-        migratePending={migrateFromGestao.isPending}
+        migratePending={migrateFromGallery.isPending}
       />
     </div>
   );
