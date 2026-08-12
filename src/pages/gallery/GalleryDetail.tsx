@@ -631,7 +631,7 @@ export default function GalleryDetail() {
         const menuItems = (
           <>
             <DropdownMenuItem asChild>
-              <Link to=\{`/app/gallery/select/\$\{supabaseGallery.id\}/edit`\}>
+              <Link to={`/app/gallery/select/${supabaseGallery.id}/edit`}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Editar
               </Link>
@@ -650,7 +650,7 @@ export default function GalleryDetail() {
         const sheetMenuItems = (
           <div className="flex flex-col gap-1 mt-2">
             <Button variant="ghost" className="justify-start" asChild onClick={() => setMobileMenuOpen(false)}>
-              <Link to=\{`/app/gallery/select/\$\{supabaseGallery.id\}/edit`\}>
+              <Link to={`/app/gallery/select/${supabaseGallery.id}/edit`}>
                 <Pencil className="h-4 w-4 mr-2" /> Editar
               </Link>
             </Button>
