@@ -28,6 +28,7 @@ import ShareAnalysisPage from "@/pages/comercial/ShareAnalysisPage";
 import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
 import PublicProposalViewer from "@/pages/comercial/PublicProposalViewer";
 import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
+import GalleryHome from '@/pages/gallery/GalleryHome';
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -74,7 +75,8 @@ import ExclusaoDadosPage from "@/pages/legal/ExclusaoDadosPage";
 import CookiesPage from "@/pages/legal/CookiesPage";
 import SegurancaPage from "@/pages/legal/SegurancaPage";
 import GalleryPlaceholder from "@/pages/gallery/GalleryPlaceholder";
-import { ModuleProvider } from "@/contexts/ModuleContext";
+import { ModuleProvider, useActiveModule } from "@/contexts/ModuleContext";
+import { useLocation } from "react-router-dom";
 import { AppProvider } from "@/contexts/AppContext";
 
 import { ConfigurationProvider } from "@/contexts/ConfigurationContext";
@@ -155,6 +157,22 @@ function PhotographerInit() {
   return null;
 }
 
+function ModuleSync() {
+  const location = useLocation(); 
+  const { activeModule, setActiveModule } = useActiveModule();
+  
+  React.useEffect(() => {
+    const path = location.pathname;
+    if (path.startsWith('/app/gallery') && activeModule !== 'gallery') {
+      setActiveModule('gallery');
+    } else if (path.startsWith('/app') && !path.startsWith('/app/gallery') && activeModule !== 'studio') {
+      setActiveModule('studio');
+    }
+  }, [location.pathname, activeModule, setActiveModule]);
+
+  return null;
+}
+
 export default function PhotographerApp() {
   return (
     <ConfigurationProvider>
@@ -164,6 +182,7 @@ export default function PhotographerApp() {
           <ModuleProvider>
             <AppProvider>
               <BuildMonitor />
+              <ModuleSync />
               <Routes>
               {/* ============ PUBLIC INSTITUTIONAL SITE (SiteLayout) ============ */}
               <Route element={<SiteLayout />}>
@@ -240,7 +259,8 @@ export default function PhotographerApp() {
                 {/* Módulo Gallery */}
                 <Route path="gallery">
                   <Route index element={<Navigate to="/app/gallery/dashboard" replace />} />
-                  <Route path="dashboard" element={<GalleryDashboard />} />
+                  <Route path="dashboard" element={<GalleryHome />} />
+                    <Route path="list" element={<GalleryDashboard />} />
                   <Route path="new/select" element={<GalleryCreate />} />
                   <Route path="new/transfer" element={<DeliverCreate />} />
                   <Route path="select/:id/edit" element={<GalleryEdit />} />
@@ -323,4 +343,5 @@ export default function PhotographerApp() {
     </ConfigurationProvider>
   );
 }
+
 

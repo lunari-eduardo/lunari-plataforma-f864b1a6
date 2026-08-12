@@ -324,7 +324,7 @@ export default function Dashboard() {
           <PopoverContent className="w-56 p-2" align="end" sideOffset={8}>
             <div className="space-y-1">
               <button
-                onClick={() => navigate('/gallery/new')}
+                onClick={() => navigate('/app/gallery/new/select')}
                 className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
               >
                 <MousePointerClick className="h-4 w-4 text-primary shrink-0" />
@@ -334,7 +334,7 @@ export default function Dashboard() {
                 </div>
               </button>
               <button
-                onClick={() => navigate('/deliver/new')}
+                onClick={() => navigate('/app/gallery/new/transfer')}
                 className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
               >
                 <Send className="h-4 w-4 text-primary shrink-0" />
@@ -469,7 +469,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground mb-6">
                 {selectGalleries.length === 0 ? 'Crie sua primeira galeria para começar' : 'Tente ajustar os filtros ou criar uma nova galeria'}
               </p>
-              <Button onClick={() => navigate('/gallery/new')} variant="terracotta">
+              <Button onClick={() => navigate('/app/gallery/new/select')} variant="terracotta">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar Galeria
               </Button>
@@ -580,7 +580,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground mb-6">
                 Use esse modo para entregar as fotos finais aos seus clientes.
               </p>
-              <Button onClick={() => navigate('/deliver/new')} variant="terracotta">
+              <Button onClick={() => navigate('/app/gallery/new/transfer')} variant="terracotta">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar galeria de transfer
               </Button>
@@ -700,3 +700,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

@@ -425,7 +425,7 @@ export default function GalleryDetail() {
         <p className="text-muted-foreground mb-4">
           A galeria solicitada não existe ou foi removida.
         </p>
-        <Button variant="outline" onClick={() => navigate('/')}>
+        <Button variant="outline" onClick={() => navigate('/app/gallery/dashboard')}>
           Voltar ao Dashboard
         </Button>
       </div>
@@ -466,7 +466,7 @@ export default function GalleryDetail() {
 
   const handleDeleteGallery = async () => {
     await deleteSupabaseGallery(supabaseGallery.id);
-    navigate('/');
+    navigate('/app/gallery/dashboard');
   };
 
   // Check if gallery can be reactivated
@@ -670,7 +670,7 @@ export default function GalleryDetail() {
             {/* Área 1 — Identificação */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/galleries')} className="shrink-0 -ml-2">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/dashboard')} className="shrink-0 -ml-2">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div className="min-w-0 flex-1">
@@ -1448,3 +1448,4 @@ export default function GalleryDetail() {
     </div>
   );
 }
+

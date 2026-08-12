@@ -1036,7 +1036,7 @@ export default function GalleryCreate() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      navigate('/');
+      navigate('/app/gallery/dashboard');
     }
   };
 
@@ -1116,7 +1116,7 @@ export default function GalleryCreate() {
             })
           }
         });
-        navigate('/');
+        navigate('/app/gallery/dashboard');
       } else {
         // Determine regrasCongeladas for new draft
         const hasSessionId = !!gestaoParams?.session_id;
@@ -1172,7 +1172,7 @@ export default function GalleryCreate() {
           venda_tipo_cobranca: chargeType,
         });
         if (result?.id) {
-          navigate('/');
+          navigate('/app/gallery/dashboard');
         }
       }
     } catch (error) {
@@ -2544,3 +2544,4 @@ export default function GalleryCreate() {
       </div>
     </div>;
 }
+

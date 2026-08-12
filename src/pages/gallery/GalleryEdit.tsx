@@ -388,7 +388,7 @@ export default function GalleryEdit() {
         <p className="text-muted-foreground mb-4">
           A galeria solicitada não existe ou foi removida.
         </p>
-        <Button variant="outline" onClick={() => navigate('/')}>
+        <Button variant="outline" onClick={() => navigate('/app/gallery/dashboard')}>
           Voltar às Galerias
         </Button>
       </div>
@@ -561,7 +561,7 @@ export default function GalleryEdit() {
 
   const handleDelete = async () => {
     await deleteGallery(gallery.id);
-    navigate('/');
+    navigate('/app/gallery/dashboard');
   };
 
   const handleReactivate = async (days: number = 7) => {
@@ -1445,4 +1445,5 @@ export default function GalleryEdit() {
     </div>
   );
 }
+
 
