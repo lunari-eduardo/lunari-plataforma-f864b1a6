@@ -120,6 +120,20 @@ function AuthRouteWrapper() {
   );
 }
 
+function GoogleCallbackProxy() {
+  React.useEffect(() => {
+    // Força o roteamento para a Edge Function oficial ignorando falhas do Vercel Rewrite
+    // Crítico para que testes em localhost, preview do Lovable ou rotas mal configuradas funcionem.
+    window.location.replace(`https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/google-calendar-callback${window.location.search}`);
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
+      Processando integração com Google Calendar...
+    </div>
+  );
+}
+
 function PhotographerInit() {
   // Workflow cache/realtime agora é gerido por <WorkflowRealtimeBridge> + workflowStore.
   // Sync de appointments→sessões é feito pelo trigger DB; capability `workflow.syncFromAgenda` cobre re-sync manual.
@@ -158,7 +172,7 @@ export default function PhotographerApp() {
               </Route>
 
               <Route path="/auth" element={<AuthRouteWrapper />} />
-              <Route path="/auth/google/callback" element={<Navigate to="/app/integracoes" replace />} />
+              <Route path="/auth/google/callback" element={<GoogleCallbackProxy />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/oauth/consent" element={<OAuthConsent />} />
               <Route path="/conteudos" element={<Conteudos />} />

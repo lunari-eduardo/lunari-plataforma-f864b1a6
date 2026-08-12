@@ -1,54 +1,17 @@
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+
 import { CreditCard, Calendar, Crown, FileSignature } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PaymentSettings } from '@/components/integracoes/PaymentSettings';
 import { GoogleCalendarCard } from '@/components/integracoes/GoogleCalendarCard';
 import { AutentiqueCard } from '@/components/integracoes/AutentiqueCard';
-import { useGoogleCalendarIntegration } from '@/hooks/useGoogleCalendarIntegration';
+
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { toast } from 'sonner';
 import { PAGE_TABS_LIST, PAGE_TABS_TRIGGER, PAGE_TABS_CONTENT } from '@/components/layout/PageTabs';
 
 export function IntegracoesTab() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { refetch: refetchGoogleCalendar } = useGoogleCalendarIntegration();
   const { hasPro } = useAccessControl();
 
-  // Handle Google Calendar OAuth callbacks
-  useEffect(() => {
-    const googleSuccess = searchParams.get('google_success');
-    const googleError = searchParams.get('google_error');
-
-    if (googleSuccess) {
-      toast.success('Google Calendar conectado com sucesso');
-      refetchGoogleCalendar();
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('tab', 'calendar');
-        next.delete('google_success');
-        return next;
-      });
-      return;
-    }
-
-    if (googleError) {
-      const errorMessages: Record<string, string> = {
-        'access_denied': 'Acesso negado pelo usuário',
-        'missing_params': 'Parâmetros inválidos',
-        'token_exchange_failed': 'Falha na autenticação',
-        'database_error': 'Erro ao salvar integração',
-      };
-      toast.error(errorMessages[googleError] || 'Erro ao conectar Google Calendar');
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set('tab', 'calendar');
-        next.delete('google_error');
-        return next;
-      });
-      return;
-    }
-  }, [searchParams, setSearchParams, refetchGoogleCalendar]);
 
   return (
     <div className="space-y-5">
