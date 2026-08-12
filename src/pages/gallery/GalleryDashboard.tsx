@@ -2,18 +2,16 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Loader2, AlertCircle, MousePointerClick, Send, Trash2, HardDrive, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { ReactivateGalleryDialog } from '@/components/gallery/ReactivateGalleryDialog';
-import { ReactivateSuccessModal } from '@/components/gallery/ReactivateSuccessModal';
+import { ReactivateGalleryDialog } from '@/components/ReactivateGalleryDialog';
+import { ReactivateSuccessModal } from '@/components/ReactivateSuccessModal';
 import { getGalleryUrl } from '@/lib/galleryUrl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { getEffectiveGalleryStatus } from '@/lib/galleryStatus';
-import { GalleryCard } from '@/components/gallery/GalleryCard';
-import { DeliverGalleryCard } from '@/components/gallery/DeliverGalleryCard';
-import { SendGalleryModal } from '@/components/gallery/SendGalleryModal';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeader } from '@/components/layout/PageHeader';
+import { GalleryCard } from '@/components/GalleryCard';
+import { DeliverGalleryCard } from '@/components/DeliverGalleryCard';
+import { SendGalleryModal } from '@/components/SendGalleryModal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,13 +22,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useGalleryDashboard, Galeria } from '@/hooks/useGalleryDashboard';
+import { useSupabaseGalleries, Galeria } from '@/hooks/useSupabaseGalleries';
 import { useSettings } from '@/hooks/useSettings';
 import { GalleryStatus, Gallery } from '@/types/gallery';
 import { cn } from '@/lib/utils';
 import { getDisplayUrl } from '@/lib/photoUrl';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeader } from '@/components/layout/PageHeader';
 import {
   Popover,
   PopoverContent,
@@ -41,13 +37,9 @@ import { isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useTransferStorage } from '@/hooks/useTransferStorage';
 import { formatStorageSize } from '@/lib/transferPlans';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeader } from '@/components/layout/PageHeader';
 
-import gallerySelectLogo from '@/assets/gallery/gallery-select-logo.png';
-import galleryTransferLogo from '@/assets/gallery/gallery-transfer-logo.png';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeader } from '@/components/layout/PageHeader';
+import gallerySelectLogo from '@/assets/gallery-select-logo.png';
+import galleryTransferLogo from '@/assets/gallery-transfer-logo.png';
 
 function TransferStorageIndicator() {
   const { hasTransferPlan, hasFreeStorageOnly, storageUsedBytes, storageLimitBytes, storageUsedPercent, planName, isAdmin, isLoading, isOverLimit, daysUntilDeletion } = useTransferStorage();
@@ -160,16 +152,16 @@ function transformSupabaseToLocal(galeria: Galeria): Gallery & { tipo: 'selecao'
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const activeTab = location.pathname.includes('/transfer') ? 'deliver' : 'select';
+  const activeTab = location.pathname.includes('/galleries/deliver') ? 'deliver' : 'select';
 
   const handleTabChange = (value: string) => {
-    navigate(value === 'deliver' ? '/app/gallery/transfer' : '/app/gallery/dashboard', { replace: true });
+    navigate(value === 'deliver' ? '/galleries/deliver' : '/galleries/select', { replace: true });
   };
   const [search, setSearch] = useState('');
   const [selectStatusFilter, setSelectStatusFilter] = useState<GalleryStatus | 'all'>('all');
   const [deliverStatusFilter, setDeliverStatusFilter] = useState<DeliverStatusFilter>('all');
   
-  const { galleries: supabaseGalleries, isLoading, error, deleteGallery, sendGallery, reopenSelection, refetch } = useGalleryDashboard() as any;
+  const { galleries: supabaseGalleries, isLoading, error, deleteGallery, sendGallery, reopenSelection, refetch } = useSupabaseGalleries() as any;
   const { settings } = useSettings();
   const queryClient = useQueryClient();
   const processedGalleriesRef = useRef<Set<string>>(new Set());
@@ -311,54 +303,51 @@ export default function Dashboard() {
     : 'Gerencie suas entregas finais.';
 
   return (
-    <PageContainer className="py-4 space-y-5 animate-fade-in">
-      <PageHeader
-        title={
-          <div className="flex items-center gap-2">
-            <img 
-              src={activeTab === 'select' ? gallerySelectLogo : galleryTransferLogo} 
-              alt={activeTab === 'select' ? 'Gallery Select' : 'Gallery Transfer'}
-              className="h-8 object-contain"
-            />
-          </div>
-        }
-        description={subtitle}
-        action={
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size="sm" className="gap-1.5 h-8">
-                <Plus className="h-3.5 w-3.5" />
-                Nova Galeria
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-2" align="end" sideOffset={8}>
-              <div className="space-y-1">
-                <button
-                  onClick={() => navigate('/app/gallery/new')}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
-                >
-                  <MousePointerClick className="h-4 w-4 text-primary shrink-0" />
-                  <div>
-                    <p>Seleção</p>
-                    <p className="text-xs text-muted-foreground font-normal">Cliente seleciona fotos</p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => navigate('/app/deliver/new')}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
-                >
-                  <Send className="h-4 w-4 text-primary shrink-0" />
-                  <div>
-                    <p>Transfer</p>
-                    <p className="text-xs text-muted-foreground font-normal">Entrega final de fotos</p>
-                  </div>
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        }
-      />
-      
+    <div className="max-w-[1100px] mx-auto space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <img 
+            src={activeTab === 'select' ? gallerySelectLogo : galleryTransferLogo} 
+            alt={activeTab === 'select' ? 'Gallery Select' : 'Gallery Transfer'}
+            className="h-10 object-contain"
+          />
+          <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="terracotta" size="lg" className="gap-2">
+              <Plus className="h-5 w-5" />
+              Nova Galeria
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="end" sideOffset={8}>
+            <div className="space-y-1">
+              <button
+                onClick={() => navigate('/gallery/new')}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
+              >
+                <MousePointerClick className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <p>SeleÃ§Ã£o</p>
+                  <p className="text-xs text-muted-foreground font-normal">Cliente seleciona fotos</p>
+                </div>
+              </button>
+              <button
+                onClick={() => navigate('/deliver/new')}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
+              >
+                <Send className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <p>Transfer</p>
+                  <p className="text-xs text-muted-foreground font-normal">Entrega final de fotos</p>
+                </div>
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="bg-transparent p-0 h-auto rounded-none border-b border-border w-full justify-start">
@@ -708,8 +697,6 @@ export default function Dashboard() {
           daysGranted={reactivateDays}
         />
       )}
-    </PageContainer>
+    </div>
   );
 }
-
-

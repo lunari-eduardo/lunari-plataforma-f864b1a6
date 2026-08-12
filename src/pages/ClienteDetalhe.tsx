@@ -11,6 +11,8 @@ import { ClientMetricsGrid } from '@/components/cliente-detalhe/shared/ClientMet
 import { ContactoTab } from '@/components/cliente-detalhe/tabs/ContactoTab';
 import { HistoricoTab } from '@/components/cliente-detalhe/tabs/HistoricoTab';
 import { DocumentosTab } from '@/components/cliente-detalhe/tabs/DocumentosTab';
+import { GaleriasTab } from '@/components/cliente-detalhe/tabs/GaleriasTab';
+import { ImageIcon } from 'lucide-react';
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -75,6 +77,10 @@ export default function ClienteDetalhe() {
             <User className="h-3.5 w-3.5" />
             Contacto
           </TabsTrigger>
+          <TabsTrigger value="galerias" className={PAGE_TABS_TRIGGER}>
+            <ImageIcon className="h-3.5 w-3.5" />
+            Galerias
+          </TabsTrigger>
           <TabsTrigger value="documentos" className={PAGE_TABS_TRIGGER}>
             <FileText className="h-3.5 w-3.5" />
             Documentos
@@ -87,6 +93,10 @@ export default function ClienteDetalhe() {
 
         <TabsContent value="contacto" className={PAGE_TABS_CONTENT}>
           <ContactoTab cliente={cliente} onUpdate={atualizarCliente} />
+        </TabsContent>
+
+        <TabsContent value="galerias" className={PAGE_TABS_CONTENT}>
+          <GaleriasTab cliente={cliente} />
         </TabsContent>
 
         <TabsContent value="documentos" className={PAGE_TABS_CONTENT}>

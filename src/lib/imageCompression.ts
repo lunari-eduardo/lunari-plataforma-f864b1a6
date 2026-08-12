@@ -1,0 +1,425 @@
+/**
+ * Image compression utilities for client-side processing
+ * Compresses images before upload to R2 and optionally applies watermark (burn-in)
+ */
+
+import { computeWatermarkLayout } from './watermarkLayout';
+
+const R2_PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL || 'https://media.lunarihub.com';
+
+export interface CompressionOptions {
+  maxLongEdge: 1024 | 1920 | 2560;
+  quality: number; // 0.7-0.85
+  removeExif: boolean;
+  watermark?: WatermarkConfig;
+}
+
+export interface WatermarkConfig {
+  mode: 'system' | 'custom' | 'none';
+  /** Custom watermark path in R2 (for custom mode) */
+  customPathHorizontal?: string | null;
+  customPathVertical?: string | null;
+  /** Opacity from 0 to 100 (default: 40) */
+  opacity: number;
+  /** Tile size for custom mode (default: 'medium') */
+  tileScale?: 'small' | 'medium' | 'large';
+}
+
+export interface CompressedImage {
+  blob: Blob;
+  width: number;
+  height: number;
+  originalSize: number;
+  compressedSize: number;
+  filename: string;
+}
+
+/**
+ * Default compression options
+ */
+export const defaultCompressionOptions: CompressionOptions = {
+  maxLongEdge: 1920,
+  quality: 0.8,
+  removeExif: true,
+};
+
+/**
+ * Load an image from a File object
+ */
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image"));
+    };
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * In-memory cache of watermark blob URLs (per page load).
+ * Avoids re-downloading the same watermark for every photo and bypasses
+ * the "non-CORS poisoned" image cache that some browsers create when the
+ * first request is fired in parallel with the CORS-tagged ones.
+ */
+const watermarkBlobCache = new Map<string, string>();
+
+export function clearWatermarkCache() {
+  for (const blobUrl of watermarkBlobCache.values()) {
+    try { URL.revokeObjectURL(blobUrl); } catch { /* noop */ }
+  }
+  watermarkBlobCache.clear();
+}
+
+async function fetchAsBlobUrl(url: string, attempt = 0): Promise<string> {
+  const cached = watermarkBlobCache.get(url);
+  if (cached) return cached;
+  // Cache-buster on retry to bypass any "poisoned" cached entry
+  const finalUrl = attempt === 0 ? url : `${url}${url.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+  const resp = await fetch(finalUrl, { mode: 'cors', cache: attempt === 0 ? 'default' : 'reload' });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ao buscar watermark`);
+  const blob = await resp.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  watermarkBlobCache.set(url, blobUrl);
+  return blobUrl;
+}
+
+/**
+ * Load an image from a URL (for watermark assets)
+ * Throws error if CORS or network fails - this MUST succeed.
+ *
+ * Strategy: fetch the bytes via fetch() and turn them into a blob: URL.
+ * Blob URLs are same-origin from the canvas's perspective so we never
+ * trip the "tainted canvas" / CORS image-cache race. Falls back to
+ * direct <img crossOrigin> loading if fetch fails.
+ */
+async function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
+  // Try fetch + blob URL first (most resilient)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const blobUrl = await fetchAsBlobUrl(url, attempt);
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('decode-failed'));
+        img.src = blobUrl;
+      });
+    } catch (err) {
+      // Drop the cached blob URL on failure so retry refetches
+      const stale = watermarkBlobCache.get(url);
+      if (stale) {
+        try { URL.revokeObjectURL(stale); } catch { /* noop */ }
+        watermarkBlobCache.delete(url);
+      }
+      if (attempt === 1) {
+        // Last-resort: direct <img crossOrigin> (depends on R2 CORS header)
+        try {
+          return await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(
+              new Error(`Falha ao carregar marca d'água (CORS). Recarregue a página (F5). URL: ${url}`)
+            );
+            img.src = `${url}${url.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+          });
+        } catch (finalErr) {
+          throw finalErr;
+        }
+      }
+    }
+  }
+  throw new Error(`Falha ao carregar marca d'água: ${url}`);
+}
+
+/**
+ * Calculate new dimensions maintaining aspect ratio based on long edge
+ */
+function calculateDimensions(
+  width: number,
+  height: number,
+  maxLongEdge: number
+): { width: number; height: number } {
+  // Determine which is the long edge
+  const longEdge = Math.max(width, height);
+  
+  // If long edge is already within limit, keep original
+  if (longEdge <= maxLongEdge) {
+    return { width, height };
+  }
+
+  // Calculate ratio based on long edge
+  const ratio = maxLongEdge / longEdge;
+  return {
+    width: Math.round(width * ratio),
+    height: Math.round(height * ratio),
+  };
+}
+
+/**
+ * Apply watermark to canvas
+ * CRITICAL: If this fails, the entire compression should fail
+ * We do NOT upload photos without watermark when watermark is configured
+ */
+async function applyWatermark(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  config: WatermarkConfig
+): Promise<void> {
+  if (config.mode === 'none') return;
+
+  const { width, height } = canvas;
+  const orientation = width > height ? 'horizontal' : 'vertical';
+
+  // Determine URL of watermark asset
+  let watermarkUrl: string;
+  
+  if (config.mode === 'system') {
+    const suffix = orientation === 'horizontal' ? 'h' : 'v';
+    watermarkUrl = `${R2_PUBLIC_URL}/system-assets/default-watermark-${suffix}.png`;
+  } else if (config.mode === 'custom') {
+    const customPath = orientation === 'horizontal' 
+      ? config.customPathHorizontal 
+      : config.customPathVertical;
+    const fallbackPath = config.customPathHorizontal || config.customPathVertical;
+    const pathToUse = customPath || fallbackPath;
+    
+    if (!pathToUse) {
+      throw new Error('Nenhuma watermark personalizada configurada');
+    }
+    
+    watermarkUrl = `${R2_PUBLIC_URL}/${pathToUse}`;
+  } else {
+    return;
+  }
+
+  // Load watermark image - MUST succeed
+  const watermarkImg = await loadImageFromUrl(watermarkUrl);
+
+  ctx.globalAlpha = config.opacity / 100;
+
+  if (config.mode === 'system') {
+    // System mode: centered, covering the full image (original behavior)
+    const scale = Math.min(width / watermarkImg.width, height / watermarkImg.height);
+    const wmWidth = watermarkImg.width * scale;
+    const wmHeight = watermarkImg.height * scale;
+    const x = (width - wmWidth) / 2;
+    const y = (height - wmHeight) / 2;
+    ctx.drawImage(watermarkImg, x, y, wmWidth, wmHeight);
+  } else {
+    // Custom mode: diagonal 45° interleaved mesh; each logo stays upright (0°)
+    const layout = computeWatermarkLayout({
+      canvasWidth: width,
+      canvasHeight: height,
+      watermarkWidth: watermarkImg.width,
+      watermarkHeight: watermarkImg.height,
+      tileScale: config.tileScale || 'medium',
+    });
+
+    for (const tile of layout.tiles) {
+      ctx.drawImage(watermarkImg, tile.x, tile.y, tile.width, tile.height);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Compress a single image file
+ * If watermark is configured and fails to load, the entire operation fails
+ */
+export async function compressImage(
+  file: File,
+  options: Partial<CompressionOptions> = {}
+): Promise<CompressedImage> {
+  const opts = { ...defaultCompressionOptions, ...options };
+
+  // Load the image
+  const img = await loadImage(file);
+  try {
+    const originalWidth = img.naturalWidth;
+    const originalHeight = img.naturalHeight;
+
+    // Calculate new dimensions based on long edge
+    const { width, height } = calculateDimensions(
+      originalWidth,
+      originalHeight,
+      opts.maxLongEdge
+    );
+
+    // Create canvas and draw resized image
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Failed to get canvas context");
+    }
+
+    // Draw with high quality
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Apply watermark if configured (MUST succeed or fail the upload)
+    if (opts.watermark && opts.watermark.mode !== 'none') {
+      await applyWatermark(canvas, ctx, opts.watermark);
+    }
+
+    // Convert to blob
+    // Using JPEG for photos (better compression), keep PNG for transparency
+    const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const quality = mimeType === "image/png" ? 1 : opts.quality;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => {
+          if (b) resolve(b);
+          else reject(new Error("Failed to compress image"));
+        },
+        mimeType,
+        quality
+      );
+    });
+
+    // Generate filename
+    const extension = mimeType === "image/jpeg" ? "jpg" : "png";
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    const filename = `${baseName}.${extension}`;
+
+    // Free canvas memory aggressively (some browsers don't GC large canvases quickly)
+    canvas.width = 0;
+    canvas.height = 0;
+
+    return {
+      blob,
+      width,
+      height,
+      originalSize: file.size,
+      compressedSize: blob.size,
+      filename,
+    };
+  } finally {
+    // Always release the object URL, even on error
+    URL.revokeObjectURL(img.src);
+  }
+}
+
+/**
+ * Compress multiple images in parallel
+ */
+export async function compressImages(
+  files: File[],
+  options: Partial<CompressionOptions> = {},
+  onProgress?: (completed: number, total: number) => void
+): Promise<CompressedImage[]> {
+  const results: CompressedImage[] = [];
+  let completed = 0;
+
+  // Process in batches to avoid memory issues
+  const batchSize = 3;
+  
+  for (let i = 0; i < files.length; i += batchSize) {
+    const batch = files.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map((file) => compressImage(file, options))
+    );
+    
+    results.push(...batchResults);
+    completed += batch.length;
+    onProgress?.(completed, files.length);
+  }
+
+  return results;
+}
+
+/**
+ * Get image dimensions from a file
+ */
+export async function getImageDimensions(
+  file: File
+): Promise<{ width: number; height: number }> {
+  const img = await loadImage(file);
+  const dimensions = {
+    width: img.naturalWidth,
+    height: img.naturalHeight,
+  };
+  URL.revokeObjectURL(img.src);
+  return dimensions;
+}
+
+/**
+ * Validate if a file is a supported image type
+ */
+export function isValidImageType(file: File): boolean {
+  const validMimes = [
+    "image/jpeg", "image/jpg", "image/pjpeg",
+    "image/png", "image/webp",
+  ];
+  if (file.type && validMimes.includes(file.type.toLowerCase())) {
+    return true;
+  }
+  // Fallback: check by extension when MIME is empty or unexpected
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  const validExtensions = ["jpg", "jpeg", "png", "webp"];
+  return !!ext && validExtensions.includes(ext);
+}
+
+/**
+ * Compress image for album cover (no watermark, low quality, small resolution)
+ * Used for watermark-free cover display on album selection screen
+ */
+export async function compressCover(file: File): Promise<CompressedImage> {
+  const img = await loadImage(file);
+  try {
+    const { width, height } = calculateDimensions(img.naturalWidth, img.naturalHeight, 600);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Failed to get canvas context");
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // No watermark applied — intentionally clean for cover display
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Failed to compress cover"))),
+        "image/jpeg",
+        0.45 // Very low quality — prevents commercial use
+      );
+    });
+
+    canvas.width = 0;
+    canvas.height = 0;
+
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    return {
+      blob,
+      width,
+      height,
+      originalSize: file.size,
+      compressedSize: blob.size,
+      filename: `${baseName}-cover.jpg`,
+    };
+  } finally {
+    URL.revokeObjectURL(img.src);
+  }
+}
+
+/**
+ * Format file size for display
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}

@@ -41,7 +41,15 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import PublicCheckout from "@/pages/PublicCheckout";
 import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
 import ShareLinkFallback from "@/pages/pay/ShareLinkFallback";
-import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
+
+import GalleryCreate from "@/pages/gallery/GalleryCreate";
+import DeliverCreate from "@/pages/gallery/DeliverCreate";
+import GalleryEdit from "@/pages/gallery/GalleryEdit";
+import GalleryDetail from "@/pages/gallery/GalleryDetail";
+import DeliverDetail from "@/pages/gallery/DeliverDetail";
+import GallerySettings from "@/pages/gallery/GallerySettings";
+import ClientGallery from "@/pages/gallery/ClientGallery";
+import ClientDeliverGallery from "@/pages/gallery/ClientDeliverGallery";
 
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
@@ -50,57 +58,7 @@ import EscolherPlano from "@/pages/EscolherPlano";
 import MinhaAssinatura from "@/pages/MinhaAssinatura";
 import EscolherPlanoPagamento from "@/pages/EscolherPlanoPagamento";
 import ResetPassword from "@/pages/ResetPassword";
-import * as React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
-import Index from "@/pages/Index";
-import Agenda from "@/pages/Agenda";
-import Clientes from "@/pages/Clientes";
-import Leads from "@/pages/Leads";
-import NovaFinancas from "@/pages/NovaFinancas";
-import Precificacao from "@/pages/Precificacao";
-import Configuracoes from "@/pages/Configuracoes";
-import AssistenteMcpTokens from "@/pages/AssistenteMcpTokens";
-import { RequireAssistantAccess } from "@/modules/assistant/runtime/RequireAssistantAccess";
-import { RequireAdmin } from "@/components/auth/RequireAdmin";
-import AssistenteAprovacoes from "@/pages/AssistenteAprovacoes";
-import Hub from "@/pages/Hub";
-import ClienteDetalhe from "@/pages/ClienteDetalhe";
-import Workflow from "@/pages/Workflow";
-import AnaliseVendas from "@/pages/AnaliseVendas";
-import MinhaConta from "@/pages/MinhaConta";
-import Integracoes from "@/pages/Integracoes";
-import Tarefas from "@/pages/Tarefas";
-import ComercialOverviewPage from "@/pages/comercial/ComercialOverviewPage";
-import BibliotecaComercialPage from "@/pages/comercial/BibliotecaComercialPage";
-import EditorPropostaPage from "@/pages/comercial/EditorPropostaPage";
-import EstrategiaComercialPage from "@/pages/comercial/EstrategiaComercialPage";
-import CompartilhamentosComercialPage from "@/pages/comercial/CompartilhamentosComercialPage";
-import ShareAnalysisPage from "@/pages/comercial/ShareAnalysisPage";
-import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
-import PublicProposalViewer from "@/pages/comercial/PublicProposalViewer";
-import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
 
-import HomePage from "@/pages/site/HomePage";
-import StudioPage from "@/pages/site/StudioPage";
-import GalleryOverviewPage from "@/pages/site/GalleryOverviewPage";
-import GallerySelectPage from "@/pages/site/GallerySelectPage";
-import GalleryTransferPage from "@/pages/site/GalleryTransferPage";
-import PrecosPage from "@/pages/site/PrecosPage";
-import SobrePage from "@/pages/site/SobrePage";
-import ContatoPage from "@/pages/site/ContatoPage";
-import { SiteLayout } from "@/components/site/SiteLayout";
-import PublicCheckout from "@/pages/PublicCheckout";
-import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
-import ShareLinkFallback from "@/pages/pay/ShareLinkFallback";
-
-import Auth from "@/pages/Auth";
-import Onboarding from "@/pages/Onboarding";
-import NotFound from "@/pages/NotFound";
-import EscolherPlano from "@/pages/EscolherPlano";
-import MinhaAssinatura from "@/pages/MinhaAssinatura";
-import EscolherPlanoPagamento from "@/pages/EscolherPlanoPagamento";
-import ResetPassword from "@/pages/ResetPassword";
 import Conteudos from "@/pages/Conteudos";
 import ConteudoDetalhe from "@/pages/ConteudoDetalhe";
 import SitemapProxy from "@/pages/SitemapProxy";
@@ -283,9 +241,18 @@ export default function PhotographerApp() {
                 <Route path="gallery">
                   <Route index element={<Navigate to="/app/gallery/dashboard" replace />} />
                   <Route path="dashboard" element={<GalleryDashboard />} />
-                  <Route path="select" element={<GalleryDashboard />} />
-                  <Route path="transfer" element={<GalleryDashboard />} />
-                  <Route path="galerias" element={<GalleryDashboard />} />
+                  <Route path="new/select" element={<GalleryCreate />} />
+                  <Route path="new/transfer" element={<DeliverCreate />} />
+                  <Route path="select/:id/edit" element={<GalleryEdit />} />
+                  <Route path="transfer/:id/edit" element={<GalleryEdit />} />
+                  <Route path="select/:id" element={<GalleryDetail />} />
+                  <Route path="transfer/:id" element={<DeliverDetail />} />
+                  <Route path="settings" element={<GallerySettings />} />
+                  
+                  {/* Alias antigos do legado para evitar quebra caso existam links hardcoded no cache */}
+                  <Route path="select" element={<Navigate to="/app/gallery/dashboard" replace />} />
+                  <Route path="transfer" element={<Navigate to="/app/gallery/dashboard" replace />} />
+                  <Route path="galerias" element={<Navigate to="/app/gallery/dashboard" replace />} />
                 </Route>
 
                 <Route path="planos-e-creditos">
@@ -342,6 +309,10 @@ export default function PhotographerApp() {
               {/* Rotas Públicas do Comercial */}
               <Route path="/p/:token" element={<PublicProposalViewer mode="tracked" />} />
               <Route path="/:slug" element={<PublicProposalViewer mode="public" />} />
+              
+              {/* Rotas Públicas de Galeria */}
+              <Route path="/g/:token" element={<ClientGallery />} />
+              <Route path="/c/:token" element={<ClientDeliverGallery />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

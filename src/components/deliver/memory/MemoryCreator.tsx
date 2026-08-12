@@ -1,0 +1,165 @@
+import { useState } from 'react';
+import { ArrowLeft, X } from 'lucide-react';
+import { MemoryPhotoSelector, type MemoryPhoto } from './MemoryPhotoSelector';
+import { MemoryTextInput } from './MemoryTextInput';
+import { MemoryLayoutPicker, type MemoryOutputType } from './MemoryLayoutPicker';
+import { MemoryCanvas } from './MemoryCanvas';
+import { MemoryVideoPreview } from './MemoryVideoPreview';
+
+interface Props {
+  photos: MemoryPhoto[];
+  isDark: boolean;
+  bgColor: string;
+  sessionFont?: string;
+  sessionName?: string;
+  onClose: () => void;
+}
+
+const STEPS = ['fotos', 'frase', 'layout', 'preview'] as const;
+type Step = typeof STEPS[number];
+
+export function MemoryCreator({ photos, isDark, bgColor, sessionFont, sessionName, onClose }: Props) {
+  const [step, setStep] = useState<Step>('fotos');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [text, setText] = useState('');
+  const [outputType, setOutputType] = useState<MemoryOutputType>('image');
+
+  const textColor = isDark ? '#F5F5F4' : '#2D2A26';
+  const stepIndex = STEPS.indexOf(step);
+
+  const canAdvance = () => {
+    if (step === 'fotos') return selectedIds.length >= 1;
+    return true;
+  };
+
+  const next = () => {
+    const i = stepIndex + 1;
+    if (i < STEPS.length) setStep(STEPS[i]);
+  };
+
+  const prev = () => {
+    const i = stepIndex - 1;
+    if (i >= 0) setStep(STEPS[i]);
+    else onClose();
+  };
+
+  const stepLabels: Record<Step, string> = {
+    fotos: 'Escolha suas fotos',
+    frase: 'Sua frase',
+    layout: 'Formato',
+    preview: 'Sua lembrança',
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col overflow-hidden"
+      style={{ backgroundColor: bgColor }}
+    >
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
+        <button onClick={prev} className="p-2 -ml-2 opacity-60 hover:opacity-100 transition-opacity">
+          <ArrowLeft className="w-5 h-5" style={{ color: textColor }} />
+        </button>
+
+        <div className="flex gap-1.5">
+          {STEPS.map((_, i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full transition-all duration-500"
+              style={{
+                backgroundColor: i <= stepIndex ? textColor : (isDark ? '#44403C' : '#D6D3D1'),
+                opacity: i <= stepIndex ? 1 : 0.4,
+              }}
+            />
+          ))}
+        </div>
+
+        <button onClick={onClose} className="p-2 -mr-2 opacity-60 hover:opacity-100 transition-opacity">
+          <X className="w-5 h-5" style={{ color: textColor }} />
+        </button>
+      </div>
+
+      {/* Step title */}
+      <div className="text-center px-6 py-2 flex-shrink-0">
+        <h3
+          className="text-xl font-light tracking-wide"
+          style={{ color: textColor, fontFamily: sessionFont }}
+        >
+          {stepLabels[step]}
+        </h3>
+      </div>
+
+      {/* Content area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="transition-all duration-500">
+          {step === 'fotos' && (
+            <MemoryPhotoSelector
+              photos={photos}
+              selected={selectedIds}
+              onSelectionChange={setSelectedIds}
+              maxSelection={10}
+              isDark={isDark}
+              highlightId={highlightId}
+              onHighlightChange={setHighlightId}
+            />
+          )}
+          {step === 'frase' && (
+            <MemoryTextInput
+              value={text}
+              onChange={setText}
+              isDark={isDark}
+            />
+          )}
+          {step === 'layout' && (
+            <MemoryLayoutPicker
+              outputType={outputType}
+              onOutputTypeChange={setOutputType}
+              photoCount={selectedIds.length}
+              isDark={isDark}
+            />
+          )}
+          {step === 'preview' && outputType === 'image' && (
+            <MemoryCanvas
+              photos={photos}
+              selectedIds={selectedIds}
+              highlightId={highlightId}
+              text={text}
+              isDark={isDark}
+              sessionFont={sessionFont}
+              sessionName={sessionName}
+            />
+          )}
+          {step === 'preview' && outputType === 'video' && (
+            <MemoryVideoPreview
+              photos={photos}
+              selectedIds={selectedIds}
+              highlightId={highlightId}
+              text={text}
+              isDark={isDark}
+              sessionFont={sessionFont}
+              sessionName={sessionName}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Bottom action */}
+      {step !== 'preview' && (
+        <div className="px-6 py-6 flex-shrink-0">
+          <button
+            onClick={next}
+            disabled={!canAdvance()}
+            className="w-full py-3 text-sm tracking-wide transition-all duration-300 disabled:opacity-20"
+            style={{
+              backgroundColor: isDark ? '#F5F5F4' : '#1C1917',
+              color: isDark ? '#1C1917' : '#F5F5F4',
+            }}
+          >
+            {step === 'layout' ? (outputType === 'video' ? 'Gerar vídeo' : 'Gerar lembrança') : 'Continuar'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

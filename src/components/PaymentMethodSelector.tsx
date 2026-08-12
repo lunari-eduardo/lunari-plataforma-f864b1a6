@@ -1,0 +1,127 @@
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { PaymentIntegration, PixManualData, InfinitePayData, AsaasData } from '@/hooks/usePaymentIntegration';
+import { pixLogo, infinitepayLogo, mercadopagoLogo, asaasLogo } from '@/assets/payment-logos';
+
+interface PaymentMethodSelectorProps {
+  integrations: PaymentIntegration[];
+  selectedMethod: string | null;
+  onSelect: (method: string) => void;
+}
+
+export function PaymentMethodSelector({ 
+  integrations, 
+  selectedMethod, 
+  onSelect 
+}: PaymentMethodSelectorProps) {
+  if (integrations.length === 0) {
+    return (
+      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+        <p className="text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" />
+          Nenhum método de pagamento configurado.{' '}
+          <a href="/settings" className="underline font-medium">
+            Configurar agora
+          </a>
+        </p>
+      </div>
+    );
+  }
+
+  const getProviderLogo = (provedor: string) => {
+    const logos: Record<string, string> = {
+      pix_manual: pixLogo,
+      infinitepay: infinitepayLogo,
+      mercadopago: mercadopagoLogo,
+      asaas: asaasLogo,
+    };
+    return logos[provedor];
+  };
+
+  const getProviderInfo = (integration: PaymentIntegration) => {
+    switch (integration.provedor) {
+      case 'pix_manual':
+        return {
+          name: 'PIX Manual',
+          detail: (integration.dadosExtras as PixManualData)?.nomeTitular || 'Chave configurada',
+        };
+      case 'infinitepay':
+        return {
+          name: 'InfinitePay',
+          detail: `@${(integration.dadosExtras as InfinitePayData)?.handle || 'handle'}`,
+        };
+      case 'mercadopago':
+        return {
+          name: 'Mercado Pago',
+          detail: 'Checkout automático',
+        };
+      case 'asaas':
+        return {
+          name: 'Asaas',
+          detail: (integration.dadosExtras as AsaasData)?.environment === 'production' ? 'Produção' : 'Sandbox',
+        };
+      default:
+        return { name: integration.provedor, detail: '' };
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-medium">Método de cobrança</Label>
+      
+      <RadioGroup 
+        value={selectedMethod || ''} 
+        onValueChange={onSelect}
+        className="flex flex-col gap-2"
+      >
+        {integrations.map((integration) => {
+          const info = getProviderInfo(integration);
+          
+          return (
+            <div key={integration.id}>
+              <RadioGroupItem 
+                value={integration.provedor} 
+                id={`payment-${integration.provedor}`} 
+                className="peer sr-only" 
+              />
+              <Label 
+                htmlFor={`payment-${integration.provedor}`}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                  selectedMethod === integration.provedor 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center p-1">
+                  <img src={getProviderLogo(integration.provedor)} alt={info.name} className="h-full w-full object-contain" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{info.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{info.detail}</p>
+                </div>
+                
+                {integration.isDefault && (
+                  <Badge variant="secondary" className="text-xs shrink-0">
+                    Padrão
+                  </Badge>
+                )}
+              </Label>
+            </div>
+          );
+        })}
+      </RadioGroup>
+      
+      {/* Warning for PIX Manual */}
+      {selectedMethod === 'pix_manual' && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+          <AlertTriangle className="h-3 w-3" />
+          Confirmação manual: você precisará verificar o recebimento
+        </p>
+      )}
+    </div>
+  );
+}

@@ -76,6 +76,7 @@
     "html2pdf.js": "^0.14.0",
     "input-otp": "^1.2.4",
     "jspdf": "^2.5.2",
+    "jszip": "^3.10.1",
     "localforage": "^1.10.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.541.0",

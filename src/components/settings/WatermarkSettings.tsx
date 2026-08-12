@@ -1,0 +1,222 @@
+import { useState, useEffect } from 'react';
+import { Shield, ShieldOff, ImageIcon, Info } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Skeleton } from '@/components/ui/skeleton';
+import { WatermarkUploader } from './WatermarkUploader';
+import { useWatermarkSettings, WatermarkMode } from '@/hooks/useWatermarkSettings';
+import { cn } from '@/lib/utils';
+
+export function WatermarkSettings() {
+  const { 
+    settings, 
+    isLoading, 
+    isSaving,
+    saveSettings, 
+    uploadWatermark, 
+    deleteWatermark 
+  } = useWatermarkSettings();
+
+  const [localOpacity, setLocalOpacity] = useState(settings.opacity);
+
+  // Sync local state with fetched settings
+  useEffect(() => {
+    setLocalOpacity(settings.opacity);
+  }, [settings.opacity]);
+
+  const handleModeChange = async (mode: WatermarkMode) => {
+    await saveSettings({ mode }, { successMessage: 'Proteção de imagem salva.' });
+  };
+
+  const handleOpacityChange = (value: number[]) => {
+    setLocalOpacity(value[0]);
+  };
+
+  const handleOpacityCommit = async (value: number[]) => {
+    await saveSettings({ opacity: value[0] }, { successMessage: 'Opacidade salva.' });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5" />
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Shield className="h-5 w-5 text-primary" />
+        <h4 className="font-medium">Proteção de Imagem</h4>
+      </div>
+
+      {/* Mode Selection */}
+      <div className="space-y-3">
+        <Label className="text-sm text-muted-foreground">Tipo de proteção</Label>
+        <RadioGroup
+          value={settings.mode}
+          onValueChange={(value) => handleModeChange(value as WatermarkMode)}
+          disabled={isSaving}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3"
+        >
+          {/* System */}
+          <label
+            className={cn(
+              "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors",
+              settings.mode === 'system' 
+                ? "border-primary bg-primary/5" 
+                : "border-border hover:bg-muted/50"
+            )}
+          >
+            <RadioGroupItem value="system" className="sr-only" />
+            <Shield className={cn(
+              "h-5 w-5",
+              settings.mode === 'system' ? "text-primary" : "text-muted-foreground"
+            )} />
+            <div>
+              <p className="font-medium text-sm">Padrão do Sistema</p>
+              <p className="text-xs text-muted-foreground">Proteção completa</p>
+            </div>
+          </label>
+
+          {/* Custom */}
+          <label
+            className={cn(
+              "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors",
+              settings.mode === 'custom' 
+                ? "border-primary bg-primary/5" 
+                : "border-border hover:bg-muted/50"
+            )}
+          >
+            <RadioGroupItem value="custom" className="sr-only" />
+            <ImageIcon className={cn(
+              "h-5 w-5",
+              settings.mode === 'custom' ? "text-primary" : "text-muted-foreground"
+            )} />
+            <div>
+              <p className="font-medium text-sm">Minha Marca</p>
+              <p className="text-xs text-muted-foreground">Logo personalizado</p>
+            </div>
+          </label>
+
+          {/* None */}
+          <label
+            className={cn(
+              "flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors",
+              settings.mode === 'none' 
+                ? "border-primary bg-primary/5" 
+                : "border-border hover:bg-muted/50"
+            )}
+          >
+            <RadioGroupItem value="none" className="sr-only" />
+            <ShieldOff className={cn(
+              "h-5 w-5",
+              settings.mode === 'none' ? "text-primary" : "text-muted-foreground"
+            )} />
+            <div>
+              <p className="font-medium text-sm">Nenhuma</p>
+              <p className="text-xs text-muted-foreground">Sem proteção</p>
+            </div>
+          </label>
+        </RadioGroup>
+      </div>
+
+      {/* Custom Watermark Upload */}
+      {settings.mode === 'custom' && (
+        <div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
+          <Label className="text-sm">Sua marca d'água</Label>
+          <WatermarkUploader
+            currentPath={settings.path}
+            onUpload={uploadWatermark}
+            onDelete={deleteWatermark}
+            disabled={isSaving}
+            opacity={localOpacity}
+            scale={settings.scale}
+          />
+
+          {/* Tile size selector */}
+          {settings.path && (
+            <div className="space-y-2">
+              <Label className="text-sm">Tamanho da marca</Label>
+              <ToggleGroup
+                type="single"
+                value={settings.scale === 15 ? 'small' : settings.scale === 40 ? 'large' : 'medium'}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  const scaleMap = { small: 15, medium: 25, large: 40 };
+                  saveSettings({ scale: scaleMap[value as 'small' | 'medium' | 'large'] }, { successMessage: 'Tamanho da marca salvo.' });
+                }}
+                disabled={isSaving}
+                className="justify-start w-fit border border-border rounded-md p-1 bg-background"
+              >
+                <ToggleGroupItem value="small" size="sm" className="px-3 text-xs">Pequeno</ToggleGroupItem>
+                <ToggleGroupItem value="medium" size="sm" className="px-3 text-xs">Médio</ToggleGroupItem>
+                <ToggleGroupItem value="large" size="sm" className="px-3 text-xs">Grande</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          )}
+
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <p>
+              Use PNG com fundo transparente. A marca será aplicada em padrão repetido cobrindo toda a imagem.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Opacity Slider (only if not 'none') */}
+      {settings.mode !== 'none' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Opacidade</Label>
+            <span className="text-sm font-medium tabular-nums">
+              {localOpacity}%
+            </span>
+          </div>
+          <Slider
+            value={[localOpacity]}
+            onValueChange={handleOpacityChange}
+            onValueCommit={handleOpacityCommit}
+            min={10}
+            max={100}
+            step={5}
+            disabled={isSaving}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">
+            Valores baixos deixam a marca mais sutil
+          </p>
+        </div>
+      )}
+
+      {/* Warning for 'none' mode */}
+      {settings.mode === 'none' && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm">
+          <ShieldOff className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+          <p className="text-destructive">
+            Sem marca d'água, suas fotos ficam desprotegidas durante a seleção do cliente.
+          </p>
+        </div>
+      )}
+
+      {/* Info about burn-in */}
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border border-border/50 text-sm">
+        <Info className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+        <p className="text-muted-foreground">
+          A marca d'água é aplicada diretamente nas fotos durante o upload, 
+          garantindo proteção consistente em qualquer dispositivo ou zoom.
+        </p>
+      </div>
+    </div>
+  );
+}

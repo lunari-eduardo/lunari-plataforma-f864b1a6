@@ -1,0 +1,91 @@
+import { Download, Image } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { applyTitleCase } from '@/lib/textTransform';
+import { TitleCaseMode } from '@/types/gallery';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface DeliverHeaderProps {
+  sessionName: string;
+  photoCount: number;
+  expirationDate?: string | null;
+  sessionFont?: string;
+  titleCaseMode?: TitleCaseMode;
+  onDownloadAll: () => void;
+  isDownloading?: boolean;
+  isDark?: boolean;
+  bgColor?: string;
+  primaryColor?: string;
+  isVisible?: boolean;
+}
+
+export function DeliverHeader({
+  sessionName, photoCount,
+  expirationDate, sessionFont, titleCaseMode = 'normal',
+  onDownloadAll, isDownloading,
+  isDark = true, bgColor, primaryColor, isVisible
+}: DeliverHeaderProps) {
+  const displayName = applyTitleCase(sessionName, titleCaseMode);
+
+  const headerBg = isDark
+    ? 'rgba(28, 25, 23, 0.85)'
+    : 'rgba(250, 249, 247, 0.85)';
+  const headerText = isDark ? '#F5F5F4' : '#2D2A26';
+  const mutedText = isDark ? 'rgba(245,245,244,0.5)' : 'rgba(45,42,38,0.5)';
+  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-40 backdrop-blur-xl transition-all duration-500",
+        isVisible === false ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100"
+      )}
+      style={{
+        backgroundColor: headerBg,
+        borderBottom: `1px solid ${borderColor}`,
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Left: session name only */}
+        <div className="min-w-0">
+          <h2
+            className="text-lg md:text-xl font-light truncate"
+            style={{ color: headerText, ...(sessionFont ? { fontFamily: sessionFont } : {}) }}
+          >
+            {displayName}
+          </h2>
+        </div>
+
+        {/* Right: info + download */}
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="hidden sm:flex items-center gap-3 text-xs" style={{ color: mutedText }}>
+            <span className="flex items-center gap-1">
+              <Image className="w-3.5 h-3.5" />
+              {photoCount} fotos
+            </span>
+            {expirationDate && (
+              <span>
+                Expira {format(new Date(expirationDate), "dd 'de' MMM", { locale: ptBR })}
+              </span>
+            )}
+          </div>
+          <Button
+            size="sm"
+            onClick={onDownloadAll}
+            disabled={isDownloading}
+            className="text-xs font-medium"
+            style={{
+              backgroundColor: isDark ? '#FFFFFF' : '#1C1917',
+              color: isDark ? '#1C1917' : '#FFFFFF',
+            }}
+          >
+            <Download className="w-3.5 h-3.5 mr-1.5" />
+            {isDownloading ? 'Baixando...' : 'Baixar Todas'}
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
