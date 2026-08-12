@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { getStorageLimitBytes, getPlanDisplayName, hasTransferStorage, FREE_TRANSFER_BYTES } from '@/lib/transferPlans';
 import { differenceInDays } from 'date-fns';
 
 export function useTransferStorage() {
-  const { user, isAdmin } = useAuthContext();
+  const { user, isAdmin } = useAuth();
 
   // Fetch active subscription with transfer storage (user may have multiple subs)
   const { data: subscription, isLoading: isLoadingSub } = useQuery({
