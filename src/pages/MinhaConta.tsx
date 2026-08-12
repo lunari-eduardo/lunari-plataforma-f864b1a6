@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import PlanosTab from '@/components/account/PlanosTab';
+import ReferralsTab from '@/components/account/ReferralsTab';
 import { Button } from '@/components/ui/button';
-import { Loader2, User, Image, Shield, ArrowRight, LucideIcon } from 'lucide-react';
+import { Loader2, User, Image, Shield, ArrowRight, LucideIcon, Package, Gift } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
@@ -142,6 +144,20 @@ export default function MinhaConta() {
                 onClick={setActiveTab}
                 icon={Shield}
               />
+              <SidebarItem 
+                label="Planos e Créditos" 
+                value="planos" 
+                active={activeTab === 'planos'} 
+                onClick={setActiveTab}
+                icon={Package}
+              />
+              <SidebarItem 
+                label="Indique e Ganhe" 
+                value="indicacoes" 
+                active={activeTab === 'indicacoes'} 
+                onClick={setActiveTab}
+                icon={Gift}
+              />
             </aside>
 
             {/* Conteúdo da Aba */}
@@ -218,6 +234,14 @@ export default function MinhaConta() {
                       </div>
                     </section>
                   </div>
+                )}
+
+                {activeTab === 'planos' && (
+                  <PlanosTab />
+                )}
+
+                {activeTab === 'indicacoes' && (
+                  <ReferralsTab />
                 )}
               </div>
             </main>
