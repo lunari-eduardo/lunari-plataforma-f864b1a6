@@ -27,6 +27,7 @@ import CompartilhamentosComercialPage from "@/pages/comercial/CompartilhamentosC
 import ShareAnalysisPage from "@/pages/comercial/ShareAnalysisPage";
 import RelatoriosComercialPage from "@/pages/comercial/RelatoriosComercialPage";
 import PublicProposalViewer from "@/pages/comercial/PublicProposalViewer";
+import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
 
 import HomePage from "@/pages/site/HomePage";
 import StudioPage from "@/pages/site/StudioPage";
@@ -40,6 +41,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import PublicCheckout from "@/pages/PublicCheckout";
 import InfinitePayCheckout from "@/pages/pay/InfinitePayCheckout";
 import ShareLinkFallback from "@/pages/pay/ShareLinkFallback";
+import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
 
 import Auth from "@/pages/Auth";
 import Onboarding from "@/pages/Onboarding";
@@ -63,6 +65,7 @@ import SegurancaPage from "@/pages/legal/SegurancaPage";
 import GalleryPlaceholder from "@/pages/gallery/GalleryPlaceholder";
 import { ModuleProvider } from "@/contexts/ModuleContext";
 import { AppProvider } from "@/contexts/AppContext";
+import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
 
 import { ConfigurationProvider } from "@/contexts/ConfigurationContext";
 import { ProdutoEtiquetasProvider } from "@/contexts/ProdutoEtiquetasContext";
@@ -75,6 +78,7 @@ import { useProvisionGalleryStatuses } from "@/hooks/useProvisionGalleryStatuses
 import { LunariSupportHostProvider } from "@/integrations/support-host";
 import { SupportUserRoutes } from "@/modules/support";
 import { ADMIN_URL } from "@/lib/appContext";
+import GalleryDashboard from '@/pages/gallery/GalleryDashboard';
 
 /**
  * Redireciona rotas legadas /app/admin/* para admin.lunarihub.com.
@@ -225,7 +229,13 @@ export default function PhotographerApp() {
                 </Route>
 
                 {/* Módulo Gallery */}
-                <Route path="gallery" element={<GalleryPlaceholder />} />
+                <Route path="gallery">
+                  <Route index element={<Navigate to="/app/gallery/dashboard" replace />} />
+                  <Route path="dashboard" element={<GalleryDashboard />} />
+                  <Route path="select" element={<GalleryDashboard />} />
+                  <Route path="transfer" element={<GalleryDashboard />} />
+                  <Route path="galerias" element={<GalleryDashboard />} />
+                </Route>
 
                 <Route path="financas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><NovaFinancas /></PlanRestrictionGuard>
@@ -286,3 +296,4 @@ export default function PhotographerApp() {
     </ConfigurationProvider>
   );
 }
+

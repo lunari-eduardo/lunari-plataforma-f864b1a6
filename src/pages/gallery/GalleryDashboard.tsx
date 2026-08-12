@@ -1,0 +1,715 @@
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, Loader2, AlertCircle, MousePointerClick, Send, Trash2, HardDrive, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ReactivateGalleryDialog } from '@/components/gallery/ReactivateGalleryDialog';
+import { ReactivateSuccessModal } from '@/components/gallery/ReactivateSuccessModal';
+import { getGalleryUrl } from '@/lib/galleryUrl';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { getEffectiveGalleryStatus } from '@/lib/galleryStatus';
+import { GalleryCard } from '@/components/gallery/GalleryCard';
+import { DeliverGalleryCard } from '@/components/gallery/DeliverGalleryCard';
+import { SendGalleryModal } from '@/components/gallery/SendGalleryModal';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useGalleryDashboard, Galeria } from '@/hooks/useGalleryDashboard';
+import { useSettings } from '@/hooks/useSettings';
+import { GalleryStatus, Gallery } from '@/types/gallery';
+import { cn } from '@/lib/utils';
+import { getDisplayUrl } from '@/lib/photoUrl';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { clearGalleryStorage } from '@/lib/storage';
+import { isPast } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useTransferStorage } from '@/hooks/useTransferStorage';
+import { formatStorageSize } from '@/lib/transferPlans';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+
+import gallerySelectLogo from '@/assets/gallery/gallery-select-logo.png';
+import galleryTransferLogo from '@/assets/gallery/gallery-transfer-logo.png';
+import { PageContainer } from '@/components/layout/PageContainer';
+import { PageHeader } from '@/components/layout/PageHeader';
+
+function TransferStorageIndicator() {
+  const { hasTransferPlan, hasFreeStorageOnly, storageUsedBytes, storageLimitBytes, storageUsedPercent, planName, isAdmin, isLoading, isOverLimit, daysUntilDeletion } = useTransferStorage();
+  if (isLoading || isAdmin || (!hasTransferPlan && !hasFreeStorageOnly)) return null;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+        <HardDrive className="h-3.5 w-3.5" />
+        {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
+        {planName && <span>· {planName}</span>}
+        {!hasTransferPlan && hasFreeStorageOnly && <span>· Gratuito</span>}
+        {storageUsedPercent >= 100 && (
+          <span className="ml-1 inline-flex items-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold text-destructive-foreground">Cheio</span>
+        )}
+      </p>
+      {isOverLimit && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2.5">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-destructive">Excedente de armazenamento</p>
+            {daysUntilDeletion !== null && (
+              <p className="text-xs text-destructive/80">
+                Exclusão automática em {daysUntilDeletion} {daysUntilDeletion === 1 ? 'dia' : 'dias'}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const selectStatusFilters: { value: GalleryStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'Todas' },
+  { value: 'created', label: 'Criadas' },
+  { value: 'sent', label: 'Enviadas' },
+  { value: 'selection_started', label: 'Em seleção' },
+  { value: 'selection_completed', label: 'Concluídas' },
+  { value: 'expired', label: 'Expiradas' },
+];
+
+type DeliverStatusFilter = 'all' | 'published' | 'expired';
+const deliverStatusFilters: { value: DeliverStatusFilter; label: string }[] = [
+  { value: 'all', label: 'Todas' },
+  { value: 'published', label: 'Publicadas' },
+  { value: 'expired', label: 'Expiradas' },
+];
+
+// O status bruto do Supabase agora é traduzido via getEffectiveGalleryStatus.
+// Esta função foi mantida apenas para compatibilidade de tipos, mas o cálculo
+// real agora é centralizado para evitar divergências.
+function mapSupabaseStatus(galeria: Galeria): GalleryStatus {
+  return getEffectiveGalleryStatus(
+    galeria.status,
+    galeria.statusPagamento,
+    galeria.finalizedAt,
+    galeria.statusSelecao,
+    galeria.prazoSelecao
+  );
+}
+
+// Transform Supabase gallery to local format for display
+function transformSupabaseToLocal(galeria: Galeria): Gallery & { tipo: 'selecao' | 'entrega'; totalFotos: number; firstPhotoKey: string | null; coverPhotoKey: string | null } {
+  const status = mapSupabaseStatus(galeria);
+  
+  const deadline = galeria.prazoSelecao || galeria.createdAt;
+  
+  return {
+    id: galeria.id,
+    clientName: galeria.clienteNome || 'Cliente',
+    clientEmail: galeria.clienteEmail || '',
+    sessionName: galeria.nomeSessao || 'Sessão',
+    packageName: galeria.nomePacote || '',
+    includedPhotos: galeria.fotosIncluidas,
+    extraPhotoPrice: galeria.valorFotoExtra,
+    saleSettings: {
+      mode: 'sale_without_payment',
+      pricingModel: 'fixed',
+      chargeType: 'only_extras',
+      fixedPrice: galeria.valorFotoExtra,
+      discountPackages: [],
+    },
+    status,
+    selectionStatus: galeria.statusSelecao === 'selecao_completa' ? 'confirmed' : 'in_progress',
+    settings: {
+      welcomeMessage: galeria.mensagemBoasVindas || '',
+      deadline,
+      deadlinePreset: 'custom',
+      watermark: galeria.configuracoes?.watermark || { type: 'standard', opacity: 40, position: 'center' },
+      watermarkDisplay: galeria.configuracoes?.watermarkDisplay || 'all',
+      imageResizeOption: galeria.configuracoes?.imageResizeOption || 1920,
+      allowComments: galeria.configuracoes?.allowComments ?? true,
+      allowDownload: galeria.configuracoes?.allowDownload ?? false,
+      allowExtraPhotos: galeria.configuracoes?.allowExtraPhotos ?? true,
+    },
+    photos: [],
+    actions: [],
+    createdAt: galeria.createdAt,
+    updatedAt: galeria.updatedAt,
+    selectedCount: galeria.fotosSelecionadas,
+    extraCount: Math.max(0, galeria.fotosSelecionadas - galeria.fotosIncluidas),
+    extraTotal: galeria.valorExtras,
+    tipo: galeria.tipo,
+    totalFotos: galeria.totalFotos,
+    firstPhotoKey: galeria.firstPhotoKey,
+    coverPhotoKey: galeria.coverPhotoKey,
+  };
+}
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.includes('/transfer') ? 'deliver' : 'select';
+
+  const handleTabChange = (value: string) => {
+    navigate(value === 'deliver' ? '/app/gallery/transfer' : '/app/gallery/dashboard', { replace: true });
+  };
+  const [search, setSearch] = useState('');
+  const [selectStatusFilter, setSelectStatusFilter] = useState<GalleryStatus | 'all'>('all');
+  const [deliverStatusFilter, setDeliverStatusFilter] = useState<DeliverStatusFilter>('all');
+  
+  const { galleries: supabaseGalleries, isLoading, error, deleteGallery, sendGallery, reopenSelection, refetch } = useGalleryDashboard() as any;
+  const { settings } = useSettings();
+  const queryClient = useQueryClient();
+  const processedGalleriesRef = useRef<Set<string>>(new Set());
+
+  // Share, Delete & Reactivate modal state
+  const [shareGalleryId, setShareGalleryId] = useState<string | null>(null);
+  const [deleteGalleryId, setDeleteGalleryId] = useState<string | null>(null);
+  const [reactivateGalleryId, setReactivateGalleryId] = useState<string | null>(null);
+  const [reactivateSuccessOpen, setReactivateSuccessOpen] = useState(false);
+  const [reactivateSuccessGallery, setReactivateSuccessGallery] = useState<Galeria | null>(null);
+  const [reactivateDays, setReactivateDays] = useState(7);
+
+  const shareGaleria = useMemo(() => 
+    supabaseGalleries.find(g => g.id === shareGalleryId) || null
+  , [supabaseGalleries, shareGalleryId]);
+
+  useEffect(() => {
+    clearGalleryStorage();
+  }, []);
+
+  // Sync expired galleries to database (trigger auto-syncs clientes_sessoes)
+  useEffect(() => {
+    if (!supabaseGalleries.length) return;
+    
+    // Filtramos apenas as galerias que ainda não estão marcadas como expiradas no banco
+    // e que ainda não tentamos processar nesta sessão para evitar loops
+    const expiredGalleries = supabaseGalleries.filter(g => {
+      if (processedGalleriesRef.current.has(g.id)) return false;
+
+      const effectiveStatus = getEffectiveGalleryStatus(
+        g.status,
+        g.statusPagamento,
+        g.finalizedAt,
+        g.statusSelecao,
+        g.prazoSelecao
+      );
+      
+      const isPastDeadline = g.prazoSelecao && isPast(g.prazoSelecao);
+      const rawStatusIsActive = ['enviado', 'sent', 'em_selecao', 'selection_started', 'selecao_iniciada', 'publicada'].includes((g.status || '').toLowerCase());
+      
+      return effectiveStatus === 'expired' && rawStatusIsActive && isPastDeadline;
+    });
+
+    if (expiredGalleries.length === 0) return;
+
+    // Marcar como processadas antes de disparar o update para evitar concorrência
+    expiredGalleries.forEach(g => processedGalleriesRef.current.add(g.id));
+
+    console.log('[Dashboard] Auto-syncing expired status for:', expiredGalleries.map(g => g.id));
+
+    const syncExpired = async () => {
+      const { error } = await supabase
+        .from('galerias')
+        .update({ 
+          status: 'expirado', 
+          updated_at: new Date().toISOString() 
+        })
+        .in('id', expiredGalleries.map(g => g.id));
+
+      if (error) {
+        console.error('[Dashboard] Error auto-syncing expired galleries:', error);
+        // Remove do ref em caso de erro para permitir nova tentativa se necessário
+        expiredGalleries.forEach(g => processedGalleriesRef.current.delete(g.id));
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      }
+    };
+    syncExpired();
+  }, [supabaseGalleries, queryClient]);
+
+  const allGalleries = useMemo(() => {
+    return supabaseGalleries.map(transformSupabaseToLocal);
+  }, [supabaseGalleries]);
+
+  const selectGalleries = useMemo(() => allGalleries.filter(g => g.tipo !== 'entrega'), [allGalleries]);
+  const deliverGalleries = useMemo(() => allGalleries.filter(g => g.tipo === 'entrega'), [allGalleries]);
+
+  const PAGE_SIZE = 20;
+  const [selectPage, setSelectPage] = useState(1);
+  const [deliverPage, setDeliverPage] = useState(1);
+
+  // Reset page on filter/search change
+  useEffect(() => { setSelectPage(1); }, [search, selectStatusFilter]);
+  useEffect(() => { setDeliverPage(1); }, [search, deliverStatusFilter]);
+
+  const filteredSelectGalleries = selectGalleries.filter((gallery) => {
+    const matchesSearch =
+      gallery.clientName.toLowerCase().includes(search.toLowerCase()) ||
+      gallery.sessionName.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = selectStatusFilter === 'all' || gallery.status === selectStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredDeliverGalleries = deliverGalleries.filter((gallery) => {
+    const matchesSearch =
+      gallery.clientName.toLowerCase().includes(search.toLowerCase()) ||
+      gallery.sessionName.toLowerCase().includes(search.toLowerCase());
+    if (deliverStatusFilter === 'all') return matchesSearch;
+    if (deliverStatusFilter === 'published') return matchesSearch && gallery.status === 'enviado';
+    if (deliverStatusFilter === 'expired') return matchesSearch && gallery.status === 'expirado';
+    return matchesSearch;
+  });
+
+  const totalSelectPages = Math.ceil(filteredSelectGalleries.length / PAGE_SIZE);
+  const paginatedSelectGalleries = filteredSelectGalleries.slice((selectPage - 1) * PAGE_SIZE, selectPage * PAGE_SIZE);
+
+  const totalDeliverPages = Math.ceil(filteredDeliverGalleries.length / PAGE_SIZE);
+  const paginatedDeliverGalleries = filteredDeliverGalleries.slice((deliverPage - 1) * PAGE_SIZE, deliverPage * PAGE_SIZE);
+
+  const selectStats = {
+    total: selectGalleries.length,
+    inProgress: selectGalleries.filter(g => g.status === 'selection_started').length,
+    completed: selectGalleries.filter(g => g.status === 'selection_completed').length,
+    expired: selectGalleries.filter(g => g.status === 'expired').length,
+  };
+
+  const deliverStats = {
+    total: deliverGalleries.length,
+    published: deliverGalleries.filter(g => g.status === 'enviado').length,
+    expired: deliverGalleries.filter(g => g.status === 'expirado').length,
+  };
+
+  const deleteTarget = allGalleries.find(g => g.id === deleteGalleryId);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteGalleryId) return;
+    setIsDeleting(true);
+    try {
+      await deleteGallery(deleteGalleryId);
+      setDeleteGalleryId(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const subtitle = activeTab === 'select'
+    ? 'Gerencie as escolhas dos seus clientes.'
+    : 'Gerencie suas entregas finais.';
+
+  return (
+    <PageContainer className="py-4 space-y-5 animate-fade-in">
+      <PageHeader
+        title={
+          <div className="flex items-center gap-2">
+            <img 
+              src={activeTab === 'select' ? gallerySelectLogo : galleryTransferLogo} 
+              alt={activeTab === 'select' ? 'Gallery Select' : 'Gallery Transfer'}
+              className="h-8 object-contain"
+            />
+          </div>
+        }
+        description={subtitle}
+        action={
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="sm" className="gap-1.5 h-8">
+                <Plus className="h-3.5 w-3.5" />
+                Nova Galeria
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="end" sideOffset={8}>
+              <div className="space-y-1">
+                <button
+                  onClick={() => navigate('/app/gallery/new')}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
+                >
+                  <MousePointerClick className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <p>Sele��o</p>
+                    <p className="text-xs text-muted-foreground font-normal">Cliente seleciona fotos</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => navigate('/app/deliver/new')}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
+                >
+                  <Send className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <p>Transfer</p>
+                    <p className="text-xs text-muted-foreground font-normal">Entrega final de fotos</p>
+                  </div>
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        }
+      />
+      
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="bg-transparent p-0 h-auto rounded-none border-b border-border w-full justify-start">
+          <TabsTrigger 
+            value="select"
+            className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 pt-1 text-muted-foreground data-[state=active]:text-foreground font-medium"
+          >
+            Select
+          </TabsTrigger>
+          <TabsTrigger 
+            value="deliver"
+            className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 pb-2.5 pt-1 text-muted-foreground data-[state=active]:text-foreground font-medium"
+          >
+            Transfer
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ===== SELECT TAB ===== */}
+        <TabsContent value="select" className="space-y-5 mt-4">
+          <p className="text-sm text-muted-foreground">
+            {selectStats.total} galerias · {selectStats.inProgress} em seleção · {selectStats.completed} concluídas · {selectStats.expired} expiradas
+          </p>
+
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por cliente ou sessão..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="inline-flex border border-border/50 rounded-lg overflow-hidden bg-background/60 backdrop-blur-sm">
+              {selectStatusFilters.map((filter, i) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setSelectStatusFilter(filter.value)}
+                  className={cn(
+                    'px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap',
+                    i < selectStatusFilters.length - 1 && 'border-r border-border',
+                    selectStatusFilter === filter.value
+                      ? 'bg-muted text-foreground'
+                      : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Erro ao carregar galerias</h3>
+              <p className="text-muted-foreground mb-4">Não foi possível conectar ao banco de dados.</p>
+              <Button variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button>
+            </div>
+          ) : filteredSelectGalleries.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3">
+                {paginatedSelectGalleries.map((gallery) => {
+                  const galeria = supabaseGalleries.find(g => g.id === gallery.id);
+                  const canReactivate = ['selection_completed', 'expired'].includes(gallery.status) || gallery.selectionStatus === 'blocked' || galeria?.statusSelecao === 'aguardando_pagamento';
+                  return (
+                    <GalleryCard
+                      key={gallery.id}
+                      gallery={gallery}
+                      thumbnailUrl={gallery.firstPhotoKey ? getDisplayUrl(gallery.firstPhotoKey) : undefined}
+                      paymentStatus={galeria?.statusPagamento}
+                      onClick={() => navigate(`/gallery/${gallery.id}`)}
+                      onEdit={() => navigate(`/gallery/${gallery.id}/edit`)}
+                      onShare={() => setShareGalleryId(gallery.id)}
+                      onDelete={() => setDeleteGalleryId(gallery.id)}
+                      onReactivate={canReactivate ? () => setReactivateGalleryId(gallery.id) : undefined}
+                    />
+                  );
+                })}
+              </div>
+              {totalSelectPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectPage(p => Math.max(1, p - 1))}
+                    disabled={selectPage === 1}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-muted-foreground px-2">
+                    {selectPage} de {totalSelectPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectPage(p => Math.min(totalSelectPages, p + 1))}
+                    disabled={selectPage === totalSelectPages}
+                    className="gap-1"
+                  >
+                    Próxima
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Nenhuma galeria encontrada</h3>
+              <p className="text-muted-foreground mb-6">
+                {selectGalleries.length === 0 ? 'Crie sua primeira galeria para começar' : 'Tente ajustar os filtros ou criar uma nova galeria'}
+              </p>
+              <Button onClick={() => navigate('/gallery/new')} variant="terracotta">
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Galeria
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ===== TRANSFER TAB ===== */}
+        <TabsContent value="deliver" className="space-y-5 mt-4">
+          <p className="text-sm text-muted-foreground">
+            {deliverStats.total} transfers · {deliverStats.published} publicadas · {deliverStats.expired} expiradas
+          </p>
+          <TransferStorageIndicator />
+
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por cliente ou sessão..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="inline-flex border border-border/50 rounded-lg overflow-hidden bg-background/60 backdrop-blur-sm">
+              {deliverStatusFilters.map((filter, i) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setDeliverStatusFilter(filter.value)}
+                  className={cn(
+                    'px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap',
+                    i < deliverStatusFilters.length - 1 && 'border-r border-border',
+                    deliverStatusFilter === filter.value
+                      ? 'bg-muted text-foreground'
+                      : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  )}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Erro ao carregar galerias</h3>
+              <p className="text-muted-foreground mb-4">Não foi possível conectar ao banco de dados.</p>
+              <Button variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button>
+            </div>
+          ) : filteredDeliverGalleries.length > 0 ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {paginatedDeliverGalleries.map((gallery) => {
+                  const canReactivate = gallery.status === 'expired';
+                  return (
+                    <DeliverGalleryCard
+                      key={gallery.id}
+                      gallery={gallery}
+                      totalPhotos={gallery.totalFotos}
+                      onClick={() => navigate(`/deliver/${gallery.id}`)}
+                      onEdit={() => navigate(`/deliver/${gallery.id}`)}
+                      onShare={() => setShareGalleryId(gallery.id)}
+                      onDelete={() => setDeleteGalleryId(gallery.id)}
+                      onReactivate={canReactivate ? () => setReactivateGalleryId(gallery.id) : undefined}
+                    />
+                  );
+                })}
+              </div>
+              {totalDeliverPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeliverPage(p => Math.max(1, p - 1))}
+                    disabled={deliverPage === 1}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <span className="text-sm text-muted-foreground px-2">
+                    {deliverPage} de {totalDeliverPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeliverPage(p => Math.min(totalDeliverPages, p + 1))}
+                    disabled={deliverPage === totalDeliverPages}
+                    className="gap-1"
+                  >
+                    Próxima
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Send className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Nenhuma galeria de transfer</h3>
+              <p className="text-muted-foreground mb-6">
+                Use esse modo para entregar as fotos finais aos seus clientes.
+              </p>
+              <Button onClick={() => navigate('/deliver/new')} variant="terracotta">
+                <Plus className="h-4 w-4 mr-2" />
+                Criar galeria de transfer
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Share Modal */}
+      {shareGaleria && (
+        <SendGalleryModal
+          isOpen={!!shareGalleryId}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShareGalleryId(null);
+              // Refresh galleries to pick up status change from RPC
+              refetch();
+            }
+          }}
+          gallery={shareGaleria}
+          settings={settings}
+          onSendGallery={async () => {
+            await sendGallery(shareGaleria.id);
+          }}
+        />
+      )}
+
+      {/* Delete Dialog */}
+      <AlertDialog open={!!deleteGalleryId} onOpenChange={(open) => !open && setDeleteGalleryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir galeria?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>"{deleteTarget?.sessionName}"</strong>?
+              <br /><br />
+              <span className="text-destructive font-medium">
+                Esta ação é irreversível. Todas as fotos serão removidas permanentemente.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteConfirm();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reactivate Dialog */}
+      {reactivateGalleryId && (() => {
+        const galeria = supabaseGalleries.find(g => g.id === reactivateGalleryId);
+        const isTransfer = galeria?.tipo === 'entrega';
+        return (
+          <ReactivateGalleryDialog
+            galleryName={galeria?.nomeSessao || 'Esta galeria'}
+            onReactivate={async (days) => {
+              if (isTransfer) {
+                const prazoSelecao = new Date();
+                prazoSelecao.setDate(prazoSelecao.getDate() + days);
+                await supabase.from('galerias').update({
+                  status: 'enviado',
+                  prazo_selecao: prazoSelecao.toISOString(),
+                  updated_at: new Date().toISOString(),
+                }).eq('id', reactivateGalleryId);
+              } else {
+                await reopenSelection({ id: reactivateGalleryId, days });
+              }
+              await refetch();
+            }}
+            open={true}
+            onOpenChange={(open) => { if (!open) setReactivateGalleryId(null); }}
+            onSuccess={(days) => {
+              setReactivateDays(days);
+              setReactivateSuccessGallery(galeria || null);
+              setReactivateSuccessOpen(true);
+            }}
+          />
+        );
+      })()}
+
+      {reactivateSuccessGallery && settings && (
+        <ReactivateSuccessModal
+          isOpen={reactivateSuccessOpen}
+          onOpenChange={(open) => {
+            setReactivateSuccessOpen(open);
+            if (!open) setReactivateSuccessGallery(null);
+          }}
+          gallery={reactivateSuccessGallery}
+          settings={settings}
+          clientLink={reactivateSuccessGallery.publicToken ? getGalleryUrl(reactivateSuccessGallery.publicToken) : null}
+          newDeadline={(() => {
+            const d = new Date();
+            d.setDate(d.getDate() + reactivateDays);
+            return d;
+          })()}
+          daysGranted={reactivateDays}
+        />
+      )}
+    </PageContainer>
+  );
+}
+
+
