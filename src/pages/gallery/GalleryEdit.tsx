@@ -509,7 +509,8 @@ export default function GalleryEdit() {
           }
         }
       });
-      navigate(`/gallery/${gallery.id}`);
+      toast.success('Galeria atualizada com sucesso!');
+      navigate(gallery?.tipo === 'entrega' ? `/app/gallery/transfer/${gallery.id}` : `/app/gallery/select/${gallery.id}`);
     } catch (error) {
       console.error('Error updating gallery:', error);
     }
@@ -638,8 +639,8 @@ export default function GalleryEdit() {
     <div className="space-y-6 animate-fade-in pb-24">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/gallery/${id}`)}>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => navigate(gallery?.tipo === 'entrega' ? `/app/gallery/transfer/${id}` : `/app/gallery/select/${id}`)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>

@@ -1013,7 +1013,7 @@ export default function GalleryCreate() {
 
           // Publish gallery (generate token) without marking as "sent"
           await publishSupabaseGallery(supabaseGalleryId);
-          navigate(`/gallery/${supabaseGalleryId}`);
+          navigate(`/app/gallery/select/${supabaseGalleryId}`);
         } catch (error) {
           console.error('Error finalizing gallery:', error);
           toast.error('Erro ao finalizar galeria');
@@ -1036,7 +1036,7 @@ export default function GalleryCreate() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      navigate('/app/gallery/dashboard');
+      navigate('/app/gallery/list');
     }
   };
 
@@ -1116,7 +1116,7 @@ export default function GalleryCreate() {
             })
           }
         });
-        navigate('/app/gallery/dashboard');
+        navigate('/app/gallery/list');
       } else {
         // Determine regrasCongeladas for new draft
         const hasSessionId = !!gestaoParams?.session_id;
@@ -1172,7 +1172,7 @@ export default function GalleryCreate() {
           venda_tipo_cobranca: chargeType,
         });
         if (result?.id) {
-          navigate('/app/gallery/dashboard');
+          navigate('/app/gallery/list');
         }
       }
     } catch (error) {

@@ -159,12 +159,12 @@ export default function DeliverCreate() {
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-          <Button onClick={() => navigate('/credits/checkout')} className="gap-2">
-            <ArrowUpCircle className="h-4 w-4" />
+          <Button onClick={() => navigate('/app/gallery/settings')} className="gap-2">
+            <Send className="w-4 h-4" />
             {hasTransferPlan ? 'Fazer Upgrade' : 'Ver Planos'}
           </Button>
           {hasTransferPlan && (
-            <Button variant="outline" onClick={() => navigate('/app/gallery/dashboard')} className="gap-2">
+            <Button variant="outline" onClick={() => navigate('/app/gallery/list')} className="gap-2">
               <Trash2 className="h-4 w-4" />
               Gerenciar Galerias
             </Button>
@@ -249,7 +249,7 @@ export default function DeliverCreate() {
 
   const handleBack = () => {
     if (currentStep === 1) {
-      navigate('/app/gallery/dashboard');
+      navigate('/app/gallery/list');
     } else {
       setCurrentStep((prev) => Math.max(prev - 1, 1));
     }
@@ -285,8 +285,8 @@ export default function DeliverCreate() {
       updateSettings({ lastSessionFont: sessionFont });
 
       // Publish gallery (generate token) without marking as "sent"
-      await publishGallery(supabaseGalleryId);
-      navigate(`/deliver/${supabaseGalleryId}`);
+      toast.success('Entrega criada com sucesso!');
+      navigate(`/app/gallery/transfer/${supabaseGalleryId}`);
     } catch (error) {
       console.error('Error publishing deliver gallery:', error);
       toast.error('Erro ao publicar galeria');
@@ -710,7 +710,7 @@ export default function DeliverCreate() {
     <div className="max-w-5xl mx-auto animate-fade-in pb-24">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/dashboard')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>

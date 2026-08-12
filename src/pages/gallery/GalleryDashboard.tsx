@@ -152,10 +152,10 @@ function transformSupabaseToLocal(galeria: Galeria): Gallery & { tipo: 'selecao'
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const activeTab = location.pathname.includes('/galleries/deliver') ? 'deliver' : 'select';
+  const [activeTab, setActiveTab] = useState<'select' | 'deliver'>('select');
 
   const handleTabChange = (value: string) => {
-    navigate(value === 'deliver' ? '/galleries/deliver' : '/galleries/select', { replace: true });
+    setActiveTab(value as 'select' | 'deliver');
   };
   const [search, setSearch] = useState('');
   const [selectStatusFilter, setSelectStatusFilter] = useState<GalleryStatus | 'all'>('all');
@@ -423,8 +423,8 @@ export default function Dashboard() {
                       gallery={gallery}
                       thumbnailUrl={gallery.firstPhotoKey ? getDisplayUrl(gallery.firstPhotoKey) : undefined}
                       paymentStatus={galeria?.statusPagamento}
-                      onClick={() => navigate(`/gallery/${gallery.id}`)}
-                      onEdit={() => navigate(`/gallery/${gallery.id}/edit`)}
+                      onClick={() => navigate(`/app/gallery/select/${gallery.id}`)}
+                      onEdit={() => navigate(`/app/gallery/select/${gallery.id}/edit`)}
                       onShare={() => setShareGalleryId(gallery.id)}
                       onDelete={() => setDeleteGalleryId(gallery.id)}
                       onReactivate={canReactivate ? () => setReactivateGalleryId(gallery.id) : undefined}
@@ -534,8 +534,8 @@ export default function Dashboard() {
                       key={gallery.id}
                       gallery={gallery}
                       totalPhotos={gallery.totalFotos}
-                      onClick={() => navigate(`/deliver/${gallery.id}`)}
-                      onEdit={() => navigate(`/deliver/${gallery.id}`)}
+                      onClick={() => navigate(`/app/gallery/transfer/${gallery.id}`)}
+                      onEdit={() => navigate(`/app/gallery/transfer/${gallery.id}/edit`)}
                       onShare={() => setShareGalleryId(gallery.id)}
                       onDelete={() => setDeleteGalleryId(gallery.id)}
                       onReactivate={canReactivate ? () => setReactivateGalleryId(gallery.id) : undefined}

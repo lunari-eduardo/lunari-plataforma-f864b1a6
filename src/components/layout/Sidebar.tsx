@@ -324,8 +324,18 @@ export default function Sidebar() {
   ].filter(item => !item.adminOnly || accessState.isAdmin);
 
   const galleryNavItems = [
-    { to: "/app/gallery", icon: <Home size={14} />, label: "Início", end: true },
-    { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" }
+    { to: "/app/gallery/dashboard", icon: <Home size={14} />, label: "Início", end: true },
+    { 
+      to: "/app/gallery/list", 
+      icon: <LayoutGrid size={14} />, 
+      label: "Galerias",
+      subItems: [
+        { to: "/app/gallery/new/select", label: "Select (Nova)", icon: <CheckSquare size={12} /> },
+        { to: "/app/gallery/new/transfer", label: "Transfer (Nova)", icon: <Send size={12} /> }
+      ]
+    },
+    { to: "/app/gallery/settings", icon: <Settings size={14} />, label: "Configurações" },
+    { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" }
   ];
 
   const currentNavItems = activeModule === 'gallery' ? galleryNavItems : navItems;

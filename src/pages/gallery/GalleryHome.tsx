@@ -152,11 +152,17 @@ export default function Home() {
                   {creditsLoading ? '—' : credits.toLocaleString('pt-BR')}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mb-1">créditos disponíveis</p>
-              <p className="text-xs text-muted-foreground/70 mb-5">Seus créditos não expiram</p>
-              <Button variant="terracotta" className="w-full sm:w-auto" onClick={() => navigate('/credits')}>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-zinc-400 mb-1">créditos disponíveis</p>
+              <p className="text-xs text-zinc-500">Seus créditos não expiram</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button variant="terracotta" className="w-full sm:w-auto" onClick={() => navigate('/app/gallery/settings')}>
                 Comprar créditos
               </Button>
+            </div>
+            </div>
             </div>
 
             {/* Storage Card */}
@@ -173,11 +179,11 @@ export default function Home() {
               </p>
               <Progress value={storageUsedPercent} className="h-2 mb-5" />
               <div className="flex flex-wrap items-center gap-3">
-                <Button variant="outline" size="sm" onClick={() => navigate('/credits/subscription')}>
-                  Ver planos de armazenamento
+                <Button variant="outline" size="sm" onClick={() => navigate('/app/gallery/settings')}>
+                  Gerenciar assinatura
                 </Button>
                 <button
-                  onClick={() => navigate('/credits/subscription')}
+                  onClick={() => navigate('/app/gallery/settings')}
                   className="text-xs text-primary hover:underline font-medium"
                 >
                   Gerenciar assinatura
@@ -241,7 +247,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* Attention Required — expiradas e concluídas */}
+            {/* Attention Required */}
             <div className="lg:col-span-3 glass p-6 overflow-hidden">
               <div className="flex items-center gap-2 mb-4">
                 <AlertCircle className="h-4 w-4 text-amber-500" />
@@ -271,10 +277,12 @@ export default function Home() {
                             {g.fotosSelecionadas} / {g.fotosIncluidas}
                           </td>
                           <td className="py-2.5 text-right">
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(`/gallery/${g.id}`)}>
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              Abrir
-                            </Button>
+                          <div>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => navigate(g.tipo === 'entrega' ? `/app/gallery/transfer/${g.id}` : `/app/gallery/select/${g.id}`)}>
+                            <ExternalLink className="w-3 h-3 mr-1" />
+                            Abrir
+                          </Button>
+                        </div>
                           </td>
                         </tr>
                       ))}
@@ -302,8 +310,8 @@ export default function Home() {
                     return (
                       <div
                         key={g.id}
-                        className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-background/30 hover:bg-background/50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/gallery/${g.id}`)}
+                        className="p-3 border border-zinc-800 rounded-lg hover:border-zinc-700 hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                        onClick={() => navigate(g.tipo === 'entrega' ? `/app/gallery/transfer/${g.id}` : `/app/gallery/select/${g.id}`)}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{g.clienteNome || '—'}</p>

@@ -140,7 +140,7 @@ export default function DeliverDetail() {
     return (
       <div className="text-center py-24">
         <h2 className="text-2xl font-bold mb-2">Galeria não encontrada</h2>
-        <Button variant="outline" onClick={() => navigate('/app/gallery/dashboard')}>Voltar</Button>
+        <Button variant="outline" onClick={() => navigate('/app/gallery/list')}>Voltar</Button>
       </div>
     );
   }
@@ -171,7 +171,7 @@ export default function DeliverDetail() {
         prazoSelecao: expirationDate,
 
       }});
-      navigate('/app/gallery/dashboard');
+      navigate('/app/gallery/list');
     } catch (error) {
       console.error('Erro ao salvar:', error);
     } finally {
@@ -191,7 +191,7 @@ export default function DeliverDetail() {
   const handleDelete = async () => {
     if (!id) return;
     await deleteGallery(id);
-    navigate('/app/gallery/dashboard');
+    navigate('/app/gallery/list');
   };
 
   const handlePhotoDelete = async (photoId: string) => {
@@ -270,7 +270,7 @@ export default function DeliverDetail() {
     <div className="space-y-6 animate-fade-in pb-24">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate('/app/gallery/dashboard')}>
+        <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate('/app/gallery/list')}>
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
