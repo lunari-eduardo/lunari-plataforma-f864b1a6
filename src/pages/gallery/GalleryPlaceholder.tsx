@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Image as ImageIcon } from 'lucide-react';
 
@@ -12,17 +12,17 @@ export default function GalleryPlaceholder() {
             Lunari Gallery
           </h1>
           <p className="text-muted-foreground">
-            Sua ferramenta de seleção e entrega de imagens.
+            Sua ferramenta de seleÃ§Ã£o e entrega de imagens.
           </p>
         </div>
       </div>
 
       <Card className="border-dashed shadow-none bg-muted/30">
         <CardHeader>
-          <CardTitle>Módulo em breve</CardTitle>
+          <CardTitle>MÃ³dulo em breve</CardTitle>
           <CardDescription>
-            A integração da Gallery com o ecossistema Lunari está sendo preparada. 
-            Em breve você poderá gerenciar suas galerias e seleções diretamente por aqui.
+            A integraÃ§Ã£o da Gallery com o ecossistema Lunari estÃ¡ sendo preparada. 
+            Em breve vocÃª poderÃ¡ gerenciar suas galerias e seleÃ§Ãµes diretamente por aqui.
           </CardDescription>
         </CardHeader>
         <CardContent>

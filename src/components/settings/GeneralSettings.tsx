@@ -15,24 +15,11 @@ interface GeneralSettingsProps {
 }
 
 export function GeneralSettings({ settings, updateSettings }: GeneralSettingsProps) {
-  const [studioName, setStudioName] = useState(settings.studioName);
   const [expirationDays, setExpirationDays] = useState(String(settings.defaultExpirationDays ?? 10));
-
-  useEffect(() => {
-    setStudioName(settings.studioName);
-  }, [settings.studioName]);
 
   useEffect(() => {
     setExpirationDays(String(settings.defaultExpirationDays ?? 10));
   }, [settings.defaultExpirationDays]);
-
-  const saveStudioName = () => {
-    const nextName = studioName.trim() || 'Meu Estúdio';
-    if (nextName !== settings.studioName) {
-      updateSettings({ studioName: nextName }, { successMessage: 'Nome do estúdio salvo.' });
-    }
-    setStudioName(nextName);
-  };
 
   const saveExpirationDays = () => {
     const nextDays = Math.min(90, Math.max(1, Number.parseInt(expirationDays, 10) || 10));
@@ -44,34 +31,6 @@ export function GeneralSettings({ settings, updateSettings }: GeneralSettingsPro
 
   return (
     <div className="space-y-6">
-      {/* Studio Info */}
-      <div className="lunari-card p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-medium">Informações do Estúdio</h2>
-            <p className="text-sm text-muted-foreground">
-              Dados exibidos nas galerias e comunicações
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="studioName">Nome do Estúdio</Label>
-            <Input
-              id="studioName"
-              value={studioName}
-              onChange={(e) => setStudioName(e.target.value)}
-              onBlur={saveStudioName}
-              placeholder="Seu estúdio"
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Gallery Permission Settings */}
       <div className="lunari-card p-6 space-y-6">
         <div className="flex items-center gap-3">

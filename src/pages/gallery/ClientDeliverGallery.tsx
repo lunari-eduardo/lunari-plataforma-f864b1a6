@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { CoverRenderer } from '@/components/deliver/covers/CoverRenderer';
 import { resolveCoverId } from '@/components/deliver/covers/registry';
 import { DeliverHeader } from '@/components/deliver/DeliverHeader';
@@ -113,7 +113,7 @@ export default function ClientDeliverGallery({ data }: Props) {
         pesoVisual: peso,
       } as DeliverPhoto;
     });
-    // Ordem canônica: alfabética natural pelo nome original.
+    // Ordem canÃ´nica: alfabÃ©tica natural pelo nome original.
     return sortPhotosByNaturalFilename(mapped);
   }, [data.photos]);
 
@@ -355,8 +355,8 @@ function ClientDeliverGalleryContent({
                   borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', 
                 }}
               >
-                <span className="opacity-40 group-hover:translate-x-[-2px] transition-transform">←</span> 
-                Álbuns
+                <span className="opacity-40 group-hover:translate-x-[-2px] transition-transform">â†</span> 
+                Ãlbuns
               </button>
               
               <div className="h-4 w-px bg-white/10 mx-1" />

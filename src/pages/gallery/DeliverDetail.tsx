@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -79,7 +79,7 @@ export default function DeliverDetail() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [galleryPassword, setGalleryPassword] = useState('');
   const [expirationDate, setExpirationDate] = useState<Date | undefined>();
-  const [shareMessage, setShareMessage] = useState('Suas fotos finais estão prontas para download.');
+  const [shareMessage, setShareMessage] = useState('Suas fotos finais estÃ£o prontas para download.');
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [photoSpacing, setPhotoSpacing] = useState(6);
   const [activeThemeId, setActiveThemeId] = useState<string>(DEFAULT_THEME_ID);
@@ -139,7 +139,7 @@ export default function DeliverDetail() {
   if (!gallery) {
     return (
       <div className="text-center py-24">
-        <h2 className="text-2xl font-bold mb-2">Galeria não encontrada</h2>
+        <h2 className="text-2xl font-bold mb-2">Galeria nÃ£o encontrada</h2>
         <Button variant="outline" onClick={() => navigate('/app/gallery/list')}>Voltar</Button>
       </div>
     );
@@ -198,7 +198,7 @@ export default function DeliverDetail() {
     if (!id) return;
     await deletePhoto({ photoId } as any);
     setPhotos(prev => prev.filter(p => p.id !== photoId));
-    // Se a foto excluída era a capa, resetar
+    // Se a foto excluÃ­da era a capa, resetar
     if (coverPhotoId === photoId) {
       setCoverPhotoId(null);
       try {
@@ -206,7 +206,7 @@ export default function DeliverDetail() {
           configuracoes: { ...(gallery?.configuracoes as any), coverPhotoId: null },
         }});
       } catch (e) {
-        console.error('Erro ao limpar capa após exclusão:', e);
+        console.error('Erro ao limpar capa apÃ³s exclusÃ£o:', e);
       }
     }
   };
@@ -261,13 +261,13 @@ export default function DeliverDetail() {
       } catch {
         // ignora
       }
-      toast.info('Cliente sem telefone cadastrado. A mensagem foi copiada — escolha o contato no WhatsApp e cole.');
+      toast.info('Cliente sem telefone cadastrado. A mensagem foi copiada â€” escolha o contato no WhatsApp e cole.');
     }
     window.open(url, '_blank');
   };
 
   return (
-    <div className="w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
+    <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
       {/* Header */}
       <div className="flex flex-col gap-4">
         <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate('/app/gallery/list')}>
@@ -278,11 +278,11 @@ export default function DeliverDetail() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold">{gallery.nomeSessao || 'Sem título'}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">{gallery.nomeSessao || 'Sem tÃ­tulo'}</h1>
               <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
-              {gallery.clienteNome || 'Sem cliente'} · {format(gallery.createdAt, "dd MMM yyyy", { locale: ptBR })} · {photos.length} fotos
+              {gallery.clienteNome || 'Sem cliente'} Â· {format(gallery.createdAt, "dd MMM yyyy", { locale: ptBR })} Â· {photos.length} fotos
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -335,7 +335,7 @@ export default function DeliverDetail() {
         </div>
       </div>
 
-      {/* Tabs: 3 abas — Compartilhamento | Fotos | Detalhes */}
+      {/* Tabs: 3 abas â€” Compartilhamento | Fotos | Detalhes */}
       <Tabs defaultValue="share">
         <TabsList className="w-full justify-start">
           <TabsTrigger value="share">Compartilhamento</TabsTrigger>
@@ -359,7 +359,7 @@ export default function DeliverDetail() {
             </div>
           ) : (
             <>
-              {/* Action buttons — inline, no cards */}
+              {/* Action buttons â€” inline, no cards */}
               <div className="flex flex-wrap gap-3">
                 <Button variant="outline" className="gap-2" onClick={() => copyToClipboard(galleryUrl)}>
                   <Copy className="h-4 w-4" />
@@ -379,7 +379,7 @@ export default function DeliverDetail() {
                 </Button>
               </div>
 
-              {/* Share message — simple block, no card wrapper */}
+              {/* Share message â€” simple block, no card wrapper */}
               <div className="space-y-2">
                 <Label>Mensagem de compartilhamento</Label>
                 <Textarea
@@ -387,7 +387,7 @@ export default function DeliverDetail() {
                   onChange={e => setShareMessage(e.target.value)}
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">Essa mensagem será usada ao compartilhar por WhatsApp.</p>
+                <p className="text-xs text-muted-foreground">Essa mensagem serÃ¡ usada ao compartilhar por WhatsApp.</p>
               </div>
             </>
           )}
@@ -398,8 +398,8 @@ export default function DeliverDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 space-y-8">
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Herança de Tema</h3>
-                <p className="text-sm text-muted-foreground">Decida se esta galeria segue as regras da sua conta ou tem estilo próprio.</p>
+                <h3 className="text-lg font-semibold">HeranÃ§a de Tema</h3>
+                <p className="text-sm text-muted-foreground">Decida se esta galeria segue as regras da sua conta ou tem estilo prÃ³prio.</p>
                 
                 <div className="space-y-3">
                   <div 
@@ -414,8 +414,8 @@ export default function DeliverDetail() {
                         {!useCustomTheme && <div className="w-2 h-2 rounded-full bg-primary" />}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Herdar tema padrão</p>
-                        <p className="text-xs text-muted-foreground">Usa o tema definido nas configurações da sua conta.</p>
+                        <p className="font-medium text-sm">Herdar tema padrÃ£o</p>
+                        <p className="text-xs text-muted-foreground">Usa o tema definido nas configuraÃ§Ãµes da sua conta.</p>
                       </div>
                     </div>
                   </div>
@@ -433,7 +433,7 @@ export default function DeliverDetail() {
                       </div>
                       <div>
                         <p className="font-medium text-sm">Personalizar esta galeria</p>
-                        <p className="text-xs text-muted-foreground">Escolha um tema e ajustes específicos apenas para este trabalho.</p>
+                        <p className="text-xs text-muted-foreground">Escolha um tema e ajustes especÃ­ficos apenas para este trabalho.</p>
                       </div>
                     </div>
                   </div>
@@ -465,7 +465,7 @@ export default function DeliverDetail() {
                     <Label className="text-base font-semibold">Ajustes Visuais</Label>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm">Espaçamento (Gap)</Label>
+                        <Label className="text-sm">EspaÃ§amento (Gap)</Label>
                         <span className="text-xs font-mono">{themeOverrides?.layout?.gap ?? 8}px</span>
                       </div>
                       <Slider
@@ -483,12 +483,12 @@ export default function DeliverDetail() {
                 </div>
               )}
 
-              {/* Capa da Galeria de Entrega — independente do Tema */}
+              {/* Capa da Galeria de Entrega â€” independente do Tema */}
               <div className="space-y-4 pt-2 border-t">
                 <div>
                   <Label className="text-base font-semibold">Capa da Galeria</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Apresentação inicial (Hero). Independe do Tema (grid).
+                    ApresentaÃ§Ã£o inicial (Hero). Independe do Tema (grid).
                   </p>
                 </div>
                 <CoverCatalog
@@ -511,7 +511,7 @@ export default function DeliverDetail() {
                 <h4 className="font-medium">
                   Preview: {useCustomTheme 
                     ? `${THEME_REGISTRY[activeThemeId]?.name} (personalizado)` 
-                    : 'Herança da conta'}
+                    : 'HeranÃ§a da conta'}
                 </h4>
                 <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
                   <Button 
@@ -555,7 +555,7 @@ export default function DeliverDetail() {
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
                    <Button variant="secondary" className="gap-2 rounded-full" onClick={() => window.open(`/g/${gallery.publicToken}`, '_blank')}>
                      <Eye className="h-4 w-4" />
-                     Ver prévia completa
+                     Ver prÃ©via completa
                    </Button>
                 </div>
               </div>
@@ -640,7 +640,7 @@ export default function DeliverDetail() {
                       </div>
                     )}
                     
-                    {/* Badge DESTAQUE — só quando tema suporta */}
+                    {/* Badge DESTAQUE â€” sÃ³ quando tema suporta */}
                     {showHighlight && (
                       <div className="absolute top-1.5 right-1.5 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 z-10 shadow-sm">
                         <Star className="h-2.5 w-2.5 fill-current" />
@@ -715,10 +715,10 @@ export default function DeliverDetail() {
 
         {/* === DETALHES === */}
         <TabsContent value="details" className="space-y-6 mt-6">
-          {/* Block 1 — Session info */}
+          {/* Block 1 â€” Session info */}
           <div className="space-y-5 p-5 rounded-lg border">
             <div className="space-y-2">
-              <Label htmlFor="sessionName">Nome da sessão</Label>
+              <Label htmlFor="sessionName">Nome da sessÃ£o</Label>
               <Input id="sessionName" value={sessionName} onChange={e => setSessionName(e.target.value)} />
             </div>
 
@@ -727,34 +727,34 @@ export default function DeliverDetail() {
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">Cliente</h4>
               <div className="space-y-1 text-sm">
-                <div>{gallery.clienteNome || '—'}</div>
-                <div className="text-muted-foreground">{gallery.clienteEmail || '—'}</div>
-                <div className="text-muted-foreground">{gallery.clienteTelefone || '—'}</div>
+                <div>{gallery.clienteNome || 'â€”'}</div>
+                <div className="text-muted-foreground">{gallery.clienteEmail || 'â€”'}</div>
+                <div className="text-muted-foreground">{gallery.clienteTelefone || 'â€”'}</div>
               </div>
             </div>
 
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="internalNotes">Observações internas</Label>
+              <Label htmlFor="internalNotes">ObservaÃ§Ãµes internas</Label>
               <Textarea
                 id="internalNotes"
-                placeholder="Anotações privadas sobre esta entrega..."
+                placeholder="AnotaÃ§Ãµes privadas sobre esta entrega..."
                 value={internalNotes}
                 onChange={e => setInternalNotes(e.target.value)}
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground">Visíveis apenas para você.</p>
+              <p className="text-xs text-muted-foreground">VisÃ­veis apenas para vocÃª.</p>
             </div>
           </div>
 
-          {/* Block 2 — Settings */}
+          {/* Block 2 â€” Settings */}
           <div className="space-y-5 p-5 rounded-lg border">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {isPrivate ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                  <span className="text-sm font-medium">{isPrivate ? 'Privada (com senha)' : 'Pública'}</span>
+                  <span className="text-sm font-medium">{isPrivate ? 'Privada (com senha)' : 'PÃºblica'}</span>
                 </div>
                 <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
               </div>
@@ -769,7 +769,7 @@ export default function DeliverDetail() {
             <Separator />
 
             <div className="space-y-2">
-              <span className="text-sm font-medium">Data de expiração</span>
+              <span className="text-sm font-medium">Data de expiraÃ§Ã£o</span>
               <div className="flex items-center gap-3">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -805,7 +805,7 @@ export default function DeliverDetail() {
                 <Textarea
                   value={welcomeMessage}
                   onChange={e => setWelcomeMessage(e.target.value)}
-                  placeholder="Olá! Suas fotos estão prontas..."
+                  placeholder="OlÃ¡! Suas fotos estÃ£o prontas..."
                   rows={4}
                 />
               )}
@@ -837,7 +837,7 @@ export default function DeliverDetail() {
           className="shadow-2xl gap-2 rounded-full px-6 h-12 backdrop-blur-xl"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? 'Salvando...' : 'Salvar Alterações'}
+          {saving ? 'Salvando...' : 'Salvar AlteraÃ§Ãµes'}
         </Button>
       </div>
     </div>

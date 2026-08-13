@@ -94,7 +94,7 @@ export function CardGalleryButtons({
                 key={g.id}
                 onClick={() =>
                   window.open(
-                    `${EXTERNAL_URLS.GALLERY.BASE}/gallery/${g.id}`,
+                    `/app/gallery/${g.tipo === 'entrega' ? 'transfer' : 'select'}/${g.id}`,
                     "_blank",
                     "noopener,noreferrer",
                   )

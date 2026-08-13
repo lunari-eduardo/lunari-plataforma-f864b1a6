@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePhotoCredits } from '@/hooks/usePhotoCredits';
 import { useTransferStorage } from '@/hooks/useTransferStorage';
@@ -40,8 +40,8 @@ function formatCurrency(value: number): string {
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   rascunho: { label: 'Criadas', color: '#C9CED6' },
   enviado: { label: 'Enviadas', color: '#7EB0E8' },
-  selecao_iniciada: { label: 'Em seleção', color: '#F2A878' },
-  selecao_completa: { label: 'Concluídas', color: '#7EC9A0' },
+  selecao_iniciada: { label: 'Em seleÃ§Ã£o', color: '#F2A878' },
+  selecao_completa: { label: 'ConcluÃ­das', color: '#7EC9A0' },
   expirado: { label: 'Expiradas', color: '#E89090' },
 };
 
@@ -113,7 +113,7 @@ export default function Home() {
   }, [galleries]);
 
   // Galleries requiring attention
-  // Aguardando ação: apenas expiradas e concluídas
+  // Aguardando aÃ§Ã£o: apenas expiradas e concluÃ­das
   const attentionGalleries = useMemo(() => {
     return galleries
       .filter(g => g.tipo === 'selecao')
@@ -121,7 +121,7 @@ export default function Home() {
       .slice(0, 6);
   }, [galleries]);
 
-  // Galerias ativas: enviadas e em seleção
+  // Galerias ativas: enviadas e em seleÃ§Ã£o
   const activeGalleries = useMemo(() => {
     const now = new Date();
     return galleries
@@ -137,7 +137,7 @@ export default function Home() {
   return (
     <div className="-mx-4 md:-mx-8 -mt-6 md:-mt-8 min-h-screen">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-8 relative z-10">
-          {/* Section 1 — Account Resources */}
+          {/* Section 1 â€” Account Resources */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
             {/* Credits Card */}
             <div className="glass p-6">
@@ -145,21 +145,21 @@ export default function Home() {
                 <div className="rounded-xl bg-primary/10 p-2">
                   <CreditCard className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="text-sm font-medium text-muted-foreground">Créditos de galerias</h3>
+                <h3 className="text-sm font-medium text-muted-foreground">CrÃ©ditos de galerias</h3>
               </div>
               <div className="mb-1">
                 <span className="text-4xl font-bold text-foreground">
-                  {creditsLoading ? '—' : credits.toLocaleString('pt-BR')}
+                  {creditsLoading ? 'â€”' : credits.toLocaleString('pt-BR')}
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-zinc-400 mb-1">créditos disponíveis</p>
-              <p className="text-xs text-zinc-500">Seus créditos não expiram</p>
+              <p className="text-sm text-zinc-400 mb-1">crÃ©ditos disponÃ­veis</p>
+              <p className="text-xs text-zinc-500">Seus crÃ©ditos nÃ£o expiram</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button variant="terracotta" className="w-full sm:w-auto" onClick={() => navigate('/app/gallery/settings')}>
-                Comprar créditos
+                Comprar crÃ©ditos
               </Button>
             </div>
             </div>
@@ -175,7 +175,7 @@ export default function Home() {
               </div>
               <p className="text-sm font-semibold text-foreground mb-1">{planName || 'Plano Gratuito'}</p>
               <p className="text-sm text-muted-foreground mb-3">
-                {storageLoading ? '—' : `${formatBytes(storageUsedBytes)} de ${formatBytes(storageLimitBytes)} usados`}
+                {storageLoading ? 'â€”' : `${formatBytes(storageUsedBytes)} de ${formatBytes(storageLimitBytes)} usados`}
               </p>
               <Progress value={storageUsedPercent} className="h-2 mb-5" />
               <div className="flex flex-wrap items-center gap-3">
@@ -192,13 +192,13 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Section 2 — Monthly Metrics */}
+          {/* Section 2 â€” Monthly Metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             {[
-              { icon: Images, label: 'Galerias criadas', value: metrics.created, sub: 'este mês' },
+              { icon: Images, label: 'Galerias criadas', value: metrics.created, sub: 'este mÃªs' },
               { icon: Send, label: 'Galerias enviadas', value: metrics.sent, sub: 'clientes convidados' },
-              { icon: CheckCircle2, label: 'Seleções concluídas', value: metrics.completed, sub: 'clientes finalizaram' },
-              { icon: DollarSign, label: 'Vendas extras', value: formatCurrency(metrics.extras), sub: 'fotos adicionais este mês' },
+              { icon: CheckCircle2, label: 'SeleÃ§Ãµes concluÃ­das', value: metrics.completed, sub: 'clientes finalizaram' },
+              { icon: DollarSign, label: 'Vendas extras', value: formatCurrency(metrics.extras), sub: 'fotos adicionais este mÃªs' },
             ].map((m, i) => (
               <div key={i} className="glass p-6 hover:-translate-y-1 cursor-default">
                 <div className="flex items-center gap-2 mb-3">
@@ -207,7 +207,7 @@ export default function Home() {
                   </div>
                   <span className="text-xs font-medium text-muted-foreground">{m.label}</span>
                 </div>
-                <p className="text-3xl font-bold text-foreground">{galleriesLoading ? '—' : m.value}</p>
+                <p className="text-3xl font-bold text-foreground">{galleriesLoading ? 'â€”' : m.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{m.sub}</p>
               </div>
             ))}
@@ -251,27 +251,27 @@ export default function Home() {
             <div className="lg:col-span-3 glass p-6 overflow-hidden">
               <div className="flex items-center gap-2 mb-4">
                 <AlertCircle className="h-4 w-4 text-amber-500" />
-                <h3 className="text-sm font-semibold text-foreground">Aguardando ação</h3>
+                <h3 className="text-sm font-semibold text-foreground">Aguardando aÃ§Ã£o</h3>
               </div>
               {attentionGalleries.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">Nenhuma galeria precisa de atenção</p>
+                <p className="text-sm text-muted-foreground py-6 text-center">Nenhuma galeria precisa de atenÃ§Ã£o</p>
               ) : (
                 <div className="overflow-x-auto -mx-6 px-6">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-muted-foreground border-b border-border/50">
                         <th className="text-left pb-2 font-medium">Cliente</th>
-                        <th className="text-left pb-2 font-medium hidden sm:table-cell">Sessão</th>
+                        <th className="text-left pb-2 font-medium hidden sm:table-cell">SessÃ£o</th>
                         <th className="text-left pb-2 font-medium">Status</th>
-                        <th className="text-left pb-2 font-medium hidden md:table-cell">Seleção</th>
+                        <th className="text-left pb-2 font-medium hidden md:table-cell">SeleÃ§Ã£o</th>
                         <th className="pb-2"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {attentionGalleries.map(g => (
                         <tr key={g.id} className="border-b border-border/30 last:border-0">
-                          <td className="py-2.5 font-medium text-foreground">{g.clienteNome || '—'}</td>
-                          <td className="py-2.5 text-muted-foreground hidden sm:table-cell">{g.nomeSessao || '—'}</td>
+                          <td className="py-2.5 font-medium text-foreground">{g.clienteNome || 'â€”'}</td>
+                          <td className="py-2.5 text-muted-foreground hidden sm:table-cell">{g.nomeSessao || 'â€”'}</td>
                           <td className="py-2.5">{getStatusBadge(g.status)}</td>
                           <td className="py-2.5 text-muted-foreground hidden md:table-cell">
                             {g.fotosSelecionadas} / {g.fotosIncluidas}
@@ -293,14 +293,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Section 5 — Atividades recentes: galerias ativas + feed */}
+          {/* Section 5 â€” Atividades recentes: galerias ativas + feed */}
           <div className="glass p-6">
             <div className="flex items-center gap-2 mb-4">
               <Activity className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold text-foreground">Atividades recentes</h3>
             </div>
 
-            {/* Galerias ativas (enviadas + em seleção) */}
+            {/* Galerias ativas (enviadas + em seleÃ§Ã£o) */}
             {activeGalleries.length > 0 && (
               <div className="mb-5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Galerias ativas</p>
@@ -314,8 +314,8 @@ export default function Home() {
                         onClick={() => navigate(g.tipo === 'entrega' ? `/app/gallery/transfer/${g.id}` : `/app/gallery/select/${g.id}`)}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{g.clienteNome || '—'}</p>
-                          <p className="text-xs text-muted-foreground truncate">{g.nomeSessao || '—'}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{g.clienteNome || 'â€”'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{g.nomeSessao || 'â€”'}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-muted-foreground">{g.fotosSelecionadas}/{g.fotosIncluidas}</span>
@@ -333,11 +333,11 @@ export default function Home() {
               </div>
             )}
 
-            {/* Feed de ações */}
+            {/* Feed de aÃ§Ãµes */}
             {recentActions.length > 0 && (
               <div>
                 {activeGalleries.length > 0 && (
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Histórico</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">HistÃ³rico</p>
                 )}
                 <div className="space-y-3">
                   {recentActions.map((action: any) => {
@@ -348,7 +348,7 @@ export default function Home() {
                         <div className="mt-1 w-2 h-2 rounded-full bg-primary/60 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-foreground">
-                            {action.descricao || action.tipo} — <span className="text-muted-foreground">{galleryLabel}</span>
+                            {action.descricao || action.tipo} â€” <span className="text-muted-foreground">{galleryLabel}</span>
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(action.created_at), "d 'de' MMM, HH:mm", { locale: ptBR })}

@@ -21,20 +21,29 @@ const ProCrown = ({ className }: { className?: string }) => (
 );
 
 interface NavItemProps {
-  to: string;
-  icon: React.ReactNode;
+  to?: string;
+  icon?: React.ReactNode;
   label: string;
   isPro?: boolean;
   showProBadge?: boolean;
   end?: boolean;
   onNavigate?: () => void;
   subItems?: { to: string; label: string; icon: React.ReactNode }[];
+  isSeparator?: boolean;
 }
 
 // Mobile/drawer variant — always shows label
-const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate, subItems }: NavItemProps) => {
+const DrawerNavItem = ({ to, icon, label, isPro, showProBadge, end, onNavigate, subItems, isSeparator }: NavItemProps) => {
   const isComercial = to === '/app/comercial';
   const [isOpen, setIsOpen] = useState(false);
+
+  if (isSeparator) {
+    return (
+      <div className="mt-4 mb-2 px-3">
+        <p className="text-[10px] font-bold text-[hsl(var(--sidebar-fg))]/50 tracking-wider uppercase">{label}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -121,6 +130,7 @@ const DesktopNavItem = ({
   end,
   expanded,
   subItems,
+  isSeparator
 }: NavItemProps & { expanded: boolean }) => {
   const isComercial = to === '/app/comercial';
   const [isOpen, setIsOpen] = useState(false);
@@ -129,6 +139,14 @@ const DesktopNavItem = ({
   useEffect(() => {
     if (!expanded) setIsOpen(false);
   }, [expanded]);
+
+  if (isSeparator) {
+    return (
+      <div className={cn("mt-4 mb-2 transition-all duration-200 overflow-hidden", expanded ? "px-3 opacity-100 h-auto" : "opacity-0 h-0 px-0")}>
+        <p className="text-[10px] font-bold text-[hsl(var(--sidebar-fg))]/50 tracking-wider uppercase truncate">{label}</p>
+      </div>
+    );
+  }
 
   const link = (
     <div className="flex flex-col">
@@ -231,8 +249,13 @@ const DesktopNavItem = ({
 };
 
 // Tablet variant — icon-only rail, no expand/collapse, no tooltip (avoids touch artifacts).
-const RailNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps) => (
-  <NavLink
+const RailNavItem = ({ to, icon, label, isPro, showProBadge, end, isSeparator }: NavItemProps) => {
+  const isComercial = to === '/app/comercial';
+
+  if (isSeparator || !to) return null; // Separators don't show in rail mode
+
+  return (
+    <NavLink
     to={to}
     end={end}
     aria-label={label}
@@ -254,7 +277,8 @@ const RailNavItem = ({ to, icon, label, isPro, showProBadge, end }: NavItemProps
       </span>
     )}
   </NavLink>
-);
+  );
+};
 
 export default function Sidebar() {
   const isMobile = useIsMobile();

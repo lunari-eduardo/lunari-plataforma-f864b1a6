@@ -80,8 +80,7 @@ export function buildGalleryNewUrl(params: GalleryRedirectParams): string {
   if (params.tipoAssinatura) {
     searchParams.set('tipo_assinatura', params.tipoAssinatura);
   }
-  
-  return `${EXTERNAL_URLS.GALLERY.BASE}${EXTERNAL_URLS.GALLERY.NEW}?${searchParams.toString()}`;
+  return `${EXTERNAL_URLS.GALLERY.NEW}?${searchParams.toString()}`;
 }
 
 /**
@@ -109,6 +108,5 @@ export function buildGalleryDeliverUrl(params: GalleryDeliverParams): string {
   }
   
   searchParams.set('cliente_nome', params.clienteNome);
-  
-  return `${EXTERNAL_URLS.GALLERY.BASE}${EXTERNAL_URLS.GALLERY.DELIVER_NEW}?${searchParams.toString()}`;
+  return `${EXTERNAL_URLS.GALLERY.DELIVER_NEW}?${searchParams.toString()}`;
 }

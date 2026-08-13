@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import PlanosTab from '@/components/account/PlanosTab';
 import ReferralsTab from '@/components/account/ReferralsTab';
 import { Button } from '@/components/ui/button';
-import { Loader2, User, Image, Shield, ArrowRight, LucideIcon, Package, Gift } from 'lucide-react';
+import { Loader2, User, Image, Shield, ArrowRight, LucideIcon, Package, Gift, Plug } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFormValidation } from '@/hooks/user-profile/useFormValidation';
@@ -17,6 +17,9 @@ import { toast } from 'sonner';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { cn } from '@/lib/utils';
+import { useGallerySettings } from '@/hooks/useGallerySettings';
+import { FaviconUploader } from '@/components/settings/FaviconUploader';
+import { IntegracoesTab } from '@/components/preferencias/IntegracoesTab';
 
 const SidebarItem = memo(({ 
   label, 
@@ -54,6 +57,7 @@ export default function MinhaConta() {
   const { profile, saveProfile, getProfileOrDefault, uploadLogo, deleteLogo, loading: isLoading } = useUserProfile();
   const [formData, setFormData] = useState<Partial<UserProfile>>(() => getProfileOrDefault());
   const validation = useFormValidation(formData);
+  const { settings: gallerySettings, updateSettings: updateGallerySettings } = useGallerySettings();
 
   useEffect(() => {
     if (profile) {
@@ -145,6 +149,13 @@ export default function MinhaConta() {
                 icon={Shield}
               />
               <SidebarItem 
+                label="Integrações e Pagamentos" 
+                value="integracoes" 
+                active={activeTab === 'integracoes'} 
+                onClick={setActiveTab}
+                icon={Plug}
+              />
+              <SidebarItem 
                 label="Planos e Créditos" 
                 value="planos" 
                 active={activeTab === 'planos'} 
@@ -202,19 +213,39 @@ export default function MinhaConta() {
                 )}
 
                 {activeTab === 'marca' && (
-                  <section>
-                    <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Logotipo do Estúdio</h3>
-                    <div className="glass-1 p-6 bg-card/40">
-                      <LogoUploadSection
-                        logoUrl={profile?.logo_url || undefined}
-                        onLogoSave={handleLogoSave}
-                        onLogoRemove={handleLogoRemove}
-                      />
-                      <p className="mt-4 text-xs text-muted-foreground">
-                        Este logotipo será utilizado em galerias, contratos e links de cobrança enviados aos clientes.
-                      </p>
-                    </div>
-                  </section>
+                  <div className="space-y-10">
+                    <section>
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Logotipo do Estúdio</h3>
+                      <div className="glass-1 p-6 bg-card/40">
+                        <LogoUploadSection
+                          logoUrl={profile?.logo_url || undefined}
+                          onLogoSave={handleLogoSave}
+                          onLogoRemove={handleLogoRemove}
+                        />
+                        <p className="mt-4 text-xs text-muted-foreground">
+                          Este logotipo será utilizado em galerias, contratos e links de cobrança enviados aos clientes.
+                        </p>
+                      </div>
+                    </section>
+                    <section>
+                      <h3 className="text-[15px] font-semibold mb-4 text-foreground/90 font-heading">Favicon das Galerias</h3>
+                      <div className="glass-1 p-6 bg-card/40">
+                        <FaviconUploader
+                          favicon={gallerySettings?.faviconUrl}
+                          onFaviconChange={(favicon) => updateGallerySettings({ faviconUrl: favicon }, { successMessage: favicon ? 'Favicon atualizado.' : 'Favicon removido.' })}
+                        />
+                        <p className="mt-4 text-xs text-muted-foreground">
+                          O ícone que aparece na aba do navegador quando clientes acessam suas galerias.
+                        </p>
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {activeTab === 'integracoes' && (
+                  <div className="animate-fade-in pb-12">
+                    <IntegracoesTab />
+                  </div>
                 )}
 
                 {activeTab === 'seguranca' && (

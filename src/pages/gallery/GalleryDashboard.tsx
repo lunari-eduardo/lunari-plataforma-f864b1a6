@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+﻿import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Loader2, AlertCircle, MousePointerClick, Send, Trash2, HardDrive, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -49,8 +49,8 @@ function TransferStorageIndicator() {
       <p className="text-xs text-muted-foreground flex items-center gap-1.5">
         <HardDrive className="h-3.5 w-3.5" />
         {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
-        {planName && <span>· {planName}</span>}
-        {!hasTransferPlan && hasFreeStorageOnly && <span>· Gratuito</span>}
+        {planName && <span>Â· {planName}</span>}
+        {!hasTransferPlan && hasFreeStorageOnly && <span>Â· Gratuito</span>}
         {storageUsedPercent >= 100 && (
           <span className="ml-1 inline-flex items-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold text-destructive-foreground">Cheio</span>
         )}
@@ -62,7 +62,7 @@ function TransferStorageIndicator() {
             <p className="text-sm font-medium text-destructive">Excedente de armazenamento</p>
             {daysUntilDeletion !== null && (
               <p className="text-xs text-destructive/80">
-                Exclusão automática em {daysUntilDeletion} {daysUntilDeletion === 1 ? 'dia' : 'dias'}
+                ExclusÃ£o automÃ¡tica em {daysUntilDeletion} {daysUntilDeletion === 1 ? 'dia' : 'dias'}
               </p>
             )}
           </div>
@@ -76,8 +76,8 @@ const selectStatusFilters: { value: GalleryStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Todas' },
   { value: 'created', label: 'Criadas' },
   { value: 'sent', label: 'Enviadas' },
-  { value: 'selection_started', label: 'Em seleção' },
-  { value: 'selection_completed', label: 'Concluídas' },
+  { value: 'selection_started', label: 'Em seleÃ§Ã£o' },
+  { value: 'selection_completed', label: 'ConcluÃ­das' },
   { value: 'expired', label: 'Expiradas' },
 ];
 
@@ -88,9 +88,9 @@ const deliverStatusFilters: { value: DeliverStatusFilter; label: string }[] = [
   { value: 'expired', label: 'Expiradas' },
 ];
 
-// O status bruto do Supabase agora é traduzido via getEffectiveGalleryStatus.
-// Esta função foi mantida apenas para compatibilidade de tipos, mas o cálculo
-// real agora é centralizado para evitar divergências.
+// O status bruto do Supabase agora Ã© traduzido via getEffectiveGalleryStatus.
+// Esta funÃ§Ã£o foi mantida apenas para compatibilidade de tipos, mas o cÃ¡lculo
+// real agora Ã© centralizado para evitar divergÃªncias.
 function mapSupabaseStatus(galeria: Galeria): GalleryStatus {
   return getEffectiveGalleryStatus(
     galeria.status,
@@ -111,7 +111,7 @@ function transformSupabaseToLocal(galeria: Galeria): Gallery & { tipo: 'selecao'
     id: galeria.id,
     clientName: galeria.clienteNome || 'Cliente',
     clientEmail: galeria.clienteEmail || '',
-    sessionName: galeria.nomeSessao || 'Sessão',
+    sessionName: galeria.nomeSessao || 'SessÃ£o',
     packageName: galeria.nomePacote || '',
     includedPhotos: galeria.fotosIncluidas,
     extraPhotoPrice: galeria.valorFotoExtra,
@@ -186,8 +186,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!supabaseGalleries.length) return;
     
-    // Filtramos apenas as galerias que ainda não estão marcadas como expiradas no banco
-    // e que ainda não tentamos processar nesta sessão para evitar loops
+    // Filtramos apenas as galerias que ainda nÃ£o estÃ£o marcadas como expiradas no banco
+    // e que ainda nÃ£o tentamos processar nesta sessÃ£o para evitar loops
     const expiredGalleries = supabaseGalleries.filter(g => {
       if (processedGalleriesRef.current.has(g.id)) return false;
 
@@ -207,7 +207,7 @@ export default function Dashboard() {
 
     if (expiredGalleries.length === 0) return;
 
-    // Marcar como processadas antes de disparar o update para evitar concorrência
+    // Marcar como processadas antes de disparar o update para evitar concorrÃªncia
     expiredGalleries.forEach(g => processedGalleriesRef.current.add(g.id));
 
     console.log('[Dashboard] Auto-syncing expired status for:', expiredGalleries.map(g => g.id));
@@ -223,7 +223,7 @@ export default function Dashboard() {
 
       if (error) {
         console.error('[Dashboard] Error auto-syncing expired galleries:', error);
-        // Remove do ref em caso de erro para permitir nova tentativa se necessário
+        // Remove do ref em caso de erro para permitir nova tentativa se necessÃ¡rio
         expiredGalleries.forEach(g => processedGalleriesRef.current.delete(g.id));
       } else {
         queryClient.invalidateQueries({ queryKey: ['galleries'] });
@@ -303,7 +303,7 @@ export default function Dashboard() {
     : 'Gerencie suas entregas finais.';
 
   return (
-    <div className="w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
+    <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -329,7 +329,7 @@ export default function Dashboard() {
               >
                 <MousePointerClick className="h-4 w-4 text-primary shrink-0" />
                 <div>
-                  <p>Seleção</p>
+                  <p>SeleÃ§Ã£o</p>
                   <p className="text-xs text-muted-foreground font-normal">Cliente seleciona fotos</p>
                 </div>
               </button>
@@ -368,14 +368,14 @@ export default function Dashboard() {
         {/* ===== SELECT TAB ===== */}
         <TabsContent value="select" className="space-y-5 mt-4">
           <p className="text-sm text-muted-foreground">
-            {selectStats.total} galerias · {selectStats.inProgress} em seleção · {selectStats.completed} concluídas · {selectStats.expired} expiradas
+            {selectStats.total} galerias Â· {selectStats.inProgress} em seleÃ§Ã£o Â· {selectStats.completed} concluÃ­das Â· {selectStats.expired} expiradas
           </p>
 
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cliente ou sessão..."
+                placeholder="Buscar por cliente ou sessÃ£o..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -408,7 +408,7 @@ export default function Dashboard() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <AlertCircle className="h-12 w-12 text-destructive mb-4" />
               <h3 className="text-xl font-semibold mb-2">Erro ao carregar galerias</h3>
-              <p className="text-muted-foreground mb-4">Não foi possível conectar ao banco de dados.</p>
+              <p className="text-muted-foreground mb-4">NÃ£o foi possÃ­vel conectar ao banco de dados.</p>
               <Button variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button>
             </div>
           ) : filteredSelectGalleries.length > 0 ? (
@@ -454,7 +454,7 @@ export default function Dashboard() {
                     disabled={selectPage === totalSelectPages}
                     className="gap-1"
                   >
-                    Próxima
+                    PrÃ³xima
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -467,7 +467,7 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-semibold mb-2">Nenhuma galeria encontrada</h3>
               <p className="text-muted-foreground mb-6">
-                {selectGalleries.length === 0 ? 'Crie sua primeira galeria para começar' : 'Tente ajustar os filtros ou criar uma nova galeria'}
+                {selectGalleries.length === 0 ? 'Crie sua primeira galeria para comeÃ§ar' : 'Tente ajustar os filtros ou criar uma nova galeria'}
               </p>
               <Button onClick={() => navigate('/app/gallery/new/select')} variant="terracotta">
                 <Plus className="h-4 w-4 mr-2" />
@@ -480,7 +480,7 @@ export default function Dashboard() {
         {/* ===== TRANSFER TAB ===== */}
         <TabsContent value="deliver" className="space-y-5 mt-4">
           <p className="text-sm text-muted-foreground">
-            {deliverStats.total} transfers · {deliverStats.published} publicadas · {deliverStats.expired} expiradas
+            {deliverStats.total} transfers Â· {deliverStats.published} publicadas Â· {deliverStats.expired} expiradas
           </p>
           <TransferStorageIndicator />
 
@@ -488,7 +488,7 @@ export default function Dashboard() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por cliente ou sessão..."
+                placeholder="Buscar por cliente ou sessÃ£o..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -521,7 +521,7 @@ export default function Dashboard() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <AlertCircle className="h-12 w-12 text-destructive mb-4" />
               <h3 className="text-xl font-semibold mb-2">Erro ao carregar galerias</h3>
-              <p className="text-muted-foreground mb-4">Não foi possível conectar ao banco de dados.</p>
+              <p className="text-muted-foreground mb-4">NÃ£o foi possÃ­vel conectar ao banco de dados.</p>
               <Button variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button>
             </div>
           ) : filteredDeliverGalleries.length > 0 ? (
@@ -565,7 +565,7 @@ export default function Dashboard() {
                     disabled={deliverPage === totalDeliverPages}
                     className="gap-1"
                   >
-                    Próxima
+                    PrÃ³xima
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -617,7 +617,7 @@ export default function Dashboard() {
               Tem certeza que deseja excluir <strong>"{deleteTarget?.sessionName}"</strong>?
               <br /><br />
               <span className="text-destructive font-medium">
-                Esta ação é irreversível. Todas as fotos serão removidas permanentemente.
+                Esta aÃ§Ã£o Ã© irreversÃ­vel. Todas as fotos serÃ£o removidas permanentemente.
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>

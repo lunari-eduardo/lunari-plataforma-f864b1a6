@@ -265,11 +265,15 @@ export default function PhotographerApp() {
                   <Route path="new/transfer" element={<DeliverCreate />} />
                   <Route path="select/:id/edit" element={<GalleryEdit />} />
                   <Route path="transfer/:id/edit" element={<GalleryEdit />} />
-                  <Route path="select/:id" element={<GalleryDetail />} />
-                  <Route path="transfer/:id" element={<DeliverDetail />} />
-                  <Route path="settings" element={<GallerySettings />} />
-                  
-                  {/* Alias antigos do legado para evitar quebra caso existam links hardcoded no cache */}
+                    <Route path="select/:id" element={<GalleryDetail />} />
+                    <Route path="transfer/:id" element={<DeliverDetail />} />
+                    
+                    {/* Settings Routes */}
+                    <Route path="settings" element={<Navigate to="/app/gallery/settings/defaults" replace />} />
+                    <Route path="settings/defaults" element={<GallerySettings tab="general" />} />
+                    <Route path="settings/customization" element={<GallerySettings tab="personalization" />} />
+                    
+                    {/* Alias antigos do legado para evitar quebra caso existam links hardcoded no cache */}
                   <Route path="select" element={<Navigate to="/app/gallery/dashboard" replace />} />
                   <Route path="transfer" element={<Navigate to="/app/gallery/dashboard" replace />} />
                   <Route path="galerias" element={<Navigate to="/app/gallery/dashboard" replace />} />
@@ -298,12 +302,12 @@ export default function PhotographerApp() {
 
                 <Route path="inteligencia" element={<Navigate to="/app/hub" replace />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
-                <Route path="integracoes" element={<Integracoes />} />
+                <Route path="integracoes" element={<Navigate to="/app/minha-conta" replace />} />
                 <Route path="tarefas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><Tarefas /></PlanRestrictionGuard>
                 } />
                 <Route path="feed-test" element={<Navigate to="/app/workflow" replace />} />
-                <Route path="preferencias" element={<Navigate to="/app/integracoes" replace />} />
+                <Route path="preferencias" element={<Navigate to="/app/minha-conta" replace />} />
 
                 {/* Compat: rotas admin antigas redirecionam para admin.lunarihub.com */}
                 <Route path="admin/usuarios" element={<RedirectToAdminHost to="/usuarios" />} />

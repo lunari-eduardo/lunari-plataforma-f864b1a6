@@ -2,13 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useGallerySettings } from '@/hooks/useGallerySettings';
 import { FontSelect } from '@/components/FontSelect';
 import { TitleCaseMode } from '@/types/gallery';
-import { LogoUploader } from './LogoUploader';
 import { ThemeConfig } from './ThemeConfig';
 import { CoverConfig } from './CoverConfig';
 import { WatermarkSettings } from './WatermarkSettings';
 import { EmailTemplates } from './EmailTemplates';
 import { EmailAutomationSettings } from './EmailAutomationSettings';
-import { FaviconUploader } from './FaviconUploader';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -68,27 +66,6 @@ export function PersonalizationSettings() {
 
   return (
     <div className="space-y-8">
-      {/* Identity Section */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-muted-foreground">Identidade Visual</h3>
-        
-        {/* Logo + Favicon */}
-        <div className="lunari-card p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            <LogoUploader
-              logo={settings.studioLogo}
-              onLogoChange={(logo) => updateSettings({ studioLogo: logo }, { successMessage: logo ? 'Logo atualizado.' : 'Logo removido.' })}
-            />
-            <div className="md:border-l md:border-border md:pl-8 pt-6 md:pt-0 border-t md:border-t-0">
-              <FaviconUploader
-                favicon={settings.faviconUrl}
-                onFaviconChange={(favicon) => updateSettings({ faviconUrl: favicon }, { successMessage: favicon ? 'Favicon atualizado.' : 'Favicon removido.' })}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
        {/* Client Gallery Appearance */}
        <div className="space-y-4">
          <h3 className="text-lg font-medium text-muted-foreground">Aparência da Galeria do Cliente</h3>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -92,7 +92,7 @@ export default function DeliverCreate() {
   const [useCustomTheme, setUseCustomTheme] = useState(false);
   const [activeThemeId, setActiveThemeId] = useState<string>(DEFAULT_THEME_ID);
   const [themeOverrides, setThemeOverrides] = useState<any>({});
-  // null = herda capa padrão do fotógrafo
+  // null = herda capa padrÃ£o do fotÃ³grafo
   const [coverId, setCoverId] = useState<string | null>(null);
 
   // Initialize defaults from settings
@@ -143,8 +143,8 @@ export default function DeliverCreate() {
           </h2>
           <p className="text-sm text-muted-foreground">
             {hasTransferPlan
-              ? 'Você atingiu o limite do seu plano. Faça upgrade ou exclua galerias para liberar espaço.'
-              : 'Você precisa de um plano Transfer para criar galerias de entrega.'}
+              ? 'VocÃª atingiu o limite do seu plano. FaÃ§a upgrade ou exclua galerias para liberar espaÃ§o.'
+              : 'VocÃª precisa de um plano Transfer para criar galerias de entrega.'}
           </p>
         </div>
 
@@ -153,7 +153,7 @@ export default function DeliverCreate() {
             <Progress value={storageUsedPercent} className="h-2.5" />
             <p className="text-xs text-muted-foreground">
               {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
-              {planName && <span className="ml-1">· {planName}</span>}
+              {planName && <span className="ml-1">Â· {planName}</span>}
             </p>
           </div>
         )}
@@ -230,7 +230,7 @@ export default function DeliverCreate() {
   const handleNext = async () => {
     if (currentStep === 1) {
       if (!sessionName.trim()) {
-        toast.error('Informe o nome da sessão');
+        toast.error('Informe o nome da sessÃ£o');
         return;
       }
       if (galleryPermission === 'private' && !galleryPassword.trim()) {
@@ -331,12 +331,12 @@ export default function DeliverCreate() {
         return (
           <div className="space-y-6 animate-fade-in">
             <p className="text-muted-foreground text-lg">
-              Dados da entrega e detalhes da sessão
+              Dados da entrega e detalhes da sessÃ£o
             </p>
 
             {/* Gallery Permission */}
             <div className="space-y-4">
-              <Label className="text-base font-medium">Permissão da Galeria</Label>
+              <Label className="text-base font-medium">PermissÃ£o da Galeria</Label>
               <RadioGroup
                 value={galleryPermission}
                 onValueChange={(v) => {
@@ -359,7 +359,7 @@ export default function DeliverCreate() {
                   >
                     <Globe className={cn('h-5 w-5', galleryPermission === 'public' ? 'text-primary' : 'text-muted-foreground')} />
                     <div>
-                      <p className="font-medium">Pública</p>
+                      <p className="font-medium">PÃºblica</p>
                       <p className="text-xs text-muted-foreground">Sem senha</p>
                     </div>
                   </Label>
@@ -431,18 +431,18 @@ export default function DeliverCreate() {
             {/* Session Name + Expiration - 2 columns */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="sessionName">Nome da sessão *</Label>
+                <Label htmlFor="sessionName">Nome da sessÃ£o *</Label>
                 <Input
                   id="sessionName"
                   value={sessionName}
                   onChange={(e) => setSessionName(e.target.value)}
-                  placeholder="Ex: Ensaio Maria - Família"
+                  placeholder="Ex: Ensaio Maria - FamÃ­lia"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expiration" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Prazo de expiração (dias)
+                  Prazo de expiraÃ§Ã£o (dias)
                 </Label>
                 <Input
                   id="expiration"
@@ -453,14 +453,14 @@ export default function DeliverCreate() {
                   onChange={(e) => setExpirationDays(Number(e.target.value))}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Disponível por {expirationDays} dias após o envio
+                  DisponÃ­vel por {expirationDays} dias apÃ³s o envio
                 </p>
               </div>
             </div>
 
             {/* Font Select */}
             <div className="space-y-2">
-              <Label>Fonte do Título</Label>
+              <Label>Fonte do TÃ­tulo</Label>
               <FontSelect
                 value={sessionFont}
                 onChange={setSessionFont}
@@ -486,8 +486,8 @@ export default function DeliverCreate() {
                     )}
                     onClick={() => setUseCustomTheme(false)}
                   >
-                    <p className="font-medium text-sm">Herdar Padrão</p>
-                    <p className="text-[10px] text-muted-foreground">Configurações da conta</p>
+                    <p className="font-medium text-sm">Herdar PadrÃ£o</p>
+                    <p className="text-[10px] text-muted-foreground">ConfiguraÃ§Ãµes da conta</p>
                   </div>
                   <div 
                     className={cn(
@@ -521,17 +521,17 @@ export default function DeliverCreate() {
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">Hero</span>
                 </div>
                 <p className="text-xs text-muted-foreground -mt-2">
-                  Apresentação inicial da galeria. Independe do Tema (grid).
+                  ApresentaÃ§Ã£o inicial da galeria. Independe do Tema (grid).
                 </p>
                 <CoverCatalog
                   selectedCoverId={coverId}
                   onSelect={setCoverId}
                   inheritLabel={
                     settings?.defaultCoverId
-                      ? `Usar capa padrão do meu estúdio (${
+                      ? `Usar capa padrÃ£o do meu estÃºdio (${
                           COVER_REGISTRY[settings.defaultCoverId]?.name ?? settings.defaultCoverId
                         })`
-                      : 'Usar capa padrão do meu estúdio'
+                      : 'Usar capa padrÃ£o do meu estÃºdio'
                   }
                 />
               </div>
@@ -539,7 +539,7 @@ export default function DeliverCreate() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Espaçamento (Grid)</Label>
+                  <Label className="text-base font-medium">EspaÃ§amento (Grid)</Label>
                   <span className="text-sm font-mono">{useCustomTheme ? (themeOverrides?.layout?.gap ?? 8) : photoSpacing}px</span>
                 </div>
                 <div className="max-w-sm">
@@ -603,7 +603,7 @@ export default function DeliverCreate() {
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              As fotos serão armazenadas em alta resolução para download direto pelo cliente.
+              As fotos serÃ£o armazenadas em alta resoluÃ§Ã£o para download direto pelo cliente.
             </p>
 
             {/* Folder Manager */}
@@ -646,7 +646,7 @@ export default function DeliverCreate() {
             <div>
               <p className="text-muted-foreground text-lg mb-1">Mensagem de Boas-Vindas</p>
               <p className="text-sm text-muted-foreground">
-                Esta mensagem será exibida quando o cliente acessar a galeria.
+                Esta mensagem serÃ¡ exibida quando o cliente acessar a galeria.
               </p>
             </div>
 
@@ -666,7 +666,7 @@ export default function DeliverCreate() {
               <Textarea
                 value={welcomeMessage}
                 onChange={(e) => setWelcomeMessage(e.target.value)}
-                placeholder="Olá! Suas fotos estão prontas para download. Aproveite!"
+                placeholder="OlÃ¡! Suas fotos estÃ£o prontas para download. Aproveite!"
                 rows={8}
                 className="min-h-[200px]"
               />
@@ -677,16 +677,16 @@ export default function DeliverCreate() {
               <h3 className="text-base font-semibold">Resumo</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Sessão:</span>
+                  <span className="text-muted-foreground">SessÃ£o:</span>
                   <p className="font-medium">{sessionName}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Cliente:</span>
-                  <p className="font-medium">{selectedClient?.name || 'Não definido'}</p>
+                  <p className="font-medium">{selectedClient?.name || 'NÃ£o definido'}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Acesso:</span>
-                  <p className="font-medium">{galleryPermission === 'public' ? 'Público' : 'Privado'}</p>
+                  <p className="font-medium">{galleryPermission === 'public' ? 'PÃºblico' : 'Privado'}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Fotos:</span>
@@ -706,7 +706,7 @@ export default function DeliverCreate() {
     }
   };
 
-  return <div className="w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(6rem,env(safe-area-inset-bottom))] animate-fade-in">
+  return <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(6rem,env(safe-area-inset-bottom))] animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list')}>
@@ -766,7 +766,7 @@ export default function DeliverCreate() {
               disabled={isCreatingGallery || isUploading}
               variant="terracotta"
             >
-              Próximo
+              PrÃ³ximo
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (

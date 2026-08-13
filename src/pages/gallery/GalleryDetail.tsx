@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+﻿import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -249,7 +249,7 @@ export default function GalleryDetail() {
         .from('cobrancas')
         .select('id, valor, qtd_fotos, provedor, metodo_manual, data_pagamento, ip_receipt_url, ip_checkout_url, status, created_at')
         .eq('galeria_id', id)
-        .eq('finalidade', 'fotos_extras') // não misturar com entrada da sessão (Studio)
+        .eq('finalidade', 'fotos_extras') // nÃ£o misturar com entrada da sessÃ£o (Studio)
         .in('status', ['pago', 'pago_manual'])
         .order('created_at', { ascending: false });
         
@@ -265,8 +265,8 @@ export default function GalleryDetail() {
   });
 
   // Fetch latest PENDING cobranca for payment status actions
-  // CRITICAL: only pending/awaiting — never reuse a paid cobrança (avoid overwrite bug
-  // in reactivated galleries where last cobrança was a previously paid one).
+  // CRITICAL: only pending/awaiting â€” never reuse a paid cobranÃ§a (avoid overwrite bug
+  // in reactivated galleries where last cobranÃ§a was a previously paid one).
   const { data: cobrancaData, refetch: refetchCobranca } = useQuery({
     queryKey: ['galeria-cobranca-pendente', id],
     queryFn: async () => {
@@ -420,10 +420,10 @@ export default function GalleryDetail() {
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-bold mb-2">
-          Galeria não encontrada
+          Galeria nÃ£o encontrada
         </h2>
         <p className="text-muted-foreground mb-4">
-          A galeria solicitada não existe ou foi removida.
+          A galeria solicitada nÃ£o existe ou foi removida.
         </p>
         <Button variant="outline" onClick={() => navigate('/app/gallery/list')}>
           Voltar ao Dashboard
@@ -470,7 +470,7 @@ export default function GalleryDetail() {
   };
 
   // Check if gallery can be reactivated
-  // (cálculo direto — não pode ser hook, pois está após early returns)
+  // (cÃ¡lculo direto â€” nÃ£o pode ser hook, pois estÃ¡ apÃ³s early returns)
   const canReactivate = (() => {
     const status = getEffectiveGalleryStatus(
       supabaseGallery.status,
@@ -480,7 +480,7 @@ export default function GalleryDetail() {
       supabaseGallery.prazoSelecao
     );
 
-    // Pode reativar se estiver expirada ou concluída (bloqueada)
+    // Pode reativar se estiver expirada ou concluÃ­da (bloqueada)
     return status === 'expired' || status === 'selection_completed';
   })();
 
@@ -522,7 +522,7 @@ export default function GalleryDetail() {
     id: supabaseGallery.id,
     clientName: supabaseGallery.clienteNome || 'Cliente',
     clientEmail: supabaseGallery.clienteEmail || '',
-    sessionName: supabaseGallery.nomeSessao || 'Sessão',
+    sessionName: supabaseGallery.nomeSessao || 'SessÃ£o',
     packageName: supabaseGallery.nomePacote || '',
     includedPhotos: supabaseGallery.fotosIncluidas,
     extraPhotoPrice: valorUnitario, // Use calculated progressive price
@@ -557,8 +557,8 @@ export default function GalleryDetail() {
   };
 
   return (
-    <div className="w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
-      {/* Header — Identificação + Informações + Ações */}
+    <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
+      {/* Header â€” IdentificaÃ§Ã£o + InformaÃ§Ãµes + AÃ§Ãµes */}
       {(() => {
         const vendido = supabaseGallery.valorTotalVendido || 0;
         const pendente = calculatedExtraTotal || 0;
@@ -575,7 +575,7 @@ export default function GalleryDetail() {
             return (
               <button {...commonProps} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:opacity-80 transition">
                 <Clock className="h-3.5 w-3.5" />
-                Parcial · Pago R$ {vendido.toFixed(2)} / Pendente R$ {pendente.toFixed(2)}
+                Parcial Â· Pago R$ {vendido.toFixed(2)} / Pendente R$ {pendente.toFixed(2)}
               </button>
             );
           }
@@ -610,7 +610,7 @@ export default function GalleryDetail() {
           return (
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cls}`}
-              title={`Galerias são excluídas automaticamente após 12 meses. Expira em ${format(exp, "dd/MM/yyyy", { locale: ptBR })}.`}
+              title={`Galerias sÃ£o excluÃ­das automaticamente apÃ³s 12 meses. Expira em ${format(exp, "dd/MM/yyyy", { locale: ptBR })}.`}
             >
               <Clock className="h-3.5 w-3.5" />
               {label}
@@ -667,7 +667,7 @@ export default function GalleryDetail() {
 
         return (
           <div className="flex flex-col gap-6">
-            {/* Área 1 — Identificação */}
+            {/* Ãrea 1 â€” IdentificaÃ§Ã£o */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
                 <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list')} className="shrink-0 -ml-2">
@@ -689,7 +689,7 @@ export default function GalleryDetail() {
                 </div>
               </div>
 
-              {/* Ações — Desktop */}
+              {/* AÃ§Ãµes â€” Desktop */}
               <div className="hidden md:flex items-center gap-2 shrink-0">
                 <TooltipProvider>
                   <Tooltip>
@@ -701,13 +701,13 @@ export default function GalleryDetail() {
                           "rounded-full transition-colors",
                           isLinkedToStudio ? "text-green-500 hover:text-green-600 hover:bg-green-50" : "text-red-500 hover:text-red-600 hover:bg-red-50"
                         )}
-                        onClick={() => toast.info(isLinkedToStudio ? "Esta galeria está vinculada a uma sessão do estúdio" : "Esta galeria não possui vínculo com o estúdio")}
+                        onClick={() => toast.info(isLinkedToStudio ? "Esta galeria estÃ¡ vinculada a uma sessÃ£o do estÃºdio" : "Esta galeria nÃ£o possui vÃ­nculo com o estÃºdio")}
                       >
                         {isLinkedToStudio ? <Database className="h-5 w-5" /> : <Unlink className="h-5 w-5" />}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{isLinkedToStudio ? "Vinculada ao estúdio" : "Não vinculada ao estúdio"}</p>
+                      <p>{isLinkedToStudio ? "Vinculada ao estÃºdio" : "NÃ£o vinculada ao estÃºdio"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -732,7 +732,7 @@ export default function GalleryDetail() {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" aria-label="Mais ações">
+                    <Button variant="outline" size="icon" aria-label="Mais aÃ§Ãµes">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -742,17 +742,17 @@ export default function GalleryDetail() {
                 </DropdownMenu>
               </div>
 
-              {/* Menu — Mobile */}
+              {/* Menu â€” Mobile */}
               <div className="md:hidden shrink-0">
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" aria-label="Mais ações">
+                    <Button variant="outline" size="icon" aria-label="Mais aÃ§Ãµes">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className="rounded-t-2xl">
                     <SheetHeader>
-                      <SheetTitle className="text-left">Ações da galeria</SheetTitle>
+                      <SheetTitle className="text-left">AÃ§Ãµes da galeria</SheetTitle>
                     </SheetHeader>
                     {sheetMenuItems}
                   </SheetContent>
@@ -760,14 +760,14 @@ export default function GalleryDetail() {
               </div>
             </div>
 
-            {/* Área 2 — Cards informativos */}
+            {/* Ãrea 2 â€” Cards informativos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <InfoCard icon={User} label="Cliente" value={supabaseGallery.clienteNome || '—'} />
-              <InfoCard icon={Calendar} label="Data da sessão" value={format(deadline, "dd MMM yyyy", { locale: ptBR })} />
+              <InfoCard icon={User} label="Cliente" value={supabaseGallery.clienteNome || 'â€”'} />
+              <InfoCard icon={Calendar} label="Data da sessÃ£o" value={format(deadline, "dd MMM yyyy", { locale: ptBR })} />
               <InfoCard icon={Image} label="Total de fotos" value={`${supabaseGallery.totalFotos} fotos`} />
             </div>
 
-            {/* Ações primárias — Mobile (abaixo dos cards) */}
+            {/* AÃ§Ãµes primÃ¡rias â€” Mobile (abaixo dos cards) */}
             <div className="flex flex-col gap-2 md:hidden">
               <div className="flex items-center gap-2 mb-1">
                 <Button 
@@ -777,10 +777,10 @@ export default function GalleryDetail() {
                     "flex-1 justify-center gap-2 rounded-xl",
                     isLinkedToStudio ? "text-green-500 bg-green-50" : "text-red-500 bg-red-50"
                   )}
-                  onClick={() => toast.info(isLinkedToStudio ? "Esta galeria está vinculada a uma sessão do estúdio" : "Esta galeria não possui vínculo com o estúdio")}
+                  onClick={() => toast.info(isLinkedToStudio ? "Esta galeria estÃ¡ vinculada a uma sessÃ£o do estÃºdio" : "Esta galeria nÃ£o possui vÃ­nculo com o estÃºdio")}
                 >
                   {isLinkedToStudio ? <Database className="h-4 w-4" /> : <Unlink className="h-4 w-4" />}
-                  <span className="text-xs font-medium">{isLinkedToStudio ? "Vinculada" : "Não vinculada"}</span>
+                  <span className="text-xs font-medium">{isLinkedToStudio ? "Vinculada" : "NÃ£o vinculada"}</span>
                 </Button>
               </div>
 
@@ -804,7 +804,7 @@ export default function GalleryDetail() {
               </Button>
             </div>
 
-            {/* Delete dialog controlado — sem trigger, aberto via menu */}
+            {/* Delete dialog controlado â€” sem trigger, aberto via menu */}
             <DeleteGalleryDialog
               galleryName={supabaseGallery.nomeSessao || 'Esta galeria'}
               onDelete={handleDeleteGallery}
@@ -825,7 +825,7 @@ export default function GalleryDetail() {
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
               <div>
                 <p className="font-medium text-amber-800 dark:text-amber-200">
-                  Aguardando confirmação de pagamento PIX
+                  Aguardando confirmaÃ§Ã£o de pagamento PIX
                 </p>
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   Valor: R$ {(supabaseGallery.valorExtras || calculatedExtraTotal).toFixed(2)}
@@ -840,7 +840,7 @@ export default function GalleryDetail() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="photos">Fotos ({transformedPhotos.length})</TabsTrigger>
-          <TabsTrigger value="selection">Seleção ({selectedPhotos.length})</TabsTrigger>
+          <TabsTrigger value="selection">SeleÃ§Ã£o ({selectedPhotos.length})</TabsTrigger>
           {isPublicGallery && (
             <TabsTrigger value="visitors">
               <Users className="h-4 w-4 mr-1" />
@@ -848,7 +848,7 @@ export default function GalleryDetail() {
             </TabsTrigger>
           )}
           <TabsTrigger value="details">Detalhes</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
+          <TabsTrigger value="history">HistÃ³rico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="photos" className="space-y-4">
@@ -920,10 +920,10 @@ export default function GalleryDetail() {
             <div className="text-center py-16 lunari-card">
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-2">
-                Em galerias públicas, cada visitante possui sua própria seleção.
+                Em galerias pÃºblicas, cada visitante possui sua prÃ³pria seleÃ§Ã£o.
               </p>
               <p className="text-sm text-muted-foreground">
-                Acesse a aba <strong>Visitantes</strong> para ver as seleções individuais.
+                Acesse a aba <strong>Visitantes</strong> para ver as seleÃ§Ãµes individuais.
               </p>
             </div>
           ) : (
@@ -949,7 +949,7 @@ export default function GalleryDetail() {
                       {photosWithComments.length > 0 && (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
                           <MessageSquare className="h-3 w-3" />
-                          {photosWithComments.length} comentário{photosWithComments.length !== 1 ? 's' : ''}
+                          {photosWithComments.length} comentÃ¡rio{photosWithComments.length !== 1 ? 's' : ''}
                         </span>
                       )}
                     </div>
@@ -977,7 +977,7 @@ export default function GalleryDetail() {
                 </div>
               </div>
               
-              {/* Lista vertical de fotos (expansível) */}
+              {/* Lista vertical de fotos (expansÃ­vel) */}
               {showSelectedPhotos && selectedPhotos.length > 0 && (
                 <div className="lunari-card divide-y divide-border">
                   {selectedPhotos.map((photo) => (
@@ -1032,7 +1032,7 @@ export default function GalleryDetail() {
             </div>
 
             <div>
-              {/* Botão de códigos com filtro de favoritas */}
+              {/* BotÃ£o de cÃ³digos com filtro de favoritas */}
               {selectedPhotos.length > 0 && (
                 <div className="mb-4 space-y-2">
                   <Button 
@@ -1044,7 +1044,7 @@ export default function GalleryDetail() {
                     }}
                   >
                     <FileText className="h-4 w-4 mr-2" />
-                    {effectiveStatus === 'selection_completed' ? 'Ver códigos das fotos' : 'Códigos para separação das fotos'}
+                    {effectiveStatus === 'selection_completed' ? 'Ver cÃ³digos das fotos' : 'CÃ³digos para separaÃ§Ã£o das fotos'}
                   </Button>
                   
                   {favoritePhotos.length > 0 && (
@@ -1057,7 +1057,7 @@ export default function GalleryDetail() {
                       }}
                     >
                       <Heart className="h-4 w-4 mr-2" />
-                      Códigos só das favoritas ({favoritePhotos.length})
+                      CÃ³digos sÃ³ das favoritas ({favoritePhotos.length})
                     </Button>
                   )}
                 </div>
@@ -1082,9 +1082,9 @@ export default function GalleryDetail() {
               />
 
 
-              {/* Payment Status Card — só aparece quando há saldo NOVO ou cobrança pendente atual.
-                  Histórico (valorTotalVendido) NÃO entra como pendente para evitar a falsa impressão
-                  de que o cliente deve novamente o que já pagou em ciclos anteriores. */}
+              {/* Payment Status Card â€” sÃ³ aparece quando hÃ¡ saldo NOVO ou cobranÃ§a pendente atual.
+                  HistÃ³rico (valorTotalVendido) NÃƒO entra como pendente para evitar a falsa impressÃ£o
+                  de que o cliente deve novamente o que jÃ¡ pagou em ciclos anteriores. */}
               {(calculatedExtraTotal > 0 || (cobrancaData && !['pago','pago_manual','cancelado'].includes(cobrancaData.status))) && (
                 <div className="mt-4">
                   <PaymentStatusCard
@@ -1136,7 +1136,7 @@ export default function GalleryDetail() {
                   const statusLabel = visitor.status === 'finalizado' ? 'Finalizado' : 'Em andamento';
                   const statusColor = visitor.status === 'finalizado' ? 'text-primary' : 'text-muted-foreground';
                   const paymentLabel = visitor.status_pagamento === 'pago' || visitor.status_pagamento === 'pago_manual'
-                    ? 'Pago' : visitor.status_pagamento === 'pendente' ? 'Pendente' : '—';
+                    ? 'Pago' : visitor.status_pagamento === 'pendente' ? 'Pendente' : 'â€”';
                   const paymentColor = paymentLabel === 'Pago' ? 'text-primary' : paymentLabel === 'Pendente' ? 'text-amber-600' : 'text-muted-foreground';
 
                   return (
@@ -1206,7 +1206,7 @@ export default function GalleryDetail() {
                             </p>
                           )}
 
-                          {/* Botão de códigos de seleção */}
+                          {/* BotÃ£o de cÃ³digos de seleÃ§Ã£o */}
                           {(visitor.fotos_selecionadas || 0) > 0 && (
                             <Button
                               variant="outline"
@@ -1226,7 +1226,7 @@ export default function GalleryDetail() {
                               ) : (
                                 <FileText className="h-4 w-4" />
                               )}
-                              Copiar códigos de seleção
+                              Copiar cÃ³digos de seleÃ§Ã£o
                             </Button>
                           )}
                         </div>
@@ -1242,7 +1242,7 @@ export default function GalleryDetail() {
         <TabsContent value="details">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="lunari-card p-5 space-y-4">
-              <h3 className="font-medium">Informações do Cliente</h3>
+              <h3 className="font-medium">InformaÃ§Ãµes do Cliente</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Nome</span>
@@ -1253,7 +1253,7 @@ export default function GalleryDetail() {
                   <span className="font-medium">{supabaseGallery.clienteEmail || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sessão</span>
+                  <span className="text-muted-foreground">SessÃ£o</span>
                   <span className="font-medium">{supabaseGallery.nomeSessao || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1261,7 +1261,7 @@ export default function GalleryDetail() {
                   <span className="font-medium">{supabaseGallery.nomePacote || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fotos incluídas</span>
+                  <span className="text-muted-foreground">Fotos incluÃ­das</span>
                   <span className="font-medium">{supabaseGallery.fotosIncluidas}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1272,7 +1272,7 @@ export default function GalleryDetail() {
             </div>
 
             <div className="lunari-card p-5 space-y-4">
-              <h3 className="font-medium">Configurações da Galeria</h3>
+              <h3 className="font-medium">ConfiguraÃ§Ãµes da Galeria</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Prazo</span>
@@ -1281,9 +1281,9 @@ export default function GalleryDetail() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Permissão</span>
+                  <span className="text-muted-foreground">PermissÃ£o</span>
                   <span className="font-medium capitalize">
-                    {supabaseGallery.permissao === 'public' ? 'Pública' : 'Privada'}
+                    {supabaseGallery.permissao === 'public' ? 'PÃºblica' : 'Privada'}
                   </span>
                 </div>
                 {(() => {
@@ -1294,7 +1294,7 @@ export default function GalleryDetail() {
                   });
                   return (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Modo de cobrança</span>
+                      <span className="text-muted-foreground">Modo de cobranÃ§a</span>
                       <span className={cn(
                         "font-medium",
                         billing.missingProvider ? "text-amber-500" : "text-foreground"
@@ -1305,9 +1305,9 @@ export default function GalleryDetail() {
                   );
                 })()}
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Comentários</span>
+                  <span className="text-muted-foreground">ComentÃ¡rios</span>
                   <span className="font-medium">
-                    {supabaseGallery.configuracoes?.allowComments ? 'Sim' : 'Não'}
+                    {supabaseGallery.configuracoes?.allowComments ? 'Sim' : 'NÃ£o'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -1369,7 +1369,7 @@ export default function GalleryDetail() {
 
         <TabsContent value="history">
           <div className="lunari-card p-5">
-            <h3 className="font-medium mb-4">Histórico de Ações</h3>
+            <h3 className="font-medium mb-4">HistÃ³rico de AÃ§Ãµes</h3>
             <ActionTimeline actions={actions} />
           </div>
         </TabsContent>
