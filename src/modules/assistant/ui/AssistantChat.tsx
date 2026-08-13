@@ -66,7 +66,14 @@ export function AssistantChat() {
       needsApproval: t.needsApproval,
       kind: t.kind,
     }));
-    const { system } = buildAssistantSystemPrompt({ page, user: u });
+    const { system } = buildAssistantSystemPrompt({
+      page,
+      user: u,
+      hints: {
+        path: location.pathname,
+        contextInfo: "O id da entidade atual geralmente está no final da URL."
+      }
+    });
     return { tools, system, page };
   }, [page]);
 

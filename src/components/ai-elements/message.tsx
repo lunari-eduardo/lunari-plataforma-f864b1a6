@@ -323,14 +323,42 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+import { GenerativeUIRenderer } from "./generative-ui";
+
 export const MessageResponse = memo(
-  ({ className, ...props }: MessageResponseProps) => (
+  ({ className, components, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
       plugins={streamdownPlugins}
+      components={{
+        code(props) {
+          const { children, className, node, ...rest } = props;
+          const match = /language-(\w+)/.exec(className || "");
+          if (match && match[1] === "ui-render") {
+            try {
+              const payload = JSON.parse(String(children).replace(/\n$/, ""));
+              return <GenerativeUIRenderer payload={payload} />;
+            } catch (e) {
+              return (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                  Erro ao renderizar componente UI: {String(e)}
+                </div>
+              );
+            }
+          }
+          // @ts-ignore
+          const CodeComponent = components?.code;
+          if (CodeComponent) {
+            return <CodeComponent {...props} />;
+          }
+          // @ts-expect-error type inference bug in react-markdown
+          return <code className={className} {...rest}>{children}</code>;
+        },
+        ...components,
+      }}
       {...props}
     />
   ),

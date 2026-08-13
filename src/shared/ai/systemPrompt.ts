@@ -1,9 +1,9 @@
 /**
- * Onda E.2 — System prompt dinâmico da Lu.
+ * Onda E.2 — System prompt dinâmico da Lunari.
  *
  * Monta o bloco de contexto (page snapshot + capabilities visíveis) que
  * é enviado ao runtime `assistant-chat` no campo `system`. A edge function
- * concatena com o system prompt canônico da Lu (invariantes de segurança).
+ * concatena com o system prompt canônico da Lunari (invariantes de segurança).
  *
  * Regras:
  *  - Snapshot é serializado como JSON compacto dentro de bloco delimitado.
@@ -41,7 +41,7 @@ function safeStringify(value: unknown): string {
   try {
     const json = JSON.stringify(value);
     if (json.length <= MAX_SNAPSHOT_CHARS) return json;
-    // Truncamento explícito — marcador para a Lu saber que foi cortado.
+    // Truncamento explícito — marcador para a Lunari saber que foi cortado.
     return json.slice(0, MAX_SNAPSHOT_CHARS - 20) + '..."__truncated__"}';
   } catch {
     return "{}";
