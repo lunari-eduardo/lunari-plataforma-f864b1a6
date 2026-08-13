@@ -164,9 +164,11 @@ function ModuleSync() {
   
   React.useEffect(() => {
     const path = location.pathname;
+    const isSharedPath = path.startsWith('/app/clientes') || path.startsWith('/app/minha-conta') || path.startsWith('/app/financas');
+    
     if (path.startsWith('/app/gallery') && activeModule !== 'gallery') {
       setActiveModule('gallery');
-    } else if (path.startsWith('/app') && !path.startsWith('/app/gallery') && activeModule !== 'studio') {
+    } else if (path.startsWith('/app') && !path.startsWith('/app/gallery') && !isSharedPath && activeModule !== 'studio') {
       setActiveModule('studio');
     }
   }, [location.pathname, activeModule, setActiveModule]);

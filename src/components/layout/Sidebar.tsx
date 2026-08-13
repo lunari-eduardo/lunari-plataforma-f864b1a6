@@ -343,7 +343,6 @@ export default function Sidebar() {
     { to: "/app/analise-vendas", icon: <PieChart size={14} />, label: "Análise de Vendas", isPro: true },
     
     { to: "/app/configuracoes", icon: <Settings size={14} />, label: "Configurações" },
-    { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" },
     { to: "/app/hub", icon: <Brain size={14} />, label: "Hub de IA", adminOnly: true },
   ].filter(item => !item.adminOnly || accessState.isAdmin);
 
@@ -361,8 +360,7 @@ export default function Sidebar() {
     { to: "/app/clientes", icon: <UserCheck size={14} />, label: "Clientes" },
     { isSeparator: true, label: "CONFIGURAÇÕES", to: "separator-config" },
     { to: "/app/gallery/settings/defaults", icon: <Settings2 size={14} />, label: "Padrões" },
-    { to: "/app/gallery/settings/customization", icon: <Palette size={14} />, label: "Personalização" },
-    { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" }
+    { to: "/app/gallery/settings/customization", icon: <Palette size={14} />, label: "Personalização" }
   ];
 
   const currentNavItems = activeModule === 'gallery' ? galleryNavItems : navItems;

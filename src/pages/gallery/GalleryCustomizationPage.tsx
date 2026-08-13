@@ -1,15 +1,28 @@
+import { useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useSettings } from '@/hooks/useSettings';
-import { PersonalizationSettings } from '@/components/settings/PersonalizationSettings';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useGallerySettings } from '@/hooks/useGallerySettings';
+import { CustomizationAppearanceTab } from '@/components/settings/customization/CustomizationAppearanceTab';
+import { CustomizationCommunicationTab } from '@/components/settings/customization/CustomizationCommunicationTab';
 
 export default function GalleryCustomizationPage() {
-  const { isUpdating } = useSettings();
+  const { 
+    settings, 
+    updateSettings, 
+    isUpdating,
+    updateEmailTemplate,
+    isUpdatingEmailTemplate
+  } = useGallerySettings();
+  
+  const [activeTab, setActiveTab] = useState('aparencia');
 
   const handleSave = () => {
     toast.success(isUpdating ? 'Salvando configurações...' : 'Configurações já estão salvas.');
   };
+
+  if (!settings) return null;
 
   return (
     <>
@@ -23,9 +36,25 @@ export default function GalleryCustomizationPage() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <PersonalizationSettings />
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6 space-y-6">
+          <TabsList className="bg-muted/50 border">
+            <TabsTrigger value="aparencia">Aparência da Galeria do Cliente</TabsTrigger>
+            <TabsTrigger value="comunicacao">Comunicação</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="aparencia" className="mt-0 outline-none">
+            <CustomizationAppearanceTab settings={settings} updateSettings={updateSettings} />
+          </TabsContent>
+
+          <TabsContent value="comunicacao" className="mt-0 outline-none">
+            <CustomizationCommunicationTab 
+              settings={settings} 
+              updateSettings={updateSettings}
+              updateEmailTemplate={updateEmailTemplate}
+              isUpdatingEmailTemplate={isUpdatingEmailTemplate}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-background/80 backdrop-blur-lg">

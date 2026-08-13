@@ -32,9 +32,11 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
+      const isSharedPath = path.startsWith('/app/clientes') || path.startsWith('/app/minha-conta') || path.startsWith('/app/financas');
+      
       if (path.startsWith('/app/gallery') && activeModule !== 'gallery') {
         setActiveModule('gallery');
-      } else if (!path.startsWith('/app/gallery') && path.startsWith('/app') && activeModule !== 'studio') {
+      } else if (!path.startsWith('/app/gallery') && path.startsWith('/app') && !isSharedPath && activeModule !== 'studio') {
         // Se estivermos no app, mas não no gallery, garantir que seja studio.
         // Opcional, mas recomendado para consistência se o usuário navegar "para fora".
         setActiveModule('studio');
