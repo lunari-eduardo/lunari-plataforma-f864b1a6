@@ -15,7 +15,7 @@ export function useMaterialShares(materialId: string | undefined) {
         .from('material_shares')
         .select(`
           *,
-          lead:leads(nome, email, whatsapp),
+          lead:leads(nome, email, whatsapp, status),
           cliente:clientes(nome, email, whatsapp)
         `)
         .eq('material_id', materialId)
@@ -137,7 +137,7 @@ export function useAllMaterialShares() {
         .select(`
           *,
           material:commercial_materials(title),
-          lead:leads(nome, email, whatsapp),
+          lead:leads(nome, email, whatsapp, status),
           cliente:clientes(nome, email, whatsapp),
           version:material_versions(version_number)
         `)

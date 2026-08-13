@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, FilterX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DEFAULT_LEAD_STATUSES } from '@/utils/leadTransformers';
 
 export default function CompartilhamentosComercialPage() {
   const { shares, isLoading } = useAllMaterialShares();
@@ -179,7 +180,27 @@ export default function CompartilhamentosComercialPage() {
                         v{share.version?.version_number || '?'}
                       </td>
                       <td className="px-6 py-4">
-                        {share.lead?.nome || <span className="text-muted-foreground italic">Sem lead associado</span>}
+                        <div className="flex flex-col items-start gap-1">
+                          {share.lead?.nome ? (
+                            <>
+                              <span>{share.lead.nome}</span>
+                              {share.lead.status && (
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] px-1.5 py-0 border-transparent ${
+                                    DEFAULT_LEAD_STATUSES.find((s) => s.key === share.lead.status)?.color ||
+                                    'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
+                                  {DEFAULT_LEAD_STATUSES.find((s) => s.key === share.lead.status)?.name ||
+                                    share.lead.status}
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground italic">Sem lead associado</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                         {share.sent_at 

@@ -15,7 +15,7 @@ export function useShareAnalysis(shareId: string | undefined) {
         .select(`
           *,
           material:commercial_materials(id, title),
-          lead:leads(id, nome, email, whatsapp),
+          lead:leads(id, nome, email, whatsapp, status),
           version:material_versions(version_number)
         `)
         .eq('id', shareId)

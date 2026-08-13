@@ -110,17 +110,19 @@ serve(async (req) => {
       session = newSession;
     }
 
-    // 3. Inserir Evento
-    const { error: insertError } = await supabaseClient
-      .from("material_share_events")
-      .insert({
-        session_id: session.id,
-        event_type,
-        payload,
-        occurred_at: occurred_at || new Date().toISOString()
-      });
+    // 3. Inserir Evento (exceto heartbeat, para evitar poluir a tabela de eventos)
+    if (event_type !== 'heartbeat') {
+      const { error: insertError } = await supabaseClient
+        .from("material_share_events")
+        .insert({
+          session_id: session.id,
+          event_type,
+          payload,
+          occurred_at: occurred_at || new Date().toISOString()
+        });
 
-    if (insertError) throw insertError;
+      if (insertError) throw insertError;
+    }
 
     // 4. Se for view_end ou heartbeat ou qualquer evento que estenda a sessão, atualizar a duração
     if (event_type === 'view_end' || event_type === 'heartbeat' || event_type === 'scroll_depth' || event_type === 'section_view') {

@@ -10,6 +10,7 @@ import { Loader2, ArrowLeft, Clock, Eye, MousePointerClick, TrendingUp, MonitorS
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { DEFAULT_LEAD_STATUSES } from '@/utils/leadTransformers';
 
 function formatSeconds(seconds: number) {
   if (!seconds) return '0s';
@@ -80,7 +81,22 @@ export default function ShareAnalysisPage() {
           <p className="text-muted-foreground mt-1">
             Proposta: <strong className="text-foreground">{share.material?.title} (v{share.version?.version_number})</strong>
             {' • '}
-            Cliente: {share.lead ? <Link to={`/app/leads`} className="text-primary hover:underline">{share.lead.nome}</Link> : 'Sem lead vinculado'}
+            Cliente: {share.lead ? (
+              <span className="inline-flex items-center gap-2">
+                <Link to={`/app/leads`} className="text-primary hover:underline">{share.lead.nome}</Link>
+                {share.lead.status && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 border-transparent ${
+                      DEFAULT_LEAD_STATUSES.find((s) => s.key === share.lead.status)?.color ||
+                      'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {DEFAULT_LEAD_STATUSES.find((s) => s.key === share.lead.status)?.name || share.lead.status}
+                  </Badge>
+                )}
+              </span>
+            ) : 'Sem lead vinculado'}
           </p>
           <div className="mt-2 text-sm text-muted-foreground">
             Enviado em {format(new Date(share.sent_at), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
@@ -172,7 +188,7 @@ export default function ShareAnalysisPage() {
                     </div>
                   ) : (
                     <div className="divide-y text-sm">
-                      {session.events.map((event: any) => (
+                      {session.events.filter((event: any) => event.event_type !== 'heartbeat').map((event: any) => (
                         <div key={event.id} className="p-3 flex items-start gap-4 hover:bg-muted/10">
                           <div className="w-16 shrink-0 text-xs text-muted-foreground pt-0.5">
                             {format(new Date(event.occurred_at), "HH:mm:ss")}

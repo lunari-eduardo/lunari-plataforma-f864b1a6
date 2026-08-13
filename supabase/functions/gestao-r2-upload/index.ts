@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         isPdf
           ? {
               cacheControl: "public, max-age=31536000, immutable",
-              contentDisposition: `inline; filename="${file.name}"`,
+              contentDisposition: "inline",
             }
           : undefined
       );
