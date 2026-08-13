@@ -138,53 +138,11 @@ export function PersonalizationSettings() {
             />
             <span className="text-sm font-mono w-10 text-right">{localPhotoSpacing}px</span>
           </div>
-        </div>
-
-        {/* Default Behavior Toggles */}
-        <div className="lunari-card p-6 space-y-4">
-          <div>
-            <Label className="text-base font-medium">Comportamento Padrão de Galerias</Label>
-            <p className="text-sm text-muted-foreground mt-1">
-              Aplicado automaticamente em novas galerias
-            </p>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 rounded-lg border">
-              <div>
-                <p className="font-medium">Permitir comentários</p>
-                <p className="text-sm text-muted-foreground">Cliente pode comentar em cada foto</p>
-              </div>
-              <Switch
-                checked={settings.defaultAllowComments ?? true}
-                onCheckedChange={(v) => updateSettings({ defaultAllowComments: v }, { successMessage: 'Comportamento padrão salvo.' })}
-              />
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-lg border">
-              <div>
-                <p className="font-medium">Permitir download</p>
-                <p className="text-sm text-muted-foreground">Cliente pode baixar fotos selecionadas</p>
-              </div>
-              <Switch
-                checked={settings.defaultAllowDownload ?? false}
-                onCheckedChange={(v) => updateSettings({ defaultAllowDownload: v }, { successMessage: 'Comportamento padrão salvo.' })}
-              />
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-lg border">
-              <div>
-                <p className="font-medium">Permitir fotos extras</p>
-                <p className="text-sm text-muted-foreground">Cliente pode escolher além do pacote</p>
-              </div>
-              <Switch
-                checked={settings.defaultAllowExtraPhotos ?? true}
-                onCheckedChange={(v) => updateSettings({ defaultAllowExtraPhotos: v }, { successMessage: 'Comportamento padrão salvo.' })}
-              />
-            </div>
           </div>
         </div>
-      </div>
 
-      {/* Communication */}
-      <div className="space-y-4">
+        {/* Communication */}
+        <div className="space-y-4">
         <h3 className="text-lg font-medium text-muted-foreground">Comunicação</h3>
         
         {/* Welcome Message Template */}

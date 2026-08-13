@@ -48,7 +48,8 @@ import DeliverCreate from "@/pages/gallery/DeliverCreate";
 import GalleryEdit from "@/pages/gallery/GalleryEdit";
 import GalleryDetail from "@/pages/gallery/GalleryDetail";
 import DeliverDetail from "@/pages/gallery/DeliverDetail";
-import GallerySettings from "@/pages/gallery/GallerySettings";
+import GalleryDefaultsPage from "@/pages/gallery/GalleryDefaultsPage";
+import GalleryCustomizationPage from "@/pages/gallery/GalleryCustomizationPage";
 import ClientGallery from "@/pages/gallery/ClientGallery";
 import ClientDeliverGallery from "@/pages/gallery/ClientDeliverGallery";
 
@@ -270,8 +271,8 @@ export default function PhotographerApp() {
                     
                     {/* Settings Routes */}
                     <Route path="settings" element={<Navigate to="/app/gallery/settings/defaults" replace />} />
-                    <Route path="settings/defaults" element={<GallerySettings tab="general" />} />
-                    <Route path="settings/customization" element={<GallerySettings tab="personalization" />} />
+                    <Route path="settings/defaults" element={<GalleryDefaultsPage />} />
+                    <Route path="settings/customization" element={<GalleryCustomizationPage />} />
                     
                     {/* Alias antigos do legado para evitar quebra caso existam links hardcoded no cache */}
                   <Route path="select" element={<Navigate to="/app/gallery/dashboard" replace />} />

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInputMode } from '@/hooks/useInputMode';
-import { CalendarClock, UserCheck, Settings, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, Target, Send, BarChart, Home, ChevronDown } from 'lucide-react';
+import { CalendarClock, UserCheck, Settings, Settings2, Palette, Filter, Wallet, Menu, X, Tag, GitBranch, PieChart, LayoutGrid, CheckSquare, Crown, Plug, Brain, BookOpen, Briefcase, Target, Send, BarChart, Home, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAccessControl } from '@/hooks/useAccessControl';
@@ -358,7 +358,10 @@ export default function Sidebar() {
         { to: "/app/gallery/new/transfer", label: "Transfer (Nova)", icon: <Send size={12} /> }
       ]
     },
-    { to: "/app/gallery/settings", icon: <Settings size={14} />, label: "Configurações" },
+    { to: "/app/clientes", icon: <UserCheck size={14} />, label: "Clientes" },
+    { isSeparator: true, label: "CONFIGURAÇÕES", to: "separator-config" },
+    { to: "/app/gallery/settings/defaults", icon: <Settings2 size={14} />, label: "Padrões" },
+    { to: "/app/gallery/settings/customization", icon: <Palette size={14} />, label: "Personalização" },
     { to: "/app/integracoes", icon: <Plug size={14} />, label: "Integrações" }
   ];
 
