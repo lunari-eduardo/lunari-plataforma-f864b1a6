@@ -2402,7 +2402,7 @@ export default function GalleryCreate() {
         return null;
     }
   };
-  return <div className="max-w-5xl mx-auto animate-fade-in pb-24">
+  return <div className="w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(6rem,env(safe-area-inset-bottom))] animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -2442,8 +2442,8 @@ export default function GalleryCreate() {
       </div>
 
       {/* Fixed Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-40">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center gap-2">
+      <div className="fixed bottom-0 left-0 lg:left-64 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+        <div className="w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
           <Button
             variant="outline"
             onClick={handleBack}
