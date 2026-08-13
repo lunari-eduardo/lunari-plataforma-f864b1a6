@@ -789,7 +789,6 @@ export default function DeliverCreate() {
         onOpenChange={setIsClientModalOpen}
         onSave={handleClientCreate}
       />
-    </div>
-  );
+    </div>;
 }
 
