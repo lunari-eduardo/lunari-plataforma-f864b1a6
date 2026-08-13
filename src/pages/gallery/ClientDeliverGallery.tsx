@@ -113,7 +113,7 @@ export default function ClientDeliverGallery({ data }: Props) {
         pesoVisual: peso,
       } as DeliverPhoto;
     });
-    // Ordem canÃ´nica: alfabÃ©tica natural pelo nome original.
+    // Ordem canônica: alfabética natural pelo nome original.
     return sortPhotosByNaturalFilename(mapped);
   }, [data.photos]);
 

@@ -113,7 +113,7 @@ export default function ClientGallery() {
   });
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState<SelectionStep>(() => {
-    // Se o backend jÃ¡ retornou que a galeria estÃ¡ finalizada no payload inicial (ou redirecionado), iniciar em 'confirmed'
+    // Se o backend já retornou que a galeria está finalizada no payload inicial (ou redirecionado), iniciar em 'confirmed'
     return 'gallery';
   });
 
@@ -156,13 +156,13 @@ export default function ClientGallery() {
   // Asaas transparent checkout state
   const [asaasCheckoutData, setAsaasCheckoutData] = useState<AsaasCheckoutData | null>(null);
   
-  // Payment return detection state (silent â€” no blocking UI)
+  // Payment return detection state (silent — no blocking UI)
   const [isProcessingPaymentReturn, setIsProcessingPaymentReturn] = useState(false);
   const [isConfirmingPixPayment, setIsConfirmingPixPayment] = useState(false);
-  // Controla se o cliente jÃ¡ clicou em "Ir para pagamento" e queremos mostrar
+  // Controla se o cliente já clicou em "Ir para pagamento" e queremos mostrar
   // o checkout inline (Asaas) ou tela de PIX, em vez da PaymentPendingScreen.
   const [showInlineCheckout, setShowInlineCheckout] = useState(false);
-  // Overlay imediato de "abrindo checkout" â€” reduz percepÃ§Ã£o de lentidÃ£o
+  // Overlay imediato de "abrindo checkout" — reduz percepção de lentidão
   const [isRedirectingToCheckout, setIsRedirectingToCheckout] = useState(false);
   const paymentRetryRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
@@ -201,7 +201,7 @@ export default function ClientGallery() {
           .eq('id', identifier)
           .single();
         
-        if (error) throw new Error('Galeria nÃ£o encontrada');
+        if (error) throw new Error('Galeria não encontrada');
         return { success: true, gallery: data, photos: null, isLegacy: true };
       }
       
@@ -226,12 +226,12 @@ export default function ClientGallery() {
         const result = await response.json();
         
         if (!response.ok) {
-          if (result.code === 'NOT_FOUND') throw new Error('Galeria nÃ£o encontrada');
+          if (result.code === 'NOT_FOUND') throw new Error('Galeria não encontrada');
           if (result.code === 'WRONG_PASSWORD') throw new Error('Senha incorreta');
           if (result.code === 'NOT_AVAILABLE' && result.retryable) {
             throw new Error('GALLERY_PUBLISHING');
           }
-          if (result.code === 'NOT_AVAILABLE') throw new Error('Galeria nÃ£o disponÃ­vel');
+          if (result.code === 'NOT_AVAILABLE') throw new Error('Galeria não disponível');
           if (result.code === 'INTERNAL_ERROR' || response.status >= 500) {
             throw new Error('GALLERY_SERVER_ERROR');
           }
@@ -301,9 +301,9 @@ export default function ClientGallery() {
     }
   }, [galleryResponse]);
 
-  // Aplica tema do Studio do fotÃ³grafo (preset + mode) na galeria pÃºblica.
-  // NÃ£o persiste no localStorage â€” apenas overlay temporÃ¡rio enquanto o visitante
-  // estÃ¡ na rota pÃºblica.
+  // Aplica tema do Studio do fotógrafo (preset + mode) na galeria pública.
+  // Não persiste no localStorage — apenas overlay temporário enquanto o visitante
+  // está na rota pública.
   useEffect(() => {
     const studioTheme = (galleryResponse as any)?.studioTheme;
     if (studioTheme?.presetId && studioTheme?.mode) {
@@ -316,7 +316,7 @@ export default function ClientGallery() {
     }
   }, [galleryResponse]);
 
-  // Restaurar default ao sair da rota pÃºblica
+  // Restaurar default ao sair da rota pública
   useEffect(() => {
     return () => {
       applyTheme(DEFAULT_THEME);
@@ -324,10 +324,10 @@ export default function ClientGallery() {
   }, []);
 
 
-  // Fase 5 â€” Preconnect para o host do provedor de pagamento assim que sabemos
-  // qual Ã©. Reduz DNS + TLS na hora do redirect (~200-500ms perceptivos).
-  // SÃ³ dispara quando saleMode === 'sale_with_payment' para nÃ£o abrir socket
-  // desnecessÃ¡rio em galerias no_sale.
+  // Fase 5 — Preconnect para o host do provedor de pagamento assim que sabemos
+  // qual é. Reduz DNS + TLS na hora do redirect (~200-500ms perceptivos).
+  // Só dispara quando saleMode === 'sale_with_payment' para não abrir socket
+  // desnecessário em galerias no_sale.
   useEffect(() => {
     if (!galleryResponse) return;
     const g: any = (galleryResponse as any).gallery || galleryResponse;
@@ -374,11 +374,11 @@ export default function ClientGallery() {
   // Get gallery ID for queries (also check galleryResponse.galleryId for finalized galleries)
   const galleryId = supabaseGallery?.id || galleryResponse?.galleryId || (isLegacyAccess ? identifier : null);
 
-  // Get session_id from gallery (for fetching frozen rules from GestÃ£o session)
+  // Get session_id from gallery (for fetching frozen rules from Gestão session)
   // Support both camelCase (from Edge Function) and snake_case (from legacy)
   const sessionId = supabaseGallery?.sessionId || supabaseGallery?.session_id;
 
-  // 2. Fetch frozen pricing rules from GestÃ£o session (as fallback if Edge Function didn't load them)
+  // 2. Fetch frozen pricing rules from Gestão session (as fallback if Edge Function didn't load them)
   const { data: sessionRegras } = useQuery({
     queryKey: ['client-gallery-session-rules', sessionId],
     queryFn: async () => {
@@ -458,15 +458,15 @@ export default function ClientGallery() {
       id: supabaseGallery.id,
       clientName: (isEdgeFunctionFormat ? supabaseGallery.clientName : supabaseGallery.cliente_nome) || 'Cliente',
       clientEmail: (isEdgeFunctionFormat ? '' : supabaseGallery.cliente_email) || '',
-      sessionName: (isEdgeFunctionFormat ? supabaseGallery.sessionName : supabaseGallery.nome_sessao) || 'SessÃ£o de Fotos',
+      sessionName: (isEdgeFunctionFormat ? supabaseGallery.sessionName : supabaseGallery.nome_sessao) || 'Sessão de Fotos',
       packageName: (isEdgeFunctionFormat ? supabaseGallery.packageName : supabaseGallery.nome_pacote) || 'Pacote',
       includedPhotos: (isEdgeFunctionFormat ? supabaseGallery.includedPhotos : supabaseGallery.fotos_incluidas) ?? 0,
       extraPhotoPrice: (() => {
-        // Prioridade 1: Valor explÃ­cito definido na galeria (manual override)
+        // Prioridade 1: Valor explícito definido na galeria (manual override)
         const fromGallery = Number(isEdgeFunctionFormat ? supabaseGallery.extraPhotoPrice : supabaseGallery.valor_foto_extra);
         if (fromGallery > 0) return fromGallery;
 
-        // Prioridade 2: Valor congelado da sessÃ£o de GestÃ£o
+        // Prioridade 2: Valor congelado da sessão de Gestão
         const regras: any = isEdgeFunctionFormat
           ? (supabaseGallery as any).regrasCongeladas
           : (supabaseGallery as any).regras_congeladas;
@@ -500,8 +500,8 @@ export default function ClientGallery() {
         const precoExtraFromRegras = Number(regras?.pacote?.valorFotoExtra ?? 0);
 
         return {
-          // Fonte de verdade: gallery-access jÃ¡ projeta colunas > JSON > default.
-          // Se ainda cair no fallback aqui, Ã© apenas para o formato legado (UUID/direct).
+          // Fonte de verdade: gallery-access já projeta colunas > JSON > default.
+          // Se ainda cair no fallback aqui, é apenas para o formato legado (UUID/direct).
           mode: (rawSettings?.mode as 'no_sale' | 'sale_with_payment' | 'sale_without_payment') || 'no_sale',
           pricingModel: (rawSettings?.pricingModel as 'fixed' | 'packages') || 'fixed',
           chargeType: (rawSettings?.chargeType as 'all_selected' | 'only_extras') || 'only_extras',
@@ -577,7 +577,7 @@ export default function ClientGallery() {
       };
     });
 
-    // Ordem canÃ´nica Ãºnica para qualquer galeria: alfabÃ©tica natural pelo
+    // Ordem canônica única para qualquer galeria: alfabética natural pelo
     // nome original do arquivo. Garante leitura linha-a-linha 1 -> 2 -> 3.
     return sortPhotosByNaturalFilename(mapped);
   }, [supabasePhotos, transformedGallery]);
@@ -598,7 +598,7 @@ export default function ClientGallery() {
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Erro ao atualizar seleÃ§Ã£o');
+        throw new Error(error.error || 'Erro ao atualizar seleção');
       }
       
       return response.json();
@@ -674,15 +674,15 @@ export default function ClientGallery() {
       
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        // R1 (gallery-rules): galeria jÃ¡ finalizada => forÃ§a refetch e mostra
-        // tela de pagamento pendente. Nunca mostra toast de erro genÃ©rico.
+        // R1 (gallery-rules): galeria já finalizada => força refetch e mostra
+        // tela de pagamento pendente. Nunca mostra toast de erro genérico.
         if (response.status === 409 || error?.code === 'ALREADY_PROCESSING' || error?.code === 'ALREADY_FINALIZED') {
           await refetchGallery();
           const err = new Error('ALREADY_FINALIZED') as Error & { silent?: boolean };
           err.silent = true;
           throw err;
         }
-        throw new Error(error.error || 'Erro ao confirmar seleÃ§Ã£o');
+        throw new Error(error.error || 'Erro ao confirmar seleção');
       }
 
       return response.json();
@@ -712,8 +712,8 @@ export default function ClientGallery() {
       // Checkout externo (InfinitePay/MercadoPago) - redirect immediately
       if (data.requiresPayment && data.checkoutUrl) {
         console.log('ðŸ’³ Redirecionando para checkout externo:', data.checkoutUrl);
-        // Fase 6: overlay imediato + breadcrumb + replace (tira galeria do histÃ³rico).
-        // O overlay mostra transiÃ§Ã£o visual enquanto o browser resolve DNS/TLS.
+        // Fase 6: overlay imediato + breadcrumb + replace (tira galeria do histórico).
+        // O overlay mostra transição visual enquanto o browser resolve DNS/TLS.
         try {
           sessionStorage.setItem(`gallery_checkout_pending_${identifier}`, JSON.stringify({
             cobrancaId: data.cobrancaId ?? null,
@@ -733,11 +733,11 @@ export default function ClientGallery() {
 
       
       // GUARD: If backend says payment is required but no checkout data arrived,
-      // do NOT confirm â€” this is likely a config/payload issue
+      // do NOT confirm — this is likely a config/payload issue
       if (data.requiresPayment) {
         console.error('âš ï¸ Backend indicated requiresPayment=true but no valid checkout data arrived. Payload:', JSON.stringify(data));
         toast.error('Pagamento pendente', {
-          description: 'NÃ£o foi possÃ­vel carregar o checkout. Recarregue a pÃ¡gina e tente novamente.',
+          description: 'Não foi possível carregar o checkout. Recarregue a página e tente novamente.',
           duration: 8000,
         });
         // Refetch gallery to let gallery-access handle the pending payment state
@@ -747,15 +747,15 @@ export default function ClientGallery() {
       
       // ðŸ›¡ï¸ CONTRACT GUARD: se a galeria exige pagamento (sale_with_payment + extras > 0)
       // e o backend voltou requiresPayment=false, NUNCA finalize localmente.
-      // Isso impede a tela "SeleÃ§Ã£o Confirmada" de aparecer indevidamente e forÃ§a
-      // refetch para cair na PaymentPendingScreen â€” nunca perder rastreamento de pagamento.
+      // Isso impede a tela "Seleção Confirmada" de aparecer indevidamente e força
+      // refetch para cair na PaymentPendingScreen — nunca perder rastreamento de pagamento.
       const expectsPayment = gallery.saleSettings?.mode === 'sale_with_payment' && (extrasACobrar ?? 0) > 0;
       if (expectsPayment && !data.requiresPayment) {
         console.error('[CONTRACT VIOLATION] Gallery requires payment but backend returned requiresPayment=false', {
           galleryId, mode: gallery.saleSettings?.mode, extrasACobrar, response: data,
         });
-        toast.error('Falha na criaÃ§Ã£o do pagamento', {
-          description: 'Reabrindo a galeria para retomar a cobranÃ§a. Se persistir, contate o fotÃ³grafo.',
+        toast.error('Falha na criação do pagamento', {
+          description: 'Reabrindo a galeria para retomar a cobrança. Se persistir, contate o fotógrafo.',
           duration: 8000,
         });
         await refetchGallery();
@@ -768,22 +768,22 @@ export default function ClientGallery() {
 
     },
     onError: (error: Error & { silent?: boolean }) => {
-      // Silent errors (ex.: ALREADY_FINALIZED) jÃ¡ dispararam refetch â€” nada de toast.
+      // Silent errors (ex.: ALREADY_FINALIZED) já dispararam refetch — nada de toast.
       if (error?.silent || error?.message === 'ALREADY_FINALIZED') return;
-      const msg = error.message || 'Erro ao confirmar seleÃ§Ã£o';
+      const msg = error.message || 'Erro ao confirmar seleção';
 
-      // Erros de validaÃ§Ã£o do provedor devolvem o cliente Ã  etapa de coleta
-      // com a mensagem grudada no campo certo â€” em vez do toast genÃ©rico.
+      // Erros de validação do provedor devolvem o cliente à etapa de coleta
+      // com a mensagem grudada no campo certo — em vez do toast genérico.
       const upper = msg.toUpperCase();
       const providerFieldErrors: Partial<Record<'nome' | 'email' | 'phone' | 'cpfCnpj', string>> = {};
-      if (upper.includes('INVALID_EMAIL') || /e-?mail\s*inv[aÃ¡]lid/i.test(msg) || /invalid.*email/i.test(msg)) {
+      if (upper.includes('INVALID_EMAIL') || /e-?mail\s*inv[aá]lid/i.test(msg) || /invalid.*email/i.test(msg)) {
         providerFieldErrors.email = 'O e-mail foi rejeitado pelo processador de pagamento. Confira e digite novamente.';
       }
-      if (upper.includes('INVALID_PHONE') || /telefone\s*inv[aÃ¡]lid|invalid.*phone|invalid.*mobilephone/i.test(msg)) {
-        providerFieldErrors.phone = 'O WhatsApp foi rejeitado pelo processador. Confira DDD e nÃºmero.';
+      if (upper.includes('INVALID_PHONE') || /telefone\s*inv[aá]lid|invalid.*phone|invalid.*mobilephone/i.test(msg)) {
+        providerFieldErrors.phone = 'O WhatsApp foi rejeitado pelo processador. Confira DDD e número.';
       }
-      if (upper.includes('INVALID_CPF') || upper.includes('INVALID_CNPJ') || /cpf.*inv[aÃ¡]lid|cnpj.*inv[aÃ¡]lid/i.test(msg)) {
-        providerFieldErrors.cpfCnpj = 'CPF/CNPJ invÃ¡lido para o processador. Confira os nÃºmeros digitados.';
+      if (upper.includes('INVALID_CPF') || upper.includes('INVALID_CNPJ') || /cpf.*inv[aá]lid|cnpj.*inv[aá]lid/i.test(msg)) {
+        providerFieldErrors.cpfCnpj = 'CPF/CNPJ inválido para o processador. Confira os números digitados.';
       }
       if (Object.keys(providerFieldErrors).length > 0) {
         setPreCheckoutExternalErrors(providerFieldErrors);
@@ -791,27 +791,27 @@ export default function ClientGallery() {
         return;
       }
 
-      // Fallback: Asaas exigiu CPF que o cache do gallery-access ainda nÃ£o sabia
+      // Fallback: Asaas exigiu CPF que o cache do gallery-access ainda não sabia
       // que estava faltando. Reabrir a etapa de coleta com o campo marcado.
       if (msg.includes('MISSING_CPF_CNPJ')) {
-        setPreCheckoutExternalErrors({ cpfCnpj: 'CPF/CNPJ Ã© obrigatÃ³rio para gerar a cobranÃ§a.' });
+        setPreCheckoutExternalErrors({ cpfCnpj: 'CPF/CNPJ é obrigatório para gerar a cobrança.' });
         refetchGallery().finally(() => setCurrentStep('pre_checkout_contact'));
         return;
       }
 
-      if (msg.includes('Nenhum mÃ©todo de pagamento configurado') || msg.includes('NO_PAYMENT_PROVIDER')) {
-        toast.error('Pagamento nÃ£o disponÃ­vel', {
-          description: 'O fotÃ³grafo ainda nÃ£o configurou o mÃ©todo de pagamento. Entre em contato com ele.',
+      if (msg.includes('Nenhum método de pagamento configurado') || msg.includes('NO_PAYMENT_PROVIDER')) {
+        toast.error('Pagamento não disponível', {
+          description: 'O fotógrafo ainda não configurou o método de pagamento. Entre em contato com ele.',
           duration: 8000,
         });
-      } else if (msg.includes('InfinitePay indisponÃ­vel') || msg.includes('INFINITEPAY_UNAVAILABLE')) {
-        toast.error('ServiÃ§o de pagamento indisponÃ­vel', {
+      } else if (msg.includes('InfinitePay indisponível') || msg.includes('INFINITEPAY_UNAVAILABLE')) {
+        toast.error('Serviço de pagamento indisponível', {
           description: 'Tente novamente em alguns minutos.',
           duration: 6000,
         });
-      } else if (msg.includes('PAYMENT_CALC_MISMATCH') || msg.includes('SELECTION_SYNC_ERROR') || msg.includes('NÃ£o foi possÃ­vel calcular o valor')) {
-        toast.error('NÃ£o foi possÃ­vel gerar sua cobranÃ§a', {
-          description: 'Recarregue a pÃ¡gina e tente novamente. Se persistir, contate o fotÃ³grafo.',
+      } else if (msg.includes('PAYMENT_CALC_MISMATCH') || msg.includes('SELECTION_SYNC_ERROR') || msg.includes('Não foi possível calcular o valor')) {
+        toast.error('Não foi possível gerar sua cobrança', {
+          description: 'Recarregue a página e tente novamente. Se persistir, contate o fotógrafo.',
           duration: 8000,
         });
         refetchGallery();
@@ -827,16 +827,16 @@ export default function ClientGallery() {
   });
 
   // Sync photos state when data loads and detect if already confirmed
-  // ProteÃ§Ã£o: sÃ³ sobrescreve localPhotos na primeira carga ou mudanÃ§a estrutural
+  // Proteção: só sobrescreve localPhotos na primeira carga ou mudança estrutural
   useEffect(() => {
     if (photos.length > 0) {
       setLocalPhotos(prev => {
-        // Primeira carga ou mudanÃ§a estrutural (quantidade diferente)
+        // Primeira carga ou mudança estrutural (quantidade diferente)
         if (prev.length === 0 || prev.length !== photos.length) {
           return photos;
         }
-        // Segue SEMPRE a ordem canÃ´nica do servidor (alfabÃ©tica natural),
-        // mas preserva o estado local de seleÃ§Ã£o/favorito/comentÃ¡rio.
+        // Segue SEMPRE a ordem canônica do servidor (alfabética natural),
+        // mas preserva o estado local de seleção/favorito/comentário.
         const localById = new Map(prev.map(p => [p.id, p]));
         return photos.map(serverPhoto => {
           const localPhoto = localById.get(serverPhoto.id);
@@ -895,7 +895,7 @@ export default function ClientGallery() {
       
       const confirmPaymentReturn = async () => {
         try {
-          console.log('ðŸ”„ VerificaÃ§Ã£o silenciosa de pagamento em background:', {
+          console.log('ðŸ”„ Verificação silenciosa de pagamento em background:', {
             orderNsu, transactionNsu, slug, captureMethod,
           });
           
@@ -911,14 +911,14 @@ export default function ClientGallery() {
           });
           
           const result = await response.json();
-          console.log('âœ… Resultado verificaÃ§Ã£o silenciosa:', result);
+          console.log('âœ… Resultado verificação silenciosa:', result);
           
           if (result.status === 'pago' || result.updated) {
             setCurrentStep('confirmed');
             setIsConfirmed(true);
             refetchGallery();
           } else {
-            // Not yet confirmed â€” start Realtime subscription + fallback polling
+            // Not yet confirmed — start Realtime subscription + fallback polling
             const channel = supabase
               .channel(`payment-return-${sessionId || galleryId}`)
               .on(
@@ -976,7 +976,7 @@ export default function ClientGallery() {
           }
         } catch (error) {
           console.error('âŒ Erro ao verificar pagamento:', error);
-          // Silently fail â€” gallery will show natural state
+          // Silently fail — gallery will show natural state
           refetchGallery();
         }
       };
@@ -1083,8 +1083,8 @@ export default function ClientGallery() {
   const galleryFolders = galleryResponse?.folders || [];
   const hasFolders = galleryFolders.length > 0;
 
-  // Fase 6 â€” Overlay imediato de redirect para checkout externo.
-  // Renderizado com PRIORIDADE mÃ¡xima: mantÃ©m a tela travada e clara
+  // Fase 6 — Overlay imediato de redirect para checkout externo.
+  // Renderizado com PRIORIDADE máxima: mantém a tela travada e clara
   // enquanto o browser resolve DNS/TLS e o checkout carrega.
   if (isRedirectingToCheckout) {
     return (
@@ -1105,7 +1105,7 @@ export default function ClientGallery() {
         )}
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
         <p className="mt-6 text-base font-medium">Abrindo checkoutâ€¦</p>
-        <p className="mt-1 text-sm text-muted-foreground">VocÃª serÃ¡ redirecionado em instantes.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Você será redirecionado em instantes.</p>
       </div>
     );
   }
@@ -1244,7 +1244,7 @@ export default function ClientGallery() {
         setRequiresVisitor(false);
         await refetchGallery();
       } else {
-        setVisitorError('Erro ao criar sessÃ£o do visitante');
+        setVisitorError('Erro ao criar sessão do visitante');
       }
     } catch (error) {
       setVisitorError('Erro ao conectar');
@@ -1258,9 +1258,9 @@ export default function ClientGallery() {
   }
 
   // ðŸ”’ R2 (gallery-rules): selectionLocked decidido no SERVIDOR.
-  // Uma vez travada a seleÃ§Ã£o, o cliente NUNCA renderiza grid â€” sÃ³
-  // pagamento pendente ou preview finalizado. Os OR abaixo sÃ£o apenas
-  // salvaguarda contra payload legado; a fonte real Ã© galleryResponse.
+  // Uma vez travada a seleção, o cliente NUNCA renderiza grid — só
+  // pagamento pendente ou preview finalizado. Os OR abaixo são apenas
+  // salvaguarda contra payload legado; a fonte real é galleryResponse.
   const selectionLocked = Boolean(
     galleryResponse?.selectionLocked
     || galleryResponse?.finalized
@@ -1278,7 +1278,7 @@ export default function ClientGallery() {
     console.debug('[ClientGallery] selectionLocked=true, blockedReason=', blockedReason);
   }
 
-  // Preview finalizada sÃ³ se pago
+  // Preview finalizada só se pago
   if (selectionLocked && hasPaid && galleryResponse?.finalized) {
     return (
       <FinalizedPreviewScreen
@@ -1360,13 +1360,13 @@ export default function ClientGallery() {
               className="text-base leading-relaxed"
               style={{ color: '#5A534A', fontWeight: 400 }}
             >
-              O prazo de acesso Ã  galeria expirou.
+              O prazo de acesso à galeria expirou.
             </p>
             <p
               className="text-sm leading-relaxed"
               style={{ color: '#8A8078', fontWeight: 400 }}
             >
-              Para visualizar novamente, entre em contato com o fotÃ³grafo e solicite a liberaÃ§Ã£o.
+              Para visualizar novamente, entre em contato com o fotógrafo e solicite a liberação.
             </p>
           </div>
 
@@ -1384,11 +1384,11 @@ export default function ClientGallery() {
     );
   }
 
-  // Payment verification now runs silently â€” no blocking screen
+  // Payment verification now runs silently — no blocking screen
 
   // â”€â”€ Contact-collection helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Declarados aqui (antes dos early returns de pagamento) porque
-  // sÃ£o reutilizados dentro dos ramos que renderizam AsaasCheckout,
+  // são reutilizados dentro dos ramos que renderizam AsaasCheckout,
   // PixPaymentScreen e no return final.
   const handleContactCollected = async (data: { email?: string; phone?: string; nome?: string; cpfCnpj?: string }) => {
     try {
@@ -1412,12 +1412,12 @@ export default function ClientGallery() {
         toast.success('Dados salvos. Toque em "Gerar PIX" novamente para continuar.');
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'NÃ£o foi possÃ­vel salvar seus dados. Tente novamente.');
+      toast.error(e instanceof Error ? e.message : 'Não foi possível salvar seus dados. Tente novamente.');
     }
   };
 
   // Handler compartilhado: backend Asaas respondeu 422 MISSING_CPF_CNPJ.
-  // ForÃ§a o modal a exibir o campo CPF mesmo se o cache do gallery-access
+  // Força o modal a exibir o campo CPF mesmo se o cache do gallery-access
   // ainda dizia que estava tudo OK.
   const openMissingCpfModal = () => {
     setForcedMissing({ cpfCnpj: true, cpfRequired: true, provider: 'asaas' });
@@ -1431,7 +1431,7 @@ export default function ClientGallery() {
     ...(forcedMissing || {}),
   };
 
-  // Modal reutilizÃ¡vel â€” montado ao lado de cada early return que
+  // Modal reutilizável — montado ao lado de cada early return que
   // renderiza AsaasCheckout/PixPaymentScreen, para garantir que
   // setContactModalOpen(true) realmente exiba o modal na tela.
   const contactModalNode = (
@@ -1445,7 +1445,7 @@ export default function ClientGallery() {
     />
   );
 
-  // Props compartilhadas para todos os AsaasCheckout: prÃ©-preenchem e persistem dados.
+  // Props compartilhadas para todos os AsaasCheckout: pré-preenchem e persistem dados.
   const payerHintsPrefill = (galleryResponse as any)?.payerHints || undefined;
   const payerMissingFlags = (galleryResponse?.payerHintsMissing as ContactCollectionMissing | undefined)
     ? {
@@ -1465,14 +1465,14 @@ export default function ClientGallery() {
       p_cpf_cnpj: payload.cpfCnpj || null,
     } as any);
     if (error) throw error;
-    // Atualiza o cache local para que prÃ³ximas cobranÃ§as usem os novos dados.
+    // Atualiza o cache local para que próximas cobranças usem os novos dados.
     refetchGallery();
   };
 
 
 
-  // Pending payment screen - travada e nÃ£o paga (fonte: selectionLocked + !hasPaid).
-  // Cobre tambÃ©m o caso awaitingCharge (sem cobranÃ§a viva â†’ botÃ£o "gerar novo link").
+  // Pending payment screen - travada e não paga (fonte: selectionLocked + !hasPaid).
+  // Cobre também o caso awaitingCharge (sem cobrança viva â†’ botão "gerar novo link").
   if (selectionLocked && !hasPaid && !isProcessingPaymentReturn) {
     const pendingPaymentMethod = galleryResponse?.paymentMethod;
     const pendingPixDados = galleryResponse?.pixDados;
@@ -1481,12 +1481,12 @@ export default function ClientGallery() {
     const pendingBgMode = effectiveBackgroundMode;
     const awaitingCharge = Boolean(galleryResponse?.awaitingCharge) || !galleryResponse?.cobrancaId;
 
-    // pendingAction canÃ´nica (backend). Fallback deriva de awaitingCharge/checkoutUrl.
+    // pendingAction canônica (backend). Fallback deriva de awaitingCharge/checkoutUrl.
     const pendingAction = (galleryResponse as any)?.pendingAction as
       | { kind: 'external_redirect' | 'asaas_modal' | 'pix_modal' | 'regenerate'; checkoutUrl?: string; provedor: string }
       | undefined;
 
-    // ApÃ³s regenerar, tenta redirecionar/abrir checkout com o payload novo.
+    // Após regenerar, tenta redirecionar/abrir checkout com o payload novo.
     const routeFromFreshData = (fresh: any) => {
       const freshAction = fresh?.pendingAction;
       const freshCheckoutUrl =
@@ -1524,7 +1524,7 @@ export default function ClientGallery() {
         });
         const result = await response.json().catch(() => ({} as any));
         if (!response.ok || !result?.success) {
-          const msg = result?.error || 'NÃ£o foi possÃ­vel gerar o link agora.';
+          const msg = result?.error || 'Não foi possível gerar o link agora.';
           const code = result?.code ? ` (${result.code})` : '';
           throw new Error(`${msg}${code}`);
         }
@@ -1534,7 +1534,7 @@ export default function ClientGallery() {
 
         // 1) Nada a cobrar â†’ apenas atualiza estado
         if (charge?.code === 'NO_AMOUNT_DUE' || charge?.alreadyPaid) {
-          toast.success('Pagamento jÃ¡ concluÃ­do');
+          toast.success('Pagamento já concluído');
           await refetchGallery();
           return;
         }
@@ -1551,7 +1551,7 @@ export default function ClientGallery() {
           toast.success('Abrindo pagamentoâ€¦');
           const fresh = await refetchGallery();
           if (routeFromFreshData(fresh?.data)) return;
-          // Se por algum motivo os dados frescos nÃ£o bateram, forÃ§a inline mesmo assim.
+          // Se por algum motivo os dados frescos não bateram, força inline mesmo assim.
           setShowInlineCheckout(true);
           return;
         }
@@ -1559,7 +1559,7 @@ export default function ClientGallery() {
         // 4) Fallback: tenta usar o que veio na galeria atualizada
         const fresh = await refetchGallery();
         if (!routeFromFreshData(fresh?.data)) {
-          toast.error('NÃ£o foi possÃ­vel abrir o pagamento. Tente novamente.');
+          toast.error('Não foi possível abrir o pagamento. Tente novamente.');
           console.error('[handleRegenerateCharge] sem rota resolvida', { charge, fresh: fresh?.data });
         }
       } catch (e) {
@@ -1567,10 +1567,10 @@ export default function ClientGallery() {
         const errMsg = e instanceof Error ? e.message : 'Erro ao gerar novo link';
         
         // Auto-heal: se o erro for de valor zerado ou PAYMENT_CREATE_ERROR (indicando
-        // dessincronizaÃ§Ã£o de backend), forÃ§amos um refetch da galeria para corrigir
-        // a UI em vez de travar o usuÃ¡rio.
+        // dessincronização de backend), forçamos um refetch da galeria para corrigir
+        // a UI em vez de travar o usuário.
         if (errMsg.includes('PAYMENT_CREATE_ERROR') || errMsg.toLowerCase().includes('maior que zero') || errMsg.includes('SYNC_REQUIRED')) {
-          toast.info('Sincronizando cobranÃ§a...');
+          toast.info('Sincronizando cobrança...');
           const fresh = await refetchGallery();
           if (routeFromFreshData(fresh?.data)) return;
         } else {
@@ -1579,9 +1579,9 @@ export default function ClientGallery() {
       }
     };
 
-    // Handler unificado do botÃ£o "Ir para pagamento" na PaymentPendingScreen.
+    // Handler unificado do botão "Ir para pagamento" na PaymentPendingScreen.
     const handleResume = async () => {
-      // Se jÃ¡ temos dados de checkout inline (Asaas/PIX), apenas revela o componente.
+      // Se já temos dados de checkout inline (Asaas/PIX), apenas revela o componente.
       if (pendingAction?.kind === 'asaas_modal' && galleryResponse?.asaasCheckoutData) {
         toast.success('Abrindo pagamentoâ€¦');
         setShowInlineCheckout(true);
@@ -1608,7 +1608,7 @@ export default function ClientGallery() {
         window.location.assign(pendingCheckoutUrl);
         return;
       }
-      // Caso a cobranÃ§a viva nÃ£o exista, aciona regeneraÃ§Ã£o (mesmo fluxo do botÃ£o regenerate).
+      // Caso a cobrança viva não exista, aciona regeneração (mesmo fluxo do botão regenerate).
       await handleRegenerateCharge();
     };
 
@@ -1639,7 +1639,7 @@ export default function ClientGallery() {
       }
     };
 
-    // === Checkout inline: sÃ³ renderiza depois que o cliente clica "Ir para pagamento" ===
+    // === Checkout inline: só renderiza depois que o cliente clica "Ir para pagamento" ===
     if (showInlineCheckout) {
       // Asaas transparente
       if (
@@ -1691,8 +1691,8 @@ export default function ClientGallery() {
       // Se caiu aqui sem dados, reseta o flag e mostra a PaymentPendingScreen.
     }
 
-    // === Mapeia todas as aÃ§Ãµes para "resume_modal" (Asaas/PIX) ou externo/regenerate ===
-    // Isso forÃ§a TODOS os provedores a passarem pela PaymentPendingScreen primeiro.
+    // === Mapeia todas as ações para "resume_modal" (Asaas/PIX) ou externo/regenerate ===
+    // Isso força TODOS os provedores a passarem pela PaymentPendingScreen primeiro.
     const screenAction = pendingAction
       ? pendingAction.kind === 'external_redirect'
         ? { kind: 'external_redirect' as const, checkoutUrl: pendingAction.checkoutUrl || '', provedor: pendingAction.provedor }
@@ -1747,7 +1747,7 @@ export default function ClientGallery() {
   // Error state - gallery not found or not available (BUT skip if password/visitor is required)
   if ((galleryError || !gallery) && !requiresPassword && !requiresVisitor) {
     const errorMessage = galleryError?.message || '';
-    const isNotAvailable = errorMessage === 'Galeria nÃ£o disponÃ­vel';
+    const isNotAvailable = errorMessage === 'Galeria não disponível';
     const isPublishing = errorMessage === 'GALLERY_PUBLISHING';
     
     return (
@@ -1765,14 +1765,14 @@ export default function ClientGallery() {
             
             <div>
               <h1 className="text-2xl font-bold mb-2">
-                {isPublishing ? 'Galeria em publicaÃ§Ã£o' : isNotAvailable ? 'Galeria nÃ£o disponÃ­vel' : 'Galeria nÃ£o encontrada'}
+                {isPublishing ? 'Galeria em publicação' : isNotAvailable ? 'Galeria não disponível' : 'Galeria não encontrada'}
               </h1>
               <p className="text-muted-foreground text-sm">
                 {isPublishing 
-                  ? 'A galeria estÃ¡ sendo preparada. Tente novamente em alguns instantes.'
+                  ? 'A galeria está sendo preparada. Tente novamente em alguns instantes.'
                   : isNotAvailable
-                  ? 'Esta galeria ainda nÃ£o estÃ¡ acessÃ­vel. Entre em contato com o fotÃ³grafo.'
-                  : 'Verifique se o link estÃ¡ correto ou entre em contato com o fotÃ³grafo.'}
+                  ? 'Esta galeria ainda não está acessível. Entre em contato com o fotógrafo.'
+                  : 'Verifique se o link está correto ou entre em contato com o fotógrafo.'}
               </p>
             </div>
 
@@ -1830,7 +1830,7 @@ export default function ClientGallery() {
   const valorJaPago = supabaseGallery?.valorTotalVendido || supabaseGallery?.valor_total_vendido || 0;
   
   // Use credit-based progressive pricing calculation:
-  // Formula: valor_a_cobrar = (total_extras Ã— valor_faixa) - valor_jÃ¡_pago
+  // Formula: valor_a_cobrar = (total_extras Ã— valor_faixa) - valor_já_pago
   const { 
     valorUnitario, 
     valorACobrar: extraTotal, 
@@ -1923,17 +1923,17 @@ export default function ClientGallery() {
       valorTotal: resultado.valorACobrar,
     };
 
-    // ðŸ§­ Etapa intermediÃ¡ria "Dados de cobranÃ§a": SÃ“ aparece quando faltar
-    // algum dado (nome/email/whatsapp/CPF) OU quando algum estiver invÃ¡lido.
-    // Quando o cliente jÃ¡ tem tudo preenchido e vÃ¡lido, pulamos direto para
-    // o `confirm-selection` â€” sem tela intermediÃ¡ria.
+    // ðŸ§­ Etapa intermediária "Dados de cobrança": SÓ aparece quando faltar
+    // algum dado (nome/email/whatsapp/CPF) OU quando algum estiver inválido.
+    // Quando o cliente já tem tudo preenchido e válido, pulamos direto para
+    // o `confirm-selection` — sem tela intermediária.
     const saleMode = gallery.saleSettings?.mode;
     const shouldRequestPayment = saleMode === 'sale_with_payment' && payload.valorTotal > 0;
     const hints = (galleryResponse as any)?.payerHints as
       | { fullName?: string | null; email?: string | null; phone?: string | null; cpfCnpj?: string | null }
       | undefined;
     const needsPreCheckout = shouldRequestPayment && !hintsAreComplete(hints);
-    // Guardar payload permite retomar apÃ³s coleta.
+    // Guardar payload permite retomar após coleta.
     setPendingConfirmPayload(payload);
     if (needsPreCheckout) {
       setCurrentStep('pre_checkout_contact');
@@ -1943,10 +1943,10 @@ export default function ClientGallery() {
     confirmMutation.mutate(payload);
   };
 
-  // Submit da etapa "Dados de cobranÃ§a": persiste via RPC e dispara confirm-selection.
+  // Submit da etapa "Dados de cobrança": persiste via RPC e dispara confirm-selection.
   // Regras:
-  //  - Erros de rede/RPC exibem toast claro e NÃƒO avanÃ§am (usuÃ¡rio precisa saber).
-  //  - `cpf_conflict` (o CPF jÃ¡ pertence a outro cliente do mesmo fotÃ³grafo) NÃƒO trava
+  //  - Erros de rede/RPC exibem toast claro e NÃO avançam (usuário precisa saber).
+  //  - `cpf_conflict` (o CPF já pertence a outro cliente do mesmo fotógrafo) NÃO trava
   //    o pagamento: mostramos aviso claro, `galeria_visitantes` foi enriquecido, e
   //    seguimos para o checkout com os valores digitados.
   const handlePreCheckoutSubmit = async (values: {
@@ -1964,30 +1964,30 @@ export default function ClientGallery() {
       } as any);
 
       if (error) {
-        // Duplicidade real (nÃ£o deveria mais ocorrer com a RPC atualizada, mas mantemos guard).
+        // Duplicidade real (não deveria mais ocorrer com a RPC atualizada, mas mantemos guard).
         if ((error as any).code === '23505') {
           console.warn('[handlePreCheckoutSubmit] cpf duplicado (fallback):', error);
           toast.warning(
-            'Este CPF/CNPJ jÃ¡ estÃ¡ cadastrado em outro cliente do fotÃ³grafo. ' +
-            'Vamos usar seus dados apenas nesta cobranÃ§a.'
+            'Este CPF/CNPJ já está cadastrado em outro cliente do fotógrafo. ' +
+            'Vamos usar seus dados apenas nesta cobrança.'
           );
         } else {
           console.error('[handlePreCheckoutSubmit] rpc error:', error);
           toast.error(
             (error as any).message
-              ? `NÃ£o foi possÃ­vel salvar seus dados: ${(error as any).message}`
-              : 'NÃ£o foi possÃ­vel salvar seus dados. Verifique sua conexÃ£o e tente novamente.'
+              ? `Não foi possível salvar seus dados: ${(error as any).message}`
+              : 'Não foi possível salvar seus dados. Verifique sua conexão e tente novamente.'
           );
-          return; // Erros reais bloqueiam â€” usuÃ¡rio precisa ver o problema.
+          return; // Erros reais bloqueiam — usuário precisa ver o problema.
         }
       } else if ((data as any)?.cpf_conflict) {
         toast.warning(
-          'Este CPF/CNPJ jÃ¡ estÃ¡ vinculado a outro cadastro do fotÃ³grafo. ' +
-          'Vamos usar seus dados apenas nesta cobranÃ§a.'
+          'Este CPF/CNPJ já está vinculado a outro cadastro do fotógrafo. ' +
+          'Vamos usar seus dados apenas nesta cobrança.'
         );
       }
 
-      // Reidrata payerHints antes de submeter â€” evita loop de "faltando dado".
+      // Reidrata payerHints antes de submeter — evita loop de "faltando dado".
       await refetchGallery();
       if (pendingConfirmPayload) {
         confirmMutation.mutate(pendingConfirmPayload);
@@ -2009,9 +2009,9 @@ export default function ClientGallery() {
   const welcomeMessage = gallery.settings.welcomeMessage
     .replace('{cliente}', (gallery.clientName || 'Cliente').split(' ')[0])
     .replace('{sessao}', gallery.sessionName)
-    .replace('{estudio}', galleryResponse?.studioSettings?.studio_name || 'EstÃºdio');
+    .replace('{estudio}', galleryResponse?.studioSettings?.studio_name || 'Estúdio');
 
-  // âœ¨ PRIMEIRA VERIFICAÃ‡ÃƒO: Galeria confirmada = modo read-only
+  // âœ¨ PRIMEIRA VERIFICAÇÃO: Galeria confirmada = modo read-only
   // Deve vir ANTES de showWelcome para garantir que galerias confirmadas
   // sempre mostrem apenas fotos selecionadas, independente do estado de welcome
   if (isConfirmed && currentStep !== 'confirmation' && currentStep !== 'payment') {
@@ -2032,7 +2032,7 @@ export default function ClientGallery() {
             {galleryResponse?.studioSettings?.studio_logo_url && (
               <img 
                 src={galleryResponse.studioSettings.studio_logo_url} 
-                alt={galleryResponse?.studioSettings?.studio_name || 'Logo do estÃºdio'} 
+                alt={galleryResponse?.studioSettings?.studio_name || 'Logo do estúdio'} 
                 className="h-[100px] sm:h-[120px] md:h-[150px] max-w-[280px] sm:max-w-[360px] md:max-w-[450px] object-contain mb-8" 
               />
             )}
@@ -2042,7 +2042,7 @@ export default function ClientGallery() {
             </div>
 
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              SeleÃ§Ã£o Confirmada
+              Seleção Confirmada
             </h2>
 
             <p className="text-sm text-muted-foreground mb-6">
@@ -2059,7 +2059,7 @@ export default function ClientGallery() {
             )}
 
             <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-              Sua galeria jÃ¡ foi finalizada. Para acessÃ¡-la novamente, entre em contato com o(a) fotÃ³grafo(a).
+              Sua galeria já foi finalizada. Para acessá-la novamente, entre em contato com o(a) fotógrafo(a).
             </p>
           </div>
         </div>
@@ -2092,7 +2092,7 @@ export default function ClientGallery() {
             >
               {gallery.sessionName}
             </p>
-            <p className="text-xs text-muted-foreground">SeleÃ§Ã£o confirmada</p>
+            <p className="text-xs text-muted-foreground">Seleção confirmada</p>
           </div>
         </header>
         
@@ -2102,12 +2102,12 @@ export default function ClientGallery() {
             <div className="flex items-center justify-center gap-2 mb-2">
               <Check className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-semibold text-primary">
-                SeleÃ§Ã£o Confirmada!
+                Seleção Confirmada!
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              VocÃª selecionou {confirmedSelectedPhotos.length} fotos. 
-              Para alteraÃ§Ãµes, entre em contato com o fotÃ³grafo.
+              Você selecionou {confirmedSelectedPhotos.length} fotos. 
+              Para alterações, entre em contato com o fotógrafo.
             </p>
             
             {confirmedSelectedPhotos.length > 0 && (
@@ -2210,7 +2210,7 @@ export default function ClientGallery() {
     setShowWelcome(false);
   }
 
-  // Pre-checkout contact step â€” universal para todos provedores
+  // Pre-checkout contact step — universal para todos provedores
   if (currentStep === 'pre_checkout_contact' && pendingConfirmPayload) {
     const hints = (galleryResponse as any)?.payerHints as
       | { fullName?: string | null; email?: string | null; phone?: string | null; cpfCnpj?: string | null }
@@ -2370,7 +2370,7 @@ export default function ClientGallery() {
     );
   }
 
-  // Album selection screen â€” shown when gallery has folders and user hasn't picked one
+  // Album selection screen — shown when gallery has folders and user hasn't picked one
   if (hasFolders && folderViewMode === 'albums' && activeFolderId === null) {
     return (
       <div 
@@ -2514,7 +2514,7 @@ export default function ClientGallery() {
       {visitorName && (
         <div className="bg-primary/5 border-b border-primary/10 px-4 py-2 text-center">
           <p className="text-xs text-muted-foreground">
-            OlÃ¡, <span className="font-medium text-foreground">{visitorName}</span> â€” vocÃª estÃ¡ selecionando suas fotos
+            Olá, <span className="font-medium text-foreground">{visitorName}</span> — você está selecionando suas fotos
           </p>
         </div>
       )}
@@ -2639,13 +2639,13 @@ export default function ClientGallery() {
       <AlertDialog open={showPartialSelectionDialog} onOpenChange={setShowPartialSelectionDialog}>
         <AlertDialogContent style={themeStyles}>
           <AlertDialogHeader>
-            <AlertDialogTitle>SeleÃ§Ã£o abaixo do pacote</AlertDialogTitle>
+            <AlertDialogTitle>Seleção abaixo do pacote</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Seu pacote inclui <strong>{gallery?.includedPhotos}</strong> fotos, mas vocÃª selecionou apenas{' '}
+                Seu pacote inclui <strong>{gallery?.includedPhotos}</strong> fotos, mas você selecionou apenas{' '}
                 <strong>{localPhotos.filter(p => p.isSelected).length}</strong>.
               </p>
-              <p>As fotos nÃ£o selecionadas nÃ£o poderÃ£o ser recuperadas depois.</p>
+              <p>As fotos não selecionadas não poderão ser recuperadas depois.</p>
               <p>Deseja confirmar mesmo assim?</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -2658,7 +2658,7 @@ export default function ClientGallery() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Contact collection modal â€” coleta email/telefone/nome/CPF antes do redirect ao checkout */}
+      {/* Contact collection modal — coleta email/telefone/nome/CPF antes do redirect ao checkout */}
       {contactModalNode}
     </div>
   );

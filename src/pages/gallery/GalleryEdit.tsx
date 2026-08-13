@@ -147,8 +147,8 @@ export default function GalleryEdit() {
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [pricingDirty, setPricingDirty] = useState(false);
 
-  // Modo de cobranÃ§a para a UI colapsÃ¡vel ('studio' | 'fixed' | 'packages').
-  // Derivado inicialmente de regrasOverride + pricingModel na hidrataÃ§Ã£o.
+  // Modo de cobrança para a UI colapsável ('studio' | 'fixed' | 'packages').
+  // Derivado inicialmente de regrasOverride + pricingModel na hidratação.
   type BillingMode = 'studio' | 'fixed' | 'packages';
   const [billingMode, setBillingMode] = useState<BillingMode>('studio');
 
@@ -156,7 +156,7 @@ export default function GalleryEdit() {
     if (mode === billingMode) return;
     setBillingMode(mode);
     if (mode === 'studio') {
-      // Restaurar regras da sessÃ£o dispara diÃ¡logo (mesma lÃ³gica antiga do link).
+      // Restaurar regras da sessão dispara diálogo (mesma lógica antiga do link).
       if (isLunariLinked && regrasOverride) {
         setRestoreDialogOpen(true);
       }
@@ -167,7 +167,7 @@ export default function GalleryEdit() {
       setPricingModel('fixed');
       setPricingDirty(true);
     } else {
-      // packages: se ainda nÃ£o houver 2 faixas, semear com 2 iniciais.
+      // packages: se ainda não houver 2 faixas, semear com 2 iniciais.
       if (discountPackages.length < 2) {
         const base = fotosIncluidas || 0;
         setDiscountPackages([
@@ -234,7 +234,7 @@ export default function GalleryEdit() {
       }
       const override = gallery.regrasOverride ?? false;
       setRegrasOverride(override);
-      // Deriva billingMode inicial: vinculada e sem override => studio; senÃ£o segue pricingModel.
+      // Deriva billingMode inicial: vinculada e sem override => studio; senão segue pricingModel.
       const linked = !!gallery.sessionId;
       if (linked && !override) {
         setBillingMode('studio');
@@ -362,7 +362,7 @@ export default function GalleryEdit() {
     }
   };
 
-  // Loading state â€” only block on initial load when no data exists yet.
+  // Loading state — only block on initial load when no data exists yet.
   // Transient refetches (e.g. after auth token refresh) must NOT unmount
   // the page, otherwise active uploads get destroyed.
   const isInitialLoading = (isSupabaseLoading && !gallery) || (isClientsLoading && clients.length === 0);
@@ -383,13 +383,13 @@ export default function GalleryEdit() {
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-bold mb-2">
-          Galeria nÃ£o encontrada
+          Galeria não encontrada
         </h2>
         <p className="text-muted-foreground mb-4">
-          A galeria solicitada nÃ£o existe ou foi removida.
+          A galeria solicitada não existe ou foi removida.
         </p>
         <Button variant="outline" onClick={() => navigate('/app/gallery/dashboard')}>
-          Voltar Ã s Galerias
+          Voltar às Galerias
         </Button>
       </div>
     );
@@ -400,16 +400,16 @@ export default function GalleryEdit() {
                         gallery.status === 'expirado' ||
                         gallery.status === 'expirada';
 
-  // Galeria concluÃ­da: bloqueia ediÃ§Ã£o de parÃ¢metros que afetam cobranÃ§a.
-  // Reativar a seleÃ§Ã£o libera novamente esses campos.
+  // Galeria concluída: bloqueia edição de parâmetros que afetam cobrança.
+  // Reativar a seleção libera novamente esses campos.
   const isBillingLocked = (gallery.statusSelecao === 'selecao_completa' || gallery.finalizedAt != null) && gallery.status !== 'selecao_iniciada';
 
-  // Galeria vinculada ao Lunari Studio (sessÃ£o do projeto Studio).
+  // Galeria vinculada ao Lunari Studio (sessão do projeto Studio).
   const isLunariLinked = !!gallery.sessionId;
 
-  // MÃ­nimo permitido para "Fotos IncluÃ­das": nÃ£o pode ficar abaixo de
-  // (selecionadas - extras jÃ¡ vendidas). Reduzir abaixo disso transformaria
-  // fotos jÃ¡ cobradas como "incluÃ­das" em extras a recobrar.
+  // Mínimo permitido para "Fotos Incluídas": não pode ficar abaixo de
+  // (selecionadas - extras já vendidas). Reduzir abaixo disso transformaria
+  // fotos já cobradas como "incluídas" em extras a recobrar.
   const minFotosIncluidasPermitido = Math.max(
     0,
     (gallery.fotosSelecionadas ?? 0) - (gallery.totalFotosExtrasVendidas ?? 0)
@@ -419,8 +419,8 @@ export default function GalleryEdit() {
     && (gallery.totalFotosExtrasVendidas ?? 0) > 0
     && fotosIncluidas < minFotosIncluidasPermitido;
 
-  // Computa regras_congeladas final + override quando hÃ¡ mudanÃ§a na precificaÃ§Ã£o.
-  // Em galeria concluÃ­da (billing lock), mantÃ©m regras originais.
+  // Computa regras_congeladas final + override quando há mudança na precificação.
+  // Em galeria concluída (billing lock), mantém regras originais.
   const computeFinalRegras = (): {
     regras: RegrasCongeladas | null | undefined;
     override: boolean | undefined;
@@ -443,7 +443,7 @@ export default function GalleryEdit() {
         gallery.nomePacote || undefined,
       );
     } else {
-      // modelo fixo â€” preserva o resto do JSONB existente quando possÃ­vel.
+      // modelo fixo — preserva o resto do JSONB existente quando possível.
       const base = gallery.regrasCongeladas || ({} as RegrasCongeladas);
       finalRegras = {
         ...base,
@@ -459,7 +459,7 @@ export default function GalleryEdit() {
       };
     }
 
-    // Override sÃ³ faz sentido quando hÃ¡ sessÃ£o vinculada.
+    // Override só faz sentido quando há sessão vinculada.
     const override = isLunariLinked ? true : regrasOverride;
     return { regras: finalRegras, override };
   };
@@ -487,7 +487,7 @@ export default function GalleryEdit() {
           clienteNome,
           clienteEmail,
           clienteTelefone: cleanPhone || undefined,
-          // Quando a galeria estÃ¡ concluÃ­da, preserva os parÃ¢metros de cobranÃ§a originais.
+          // Quando a galeria está concluída, preserva os parâmetros de cobrança originais.
           nomePacote: isBillingLocked ? (gallery.nomePacote || undefined) : (nomePacote || undefined),
           fotosIncluidas: isBillingLocked ? gallery.fotosIncluidas : fotosIncluidas,
           valorFotoExtra: isBillingLocked ? gallery.valorFotoExtra : valorFotoExtra,
@@ -518,7 +518,7 @@ export default function GalleryEdit() {
 
   const handleRestoreSessionRules = async () => {
     try {
-      // Limpa override e regras_congeladas â€” o trigger BEFORE UPDATE re-popula da sessÃ£o.
+      // Limpa override e regras_congeladas — o trigger BEFORE UPDATE re-popula da sessão.
       await updateGallery({
         id: gallery.id,
         data: {
@@ -528,11 +528,11 @@ export default function GalleryEdit() {
       });
       await queryClient.invalidateQueries({ queryKey: ['galleries'] });
       await queryClient.refetchQueries({ queryKey: ['galleries'] });
-      toast.success('Regras da sessÃ£o restauradas');
+      toast.success('Regras da sessão restauradas');
       setRestoreDialogOpen(false);
     } catch (error) {
       console.error('Error restoring session rules:', error);
-      toast.error('Erro ao restaurar regras da sessÃ£o');
+      toast.error('Erro ao restaurar regras da sessão');
     }
   };
 
@@ -540,13 +540,13 @@ export default function GalleryEdit() {
   const handleSave = async () => {
     if (fotosIncluidasAbaixoDoMinimo) {
       toast.error(
-        `NÃ£o Ã© possÃ­vel reduzir as fotos incluÃ­das abaixo de ${minFotosIncluidasPermitido}: existem fotos jÃ¡ pagas como extras nesta galeria.`
+        `Não é possível reduzir as fotos incluídas abaixo de ${minFotosIncluidasPermitido}: existem fotos já pagas como extras nesta galeria.`
       );
       return;
     }
 
     if (!isBillingLocked && pricingModel === 'packages' && discountPackages.length < 2) {
-      toast.error('Configure pelo menos 2 faixas para o modelo "Pacotes com descontos" ou troque para "PreÃ§o Ãºnico".');
+      toast.error('Configure pelo menos 2 faixas para o modelo "Pacotes com descontos" ou troque para "Preço único".');
       return;
     }
 
@@ -621,11 +621,11 @@ export default function GalleryEdit() {
     try {
       await deletePhotos({ photoIds: ids } as any);
       setLocalPhotoCount(prev => Math.max(0, (prev || ids.length) - ids.length));
-      toast.success(`${ids.length} foto${ids.length !== 1 ? 's' : ''} excluÃ­da${ids.length !== 1 ? 's' : ''}`);
+      toast.success(`${ids.length} foto${ids.length !== 1 ? 's' : ''} excluída${ids.length !== 1 ? 's' : ''}`);
       setSelectedIds(new Set());
       setConfirmBulkDeleteOpen(false);
     } catch (err) {
-      // Toast jÃ¡ tratado no hook; manter seleÃ§Ã£o e modal aberto para retry
+      // Toast já tratado no hook; manter seleção e modal aberto para retry
     }
   };
 
@@ -663,16 +663,16 @@ export default function GalleryEdit() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Image className="h-5 w-5" />
-                InformaÃ§Ãµes da Galeria
+                Informações da Galeria
               </CardTitle>
               <CardDescription>
-                Dados bÃ¡sicos e configuraÃ§Ãµes de preÃ§o
+                Dados básicos e configurações de preço
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Fonte do TÃ­tulo */}
+              {/* Fonte do Título */}
               <div className="space-y-2">
-                <Label>Fonte do TÃ­tulo</Label>
+                <Label>Fonte do Título</Label>
                 <FontSelect 
                   value={sessionFont} 
                   onChange={setSessionFont} 
@@ -685,12 +685,12 @@ export default function GalleryEdit() {
               {/* Nome + Pacote */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="nomeSessao">Nome da SessÃ£o</Label>
+                  <Label htmlFor="nomeSessao">Nome da Sessão</Label>
                   <Input
                     id="nomeSessao"
                     value={nomeSessao}
                     onChange={(e) => setNomeSessao(e.target.value)}
-                    placeholder="Ex: Ensaio FamÃ­lia Silva"
+                    placeholder="Ex: Ensaio Família Silva"
                   />
                 </div>
                 
@@ -756,7 +756,7 @@ export default function GalleryEdit() {
                     placeholder="(00) 00000-0000"
                   />
                   <p className="text-xs text-muted-foreground">
-                    NecessÃ¡rio para abrir a conversa direta com o cliente no WhatsApp.
+                    Necessário para abrir a conversa direta com o cliente no WhatsApp.
                   </p>
                 </div>
               </div>
@@ -800,15 +800,15 @@ export default function GalleryEdit() {
             </CardContent>
           </Card>
 
-          {/* ============ Card: Regras de CobranÃ§a ============ */}
+          {/* ============ Card: Regras de Cobrança ============ */}
           <Card className="glass">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Regras de CobranÃ§a
+                Regras de Cobrança
               </CardTitle>
               <CardDescription>
-                Como esta galeria calcula fotos incluÃ­das e extras
+                Como esta galeria calcula fotos incluídas e extras
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -816,9 +816,9 @@ export default function GalleryEdit() {
                 <div className="glass rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex gap-3">
                   <Lock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                   <div className="space-y-1 text-sm">
-                    <p className="font-medium text-foreground">Galeria concluÃ­da</p>
+                    <p className="font-medium text-foreground">Galeria concluída</p>
                     <p className="text-muted-foreground">
-                      Os parÃ¢metros de cobranÃ§a estÃ£o bloqueados para preservar o histÃ³rico de pagamentos. Para alterÃ¡-los, <span className="font-medium text-foreground">reative a seleÃ§Ã£o</span> pelo botÃ£o "Reativar".
+                      Os parâmetros de cobrança estão bloqueados para preservar o histórico de pagamentos. Para alterá-los, <span className="font-medium text-foreground">reative a seleção</span> pelo botão "Reativar".
                     </p>
                   </div>
                 </div>
@@ -857,14 +857,14 @@ export default function GalleryEdit() {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Esta galeria utiliza automaticamente as regras da sessÃ£o original: fotos incluÃ­das, valor extra e tabela progressiva. Se vocÃª criar regras personalizadas abaixo, elas passarÃ£o a valer apenas nesta galeria â€” a sessÃ£o do cliente no Lunari Studio nÃ£o Ã© alterada. VocÃª pode voltar ao modo sincronizado a qualquer momento.
+                        Esta galeria utiliza automaticamente as regras da sessão original: fotos incluídas, valor extra e tabela progressiva. Se você criar regras personalizadas abaixo, elas passarão a valer apenas nesta galeria — a sessão do cliente no Lunari Studio não é alterada. Você pode voltar ao modo sincronizado a qualquer momento.
                       </p>
                     </div>
                   </div>
                 </button>
               )}
 
-              {/* Modo: PreÃ§o Ãºnico (colapsÃ¡vel) */}
+              {/* Modo: Preço único (colapsável) */}
               <Collapsible open={billingMode === 'fixed'}>
                 <CollapsibleTrigger asChild>
                   <button
@@ -889,7 +889,7 @@ export default function GalleryEdit() {
                         )} />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">PreÃ§o Ãºnico por foto</p>
+                        <p className="font-medium">Preço único por foto</p>
                         <p className="text-xs text-muted-foreground">Um valor fixo por foto extra</p>
                       </div>
                       <ChevronDown className={cn(
@@ -902,7 +902,7 @@ export default function GalleryEdit() {
                 <CollapsibleContent className="pt-3 pl-1 pr-1">
                   <div className="grid gap-4 md:grid-cols-2 rounded-lg border border-border/50 bg-muted/20 p-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fotosIncluidasFixed">Fotos IncluÃ­das</Label>
+                      <Label htmlFor="fotosIncluidasFixed">Fotos Incluídas</Label>
                       <Input
                         id="fotosIncluidasFixed"
                         type="number"
@@ -917,7 +917,7 @@ export default function GalleryEdit() {
                       />
                       {fotosIncluidasAbaixoDoMinimo && (
                         <p className="text-xs text-destructive">
-                          MÃ­nimo permitido: <span className="font-medium">{minFotosIncluidasPermitido}</span> â€” existem fotos extras jÃ¡ pagas.
+                          Mínimo permitido: <span className="font-medium">{minFotosIncluidasPermitido}</span> — existem fotos extras já pagas.
                         </p>
                       )}
                     </div>
@@ -940,7 +940,7 @@ export default function GalleryEdit() {
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* Modo: Pacotes com descontos (colapsÃ¡vel) */}
+              {/* Modo: Pacotes com descontos (colapsável) */}
               <Collapsible open={billingMode === 'packages'}>
                 <CollapsibleTrigger asChild>
                   <button
@@ -966,7 +966,7 @@ export default function GalleryEdit() {
                       </div>
                       <div className="flex-1">
                         <p className="font-medium">Desconto progressivo personalizado</p>
-                        <p className="text-xs text-muted-foreground">PreÃ§o diferente por faixa de quantidade</p>
+                        <p className="text-xs text-muted-foreground">Preço diferente por faixa de quantidade</p>
                       </div>
                       <ChevronDown className={cn(
                         'h-4 w-4 text-muted-foreground transition-transform',
@@ -978,7 +978,7 @@ export default function GalleryEdit() {
                 <CollapsibleContent className="pt-3 pl-1 pr-1 space-y-4">
                   <div className="grid gap-4 md:grid-cols-2 rounded-lg border border-border/50 bg-muted/20 p-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fotosIncluidasPkg">Fotos IncluÃ­das</Label>
+                      <Label htmlFor="fotosIncluidasPkg">Fotos Incluídas</Label>
                       <Input
                         id="fotosIncluidasPkg"
                         type="number"
@@ -993,7 +993,7 @@ export default function GalleryEdit() {
                       />
                       {fotosIncluidasAbaixoDoMinimo && (
                         <p className="text-xs text-destructive">
-                          MÃ­nimo permitido: <span className="font-medium">{minFotosIncluidasPermitido}</span>.
+                          Mínimo permitido: <span className="font-medium">{minFotosIncluidasPermitido}</span>.
                         </p>
                       )}
                     </div>
@@ -1056,10 +1056,10 @@ export default function GalleryEdit() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5" />
-                Prazo de SeleÃ§Ã£o
+                Prazo de Seleção
               </CardTitle>
               <CardDescription>
-                Defina atÃ© quando o cliente pode fazer a seleÃ§Ã£o
+                Defina até quando o cliente pode fazer a seleção
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1328,7 +1328,7 @@ export default function GalleryEdit() {
               <CardHeader>
                 <CardTitle>Reativar Galeria</CardTitle>
                 <CardDescription>
-                  Permite que o cliente faÃ§a novas seleÃ§Ãµes
+                  Permite que o cliente faça novas seleções
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1375,9 +1375,9 @@ export default function GalleryEdit() {
       <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restaurar regras da sessÃ£o?</AlertDialogTitle>
+            <AlertDialogTitle>Restaurar regras da sessão?</AlertDialogTitle>
             <AlertDialogDescription>
-              As regras personalizadas desta galeria serÃ£o descartadas e a galeria voltarÃ¡ a seguir os valores da sessÃ£o do Lunari Studio (fotos incluÃ­das, valor da foto extra e descontos progressivos). Esta aÃ§Ã£o nÃ£o afeta vendas jÃ¡ realizadas.
+              As regras personalizadas desta galeria serão descartadas e a galeria voltará a seguir os valores da sessão do Lunari Studio (fotos incluídas, valor da foto extra e descontos progressivos). Esta ação não afeta vendas já realizadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1402,7 +1402,7 @@ export default function GalleryEdit() {
               Excluir {selectedIds.size} foto{selectedIds.size !== 1 ? 's' : ''}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta aÃ§Ã£o nÃ£o pode ser desfeita. As fotos serÃ£o removidas permanentemente da galeria e do armazenamento.
+              Esta ação não pode ser desfeita. As fotos serão removidas permanentemente da galeria e do armazenamento.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1440,7 +1440,7 @@ export default function GalleryEdit() {
           className="shadow-2xl gap-2 rounded-full px-6 h-12 backdrop-blur-xl"
         >
           {isUpdating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {isUpdating ? 'Salvando...' : 'Salvar AlteraÃ§Ãµes'}
+          {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
         </Button>
       </div>
     </div>

@@ -12,17 +12,17 @@ export default function GalleryPlaceholder() {
             Lunari Gallery
           </h1>
           <p className="text-muted-foreground">
-            Sua ferramenta de seleÃ§Ã£o e entrega de imagens.
+            Sua ferramenta de seleção e entrega de imagens.
           </p>
         </div>
       </div>
 
       <Card className="border-dashed shadow-none bg-muted/30">
         <CardHeader>
-          <CardTitle>MÃ³dulo em breve</CardTitle>
+          <CardTitle>Módulo em breve</CardTitle>
           <CardDescription>
-            A integraÃ§Ã£o da Gallery com o ecossistema Lunari estÃ¡ sendo preparada. 
-            Em breve vocÃª poderÃ¡ gerenciar suas galerias e seleÃ§Ãµes diretamente por aqui.
+            A integração da Gallery com o ecossistema Lunari está sendo preparada. 
+            Em breve você poderá gerenciar suas galerias e seleções diretamente por aqui.
           </CardDescription>
         </CardHeader>
         <CardContent>

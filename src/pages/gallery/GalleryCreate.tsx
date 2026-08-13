@@ -76,15 +76,15 @@ function getInitialExtraPrice(regras: RegrasCongeladas | null): number {
 }
 
 /**
- * Resolve o preÃ§o unitÃ¡rio e regras congeladas para criaÃ§Ã£o assistida (com session_id).
+ * Resolve o preço unitário e regras congeladas para criação assistida (com session_id).
  *
- * Regra de precedÃªncia (ordem de freshness):
- *   1. URL `preco_da_foto_extra` (gerada no clique de "Criar galeria" no GestÃ£o â€” mais fresca)
+ * Regra de precedência (ordem de freshness):
+ *   1. URL `preco_da_foto_extra` (gerada no clique de "Criar galeria" no Gestão — mais fresca)
  *   2. JSONB `regras.pacote.valorFotoExtra` (pode estar stale se o trigger falhar)
  *
- * Quando hÃ¡ divergÃªncia > R$ 0,01 e a URL traz valor vÃ¡lido (>0), a URL vence:
- * - patcheia o JSONB em memÃ³ria para a galeria nascer jÃ¡ consistente,
- * - emite warning para telemetria de divergÃªncia (problemas no trigger / race conditions).
+ * Quando há divergência > R$ 0,01 e a URL traz valor válido (>0), a URL vence:
+ * - patcheia o JSONB em memória para a galeria nascer já consistente,
+ * - emite warning para telemetria de divergência (problemas no trigger / race conditions).
  */
 function resolveAssistedExtraPrice(
   regras: RegrasCongeladas | null,
@@ -101,17 +101,17 @@ function resolveAssistedExtraPrice(
       : undefined;
 
   // Apenas modelo "fixo" (ou ausente) deve sofrer override pela URL.
-  // Modelos "global" / "categoria" usam tabelas de faixas â€” a URL nÃ£o tem como descrevÃª-las.
+  // Modelos "global" / "categoria" usam tabelas de faixas — a URL não tem como descrevê-las.
   const modelo = regras.precificacaoFotoExtra?.modelo;
   const allowUrlOverride = !modelo || modelo === 'fixo';
 
   if (allowUrlOverride && valorUrl !== undefined && Math.abs(valorUrl - valorJsonb) > 0.01) {
     console.warn(
-      '[GalleryCreate] DivergÃªncia preco_da_foto_extra: URL=',
+      '[GalleryCreate] Divergência preco_da_foto_extra: URL=',
       valorUrl,
       'JSONB=',
       valorJsonb,
-      'â€” usando URL (mais fresca)'
+      '— usando URL (mais fresca)'
     );
     const patchedRegras: RegrasCongeladas = {
       ...regras,
@@ -133,7 +133,7 @@ const steps = [{
   icon: Tag
 }, {
   id: 3,
-  name: 'ConfiguraÃ§Ãµes',
+  name: 'Configurações',
   icon: Settings
 }, {
   id: 4,
@@ -145,7 +145,7 @@ const steps = [{
   icon: MessageSquare
 }, {
   id: 6,
-  name: 'RevisÃ£o',
+  name: 'Revisão',
   icon: Check
 }];
 export default function GalleryCreate() {
@@ -169,7 +169,7 @@ export default function GalleryCreate() {
     isLoading: isLoadingPackages
   } = useGestaoPackages();
 
-  // Assisted mode: has GestÃ£o params AND user has integration
+  // Assisted mode: has Gestão params AND user has integration
   const isAssistedMode = hasGestaoSession && hasGestaoIntegration;
   const {
     clients,
@@ -253,7 +253,7 @@ export default function GalleryCreate() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
-  // Aviso: sessÃ£o jÃ¡ teve uma galeria excluÃ­da (recriaÃ§Ã£o)
+  // Aviso: sessão já teve uma galeria excluída (recriação)
   const [priorDeletion, setPriorDeletion] = useState<{
     nome_sessao: string | null;
     deleted_at: string;
@@ -264,16 +264,16 @@ export default function GalleryCreate() {
 
   // Folder management
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  // Frozen pricing rules from GestÃ£o session (for PRO+Gallery users)
+  // Frozen pricing rules from Gestão session (for PRO+Gallery users)
   const [regrasCongeladas, setRegrasCongeladas] = useState<RegrasCongeladas | null>(null);
   const [isLoadingRegras, setIsLoadingRegras] = useState(false);
   const [regrasLoaded, setRegrasLoaded] = useState(false);
-  // cliente_id resolvido server-side via clientes_sessoes (fonte primÃ¡ria â€” independe da URL)
+  // cliente_id resolvido server-side via clientes_sessoes (fonte primária — independe da URL)
   const [sessionClienteId, setSessionClienteId] = useState<string | null>(null);
 
-  // Override pricing: removido. A sessÃ£o (Lunari Studio) Ã© a fonte Ãºnica
-  // do valor da foto extra. Para alterar, edite no editor da galeria apÃ³s
-  // criar â€” a mudanÃ§a propaga para a sessÃ£o.
+  // Override pricing: removido. A sessão (Lunari Studio) é a fonte única
+  // do valor da foto extra. Para alterar, edite no editor da galeria após
+  // criar — a mudança propaga para a sessão.
   const overridePricing = false;
   const setOverridePricing = (_v: boolean) => {};
 
@@ -319,7 +319,7 @@ export default function GalleryCreate() {
       
       // Call edge function directly to batch-delete all photos
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('NÃ£o autenticado');
+      if (!session) throw new Error('Não autenticado');
       const response = await fetch(
         `https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/delete-photos`,
         {
@@ -374,7 +374,7 @@ export default function GalleryCreate() {
   // Read global watermark settings from photographer_accounts
   const { settings: watermarkGlobalSettings } = useWatermarkSettings();
 
-  // Tracks whether the user manually changed defaults â€” prevents async settings
+  // Tracks whether the user manually changed defaults — prevents async settings
   // from overwriting user choices when they load after the user already interacted.
   const userTouchedSaleModeRef = useRef(false);
   const userTouchedImageResizeRef = useRef(false);
@@ -430,9 +430,9 @@ export default function GalleryCreate() {
       }
 
       // Hydrate sale mode default from photographer settings.
-      // Priority: GestÃ£o URL param > userTouched > settings default.
-      // (Removed `!hasGestaoParams` guard â€” defaults must apply even in assisted mode
-      // when GestÃ£o did not send `modelo_de_cobranca`.)
+      // Priority: Gestão URL param > userTouched > settings default.
+      // (Removed `!hasGestaoParams` guard — defaults must apply even in assisted mode
+      // when Gestão did not send `modelo_de_cobranca`.)
       if (
         !userTouchedSaleModeRef.current &&
         !gestaoParams?.modelo_de_cobranca &&
@@ -457,7 +457,7 @@ export default function GalleryCreate() {
         setChargeType(settings.defaultChargeType);
       }
 
-      // Hydrate pricing model default â€” GestÃ£o's `modelo_de_preco` has priority
+      // Hydrate pricing model default — Gestão's `modelo_de_preco` has priority
       if (
         !userTouchedPricingModelRef.current &&
         !gestaoParams?.modelo_de_preco &&
@@ -489,7 +489,7 @@ export default function GalleryCreate() {
     setWatermarkOpacity(watermarkGlobalSettings.opacity);
   }, [watermarkGlobalSettings]);
 
-  // Fetch frozen pricing rules from GestÃ£o session
+  // Fetch frozen pricing rules from Gestão session
   // Now fetches ALWAYS when session_id is present, regardless of hasGestaoIntegration
   useEffect(() => {
     const sessionId = gestaoParams?.session_id;
@@ -543,7 +543,7 @@ export default function GalleryCreate() {
     fetchSessionData();
   }, [gestaoParams?.session_id]);
 
-  // Checa se a sessÃ£o jÃ¡ teve uma galeria excluÃ­da anteriormente
+  // Checa se a sessão já teve uma galeria excluída anteriormente
   useEffect(() => {
     const sessionId = gestaoParams?.session_id;
     if (!sessionId) return;
@@ -561,7 +561,7 @@ export default function GalleryCreate() {
 
   // NEW: Sync includedPhotos, packageName, sessionName from regrasCongeladas
   // This runs AFTER regrasCongeladas is loaded to ensure correct values from frozen rules
-  // regrasCongeladas.pacote.fotosIncluidas is the SOURCE OF TRUTH for GestÃ£o sessions
+  // regrasCongeladas.pacote.fotosIncluidas is the SOURCE OF TRUTH for Gestão sessions
   useEffect(() => {
     // Only run when regras are loaded and we have a session
     if (!regrasLoaded || !regrasCongeladas || !gestaoParams?.session_id) return;
@@ -575,16 +575,16 @@ export default function GalleryCreate() {
       setIncludedPhotos(pacote.fotosIncluidas);
     }
 
-    // Package name from frozen rules â€” sÃ³ preenche se o usuÃ¡rio ainda nÃ£o tocou no campo.
+    // Package name from frozen rules — só preenche se o usuário ainda não tocou no campo.
     // Evita loop de re-preenchimento ao apagar o valor.
     if (pacote?.nome && !userTouchedPackageNameRef.current && !packageName) {
       console.log('ðŸ”— Syncing packageName from regrasCongeladas:', pacote.nome);
       setPackageName(pacote.nome);
     }
 
-    // Nome da sessÃ£o NÃƒO Ã© auto-preenchido em modo assistido (decisÃ£o de UX).
-    // O fotÃ³grafo deve nomear a sessÃ£o manualmente. `pacote.categoria` fica sÃ³
-    // como sugestÃ£o textual no hint do input.
+    // Nome da sessão NÃO é auto-preenchido em modo assistido (decisão de UX).
+    // O fotógrafo deve nomear a sessão manualmente. `pacote.categoria` fica só
+    // como sugestão textual no hint do input.
 
     // valorFotoExtra from frozen rules - URL vence JSONB quando divergir (mais fresca)
     if (pacote?.valorFotoExtra !== undefined && pacote.valorFotoExtra > 0) {
@@ -594,11 +594,11 @@ export default function GalleryCreate() {
       if (valorUrl !== undefined && valorUrl > 0 && Math.abs(valorUrl - valorJsonb) > 0.01) {
         const valorUrlSanitizado = sanitizeExtraPrice(valorUrl);
         console.warn(
-          '[GalleryCreate] DivergÃªncia preco_da_foto_extra na hidrataÃ§Ã£o: URL=',
+          '[GalleryCreate] Divergência preco_da_foto_extra na hidratação: URL=',
           valorUrlSanitizado,
           'JSONB=',
           valorJsonb,
-          'â€” usando URL (mais fresca)'
+          '— usando URL (mais fresca)'
         );
         setFixedPrice(valorUrlSanitizado);
       } else {
@@ -609,10 +609,10 @@ export default function GalleryCreate() {
   }, [regrasLoaded, regrasCongeladas, gestaoParams?.session_id, gestaoParams?.preco_da_foto_extra]);
 
   // Modo Assistido (Studio â†’ Gallery)
-  //   Stage A â€” pacote/sessÃ£o/preÃ§o/sale (depende dos params da URL + plano).
-  //   Stage B â€” cliente: SESSION-FIRST. Resolve via clientes_sessoes.cliente_id (server-side)
-  //             e cai para os params da URL apenas como fallback. NÃ£o depende de hasGestaoIntegration:
-  //             a integraÃ§Ã£o governa o que mostrar, nÃ£o a hidrataÃ§Ã£o dos dados.
+  //   Stage A — pacote/sessão/preço/sale (depende dos params da URL + plano).
+  //   Stage B — cliente: SESSION-FIRST. Resolve via clientes_sessoes.cliente_id (server-side)
+  //             e cai para os params da URL apenas como fallback. Não depende de hasGestaoIntegration:
+  //             a integração governa o que mostrar, não a hidratação dos dados.
   useEffect(() => {
     if (!hasGestaoSession || !gestaoParams || paramsProcessed) return;
 
@@ -623,16 +623,16 @@ export default function GalleryCreate() {
     }
     // Aguarda regras congeladas (que trazem o sessionClienteId server-side)
     if (!regrasLoaded) {
-      console.log('[AssistedMode] aguardando regras/sessÃ£o...');
+      console.log('[AssistedMode] aguardando regras/sessão...');
       return;
     }
 
     console.log('[AssistedMode] processing', { gestaoParams, sessionClienteId, hasGestaoIntegration });
 
-    // â”€â”€â”€ Stage A: pacote/sessÃ£o/preÃ§o/sale (somente com integraÃ§Ã£o ativa) â”€â”€â”€
+    // â”€â”€â”€ Stage A: pacote/sessão/preço/sale (somente com integração ativa) â”€â”€â”€
     if (isAssistedMode) {
-      // Nome da sessÃ£o: NÃƒO auto-preencher em modo assistido.
-      // `pacote_categoria` fica disponÃ­vel apenas como hint textual no input.
+      // Nome da sessão: NÃO auto-preencher em modo assistido.
+      // `pacote_categoria` fica disponível apenas como hint textual no input.
 
       if (gestaoParams.pacote_nome && !userTouchedPackageNameRef.current) {
         setPackageName(gestaoParams.pacote_nome);
@@ -665,16 +665,16 @@ export default function GalleryCreate() {
 
     // â”€â”€â”€ Stage B: cliente (SESSION-FIRST, URL como fallback) â”€â”€â”€
     const resolveClient = async (): Promise<boolean> => {
-      // Prioridade de IDs: 1Âº o resolvido server-side, 2Âº o que veio na URL
+      // Prioridade de IDs: 1º o resolvido server-side, 2º o que veio na URL
       const candidateIds = [sessionClienteId, gestaoParams.cliente_id].filter(Boolean) as string[];
 
-      // Telemetria: URL trouxe cliente_id? Se nÃ£o, e session resolveu, registramos sinal de degradaÃ§Ã£o
+      // Telemetria: URL trouxe cliente_id? Se não, e session resolveu, registramos sinal de degradação
       if (!gestaoParams.cliente_id && sessionClienteId) {
-        console.warn('[AssistedMode] URL chegou SEM cliente_id mas session tem â€” provÃ¡vel truncamento de URL em mobile/PWA');
+        console.warn('[AssistedMode] URL chegou SEM cliente_id mas session tem — provável truncamento de URL em mobile/PWA');
       }
 
       for (const id of candidateIds) {
-        // 1) cache em memÃ³ria
+        // 1) cache em memória
         const fromCache = clients.find((c) => c.id === id);
         if (fromCache) {
           console.log('[AssistedMode] cache HIT:', fromCache.name);
@@ -682,8 +682,8 @@ export default function GalleryCreate() {
           setUseExistingPassword(!!fromCache.galleryPassword);
           return true;
         }
-        // 2) busca direta no banco (resistente a race/paginaÃ§Ã£o/PWA mobile)
-        console.log('[AssistedMode] cache MISS â€” DB lookup:', id);
+        // 2) busca direta no banco (resistente a race/paginação/PWA mobile)
+        console.log('[AssistedMode] cache MISS — DB lookup:', id);
         const fromDb = await fetchClientById(id);
         if (fromDb) {
           console.log('[AssistedMode] DB HIT:', fromDb.name);
@@ -712,8 +712,8 @@ export default function GalleryCreate() {
         }
       }
 
-      console.error('[AssistedMode] nÃ£o foi possÃ­vel resolver cliente da sessÃ£o', { candidateIds, sessionClienteId });
-      toast.error('NÃ£o foi possÃ­vel identificar o cliente da sessÃ£o. Selecione manualmente abaixo.');
+      console.error('[AssistedMode] não foi possível resolver cliente da sessão', { candidateIds, sessionClienteId });
+      toast.error('Não foi possível identificar o cliente da sessão. Selecione manualmente abaixo.');
       return false;
     };
 
@@ -730,14 +730,14 @@ export default function GalleryCreate() {
         console.log('[AssistedMode] aguardando clients...');
         return; // re-roda quando isLoadingClients mudar
       }
-      // Awaited para nÃ£o marcar processado antes de a resoluÃ§Ã£o terminar
+      // Awaited para não marcar processado antes de a resolução terminar
       resolveClient().finally(finish);
     } else {
       finish();
     }
   }, [hasGestaoSession, isAssistedMode, hasGestaoIntegration, gestaoParams, clients, gestaoPackages, isLoadingClients, isLoadingPackages, paramsProcessed, markAsProcessed, clearParams, fetchClientById, addClientToCache, createClient, regrasCongeladas, regrasLoaded, sessionClienteId]);
-  // Initialize payment method default â€” preference order:
-  // 1. User explicitly chose (userTouched ref) â€” never overwrite
+  // Initialize payment method default — preference order:
+  // 1. User explicitly chose (userTouched ref) — never overwrite
   // 2. Photographer's `defaultPaymentMethod` configured in Settings
   // 3. Active payment integration (`defaultIntegration`) as fallback
   useEffect(() => {
@@ -764,7 +764,7 @@ export default function GalleryCreate() {
       return false;
     }
     if (!sessionName.trim()) {
-      toast.error('Informe o nome da sessÃ£o para continuar.');
+      toast.error('Informe o nome da sessão para continuar.');
       return false;
     }
     if (supabaseGalleryId) return true;
@@ -794,18 +794,18 @@ export default function GalleryCreate() {
       }
       // If passwordDisabled = true, passwordToUse stays undefined (no password protection)
 
-      // Client name from selected client (or 'Galeria PÃºblica' if public gallery)
-      const clientName = selectedClient?.name || 'Galeria PÃºblica';
+      // Client name from selected client (or 'Galeria Pública' if public gallery)
+      const clientName = selectedClient?.name || 'Galeria Pública';
       const clientEmail = selectedClient?.email || '';
 
       // Determine the final extra photo price and regrasCongeladas based on pricing source
-      // When we have frozen rules from GestÃ£o and no override, use them
+      // When we have frozen rules from Gestão and no override, use them
       const hasSessionRegras = regrasCongeladas && !overridePricing;
       const hasSessionId = !!gestaoParams?.session_id;
       let valorFotoExtraFinal = fixedPrice;
       let finalRegrasCongeladas: RegrasCongeladas | null = null;
       if (hasSessionRegras) {
-        // Assisted mode with GestÃ£o rules â€” URL vence JSONB stale (mais fresca)
+        // Assisted mode with Gestão rules — URL vence JSONB stale (mais fresca)
         const resolved = resolveAssistedExtraPrice(regrasCongeladas, gestaoParams?.preco_da_foto_extra);
         valorFotoExtraFinal = resolved.valor;
         finalRegrasCongeladas = resolved.regras;
@@ -834,7 +834,7 @@ export default function GalleryCreate() {
         // Use session_id if present in URL, regardless of integration status
         sessionId: hasSessionId ? gestaoParams.session_id : null,
         origin: hasSessionId ? 'gestao' : 'manual',
-        // Pass frozen rules from GestÃ£o OR generated from discount packages
+        // Pass frozen rules from Gestão OR generated from discount packages
         regrasCongeladas: finalRegrasCongeladas,
         // Sync legacy top-level sale fields
         venda_modo: saleMode,
@@ -862,7 +862,7 @@ export default function GalleryCreate() {
       if (result?.id) {
         setSupabaseGalleryId(result.id);
         
-        // Auto-create default folder with session name (idempotente â€” verifica se jÃ¡ existe)
+        // Auto-create default folder with session name (idempotente — verifica se já existe)
         try {
           const { data: { user: currentUser } } = await supabase.auth.getUser();
           if (currentUser) {
@@ -924,15 +924,15 @@ export default function GalleryCreate() {
         if (isAssistedMode && !regrasLoaded) {
           return;
         }
-        // Gate por ref evita corrida entre cliques rÃ¡pidos / StrictMode
+        // Gate por ref evita corrida entre cliques rápidos / StrictMode
         if (creatingGalleryRef.current) return;
-        // Se a sessÃ£o jÃ¡ teve uma galeria excluÃ­da antes, pede confirmaÃ§Ã£o
+        // Se a sessão já teve uma galeria excluída antes, pede confirmação
         if (priorDeletion && !recreateConfirmed) {
           setShowRecreateDialog(true);
           return;
         }
         const ok = await createSupabaseGalleryForUploads();
-        if (!ok) return; // nÃ£o avanÃ§a se falhou
+        if (!ok) return; // não avança se falhou
       }
 
       // Block advancing from step 4 (Fotos) with pending uploads or errors
@@ -1044,7 +1044,7 @@ export default function GalleryCreate() {
   const handleSaveDraft = async () => {
     if (isAdvancing || isSavingDraft || isGoingBack) return;
     if (!sessionName.trim()) {
-      toast.error('Informe o nome da sessÃ£o para salvar o rascunho.');
+      toast.error('Informe o nome da sessão para salvar o rascunho.');
       return;
     }
     setIsSavingDraft(true);
@@ -1209,12 +1209,12 @@ export default function GalleryCreate() {
   const addDiscountPackage = () => {
     const updatedPackages = [...discountPackages];
 
-    // Se jÃ¡ existe Ãºltima faixa com infinito, converter para nÃºmero
+    // Se já existe última faixa com infinito, converter para número
     if (updatedPackages.length > 0) {
       const lastIndex = updatedPackages.length - 1;
       const lastPkg = updatedPackages[lastIndex];
       if (lastPkg.maxPhotos === null) {
-        // Definir valor padrÃ£o: minPhotos + 9
+        // Definir valor padrão: minPhotos + 9
         updatedPackages[lastIndex] = {
           ...lastPkg,
           maxPhotos: lastPkg.minPhotos + 9
@@ -1227,7 +1227,7 @@ export default function GalleryCreate() {
       id: generateId(),
       minPhotos,
       maxPhotos: null,
-      // Infinito por padrÃ£o
+      // Infinito por padrão
       pricePerPhoto: Math.max(1, fixedPrice - (discountPackages.length + 1) * 5)
     }]);
   };
@@ -1240,24 +1240,24 @@ export default function GalleryCreate() {
   const savePreset = () => {
     const trimmed = presetName.trim();
     if (!trimmed) {
-      toast.error('Digite um nome para a predefiniÃ§Ã£o');
+      toast.error('Digite um nome para a predefinição');
       return;
     }
     const existing = settings.discountPresets || [];
     if (existing.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error('JÃ¡ existe uma predefiniÃ§Ã£o com esse nome');
+      toast.error('Já existe uma predefinição com esse nome');
       return;
     }
     createDiscountPreset(
       { name: trimmed, packages: discountPackages },
       {
         onSuccess: () => {
-          toast.success('PredefiniÃ§Ã£o salva');
+          toast.success('Predefinição salva');
           setPresetName('');
           setShowSavePresetDialog(false);
         },
         onError: () => {
-          toast.error('Erro ao salvar predefiniÃ§Ã£o');
+          toast.error('Erro ao salvar predefinição');
         },
       } as any
     );
@@ -1270,7 +1270,7 @@ export default function GalleryCreate() {
         id: generateId()
       }));
       setDiscountPackages(clonedPackages);
-      toast.success(`PredefiniÃ§Ã£o "${preset.name}" carregada`);
+      toast.success(`Predefinição "${preset.name}" carregada`);
     }
   };
   const renamePreset = () => {
@@ -1282,14 +1282,14 @@ export default function GalleryCreate() {
     }
     const others = (settings.discountPresets || []).filter((p) => p.id !== renamingPreset.id);
     if (others.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error('JÃ¡ existe uma predefiniÃ§Ã£o com esse nome');
+      toast.error('Já existe uma predefinição com esse nome');
       return;
     }
     updateDiscountPreset(
       { ...renamingPreset, name: trimmed },
       {
         onSuccess: () => {
-          toast.success('PredefiniÃ§Ã£o renomeada');
+          toast.success('Predefinição renomeada');
           setRenamingPreset(null);
           setRenameValue('');
         },
@@ -1301,7 +1301,7 @@ export default function GalleryCreate() {
     if (!deletingPresetId) return;
     deleteDiscountPreset(deletingPresetId, {
       onSuccess: () => {
-        toast.success('PredefiniÃ§Ã£o excluÃ­da');
+        toast.success('Predefinição excluída');
         setDeletingPresetId(null);
       },
       onError: () => toast.error('Erro ao excluir'),
@@ -1324,7 +1324,7 @@ export default function GalleryCreate() {
   const getPricingModelLabel = () => {
     switch (pricingModel) {
       case 'fixed':
-        return 'PreÃ§o Ãºnico';
+        return 'Preço único';
       case 'packages':
         return 'Pacotes com desconto';
     }
@@ -1343,18 +1343,18 @@ export default function GalleryCreate() {
         return <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground text-lg">
-                Dados do cliente e detalhes da sessÃ£o
+                Dados do cliente e detalhes da sessão
               </p>
               {/* Assisted Mode Badge */}
               {isAssistedMode && <Badge variant="secondary" className="gap-1.5">
                   <Link2 className="h-3 w-3" />
-                  Vinculada Ã  sessÃ£o do Studio
+                  Vinculada à sessão do Studio
                 </Badge>}
             </div>
 
             {/* Gallery Permission */}
             <div className="space-y-4">
-              <Label className="text-base font-medium">PermissÃ£o da Galeria</Label>
+              <Label className="text-base font-medium">Permissão da Galeria</Label>
               <RadioGroup value={galleryPermission} onValueChange={(v) => {
               setGalleryPermission(v as GalleryPermission);
               if (v === 'public') {
@@ -1366,7 +1366,7 @@ export default function GalleryCreate() {
                   <Label htmlFor="gallery-public" className={cn("flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", "hover:border-primary/50 hover:bg-muted/50", galleryPermission === 'public' ? "border-primary bg-primary/5" : "border-border")}>
                     <Globe className={cn("h-5 w-5", galleryPermission === 'public' ? "text-primary" : "text-muted-foreground")} />
                     <div>
-                      <p className="font-medium">PÃºblica</p>
+                      <p className="font-medium">Pública</p>
                       <p className="text-xs text-muted-foreground">Sem senha</p>
                     </div>
                   </Label>
@@ -1413,7 +1413,7 @@ export default function GalleryCreate() {
                     </div>
                     
                     <div className="pt-2 space-y-3">
-                      <Label className="text-sm">Senha de acesso Ã  galeria</Label>
+                      <Label className="text-sm">Senha de acesso à galeria</Label>
                       
                       {/* Option: Disable password protection */}
                       <div className="flex items-center space-x-2">
@@ -1425,11 +1425,11 @@ export default function GalleryCreate() {
                     }
                   }} />
                         <label htmlFor="passwordDisabled" className="text-sm font-medium leading-none">
-                          Sem proteÃ§Ã£o por senha
+                          Sem proteção por senha
                         </label>
                       </div>
                       <p className="text-xs text-muted-foreground ml-6">
-                        Qualquer pessoa com o link poderÃ¡ acessar a galeria
+                        Qualquer pessoa com o link poderá acessar a galeria
                       </p>
                       
                       {/* Password options - only show if password is NOT disabled */}
@@ -1462,7 +1462,7 @@ export default function GalleryCreate() {
                             </> : (/* Client has NO password registered */
                   <div className="space-y-2">
                               <p className="text-xs text-muted-foreground">
-                                Este cliente nÃ£o possui senha cadastrada
+                                Este cliente não possui senha cadastrada
                               </p>
                               <Input placeholder="Definir senha para a galeria" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
                               <div className="flex items-center space-x-2">
@@ -1480,7 +1480,7 @@ export default function GalleryCreate() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="sessionName">Nome da SessÃ£o *</Label>
+                <Label htmlFor="sessionName">Nome da Sessão *</Label>
                 <Input
                   id="sessionName"
                   placeholder="Ex: Ensaio Gestante"
@@ -1492,7 +1492,7 @@ export default function GalleryCreate() {
                 />
                 {hasGestaoSession && (
                   <p className="text-xs text-muted-foreground">
-                    Defina um nome para esta sessÃ£o{gestaoParams?.pacote_categoria ? ` (sugestÃ£o: ${gestaoParams.pacote_categoria}${selectedClient?.name ? ` â€” ${selectedClient.name}` : ''})` : ''}.
+                    Defina um nome para esta sessão{gestaoParams?.pacote_categoria ? ` (sugestão: ${gestaoParams.pacote_categoria}${selectedClient?.name ? ` — ${selectedClient.name}` : ''})` : ''}.
                   </p>
                 )}
               </div>
@@ -1519,7 +1519,7 @@ export default function GalleryCreate() {
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="includedPhotos">Fotos IncluÃ­das no Pacote *</Label>
+                <Label htmlFor="includedPhotos">Fotos Incluídas no Pacote *</Label>
                 <Input id="includedPhotos" type="number" min={1} value={includedPhotos} onChange={(e) => setIncludedPhotos(e.target.value === '' ? 0 : (parseInt(e.target.value) || 0))} className="max-w-[200px]" />
               </div>
 
@@ -1527,20 +1527,20 @@ export default function GalleryCreate() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
-                  <Label>Prazo de SeleÃ§Ã£o *</Label>
+                  <Label>Prazo de Seleção *</Label>
                 </div>
                 <div className="flex items-center gap-3">
                   <Input type="number" min={1} max={90} value={customDays || ''} onChange={(e) => setCustomDays(e.target.value === '' ? 0 : (parseInt(e.target.value) || 0))} className="w-24" />
                   <span className="text-muted-foreground">dias</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  PadrÃ£o: {settings.defaultExpirationDays || 10} dias
+                  Padrão: {settings.defaultExpirationDays || 10} dias
                 </p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label>Fonte do TÃ­tulo</Label>
+              <Label>Fonte do Título</Label>
               <FontSelect 
                 value={sessionFont} 
                 onChange={(font) => {
@@ -1563,7 +1563,7 @@ export default function GalleryCreate() {
             <div>
               
               <p className="text-muted-foreground text-lg">
-                Defina como serÃ¡ a cobranÃ§a por fotos extras
+                Defina como será a cobrança por fotos extras
               </p>
             </div>
 
@@ -1581,9 +1581,9 @@ export default function GalleryCreate() {
                         <Ban className={cn("h-5 w-5", saleMode === 'no_sale' ? "text-primary" : "text-muted-foreground")} />
                       </div>
                       <div>
-                        <p className="font-medium">NÃ£o, sem venda</p>
+                        <p className="font-medium">Não, sem venda</p>
                         <p className="text-xs text-muted-foreground">
-                          O cliente nÃ£o serÃ¡ informado sobre os preÃ§os das fotos
+                          O cliente não será informado sobre os preços das fotos
                         </p>
                       </div>
                     </Label>
@@ -1599,7 +1599,7 @@ export default function GalleryCreate() {
                       <div>
                         <p className="font-medium">Sim, COM pagamento</p>
                         <p className="text-xs text-muted-foreground">
-                          O cliente serÃ¡ cobrado ao finalizar a seleÃ§Ã£o
+                          O cliente será cobrado ao finalizar a seleção
                         </p>
                       </div>
                     </Label>
@@ -1615,7 +1615,7 @@ export default function GalleryCreate() {
                       <div>
                         <p className="font-medium">Sim, SEM pagamento</p>
                         <p className="text-xs text-muted-foreground">
-                          O cliente serÃ¡ apenas informado sobre os preÃ§os
+                          O cliente será apenas informado sobre os preços
                         </p>
                       </div>
                     </Label>
@@ -1630,7 +1630,7 @@ export default function GalleryCreate() {
 
               {/* Right Block - Pricing Configuration (conditional) */}
               {saleMode !== 'no_sale' && <div className="space-y-6">
-                  {/* Show frozen rules from GestÃ£o when available and not overriding */}
+                  {/* Show frozen rules from Gestão when available and not overriding */}
                   {regrasCongeladas && !overridePricing ? <div className="space-y-4">
                       {/* Loading state */}
                       {isLoadingRegras ? <div className="space-y-3">
@@ -1641,16 +1641,16 @@ export default function GalleryCreate() {
                           <div className="p-4 rounded-lg bg-accent/20 border border-accent/50">
                           <div className="flex items-center gap-2 text-accent-foreground">
                               <Link2 className="h-5 w-5" />
-                              <span className="font-medium">PreÃ§os sincronizados do Lunari Studio</span>
+                              <span className="font-medium">Preços sincronizados do Lunari Studio</span>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              Os preÃ§os de fotos extras estÃ£o configurados na sessÃ£o original.
+                              Os preços de fotos extras estão configurados na sessão original.
                             </p>
                           </div>
 
                           {/* Rules summary */}
                           <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                            <h4 className="font-medium">ConfiguraÃ§Ã£o de PreÃ§os</h4>
+                            <h4 className="font-medium">Configuração de Preços</h4>
                             
                             {/* Pricing model */}
                             <div className="flex items-center gap-2 text-sm">
@@ -1671,13 +1671,13 @@ export default function GalleryCreate() {
                             
                             {/* Fixed base price (if fixed model or as fallback) */}
                             {(regrasCongeladas.precificacaoFotoExtra?.modelo === 'fixo' || getFaixasFromRegras(regrasCongeladas).length === 0) && <div className="flex justify-between text-sm pt-2 border-t border-border/50">
-                                <span className="text-muted-foreground">PreÃ§o por foto extra:</span>
+                                <span className="text-muted-foreground">Preço por foto extra:</span>
                                 <span className="font-medium">R$ {(regrasCongeladas.pacote?.valorFotoExtra || 0).toFixed(2)}</span>
                               </div>}
                           </div>
 
-                          {/* BotÃ£o "Personalizar" removido: o valor da foto extra agora Ã©
-                              editado no editor da galeria apÃ³s criaÃ§Ã£o e propaga para a sessÃ£o
+                          {/* Botão "Personalizar" removido: o valor da foto extra agora é
+                              editado no editor da galeria após criação e propaga para a sessão
                               do Lunari Studio. */}
                         </>}
                     </div> : <>
@@ -1694,7 +1694,7 @@ export default function GalleryCreate() {
 
                       {/* Manual Pricing Model selection (default or override mode) */}
                       <div className="space-y-4">
-                        <Label className="text-base font-medium">Qual formato de preÃ§o?</Label>
+                        <Label className="text-base font-medium">Qual formato de preço?</Label>
                         <RadioGroup value={pricingModel} onValueChange={(v) => { userTouchedPricingModelRef.current = true; setPricingModel(v as PricingModel); }} className="flex flex-col gap-3">
                           {/* Fixed Price */}
                           <div>
@@ -1705,7 +1705,7 @@ export default function GalleryCreate() {
                                   <Tag className={cn("h-4 w-4", pricingModel === 'fixed' ? "text-primary" : "text-muted-foreground")} />
                                 </div>
                                 <div>
-                                  <p className="font-medium">PreÃ§o Ãºnico por foto</p>
+                                  <p className="font-medium">Preço único por foto</p>
                                   <p className="text-xs text-muted-foreground">
                                     Defina um valor fixo para cada foto
                                   </p>
@@ -1744,14 +1744,14 @@ export default function GalleryCreate() {
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <Label className="text-sm font-medium">Configurar faixas</Label>
                         <div className="flex gap-2 flex-wrap">
-                          {/* BotÃ£o salvar predefiniÃ§Ã£o */}
+                          {/* Botão salvar predefinição */}
 
                           {discountPackages.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => setShowSavePresetDialog(true)} className="gap-1">
                               <Save className="h-4 w-4" />
                               Salvar
                             </Button>}
                           
-                          {/* BotÃ£o adicionar faixa */}
+                          {/* Botão adicionar faixa */}
                           <Button type="button" variant="outline" size="sm" onClick={addDiscountPackage} className="gap-1">
                             <Plus className="h-4 w-4" />
                             Adicionar
@@ -1760,7 +1760,7 @@ export default function GalleryCreate() {
                       </div>
 
                       {discountPackages.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">
-                          Adicione faixas para definir preÃ§os por quantidade
+                          Adicione faixas para definir preços por quantidade
                         </p> : <div className="space-y-3">
                           {discountPackages.map((pkg, index) => <div key={pkg.id} className="flex items-center gap-2 p-3 rounded-lg bg-background border border-border/50">
                               <div className="flex-1 grid grid-cols-3 gap-2">
@@ -1769,7 +1769,7 @@ export default function GalleryCreate() {
                                   <Input type="number" min={1} value={pkg.minPhotos} onChange={(e) => updateDiscountPackage(pkg.id, 'minPhotos', parseInt(e.target.value) || 1)} className="h-8" />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-xs text-muted-foreground">AtÃ©</Label>
+                                  <Label className="text-xs text-muted-foreground">Até</Label>
                                   {index === discountPackages.length - 1 ? <Input type="text" value={pkg.maxPhotos === null ? 'âˆž' : pkg.maxPhotos} onChange={(e) => {
                           const val = e.target.value;
                           if (val === '' || val === 'âˆž') {
@@ -1793,11 +1793,11 @@ export default function GalleryCreate() {
                             </div>)}
                         </div>}
 
-                      {/* PredefiniÃ§Ãµes salvas */}
+                      {/* Predefinições salvas */}
                       {settings.discountPresets && settings.discountPresets.length > 0 && (
                         <div className="space-y-2 pt-2 border-t border-border/50">
                           <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            PredefiniÃ§Ãµes salvas
+                            Predefinições salvas
                           </Label>
                           <div className="space-y-1.5">
                             {settings.discountPresets.map((preset) => {
@@ -1805,8 +1805,8 @@ export default function GalleryCreate() {
                               const minP = prices.length ? Math.min(...prices) : 0;
                               const maxP = prices.length ? Math.max(...prices) : 0;
                               const priceLabel = prices.length
-                                ? (minP === maxP ? `R$ ${minP.toFixed(2)}` : `R$ ${minP.toFixed(2)}â€“${maxP.toFixed(2)}`)
-                                : 'â€”';
+                                ? (minP === maxP ? `R$ ${minP.toFixed(2)}` : `R$ ${minP.toFixed(2)}–${maxP.toFixed(2)}`)
+                                : '—';
                               return (
                                 <div key={preset.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-background border border-border/50">
                                   <div className="flex-1 min-w-0">
@@ -1835,7 +1835,7 @@ export default function GalleryCreate() {
 
                   {/* Charge Type */}
                   <div className="space-y-3">
-                    <Label className="text-base font-medium">Tipo de cobranÃ§a</Label>
+                    <Label className="text-base font-medium">Tipo de cobrança</Label>
                     <Select value={chargeType} onValueChange={(v) => { userTouchedChargeTypeRef.current = true; setChargeType(v as ChargeType); }}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1846,24 +1846,24 @@ export default function GalleryCreate() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      {chargeType === 'only_extras' ? `Fotos atÃ© o limite do pacote (${includedPhotos}) sÃ£o gratuitas.` : `Todas as fotos selecionadas serÃ£o cobradas.`}
+                      {chargeType === 'only_extras' ? `Fotos até o limite do pacote (${includedPhotos}) são gratuitas.` : `Todas as fotos selecionadas serão cobradas.`}
                     </p>
                   </div>
                 </div>}
             </div>
             
-            {/* Dialog para salvar predefiniÃ§Ã£o */}
+            {/* Dialog para salvar predefinição */}
             <Dialog open={showSavePresetDialog} onOpenChange={setShowSavePresetDialog}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Salvar predefiniÃ§Ã£o de faixas</DialogTitle>
+                  <DialogTitle>Salvar predefinição de faixas</DialogTitle>
                   <DialogDescription>
-                    Salve esta configuraÃ§Ã£o de faixas para reutilizar em outras galerias
+                    Salve esta configuração de faixas para reutilizar em outras galerias
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="presetName">Nome da predefiniÃ§Ã£o</Label>
+                    <Label htmlFor="presetName">Nome da predefinição</Label>
                     <Input id="presetName" value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Ex: Casamentos, Ensaios..." />
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
@@ -1877,16 +1877,16 @@ export default function GalleryCreate() {
                   <Button variant="outline" onClick={() => setShowSavePresetDialog(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={savePreset}>Salvar predefiniÃ§Ã£o</Button>
+                  <Button onClick={savePreset}>Salvar predefinição</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
-            {/* Dialog renomear predefiniÃ§Ã£o */}
+            {/* Dialog renomear predefinição */}
             <Dialog open={!!renamingPreset} onOpenChange={(open) => { if (!open) { setRenamingPreset(null); setRenameValue(''); } }}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Renomear predefiniÃ§Ã£o</DialogTitle>
+                  <DialogTitle>Renomear predefinição</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-2">
                   <Label htmlFor="renamePreset">Novo nome</Label>
@@ -1899,13 +1899,13 @@ export default function GalleryCreate() {
               </DialogContent>
             </Dialog>
 
-            {/* Confirmar exclusÃ£o de predefiniÃ§Ã£o */}
+            {/* Confirmar exclusão de predefinição */}
             <AlertDialog open={!!deletingPresetId} onOpenChange={(open) => { if (!open) setDeletingPresetId(null); }}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Excluir predefiniÃ§Ã£o?</AlertDialogTitle>
+                  <AlertDialogTitle>Excluir predefinição?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta aÃ§Ã£o nÃ£o pode ser desfeita. Galerias jÃ¡ criadas nÃ£o sÃ£o afetadas.
+                    Esta ação não pode ser desfeita. Galerias já criadas não são afetadas.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -1923,7 +1923,7 @@ export default function GalleryCreate() {
             <div>
               
               <p className="text-muted-foreground text-lg">
-                Adicione as fotos da sessÃ£o para o cliente selecionar
+                Adicione as fotos da sessão para o cliente selecionar
               </p>
             </div>
 
@@ -1961,10 +1961,10 @@ export default function GalleryCreate() {
           <div className="border-2 border-dashed border-border rounded-xl p-12 text-center">
                 <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-lg font-medium mb-2">
-                  Preparando Ã¡rea de upload...
+                  Preparando área de upload...
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  A galeria serÃ¡ criada automaticamente
+                  A galeria será criada automaticamente
                 </p>
               </div>}
 
@@ -2040,7 +2040,7 @@ export default function GalleryCreate() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Excluir todas as fotos?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tem certeza que deseja excluir todas as {uploadedCount} fotos desta galeria? Os crÃ©ditos serÃ£o devolvidos automaticamente.
+                    Tem certeza que deseja excluir todas as {uploadedCount} fotos desta galeria? Os créditos serão devolvidos automaticamente.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -2059,7 +2059,7 @@ export default function GalleryCreate() {
             <div>
               
               <p className="text-muted-foreground text-xl">
-                Personalize a experiÃªncia do cliente
+                Personalize a experiência do cliente
               </p>
             </div>
 
@@ -2084,7 +2084,7 @@ export default function GalleryCreate() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Aresta longa â€¢ Fotos sÃ£o redimensionadas proporcionalmente
+                    Aresta longa â€¢ Fotos são redimensionadas proporcionalmente
                   </p>
                 </div>
 
@@ -2092,7 +2092,7 @@ export default function GalleryCreate() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Droplet className="h-4 w-4 text-primary" />
-                    <Label>ProteÃ§Ã£o da Imagem</Label>
+                    <Label>Proteção da Imagem</Label>
                   </div>
                   
                   {/* Watermark Type */}
@@ -2100,7 +2100,7 @@ export default function GalleryCreate() {
                     <div className="flex items-center">
                       <RadioGroupItem value="standard" id="wm-standard" className="peer sr-only" />
                       <Label htmlFor="wm-standard" className="px-3 py-1.5 text-sm rounded-lg border cursor-pointer peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground peer-data-[state=checked]:border-primary">
-                        PadrÃ£o do Sistema
+                        Padrão do Sistema
                       </Label>
                     </div>
                     <div className="flex items-center">
@@ -2155,7 +2155,7 @@ export default function GalleryCreate() {
                 {settings.themeType === 'custom' && settings.customTheme && <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Palette className="h-4 w-4 text-primary" />
-                      <h3 className="font-medium text-sm">AparÃªncia da Galeria</h3>
+                      <h3 className="font-medium text-sm">Aparência da Galeria</h3>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Usando tema personalizado: {settings.customTheme.name}
@@ -2166,13 +2166,13 @@ export default function GalleryCreate() {
                       <div className="flex gap-1.5">
                         <div className="w-6 h-6 rounded-full border" style={{
                       backgroundColor: settings.customTheme.primaryColor
-                    }} title="Cor primÃ¡ria" />
+                    }} title="Cor primária" />
                         <div className="w-6 h-6 rounded-full border" style={{
                       backgroundColor: settings.customTheme.accentColor
                     }} title="Cor de destaque" />
                         <div className="w-6 h-6 rounded-full border" style={{
                       backgroundColor: settings.customTheme.emphasisColor
-                    }} title="Cor de Ãªnfase" />
+                    }} title="Cor de ênfase" />
                       </div>
                       <span className="text-sm text-muted-foreground">
                         Fundo {settings.customTheme.backgroundMode === 'dark' ? 'escuro' : 'claro'}
@@ -2184,7 +2184,7 @@ export default function GalleryCreate() {
                       <div className="min-w-0">
                         <Label className="text-sm">Fundo desta galeria</Label>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          As cores do seu tema personalizado serÃ£o aplicadas sobre o fundo escolhido.
+                          As cores do seu tema personalizado serão aplicadas sobre o fundo escolhido.
                         </p>
                       </div>
                       <div className="flex gap-2 shrink-0">
@@ -2202,11 +2202,11 @@ export default function GalleryCreate() {
 
                 {/* Client Interactions */}
                 <div className="space-y-3">
-                  <h3 className="font-medium text-sm">InteraÃ§Ãµes do Cliente</h3>
+                  <h3 className="font-medium text-sm">Interações do Cliente</h3>
                   
                   <div className="flex items-center justify-between py-2">
                     <div>
-                      <p className="text-sm font-medium">Permitir comentÃ¡rios</p>
+                      <p className="text-sm font-medium">Permitir comentários</p>
                       <p className="text-xs text-muted-foreground">
                         Cliente pode comentar em cada foto
                       </p>
@@ -2228,7 +2228,7 @@ export default function GalleryCreate() {
                       <div>
                         <p className="text-sm font-medium">Permitir fotos extras</p>
                         <p className="text-xs text-muted-foreground">
-                          Cliente pode selecionar alÃ©m do limite
+                          Cliente pode selecionar além do limite
                         </p>
                       </div>
                       <Switch checked={allowExtraPhotos} onCheckedChange={(v) => { userTouchedAllowExtraPhotosRef.current = true; setAllowExtraPhotos(v); }} />
@@ -2241,7 +2241,7 @@ export default function GalleryCreate() {
         return <div className="space-y-6 animate-fade-in">
             <div>
               <p className="text-muted-foreground text-lg">
-                Personalize a mensagem que o cliente verÃ¡ ao acessar a galeria
+                Personalize a mensagem que o cliente verá ao acessar a galeria
               </p>
             </div>
 
@@ -2249,7 +2249,7 @@ export default function GalleryCreate() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-primary" />
-                  <Label>Mensagem de SaudaÃ§Ã£o</Label>
+                  <Label>Mensagem de Saudação</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <Label className="text-sm text-muted-foreground">Ativar mensagem</Label>
@@ -2268,7 +2268,7 @@ export default function GalleryCreate() {
                 <>
                   <Textarea value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)} placeholder="Personalize a mensagem de boas-vindas..." rows={8} className="resize-none" />
                   <p className="text-xs text-muted-foreground">
-                    Use {'{cliente}'}, {'{sessao}'}, {'{estudio}'} para personalizaÃ§Ã£o automÃ¡tica.
+                    Use {'{cliente}'}, {'{sessao}'}, {'{estudio}'} para personalização automática.
                   </p>
                 </>
               )}
@@ -2279,7 +2279,7 @@ export default function GalleryCreate() {
             <div>
               
               <p className="text-muted-foreground text-lg">
-                Confira as informaÃ§Ãµes antes de criar a galeria
+                Confira as informações antes de criar a galeria
               </p>
             </div>
 
@@ -2287,7 +2287,7 @@ export default function GalleryCreate() {
               <div className="lunari-card p-5 space-y-4">
                 <h3 className="font-medium flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" />
-                  InformaÃ§Ãµes do Cliente
+                  Informações do Cliente
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -2299,7 +2299,7 @@ export default function GalleryCreate() {
                     <span className="font-medium">{selectedClient?.email || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">SessÃ£o</span>
+                    <span className="text-muted-foreground">Sessão</span>
                     <span className="font-medium">{sessionName || '-'}</span>
                   </div>
                   <div className="flex justify-between">
@@ -2307,7 +2307,7 @@ export default function GalleryCreate() {
                     <span className="font-medium">{packageName || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Fotos incluÃ­das</span>
+                    <span className="text-muted-foreground">Fotos incluídas</span>
                     <span className="font-medium">{includedPhotos}</span>
                   </div>
                 </div>
@@ -2316,7 +2316,7 @@ export default function GalleryCreate() {
               <div className="lunari-card p-5 space-y-4">
                 <h3 className="font-medium flex items-center gap-2">
                   <Tag className="h-4 w-4 text-primary" />
-                  ConfiguraÃ§Ã£o de Venda
+                  Configuração de Venda
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -2325,11 +2325,11 @@ export default function GalleryCreate() {
                   </div>
                   {saleMode !== 'no_sale' && <>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Modelo de preÃ§o</span>
+                        <span className="text-muted-foreground">Modelo de preço</span>
                         <span className="font-medium">{getPricingModelLabel()}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tipo de cobranÃ§a</span>
+                        <span className="text-muted-foreground">Tipo de cobrança</span>
                         <span className="font-medium">{getChargeTypeLabel()}</span>
                       </div>
                       <div className="flex justify-between">
@@ -2342,7 +2342,7 @@ export default function GalleryCreate() {
                           <div>
                             <p className="font-medium">Confira: R$ {fixedPrice.toFixed(2)} por foto extra.</p>
                             <p className="text-yellow-700/80 dark:text-yellow-300/80">
-                              Valores acima de R$ 100 sÃ£o incomuns. Se estiver errado, volte ao Passo 2.
+                              Valores acima de R$ 100 são incomuns. Se estiver errado, volte ao Passo 2.
                             </p>
                           </div>
                         </div>
@@ -2358,7 +2358,7 @@ export default function GalleryCreate() {
               <div className="lunari-card p-5 space-y-4">
                 <h3 className="font-medium flex items-center gap-2">
                   <Settings className="h-4 w-4 text-primary" />
-                  ConfiguraÃ§Ãµes
+                  Configurações
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -2374,12 +2374,12 @@ export default function GalleryCreate() {
                     <span className="font-medium">{imageResizeOption}px</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">ProteÃ§Ã£o</span>
-                    <span className="font-medium capitalize">{watermarkType === 'none' ? 'Nenhuma' : watermarkType === 'standard' ? 'PadrÃ£o do Sistema' : 'Minha Marca'}</span>
+                    <span className="text-muted-foreground">Proteção</span>
+                    <span className="font-medium capitalize">{watermarkType === 'none' ? 'Nenhuma' : watermarkType === 'standard' ? 'Padrão do Sistema' : 'Minha Marca'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">ComentÃ¡rios</span>
-                    <span className="font-medium">{allowComments ? 'Sim' : 'NÃ£o'}</span>
+                    <span className="text-muted-foreground">Comentários</span>
+                    <span className="font-medium">{allowComments ? 'Sim' : 'Não'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Download</span>
@@ -2394,7 +2394,7 @@ export default function GalleryCreate() {
                 âœ¨ Pronto para criar!
               </p>
               <p className="text-muted-foreground">
-                ApÃ³s criar a galeria, vocÃª poderÃ¡ enviar o link de seleÃ§Ã£o para o cliente.
+                Após criar a galeria, você poderá enviar o link de seleção para o cliente.
               </p>
             </div>
           </div>;
@@ -2492,25 +2492,25 @@ export default function GalleryCreate() {
             >
               {isAdvancing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isAdvancing
-                ? (currentStep === 6 ? 'Criando galeria...' : 'AvanÃ§ando...')
-                : (currentStep === 6 ? 'Criar Galeria' : 'PrÃ³ximo')}
+                ? (currentStep === 6 ? 'Criando galeria...' : 'Avançando...')
+                : (currentStep === 6 ? 'Criar Galeria' : 'Próximo')}
               {!isAdvancing && currentStep < 6 && <ArrowRight className="h-4 w-4 ml-2" />}
             </Button>
           </div>
         </div>
 
-        {/* Aviso: sessÃ£o jÃ¡ teve uma galeria excluÃ­da anteriormente */}
+        {/* Aviso: sessão já teve uma galeria excluída anteriormente */}
         <AlertDialog open={showRecreateDialog} onOpenChange={setShowRecreateDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
-                Recriar galeria desta sessÃ£o?
+                Recriar galeria desta sessão?
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm">
                   <p>
-                    Esta sessÃ£o jÃ¡ teve uma galeria{priorDeletion?.nome_sessao ? <> chamada <strong>"{priorDeletion.nome_sessao}"</strong></> : null} excluÃ­da
+                    Esta sessão já teve uma galeria{priorDeletion?.nome_sessao ? <> chamada <strong>"{priorDeletion.nome_sessao}"</strong></> : null} excluída
                     {priorDeletion?.deleted_at ? <> em <strong>{new Date(priorDeletion.deleted_at).toLocaleDateString('pt-BR')}</strong></> : null}.
                   </p>
                   {priorDeletion?.fotos_count ? (
@@ -2519,8 +2519,8 @@ export default function GalleryCreate() {
                     </p>
                   ) : null}
                   <p className="text-muted-foreground">
-                    O extrato financeiro da sessÃ£o (pagamentos e cobranÃ§as) foi preservado no GestÃ£o.
-                    VocÃª estÃ¡ prestes a criar uma <strong>nova galeria</strong> vinculada Ã  mesma sessÃ£o.
+                    O extrato financeiro da sessão (pagamentos e cobranças) foi preservado no Gestão.
+                    Você está prestes a criar uma <strong>nova galeria</strong> vinculada à mesma sessão.
                   </p>
                 </div>
               </AlertDialogDescription>
@@ -2532,7 +2532,7 @@ export default function GalleryCreate() {
                   e.preventDefault();
                   setRecreateConfirmed(true);
                   setShowRecreateDialog(false);
-                  // Reexecuta o avanÃ§o com a confirmaÃ§Ã£o registrada
+                  // Reexecuta o avanço com a confirmação registrada
                   setTimeout(() => handleNext(), 0);
                 }}
               >
