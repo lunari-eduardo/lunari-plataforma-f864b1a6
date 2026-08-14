@@ -65,7 +65,7 @@ async function logInvocation(
     model: string;
     provider: string;
     toolCount: number;
-    status: "success" | "error";
+    status: "ok" | "error";
     error?: string;
     finishReason?: string;
     usage?: unknown;
@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
           model: modelId,
           provider: providerName,
           toolCount: Object.keys(tools).length,
-          status: "success",
+          status: "ok",
           finishReason,
           usage,
           durationMs: Date.now() - startedAt,
