@@ -32,6 +32,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { convertToModelMessages, streamText, stepCountIs, type UIMessage } from "npm:ai@^5";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@^1";
+import { createGoogleGenerativeAI } from "npm:@ai-sdk/google@^0.0.52";
 import {
   createLovableAiGatewayProvider,
   getLovableAiGatewayResponseHeaders,
@@ -47,7 +48,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const DEFAULT_MODEL = "google/gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
 const DEFAULT_SYSTEM_PROMPT = `Você é a Lunari, assistente operacional do Lunari Studio (plataforma para fotógrafos).
 Regras invioláveis de Segurança e Operação:
@@ -174,7 +175,11 @@ Deno.serve(async (req) => {
   let model;
   let gateway: any = undefined;
 
-  if (providerName === "deepseek") {
+  if (providerName === "gemini") {
+    if (!apiKey) return json({ error: "Gemini API key not configured in vault" }, 500);
+    const google = createGoogleGenerativeAI({ apiKey });
+    model = google(modelId);
+  } else if (providerName === "deepseek") {
     if (!apiKey) return json({ error: "DeepSeek API key not configured in vault" }, 500);
     const dsProvider = createOpenAICompatible({
       name: "deepseek",
@@ -202,10 +207,32 @@ Deno.serve(async (req) => {
   const systemPrompt = [DEFAULT_SYSTEM_PROMPT, body.system?.trim()].filter(Boolean).join("\n\n");
 
   try {
+    let coreMessages = await convertToModelMessages(body.messages);
+
+    // --- Otimização de Histórico (Sliding Window & Truncamento) ---
+    if (coreMessages.length > 10) {
+      coreMessages = coreMessages.slice(-10);
+    }
+    let toolResultCount = 0;
+    for (let i = coreMessages.length - 1; i >= 0; i--) {
+      const msg = coreMessages[i];
+      if (msg.role === "tool" && Array.isArray(msg.content)) {
+        toolResultCount++;
+        if (toolResultCount > 2) {
+          msg.content = msg.content.map((part) => {
+            if (part.type === "tool-result") {
+              return { ...part, result: { _truncated: "Resultados antigos omitidos para economia de tokens" } };
+            }
+            return part;
+          });
+        }
+      }
+    }
+
     const result = streamText({
       model,
       system: systemPrompt,
-      messages: await convertToModelMessages(body.messages),
+      messages: coreMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
       stopWhen: stepCountIs(50),
       // metadata útil para debug via AI Gateway logs

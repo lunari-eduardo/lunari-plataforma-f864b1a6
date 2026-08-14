@@ -368,6 +368,7 @@ export default function AssistantRolloutPage() {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
                   <SelectItem value="deepseek">DeepSeek</SelectItem>
                   <SelectItem value="openai">OpenAI</SelectItem>
                   <SelectItem value="lovable">Lovable Gateway</SelectItem>
@@ -379,7 +380,7 @@ export default function AssistantRolloutPage() {
               <Input 
                 value={apiModel} 
                 onChange={(e) => setApiModel(e.target.value)} 
-                placeholder="Ex: deepseek-chat" 
+                placeholder="Ex: gemini-3.5-flash-lite" 
                 disabled={saving}
               />
             </div>

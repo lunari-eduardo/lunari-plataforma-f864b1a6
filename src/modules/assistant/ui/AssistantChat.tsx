@@ -89,7 +89,7 @@ export function AssistantChat() {
     [session?.access_token, buildRequestBody],
   );
 
-  const { messages, sendMessage, status, stop, addToolResult, error } = useChat({
+  const { messages, append, status, stop, addToolResult, error } = useChat({
     id: `lunari-${authUser?.id ?? "anon"}`,
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -167,6 +167,17 @@ export function AssistantChat() {
                   }
                   return null;
                 })}
+                {message.experimental_attachments?.map((att, i) => (
+                  <div key={`att-${i}`} className="mt-2">
+                    {att.contentType?.startsWith("audio/") ? (
+                      <audio controls src={att.url} className="h-8 max-w-full" />
+                    ) : (
+                      <a href={att.url} target="_blank" rel="noreferrer" className="text-sm underline">
+                        {att.name || "Anexo"}
+                      </a>
+                    )}
+                  </div>
+                ))}
               </MessageContent>
             </Message>
           ))}
@@ -191,8 +202,13 @@ export function AssistantChat() {
           disabled={disabled}
           status={status}
           onStop={stop}
-          onSend={(text) => void sendMessage({ text })}
-          accessToken={session?.access_token ?? null}
+          onSend={(text) => void append({ role: "user", content: text })}
+          onSendAudio={(url, mimeType) => void append({
+            role: "user",
+            content: "",
+            experimental_attachments: [{ url, contentType: mimeType, name: "audio.webm" }]
+          })}
+          userId={authUser?.id ?? null}
         />
       </div>
 
@@ -218,7 +234,8 @@ interface VoicePromptInputProps {
   status: ReturnType<typeof useChat>["status"];
   onStop: () => void;
   onSend: (text: string) => void;
-  accessToken: string | null;
+  onSendAudio: (url: string, mimeType: string) => void;
+  userId: string | null;
 }
 
 function VoicePromptInput({
@@ -226,28 +243,13 @@ function VoicePromptInput({
   status,
   onStop,
   onSend,
-  accessToken,
+  onSendAudio,
+  userId,
 }: VoicePromptInputProps) {
   const recorder = useVoiceRecorder();
   const [transcribing, setTranscribing] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
-
-  const insertIntoTextarea = useCallback((text: string) => {
-    const root = wrapRef.current;
-    if (!root) return;
-    const ta = root.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
-    if (!ta) return;
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value",
-    )?.set;
-    const next = ta.value ? `${ta.value} ${text}` : text;
-    setter?.call(ta, next);
-    ta.dispatchEvent(new Event("input", { bubbles: true }));
-    ta.focus();
-    ta.setSelectionRange(next.length, next.length);
-  }, []);
 
   const handleMicClick = useCallback(async () => {
     setVoiceError(null);
@@ -257,18 +259,16 @@ function VoicePromptInput({
         setVoiceError(recorder.error || "Gravação inválida.");
         return;
       }
-      if (!accessToken) {
-        setVoiceError("Sessão expirada. Faça login novamente.");
-        return;
-      }
-      setTranscribing(true);
+      setTranscribing(true); // Reused for 'Uploading' state visually
       try {
-        const text = await transcribeAudio({ accessToken, audio: blob });
-        if (text) {
-          insertIntoTextarea(text);
-        } else {
-          setVoiceError("Não entendi o áudio. Pode repetir?");
-        }
+        const filename = `${userId || "anon"}/${Date.now()}.webm`;
+        const { error } = await supabase.storage.from("assistant_audio_temp").upload(filename, blob, {
+          contentType: blob.type,
+        });
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage.from("assistant_audio_temp").getPublicUrl(filename);
+        onSendAudio(publicUrl, blob.type);
       } catch (err) {
         setVoiceError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -277,7 +277,7 @@ function VoicePromptInput({
     } else {
       await recorder.start();
     }
-  }, [recorder, accessToken, insertIntoTextarea]);
+  }, [recorder, userId, onSendAudio]);
 
   const micDisabled = disabled || transcribing;
 

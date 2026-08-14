@@ -19,7 +19,7 @@ import {
   type AllPageSnapshots,
 } from "./registry";
 
-const MAX_SNAPSHOT_CHARS = 8_000;
+const MAX_SNAPSHOT_CHARS = 3_000;
 
 export interface AssistantSystemContext {
   page: LunariPage;
