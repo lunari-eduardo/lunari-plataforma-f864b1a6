@@ -583,6 +583,89 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          data: Json | null
+          id: string
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          data?: Json | null
+          id: string
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          role?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_provider_keys: {
+        Row: {
+          api_key: string
+          created_at: string
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          created_at?: string
+          provider_name: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          created_at?: string
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      assistant_threads: {
+        Row: {
+          created_at: string
+          id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -2124,6 +2207,84 @@ export type Database = {
             columns: ["visitor_id"]
             isOneToOne: false
             referencedRelation: "galeria_visitantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_automation_config: {
+        Row: {
+          auto_advance_stage_on_share: boolean
+          created_at: string
+          id: string
+          target_stage_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_advance_stage_on_share?: boolean
+          created_at?: string
+          id?: string
+          target_stage_key?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_advance_stage_on_share?: boolean
+          created_at?: string
+          id?: string
+          target_stage_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      commercial_materials: {
+        Row: {
+          active_version_id: string | null
+          categoria_id: string | null
+          cover_image_url: string | null
+          created_at: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_version_id?: string | null
+          categoria_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_version_id?: string | null
+          categoria_id?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_materials_active_version_id_fkey"
+            columns: ["active_version_id"]
+            isOneToOne: false
+            referencedRelation: "material_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_materials_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
         ]
@@ -4450,6 +4611,289 @@ export type Database = {
         }
         Relationships: []
       }
+      material_share_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_share_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "material_share_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_share_link_slugs: {
+        Row: {
+          active_from: string
+          active_until: string | null
+          created_at: string
+          id: string
+          share_link_id: string
+          slug: string
+        }
+        Insert: {
+          active_from?: string
+          active_until?: string | null
+          created_at?: string
+          id?: string
+          share_link_id: string
+          slug: string
+        }
+        Update: {
+          active_from?: string
+          active_until?: string | null
+          created_at?: string
+          id?: string
+          share_link_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_share_link_slugs_share_link_id_fkey"
+            columns: ["share_link_id"]
+            isOneToOne: false
+            referencedRelation: "material_share_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_share_links: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          material_id: string
+          slug: string
+          slug_updated_at: string
+          total_views: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          material_id: string
+          slug: string
+          slug_updated_at?: string
+          total_views?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          material_id?: string
+          slug?: string
+          slug_updated_at?: string
+          total_views?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_share_links_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: true
+            referencedRelation: "commercial_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_share_sessions: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          ip_hash: string | null
+          session_token: string
+          share_id: string | null
+          share_link_id: string | null
+          started_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          ip_hash?: string | null
+          session_token: string
+          share_id?: string | null
+          share_link_id?: string | null
+          started_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          ip_hash?: string | null
+          session_token?: string
+          share_id?: string | null
+          share_link_id?: string | null
+          started_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_share_sessions_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "material_shares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_share_sessions_share_link_id_fkey"
+            columns: ["share_link_id"]
+            isOneToOne: false
+            referencedRelation: "material_share_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_shares: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          custom_message: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          lead_id: string | null
+          material_id: string
+          note: string | null
+          sent_at: string
+          share_number: number
+          token: string
+          user_id: string
+          version_id: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          custom_message?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          lead_id?: string | null
+          material_id: string
+          note?: string | null
+          sent_at?: string
+          share_number: number
+          token: string
+          user_id: string
+          version_id: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          custom_message?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          lead_id?: string | null
+          material_id?: string
+          note?: string | null
+          sent_at?: string
+          share_number?: number
+          token?: string
+          user_id?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_shares_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_shares_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_shares_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_shares_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "material_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      material_versions: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          material_id: string
+          published_at: string | null
+          version_number: number
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          material_id: string
+          published_at?: string | null
+          version_number?: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          material_id?: string
+          published_at?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_versions_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memory_entries: {
         Row: {
           confidence: number
@@ -5253,6 +5697,45 @@ export type Database = {
           telefones?: string[] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      proposal_templates: {
+        Row: {
+          blocks_json: Json
+          created_at: string | null
+          description: string | null
+          design_tokens: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          preview_html_path: string | null
+          tags: string[] | null
+          template_id: string
+        }
+        Insert: {
+          blocks_json: Json
+          created_at?: string | null
+          description?: string | null
+          design_tokens?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          preview_html_path?: string | null
+          tags?: string[] | null
+          template_id: string
+        }
+        Update: {
+          blocks_json?: Json
+          created_at?: string | null
+          description?: string | null
+          design_tokens?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          preview_html_path?: string | null
+          tags?: string[] | null
+          template_id?: string
         }
         Relationships: []
       }
@@ -6163,6 +6646,7 @@ export type Database = {
           description: string | null
           features: Json | null
           id: string
+          includes_materials: boolean
           includes_select: boolean | null
           includes_studio: boolean | null
           includes_transfer: boolean | null
@@ -6182,6 +6666,7 @@ export type Database = {
           description?: string | null
           features?: Json | null
           id?: string
+          includes_materials?: boolean
           includes_select?: boolean | null
           includes_studio?: boolean | null
           includes_transfer?: boolean | null
@@ -6201,6 +6686,7 @@ export type Database = {
           description?: string | null
           features?: Json | null
           id?: string
+          includes_materials?: boolean
           includes_select?: boolean | null
           includes_studio?: boolean | null
           includes_transfer?: boolean | null
@@ -6883,6 +7369,13 @@ export type Database = {
         Args: { produtos: Json }
         Returns: number
       }
+      check_assistant_key_status: {
+        Args: { p_provider_name: string }
+        Returns: {
+          has_key: boolean
+          key_length: number
+        }[]
+      }
       check_photo_credits: {
         Args: { _photo_count: number; _user_id: string }
         Returns: boolean
@@ -7004,6 +7497,23 @@ export type Database = {
         Args: { p_token: string }
         Returns: Json
       }
+      get_or_create_automation_config: {
+        Args: { p_user_id: string }
+        Returns: {
+          auto_advance_stage_on_share: boolean
+          created_at: string
+          id: string
+          target_stage_key: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "commercial_automation_config"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_photo_credit_balance: { Args: { _user_id: string }; Returns: number }
       get_photographer_account: {
         Args: { _user_id: string }
@@ -7047,6 +7557,10 @@ export type Database = {
       }
       increment_gallery_photo_count: {
         Args: { gallery_id: string }
+        Returns: undefined
+      }
+      increment_share_link_views: {
+        Args: { link_id: string }
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
@@ -7160,6 +7674,10 @@ export type Database = {
           p_year: number
         }
         Returns: Json
+      }
+      set_assistant_provider_key: {
+        Args: { p_api_key: string; p_model_id: string; p_provider_name: string }
+        Returns: undefined
       }
       set_session_extras: {
         Args: {
