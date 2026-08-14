@@ -98,15 +98,12 @@ function getToolLabel(toolName: string, state: string): string {
 
 // ---------------------------------------------------------------------------
 
-function toAuthUser(user: ReturnType<typeof useAuth>["user"]): AuthUser | null {
-  if (!user?.id) return null;
-  return { id: user.id, email: user.email ?? undefined } as AuthUser;
-}
+import { useAuthUser } from "@/shared/capability/react";
 
 export function AssistantChat() {
-  const { user, session } = useAuth();
+  const { session } = useAuth();
   const location = useLocation();
-  const authUser = useMemo(() => toAuthUser(user), [user]);
+  const authUser = useAuthUser();
   const authUserRef = useRef(authUser);
   authUserRef.current = authUser;
 
