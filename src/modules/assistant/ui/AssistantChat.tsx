@@ -36,6 +36,7 @@ import {
 
 import { executeAssistantToolCall } from "../runtime/executeToolCall";
 import { pageFromRoute } from "../runtime/pageFromRoute";
+import { selectToolsForPage, MAX_TOOLS_PER_TURN } from "../runtime/selectToolsForPage";
 import { useVoiceRecorder } from "../runtime/useVoiceRecorder";
 
 const ASSISTANT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
@@ -57,7 +58,11 @@ export function AssistantChat() {
   // Snapshot + tool declarations rebuilt on every send (context is dynamic).
   const buildRequestBody = useCallback(() => {
     const u = authUserRef.current;
-    const tools = listAllLunariAITools({ user: u }).map((t) => ({
+    const all = listAllLunariAITools({ user: u });
+    // Providers de LLM têm limite prático (~128) de function declarations e
+    // degradam muito antes disso. Priorizamos por relevância de página.
+    const selected = selectToolsForPage(all, page, MAX_TOOLS_PER_TURN);
+    const tools = selected.map((t) => ({
       name: t.id.replace(/\./g, "__"),
       description: t.description,
       parameters: t.inputSchema ?? { type: "object", properties: {} },
