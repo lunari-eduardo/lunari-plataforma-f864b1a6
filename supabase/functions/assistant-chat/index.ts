@@ -31,6 +31,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { convertToModelMessages, streamText, stepCountIs, type UIMessage } from "npm:ai@^5";
+import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@^1";
 import {
   createLovableAiGatewayProvider,
   getLovableAiGatewayResponseHeaders,
@@ -124,12 +125,6 @@ Deno.serve(async (req) => {
   const denied = await assertAssistantAccess(supabase, userId, corsHeaders);
   if (denied) return denied;
 
-  // --- API key ---
-  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!lovableApiKey) {
-    return json({ error: "LOVABLE_API_KEY not configured" }, 500);
-  }
-
   // --- Parse body ---
   let body: ChatRequestBody;
   try {
@@ -141,11 +136,27 @@ Deno.serve(async (req) => {
     return json({ error: "messages: array required" }, 400);
   }
 
-  const modelId = typeof body.model === "string" && body.model.startsWith("google/")
-    ? body.model
-    : typeof body.model === "string" && body.model.startsWith("openai/")
-    ? body.model
-    : DEFAULT_MODEL;
+  // --- Fetch API Configuration from Vault via service_role ---
+  const supabaseService = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const [{ data: provRow }, { data: modRow }] = await Promise.all([
+    supabaseService.from("app_settings").select("value").eq("key", "assistant_ai_provider").maybeSingle(),
+    supabaseService.from("app_settings").select("value").eq("key", "assistant_ai_model").maybeSingle(),
+  ]);
+
+  const providerName = typeof provRow?.value === "string" ? provRow.value : "lovable";
+  const modelId = typeof modRow?.value === "string" ? modRow.value : DEFAULT_MODEL;
+
+  const { data: keyRow } = await supabaseService
+    .from("assistant_provider_keys")
+    .select("api_key")
+    .eq("provider_name", providerName)
+    .maybeSingle();
+
+  const apiKey = keyRow?.api_key;
 
   // --- Adapt tools (client → AI SDK). Sem `execute` → cliente resolve. ---
   const tools: Record<string, any> = {};
@@ -154,18 +165,39 @@ Deno.serve(async (req) => {
     tools[decl.name] = {
       description: buildToolDescription(decl),
       inputSchema: {
-        // AI SDK aceita JSON Schema puro no lugar de zod via `jsonSchema()`,
-        // mas para máxima interop deixamos como schema livre (o modelo enxerga
-        // igual). O provider OpenAI-compatible faz o passthrough.
         jsonSchema: decl.parameters ?? { type: "object", properties: {} },
       },
     };
   }
 
   // --- Provider ---
-  const initialRunId = getLovableAiGatewayRunId(req);
-  const gateway = createLovableAiGatewayProvider(lovableApiKey, initialRunId);
-  const model = gateway(modelId);
+  let model;
+  let gateway: any = undefined;
+
+  if (providerName === "deepseek") {
+    if (!apiKey) return json({ error: "DeepSeek API key not configured in vault" }, 500);
+    const dsProvider = createOpenAICompatible({
+      name: "deepseek",
+      baseURL: "https://api.deepseek.com/beta",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    model = dsProvider(modelId);
+  } else if (providerName === "openai") {
+    if (!apiKey) return json({ error: "OpenAI API key not configured in vault" }, 500);
+    const oaProvider = createOpenAICompatible({
+      name: "openai",
+      baseURL: "https://api.openai.com/v1",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    model = oaProvider(modelId);
+  } else {
+    // fallback to lovable
+    const lovableKey = apiKey || Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableKey) return json({ error: "Lovable API key not configured" }, 500);
+    const initialRunId = getLovableAiGatewayRunId(req);
+    gateway = createLovableAiGatewayProvider(lovableKey, initialRunId);
+    model = gateway(modelId);
+  }
 
   const systemPrompt = [DEFAULT_SYSTEM_PROMPT, body.system?.trim()].filter(Boolean).join("\n\n");
 
@@ -187,11 +219,14 @@ Deno.serve(async (req) => {
     const streamResponse = result.toUIMessageStreamResponse({
       headers: getLovableAiGatewayResponseHeaders(undefined, {
         ...corsHeaders,
-        ...(initialRunId ? { [LOVABLE_AIG_RUN_ID_HEADER]: initialRunId } : {}),
+        ...(gateway ? { [LOVABLE_AIG_RUN_ID_HEADER]: gateway.getRunId?.() } : {}),
       }),
     });
 
-    return withLovableAiGatewayRunIdHeader(streamResponse, gateway, corsHeaders);
+    if (gateway) {
+      return withLovableAiGatewayRunIdHeader(streamResponse, gateway, corsHeaders);
+    }
+    return streamResponse;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[assistant-chat] streamText failed:", message);

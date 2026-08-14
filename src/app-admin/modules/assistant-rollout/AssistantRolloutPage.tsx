@@ -59,11 +59,16 @@ export default function AssistantRolloutPage() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [metrics, setMetrics] = useState<{ total: number; blocked: number } | null>(null);
+  const [apiProvider, setApiProvider] = useState<string>("deepseek");
+  const [apiModel, setApiModel] = useState<string>("deepseek-chat");
+  const [apiKey, setApiKey] = useState("");
   const [requests, setRequests] = useState<RequestRow[]>([]);
 
   const loadAll = async () => {
-    const [{ data: settingRows }, { data: betaRows }, { data: invRows }] = await Promise.all([
+    const [{ data: settingRows }, { data: provRows }, { data: modRows }, { data: betaRows }, { data: invRows }] = await Promise.all([
       supabase.from("app_settings").select("value").eq("key", "assistant_rollout_stage").maybeSingle(),
+      supabase.from("app_settings").select("value").eq("key", "assistant_ai_provider").maybeSingle(),
+      supabase.from("app_settings").select("value").eq("key", "assistant_ai_model").maybeSingle(),
       supabase.from("assistant_beta_access").select("user_id, granted_at, note").order("granted_at", { ascending: false }),
       supabase.from("assistant_invocations").select("output_status").gte("created_at", new Date(Date.now() - 30 * 864e5).toISOString()),
     ]);
@@ -71,6 +76,12 @@ export default function AssistantRolloutPage() {
     const raw = (settingRows as any)?.value;
     const s = typeof raw === "string" ? raw : (raw as string);
     if (s === "admin" || s === "beta" || s === "geral") setStage(s);
+
+    const provRaw = (provRows as any)?.value;
+    if (provRaw) setApiProvider(typeof provRaw === "string" ? provRaw : (provRaw as string));
+
+    const modRaw = (modRows as any)?.value;
+    if (modRaw) setApiModel(typeof modRaw === "string" ? modRaw : (modRaw as string));
 
     const rows = (betaRows ?? []) as BetaRow[];
     if (rows.length) {
@@ -163,6 +174,22 @@ export default function AssistantRolloutPage() {
     const { error } = await supabase.from("assistant_beta_access").delete().eq("user_id", userId);
     if (error) return toast.error("Falha ao remover: " + error.message);
     await loadAll();
+  };
+
+  const saveApiConfig = async () => {
+    setSaving(true);
+    const { error } = await supabase.rpc("set_assistant_provider_key", {
+      p_provider_name: apiProvider,
+      p_api_key: apiKey,
+      p_model_id: apiModel,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error("Falha ao salvar configurações de API: " + error.message);
+      return;
+    }
+    toast.success("Configurações de IA salvas com sucesso!");
+    setApiKey(""); // Limpa o input de senha por segurança
   };
 
   return (
@@ -322,6 +349,56 @@ export default function AssistantRolloutPage() {
               ))}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Cofre de APIs (Motor de IA)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Configure o provedor de Inteligência Artificial ativo. A chave de API nunca é exibida na tela por segurança.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Provedor</label>
+              <Select value={apiProvider} onValueChange={setApiProvider} disabled={saving}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="deepseek">DeepSeek</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="lovable">Lovable Gateway</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">ID do Modelo</label>
+              <Input 
+                value={apiModel} 
+                onChange={(e) => setApiModel(e.target.value)} 
+                placeholder="Ex: deepseek-chat" 
+                disabled={saving}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nova Chave de API (opcional)</label>
+              <Input 
+                type="password"
+                value={apiKey} 
+                onChange={(e) => setApiKey(e.target.value)} 
+                placeholder="********" 
+                disabled={saving}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button onClick={saveApiConfig} disabled={saving}>
+              Salvar Configuração do Cofre
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
