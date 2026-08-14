@@ -376,13 +376,42 @@ export default function AssistantRolloutPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">ID do Modelo</label>
-              <Input 
-                value={apiModel} 
-                onChange={(e) => setApiModel(e.target.value)} 
-                placeholder="Ex: gemini-3.5-flash-lite" 
-                disabled={saving}
-              />
+              <label className="text-sm font-medium">Modelo Ativo</label>
+              {apiProvider === "lovable" || !apiProvider ? (
+                <Input 
+                  value={apiModel} 
+                  onChange={(e) => setApiModel(e.target.value)} 
+                  placeholder="Ex: deepseek-chat" 
+                  disabled={saving}
+                />
+              ) : (
+                <Select value={apiModel} onValueChange={setApiModel} disabled={saving}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um modelo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {apiProvider === "gemini" && (
+                      <>
+                        <SelectItem value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (Rápido/Barato)</SelectItem>
+                        <SelectItem value="gemini-3.7-flash">Gemini 3.7 Flash (Recomendado)</SelectItem>
+                        <SelectItem value="gemini-3.1-pro">Gemini 3.1 Pro (Raciocínio Avançado)</SelectItem>
+                      </>
+                    )}
+                    {apiProvider === "deepseek" && (
+                      <>
+                        <SelectItem value="deepseek-chat">DeepSeek V3 (Chat)</SelectItem>
+                        <SelectItem value="deepseek-reasoner">DeepSeek R1 (Reasoner)</SelectItem>
+                      </>
+                    )}
+                    {apiProvider === "openai" && (
+                      <>
+                        <SelectItem value="gpt-4o-mini">GPT-4o Mini (Rápido/Barato)</SelectItem>
+                        <SelectItem value="gpt-4o">GPT-4o (Recomendado/Multimodal)</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nova Chave de API (opcional)</label>
