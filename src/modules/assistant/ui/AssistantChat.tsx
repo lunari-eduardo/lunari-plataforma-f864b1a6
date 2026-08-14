@@ -166,8 +166,9 @@ export function AssistantChat() {
   // ---------------------------------------------------------------------------
   // Execução de tools APÓS o stream fechar (pós-stream, não dentro do stream).
   // ---------------------------------------------------------------------------
-  // Ref para evitar execuções duplicadas por re-render.
+  // Ref para evitar execuções duplicadas por re-render e state para UI.
   const executingToolsRef = useRef<Set<string>>(new Set());
+  const [executingToolCount, setExecutingToolCount] = useState(0);
 
   useEffect(() => {
     // Só roda quando o stream terminou (status = "ready").
@@ -194,13 +195,13 @@ export function AssistantChat() {
       const toolCallId = (part as any).toolCallId as string;
       if (executingToolsRef.current.has(toolCallId)) continue;
       executingToolsRef.current.add(toolCallId);
+      setExecutingToolCount(executingToolsRef.current.size);
 
-      // Nome da tool: "tool-workflow__listMonth" → "workflow__listMonth"
-      const toolName = part.type.startsWith("tool-")
-        ? part.type.slice("tool-".length)
-        : (part as any).toolName ?? part.type;
+      // Nome da tool no AI SDK 5 vem em part.toolName
+      const toolName = (part as any).toolName;
 
-      const input = (part as any).input;
+      // Argumentos no AI SDK 5 vêm em part.args (input era usado em versões antigas/internas)
+      const input = (part as any).args ?? (part as any).input;
 
       // Executa assincronamente sem bloquear o effect.
       void (async () => {
@@ -233,13 +234,14 @@ export function AssistantChat() {
           });
         } finally {
           executingToolsRef.current.delete(toolCallId);
+          setExecutingToolCount(executingToolsRef.current.size);
         }
       })();
     }
   }, [status, messages, addToolResult]);
 
-  const disabled = !authUser || !session?.access_token;
-  const isLoading = status === "submitted" || status === "streaming";
+  const disabled = !authUser || !session?.access_token || executingToolCount > 0;
+  const isLoading = status === "submitted" || status === "streaming" || executingToolCount > 0;
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
