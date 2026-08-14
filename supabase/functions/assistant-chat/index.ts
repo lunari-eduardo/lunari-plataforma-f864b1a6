@@ -88,6 +88,9 @@ async function logInvocation(
         entry.finishReason ? `, ${entry.finishReason}` : ""
       })`,
     });
+    if (auditError) {
+      console.error("[assistant-chat] ✗ auditoria rejeitada:", auditError.message ?? auditError);
+    }
   } catch (e) {
     console.error("[assistant-chat] falha ao auditar invocação:", e);
   }
