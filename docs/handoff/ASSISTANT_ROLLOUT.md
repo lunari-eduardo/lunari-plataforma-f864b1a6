@@ -1,4 +1,4 @@
-# Rollout da assistente Lu (A6)
+# Rollout da assistente Lunari (A6)
 
 Estágio global em `app_settings.assistant_rollout_stage` — JSON string, com
 `CHECK` no banco: só `"admin"`, `"beta"` ou `"geral"`.
@@ -8,7 +8,7 @@ Fonte única de decisão: RPC `public.assistant_access_allowed(_uid)`
 
 ## Matriz de comportamento
 
-| Estágio | Launcher da Lu | Edge functions `assistant-*` | Criar PAT | Tool via MCP | App OAuth |
+| Estágio | Launcher da Lunari | Edge functions `assistant-*` | Criar PAT | Tool via MCP | App OAuth |
 |---|---|---|---|---|---|
 | `admin` | só admin | só admin | só admin | só admin | só admin |
 | `beta`  | admin + `assistant_beta_access` | idem | idem | idem | idem |

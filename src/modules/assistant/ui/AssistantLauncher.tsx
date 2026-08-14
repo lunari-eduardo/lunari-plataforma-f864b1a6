@@ -9,7 +9,7 @@ import { AssistantChat } from "./AssistantChat";
 import { useAssistantAccess } from "../runtime/useAssistantAccess";
 
 /**
- * Onda E.3 — Launcher flutuante da Lu.
+ * Onda E.3 — Launcher flutuante da Lunari.
  *
  * Renderizado uma vez pelo Layout autenticado. Abre um Sheet lateral
  * com o chat da assistente. Só aparece quando o rollout permite
@@ -24,7 +24,7 @@ export function AssistantLauncher() {
     <>
       <button
         type="button"
-        aria-label="Abrir assistente Lu"
+        aria-label="Abrir assistente Lunari"
         onClick={() => setOpen(true)}
         className={cn(
           "fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full",
@@ -45,7 +45,7 @@ export function AssistantLauncher() {
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <Sparkles className="h-4 w-4" />
               </div>
-              <SheetTitle className="text-base font-medium">Lu · Assistente</SheetTitle>
+              <SheetTitle className="text-base font-medium">Lunari · Assistente</SheetTitle>
             </div>
             <Button
               variant="ghost"

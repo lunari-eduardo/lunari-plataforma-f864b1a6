@@ -1,8 +1,8 @@
-# Assistente Lu — Guia de Implementação Pendente
+# Assistente Lunari — Guia de Implementação Pendente
 
 > Status: **Infraestrutura pronta, runtime não plugado.**
 > Todas as capabilities, tools de IA, permissions e o registry central já existem no código.
-> Este documento lista **exatamente** o que falta fazer para ativar o Lu em produção.
+> Este documento lista **exatamente** o que falta fazer para ativar a Lunari em produção.
 
 ---
 
@@ -38,7 +38,7 @@ Módulo | Capability | Tipo | Aprovação humana
 ## 2. O que FALTA implementar
 
 ### 2.1 Endpoint do chat (Edge Function)
-**Arquivo alvo:** `supabase/functions/lu-assistant-chat/index.ts` (criar).
+**Arquivo alvo:** `supabase/functions/lunari-assistant-chat/index.ts` (criar).
 
 Requisitos:
 1. Usar AI SDK (`streamText` + `toUIMessageStreamResponse`) via Lovable AI Gateway (`_shared/ai-gateway.ts`).
@@ -51,7 +51,7 @@ Requisitos:
 
 Contrato de request:
 ```ts
-POST /functions/v1/lu-assistant-chat
+POST /functions/v1/lunari-assistant-chat
 { threadId: string, messages: UIMessage[] }
 ```
 
@@ -91,7 +91,7 @@ Padrões obrigatórios (`chat-agent-ui-contract`):
 
 ### 2.4 System prompt (rascunho)
 ```
-Você é Lu, assistente da plataforma Lunari para fotógrafos profissionais.
+Você é a Lunari, assistente da plataforma Lunari para fotógrafos profissionais.
 
 REGRAS:
 - Nunca acesse o banco diretamente. Use apenas as ferramentas expostas.
@@ -168,10 +168,10 @@ Cada teste deve gerar linha em `assistant_invocations`.
 
 1. Perguntar ao usuário: **thread × storage** (bloqueia UI).
 2. Migration `assistant_invocations` (+ threads/messages se DB).
-3. Edge Function `lu-assistant-chat` com wrapper de auditoria.
+3. Edge Function `lunari-assistant-chat` com wrapper de auditoria.
 4. UI base (`AssistantPage` + `ChatWindow`) sem approval.
 5. `ToolCallCard` de approval + fluxo human-in-the-loop.
-6. Rota + navegação (sidebar item "Lu").
+6. Rota + navegação (sidebar item "Lunari").
 7. Testes manuais 1–8.
 8. Ajuste de system prompt conforme comportamento observado.
 

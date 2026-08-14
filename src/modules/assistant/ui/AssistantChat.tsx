@@ -90,7 +90,7 @@ export function AssistantChat() {
   );
 
   const { messages, sendMessage, status, stop, addToolResult, error } = useChat({
-    id: `lu-${authUser?.id ?? "anon"}`,
+    id: `lunari-${authUser?.id ?? "anon"}`,
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({ toolCall }) => {
@@ -127,7 +127,7 @@ export function AssistantChat() {
         <ConversationContent className="space-y-3 px-4 py-4">
           {messages.length === 0 && (
             <div className="mx-auto max-w-sm py-10 text-center text-sm text-muted-foreground">
-              Oi, sou a <span className="font-medium text-foreground">Lu</span>.
+              Oi, sou a <span className="font-medium text-foreground">Lunari</span>.
               Posso consultar e operar sua página <span className="font-medium">{page}</span>.
               Peça relatório, ação ou ajuda operacional — ações sensíveis pedem sua confirmação.
             </div>
@@ -179,7 +179,7 @@ export function AssistantChat() {
 
           {error && (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              {error.message || "Erro ao contactar a Lu."}
+              {error.message || "Erro ao contactar a Lunari."}
             </div>
           )}
         </ConversationContent>
@@ -197,7 +197,7 @@ export function AssistantChat() {
       </div>
 
       {isLoading && (
-        <div className="sr-only" aria-live="polite">Lu está respondendo…</div>
+        <div className="sr-only" aria-live="polite">Lunari está respondendo…</div>
       )}
 
       {/* keep supabase reference for tree-shaking safety */}
@@ -293,12 +293,12 @@ function VoicePromptInput({
       <PromptInputTextarea
         placeholder={
           disabled
-            ? "Faça login para conversar com a Lu…"
+            ? "Faça login para conversar com a Lunari…"
             : recorder.isRecording
               ? "Gravando… clique no microfone para transcrever."
               : transcribing
                 ? "Transcrevendo…"
-                : "Peça algo à Lu — ou clique no microfone."
+                : "Peça algo à Lunari — ou clique no microfone."
         }
         disabled={disabled || transcribing}
         autoFocus
