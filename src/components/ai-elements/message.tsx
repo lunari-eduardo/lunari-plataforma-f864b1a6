@@ -330,19 +330,24 @@ export const MessageResponse = memo(
     let rawContent = String(props.children || "");
     let directPayload = null;
     let isStreamingRawJson = false;
-    let jsonParseError = null;
 
-    if (!rawContent.includes("```json ui-render")) {
-      const rawMatch = rawContent.match(/\{\s*"type"\s*:\s*"(table|metric_group|card_list|action|confirmation|alert)"[\s\S]*/);
-      if (rawMatch) {
-        isStreamingRawJson = true;
+    const uiMatch = rawContent.match(/\{\s*"type"\s*:\s*"(table|metric_group|card_list|action|confirmation|alert)"[\s\S]*/);
+    
+    if (uiMatch) {
+      const matchText = uiMatch[0];
+      const start = matchText.indexOf('{');
+      const end = matchText.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end >= start) {
+        const potentialJson = matchText.substring(start, end + 1);
         try {
-          directPayload = JSON.parse(rawMatch[0]);
-          rawContent = rawContent.replace(rawMatch[0], "");
+          directPayload = JSON.parse(potentialJson);
+          rawContent = rawContent.replace(potentialJson, "");
+          rawContent = rawContent.replace(/```(?:json)?(?: ui-render)?\s*```/g, "");
+          rawContent = rawContent.replace(/ui-render\s*/g, "");
         } catch (e) {
-          jsonParseError = e;
+          isStreamingRawJson = true;
           if (isAnimating) {
-            rawContent = rawContent.replace(rawMatch[0], "");
+            rawContent = rawContent.replace(matchText, "");
           }
         }
       }
@@ -357,11 +362,6 @@ export const MessageResponse = memo(
             Desenhando interface...
           </div>
         )}
-        {!directPayload && isStreamingRawJson && !isAnimating && (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-            Erro ao renderizar componente UI: {String(jsonParseError)}
-          </div>
-        )}
         {rawContent.trim().length > 0 && (
           <Streamdown
             className={cn(
@@ -374,11 +374,23 @@ export const MessageResponse = memo(
                 const { children, className, node, ...rest } = codeProps;
                 const match = /language-(\w+)/.exec(className || "");
                 if (match && (match[1] === "ui-render" || match[1] === "json")) {
-                  const textContent = String(children).replace(/\n$/, "");
+                  let textContent = String(children).trim();
                   if (match[1] === "json" && !textContent.includes('"type":')) {
-                    // Deixa cair pro comportamento padrão de código abaixo
+                    // Deixa cair pro comportamento padrão
                   } else {
                     try {
+                      if (textContent.startsWith("ui-render")) {
+                        textContent = textContent.replace(/^ui-render\s*/, "");
+                      }
+                      const start = textContent.indexOf('{');
+                      const end = textContent.lastIndexOf('}');
+                      if (start !== -1 && end !== -1 && end >= start) {
+                        const jsonOnly = textContent.substring(start, end + 1);
+                        const payload = JSON.parse(jsonOnly);
+                        if (payload.type) {
+                          return <GenerativeUIRenderer payload={payload} />;
+                        }
+                      }
                       const payload = JSON.parse(textContent);
                       if (payload.type) {
                         return <GenerativeUIRenderer payload={payload} />;
@@ -392,11 +404,6 @@ export const MessageResponse = memo(
                           </div>
                         );
                       }
-                      return (
-                        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-                          Erro ao renderizar componente UI: {String(e)}
-                        </div>
-                      );
                     }
                   }
                 }
