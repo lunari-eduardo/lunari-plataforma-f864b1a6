@@ -30,7 +30,13 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { convertToModelMessages, streamText, stepCountIs, type UIMessage } from "npm:ai@^5";
+import {
+  convertToModelMessages,
+  jsonSchema,
+  streamText,
+  stepCountIs,
+  type UIMessage,
+} from "npm:ai@^5";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@^1";
 import { createGoogleGenerativeAI } from "npm:@ai-sdk/google@^2";
 import {
@@ -49,6 +55,43 @@ const corsHeaders = {
 };
 
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+
+/** Auditoria de turno do assistente (best-effort — nunca derruba o stream). */
+async function logInvocation(
+  db: any,
+  entry: {
+    userId: string | null;
+    page?: string | null;
+    model: string;
+    provider: string;
+    toolCount: number;
+    status: "success" | "error";
+    error?: string;
+    finishReason?: string;
+    usage?: unknown;
+    durationMs: number;
+  },
+) {
+  try {
+    await db.from("assistant_invocations").insert({
+      user_id: entry.userId,
+      capability_id: "assistant.chat.turn",
+      module: "assistant",
+      kind: "query",
+      actor: "assistant",
+      output_status: entry.status,
+      error_message: entry.error ?? null,
+      latency_ms: Math.round(entry.durationMs),
+      surface: "chat",
+      auth_source: "supabase",
+      tool_name: `${entry.provider}:${entry.model} (${entry.toolCount} tools${
+        entry.finishReason ? `, ${entry.finishReason}` : ""
+      })`,
+    });
+  } catch (e) {
+    console.error("[assistant-chat] falha ao auditar invocação:", e);
+  }
+}
 
 const DEFAULT_SYSTEM_PROMPT = `Você é a Lunari, assistente operacional do Lunari Studio (plataforma para fotógrafos).
 Regras invioláveis de Segurança e Operação:
@@ -180,14 +223,18 @@ Deno.serve(async (req) => {
   }
 
   // --- Adapt tools (client → AI SDK). Sem `execute` → cliente resolve. ---
+  // IMPORTANTE: `inputSchema` precisa do helper `jsonSchema()` do AI SDK 5.
+  // Um objeto cru cai no caminho Zod e quebra em `parseDef` (typeName undefined).
   const tools: Record<string, any> = {};
   for (const decl of body.tools ?? []) {
     if (!decl?.name) continue;
+    const params =
+      decl.parameters && typeof decl.parameters === "object"
+        ? decl.parameters
+        : { type: "object", properties: {} };
     tools[decl.name] = {
       description: buildToolDescription(decl),
-      inputSchema: {
-        jsonSchema: decl.parameters ?? { type: "object", properties: {} },
-      },
+      inputSchema: jsonSchema(params as any),
     };
   }
 
@@ -231,8 +278,12 @@ Deno.serve(async (req) => {
     let coreMessages = await convertToModelMessages(body.messages);
 
     // --- Otimização de Histórico (Sliding Window & Truncamento) ---
+    // Corta sempre numa fronteira segura: nunca começa em mensagem `tool`
+    // (isso separaria o tool-result do seu tool-call e invalida o histórico).
     if (coreMessages.length > 10) {
-      coreMessages = coreMessages.slice(-10);
+      let start = coreMessages.length - 10;
+      while (start > 0 && coreMessages[start].role === "tool") start--;
+      coreMessages = coreMessages.slice(start);
     }
     let toolResultCount = 0;
     for (let i = coreMessages.length - 1; i >= 0; i--) {
@@ -240,9 +291,16 @@ Deno.serve(async (req) => {
       if (msg.role === "tool" && Array.isArray(msg.content)) {
         toolResultCount++;
         if (toolResultCount > 2) {
-          msg.content = msg.content.map((part) => {
+          msg.content = msg.content.map((part: any) => {
             if (part.type === "tool-result") {
-              return { ...part, result: { _truncated: "Resultados antigos omitidos para economia de tokens" } };
+              // AI SDK 5: o payload do resultado vive em `output`, não em `result`.
+              return {
+                ...part,
+                output: {
+                  type: "json",
+                  value: { _truncated: "Resultados antigos omitidos para economia de tokens" },
+                },
+              };
             }
             return part;
           });
@@ -250,6 +308,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    const startedAt = Date.now();
     const result = streamText({
       model,
       system: systemPrompt,
@@ -262,9 +321,44 @@ Deno.serve(async (req) => {
           metadata: { userId, page: body.page ?? null, source: "assistant-chat" },
         },
       },
+      onError({ error }) {
+        const m = error instanceof Error ? error.message : String(error);
+        console.error("[assistant-chat] ✗ Erro no stream:", m, error instanceof Error ? error.stack : "");
+        void logInvocation(supabaseService, {
+          userId,
+          page: body.page ?? null,
+          model: modelId,
+          provider: providerName,
+          toolCount: Object.keys(tools).length,
+          status: "error",
+          error: m,
+          durationMs: Date.now() - startedAt,
+        });
+      },
+      onFinish({ finishReason, usage }) {
+        console.log(
+          `[assistant-chat] ✓ Turno concluído — reason=${finishReason} tokens=${usage?.totalTokens ?? "?"}`,
+        );
+        void logInvocation(supabaseService, {
+          userId,
+          page: body.page ?? null,
+          model: modelId,
+          provider: providerName,
+          toolCount: Object.keys(tools).length,
+          status: "success",
+          finishReason,
+          usage,
+          durationMs: Date.now() - startedAt,
+        });
+      },
     });
 
     const streamResponse = result.toUIMessageStreamResponse({
+      // Sem isto o AI SDK mascara tudo como "An error occurred."
+      onError: (error) => {
+        const m = error instanceof Error ? error.message : String(error);
+        return `Falha na Lunari: ${m}`;
+      },
       headers: getLovableAiGatewayResponseHeaders(undefined, {
         ...corsHeaders,
         ...(gateway ? { [LOVABLE_AIG_RUN_ID_HEADER]: gateway.getRunId?.() } : {}),

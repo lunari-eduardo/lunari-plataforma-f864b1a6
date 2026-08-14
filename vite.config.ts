@@ -91,6 +91,8 @@ export default defineConfig(({ mode }) => ({
         navigationPreload: false,
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // Chunks pesados e carregados sob demanda (diagramas markdown) não entram no precache.
+        globIgnores: ['**/mermaid-*.js', '**/emacs-lisp-*.js', '**/cpp-*.js', '**/cynefin-*.js'],
       navigateFallbackDenylist: [/^\/formulario\//, /^\/checkout\//, /^\/pay\//, /^\/l\//],
       runtimeCaching: [
           {
