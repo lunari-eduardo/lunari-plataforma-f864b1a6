@@ -65,7 +65,7 @@ async function logInvocation(
     model: string;
     provider: string;
     toolCount: number;
-    status: "success" | "error";
+    status: "ok" | "error";
     error?: string;
     finishReason?: string;
     usage?: unknown;
@@ -73,7 +73,7 @@ async function logInvocation(
   },
 ) {
   try {
-    await db.from("assistant_invocations").insert({
+    const { error: auditError } = await db.from("assistant_invocations").insert({
       user_id: entry.userId,
       capability_id: "assistant.chat.turn",
       module: "assistant",
@@ -88,6 +88,9 @@ async function logInvocation(
         entry.finishReason ? `, ${entry.finishReason}` : ""
       })`,
     });
+    if (auditError) {
+      console.error("[assistant-chat] ✗ auditoria rejeitada:", auditError.message ?? auditError);
+    }
   } catch (e) {
     console.error("[assistant-chat] falha ao auditar invocação:", e);
   }
@@ -314,7 +317,7 @@ Deno.serve(async (req) => {
       system: systemPrompt,
       messages: coreMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
-      stopWhen: stepCountIs(50),
+      stopWhen: stepCountIs(8),
       // metadata útil para debug via AI Gateway logs
       providerOptions: {
         lovable: {
@@ -345,7 +348,7 @@ Deno.serve(async (req) => {
           model: modelId,
           provider: providerName,
           toolCount: Object.keys(tools).length,
-          status: "success",
+          status: "ok",
           finishReason,
           usage,
           durationMs: Date.now() - startedAt,

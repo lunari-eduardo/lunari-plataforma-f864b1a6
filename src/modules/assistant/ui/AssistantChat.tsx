@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import { Loader2, Mic, MicOff } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   buildAssistantSystemPrompt,
   listAllLunariAITools,
@@ -113,6 +114,12 @@ export function AssistantChat() {
         input: toolCall.input,
         user: u,
       });
+      console.info(
+        `[Lu] tool ${capabilityId} → ${result.status}${
+          result.latencyMs ? ` (${result.latencyMs}ms)` : ""
+        }`,
+        result.error ?? "",
+      );
       await addToolResult({
         tool: toolCall.toolName,
         toolCallId: toolCall.toolCallId,
@@ -251,17 +258,35 @@ function VoicePromptInput({
       }
       setTranscribing(true);
       try {
-        // Converter blob para base64 e enviar inline ao Gemini
-        // (não usar Storage: bucket é privado e Gemini não lê URLs externas)
-        const arrayBuffer = await blob.arrayBuffer();
-        const uint8 = new Uint8Array(arrayBuffer);
-        let binary = "";
-        for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
-        const base64 = btoa(binary);
-        const dataUrl = `data:audio/wav;base64,${base64}`;
-        // Enviar como mensagem de texto com dataUrl embutida no conteúdo
-        // A Edge Function detecta o prefixo data:audio e passa como inlineData para o Gemini
-        onSend(dataUrl);
+        // NUNCA enviar o áudio como texto (base64 estourava ~80k tokens/turno).
+        // O WAV vai para `assistant-transcribe` e só o TEXTO volta ao composer.
+        const form = new FormData();
+        form.append("file", blob, "recording.wav");
+        form.append("stream", ""); // resposta JSON bufferizada
+        const { data, error } = await supabase.functions.invoke("assistant-transcribe", {
+          body: form,
+        });
+        if (error) throw error;
+        const text = String(
+          (data as { text?: string })?.text ?? "",
+        ).trim();
+        if (!text) {
+          setVoiceError("Não consegui entender o áudio. Tente de novo.");
+          return;
+        }
+        const el = wrapRef.current?.querySelector("textarea");
+        if (el) {
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            "value",
+          )?.set;
+          const next = el.value ? `${el.value} ${text}` : text;
+          setter?.call(el, next);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.focus();
+        } else {
+          onSend(text);
+        }
       } catch (err) {
         setVoiceError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -280,6 +305,8 @@ function VoicePromptInput({
       onSubmit={(msg) => {
         const text = msg.text?.trim();
         if (!text || disabled) return;
+        // Guard-rail: nunca enviar áudio/arquivo embutido como texto.
+        if (text.startsWith("data:")) return;
         onSend(text);
       }}
     >
