@@ -113,6 +113,12 @@ export function AssistantChat() {
         input: toolCall.input,
         user: u,
       });
+      console.info(
+        `[Lu] tool ${capabilityId} → ${result.status}${
+          result.latencyMs ? ` (${result.latencyMs}ms)` : ""
+        }`,
+        result.error ?? "",
+      );
       await addToolResult({
         tool: toolCall.toolName,
         toolCallId: toolCall.toolCallId,
