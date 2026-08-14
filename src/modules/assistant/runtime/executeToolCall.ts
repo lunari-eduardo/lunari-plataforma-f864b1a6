@@ -28,8 +28,11 @@ export async function executeAssistantToolCall({
   input,
   user,
 }: ExecuteToolCallInput): Promise<ExecuteToolCallResult> {
+  // `getAllLunariAIToolsMap` devolve um `Map` — acessar por índice (`map[id]`)
+  // retornava sempre `undefined` e quebrava TODA execução de tool.
   const map = getAllLunariAIToolsMap({ user });
-  const tool = map[toolName];
+  const normalized = toolName.replace(/__/g, ".");
+  const tool = map.get(toolName) ?? map.get(normalized);
 
   if (!tool) {
     return {
