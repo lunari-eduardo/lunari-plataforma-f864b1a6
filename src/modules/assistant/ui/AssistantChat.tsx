@@ -148,10 +148,33 @@ export function AssistantChat() {
     [session?.access_token, buildRequestBody],
   );
 
+  // ---------------------------------------------------------------------------
+  // Helper Universal para extração de dados da ferramenta
+  // ---------------------------------------------------------------------------
+  const extractToolInfo = (part: any) => {
+    if (part.toolInvocation) {
+      return {
+        toolCallId: part.toolInvocation.toolCallId,
+        toolName: part.toolInvocation.toolName,
+        args: part.toolInvocation.args,
+        state: part.toolInvocation.state,
+      };
+    }
+    return {
+      toolCallId: (part as any).toolCallId,
+      toolName: (part as any).toolName ?? (part.type?.startsWith("tool-") ? part.type.slice(5) : part.type),
+      args: (part as any).args ?? (part as any).input,
+      state: (part as any).state,
+    };
+  };
+
   const { messages, sendMessage, status, stop, addToolResult, error } = useChat({
     id: `lunari-${authUser?.id ?? "anon"}`,
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onError: (err) => {
+      console.error("[LUNARI SYSTEM ERROR] Erro capturado pelo useChat:", err);
+    },
     // NOTA: onToolCall foi REMOVIDO intencionalmente.
     //
     // No AI SDK 5, onToolCall é chamado DENTRO do stream transform (enquanto
@@ -180,45 +203,51 @@ export function AssistantChat() {
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== "assistant") return;
 
-    // Filtra tools pendentes (estado "input-available" = aguardando execução).
-    const pendingParts = lastMessage.parts.filter(
-      (p): p is typeof p & { type: string; state: string; toolCallId: string; input: unknown; toolName?: string } =>
+    // Filtra tools pendentes blindando contra parts indefinidas
+    const pendingParts = (lastMessage.parts ?? []).filter((p: any) => {
+      const info = extractToolInfo(p);
+      return (
         p.type?.startsWith("tool-") &&
-        (p as any).state === "input-available" &&
-        !(p as any).providerExecuted
-    );
+        (info.state === "input-available" || info.state === "call") &&
+        !p.providerExecuted
+      );
+    });
 
     if (pendingParts.length === 0) return;
 
     // Executa cada tool pendente que ainda não está sendo executada.
     for (const part of pendingParts) {
-      const toolCallId = (part as any).toolCallId as string;
+      const info = extractToolInfo(part);
+      const toolCallId = info.toolCallId;
+      const toolName = info.toolName;
+      const args = info.args;
+
+      if (!toolCallId || !toolName) {
+        console.error("[LUNARI SYSTEM ERROR] Falha ao extrair toolCallId ou toolName da part:", part);
+        continue;
+      }
+
       if (executingToolsRef.current.has(toolCallId)) continue;
       executingToolsRef.current.add(toolCallId);
       setExecutingToolCount(executingToolsRef.current.size);
 
-      // Nome da tool no AI SDK 5 vem em part.toolName
-      const toolName = (part as any).toolName;
-
-      // Argumentos no AI SDK 5 vêm em part.args (input era usado em versões antigas/internas)
-      const input = (part as any).args ?? (part as any).input;
-
       // Executa assincronamente sem bloquear o effect.
       void (async () => {
         try {
+          console.info(`[LUNARI SYSTEM LOG] Iniciando tool ${toolName} com args:`, args);
           // Convert namespaced name back (workflow__addPayment → workflow.addPayment).
           const capabilityId = toolName.replace(/__/g, ".");
           const result = await executeAssistantToolCall({
             toolName: capabilityId,
-            input,
+            input: args,
             user: u,
           });
-          console.info(
-            `[Lu] tool ${capabilityId} → ${result.status}${
-              result.latencyMs ? ` (${result.latencyMs}ms)` : ""
-            }`,
-            result.error ?? "",
-          );
+          
+          console.info(`[LUNARI SYSTEM LOG] tool ${capabilityId} finalizou com status: ${result.status}${result.latencyMs ? ` (${result.latencyMs}ms)` : ""}`);
+          if (result.error) {
+            console.error(`[LUNARI SYSTEM ERROR] tool ${capabilityId} erro na execução local:`, result.error);
+          }
+
           await addToolResult({
             tool: toolName,
             toolCallId,
@@ -226,7 +255,7 @@ export function AssistantChat() {
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          console.error(`[Lu] tool ${toolName} exception:`, message);
+          console.error(`[LUNARI SYSTEM ERROR] tool ${toolName} exceção fatal capturada:`, message, err);
           await addToolResult({
             tool: toolName,
             toolCallId,
