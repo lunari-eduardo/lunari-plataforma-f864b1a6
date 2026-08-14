@@ -13,6 +13,7 @@ import {
 import type { AuthUser } from "@/shared/ports";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import {
   Conversation,
@@ -220,7 +221,15 @@ export function AssistantChat() {
       const info = extractToolInfo(part);
       const toolCallId = info.toolCallId;
       const toolName = info.toolName;
-      const args = info.args;
+      let args = info.args;
+
+      if (typeof args === "string") {
+        try {
+          args = JSON.parse(args);
+        } catch (e) {
+          console.warn("[LUNARI SYSTEM WARNING] Falha ao fazer parse de args (mantendo string):", args);
+        }
+      }
 
       if (!toolCallId || !toolName) {
         console.error("[LUNARI SYSTEM ERROR] Falha ao extrair toolCallId ou toolName da part:", part);
@@ -246,6 +255,7 @@ export function AssistantChat() {
           console.info(`[LUNARI SYSTEM LOG] tool ${capabilityId} finalizou com status: ${result.status}${result.latencyMs ? ` (${result.latencyMs}ms)` : ""}`);
           if (result.error) {
             console.error(`[LUNARI SYSTEM ERROR] tool ${capabilityId} erro na execução local:`, result.error);
+            toast.error(`Erro interno da Tool ${capabilityId}: ${JSON.stringify(result.error)}`, { duration: 10000 });
           }
 
           await addToolResult({
@@ -256,6 +266,7 @@ export function AssistantChat() {
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           console.error(`[LUNARI SYSTEM ERROR] tool ${toolName} exceção fatal capturada:`, message, err);
+          toast.error(`Exceção fatal na Tool ${toolName}: ${message}`, { duration: 10000 });
           await addToolResult({
             tool: toolName,
             toolCallId,

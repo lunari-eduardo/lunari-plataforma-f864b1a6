@@ -19,7 +19,7 @@ const Input = z.object({
   includeHistorico: z.boolean().optional().default(false),
   categoria: z.string().optional(),
   status: z.string().optional(),
-  limit: z.number().int().min(1).max(1000).optional().default(500),
+  limit: z.coerce.number().int().min(1).max(1000).optional().default(500),
   cursor: z
     .object({ data_sessao: DateStr, id: z.string() })
     .nullable()
