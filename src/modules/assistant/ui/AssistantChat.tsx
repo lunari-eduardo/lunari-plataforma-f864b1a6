@@ -1,6 +1,6 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Loader2, Mic, MicOff } from "lucide-react";
 
@@ -27,13 +27,6 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "@/components/ai-elements/tool";
 
 import { executeAssistantToolCall } from "../runtime/executeToolCall";
 import { pageFromRoute } from "../runtime/pageFromRoute";
@@ -41,6 +34,68 @@ import { selectToolsForPage, MAX_TOOLS_PER_TURN } from "../runtime/selectToolsFo
 import { useVoiceRecorder } from "../runtime/useVoiceRecorder";
 
 const ASSISTANT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
+
+// ---------------------------------------------------------------------------
+// Mapa de rótulos amigáveis por tool ID (namespace com __).
+// Queries mostram "Consultando...", commands mostram nome da ação.
+// ---------------------------------------------------------------------------
+const TOOL_LABELS: Record<string, string> = {
+  // Workflow — queries
+  "workflow__listMonth": "Consultando sessões do mês",
+  "workflow__listRange": "Consultando sessões por período",
+  "workflow__metricsForMonth": "Calculando métricas do mês",
+  "workflow__metricsForRange": "Calculando métricas do período",
+  "workflow__pendingPayments": "Verificando pagamentos pendentes",
+  "workflow__search": "Pesquisando sessões",
+  "workflow__diagnoseSession": "Analisando sessão",
+  "workflow__getCardBySession": "Buscando card",
+  "workflow__getSessionFinancials": "Verificando financeiro",
+  "workflow__listSessionsByPaymentStatus": "Filtrando por status financeiro",
+  "workflow__statusOptions": "Carregando opções de status",
+  "workflow__analytics__summary": "Calculando resumo analítico",
+  "workflow__photoProductionForMonth": "Verificando produção fotográfica",
+  "workflow__photoProductionForYear": "Verificando produção anual",
+  "workflow__vendas__resumo": "Consultando resumo de vendas",
+  "workflow__vendas__compararAnos": "Comparando anos",
+  "workflow__vendas__metasProgresso": "Verificando metas",
+  "workflow__produto__listBySession": "Listando produtos da sessão",
+  "workflow__produto__listPending": "Verificando produção pendente",
+  // Workflow — commands
+  "workflow__addPayment": "Registrando pagamento",
+  "workflow__advanceCard": "Avançando etapa",
+  "workflow__updateFields": "Atualizando sessão",
+  "workflow__deleteSession": "Excluindo sessão",
+  "workflow__refundPayment": "Processando estorno",
+  "workflow__syncFromAgenda": "Sincronizando com agenda",
+  // Agenda
+  "agenda__listAppointmentsByRange": "Consultando agenda",
+  "agenda__checkSlot": "Verificando horário",
+  "agenda__findNextAvailableSlot": "Buscando próximo horário disponível",
+  "agenda__listAvailability": "Verificando disponibilidade",
+  "agenda__getAppointmentById": "Buscando agendamento",
+  // Clientes
+  "clientes__list": "Buscando clientes",
+  "clientes__get": "Carregando cliente",
+  "clientes__search": "Pesquisando clientes",
+  "clientes__listSessoes": "Buscando sessões do cliente",
+  "clientes__listTransacoes": "Buscando transações do cliente",
+  // Finance
+  "finance__dashboardKpis": "Calculando KPIs",
+  "finance__extratoSummary": "Consultando extrato",
+  "finance__kpisByNature": "Analisando receitas e despesas",
+  "finance__goalsProgress": "Verificando metas financeiras",
+  // Leads
+  "leads__list": "Buscando leads",
+  "leads__search": "Pesquisando leads",
+};
+
+function getToolLabel(toolName: string, state: string): string {
+  if (state === "output-available") return "";
+  if (state === "output-error") return "Erro ao executar";
+  return TOOL_LABELS[toolName] ?? "Consultando...";
+}
+
+// ---------------------------------------------------------------------------
 
 function toAuthUser(user: ReturnType<typeof useAuth>["user"]): AuthUser | null {
   if (!user?.id) return null;
@@ -97,36 +152,91 @@ export function AssistantChat() {
     id: `lunari-${authUser?.id ?? "anon"}`,
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-    onToolCall: async ({ toolCall }) => {
-      const u = authUserRef.current;
-      if (!u) {
-        await addToolResult({
-          tool: toolCall.toolName,
-          toolCallId: toolCall.toolCallId,
-          output: { status: "error", error: "Usuário não autenticado" },
-        });
-        return;
-      }
-      // Convert namespaced name back (workflow__addPayment → workflow.addPayment).
-      const capabilityId = toolCall.toolName.replace(/__/g, ".");
-      const result = await executeAssistantToolCall({
-        toolName: capabilityId,
-        input: toolCall.input,
-        user: u,
-      });
-      console.info(
-        `[Lu] tool ${capabilityId} → ${result.status}${
-          result.latencyMs ? ` (${result.latencyMs}ms)` : ""
-        }`,
-        result.error ?? "",
-      );
-      await addToolResult({
-        tool: toolCall.toolName,
-        toolCallId: toolCall.toolCallId,
-        output: result,
-      });
-    },
+    // NOTA: onToolCall foi REMOVIDO intencionalmente.
+    //
+    // No AI SDK 5, onToolCall é chamado DENTRO do stream transform (enquanto
+    // status === "streaming"). Nesse momento, addToolResult verifica
+    // `this.status !== "streaming"` antes de disparar makeRequest — e falha
+    // silenciosamente. O segundo turno para o Gemini nunca acontece.
+    //
+    // A solução correta é detectar tools pendentes DEPOIS do stream fechar
+    // (status === "ready"), via useEffect abaixo.
   });
+
+  // ---------------------------------------------------------------------------
+  // Execução de tools APÓS o stream fechar (pós-stream, não dentro do stream).
+  // ---------------------------------------------------------------------------
+  // Ref para evitar execuções duplicadas por re-render.
+  const executingToolsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Só roda quando o stream terminou (status = "ready").
+    if (status !== "ready") return;
+
+    const u = authUserRef.current;
+    if (!u) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage || lastMessage.role !== "assistant") return;
+
+    // Filtra tools pendentes (estado "input-available" = aguardando execução).
+    const pendingParts = lastMessage.parts.filter(
+      (p): p is typeof p & { type: string; state: string; toolCallId: string; input: unknown; toolName?: string } =>
+        p.type?.startsWith("tool-") &&
+        (p as any).state === "input-available" &&
+        !(p as any).providerExecuted
+    );
+
+    if (pendingParts.length === 0) return;
+
+    // Executa cada tool pendente que ainda não está sendo executada.
+    for (const part of pendingParts) {
+      const toolCallId = (part as any).toolCallId as string;
+      if (executingToolsRef.current.has(toolCallId)) continue;
+      executingToolsRef.current.add(toolCallId);
+
+      // Nome da tool: "tool-workflow__listMonth" → "workflow__listMonth"
+      const toolName = part.type.startsWith("tool-")
+        ? part.type.slice("tool-".length)
+        : (part as any).toolName ?? part.type;
+
+      const input = (part as any).input;
+
+      // Executa assincronamente sem bloquear o effect.
+      void (async () => {
+        try {
+          // Convert namespaced name back (workflow__addPayment → workflow.addPayment).
+          const capabilityId = toolName.replace(/__/g, ".");
+          const result = await executeAssistantToolCall({
+            toolName: capabilityId,
+            input,
+            user: u,
+          });
+          console.info(
+            `[Lu] tool ${capabilityId} → ${result.status}${
+              result.latencyMs ? ` (${result.latencyMs}ms)` : ""
+            }`,
+            result.error ?? "",
+          );
+          await addToolResult({
+            tool: toolName,
+            toolCallId,
+            output: result,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(`[Lu] tool ${toolName} exception:`, message);
+          await addToolResult({
+            tool: toolName,
+            toolCallId,
+            output: { status: "error", error: message },
+          });
+        } finally {
+          executingToolsRef.current.delete(toolCallId);
+        }
+      })();
+    }
+  }, [status, messages, addToolResult]);
 
   const disabled = !authUser || !session?.access_token;
   const isLoading = status === "submitted" || status === "streaming";
@@ -137,9 +247,8 @@ export function AssistantChat() {
         <ConversationContent className="space-y-3 px-4 py-4">
           {messages.length === 0 && (
             <div className="mx-auto max-w-sm py-10 text-center text-sm text-muted-foreground">
-              Oi, sou a <span className="font-medium text-foreground">Lunari</span>.
-              Posso consultar e operar sua página <span className="font-medium">{page}</span>.
-              Peça relatório, ação ou ajuda operacional — ações sensíveis pedem sua confirmação.
+              Olá! Estou pronta para ajudar na gestão do seu estúdio.{" "}
+              Como posso ser útil hoje?
             </div>
           )}
 
@@ -154,27 +263,58 @@ export function AssistantChat() {
                       <span key={i} className="whitespace-pre-wrap">{part.text}</span>
                     );
                   }
+
+                  // Renderização discreta de tool calls (sem nomes técnicos ou JSON).
                   if (part.type?.startsWith("tool-")) {
                     const p = part as unknown as {
                       type: string;
                       state: string;
+                      toolCallId?: string;
                       input?: unknown;
                       output?: unknown;
                       errorText?: string;
                     };
-                    return (
-                      <Tool key={i} defaultOpen={false}>
-                        <ToolHeader
-                          type={p.type as `tool-${string}`}
-                          state={p.state as never}
-                        />
-                        <ToolContent>
-                          {p.input !== undefined && <ToolInput input={p.input} />}
-                          <ToolOutput output={p.output} errorText={p.errorText} />
-                        </ToolContent>
-                      </Tool>
-                    );
+                    const toolName = p.type.startsWith("tool-")
+                      ? p.type.slice("tool-".length)
+                      : p.type;
+                    const label = getToolLabel(toolName, p.state);
+
+                    // Tool concluída com sucesso: não exibir nada (o Gemini
+                    // já vai resumir o resultado na resposta textual).
+                    if (p.state === "output-available") return null;
+
+                    // Tool com erro: exibir mensagem amigável.
+                    if (p.state === "output-error") {
+                      return (
+                        <div
+                          key={i}
+                          className="mt-1 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs text-destructive"
+                        >
+                          Não foi possível completar a consulta.
+                          {p.errorText && (
+                            <span className="ml-1 opacity-70">({p.errorText})</span>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // Tool em andamento (input-available, input-streaming):
+                    // exibir indicador discreto com rótulo amigável.
+                    if (label) {
+                      return (
+                        <div
+                          key={i}
+                          className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                          <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                          <span>{label}…</span>
+                        </div>
+                      );
+                    }
+
+                    return null;
                   }
+
                   return null;
                 })}
                 {message.experimental_attachments?.map((att, i) => (
