@@ -1,0 +1,3 @@
+ALTER TABLE public.assistant_invocations DROP CONSTRAINT IF EXISTS assistant_invocations_output_status_check;
+ALTER TABLE public.assistant_invocations ADD CONSTRAINT assistant_invocations_output_status_check CHECK (output_status = ANY (ARRAY['ok'::text,'error'::text,'denied'::text,'pending_approval'::text,'blocked_by_rollout'::text]));
+ALTER TABLE public.assistant_invocations ALTER COLUMN needs_approval SET DEFAULT false;
