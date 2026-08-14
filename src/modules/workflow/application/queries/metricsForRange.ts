@@ -10,7 +10,25 @@ import { supabase } from "@/integrations/supabase/client";
  * granularidade (day/month/quarter/year/total). Valores em centavos.
  */
 
-const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "esperado YYYY-MM-DD");
+const DateStr = z.preprocess((val) => {
+  if (typeof val !== "string") return val;
+  const str = val.trim();
+  const brDateMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brDateMatch) {
+    const [_, d, m, y] = brDateMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  const isoLikeMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (isoLikeMatch) {
+    const [_, y, m, d] = isoLikeMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split("T")[0];
+  }
+  return str;
+}, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "esperado YYYY-MM-DD"));
 
 const Input = z.object({
   startDate: DateStr,
