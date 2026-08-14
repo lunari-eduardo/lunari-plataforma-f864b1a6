@@ -5,7 +5,6 @@ import { useLocation } from "react-router-dom";
 import { Loader2, Mic, MicOff } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import {
   buildAssistantSystemPrompt,
   listAllLunariAITools,
@@ -38,7 +37,6 @@ import {
 import { executeAssistantToolCall } from "../runtime/executeToolCall";
 import { pageFromRoute } from "../runtime/pageFromRoute";
 import { useVoiceRecorder } from "../runtime/useVoiceRecorder";
-import { transcribeAudio } from "../runtime/transcribeAudio";
 
 const ASSISTANT_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
 
@@ -203,21 +201,12 @@ export function AssistantChat() {
           status={status}
           onStop={stop}
           onSend={(text) => void append({ role: "user", content: text })}
-          onSendAudio={(url, mimeType) => void append({
-            role: "user",
-            content: "",
-            experimental_attachments: [{ url, contentType: mimeType, name: "audio.webm" }]
-          })}
-          userId={authUser?.id ?? null}
         />
       </div>
 
       {isLoading && (
         <div className="sr-only" aria-live="polite">Lunari está respondendo…</div>
       )}
-
-      {/* keep supabase reference for tree-shaking safety */}
-      {false && <span>{supabase ? "" : ""}</span>}
     </div>
   );
 }
@@ -234,8 +223,6 @@ interface VoicePromptInputProps {
   status: ReturnType<typeof useChat>["status"];
   onStop: () => void;
   onSend: (text: string) => void;
-  onSendAudio: (url: string, mimeType: string) => void;
-  userId: string | null;
 }
 
 function VoicePromptInput({
@@ -243,8 +230,6 @@ function VoicePromptInput({
   status,
   onStop,
   onSend,
-  onSendAudio,
-  userId,
 }: VoicePromptInputProps) {
   const recorder = useVoiceRecorder();
   const [transcribing, setTranscribing] = useState(false);
@@ -259,16 +244,19 @@ function VoicePromptInput({
         setVoiceError(recorder.error || "Gravação inválida.");
         return;
       }
-      setTranscribing(true); // Reused for 'Uploading' state visually
+      setTranscribing(true);
       try {
-        const filename = `${userId || "anon"}/${Date.now()}.webm`;
-        const { error } = await supabase.storage.from("assistant_audio_temp").upload(filename, blob, {
-          contentType: blob.type,
-        });
-        if (error) throw error;
-        
-        const { data: { publicUrl } } = supabase.storage.from("assistant_audio_temp").getPublicUrl(filename);
-        onSendAudio(publicUrl, blob.type);
+        // Converter blob para base64 e enviar inline ao Gemini
+        // (não usar Storage: bucket é privado e Gemini não lê URLs externas)
+        const arrayBuffer = await blob.arrayBuffer();
+        const uint8 = new Uint8Array(arrayBuffer);
+        let binary = "";
+        for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+        const base64 = btoa(binary);
+        const dataUrl = `data:audio/wav;base64,${base64}`;
+        // Enviar como mensagem de texto com dataUrl embutida no conteúdo
+        // A Edge Function detecta o prefixo data:audio e passa como inlineData para o Gemini
+        onSend(dataUrl);
       } catch (err) {
         setVoiceError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -277,7 +265,7 @@ function VoicePromptInput({
     } else {
       await recorder.start();
     }
-  }, [recorder, userId, onSendAudio]);
+  }, [recorder, onSend]);
 
   const micDisabled = disabled || transcribing;
 

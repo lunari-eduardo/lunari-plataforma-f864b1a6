@@ -105,8 +105,10 @@ Deno.serve(async (req) => {
   }
 
   // --- Auth: user_id vem do token, nunca do body. ---
+  console.log("[assistant-chat] ▶ Requisição recebida");
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
+    console.log("[assistant-chat] ✗ Auth: header ausente ou malformado");
     return json({ error: "Unauthorized" }, 401);
   }
   const supabase = createClient(
@@ -117,14 +119,20 @@ Deno.serve(async (req) => {
   const token = authHeader.replace("Bearer ", "");
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
   if (claimsError || !claimsData?.claims?.sub) {
+    console.log("[assistant-chat] ✗ Auth: JWT inválido —", claimsError?.message);
     return json({ error: "Unauthorized" }, 401);
   }
   const userId = claimsData.claims.sub as string;
+  console.log("[assistant-chat] ✓ Auth OK — userId:", userId);
 
   // Rollout gate (Admin → Beta → Geral)
   const { assertAssistantAccess } = await import("../_shared/assistant-guard.ts");
   const denied = await assertAssistantAccess(supabase, userId, corsHeaders);
-  if (denied) return denied;
+  if (denied) {
+    console.log("[assistant-chat] ✗ Rollout gate: acesso negado para userId:", userId);
+    return denied;
+  }
+  console.log("[assistant-chat] ✓ Rollout gate: acesso permitido");
 
   // --- Parse body ---
   let body: ChatRequestBody;
@@ -143,21 +151,33 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  const [{ data: provRow }, { data: modRow }] = await Promise.all([
+  const [{ data: provRow, error: provErr }, { data: modRow, error: modErr }] = await Promise.all([
     supabaseService.from("app_settings").select("value").eq("key", "assistant_ai_provider").maybeSingle(),
     supabaseService.from("app_settings").select("value").eq("key", "assistant_ai_model").maybeSingle(),
   ]);
+  if (provErr) console.log("[assistant-chat] ⚠ Erro ao ler provider:", provErr.message);
+  if (modErr) console.log("[assistant-chat] ⚠ Erro ao ler modelo:", modErr.message);
 
   const providerName = typeof provRow?.value === "string" ? provRow.value : "lovable";
   const modelId = typeof modRow?.value === "string" ? modRow.value : DEFAULT_MODEL;
+  console.log(`[assistant-chat] ✓ Configuração: provider='${providerName}' model='${modelId}'`);
 
-  const { data: keyRow } = await supabaseService
+  const { data: keyRow, error: keyErr } = await supabaseService
     .from("assistant_provider_keys")
     .select("api_key")
     .eq("provider_name", providerName)
     .maybeSingle();
+  if (keyErr) console.log("[assistant-chat] ⚠ Erro ao buscar chave:", keyErr.message);
 
   const apiKey = keyRow?.api_key;
+  console.log(`[assistant-chat] ✓ Chave no cofre: ${apiKey ? `${apiKey.length} chars, prefixo='${apiKey.slice(0, 6)}...'` : 'NÃO ENCONTRADA'}`);
+
+  // Validação mínima de API Key
+  if (providerName !== "lovable" && (!apiKey || apiKey.length < 20)) {
+    const msg = `API Key inválida ou ausente no cofre para provider '${providerName}'. Verifique o Painel Admin.`;
+    console.log("[assistant-chat] ✗", msg);
+    return json({ error: msg }, 500);
+  }
 
   // --- Adapt tools (client → AI SDK). Sem `execute` → cliente resolve. ---
   const tools: Record<string, any> = {};
@@ -206,6 +226,7 @@ Deno.serve(async (req) => {
 
   const systemPrompt = [DEFAULT_SYSTEM_PROMPT, body.system?.trim()].filter(Boolean).join("\n\n");
 
+  console.log(`[assistant-chat] ✓ Iniciando streamText — ${body.messages?.length ?? 0} msgs, ${Object.keys(tools).length} tools`);
   try {
     let coreMessages = await convertToModelMessages(body.messages);
 
@@ -251,12 +272,15 @@ Deno.serve(async (req) => {
     });
 
     if (gateway) {
+      console.log("[assistant-chat] ✓ Stream iniciado (via gateway)");
       return withLovableAiGatewayRunIdHeader(streamResponse, gateway, corsHeaders);
     }
+    console.log("[assistant-chat] ✓ Stream iniciado com sucesso");
     return streamResponse;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[assistant-chat] streamText failed:", message);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[assistant-chat] ✗ streamText falhou:", message, stack ?? "");
     // 429/402 do gateway sobem como Error com status embutido — repassa se der.
     const status = extractStatus(err) ?? 500;
     return json({ error: message }, status);

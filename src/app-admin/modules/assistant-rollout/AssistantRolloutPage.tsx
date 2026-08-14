@@ -59,10 +59,12 @@ export default function AssistantRolloutPage() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [metrics, setMetrics] = useState<{ total: number; blocked: number } | null>(null);
-  const [apiProvider, setApiProvider] = useState<string>("deepseek");
-  const [apiModel, setApiModel] = useState<string>("deepseek-chat");
+  const [apiProvider, setApiProvider] = useState<string>("gemini");
+  const [apiModel, setApiModel] = useState<string>("gemini-3.5-flash-lite");
   const [apiKey, setApiKey] = useState("");
   const [requests, setRequests] = useState<RequestRow[]>([]);
+  // Estado do cofre: null = carregando, false = sem chave, number = tamanho da chave salva
+  const [savedKeyLength, setSavedKeyLength] = useState<number | null | false>(null);
 
   const loadAll = async () => {
     const [{ data: settingRows }, { data: provRows }, { data: modRows }, { data: betaRows }, { data: invRows }] = await Promise.all([
@@ -78,10 +80,19 @@ export default function AssistantRolloutPage() {
     if (s === "admin" || s === "beta" || s === "geral") setStage(s);
 
     const provRaw = (provRows as any)?.value;
-    if (provRaw) setApiProvider(typeof provRaw === "string" ? provRaw : (provRaw as string));
+    const currentProvider = typeof provRaw === "string" ? provRaw : "gemini";
+    if (provRaw) setApiProvider(currentProvider);
 
     const modRaw = (modRows as any)?.value;
-    if (modRaw) setApiModel(typeof modRaw === "string" ? modRaw : (modRaw as string));
+    if (modRaw) setApiModel(typeof modRaw === "string" ? modRaw : "gemini-3.5-flash-lite");
+
+    // Verificar status da chave no cofre via Edge Function de diagnóstico
+    // (não podemos ler a tabela diretamente — RLS protege)
+    // Usamos uma chamada RPC simples que retorna apenas o comprimento da chave
+    const { data: keyCheck } = await supabase.rpc("check_assistant_key_status", {
+      p_provider_name: currentProvider,
+    }).maybeSingle();
+    setSavedKeyLength((keyCheck as any)?.key_length ?? false);
 
     const rows = (betaRows ?? []) as BetaRow[];
     if (rows.length) {
@@ -177,10 +188,14 @@ export default function AssistantRolloutPage() {
   };
 
   const saveApiConfig = async () => {
+    if (!apiKey.trim()) {
+      toast.error("Digite a nova chave de API antes de salvar.");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.rpc("set_assistant_provider_key", {
       p_provider_name: apiProvider,
-      p_api_key: apiKey,
+      p_api_key: apiKey.trim(),
       p_model_id: apiModel,
     });
     setSaving(false);
@@ -189,7 +204,12 @@ export default function AssistantRolloutPage() {
       return;
     }
     toast.success("Configurações de IA salvas com sucesso!");
-    setApiKey(""); // Limpa o input de senha por segurança
+    setApiKey(""); // Limpa o campo de senha por segurança
+    // Recarrega o status da chave para refletir no badge
+    const { data: keyCheck } = await supabase.rpc("check_assistant_key_status", {
+      p_provider_name: apiProvider,
+    }).maybeSingle();
+    setSavedKeyLength((keyCheck as any)?.key_length ?? false);
   };
 
   return (
@@ -360,6 +380,23 @@ export default function AssistantRolloutPage() {
           <p className="text-sm text-muted-foreground">
             Configure o provedor de Inteligência Artificial ativo. A chave de API nunca é exibida na tela por segurança.
           </p>
+
+          {/* Badge de status da chave no cofre */}
+          <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+            <span className="font-medium text-muted-foreground">Status do cofre:</span>
+            {savedKeyLength === null && (
+              <span className="text-muted-foreground">Verificando...</span>
+            )}
+            {savedKeyLength === false && (
+              <span className="font-medium text-destructive">❌ Não configurado — nenhuma chave encontrada para este provedor.</span>
+            )}
+            {typeof savedKeyLength === "number" && savedKeyLength < 30 && (
+              <span className="font-medium text-amber-500">⚠️ Chave suspeita ({savedKeyLength} chars) — parece curta ou inválida. Reconfigure.</span>
+            )}
+            {typeof savedKeyLength === "number" && savedKeyLength >= 30 && (
+              <span className="font-medium text-emerald-600">✅ Chave configurada ({savedKeyLength} chars).</span>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Provedor</label>
@@ -414,14 +451,19 @@ export default function AssistantRolloutPage() {
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nova Chave de API (opcional)</label>
+              <label className="text-sm font-medium">Nova Chave de API</label>
               <Input 
                 type="password"
                 value={apiKey} 
                 onChange={(e) => setApiKey(e.target.value)} 
-                placeholder="********" 
+                placeholder={apiProvider === "gemini" ? "Cole aqui (deve começar com AIza...)" : "Cole a nova chave aqui"}
                 disabled={saving}
+                autoComplete="new-password"
               />
+              {apiProvider === "gemini" && apiKey && !apiKey.startsWith("AIza") && (
+                <p className="text-xs text-amber-500">⚠️ Chaves do Google AI Studio começam com &quot;AIza&quot;. Verifique se a chave é correta.</p>
+              )}
+              <p className="text-xs text-muted-foreground">Obtenha sua chave em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline">Google AI Studio</a>. Sempre cole a chave completa.</p>
             </div>
           </div>
           <div className="flex justify-end pt-2">
