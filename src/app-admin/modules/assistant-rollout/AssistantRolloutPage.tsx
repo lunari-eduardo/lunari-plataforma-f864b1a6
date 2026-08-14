@@ -86,13 +86,7 @@ export default function AssistantRolloutPage() {
     const modRaw = (modRows as any)?.value;
     if (modRaw) setApiModel(typeof modRaw === "string" ? modRaw : "gemini-3.5-flash-lite");
 
-    // Verificar status da chave no cofre via Edge Function de diagnóstico
-    // (não podemos ler a tabela diretamente — RLS protege)
-    // Usamos uma chamada RPC simples que retorna apenas o comprimento da chave
-    const { data: keyCheck } = await supabase.rpc("check_assistant_key_status", {
-      p_provider_name: currentProvider,
-    }).maybeSingle();
-    setSavedKeyLength((keyCheck as any)?.key_length ?? false);
+    // O status da chave é verificado separadamente pelo useEffect(..., [apiProvider])
 
     const rows = (betaRows ?? []) as BetaRow[];
     if (rows.length) {
@@ -132,6 +126,18 @@ export default function AssistantRolloutPage() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  useEffect(() => {
+    async function checkKey() {
+      if (!apiProvider) return;
+      setSavedKeyLength(null);
+      const { data: keyCheck } = await supabase.rpc("check_assistant_key_status", {
+        p_provider_name: apiProvider,
+      }).maybeSingle();
+      setSavedKeyLength((keyCheck as any)?.key_length ?? false);
+    }
+    checkKey();
+  }, [apiProvider]);
 
   const changeStage = async (next: Stage) => {
     setSaving(true);
@@ -188,8 +194,9 @@ export default function AssistantRolloutPage() {
   };
 
   const saveApiConfig = async () => {
-    if (!apiKey.trim()) {
-      toast.error("Digite a nova chave de API antes de salvar.");
+    const hasValidSavedKey = typeof savedKeyLength === "number" && savedKeyLength >= 30;
+    if (!apiKey.trim() && !hasValidSavedKey) {
+      toast.error("Para configurar ou salvar as opções deste provedor pela primeira vez, digite a nova chave de API.");
       return;
     }
     setSaving(true);
@@ -205,7 +212,8 @@ export default function AssistantRolloutPage() {
     }
     toast.success("Configurações de IA salvas com sucesso!");
     setApiKey(""); // Limpa o campo de senha por segurança
-    // Recarrega o status da chave para refletir no badge
+    
+    // Atualiza o status caso tenha inserido uma nova chave
     const { data: keyCheck } = await supabase.rpc("check_assistant_key_status", {
       p_provider_name: apiProvider,
     }).maybeSingle();
@@ -456,7 +464,7 @@ export default function AssistantRolloutPage() {
                 type="password"
                 value={apiKey} 
                 onChange={(e) => setApiKey(e.target.value)} 
-                placeholder={apiProvider === "gemini" ? "Cole aqui (deve começar com AIza...)" : "Cole a nova chave aqui"}
+                placeholder={apiProvider === "gemini" ? "Cole a chave (começa com AIza...). Deixe vazio para manter a atual." : "Cole a nova chave aqui. Deixe vazio para manter a atual."}
                 disabled={saving}
                 autoComplete="new-password"
               />
