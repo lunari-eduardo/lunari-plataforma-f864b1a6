@@ -326,42 +326,74 @@ const streamdownPlugins = { cjk, code, math, mermaid };
 import { GenerativeUIRenderer } from "./generative-ui";
 
 export const MessageResponse = memo(
-  ({ className, components, ...props }: MessageResponseProps) => (
-    <Streamdown
-      className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className
-      )}
-      plugins={streamdownPlugins}
-      components={{
-        code(props) {
-          const { children, className, node, ...rest } = props;
-          const match = /language-(\w+)/.exec(className || "");
-          if (match && match[1] === "ui-render") {
-            try {
-              const payload = JSON.parse(String(children).replace(/\n$/, ""));
-              return <GenerativeUIRenderer payload={payload} />;
-            } catch (e) {
-              return (
-                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-                  Erro ao renderizar componente UI: {String(e)}
-                </div>
-              );
+  ({ className, components, isAnimating, ...props }: MessageResponseProps & { isAnimating?: boolean }) => {
+    let rawContent = String(props.children || "");
+
+    // Heurística defensiva: Se o LLM esqueceu o bloco markdown e mandou JSON cru com "type", 
+    // nós forçamos o embrulho (wrappping) on-the-fly para ativar o componente Generative UI.
+    if (!rawContent.includes("```json ui-render")) {
+      const rawMatch = rawContent.match(/\{\s*"type"\s*:\s*"(table|metric_group|card_list|action|confirmation|alert)"[\s\S]*/);
+      if (rawMatch) {
+        const jsonStr = rawMatch[0];
+        rawContent = rawContent.replace(jsonStr, `\n\`\`\`json ui-render\n${jsonStr}\n\`\`\`\n`);
+      }
+    }
+
+    return (
+      <Streamdown
+        className={cn(
+          "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          className
+        )}
+        plugins={streamdownPlugins}
+        components={{
+          code(codeProps) {
+            const { children, className, node, ...rest } = codeProps;
+            const match = /language-(\w+)/.exec(className || "");
+            if (match && (match[1] === "ui-render" || match[1] === "json")) {
+              const textContent = String(children).replace(/\n$/, "");
+              // Se a linguagem for apenas 'json' mas tiver o formato da nossa UI, nós renderizamos como UI.
+              if (match[1] === "json" && !textContent.includes('"type":')) {
+                // Deixa cair pro comportamento padrão de código abaixo
+              } else {
+                try {
+                  const payload = JSON.parse(textContent);
+                  if (payload.type) {
+                    return <GenerativeUIRenderer payload={payload} />;
+                  }
+                } catch (e) {
+                  // Oculta o log de erro e mostra "carregando" se o stream ainda está rolando e o JSON está cortado
+                  if (isAnimating) {
+                    return (
+                      <div className="flex animate-pulse items-center gap-2 rounded-md border border-border/50 bg-secondary/20 p-4 text-sm text-muted-foreground">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Desenhando interface...
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                      Erro ao renderizar componente UI: {String(e)}
+                    </div>
+                  );
+                }
+              }
             }
-          }
-          // @ts-ignore
-          const CodeComponent = components?.code;
-          if (CodeComponent) {
-            return <CodeComponent {...props} />;
-          }
-          // @ts-expect-error type inference bug in react-markdown
-          return <code className={className} {...rest}>{children}</code>;
-        },
-        ...components,
-      }}
-      {...props}
-    />
-  ),
+            // @ts-ignore
+            const CodeComponent = components?.code;
+            if (CodeComponent) {
+              return <CodeComponent {...codeProps} />;
+            }
+            // @ts-expect-error type inference bug in react-markdown
+            return <code className={className} {...rest}>{children}</code>;
+          },
+          ...components,
+        }}
+        {...props}
+        children={rawContent}
+      />
+    );
+  },
   (prevProps, nextProps) =>
     prevProps.children === nextProps.children &&
     nextProps.isAnimating === prevProps.isAnimating
