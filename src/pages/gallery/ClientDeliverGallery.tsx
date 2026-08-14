@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CoverRenderer } from '@/components/deliver/covers/CoverRenderer';
 import { resolveCoverId } from '@/components/deliver/covers/registry';
 import { DeliverHeader } from '@/components/deliver/DeliverHeader';
@@ -72,11 +72,14 @@ export default function ClientDeliverGallery({ data }: Props) {
   const folders = data.folders || [];
   const hasFolders = folders.length > 0;
 
-  const isDark = data.clientMode === 'dark' || (!data.clientMode);
-  // Default values before theme resolution
-  const bgColor = isDark ? '#1C1917' : '#FAF9F7';
-  const textColor = isDark ? '#F5F5F4' : '#2D2A26';
-  const primaryColor = isDark ? '#FFFFFF' : '#1C1917';
+  const clientMode = (data.clientMode === 'dark' || data.clientMode === 'light') ? data.clientMode : 'light';
+  const isDark = clientMode === 'dark';
+  const customPrimaryColor = data.theme?.primaryColor || undefined;
+
+  // Fallback colors antes do GalleryThemeProvider (album view e loading)
+  const bgColor = isDark ? '#0D0D0D' : '#FAF9F7';
+  const textColor = isDark ? '#F0EDE9' : '#1A1614';
+  const primaryColor = customPrimaryColor || '#C6A36A'; // dourado Lunari padrão
 
 
   const [showWelcome, setShowWelcome] = useState(() => {
@@ -194,13 +197,12 @@ export default function ClientDeliverGallery({ data }: Props) {
           onEnter={() => setHeroEntered(true)}
         />
 
-
         <div id="deliver-gallery" className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl sm:text-3xl font-normal mb-1" style={{ fontFamily: sessionFont }}>
               {gallery.sessionName}
             </h2>
-            <p className="text-sm" style={{ color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }}>
+            <p className="text-sm opacity-50">
               {allPhotos.length} fotos
             </p>
           </div>
@@ -226,7 +228,7 @@ export default function ClientDeliverGallery({ data }: Props) {
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     ) : (
-                      <div className="absolute inset-0" style={{ backgroundColor: isDark ? '#2A2520' : '#EDE9E4' }} />
+                      <div className="absolute inset-0" style={{ backgroundColor: isDark ? '#1F1F1F' : '#F0EDE9' }} />
                     )}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-500" />
                   </div>
@@ -255,6 +257,8 @@ export default function ClientDeliverGallery({ data }: Props) {
       globalSettings={data.studioSettings as any}
       activeThemeId={gallery.settings?.themeId}
       themeOverrides={gallery.settings?.themeOverrides}
+      backgroundMode={clientMode}
+      customPrimaryColor={customPrimaryColor}
       footer={{
         whatsapp: "wa.me/5551998807701",
         maps: "maps.app.goo.gl/XVYSt7E869UvJNBG6?g_st=ic",
@@ -306,10 +310,10 @@ function ClientDeliverGalleryContent({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isDark = data.clientMode === 'dark' || (!data.clientMode);
-  const bgColor = cssVars['--gallery-bg'] !== 'transparent' ? cssVars['--gallery-bg'] : (isDark ? '#1C1917' : '#FAF9F7');
-  const textColor = isDark ? '#F5F5F4' : '#2D2A26';
-  const primaryColor = isDark ? '#FFFFFF' : '#1C1917';
+  const isDark = data.clientMode === 'dark';
+  const bgColor = cssVars['--gallery-bg'] || (isDark ? '#0D0D0D' : '#FAF9F7');
+  const textColor = cssVars['--gallery-text'] || (isDark ? '#F0EDE9' : '#1A1614');
+  const primaryColor = cssVars['--gallery-primary'] || '#C6A36A';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor, color: textColor }}>

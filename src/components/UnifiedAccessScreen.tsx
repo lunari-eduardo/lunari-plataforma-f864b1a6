@@ -93,7 +93,7 @@ export function UnifiedAccessScreen({
     <div 
       className={cn(
         "min-h-screen flex flex-col relative overflow-hidden",
-        backgroundMode === 'dark' ? 'dark bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'
+        backgroundMode === 'dark' ? 'dark bg-[var(--gallery-bg,#FAF9F7)] text-[var(--gallery-text,#1A1614)]' : 'bg-[var(--gallery-bg,#FAF9F7)] text-[var(--gallery-text,#1A1614)]'
       )}
       style={themeStyles}
     >

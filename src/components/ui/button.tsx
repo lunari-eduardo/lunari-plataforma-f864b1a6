@@ -16,6 +16,7 @@ const buttonVariants = cva(
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        'gallery-primary': 'bg-[var(--gallery-primary,#C6A36A)] text-[var(--gallery-primary-fg,#1A1614)] hover:bg-[var(--gallery-primary,#C6A36A)]/90 focus-visible:ring-[var(--gallery-primary,#C6A36A)]',
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },

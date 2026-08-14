@@ -580,7 +580,7 @@ export function Lightbox({
                 Cancelar
               </Button>
               <Button 
-                variant="terracotta" 
+                variant="gallery-primary" 
                 size="sm"
                 onClick={handleSaveComment}
               >

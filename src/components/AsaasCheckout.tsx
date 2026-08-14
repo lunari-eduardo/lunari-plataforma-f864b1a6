@@ -845,7 +845,7 @@ export function AsaasCheckout({
                     onClick={handleGeneratePixClick}
                     disabled={pixContactLoading || (showPixContactForm && !pixFormValid)}
                     className="w-full gap-2 h-12 rounded-lg active:scale-[0.98] transition-transform"
-                    variant="terracotta"
+                    variant="gallery-primary"
                   >
                     {pixContactLoading ? (
                       <><Loader2 className="h-5 w-5 animate-spin" /> Salvando dados...</>
@@ -1149,7 +1149,7 @@ export function AsaasCheckout({
                 onClick={handleCardSubmit}
                 disabled={cardLoading || feesLoading}
                 className="w-full gap-2 h-12 rounded-lg text-base font-semibold active:scale-[0.98] transition-transform"
-                variant="terracotta"
+                variant="gallery-primary"
               >
                 {cardLoading ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Processando...</>

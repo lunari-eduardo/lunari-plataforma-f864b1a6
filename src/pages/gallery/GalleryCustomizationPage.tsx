@@ -43,7 +43,12 @@ export default function GalleryCustomizationPage() {
           </TabsList>
 
           <TabsContent value="aparencia" className="mt-0 outline-none">
-            <CustomizationAppearanceTab settings={settings} updateSettings={updateSettings} />
+            <CustomizationAppearanceTab
+              settings={settings}
+              updateSettings={updateSettings}
+              studioName={settings.studioName}
+              studioLogoUrl={settings.studioLogo}
+            />
           </TabsContent>
 
           <TabsContent value="comunicacao" className="mt-0 outline-none">

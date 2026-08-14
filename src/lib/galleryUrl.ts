@@ -1,5 +1,5 @@
 // Production domain for gallery URLs
-const PRODUCTION_GALLERY_DOMAIN = 'https://gallery.lunarihub.com';
+const PRODUCTION_GALLERY_DOMAIN = 'https://app.lunarihub.com';
 
 // Supabase URL for edge functions
 const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -30,8 +30,8 @@ export function getGalleryOgUrl(publicToken: string): string {
  */
 export function isProductionDomain(): boolean {
   if (typeof window === 'undefined') return false;
-  return window.location.hostname === 'gallery.lunarihub.com' ||
-         window.location.hostname.endsWith('.gallery.lunarihub.com');
+  return window.location.hostname === 'app.lunarihub.com' ||
+         window.location.hostname.endsWith('.app.lunarihub.com');
 }
 
 /**

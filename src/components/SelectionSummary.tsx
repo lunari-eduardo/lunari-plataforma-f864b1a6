@@ -62,7 +62,7 @@ function resolveBillingState(b: BillingInfo): {
   if (status === 'pago' || status === 'pago_manual' || (paid && !pending)) {
     return {
       label: status === 'pago_manual' ? 'Pago (manual)' : 'Pago',
-      badgeClass: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30',
+      badgeClass: 'bg-green-500/10 text-[hsl(var(--success,152_40%_34%))]  border-green-500/30',
       Icon: BadgeCheck,
     };
   }
@@ -166,7 +166,7 @@ export function SelectionSummary({
 
           <div className="flex items-center shrink-0">
             {isConfirmed ? (
-              <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+              <div className="flex items-center gap-1.5 text-[hsl(var(--success,152_40%_34%))] ">
                 <Check className={cn(isMobile ? 'h-4 w-4' : 'h-5 w-5')} />
                 <span className={cn('font-medium hidden sm:inline', isMobile ? 'text-xs' : 'text-sm')}>Confirmada</span>
               </div>
@@ -178,7 +178,7 @@ export function SelectionSummary({
             ) : (
               <Button
                 onClick={onConfirm}
-                variant="terracotta"
+                variant="gallery-primary"
                 size={isMobile ? 'sm' : 'lg'}
                 className={cn(isMobile ? 'px-3 text-[11px] h-7' : 'px-6')}
               >
@@ -272,7 +272,7 @@ export function SelectionSummary({
             )}
 
             {!hasPendingCharge && hasPaidExtras && !isClient && (
-              <div className="flex items-center gap-2 pt-2 border-t border-white/5 text-xs text-green-600 dark:text-green-400">
+              <div className="flex items-center gap-2 pt-2 border-t border-white/5 text-xs text-[hsl(var(--success,152_40%_34%))] ">
                 <BadgeCheck className="h-4 w-4" />
                 <span>Todas as extras desta seleção já foram pagas</span>
               </div>
@@ -368,7 +368,7 @@ export function SelectionSummary({
 
       {/* Banner "enviada com sucesso" só faz sentido para o cliente */}
       {isClient && isConfirmed && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm animate-scale-in">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-[hsl(var(--success,152_40%_34%))]  text-sm animate-scale-in">
           <Check className="h-5 w-5 flex-shrink-0" />
           <p className="font-medium">Sua seleção foi enviada com sucesso!</p>
         </div>

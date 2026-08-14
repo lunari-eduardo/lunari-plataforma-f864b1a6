@@ -219,7 +219,7 @@ export function VisitorIdentificationScreen({
 
             <Button 
               type="submit" 
-              variant="terracotta" 
+              variant="gallery-primary" 
               className="w-full rounded-sm"
               disabled={isLoading || !isValid}
             >

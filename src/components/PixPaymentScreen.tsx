@@ -184,7 +184,7 @@ export function PixPaymentScreen({
         {onPaymentConfirmed && (
           <div className="space-y-2">
             <Button
-              variant="terracotta"
+              variant="gallery-primary"
               onClick={() => setShowConfirmModal(true)}
               className="w-full"
               disabled={isConfirming}
@@ -247,7 +247,7 @@ export function PixPaymentScreen({
             <Button variant="ghost" onClick={() => setShowConfirmModal(false)}>
               Cancelar
             </Button>
-            <Button variant="terracotta" onClick={handleConfirmPayment} disabled={isConfirming}>
+            <Button variant="gallery-primary" onClick={handleConfirmPayment} disabled={isConfirming}>
               {isConfirming ? 'Confirmando...' : 'Confirmar'}
             </Button>
           </DialogFooter>

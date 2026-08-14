@@ -4,8 +4,8 @@
  */
 export const EXTERNAL_URLS = {
   GALLERY: {
-    // Novo domínio principal
-    BASE: 'https://gallery.lunarihub.com',
+    // Novo domínio principal (Unificado no Studio)
+    BASE: 'https://app.lunarihub.com',
     // Subdomínios dinâmicos: *.gallery.lunarihub.com
     NEW: '/app/gallery/new/select',
     DELIVER_NEW: '/app/gallery/new/transfer'

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, differenceInHours, isPast } from 'date-fns';
@@ -1298,7 +1298,7 @@ export default function ClientGallery() {
 
 
 
-  // Expired gallery screen - always light background
+  // Expired gallery screen — respeita o tema da galeria
   if (galleryResponse?.expired) {
     const expiredFont = getFontFamilyById(supabaseGallery?.configuracoes?.sessionFont || galleryResponse?.settings?.sessionFont);
     const expiredTitleCase = (supabaseGallery?.configuracoes?.titleCaseMode || galleryResponse?.settings?.titleCaseMode) as TitleCaseMode || 'normal';
@@ -1306,10 +1306,10 @@ export default function ClientGallery() {
     const expiredStudioLogo = galleryResponse?.studioSettings?.studio_logo_url;
     const expiredStudioName = galleryResponse?.studioSettings?.studio_name;
 
-    // Always use light background for expired screen
     const expiredBgStyle: React.CSSProperties = {
-      backgroundColor: '#FAF9F7',
-      color: '#2D2A26',
+      ...themeStyles,
+      backgroundColor: 'var(--gallery-bg, #FAF9F7)',
+      color: 'var(--gallery-text, #1A1614)',
       fontFamily: expiredFont || 'Inter, system-ui, sans-serif',
     };
 
@@ -1333,16 +1333,16 @@ export default function ClientGallery() {
           {/* Icon */}
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
-            style={{ backgroundColor: '#EDE9E4' }}
+            style={{ backgroundColor: 'var(--gallery-bg-elevated, #F0EDE9)' }}
           >
-            <Clock className="h-9 w-9" style={{ color: '#8A8078' }} />
+            <Clock className="h-9 w-9" style={{ color: 'var(--gallery-text-muted, #6B6560)' }} />
           </div>
 
           {/* Session name */}
           {expiredSessionName && (
             <p
               className="text-sm tracking-widest uppercase"
-              style={{ color: '#8A8078', fontWeight: 400 }}
+              style={{ color: 'var(--gallery-text-muted, #6B6560)', fontWeight: 400 }}
             >
               {applyTitleCase(expiredSessionName, expiredTitleCase)}
             </p>
@@ -1352,19 +1352,19 @@ export default function ClientGallery() {
           <div className="space-y-4">
             <h1
               className="text-2xl"
-              style={{ color: '#2D2A26', fontWeight: 600 }}
+              style={{ color: 'var(--gallery-text, #1A1614)', fontWeight: 600 }}
             >
               Galeria expirada
             </h1>
             <p
               className="text-base leading-relaxed"
-              style={{ color: '#5A534A', fontWeight: 400 }}
+              style={{ color: 'var(--gallery-text-muted, #6B6560)', fontWeight: 400 }}
             >
               O prazo de acesso à galeria expirou.
             </p>
             <p
               className="text-sm leading-relaxed"
-              style={{ color: '#8A8078', fontWeight: 400 }}
+              style={{ color: 'var(--gallery-text-muted, #6B6560)', fontWeight: 400 }}
             >
               Para visualizar novamente, entre em contato com o fotógrafo e solicite a liberação.
             </p>
@@ -1374,7 +1374,7 @@ export default function ClientGallery() {
           {!expiredStudioLogo && expiredStudioName && (
             <p
               className="text-xs pt-4"
-              style={{ color: '#8A8078', borderTop: '1px solid #E5E0D9', fontWeight: 400 }}
+              style={{ color: 'var(--gallery-text-muted, #6B6560)', borderTop: '1px solid var(--gallery-border, #DAD6D1)', fontWeight: 400 }}
             >
               {expiredStudioName}
             </p>

@@ -367,20 +367,36 @@ export function useGallerySettings() {
         updateData.default_cover_id = data.defaultCoverId || 'fullscreen';
       }
 
-      // Nothing to update
-      if (Object.keys(updateData).length === 0) return;
+      // Nothing to update in gallery_settings
+      if (Object.keys(updateData).length > 0) {
+        if (existing) {
+          const { error } = await supabase
+            .from('gallery_settings')
+            .update(updateData)
+            .eq('user_id', user.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('gallery_settings')
+            .insert({ user_id: user.id, ...updateData });
+          if (error) throw error;
+        }
+      }
 
-      if (existing) {
-        const { error } = await supabase
-          .from('gallery_settings')
-          .update(updateData)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('gallery_settings')
-          .insert({ user_id: user.id, ...updateData });
-        if (error) throw error;
+      // If customTheme was provided, save it to gallery_themes as well
+      if (data.customTheme) {
+        const t = data.customTheme;
+        const { error: themeError } = await supabase
+          .from('gallery_themes')
+          .upsert({
+            user_id: user.id,
+            name: t.name || 'Custom',
+            background_mode: t.backgroundMode || 'light',
+            primary_color: t.primaryColor || '#C6A36A',
+            accent_color: t.accentColor || t.primaryColor || '#B08F55',
+            emphasis_color: t.emphasisColor || t.primaryColor || '#C6A36A',
+          }, { onConflict: 'user_id' });
+        if (themeError) throw themeError;
       }
     },
     onSuccess: () => {

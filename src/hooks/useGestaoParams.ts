@@ -89,10 +89,10 @@ export function useGestaoParams(): UseGestaoParamsResult {
   // Assisted mode is determined by the presence of session_id
   const hasGestaoParams = !!gestaoParams.session_id;
 
-  // Clear URL params without adding to browser history
+  // Clear URL params sem apagar o histórico (desativado para evitar piscar na tela ao remontar o React)
   const clearParams = useCallback(() => {
-    setSearchParams({}, { replace: true });
-  }, [setSearchParams]);
+    // setSearchParams({}, { replace: true });
+  }, []);
 
   // Mark params as processed to prevent re-application
   const markAsProcessed = useCallback(() => {
