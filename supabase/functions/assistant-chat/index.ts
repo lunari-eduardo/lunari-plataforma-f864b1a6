@@ -32,7 +32,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { convertToModelMessages, streamText, stepCountIs, type UIMessage } from "npm:ai@^5";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible@^1";
-import { createGoogleGenerativeAI } from "npm:@ai-sdk/google@^0.0.52";
+import { createGoogleGenerativeAI } from "npm:@ai-sdk/google@^1";
 import {
   createLovableAiGatewayProvider,
   getLovableAiGatewayResponseHeaders,
