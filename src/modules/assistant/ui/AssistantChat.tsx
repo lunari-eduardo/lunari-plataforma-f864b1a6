@@ -5,6 +5,7 @@ import { useLocation } from "react-router-dom";
 import { Loader2, Mic, MicOff } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   buildAssistantSystemPrompt,
   listAllLunariAITools,
@@ -304,6 +305,8 @@ function VoicePromptInput({
       onSubmit={(msg) => {
         const text = msg.text?.trim();
         if (!text || disabled) return;
+        // Guard-rail: nunca enviar áudio/arquivo embutido como texto.
+        if (text.startsWith("data:")) return;
         onSend(text);
       }}
     >

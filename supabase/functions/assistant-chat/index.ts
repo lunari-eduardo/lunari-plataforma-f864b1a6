@@ -73,7 +73,7 @@ async function logInvocation(
   },
 ) {
   try {
-    await db.from("assistant_invocations").insert({
+    const { error: auditError } = await db.from("assistant_invocations").insert({
       user_id: entry.userId,
       capability_id: "assistant.chat.turn",
       module: "assistant",
@@ -314,7 +314,7 @@ Deno.serve(async (req) => {
       system: systemPrompt,
       messages: coreMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
-      stopWhen: stepCountIs(50),
+      stopWhen: stepCountIs(8),
       // metadata útil para debug via AI Gateway logs
       providerOptions: {
         lovable: {
