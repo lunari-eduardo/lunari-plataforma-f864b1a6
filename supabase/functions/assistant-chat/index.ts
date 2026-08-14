@@ -31,7 +31,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-  convertToModelMessages,
+  convertToCoreMessages,
   jsonSchema,
   streamText,
   stepCountIs,
@@ -278,14 +278,15 @@ Deno.serve(async (req) => {
 
   console.log(`[assistant-chat] ✓ Iniciando streamText — ${body.messages?.length ?? 0} msgs, ${Object.keys(tools).length} tools`);
   try {
-    let coreMessages = await convertToModelMessages(body.messages);
+    let coreMessages = convertToCoreMessages(body.messages);
 
     // --- Otimização de Histórico (Sliding Window & Truncamento) ---
     // Corta sempre numa fronteira segura: nunca começa em mensagem `tool`
     // (isso separaria o tool-result do seu tool-call e invalida o histórico).
+    // Além disso, garante que o array truncado comece sempre com um `user` turn.
     if (coreMessages.length > 10) {
       let start = coreMessages.length - 10;
-      while (start > 0 && coreMessages[start].role === "tool") start--;
+      while (start > 0 && coreMessages[start].role !== "user") start--;
       coreMessages = coreMessages.slice(start);
     }
     let toolResultCount = 0;
@@ -296,13 +297,9 @@ Deno.serve(async (req) => {
         if (toolResultCount > 2) {
           msg.content = msg.content.map((part: any) => {
             if (part.type === "tool-result") {
-              // AI SDK 5: o payload do resultado vive em `output`, não em `result`.
               return {
                 ...part,
-                output: {
-                  type: "json",
-                  value: { _truncated: "Resultados antigos omitidos para economia de tokens" },
-                },
+                result: { _truncated: "Resultados antigos omitidos para economia de tokens" },
               };
             }
             return part;
@@ -310,6 +307,8 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+    console.log(JSON.stringify(coreMessages, null, 2));
 
     const startedAt = Date.now();
     const result = streamText({
