@@ -87,7 +87,7 @@ export function AssistantChat() {
     [session?.access_token, buildRequestBody],
   );
 
-  const { messages, append, status, stop, addToolResult, error } = useChat({
+  const { messages, sendMessage, status, stop, addToolResult, error } = useChat({
     id: `lunari-${authUser?.id ?? "anon"}`,
     transport,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -200,7 +200,7 @@ export function AssistantChat() {
           disabled={disabled}
           status={status}
           onStop={stop}
-          onSend={(text) => void append({ role: "user", content: text })}
+          onSend={(text) => void sendMessage({ text })}
         />
       </div>
 
