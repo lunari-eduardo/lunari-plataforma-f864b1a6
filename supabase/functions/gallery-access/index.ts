@@ -477,7 +477,28 @@ serve(async (req) => {
 
 
     let themeData = null
-    if (themeId) {
+    
+    // First, try to fetch custom theme if applicable
+    if (!gallery.use_custom_theme && accountTheme?.theme_type === 'custom' && accountTheme?.user_id) {
+      const { data: theme } = await supabase
+        .from('gallery_themes')
+        .select('*')
+        .eq('user_id', accountTheme.user_id)
+        .maybeSingle();
+      if (theme) {
+        themeData = {
+          id: theme.id,
+          name: theme.name,
+          backgroundMode: clientMode,
+          primaryColor: theme.primary_color,
+          accentColor: theme.accent_color,
+          emphasisColor: theme.emphasis_color,
+        };
+      }
+    }
+    
+    // Fallback to themeId lookup if custom theme wasn't found or isn't applicable
+    if (!themeData && themeId) {
       const { data: theme } = await supabase
         .from('gallery_themes')
         .select('*')

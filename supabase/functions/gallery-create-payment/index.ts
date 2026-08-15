@@ -233,12 +233,20 @@ serve(async (req) => {
       cobrancaId = cobranca.id;
 
       const ipPayload = {
-        handle,
+        handle: handle,
+        payment_methods: ["pix", "credit_card"],
         items: [{
           quantity: 1,
           price: Math.round(valor * 100),
           description: descricao || "Fotos extras - Galeria",
         }],
+        customer: {
+          first_name: cliente.nome?.split(" ")[0] || "Cliente",
+          last_name: cliente.nome?.split(" ").slice(1).join(" ") || "Lunari",
+          email: cliente.email || undefined,
+          phone_number: (cliente.whatsapp || cliente.telefone)?.replace(/\D/g, "") || undefined,
+          document_number: cliente.cpf_cnpj?.replace(/\D/g, "") || undefined,
+        },
         order_nsu: cobranca.id,
         webhook_url: `${SUPABASE_URL}/functions/v1/infinitepay-webhook`,
       };
