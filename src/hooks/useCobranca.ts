@@ -420,8 +420,9 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || cancelled) return;
 
+      const channelId = crypto.randomUUID();
       channel = supabase
-        .channel(`cobrancas-${user.id}`)
+        .channel(`cobrancas-${user.id}-${channelId}`)
         .on(
           'postgres_changes',
           {

@@ -52,14 +52,17 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const body: CreatePaymentRequest = await req.json();
-    const { galleryId, sessionId, clienteId, valor, descricao, qtdFotosExtras, fotosIncluidasGaleria } = body;
+    const body: CreatePaymentRequest & { preloaded?: Record<string, any> } = await req.json();
+    const { galleryId, sessionId, descricao, qtdFotosExtras, fotosIncluidasGaleria, preloaded } = body;
+    
+    const clienteId = preloaded?.gallery?.cliente_id ?? body.clienteId;
+    const valor = preloaded?.valorCanonico ?? body.valor;
 
-    console.log("[gallery-create-payment] Request:", JSON.stringify({ galleryId, sessionId, clienteId, valor, qtdFotosExtras }));
+    console.log("[gallery-create-payment] Request:", JSON.stringify({ galleryId, sessionId, clienteId, valor, qtdFotosExtras, hasPreloaded: !!preloaded }));
 
     // ----- Validação de entrada ---------------------------------------------
     if (!clienteId) return jsonResponse({ success: false, error: "clienteId é obrigatório" }, 400);
-    if (!valor || valor <= 0) return jsonResponse({ success: false, error: "valor deve ser maior que zero" }, 400);
+    if (valor === undefined || valor === null || Number(valor) <= 0) return jsonResponse({ success: false, error: "valor deve ser maior que zero" }, 400);
     if (!galleryId && !sessionId) {
       return jsonResponse({ success: false, error: "galleryId ou sessionId é obrigatório" }, 400);
     }
