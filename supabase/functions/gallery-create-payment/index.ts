@@ -35,6 +35,39 @@ interface CreatePaymentRequest {
   descricao?: string;
   qtdFotosExtras?: number;
   fotosIncluidasGaleria?: number;
+  payer?: {
+    nome?: string;
+    email?: string;
+    phone?: string;
+    cpfCnpj?: string;
+  };
+}
+
+function cleanName(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const name = value.replace(/\s+/g, " ").trim();
+  return name || undefined;
+}
+
+function cleanEmail(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const email = value.trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : undefined;
+}
+
+function normalizeBrazilPhone(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const digits = value.replace(/\D/g, "");
+  const local = digits.startsWith("55") && (digits.length === 12 || digits.length === 13)
+    ? digits.slice(2)
+    : digits;
+  return local.length === 10 || local.length === 11 ? `+55${local}` : undefined;
+}
+
+function normalizeDocument(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const digits = value.replace(/\D/g, "");
+  return digits.length === 11 || digits.length === 14 ? digits : undefined;
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -53,7 +86,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body: CreatePaymentRequest & { preloaded?: Record<string, any> } = await req.json();
-    const { galleryId, sessionId, descricao, qtdFotosExtras, fotosIncluidasGaleria, preloaded } = body;
+    const { galleryId, sessionId, descricao, qtdFotosExtras, fotosIncluidasGaleria, preloaded, payer } = body;
     
     const clienteId = preloaded?.gallery?.cliente_id ?? body.clienteId;
     const valor = preloaded?.valorCanonico ?? body.valor;
@@ -197,6 +230,16 @@ serve(async (req) => {
       return jsonResponse({ success: false, error: "Cliente não encontrado" }, 404);
     }
 
+    // Dados recém-coletados na galeria têm precedência; o cadastro é fallback.
+    // CPF/CNPJ é normalizado aqui para manter o contrato entre provedores, mas
+    // a API de Links da InfinitePay só documenta nome, e-mail e telefone.
+    const payerData = {
+      nome: cleanName(payer?.nome) || cleanName(cliente.nome),
+      email: cleanEmail(payer?.email) || cleanEmail(cliente.email),
+      phone: normalizeBrazilPhone(payer?.phone) || normalizeBrazilPhone(cliente.whatsapp || cliente.telefone),
+      cpfCnpj: normalizeDocument(payer?.cpfCnpj) || normalizeDocument(cliente.cpf_cnpj),
+    };
+
     let checkoutUrl: string | null = null;
     let cobrancaId: string | null = null;
 
@@ -232,18 +275,19 @@ serve(async (req) => {
       }
       cobrancaId = cobranca.id;
 
+      const customer = {
+        ...(payerData.nome ? { name: payerData.nome } : {}),
+        ...(payerData.email ? { email: payerData.email } : {}),
+        ...(payerData.phone ? { phone_number: payerData.phone } : {}),
+      };
       const ipPayload = {
         handle: handle,
-        payment_methods: ["pix", "credit_card"],
         items: [{
           quantity: 1,
           price: Math.round(valor * 100),
           description: descricao || "Fotos extras - Galeria",
         }],
-        customer_name: cliente.nome || "Cliente",
-        customer_email: cliente.email || undefined,
-        customer_phone: (cliente.whatsapp || cliente.telefone)?.replace(/\D/g, "") || undefined,
-        customer_document: (cliente.cpf_cnpj as string | undefined)?.replace(/\D/g, "") || undefined,
+        ...(Object.keys(customer).length > 0 ? { customer } : {}),
         order_nsu: cobranca.id,
         webhook_url: `${SUPABASE_URL}/functions/v1/infinitepay-webhook`,
       };

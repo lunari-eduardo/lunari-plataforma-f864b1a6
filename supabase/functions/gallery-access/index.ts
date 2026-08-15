@@ -437,12 +437,9 @@ serve(async (req) => {
     // 4. Resolve Theme (Centralized logic)
     const galleryConfig = gallery.configuracoes as any || {}
     
-    // Resolve fallback theme from account settings
-    const fallbackThemeId = accountTheme?.theme_type === 'custom' && accountTheme?.active_theme_id 
-        ? accountTheme.active_theme_id 
-        : accountTheme?.default_theme_id;
-
-    const themeId = (gallery.use_custom_theme ? gallery.theme_id : fallbackThemeId) || galleryConfig?.themeId || 'lunari';
+    const galleryThemeId = gallery.use_custom_theme ? gallery.theme_id : null;
+    const accountThemeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id || null;
+    const themeId = galleryThemeId || accountThemeId || galleryConfig?.themeId || 'lunari';
     const clientMode = (galleryConfig?.clientMode as 'light' | 'dark') || 'light'
     const themeOverrides = (gallery.use_custom_theme ? gallery.theme_overrides : accountTheme?.theme_overrides) || galleryConfig?.themeOverrides || {};
 
@@ -477,28 +474,9 @@ serve(async (req) => {
 
 
     let themeData = null
-    
-    // First, try to fetch custom theme if applicable
-    if (!gallery.use_custom_theme && accountTheme?.theme_type === 'custom' && accountTheme?.user_id) {
-      const { data: theme } = await supabase
-        .from('gallery_themes')
-        .select('*')
-        .eq('user_id', accountTheme.user_id)
-        .maybeSingle();
-      if (theme) {
-        themeData = {
-          id: theme.id,
-          name: theme.name,
-          backgroundMode: clientMode,
-          primaryColor: theme.primary_color,
-          accentColor: theme.accent_color,
-          emphasisColor: theme.emphasis_color,
-        };
-      }
-    }
-    
-    // Fallback to themeId lookup if custom theme wasn't found or isn't applicable
-    if (!themeData && themeId) {
+
+    // A theme explicitly selected for the gallery or account is authoritative.
+    if (themeId && themeId !== 'lunari') {
       const { data: theme } = await supabase
         .from('gallery_themes')
         .select('*')
@@ -513,6 +491,29 @@ serve(async (req) => {
           accentColor: theme.accent_color,
           emphasisColor: theme.emphasis_color,
         }
+      }
+    }
+
+    // Legacy custom accounts can lack active_theme_id. Pick the latest record
+    // deterministically instead of letting maybeSingle fail on multiple themes.
+    if (!themeData && !galleryThemeId && accountTheme?.theme_type === 'custom' && accountTheme?.user_id) {
+      const { data: theme } = await supabase
+        .from('gallery_themes')
+        .select('*')
+        .eq('user_id', accountTheme.user_id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (theme) {
+        themeData = {
+          id: theme.id,
+          name: theme.name,
+          backgroundMode: clientMode,
+          primaryColor: theme.primary_color,
+          accentColor: theme.accent_color,
+          emphasisColor: theme.emphasis_color,
+        };
       }
     }
 

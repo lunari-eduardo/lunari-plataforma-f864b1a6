@@ -32,6 +32,12 @@ interface RequestBody {
   valorTotal?: number;
   requestPayment?: boolean;
   visitorId?: string;  // Required for public galleries
+  payer?: {
+    nome?: string;
+    email?: string;
+    phone?: string;
+    cpfCnpj?: string;
+  };
 }
 
 import { RegrasCongeladas, Gallery } from '../_shared/types.ts';
@@ -63,7 +69,7 @@ Deno.serve(async (req) => {
 
 
     const body: RequestBody = await req.json();
-    const { extraCount, requestPayment, galleryToken, visitorId } = body;
+    const { extraCount, requestPayment, galleryToken, visitorId, payer } = body;
 
     // Log início do processo
     await logAuditEvent({
@@ -636,6 +642,7 @@ Deno.serve(async (req) => {
               snapshotFotosIncluidas: gallery.fotos_incluidas || 0,
               snapshotRegrasCongeladas: gallery.regras_congeladas,
               correlationId,
+              payer,
               preloaded: {
                 gallery: {
                   id: galleryId,
