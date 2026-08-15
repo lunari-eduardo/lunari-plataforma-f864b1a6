@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
           valor: valorManual,
           valor_liquido: valorManual,
           valor_extras_componente: componenteExtras,
-          tipo_cobranca: finalidade === "sessao_e_extras" ? "sessao_e_extras" : "foto_extra",
+          tipo_cobranca: "presencial",
           finalidade,
           provedor: "manual",
           status: "pendente",

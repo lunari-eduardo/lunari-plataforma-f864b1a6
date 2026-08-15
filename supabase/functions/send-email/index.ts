@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const FROM_EMAIL = 'Lunari <contato@mail.lunarihub.com>';
-const GALLERY_BASE_URL = 'https://gallery.lunarihub.com';
+const GALLERY_BASE_URL = 'https://app.lunarihub.com';
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
 type EventType = 'gallery_sent' | 'payment_confirmed' | 'gallery_reactivated';

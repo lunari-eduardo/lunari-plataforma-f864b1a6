@@ -32,7 +32,7 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-const GALLERY_BASE_URL = "https://gallery.lunarihub.com";
+const GALLERY_BASE_URL = "https://app.lunarihub.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

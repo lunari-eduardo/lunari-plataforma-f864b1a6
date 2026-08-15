@@ -59,18 +59,6 @@ export function getOAuthRedirectUri(): string {
   return `${getAppBaseUrl()}/app/integracoes`;
 }
 
-/**
- * Obtém a URL base do Gallery baseado no domínio atual
- */
-export function getGalleryBaseUrl(): string {
-  const hostname = window.location.hostname;
-  
-  if (hostname.includes('lunarihub')) {
-    return 'https://gallery.lunarihub.com';
-  }
-  
-  return 'https://lunari-gallery.lovable.app';
-}
 
 /**
  * Obtém URL canônica para SEO baseado no domínio atual
