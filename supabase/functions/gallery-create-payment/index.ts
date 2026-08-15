@@ -188,7 +188,7 @@ serve(async (req) => {
     // ----- Cliente ----------------------------------------------------------
     const { data: cliente, error: clienteError } = await supabase
       .from("clientes")
-      .select("nome, email, telefone, whatsapp")
+      .select("nome, email, telefone, whatsapp, cpf_cnpj")
       .eq("id", clienteId)
       .maybeSingle();
 
@@ -240,13 +240,10 @@ serve(async (req) => {
           price: Math.round(valor * 100),
           description: descricao || "Fotos extras - Galeria",
         }],
-        customer: {
-          first_name: cliente.nome?.split(" ")[0] || "Cliente",
-          last_name: cliente.nome?.split(" ").slice(1).join(" ") || "Lunari",
-          email: cliente.email || undefined,
-          phone_number: (cliente.whatsapp || cliente.telefone)?.replace(/\D/g, "") || undefined,
-          document_number: cliente.cpf_cnpj?.replace(/\D/g, "") || undefined,
-        },
+        customer_name: cliente.nome || "Cliente",
+        customer_email: cliente.email || undefined,
+        customer_phone: (cliente.whatsapp || cliente.telefone)?.replace(/\D/g, "") || undefined,
+        customer_document: (cliente.cpf_cnpj as string | undefined)?.replace(/\D/g, "") || undefined,
         order_nsu: cobranca.id,
         webhook_url: `${SUPABASE_URL}/functions/v1/infinitepay-webhook`,
       };
