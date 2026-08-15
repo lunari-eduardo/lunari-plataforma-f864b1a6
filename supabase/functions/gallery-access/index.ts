@@ -436,7 +436,13 @@ serve(async (req) => {
 
     // 4. Resolve Theme (Centralized logic)
     const galleryConfig = gallery.configuracoes as any || {}
-    const themeId = (gallery.use_custom_theme ? gallery.theme_id : accountTheme?.default_theme_id) || galleryConfig?.themeId || 'lunari';
+    
+    // Resolve fallback theme from account settings
+    const fallbackThemeId = accountTheme?.theme_type === 'custom' && accountTheme?.active_theme_id 
+        ? accountTheme.active_theme_id 
+        : accountTheme?.default_theme_id;
+
+    const themeId = (gallery.use_custom_theme ? gallery.theme_id : fallbackThemeId) || galleryConfig?.themeId || 'lunari';
     const clientMode = (galleryConfig?.clientMode as 'light' | 'dark') || 'light'
     const themeOverrides = (gallery.use_custom_theme ? gallery.theme_overrides : accountTheme?.theme_overrides) || galleryConfig?.themeOverrides || {};
 
