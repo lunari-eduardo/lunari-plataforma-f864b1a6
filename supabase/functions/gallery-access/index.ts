@@ -515,9 +515,9 @@ serve(async (req) => {
       cpfCnpj: string | null;
     } | null = null;
     try {
-      const hints = await resolvePayerHints(supabase, {
+      const hints = await resolvePayerHints({
+        supabase,
         clienteId: gallery.cliente_id,
-        visitorId: visitorId || null,
       });
 
       // Descobre provider ativo (default) para decidir requisitos.
