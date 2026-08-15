@@ -1040,18 +1040,18 @@ export default function ClientGallery() {
     
     // Base colors depend on background mode (always applied, even for system theme)
     const baseColors = backgroundMode === 'dark' ? {
-      '--background': '25 15% 10%',
-      '--foreground': '30 20% 95%',
-      '--card': '25 15% 13%',
-      '--card-foreground': '30 20% 95%',
-      '--muted': '25 12% 20%',
-      '--muted-foreground': '30 15% 60%',
-      '--border': '25 12% 22%',
-      '--primary-foreground': '25 15% 10%',
-      '--popover': '25 15% 13%',
-      '--popover-foreground': '30 20% 95%',
+      '--background': '0 0% 5%',
+      '--foreground': '0 0% 95%',
+      '--card': '0 0% 9%',
+      '--card-foreground': '0 0% 95%',
+      '--muted': '0 0% 14%',
+      '--muted-foreground': '0 0% 60%',
+      '--border': '0 0% 16%',
+      '--primary-foreground': '0 0% 5%',
+      '--popover': '0 0% 9%',
+      '--popover-foreground': '0 0% 95%',
       // Gradients for dark mode
-      '--gradient-card': 'linear-gradient(180deg, hsl(25 15% 13%) 0%, hsl(25 12% 11%) 100%)',
+      '--gradient-card': 'linear-gradient(180deg, hsl(0 0% 10%) 0%, hsl(0 0% 7%) 100%)',
     } : {
       '--background': '30 25% 97%',
       '--foreground': '25 20% 15%',

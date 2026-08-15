@@ -78,8 +78,8 @@ export default function ClientDeliverGallery({ data }: Props) {
   const customPrimaryColor = data.theme?.primaryColor || undefined;
 
   // Fallback colors antes do GalleryThemeProvider (album view e loading)
-  const bgColor = isDark ? '#0D0D0D' : '#FAF9F7';
-  const textColor = isDark ? '#F0EDE9' : '#1A1614';
+  const bgColor = isDark ? '#0E0E0E' : '#FAF9F7';
+  const textColor = isDark ? '#F2F2F2' : '#1A1614';
   const primaryColor = customPrimaryColor || '#C6A36A'; // dourado Lunari padrão
 
 
@@ -229,7 +229,7 @@ export default function ClientDeliverGallery({ data }: Props) {
                         className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     ) : (
-                      <div className="absolute inset-0" style={{ backgroundColor: isDark ? '#1F1F1F' : '#F0EDE9' }} />
+                      <div className="absolute inset-0" style={{ backgroundColor: isDark ? '#171717' : '#F0EDE9' }} />
                     )}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-500" />
                   </div>
@@ -312,8 +312,8 @@ function ClientDeliverGalleryContent({
   }, []);
 
   const isDark = data.clientMode === 'dark';
-  const bgColor = cssVars['--gallery-bg'] || (isDark ? '#0D0D0D' : '#FAF9F7');
-  const textColor = cssVars['--gallery-text'] || (isDark ? '#F0EDE9' : '#1A1614');
+  const bgColor = cssVars['--gallery-bg'] || (isDark ? '#0E0E0E' : '#FAF9F7');
+  const textColor = cssVars['--gallery-text'] || (isDark ? '#F2F2F2' : '#1A1614');
   const primaryColor = cssVars['--gallery-primary'] || '#C6A36A';
 
   return (

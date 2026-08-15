@@ -92,18 +92,18 @@ export function UnifiedAccessScreen({
   return (
     <div 
       className={cn(
-        "min-h-screen flex flex-col relative overflow-hidden",
-        backgroundMode === 'dark' ? 'dark bg-background text-foreground' : 'bg-background text-foreground'
+        "min-h-screen flex flex-col relative overflow-hidden bg-background text-foreground",
+        backgroundMode === 'dark' && 'dark'
       )}
       style={themeStyles}
     >
       {/* Dynamic Background with Blur */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <div 
-          className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-20 transition-opacity duration-1000"
+          className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-15 transition-opacity duration-1000"
           style={{ backgroundImage: `url(${studioLogo || ''})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
       </div>
 
       <div className="relative z-10 flex-1 flex flex-col">
@@ -113,31 +113,38 @@ export function UnifiedAccessScreen({
             <img 
               src={studioLogo} 
               alt={studioName || 'Studio'} 
-              className="h-32 md:h-40 lg:h-48 w-auto object-contain animate-fade-in"
+              className="h-28 md:h-36 lg:h-44 w-auto object-contain animate-fade-in"
             />
           ) : (
-            <span className="text-xl tracking-[0.2em] uppercase font-light opacity-50">
+            <span className="text-xl tracking-[0.2em] uppercase font-light opacity-60">
               {studioName}
             </span>
           )}
         </header>
 
         {/* Content */}
-        <main className="flex-1 flex items-center justify-center p-6">
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
           <div className="max-w-xl w-full text-center space-y-8 animate-slide-up">
             {/* Title Section */}
-            <div className="space-y-4">
-              <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-2">
-                <Lock className="h-5 w-5 text-primary" />
+            <div className="space-y-3">
+              <div 
+                className="inline-flex items-center justify-center p-3 rounded-full mb-2 border"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--gallery-primary, #C6A36A) 12%, transparent)',
+                  borderColor: 'color-mix(in srgb, var(--gallery-primary, #C6A36A) 25%, transparent)',
+                  color: 'var(--gallery-primary, #C6A36A)',
+                }}
+              >
+                <Lock className="h-5 w-5" />
               </div>
               
-              <h2 className="text-sm md:text-base font-medium tracking-[0.2em] uppercase text-muted-foreground">
+              <h2 className="text-xs md:text-sm font-medium tracking-[0.25em] uppercase text-muted-foreground">
                 Sua galeria está pronta
               </h2>
               
               {sessionName && (
                 <h1 
-                  className="text-4xl md:text-6xl lg:text-7xl font-light opacity-100"
+                  className="text-3xl sm:text-5xl md:text-6xl font-light tracking-tight text-foreground"
                   style={{ fontFamily: sessionFont || 'inherit' }}
                 >
                   {applyTitleCase(sessionName, titleCaseMode)}
@@ -146,23 +153,23 @@ export function UnifiedAccessScreen({
             </div>
 
             {/* Unified Form Card */}
-            <div className="glass p-8 md:p-10 space-y-8 shadow-2xl border-white/10 max-w-lg mx-auto backdrop-blur-md">
+            <div className="p-6 sm:p-10 space-y-6 shadow-2xl rounded-2xl max-w-lg mx-auto bg-card/90 border border-border/40 backdrop-blur-xl">
               <form onSubmit={handleSubmit} className="space-y-6">
                 
                 {requiresPassword && (
                   <div className="space-y-2 text-left">
-                    <label className="text-[10px] uppercase tracking-widest opacity-50 ml-1 font-semibold">
+                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1 font-semibold">
                       Senha de Acesso
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-30" />
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="password"
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className={cn(
-                          "bg-background/40 border-white/5 text-center text-lg h-14 tracking-[0.3em] rounded-md transition-all focus:ring-primary/20 pl-10",
+                          "bg-muted/40 border-border text-center text-lg h-14 tracking-[0.3em] rounded-xl transition-all pl-10 text-foreground placeholder:text-muted-foreground/40",
                           error && "border-destructive focus-visible:ring-destructive"
                         )}
                         disabled={isLoading}
@@ -175,17 +182,17 @@ export function UnifiedAccessScreen({
                 {requiresVisitor && (
                   <div className="space-y-5">
                     <div className="space-y-2 text-left">
-                      <label className="text-[10px] uppercase tracking-widest opacity-50 ml-1 font-semibold">
+                      <label className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1 font-semibold">
                         Identificação
                       </label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-30" />
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           type="text"
                           placeholder="Seu nome"
                           value={nome}
                           onChange={(e) => setNome(e.target.value)}
-                          className="bg-background/40 border-white/5 h-12 rounded-md pl-10"
+                          className="bg-muted/40 border-border h-12 rounded-xl pl-10 text-foreground placeholder:text-muted-foreground/40"
                           disabled={isLoading}
                           autoFocus={requiresVisitor}
                         />
@@ -198,10 +205,10 @@ export function UnifiedAccessScreen({
                           type="button"
                           onClick={() => { setContatoTipo('whatsapp'); setContato(''); }}
                           className={cn(
-                            "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] uppercase tracking-wider font-semibold transition-all",
+                            "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] uppercase tracking-wider font-semibold transition-all border",
                             contatoTipo === 'whatsapp' 
-                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                              : "bg-white/5 text-white/40 hover:text-white/60"
+                              ? "bg-[var(--gallery-primary)] text-[var(--gallery-primary-fg)] border-[var(--gallery-primary)] shadow-md" 
+                              : "bg-muted/30 border-border/40 text-muted-foreground hover:text-foreground"
                           )}
                         >
                           <Phone className="h-3 w-3" />
@@ -211,10 +218,10 @@ export function UnifiedAccessScreen({
                           type="button"
                           onClick={() => { setContatoTipo('email'); setContato(''); }}
                           className={cn(
-                            "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] uppercase tracking-wider font-semibold transition-all",
+                            "flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] uppercase tracking-wider font-semibold transition-all border",
                             contatoTipo === 'email' 
-                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
-                              : "bg-white/5 text-white/40 hover:text-white/60"
+                              ? "bg-[var(--gallery-primary)] text-[var(--gallery-primary-fg)] border-[var(--gallery-primary)] shadow-md" 
+                              : "bg-muted/30 border-border/40 text-muted-foreground hover:text-foreground"
                           )}
                         >
                           <Mail className="h-3 w-3" />
@@ -224,16 +231,16 @@ export function UnifiedAccessScreen({
 
                       <div className="relative">
                         {contatoTipo === 'whatsapp' ? (
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-30" />
+                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-30" />
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         )}
                         <Input
                           type={contatoTipo === 'email' ? 'email' : 'tel'}
                           placeholder={contatoTipo === 'whatsapp' ? '(11) 99999-9999' : 'seu@email.com'}
                           value={contato}
                           onChange={(e) => handleContatoChange(e.target.value)}
-                          className="bg-background/40 border-white/5 h-12 rounded-md pl-10"
+                          className="bg-muted/40 border-border h-12 rounded-xl pl-10 text-foreground placeholder:text-muted-foreground/40"
                           disabled={isLoading}
                         />
                       </div>
@@ -252,11 +259,11 @@ export function UnifiedAccessScreen({
                   type="submit" 
                   variant="default" 
                   size="xl"
-                  className="w-full shadow-xl hover:shadow-primary/20 transition-all duration-500 rounded-md"
+                  className="w-full shadow-lg transition-all duration-300 rounded-xl h-13 text-sm font-medium tracking-wide"
                   disabled={isLoading || !isFormValid()}
                   style={{ 
-                    backgroundColor: 'var(--gallery-primary)',
-                    color: 'var(--gallery-primary-foreground)'
+                    backgroundColor: 'var(--gallery-primary, #C6A36A)',
+                    color: 'var(--gallery-primary-fg, #0E0E0E)'
                   }}
                 >
                   {isLoading ? (
@@ -271,26 +278,28 @@ export function UnifiedAccessScreen({
               </form>
 
               {/* metadata integration from welcome screen */}
-              <div className="pt-6 border-t border-white/5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 opacity-40">
-                {totalPhotos && (
-                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-medium">
-                    <ImageIcon className="h-3 w-3" />
-                    {totalPhotos} fotos
-                  </div>
-                )}
-                {includedPhotos && (
-                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-medium">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {includedPhotos} contratadas
-                  </div>
-                )}
-                {deadline && (
-                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-medium">
-                    <Clock className="h-3 w-3" />
-                    {format(deadline, "dd/MM/yyyy", { locale: ptBR })}
-                  </div>
-                )}
-              </div>
+              {(Boolean(totalPhotos) || Boolean(includedPhotos) || Boolean(deadline)) && (
+                <div className="pt-4 border-t border-border/40 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-muted-foreground">
+                  {Boolean(totalPhotos) && (
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-medium">
+                      <ImageIcon className="h-3 w-3" />
+                      {totalPhotos} fotos
+                    </div>
+                  )}
+                  {Boolean(includedPhotos) && (
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-medium">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {includedPhotos} contratadas
+                    </div>
+                  )}
+                  {deadline && (
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-medium">
+                      <Clock className="h-3 w-3" />
+                      {format(deadline, "dd/MM/yyyy", { locale: ptBR })}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {welcomeMessage && (
                 <p className="text-xs opacity-40 italic leading-relaxed pt-2">

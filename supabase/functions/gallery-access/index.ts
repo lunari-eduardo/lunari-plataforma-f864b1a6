@@ -82,6 +82,58 @@ serve(async (req) => {
     // Resolve owner settings (account theme)
     const accountTheme = settingsWithOwner;
 
+    // Resolve Theme and Client Mode early (needed for Password / Visitor access screens)
+    const galleryConfig = (gallery.configuracoes as any) || {};
+    const galleryThemeId = gallery.use_custom_theme ? gallery.theme_id : null;
+    const accountThemeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id || null;
+    const themeId = galleryThemeId || accountThemeId || galleryConfig?.themeId || 'lunari';
+    const clientMode = (galleryConfig?.clientMode as 'light' | 'dark') || 'light';
+    const themeOverrides = (gallery.use_custom_theme ? gallery.theme_overrides : accountTheme?.theme_overrides) || galleryConfig?.themeOverrides || {};
+
+    let themeData = null;
+
+    if (themeId && themeId !== 'lunari') {
+      const { data: theme } = await supabase
+        .from('gallery_themes')
+        .select('*')
+        .eq('id', themeId)
+        .maybeSingle();
+      if (theme) {
+        themeData = {
+          id: theme.id,
+          name: theme.name,
+          backgroundMode: clientMode,
+          primaryColor: theme.primary_color,
+          accentColor: theme.accent_color,
+          emphasisColor: theme.emphasis_color,
+        };
+      }
+    }
+
+    if (!themeData && !galleryThemeId && accountTheme?.theme_type === 'custom' && accountTheme?.user_id) {
+      const { data: theme } = await supabase
+        .from('gallery_themes')
+        .select('*')
+        .eq('user_id', accountTheme.user_id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (theme) {
+        themeData = {
+          id: theme.id,
+          name: theme.name,
+          backgroundMode: clientMode,
+          primaryColor: theme.primary_color,
+          accentColor: theme.accent_color,
+          emphasisColor: theme.emphasis_color,
+        };
+      }
+    }
+
+    if (!themeData) {
+      themeData = { id: 'system', name: 'Sistema', backgroundMode: clientMode, primaryColor: null, accentColor: null, emphasisColor: null };
+    }
 
     // 3. Check password if private (só exige senha se realmente houver uma cadastrada)
     const hasPassword = typeof gallery.gallery_password === 'string' && gallery.gallery_password.length > 0;
@@ -91,12 +143,18 @@ serve(async (req) => {
         requiresPassword: true,
         sessionName: gallery.nome_sessao,
         studioSettings: settingsWithOwner,
+        theme: themeData,
+        clientMode,
+        settings: {
+          sessionFont: galleryConfig?.sessionFont || undefined,
+          titleCaseMode: galleryConfig?.titleCaseMode || 'normal',
+        },
         error: password ? 'Senha incorreta' : undefined,
         code: password ? 'WRONG_PASSWORD' : 'AUTH_REQUIRED'
       }), {
         status: password ? 401 : 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      });
     }
 
     // 2.5 TRACKING: Marcar galeria como acessada/em seleção no primeiro acesso
@@ -434,16 +492,7 @@ serve(async (req) => {
     }
 
 
-    // 4. Resolve Theme (Centralized logic)
-    const galleryConfig = gallery.configuracoes as any || {}
-    
-    const galleryThemeId = gallery.use_custom_theme ? gallery.theme_id : null;
-    const accountThemeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id || null;
-    const themeId = galleryThemeId || accountThemeId || galleryConfig?.themeId || 'lunari';
-    const clientMode = (galleryConfig?.clientMode as 'light' | 'dark') || 'light'
-    const themeOverrides = (gallery.use_custom_theme ? gallery.theme_overrides : accountTheme?.theme_overrides) || galleryConfig?.themeOverrides || {};
-
-    // 4.1. Normalize saleSettings — canonical columns > JSON > default.
+    // 4. Normalize saleSettings — canonical columns > JSON > default.
     // Frontend NEVER derives sale mode from any other source. This is the single
     // source of truth exposed to the client (see .lovable/pipeline-galeria-pagamento.md).
     const rawSaleSettings = (galleryConfig?.saleSettings || {}) as Record<string, unknown>;
@@ -470,55 +519,6 @@ serve(async (req) => {
     if ((rawSaleSettings.mode as string | undefined) && (gallery as any).venda_modo
         && rawSaleSettings.mode !== (gallery as any).venda_modo) {
       console.warn(`[gallery-access] SALE_MODE_DIVERGENCE gallery=${gallery.id} column=${(gallery as any).venda_modo} json=${rawSaleSettings.mode}`);
-    }
-
-
-    let themeData = null
-
-    // A theme explicitly selected for the gallery or account is authoritative.
-    if (themeId && themeId !== 'lunari') {
-      const { data: theme } = await supabase
-        .from('gallery_themes')
-        .select('*')
-        .eq('id', themeId)
-        .maybeSingle()
-      if (theme) {
-        themeData = {
-          id: theme.id,
-          name: theme.name,
-          backgroundMode: clientMode,
-          primaryColor: theme.primary_color,
-          accentColor: theme.accent_color,
-          emphasisColor: theme.emphasis_color,
-        }
-      }
-    }
-
-    // Legacy custom accounts can lack active_theme_id. Pick the latest record
-    // deterministically instead of letting maybeSingle fail on multiple themes.
-    if (!themeData && !galleryThemeId && accountTheme?.theme_type === 'custom' && accountTheme?.user_id) {
-      const { data: theme } = await supabase
-        .from('gallery_themes')
-        .select('*')
-        .eq('user_id', accountTheme.user_id)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (theme) {
-        themeData = {
-          id: theme.id,
-          name: theme.name,
-          backgroundMode: clientMode,
-          primaryColor: theme.primary_color,
-          accentColor: theme.accent_color,
-          emphasisColor: theme.emphasis_color,
-        };
-      }
-    }
-
-    if (!themeData) {
-      themeData = { id: 'system', name: 'Sistema', backgroundMode: clientMode, primaryColor: null, accentColor: null, emphasisColor: null }
     }
 
     // Payer hints missing (booleans only — não expõe valores).

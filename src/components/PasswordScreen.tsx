@@ -43,18 +43,18 @@ export function PasswordScreen({
   return (
     <div 
       className={cn(
-        "min-h-screen flex flex-col relative overflow-hidden",
-        backgroundMode === 'dark' ? 'dark bg-zinc-950 text-zinc-100' : 'bg-stone-50 text-stone-900'
+        "min-h-screen flex flex-col relative overflow-hidden bg-background text-foreground",
+        backgroundMode === 'dark' && 'dark'
       )}
       style={themeStyles}
     >
       {/* Dynamic Background with Blur */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none">
         <div 
-          className="absolute inset-0 bg-cover bg-center scale-110 blur-xl opacity-20 transition-opacity duration-1000"
+          className="absolute inset-0 bg-cover bg-center scale-110 blur-3xl opacity-15 transition-opacity duration-1000"
           style={{ backgroundImage: `url(${studioLogo || ''})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
       </div>
 
       <div className="relative z-10 flex-1 flex flex-col">
@@ -64,51 +64,61 @@ export function PasswordScreen({
             <img 
               src={studioLogo} 
               alt={studioName || 'Studio'} 
-              className="h-20 md:h-28 lg:h-32 w-auto object-contain animate-fade-in"
+              className="h-28 md:h-36 lg:h-44 w-auto object-contain animate-fade-in"
             />
           ) : (
-            <span className="text-xl tracking-[0.2em] uppercase font-light opacity-50">
+            <span className="text-xl tracking-[0.2em] uppercase font-light opacity-60">
               {studioName}
             </span>
           )}
         </header>
 
         {/* Content */}
-        <main className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full text-center space-y-10 animate-slide-up">
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+          <div className="max-w-md w-full text-center space-y-8 animate-slide-up">
             {/* Title Section */}
-            <div className="space-y-4">
-              <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-2">
-                <Lock className="h-5 w-5 text-primary" />
+            <div className="space-y-3">
+              <div 
+                className="inline-flex items-center justify-center p-3 rounded-full mb-2 border"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--gallery-primary, #C6A36A) 12%, transparent)',
+                  borderColor: 'color-mix(in srgb, var(--gallery-primary, #C6A36A) 25%, transparent)',
+                  color: 'var(--gallery-primary, #C6A36A)',
+                }}
+              >
+                <Lock className="h-5 w-5" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-light tracking-tight">
+              
+              <h2 className="text-xs md:text-sm font-medium tracking-[0.25em] uppercase text-muted-foreground">
                 Sua galeria está pronta
-              </h1>
+              </h2>
+              
               {sessionName && (
-                <p 
-                  className="text-xl md:text-2xl font-normal opacity-70 italic"
+                <h1 
+                  className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-foreground"
                   style={{ fontFamily: sessionFont || 'inherit' }}
                 >
                   {applyTitleCase(sessionName, titleCaseMode)}
-                </p>
+                </h1>
               )}
             </div>
 
             {/* Password Form Card */}
-            <div className="glass p-8 md:p-10 space-y-6 shadow-2xl border-white/10">
+            <div className="p-6 sm:p-10 space-y-6 shadow-2xl rounded-2xl max-w-md mx-auto bg-card/90 border border-border/40 backdrop-blur-xl">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2 text-left">
-                  <label className="text-xs uppercase tracking-widest opacity-50 ml-1 font-medium">
+                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1 font-semibold">
                     Senha de Acesso
                   </label>
                   <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className={cn(
-                        "bg-background/50 border-white/10 text-center text-lg h-14 tracking-[0.3em] rounded-md transition-all focus:ring-primary/20",
+                        "bg-muted/40 border-border text-center text-lg h-14 tracking-[0.3em] rounded-xl transition-all pl-10 text-foreground placeholder:text-muted-foreground/40",
                         error && "border-destructive focus-visible:ring-destructive"
                       )}
                       disabled={isLoading}
@@ -128,11 +138,11 @@ export function PasswordScreen({
                   type="submit" 
                   variant="default" 
                   size="xl"
-                  className="w-full shadow-xl hover:shadow-primary/20 transition-all duration-500"
+                  className="w-full shadow-lg transition-all duration-300 rounded-xl h-13 text-sm font-medium tracking-wide"
                   disabled={isLoading || !password.trim()}
                   style={{ 
-                    backgroundColor: 'var(--gallery-primary)',
-                    color: 'var(--gallery-primary-foreground)',
+                    backgroundColor: 'var(--gallery-primary, #C6A36A)',
+                    color: 'var(--gallery-primary-fg, #0E0E0E)',
                     borderRadius: 'var(--gallery-radius)'
                   }}
                 >
@@ -147,7 +157,7 @@ export function PasswordScreen({
                 </Button>
               </form>
 
-              <p className="text-sm opacity-40">
+              <p className="text-xs text-muted-foreground">
                 Conteúdo exclusivo e protegido para sua privacidade.
               </p>
             </div>
@@ -155,8 +165,8 @@ export function PasswordScreen({
         </main>
 
         {/* Footer Info */}
-        <footer className="p-8 text-center opacity-30 text-[10px] uppercase tracking-[0.2em]">
-          Powered by Lunari
+        <footer className="p-8 text-center opacity-20 text-[10px] uppercase tracking-[0.3em] font-light">
+          Experience by Lunari
         </footer>
       </div>
     </div>

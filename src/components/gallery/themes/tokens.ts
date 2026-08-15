@@ -31,17 +31,17 @@ export const LUNARI_GALLERY_TOKENS_LIGHT: Omit<GalleryThemeTokens, '--gallery-ga
   '--gallery-success': '#347A57',      // verde sucesso
 };
 
-// Paleta oficial Lunari para galerias no modo DARK
+// Paleta oficial Lunari para galerias no modo DARK (Preto Grafite Elegante)
 export const LUNARI_GALLERY_TOKENS_DARK: Omit<GalleryThemeTokens, '--gallery-gap' | '--gallery-radius' | '--gallery-row-unit'> = {
-  '--gallery-bg': '#0D0D0D',           // grafite puro
-  '--gallery-bg-elevated': '#1A1A1A',  // superfície elevada dark
-  '--gallery-surface': '#1F1F1F',      // cards e overlays dark
+  '--gallery-bg': '#0E0E0E',           // preto grafite elegante
+  '--gallery-bg-elevated': '#171717',  // superfície elevada dark
+  '--gallery-surface': '#1A1A1A',      // cards e overlays dark
   '--gallery-primary': '#C6A36A',      // dourado permanece (funciona nos dois modos)
-  '--gallery-primary-fg': '#0D0D0D',   // texto escuro sobre o dourado
+  '--gallery-primary-fg': '#0E0E0E',   // texto escuro sobre o dourado
   '--gallery-accent': '#D0B581',       // dourado mais luminoso no dark
-  '--gallery-text': '#F0EDE9',         // off-white quente
-  '--gallery-text-muted': '#8A8278',   // texto secundário dark
-  '--gallery-border': '#2A2A2A',       // bordas dark
+  '--gallery-text': '#F2F2F2',         // off-white nítido neutro
+  '--gallery-text-muted': '#8A8A8A',   // texto secundário neutro grafite
+  '--gallery-border': '#242424',       // bordas neutras grafite
   '--gallery-success': '#56B485',      // verde sucesso luminoso
 };
 
