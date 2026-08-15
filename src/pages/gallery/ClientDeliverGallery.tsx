@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { CoverRenderer } from '@/components/deliver/covers/CoverRenderer';
 import { resolveCoverId } from '@/components/deliver/covers/registry';
 import { DeliverHeader } from '@/components/deliver/DeliverHeader';
@@ -359,8 +360,8 @@ function ClientDeliverGalleryContent({
                   borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', 
                 }}
               >
-                <span className="opacity-40 group-hover:translate-x-[-2px] transition-transform">â†</span> 
-                Ãlbuns
+                <ArrowLeft className="h-3.5 w-3.5 opacity-60 group-hover:translate-x-[-2px] transition-transform" />
+                Álbuns
               </button>
               
               <div className="h-4 w-px bg-white/10 mx-1" />

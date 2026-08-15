@@ -11,6 +11,7 @@ import {
   Clock,
   AlertCircle,
   Download,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RowMasonryGrid as MasonryGrid, RowMasonryItem as MasonryItem } from '@/components/RowMasonryGrid';
@@ -53,6 +54,7 @@ import { applyTitleCase } from '@/lib/textTransform';
 import { useImageProtection } from '@/hooks/useImageProtection';
 import ClientDeliverGallery from '@/pages/gallery/ClientDeliverGallery';
 import { applyTheme, DEFAULT_THEME, type ThemePresetId, type VisualThemeMode } from '@/lib/visualTheme';
+import { resolveGalleryColorTokens } from '@/components/gallery/themes/tokens';
 import { sortPhotosByNaturalFilename } from '@/lib/photoOrdering';
 
 // Helper to convert HEX to HSL values for CSS variables
@@ -305,14 +307,12 @@ export default function ClientGallery() {
   // Não persiste no localStorage — apenas overlay temporário enquanto o visitante
   // está na rota pública.
   useEffect(() => {
-    const studioTheme = (galleryResponse as any)?.studioTheme;
-    if (studioTheme?.presetId && studioTheme?.mode) {
+    if (galleryResponse) {
+      const mode = galleryResponse.clientMode || galleryResponse.studioSettings?.clientTheme || 'light';
       applyTheme({
-        presetId: studioTheme.presetId as ThemePresetId,
-        mode: studioTheme.mode as VisualThemeMode,
+        presetId: 'graphite',
+        mode: mode as VisualThemeMode,
       });
-    } else if (galleryResponse) {
-      applyTheme(DEFAULT_THEME);
     }
   }, [galleryResponse]);
 
@@ -1032,7 +1032,11 @@ export default function ClientGallery() {
     const theme = galleryResponse?.theme;
     
     // Gallery's clientMode wins over theme's backgroundMode
-    const backgroundMode = galleryResponse?.clientMode || theme?.backgroundMode || 'light';
+    const backgroundMode: 'light' | 'dark' = (galleryResponse?.clientMode === 'dark' || theme?.backgroundMode === 'dark') ? 'dark' : 'light';
+    const customPrimary = theme?.primaryColor || undefined;
+    
+    // Resolve standard gallery tokens (--gallery-primary, --gallery-primary-fg, etc.)
+    const galleryTokens = resolveGalleryColorTokens(backgroundMode, customPrimary);
     
     // Base colors depend on background mode (always applied, even for system theme)
     const baseColors = backgroundMode === 'dark' ? {
@@ -1063,20 +1067,20 @@ export default function ClientGallery() {
       '--gradient-card': 'linear-gradient(180deg, hsl(30 20% 99%) 0%, hsl(30 15% 96%) 100%)',
     };
     
-    // Only add custom colors if theme has them (not system theme with null colors)
-    if (theme?.primaryColor) {
-      const primaryHsl = hexToHsl(theme.primaryColor);
-      const accentHsl = hexToHsl(theme.accentColor);
-      
-      return {
-        ...baseColors,
-        '--primary': primaryHsl || '18 55% 55%',
-        '--accent': accentHsl || '120 20% 62%',
-        '--ring': primaryHsl || '18 55% 55%',
-      } as React.CSSProperties;
-    }
+    const primaryHex = customPrimary || galleryTokens['--gallery-primary'];
+    const primaryHsl = hexToHsl(primaryHex);
+    const accentHsl = theme?.accentColor ? hexToHsl(theme.accentColor) : null;
     
-    return baseColors as React.CSSProperties;
+    return {
+      ...baseColors,
+      ...galleryTokens,
+      '--gallery-primary': primaryHex,
+      '--gallery-primary-fg': galleryTokens['--gallery-primary-fg'],
+      '--gallery-primary-foreground': galleryTokens['--gallery-primary-fg'],
+      '--primary': primaryHsl || '39 35% 60%',
+      '--accent': accentHsl || '39 35% 60%',
+      '--ring': primaryHsl || '39 35% 60%',
+    } as React.CSSProperties;
   }, [galleryResponse?.theme, galleryResponse?.clientMode]);
 
   // Extract folders from gallery response
@@ -1104,7 +1108,7 @@ export default function ClientGallery() {
           />
         )}
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
-        <p className="mt-6 text-base font-medium">Abrindo checkoutâ€¦</p>
+        <p className="mt-6 text-base font-medium">Abrindo checkout...</p>
         <p className="mt-1 text-sm text-muted-foreground">Você será redirecionado em instantes.</p>
       </div>
     );
@@ -1541,14 +1545,14 @@ export default function ClientGallery() {
 
         // 2) Redirect externo (InfinitePay / Mercado Pago)
         if (charge?.checkoutUrl) {
-          toast.success('Redirecionandoâ€¦');
+          toast.success('Redirecionando...');
           window.location.assign(charge.checkoutUrl);
           return;
         }
 
         // 3) Checkout inline (Asaas transparente / PIX)
         if (charge?.transparentCheckout || charge?.provedor === 'asaas' || charge?.provedor === 'pix_manual') {
-          toast.success('Abrindo pagamentoâ€¦');
+          toast.success('Abrindo pagamento...');
           const fresh = await refetchGallery();
           if (routeFromFreshData(fresh?.data)) return;
           // Se por algum motivo os dados frescos não bateram, força inline mesmo assim.
@@ -1583,28 +1587,28 @@ export default function ClientGallery() {
     const handleResume = async () => {
       // Se já temos dados de checkout inline (Asaas/PIX), apenas revela o componente.
       if (pendingAction?.kind === 'asaas_modal' && galleryResponse?.asaasCheckoutData) {
-        toast.success('Abrindo pagamentoâ€¦');
+        toast.success('Abrindo pagamento...');
         setShowInlineCheckout(true);
         return;
       }
       if (pendingAction?.kind === 'pix_modal' && pendingPixDados) {
-        toast.success('Abrindo pagamentoâ€¦');
+        toast.success('Abrindo pagamento...');
         setShowInlineCheckout(true);
         return;
       }
       if (pendingPaymentMethod === 'asaas' && galleryResponse?.asaasCheckoutData) {
-        toast.success('Abrindo pagamentoâ€¦');
+        toast.success('Abrindo pagamento...');
         setShowInlineCheckout(true);
         return;
       }
       if (pendingPaymentMethod === 'pix_manual' && pendingPixDados) {
-        toast.success('Abrindo pagamentoâ€¦');
+        toast.success('Abrindo pagamento...');
         setShowInlineCheckout(true);
         return;
       }
       // Fallback: se temos checkoutUrl externo, redireciona direto.
       if (pendingCheckoutUrl) {
-        toast.success('Redirecionandoâ€¦');
+        toast.success('Redirecionando...');
         window.location.assign(pendingCheckoutUrl);
         return;
       }
@@ -2528,9 +2532,10 @@ export default function ClientGallery() {
                 setActiveFolderId(null);
                 setFolderViewMode('albums');
               }}
-              className="shrink-0 px-3 py-1 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:bg-muted transition-colors"
+              className="shrink-0 px-3 py-1 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:bg-muted transition-colors inline-flex items-center gap-1.5"
             >
-              â† Ãlbuns
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Álbuns
             </button>
             {galleryFolders.map((f: { id: string; nome: string }) => {
               const isActive = f.id === activeFolderId;
