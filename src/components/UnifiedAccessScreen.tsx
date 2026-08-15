@@ -93,7 +93,7 @@ export function UnifiedAccessScreen({
     <div 
       className={cn(
         "min-h-screen flex flex-col relative overflow-hidden",
-        backgroundMode === 'dark' ? 'dark bg-[var(--gallery-bg,#FAF9F7)] text-[var(--gallery-text,#1A1614)]' : 'bg-[var(--gallery-bg,#FAF9F7)] text-[var(--gallery-text,#1A1614)]'
+        backgroundMode === 'dark' ? 'dark bg-background text-foreground' : 'bg-background text-foreground'
       )}
       style={themeStyles}
     >
@@ -113,7 +113,7 @@ export function UnifiedAccessScreen({
             <img 
               src={studioLogo} 
               alt={studioName || 'Studio'} 
-              className="h-20 md:h-28 lg:h-32 w-auto object-contain animate-fade-in"
+              className="h-32 md:h-40 lg:h-48 w-auto object-contain animate-fade-in"
             />
           ) : (
             <span className="text-xl tracking-[0.2em] uppercase font-light opacity-50">
@@ -130,16 +130,18 @@ export function UnifiedAccessScreen({
               <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-2">
                 <Lock className="h-5 w-5 text-primary" />
               </div>
-              <h1 className="text-3xl md:text-5xl font-light tracking-tight">
+              
+              <h2 className="text-sm md:text-base font-medium tracking-[0.2em] uppercase text-muted-foreground">
                 Sua galeria está pronta
-              </h1>
+              </h2>
+              
               {sessionName && (
-                <p 
-                  className="text-xl md:text-2xl font-normal opacity-70 italic"
+                <h1 
+                  className="text-4xl md:text-6xl lg:text-7xl font-light opacity-100"
                   style={{ fontFamily: sessionFont || 'inherit' }}
                 >
                   {applyTitleCase(sessionName, titleCaseMode)}
-                </p>
+                </h1>
               )}
             </div>
 
