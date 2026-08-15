@@ -21,7 +21,7 @@ interface CustomizationAppearanceTabProps {
 
 // Paleta de sugestão de cores da identidade Lunari para uso no picker
 const SUGGESTED_COLORS = [
-  { label: 'Dourado Lunari', value: '#C6A36A' },
+  { label: 'Dourado Lunari', value: '#D1BE9F' },
   { label: 'Dourado Suave', value: '#D4B98A' },
   { label: 'Grafite', value: '#171717' },
   { label: 'Off-White', value: '#FAF9F7' },
@@ -41,14 +41,20 @@ export function CustomizationAppearanceTab({
   const [titleCaseMode, setTitleCaseMode] = useState<TitleCaseMode>('normal');
   const [localPhotoSpacing, setLocalPhotoSpacing] = useState<number>(6);
   const [localPrimaryColor, setLocalPrimaryColor] = useState(
-    settings.customTheme?.primaryColor || '#C6A36A'
+    settings.customTheme?.primaryColor || '#D1BE9F'
   );
+  const [themeModeOption, setThemeModeOption] = useState<'padrao' | 'custom'>(
+    settings.customTheme?.primaryColor && settings.customTheme.primaryColor !== '#D1BE9F' ? 'custom' : 'padrao'
+  );
+
   const userTouchedTypographyRef = useRef(false);
 
   useEffect(() => {
     if (settings) {
       setLocalPhotoSpacing(settings.defaultPhotoSpacing ?? 6);
-      setLocalPrimaryColor(settings.customTheme?.primaryColor || '#C6A36A');
+      const color = settings.customTheme?.primaryColor || '#D1BE9F';
+      setLocalPrimaryColor(color);
+      setThemeModeOption(color.toUpperCase() !== '#D1BE9F' ? 'custom' : 'padrao');
 
       if (!userTouchedTypographyRef.current) {
         if (settings.lastSessionFont) {
@@ -152,63 +158,111 @@ export function CustomizationAppearanceTab({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            {/* Color picker nativo */}
-            <div className="relative">
-              <input
-                type="color"
-                value={localPrimaryColor}
-                onChange={(e) => setLocalPrimaryColor(e.target.value)}
-                onBlur={(e) => handlePrimaryColorChange(e.target.value)}
-                className="w-12 h-12 rounded-lg cursor-pointer border border-border p-0.5 bg-transparent"
-                title="Escolher cor"
-              />
-            </div>
+          {/* Cartões Padrão Lunari vs Personalizado */}
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => {
+                setThemeModeOption('padrao');
+                handlePrimaryColorChange('#D1BE9F');
+              }}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                themeModeOption === 'padrao'
+                  ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                  : 'border-border hover:border-foreground/30 bg-background'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-4 h-4 rounded-full bg-[#D1BE9F] shadow-sm" />
+                <span className="font-semibold text-sm">Padrão Lunari</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cor dourada fosca exclusiva e elegante.
+              </p>
+            </button>
 
-            {/* Valor hex */}
-            <div className="flex flex-col gap-0.5">
-              <code className="text-sm font-mono font-semibold">{localPrimaryColor.toUpperCase()}</code>
-              <span className="text-xs text-muted-foreground">Hex</span>
-            </div>
-
-            {/* Preview do botão */}
-            <div className="ml-auto">
-              <button
-                className="px-4 py-2 rounded text-sm font-semibold"
-                style={{
-                  backgroundColor: localPrimaryColor,
-                  color: '#FAF9F7',
-                }}
-              >
-                Confirmar Seleção
-              </button>
-            </div>
+            <button
+              onClick={() => setThemeModeOption('custom')}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                themeModeOption === 'custom'
+                  ? 'border-primary ring-1 ring-primary/20 bg-primary/5'
+                  : 'border-border hover:border-foreground/30 bg-background'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="flex -space-x-1">
+                  <div className="w-4 h-4 rounded-full bg-slate-800 border-2 border-background z-10" />
+                  <div className="w-4 h-4 rounded-full bg-rose-500 border-2 border-background z-20" />
+                  <div className="w-4 h-4 rounded-full bg-sky-500 border-2 border-background z-30" />
+                </div>
+                <span className="font-semibold text-sm">Personalizado</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Escolha a cor exata da sua marca.
+              </p>
+            </button>
           </div>
 
-          {/* Sugestões de cores */}
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Sugestões:</p>
-            <div className="flex flex-wrap gap-2">
-              {SUGGESTED_COLORS.map((sug) => (
-                <button
-                  key={sug.value}
-                  onClick={() => handlePrimaryColorChange(sug.value)}
-                  className="group flex flex-col items-center gap-1"
-                  title={sug.label}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-lg border-2 transition-all group-hover:scale-110 ${
-                      localPrimaryColor.toLowerCase() === sug.value.toLowerCase()
-                        ? 'border-primary scale-110 shadow-md'
-                        : 'border-transparent hover:border-border/60'
-                    }`}
-                    style={{ backgroundColor: sug.value }}
+          {themeModeOption === 'custom' && (
+            <div className="pt-4 border-t border-border mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {/* Color picker nativo */}
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={localPrimaryColor}
+                    onChange={(e) => setLocalPrimaryColor(e.target.value)}
+                    onBlur={(e) => handlePrimaryColorChange(e.target.value)}
+                    className="w-12 h-12 rounded-lg cursor-pointer border border-border p-0.5 bg-transparent"
+                    title="Escolher cor"
                   />
-                  <span className="text-[9px] text-muted-foreground leading-none">{sug.label.split(' ')[0]}</span>
-                </button>
-              ))}
+                </div>
+
+                {/* Valor hex */}
+                <div className="flex flex-col gap-0.5">
+                  <code className="text-sm font-mono font-semibold">{localPrimaryColor.toUpperCase()}</code>
+                  <span className="text-xs text-muted-foreground">Hex</span>
+                </div>
+
+                {/* Preview do botão */}
+                <div className="ml-auto">
+                  <button
+                    className="px-4 py-2 rounded text-sm font-semibold"
+                    style={{
+                      backgroundColor: localPrimaryColor,
+                      color: '#FAF9F7',
+                    }}
+                  >
+                    Confirmar Seleção
+                  </button>
+                </div>
+              </div>
+
+              {/* Sugestões de cores */}
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-2">Sugestões:</p>
+                <div className="flex flex-wrap gap-2">
+                  {SUGGESTED_COLORS.map((sug) => (
+                    <button
+                      key={sug.value}
+                      onClick={() => handlePrimaryColorChange(sug.value)}
+                      className="group flex flex-col items-center gap-1"
+                      title={sug.label}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-lg border-2 transition-all group-hover:scale-110 ${
+                          localPrimaryColor.toLowerCase() === sug.value.toLowerCase()
+                            ? 'border-primary scale-110 shadow-md'
+                            : 'border-transparent hover:border-border/60'
+                        }`}
+                        style={{ backgroundColor: sug.value }}
+                      />
+                      <span className="text-[9px] text-muted-foreground leading-none">{sug.label.split(' ')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Theme Config (Grid layout — Seleção + Entrega) */}
