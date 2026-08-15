@@ -1929,10 +1929,10 @@ export default function ClientGallery() {
     // o `confirm-selection` — sem tela intermediária.
     const saleMode = gallery.saleSettings?.mode;
     const shouldRequestPayment = saleMode === 'sale_with_payment' && payload.valorTotal > 0;
-    const hints = (galleryResponse as any)?.payerHints as
-      | { fullName?: string | null; email?: string | null; phone?: string | null; cpfCnpj?: string | null }
-      | undefined;
-    const needsPreCheckout = shouldRequestPayment && !hintsAreComplete(hints);
+    const missing = (galleryResponse as any)?.payerHintsMissing;
+    const needsPreCheckout = shouldRequestPayment && (
+      !missing || missing.name || missing.email || missing.phone || missing.cpfCnpj
+    );
     // Guardar payload permite retomar após coleta.
     setPendingConfirmPayload(payload);
     if (needsPreCheckout) {

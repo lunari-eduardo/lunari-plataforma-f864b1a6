@@ -550,7 +550,7 @@ serve(async (req) => {
         cpfRequired,
       };
       payerHintsValues = {
-        fullName: hints.fullName || null,
+        fullName: hints.name || null,
         email: hints.email || null,
         phone: hints.phone || null,
         cpfCnpj: hints.cpfCnpj || null,

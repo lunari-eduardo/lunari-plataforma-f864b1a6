@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, User, Image, Settings, Check, Upload, Calendar, MessageSquare, Download, Droplet, Plus, Ban, CreditCard, Receipt, Tag, Package, Trash2, Save, Globe, Lock, Link2, Pencil, TrendingDown, Palette, Sun, Moon, Eye, X, Loader2, AlertTriangle } from 'lucide-react';
@@ -2152,53 +2152,32 @@ export default function GalleryCreate() {
               {/* Right Block - Appearance & Interactions */}
               <div className="space-y-6">
                 {/* Theme Selection for Client Gallery - Simplified */}
-                {settings.themeType === 'custom' && settings.customTheme && <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Palette className="h-4 w-4 text-primary" />
-                      <h3 className="font-medium text-sm">Aparência da Galeria</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-primary" />
+                    <h3 className="font-medium text-sm">Aparência da Galeria</h3>
+                  </div>
+                  
+                  {/* Client Mode Toggle - Override per gallery */}
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <Label className="text-sm">Fundo desta galeria</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        As cores do seu tema serão aplicadas sobre o fundo escolhido.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Usando tema personalizado: {settings.customTheme.name}
-                    </p>
-                    
-                    {/* Preview of custom theme */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                      <div className="flex gap-1.5">
-                        <div className="w-6 h-6 rounded-full border" style={{
-                      backgroundColor: settings.customTheme.primaryColor
-                    }} title="Cor primária" />
-                        <div className="w-6 h-6 rounded-full border" style={{
-                      backgroundColor: settings.customTheme.accentColor
-                    }} title="Cor de destaque" />
-                        <div className="w-6 h-6 rounded-full border" style={{
-                      backgroundColor: settings.customTheme.emphasisColor
-                    }} title="Cor de ênfase" />
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        Fundo {settings.customTheme.backgroundMode === 'dark' ? 'escuro' : 'claro'}
-                      </span>
+                    <div className="flex gap-2 shrink-0">
+                      <Button type="button" variant={clientMode === 'light' ? 'default' : 'outline'} size="sm" onClick={() => { userTouchedClientModeRef.current = true; setClientMode('light'); }} className="gap-1">
+                        <Sun className="h-3.5 w-3.5" />
+                        Claro
+                      </Button>
+                      <Button type="button" variant={clientMode === 'dark' ? 'default' : 'outline'} size="sm" onClick={() => { userTouchedClientModeRef.current = true; setClientMode('dark'); }} className="gap-1">
+                        <Moon className="h-3.5 w-3.5" />
+                        Escuro
+                      </Button>
                     </div>
-                    
-                    {/* Client Mode Toggle - Override per gallery */}
-                    <div className="flex items-start justify-between gap-3 pt-2 flex-wrap">
-                      <div className="min-w-0">
-                        <Label className="text-sm">Fundo desta galeria</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          As cores do seu tema personalizado serão aplicadas sobre o fundo escolhido.
-                        </p>
-                      </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button type="button" variant={clientMode === 'light' ? 'default' : 'outline'} size="sm" onClick={() => { userTouchedClientModeRef.current = true; setClientMode('light'); }} className="gap-1">
-                          <Sun className="h-3.5 w-3.5" />
-                          Claro
-                        </Button>
-                        <Button type="button" variant={clientMode === 'dark' ? 'default' : 'outline'} size="sm" onClick={() => { userTouchedClientModeRef.current = true; setClientMode('dark'); }} className="gap-1">
-                          <Moon className="h-3.5 w-3.5" />
-                          Escuro
-                        </Button>
-                      </div>
-                    </div>
-                  </div>}
+                  </div>
+                </div>
 
                 {/* Client Interactions */}
                 <div className="space-y-3">
@@ -2443,7 +2422,7 @@ export default function GalleryCreate() {
 
       {/* Fixed Navigation */}
       <div className="fixed bottom-0 left-0 lg:left-64 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
-        <div className="w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
+        <div className="max-w-[79rem] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
           <Button
             variant="outline"
             onClick={handleBack}

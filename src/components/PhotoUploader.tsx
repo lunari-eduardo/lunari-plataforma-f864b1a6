@@ -513,11 +513,12 @@ export function PhotoUploader({
             <Progress value={overallProgress} className="h-1.5 transition-all" />
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="relative aspect-square rounded-lg overflow-hidden bg-muted"
+          <div className="max-h-[50vh] overflow-y-auto pr-1 -mr-1 custom-scrollbar">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="relative aspect-square rounded-lg overflow-hidden bg-muted"
               >
                 {isVideoFile(item.file) ? (
                   <video
@@ -595,7 +596,8 @@ export function PhotoUploader({
                   </div>
                 )}
               </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
