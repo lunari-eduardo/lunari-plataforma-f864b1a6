@@ -462,8 +462,9 @@ export default function PublicCheckout() {
               {data.photographer.name}
             </p>
           )}
+          </div>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
