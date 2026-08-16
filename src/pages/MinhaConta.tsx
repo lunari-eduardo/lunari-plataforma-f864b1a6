@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PlanosTab from '@/components/account/PlanosTab';
 import ReferralsTab from '@/components/account/ReferralsTab';
@@ -52,7 +53,30 @@ const SidebarItem = memo(({
 ));
 
 export default function MinhaConta() {
-  const [activeTab, setActiveTab] = useState('perfil');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const hasMpCallback = !!searchParams.get('mp_callback');
+  
+  const initialTab = tabParam || (hasMpCallback ? 'integracoes' : 'perfil');
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    if (tabParam && ['perfil', 'marca', 'seguranca', 'integracoes', 'planos', 'indicacoes'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    } else if (hasMpCallback) {
+      setActiveTab('integracoes');
+    }
+  }, [tabParam, hasMpCallback]);
+
+  const handleTabChange = useCallback((val: string) => {
+    setActiveTab(val);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', val);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
   const { user } = useAuth();
   const { profile, saveProfile, getProfileOrDefault, uploadLogo, deleteLogo, loading: isLoading } = useUserProfile();
   const [formData, setFormData] = useState<Partial<UserProfile>>(() => getProfileOrDefault());
@@ -131,42 +155,42 @@ export default function MinhaConta() {
                 label="Perfil Pessoal" 
                 value="perfil" 
                 active={activeTab === 'perfil'} 
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={User}
               />
               <SidebarItem 
                 label="Identidade Visual" 
                 value="marca" 
                 active={activeTab === 'marca'} 
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={Image}
               />
               <SidebarItem 
                 label="Segurança e Acesso" 
                 value="seguranca" 
                 active={activeTab === 'seguranca'} 
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={Shield}
               />
               <SidebarItem 
                 label="Integrações e Pagamentos" 
                 value="integracoes" 
                 active={activeTab === 'integracoes'} 
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={Plug}
               />
               <SidebarItem 
                 label="Planos e Créditos" 
                 value="planos" 
                 active={activeTab === 'planos'} 
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={Package}
               />
               <SidebarItem 
                 label="Indique e Ganhe" 
                 value="indicacoes" 
                 active={activeTab === 'indicacoes'} 
-                onClick={setActiveTab}
+                onClick={handleTabChange}
                 icon={Gift}
               />
             </aside>

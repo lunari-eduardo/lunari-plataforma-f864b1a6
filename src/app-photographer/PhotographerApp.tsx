@@ -305,7 +305,7 @@ export default function PhotographerApp() {
 
                 <Route path="inteligencia" element={<Navigate to="/app/hub" replace />} />
                 <Route path="minha-conta" element={<MinhaConta />} />
-                <Route path="integracoes" element={<Navigate to="/app/minha-conta" replace />} />
+                <Route path="integracoes" element={<Integracoes />} />
                 <Route path="tarefas" element={
                   <PlanRestrictionGuard requiredPlan="pro"><Tarefas /></PlanRestrictionGuard>
                 } />

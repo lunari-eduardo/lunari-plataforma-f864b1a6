@@ -126,7 +126,7 @@ export function PaymentSettings() {
   useEffect(() => {
     connectMercadoPagoRef.current = connectMercadoPago;
     navigateRef.current = navigate;
-  });
+  }, [connectMercadoPago, navigate]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -136,22 +136,26 @@ export function PaymentSettings() {
 
     if (!isCallback || hasProcessedCallback.current) return;
 
+    const targetPath = location.pathname.includes('minha-conta') 
+      ? '/app/minha-conta?tab=integracoes' 
+      : '/app/integracoes';
+
     if (errorParam) {
       hasProcessedCallback.current = true;
       toast.error(`Erro ao autorizar Mercado Pago: ${errorParam}`);
-      navigateRef.current('/app/integracoes', { replace: true });
+      navigateRef.current(targetPath, { replace: true });
       return;
     }
 
     if (code) {
       hasProcessedCallback.current = true;
-      const redirectUri = `${window.location.origin}${window.location.pathname}?mp_callback=true`;
+      const redirectUri = `${window.location.origin}/app/integracoes?mp_callback=true`;
       connectMercadoPagoRef.current.mutate(
         { code, redirect_uri: redirectUri },
-        { onSettled: () => navigateRef.current('/app/integracoes', { replace: true }) }
+        { onSettled: () => navigateRef.current(targetPath, { replace: true }) }
       );
     }
-  }, [location.search]);
+  }, [location.search, location.pathname]);
 
   // Sync form state from data
   useEffect(() => {

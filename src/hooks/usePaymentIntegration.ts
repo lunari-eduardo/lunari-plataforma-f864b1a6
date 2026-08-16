@@ -72,26 +72,10 @@ function toJsonData(data: PixManualData | InfinitePayData | AsaasData | Record<s
 }
 
 export function usePaymentIntegration() {
-  const mpAppIdQuery = useQuery({
-    queryKey: ['mercadopago-app-id'],
-    queryFn: async () => {
-      if (import.meta.env.VITE_MERCADOPAGO_APP_ID) {
-        return import.meta.env.VITE_MERCADOPAGO_APP_ID as string;
-      }
-      try {
-        const { data, error } = await supabase.functions.invoke('mercadopago-get-app-id');
-        if (error || !data?.success || !data?.appId) {
-          return '';
-        }
-        return data.appId as string;
-      } catch {
-        return '';
-      }
-    },
-    staleTime: 60 * 60 * 1000,
-  });
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const mpAppId = import.meta.env.VITE_MERCADOPAGO_APP_ID || mpAppIdQuery.data || '';
+  const mpAppId = import.meta.env.VITE_MERCADOPAGO_APP_ID || '';
 
   const query = useQuery({
     queryKey: ['payment-integration', user?.id],
