@@ -468,24 +468,27 @@ export function AsaasCheckout({
     let totalComTaxas = data.valorTotal;
     let label = `${i}x de R$ ${(data.valorTotal / i).toFixed(2)}`;
 
-    if (!data.absorverTaxa && accountFees) {
-      // 1. Processing fee (tier-based percentage + fixed operation value)
-      // Use discount tiers if active, otherwise standard tiers
-      const activeTiers = (accountFees.discount?.active && accountFees.discount.tiers.length > 0)
-        ? accountFees.discount.tiers
-        : accountFees.creditCard.tiers;
+    if (!data.absorverTaxa && accountFees?.creditCard) {
+      const discountTiers = Array.isArray(accountFees.discount?.tiers) ? accountFees.discount.tiers : [];
+      const isDiscountActive = Boolean(accountFees.discount?.active && discountTiers.length > 0);
+      const creditCardTiers = Array.isArray(accountFees.creditCard?.tiers) ? accountFees.creditCard.tiers : [];
+
+      const activeTiers = isDiscountActive ? discountTiers : creditCardTiers;
       const tier = activeTiers.find(t => i >= t.min && i <= t.max);
       const processingPercentage = tier?.percentageFee ?? 0;
-      const processingFee = (data.valorTotal * processingPercentage / 100) + accountFees.creditCard.operationValue;
+      const operationValue = accountFees.creditCard?.operationValue ?? 0;
+      const processingFee = (data.valorTotal * processingPercentage / 100) + operationValue;
 
       // 2. Anticipation fee — only when enabled
       let anticipationFee = 0;
       if (incluirAntecipacao) {
         const taxaMensal = i === 1
-          ? accountFees.creditCard.detachedMonthlyFeeValue
-          : accountFees.creditCard.installmentMonthlyFeeValue;
-        const result = calcularAntecipacao(data.valorTotal, i, taxaMensal);
-        anticipationFee = result.totalTaxa;
+          ? (accountFees.creditCard?.detachedMonthlyFeeValue ?? 0)
+          : (accountFees.creditCard?.installmentMonthlyFeeValue ?? 0);
+        if (taxaMensal > 0) {
+          const result = calcularAntecipacao(data.valorTotal, i, taxaMensal);
+          anticipationFee = result.totalTaxa;
+        }
       }
 
       totalComTaxas = data.valorTotal + processingFee + anticipationFee;

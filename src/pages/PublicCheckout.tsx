@@ -384,30 +384,37 @@ export default function PublicCheckout() {
   const installmentOptions: Array<{ value: string; label: string; totalValue: number }> = [];
   if (data) {
     const valor = data.cobranca.valor;
-    const ireiAntecipar = data.settings.ireiAntecipar ?? false;
-    const repassarAntecipacao = ireiAntecipar ? (data.settings.repassarTaxaAntecipacao ?? false) : false;
-    const repassarTaxas = !data.settings.absorverTaxa;
-    for (let i = 1; i <= data.settings.maxParcelas; i++) {
+    const ireiAntecipar = data.settings?.ireiAntecipar ?? false;
+    const repassarAntecipacao = ireiAntecipar ? (data.settings?.repassarTaxaAntecipacao ?? false) : false;
+    const repassarTaxas = !data.settings?.absorverTaxa;
+    const maxParcelas = data.settings?.maxParcelas || 12;
+
+    for (let i = 1; i <= maxParcelas; i++) {
       let totalComTaxas = valor;
       let label = `${i}x de R$ ${(valor / i).toFixed(2)}`;
 
-      if (data.accountFees) {
-        const activeTiers = (data.accountFees.discount?.active && data.accountFees.discount.tiers.length > 0)
-          ? data.accountFees.discount.tiers
-          : data.accountFees.creditCard.tiers;
+      if (data.accountFees?.creditCard) {
+        const discountTiers = Array.isArray(data.accountFees.discount?.tiers) ? data.accountFees.discount.tiers : [];
+        const isDiscountActive = Boolean(data.accountFees.discount?.active && discountTiers.length > 0);
+        const creditCardTiers = Array.isArray(data.accountFees.creditCard?.tiers) ? data.accountFees.creditCard.tiers : [];
+
+        const activeTiers = isDiscountActive ? discountTiers : creditCardTiers;
         const tier = activeTiers.find(t => i >= t.min && i <= t.max);
         const processingPercentage = tier?.percentageFee ?? 0;
+        const operationValue = data.accountFees.creditCard?.operationValue ?? 0;
         const processingFee = repassarTaxas
-          ? (valor * processingPercentage / 100) + data.accountFees.creditCard.operationValue
+          ? (valor * processingPercentage / 100) + operationValue
           : 0;
 
         let anticipationFee = 0;
         if (repassarAntecipacao) {
           const taxaMensal = i === 1
-            ? data.accountFees.creditCard.detachedMonthlyFeeValue
-            : data.accountFees.creditCard.installmentMonthlyFeeValue;
-          const result = calcularAntecipacao(valor, i, taxaMensal);
-          anticipationFee = result.totalTaxa;
+            ? (data.accountFees.creditCard?.detachedMonthlyFeeValue ?? 0)
+            : (data.accountFees.creditCard?.installmentMonthlyFeeValue ?? 0);
+          if (taxaMensal > 0) {
+            const result = calcularAntecipacao(valor, i, taxaMensal);
+            anticipationFee = result.totalTaxa;
+          }
         }
 
         totalComTaxas = valor + processingFee + anticipationFee;
@@ -426,7 +433,11 @@ export default function PublicCheckout() {
 
   // ═══════════════════ RENDER ═══════════════════
   if (loading) {
-    return <CheckoutSkeleton />;
+    return (
+      <PublicThemeWrapper>
+        <CheckoutSkeleton />
+      </PublicThemeWrapper>
+    );
   }
 
   if (error || !data) {

@@ -274,23 +274,28 @@ export function AsaasCheckoutSection({
     let totalComTaxas = valor;
     let label = `${i}x de R$ ${(valor / i).toFixed(2)}`;
 
-    if (accountFees) {
-      const activeTiers = (accountFees.discount?.active && accountFees.discount.tiers.length > 0)
-        ? accountFees.discount.tiers
-        : accountFees.creditCard.tiers;
+    if (accountFees?.creditCard) {
+      const discountTiers = Array.isArray(accountFees.discount?.tiers) ? accountFees.discount.tiers : [];
+      const isDiscountActive = Boolean(accountFees.discount?.active && discountTiers.length > 0);
+      const creditCardTiers = Array.isArray(accountFees.creditCard?.tiers) ? accountFees.creditCard.tiers : [];
+
+      const activeTiers = isDiscountActive ? discountTiers : creditCardTiers;
       const tier = activeTiers.find(t => i >= t.min && i <= t.max);
       const processingPercentage = tier?.percentageFee ?? 0;
+      const operationValue = accountFees.creditCard?.operationValue ?? 0;
       const processingFee = repassarTaxas
-        ? (valor * processingPercentage / 100) + accountFees.creditCard.operationValue
+        ? (valor * processingPercentage / 100) + operationValue
         : 0;
 
       let anticipationFee = 0;
       if (repassarAntecipacao) {
         const taxaMensal = i === 1
-          ? accountFees.creditCard.detachedMonthlyFeeValue
-          : accountFees.creditCard.installmentMonthlyFeeValue;
-        const result = calcularAntecipacao(valor, i, taxaMensal);
-        anticipationFee = result.totalTaxa;
+          ? (accountFees.creditCard?.detachedMonthlyFeeValue ?? 0)
+          : (accountFees.creditCard?.installmentMonthlyFeeValue ?? 0);
+        if (taxaMensal > 0) {
+          const result = calcularAntecipacao(valor, i, taxaMensal);
+          anticipationFee = result.totalTaxa;
+        }
       }
 
       totalComTaxas = valor + processingFee + anticipationFee;
