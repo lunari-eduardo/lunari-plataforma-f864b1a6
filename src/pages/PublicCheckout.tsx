@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import CheckoutShell, { CheckoutSkeleton } from './checkout/CheckoutShell';
 import ProviderCheckout, { ProviderBlock, Provedor } from './checkout/ProviderCheckout';
 import { PayerValue } from './checkout/PayerGate';
+import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
 
 const SUPABASE_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'tlnjspsywycbudhewsfv'}.supabase.co`;
 const POLL_INTERVAL = 15_000;
@@ -118,6 +119,7 @@ interface CheckoutData {
   accountFees: AccountFees | null;
   payerHints?: PayerHints;
   payerMissing?: PayerMissing;
+  theme?: { primaryColor: string | null };
 }
 
 type Tab = 'pix' | 'card';
@@ -155,18 +157,6 @@ export default function PublicCheckout() {
   const [cardInstallments, setCardInstallments] = useState('1');
   const [cardError, setCardError] = useState<string | null>(null);
   const [cardSuccess, setCardSuccess] = useState(false);
-
-  // ——— FORÇAR MODO LIGHT no checkout público ———
-  useEffect(() => {
-    const html = document.documentElement;
-    const hadDark = html.classList.contains('dark');
-    html.classList.remove('dark');
-    html.classList.add('light');
-    return () => {
-      html.classList.remove('light');
-      if (hadDark) html.classList.add('dark');
-    };
-  }, []);
 
   // Fetch checkout data
   useEffect(() => {
@@ -441,22 +431,25 @@ export default function PublicCheckout() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(30,20%,97%)] p-4">
-        <Sonner />
-        <div className="max-w-sm w-full text-center space-y-4">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-          <h1 className="text-xl font-semibold text-neutral-900">Pagamento indisponível</h1>
-          <p className="text-neutral-600">{error || 'Cobrança não encontrada'}</p>
+      <PublicThemeWrapper>
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <Sonner />
+          <div className="max-w-sm w-full text-center space-y-4">
+            <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+            <h1 className="text-xl font-semibold text-neutral-900">Pagamento indisponível</h1>
+            <p className="text-neutral-600">{error || 'Cobrança não encontrada'}</p>
+          </div>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
   if (pixConfirmed || cardSuccess) {
     return (
-      <div className="light min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-[hsl(30,20%,97%)] p-4">
-        <Sonner />
-        <div className="max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
+      <PublicThemeWrapper primaryColor={data.theme?.primaryColor || undefined}>
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <Sonner />
+          <div className="max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
           <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-emerald-100 shadow-sm">
             <CheckCircle className="h-10 w-10 text-emerald-600" />
           </div>
@@ -485,11 +478,12 @@ export default function PublicCheckout() {
       cpfCnpj: payerCpf,
     };
     return (
-      <CheckoutShell
-        photographer={data.photographer}
-        valor={data.cobranca.valor}
-        descricao={data.cobranca.descricao}
-      >
+      <PublicThemeWrapper primaryColor={data.theme?.primaryColor || undefined}>
+        <CheckoutShell
+          photographer={data.photographer}
+          valor={data.cobranca.valor}
+          descricao={data.cobranca.descricao}
+        >
         <Sonner />
         <ProviderCheckout
           provedor={provedorAtual as Provedor}
@@ -505,6 +499,7 @@ export default function PublicCheckout() {
           onPaid={() => setPixConfirmed(true)}
         />
       </CheckoutShell>
+      </PublicThemeWrapper>
     );
   }
 
@@ -513,7 +508,7 @@ export default function PublicCheckout() {
 
   // ——— Layout base (estilo Gallery, imagens 4 e 5) ———
   return (
-    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] text-neutral-900 px-4 py-6">
+    <PublicThemeWrapper primaryColor={data.theme?.primaryColor || undefined} className="flex flex-col items-center px-4 py-6">
       <Sonner />
       <div className="max-w-md w-full space-y-4">
         {/* Header — logo/nome do fotógrafo + selo em uma linha compacta */}
@@ -806,6 +801,6 @@ export default function PublicCheckout() {
           </div>
         )}
       </div>
-    </div>
+    </PublicThemeWrapper>
   );
 }

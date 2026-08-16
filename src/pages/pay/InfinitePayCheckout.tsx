@@ -17,6 +17,7 @@ import {
   isValidCep,
 } from "@/lib/validateCpfCnpj";
 import { lookupCep } from "@/lib/viaCep";
+import { PublicThemeWrapper } from "@/components/shared/PublicThemeWrapper";
 
 interface GetPayload {
   cobranca: { id: string; valor: number; descricao?: string; status: string; ip_checkout_url?: string };
@@ -35,6 +36,7 @@ interface GetPayload {
     uf: string;
   };
   missingFields: string[];
+  theme?: { primaryColor: string | null };
 }
 
 type Phase = "loading" | "form" | "redirecting" | "paid" | "error" | "polling";
@@ -64,18 +66,6 @@ export default function InfinitePayCheckout() {
   const [showOptional, setShowOptional] = useState(false);
   const pollRef = useRef<number | null>(null);
   const autoSubmittedRef = useRef(false);
-
-  // ——— FORÇAR MODO LIGHT no checkout público ———
-  useEffect(() => {
-    const html = document.documentElement;
-    const hadDark = html.classList.contains('dark');
-    html.classList.remove('dark');
-    html.classList.add('light');
-    return () => {
-      html.classList.remove('light');
-      if (hadDark) html.classList.add('dark');
-    };
-  }, []);
 
   const fetchData = useCallback(async () => {
     if (!cobrancaId) return;
@@ -289,7 +279,7 @@ export default function InfinitePayCheckout() {
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <div className="light min-h-screen bg-[hsl(30,20%,97%)] text-neutral-900 flex items-center justify-center p-4">
+    <PublicThemeWrapper primaryColor={data?.theme?.primaryColor || undefined} className="flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header comercial */}
         {data && (
@@ -505,6 +495,6 @@ export default function InfinitePayCheckout() {
           Powered by Lunari · Seus dados são criptografados e usados apenas neste pagamento.
         </p>
       </div>
-    </div>
+    </PublicThemeWrapper>
   );
 }

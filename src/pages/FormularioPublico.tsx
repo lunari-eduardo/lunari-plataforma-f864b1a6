@@ -12,13 +12,16 @@ import { useFormularioPublico, useSubmitFormularioResposta, useFormularioRespost
 import { FormularioCampo } from '@/types/formulario';
 import { supabase } from '@/integrations/supabase/client';
 import { useDropzone } from 'react-dropzone';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
+import { usePublicTheme } from '@/hooks/usePublicTheme';
 
 export default function FormularioPublico() {
   const { token } = useParams<{ token: string }>();
   const { data: formulario, isLoading, error } = useFormularioPublico(token);
   const submitMutation = useSubmitFormularioResposta();
+  
+  const { data: primaryColor } = usePublicTheme(formulario?.user_id);
 
   const isRespondido = formulario?.status_envio === 'respondido';
   const isExpirado = formulario?.expires_at && new Date(formulario.expires_at) < new Date();
@@ -93,46 +96,52 @@ export default function FormularioPublico() {
   // Loading
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-sm text-muted-foreground">Carregando formulário...</p>
+      <PublicThemeWrapper>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-sm text-muted-foreground">Carregando formulário...</p>
+          </div>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
   // Not found
   if (error || !formulario) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-3 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
-            <X className="h-8 w-8 text-destructive" />
+      <PublicThemeWrapper>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="text-center space-y-3 max-w-md">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+              <X className="h-8 w-8 text-destructive" />
+            </div>
+            <h1 className="text-xl font-semibold">Formulário não encontrado</h1>
+            <p className="text-sm text-muted-foreground">
+              Este link pode ter expirado ou o formulário não está mais disponível.
+            </p>
           </div>
-          <h1 className="text-xl font-semibold">Formulário não encontrado</h1>
-          <p className="text-sm text-muted-foreground">
-            Este link pode ter expirado ou o formulário não está mais disponível.
-          </p>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
   // Expirado
   if (isExpirado) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-3 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-            <Clock className="h-8 w-8 text-muted-foreground" />
+      <PublicThemeWrapper>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="text-center space-y-3 max-w-md">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+              <Clock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h1 className="text-xl font-semibold">Formulário expirado</h1>
+            <p className="text-sm text-muted-foreground">
+              O prazo para responder este formulário já passou. Entre em contato com o fotógrafo.
+            </p>
           </div>
-          <h1 className="text-xl font-semibold">Formulário expirado</h1>
-          <p className="text-sm text-muted-foreground">
-            O prazo para responder este formulário já passou. Entre em contato com o fotógrafo.
-          </p>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
@@ -143,79 +152,83 @@ export default function FormularioPublico() {
     const submittedAt = respostaExistente?.submitted_at;
 
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
-          <div className="max-w-2xl mx-auto px-4 py-4">
-            <h1 className="text-lg font-semibold">
-              {respostaExistente?.titulo || formulario.titulo_cliente || formulario.titulo}
-            </h1>
-          </div>
-        </header>
-        <main className="max-w-2xl mx-auto px-4 py-8">
-          <div className="text-center space-y-4 mb-8">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-              <FileCheck className="h-10 w-10 text-primary" />
+      <PublicThemeWrapper primaryColor={primaryColor || undefined}>
+        <div className="min-h-screen bg-background">
+          <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
+            <div className="max-w-2xl mx-auto px-4 py-4">
+              <h1 className="text-lg font-semibold">
+                {respostaExistente?.titulo || formulario.titulo_cliente || formulario.titulo}
+              </h1>
             </div>
-            <h2 className="text-2xl font-semibold">Formulário já respondido</h2>
-            <p className="text-muted-foreground">
-              {respostaExistente?.mensagem_conclusao || formulario.mensagem_conclusao}
-            </p>
-            {submittedAt && (
-              <p className="text-xs text-muted-foreground">
-                Enviado em {format(new Date(submittedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+          </header>
+          <main className="max-w-2xl mx-auto px-4 py-8">
+            <div className="text-center space-y-4 mb-8">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <FileCheck className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="text-2xl font-semibold">Formulário já respondido</h2>
+              <p className="text-muted-foreground">
+                {respostaExistente?.mensagem_conclusao || formulario.mensagem_conclusao}
               </p>
-            )}
-          </div>
-
-          {/* Respostas em modo leitura */}
-          {respostasData && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Suas respostas:</h3>
-              {(camposData as FormularioCampo[])
-                .sort((a, b) => a.ordem - b.ordem)
-                .map((campo) => {
-                  const valor = (respostasData as Record<string, any>)[campo.id];
-                  if (valor === undefined || valor === '' || (Array.isArray(valor) && valor.length === 0)) return null;
-                  return (
-                    <div key={campo.id} className="border rounded-lg p-3 space-y-1">
-                      <p className="text-sm font-medium">{campo.label}</p>
-                      {Array.isArray(valor) ? (
-                        campo.tipo === 'upload_imagem' || campo.tipo === 'upload_referencia' ? (
-                          <div className="flex flex-wrap gap-2">
-                            {valor.map((url: string, i: number) => (
-                              <img key={i} src={url} alt="" className="w-16 h-16 rounded object-cover border" />
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">{valor.join(', ')}</p>
-                        )
-                      ) : (
-                        <p className="text-sm text-muted-foreground">{String(valor)}</p>
-                      )}
-                    </div>
-                  );
-                })}
+              {submittedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Enviado em {format(new Date(submittedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              )}
             </div>
-          )}
-        </main>
-      </div>
+
+            {/* Respostas em modo leitura */}
+            {respostasData && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-muted-foreground">Suas respostas:</h3>
+                {(camposData as FormularioCampo[])
+                  .sort((a, b) => a.ordem - b.ordem)
+                  .map((campo) => {
+                    const valor = (respostasData as Record<string, any>)[campo.id];
+                    if (valor === undefined || valor === '' || (Array.isArray(valor) && valor.length === 0)) return null;
+                    return (
+                      <div key={campo.id} className="border rounded-lg p-3 space-y-1">
+                        <p className="text-sm font-medium">{campo.label}</p>
+                        {Array.isArray(valor) ? (
+                          campo.tipo === 'upload_imagem' || campo.tipo === 'upload_referencia' ? (
+                            <div className="flex flex-wrap gap-2">
+                              {valor.map((url: string, i: number) => (
+                                <img key={i} src={url} alt="" className="w-16 h-16 rounded object-cover border" />
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">{valor.join(', ')}</p>
+                          )
+                        ) : (
+                          <p className="text-sm text-muted-foreground">{String(valor)}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </main>
+        </div>
+      </PublicThemeWrapper>
     );
   }
 
   // Formulário não publicado
   if (formulario.status !== 'publicado') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-3 max-w-md">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-            <X className="h-8 w-8 text-muted-foreground" />
+      <PublicThemeWrapper>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="text-center space-y-3 max-w-md">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+              <X className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h1 className="text-xl font-semibold">Formulário indisponível</h1>
+            <p className="text-sm text-muted-foreground">
+              Este formulário ainda não está disponível para preenchimento.
+            </p>
           </div>
-          <h1 className="text-xl font-semibold">Formulário indisponível</h1>
-          <p className="text-sm text-muted-foreground">
-            Este formulário ainda não está disponível para preenchimento.
-          </p>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
@@ -231,91 +244,93 @@ export default function FormularioPublico() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <h1 className="text-lg font-semibold">
-            {formulario.titulo_cliente || formulario.titulo}
-          </h1>
-          {formulario.descricao && (
-            <p className="text-sm text-muted-foreground mt-1">{formulario.descricao}</p>
-          )}
-          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              ~{formulario.tempo_estimado} minutos
-            </span>
-          </div>
-        </div>
-        <div className="h-1 bg-muted">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progresso}%` }}
-          />
-        </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="space-y-4 p-4 rounded-lg border bg-card">
-            <p className="text-sm font-medium">Suas informações (opcional)</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Seu nome</Label>
-                <Input
-                  id="nome"
-                  value={respondenteName}
-                  onChange={(e) => setRespondenteName(e.target.value)}
-                  placeholder="Ex: Maria Silva"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Seu email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={respondenteEmail}
-                  onChange={(e) => setRespondenteEmail(e.target.value)}
-                  placeholder="Ex: maria@email.com"
-                />
-              </div>
+    <PublicThemeWrapper primaryColor={primaryColor || undefined}>
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-card/50 backdrop-blur sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <h1 className="text-lg font-semibold">
+              {formulario.titulo_cliente || formulario.titulo}
+            </h1>
+            {formulario.descricao && (
+              <p className="text-sm text-muted-foreground mt-1">{formulario.descricao}</p>
+            )}
+            <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                ~{formulario.tempo_estimado} minutos
+              </span>
             </div>
           </div>
-
-          {camposOrdenados.map((campo, idx) => (
-            <CampoRenderer
-              key={campo.id}
-              campo={campo}
-              index={idx + 1}
-              total={camposOrdenados.length}
-              value={respostas[campo.id]}
-              onChange={(value) => handleChange(campo.id, value)}
-              onFileUpload={(files) => handleFileUpload(campo.id, files)}
-              onRemoveFile={(index) => removeFile(campo.id, index)}
-              isUploading={uploading[campo.id]}
+          <div className="h-1 bg-muted">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${progresso}%` }}
             />
-          ))}
-
-          <div className="pt-4">
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={submitMutation.isPending}
-            >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                'Enviar formulário'
-              )}
-            </Button>
           </div>
-        </form>
-      </main>
-    </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 py-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-4 p-4 rounded-lg border bg-card">
+              <p className="text-sm font-medium">Suas informações (opcional)</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Seu nome</Label>
+                  <Input
+                    id="nome"
+                    value={respondenteName}
+                    onChange={(e) => setRespondenteName(e.target.value)}
+                    placeholder="Ex: Maria Silva"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Seu email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={respondenteEmail}
+                    onChange={(e) => setRespondenteEmail(e.target.value)}
+                    placeholder="Ex: maria@email.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {camposOrdenados.map((campo, idx) => (
+              <CampoRenderer
+                key={campo.id}
+                campo={campo}
+                index={idx + 1}
+                total={camposOrdenados.length}
+                value={respostas[campo.id]}
+                onChange={(value) => handleChange(campo.id, value)}
+                onFileUpload={(files) => handleFileUpload(campo.id, files)}
+                onRemoveFile={(index) => removeFile(campo.id, index)}
+                isUploading={uploading[campo.id]}
+              />
+            ))}
+
+            <div className="pt-4">
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar formulário'
+                )}
+              </Button>
+            </div>
+          </form>
+        </main>
+      </div>
+    </PublicThemeWrapper>
   );
 }
 

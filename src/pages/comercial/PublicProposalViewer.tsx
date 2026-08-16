@@ -3,9 +3,9 @@ import { useParams, Navigate } from 'react-router-dom';
 import { usePublicMaterial } from '@/hooks/usePublicMaterial';
 import { useTrackedMaterial } from '@/hooks/useTrackedMaterial';
 import { useShareTracking } from '@/hooks/useShareTracking';
-import { VisualRenderer } from './components/editor/VisualRenderer';
 import { NativePdfViewer } from './components/editor/NativePdfViewer';
 import { Loader2, MessageCircle } from 'lucide-react';
+import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
 
 export default function PublicProposalViewer({ mode }: { mode: 'public' | 'tracked' }) {
   const { slug, token } = useParams<{ slug?: string; token?: string }>();
@@ -44,18 +44,22 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <PublicThemeWrapper>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </PublicThemeWrapper>
     );
   }
 
   if (error || result?.type === 'not_found' || !result) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDFBF7] p-4 text-center">
-        <h1 className="text-3xl font-serif text-[#2C2825] mb-4">Proposta não encontrada</h1>
-        <p className="text-[#6D655E]">Este link pode ter expirado ou estar incorreto.</p>
-      </div>
+      <PublicThemeWrapper>
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+          <h1 className="text-3xl font-serif text-[#2C2825] mb-4">Proposta não encontrada</h1>
+          <p className="text-[#6D655E]">Este link pode ter expirado ou estar incorreto.</p>
+        </div>
+      </PublicThemeWrapper>
     );
   }
 
@@ -103,25 +107,27 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   if (!hasStarted && result.customMessage) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-black/5">
-          {userProfile?.avatar_url && (
-            <img src={userProfile.avatar_url} alt="Fotógrafo" className="w-20 h-20 rounded-full mx-auto mb-6 object-cover" />
-          )}
-          <h2 className="text-2xl font-serif text-[#2C2825] mb-4">
-            Mensagem para você
-          </h2>
-          <p className="text-[#6D655E] mb-8 whitespace-pre-wrap italic">
-            "{result.customMessage}"
-          </p>
-          <button 
-            onClick={handleStart}
-            className="w-full bg-[#2C2825] hover:bg-black text-white px-6 py-4 rounded-xl font-medium transition-all"
-          >
-            Acessar Proposta
-          </button>
+      <PublicThemeWrapper primaryColor={result.theme?.primaryColor || undefined}>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-black/5">
+            {userProfile?.avatar_url && (
+              <img src={userProfile.avatar_url} alt="Fotógrafo" className="w-20 h-20 rounded-full mx-auto mb-6 object-cover" />
+            )}
+            <h2 className="text-2xl font-serif text-[#2C2825] mb-4">
+              Mensagem para você
+            </h2>
+            <p className="text-[#6D655E] mb-8 whitespace-pre-wrap italic">
+              "{result.customMessage}"
+            </p>
+            <button 
+              onClick={handleStart}
+              className="w-full bg-[#2C2825] hover:bg-black text-white px-6 py-4 rounded-xl font-medium transition-all"
+            >
+              Acessar Proposta
+            </button>
+          </div>
         </div>
-      </div>
+      </PublicThemeWrapper>
     );
   }
 
@@ -132,7 +138,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col relative pb-24">
+    <PublicThemeWrapper primaryColor={result.theme?.primaryColor || undefined} className="flex flex-col relative pb-24">
       {isPdfFormat ? (
         <NativePdfViewer url={pdfUrl} logoUrl={userProfile?.avatar_url} />
       ) : (
@@ -150,18 +156,18 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
       {!hideWhatsApp && (
         <>
           {/* Floating CTA WhatsApp */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent flex justify-center z-50 pointer-events-none">
-        <button 
-          ref={ctaRef}
-          onClick={handleWhatsAppClick}
-          className="pointer-events-auto shadow-2xl bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-full font-medium flex items-center gap-3 transition-transform hover:scale-105 active:scale-95"
-        >
-          <MessageCircle className="w-5 h-5" />
-          Quero falar com o fotógrafo
-        </button>
-      </div>
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent flex justify-center z-50 pointer-events-none">
+            <button 
+              ref={ctaRef}
+              onClick={handleWhatsAppClick}
+              className="pointer-events-auto shadow-2xl bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-full font-medium flex items-center gap-3 transition-transform hover:scale-105 active:scale-95"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Quero falar com o fotógrafo
+            </button>
+          </div>
         </>
       )}
-    </div>
+    </PublicThemeWrapper>
   );
 }

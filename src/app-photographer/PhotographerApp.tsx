@@ -216,7 +216,7 @@ export default function PhotographerApp() {
 
               <Route path="/formulario/:token" element={<FormularioPublico />} />
               <Route path="/checkout/:cobrancaId" element={<PublicCheckout />} />
-              <Route path="/pay/ip/:cobrancaId" element={<InfinitePayCheckout />} />
+              <Route path="/pay/ip/:cobrancaId" element={<PublicCheckout />} />
               <Route path="/l/:cobrancaId" element={<ShareLinkFallback />} />
 
 

@@ -107,6 +107,40 @@ serve(async (req) => {
     if (isEmpty(payer_snapshot.cpfCnpj)) missingFields.push("cpfCnpj_optional");
     if (isEmpty(payer_snapshot.cep) || isEmpty(payer_snapshot.endereco_numero)) missingFields.push("address_optional");
 
+    // Fetch user's theme
+    let customPrimaryColor = null;
+    try {
+      const { data: accountTheme } = await supabase
+        .from('gallery_settings')
+        .select('active_theme_id, default_theme_id, theme_type')
+        .eq('user_id', cobranca.user_id)
+        .maybeSingle();
+
+      const themeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id;
+
+      if (themeId && themeId !== 'lunari') {
+        const { data: theme } = await supabase
+          .from('gallery_themes')
+          .select('primary_color')
+          .eq('id', themeId)
+          .maybeSingle();
+        if (theme?.primary_color) customPrimaryColor = theme.primary_color;
+      }
+
+      if (!customPrimaryColor && accountTheme?.theme_type === 'custom') {
+        const { data: theme } = await supabase
+          .from('gallery_themes')
+          .select('primary_color')
+          .eq('user_id', cobranca.user_id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (theme?.primary_color) customPrimaryColor = theme.primary_color;
+      }
+    } catch (err) {
+      console.warn('Error fetching gallery theme for infinitepay:', err);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -121,6 +155,7 @@ serve(async (req) => {
         payer_snapshot,
         missingFields,
         required_min: REQUIRED_MIN,
+        theme: { primaryColor: customPrimaryColor },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

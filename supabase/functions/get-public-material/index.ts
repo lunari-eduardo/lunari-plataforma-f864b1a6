@@ -26,6 +26,39 @@ serve(async (req) => {
       });
     }
 
+    const getTheme = async (userId: string) => {
+      try {
+        const { data: accountTheme } = await supabaseClient
+          .from('gallery_settings')
+          .select('active_theme_id, default_theme_id, theme_type')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        const themeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id;
+
+        if (themeId && themeId !== 'lunari') {
+          const { data: theme } = await supabaseClient
+            .from('gallery_themes')
+            .select('primary_color')
+            .eq('id', themeId)
+            .maybeSingle();
+          if (theme?.primary_color) return theme.primary_color;
+        }
+
+        if (accountTheme?.theme_type === 'custom') {
+          const { data: theme } = await supabaseClient
+            .from('gallery_themes')
+            .select('primary_color')
+            .eq('user_id', userId)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (theme?.primary_color) return theme.primary_color;
+        }
+      } catch (err) {}
+      return null;
+    };
+
     if (mode === 'tracked') {
       const token = identifier;
       // 1. Buscar o share rastreável
@@ -60,7 +93,7 @@ serve(async (req) => {
       // 4. Buscar perfil do fotógrafo
       const { data: profile } = await supabaseClient
         .from('profiles')
-        .select('nome, whatsapp, avatar_url')
+        .select('id, nome, whatsapp, avatar_url')
         .eq('id', share.user_id)
         .single();
 
@@ -74,7 +107,8 @@ serve(async (req) => {
         },
         userProfile: profile,
         shareLinkId: share.id,
-        customMessage: share.custom_message
+        customMessage: share.custom_message,
+        theme: { primaryColor: await getTheme(share.user_id) }
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -137,7 +171,7 @@ serve(async (req) => {
 
       const { data: profile } = await supabaseClient
         .from('profiles')
-        .select('nome, whatsapp, avatar_url')
+        .select('id, nome, whatsapp, avatar_url')
         .eq('id', targetUserId)
         .single();
 
@@ -150,7 +184,8 @@ serve(async (req) => {
           version_number: version.version_number
         },
         userProfile: profile,
-        shareLinkId: activeLink.id
+        shareLinkId: activeLink.id,
+        theme: { primaryColor: await getTheme(targetUserId) }
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

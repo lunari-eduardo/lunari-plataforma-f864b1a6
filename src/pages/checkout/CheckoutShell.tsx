@@ -20,7 +20,7 @@ export default function CheckoutShell({
   children,
 }: CheckoutShellProps) {
   return (
-    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] text-neutral-900 px-4 py-6">
+    <div className="flex flex-col items-center px-4 py-6">
       <div className="max-w-md w-full space-y-4">
         <div className="flex items-center justify-between gap-3 min-h-8">
           {photographer?.logoUrl ? (
@@ -61,7 +61,7 @@ export default function CheckoutShell({
 /** Skeleton branded — sem spinner cru, sem troca de fundo. */
 export function CheckoutSkeleton() {
   return (
-    <div className="light min-h-screen flex flex-col items-center bg-[hsl(30,20%,97%)] px-4 py-6">
+    <div className="flex flex-col items-center px-4 py-6">
       <div className="max-w-md w-full space-y-4 animate-pulse">
         <div className="flex items-center justify-between gap-3">
           <div className="h-8 w-28 rounded bg-neutral-200/70" />
