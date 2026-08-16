@@ -1,13 +1,13 @@
 // supabase/functions/pay-infinitepay-finalize/index.ts
-// Endpoint público chamado pela página /pay/ip/:cobrancaId para coletar dados do pagador,
-// enriquecer CRM e delegar a criação do link InfinitePay ao adaptador oficial.
+// Endpoint público chamado pelo checkout público para coletar dados do pagador,
+// enriquecer CRM e emitir o link final na InfinitePay com os dados do cliente.
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
 import { enrichClienteIfMissing, type EnrichPatch } from "../_shared/enrich-cliente.ts";
 import { resolvePayerHints } from "../_shared/payer-hints.ts";
-import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../_shared/payment-types.ts";
+import { createInfinitePayPayment } from "../_shared/adapters/infinitepay.ts";
+import { AdapterCreatePaymentInput } from "../_shared/payment-types.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -18,7 +18,7 @@ interface FinalizeRequest {
   payerPatch?: EnrichPatch & { nome?: string };
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -40,12 +40,6 @@ serve(async (req) => {
     if (cobError || !cobranca) return errorResponse("Cobrança não encontrada", 404);
     if (cobranca.provedor !== "infinitepay") return errorResponse("Cobrança não é InfinitePay", 400);
     if (cobranca.status === "pago") return jsonResponse({ success: false, error: "Cobrança já paga", code: "ALREADY_PAID" }, 400);
-
-    // Se já possui link definitivo na InfinitePay, reaproveita
-    const existingUrl = cobranca.checkout_url || cobranca.ip_checkout_url;
-    if (existingUrl && !existingUrl.startsWith(PUBLIC_SITE_URL) && existingUrl.includes("infinitepay")) {
-      return jsonResponse({ success: true, checkoutUrl: existingUrl, reused: true });
-    }
 
     // 2. Enriquecimento do CRM
     if (payerPatch && cobranca.cliente_id) {
@@ -70,11 +64,12 @@ serve(async (req) => {
       ? await resolvePayerHints({ supabase, clienteId: cobranca.cliente_id })
       : {};
 
-    if (!hints.name) return errorResponse("Nome do pagador é obrigatório", 400, "MISSING_NAME");
-    if (!hints.phone) return errorResponse("Telefone do pagador é obrigatório", 400, "MISSING_PHONE");
+    const clientNome = payerPatch?.nome || hints.name || "Cliente";
+    const clientPhone = payerPatch?.telefone || hints.phone;
+    const clientEmail = payerPatch?.email || hints.email;
+    const clientDoc = payerPatch?.cpfCnpj || hints.cpfCnpj;
 
-    // 4. Delegar criação para o adaptador create-infinitepay-payment
-    const adapterUrl = `${SUPABASE_URL}/functions/v1/create-infinitepay-payment`;
+    // 4. Executar adaptador da InfinitePay
     const adapterPayload: AdapterCreatePaymentInput = {
       cobrancaId: cobranca.id,
       userId: cobranca.user_id,
@@ -82,11 +77,11 @@ serve(async (req) => {
       descricao: cobranca.descricao || "Serviço fotográfico",
       cliente: {
         id: cobranca.cliente_id || undefined,
-        nome: hints.name,
-        email: hints.email,
-        telefone: hints.phone,
-        whatsapp: hints.phone,
-        cpfCnpj: hints.document,
+        nome: clientNome,
+        email: clientEmail,
+        telefone: clientPhone,
+        whatsapp: clientPhone,
+        cpfCnpj: clientDoc,
         cep: hints.postalCode,
         endereco: hints.address,
         numero: hints.addressNumber,
@@ -96,21 +91,11 @@ serve(async (req) => {
       integrationData: {},
     };
 
-    console.log(`[pay-infinitepay-finalize] Invocando create-infinitepay-payment para cobranca=${cobranca.id}`);
+    console.log(`[pay-infinitepay-finalize] Criando checkout InfinitePay para cobranca=${cobranca.id}`);
 
-    const adapterRes = await fetch(adapterUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-        "x-lunari-internal-caller": "pay-infinitepay-finalize",
-      },
-      body: JSON.stringify(adapterPayload),
-    });
+    const adapterData = await createInfinitePayPayment(supabase, adapterPayload, SUPABASE_URL, PUBLIC_SITE_URL);
 
-    const adapterData: AdapterCreatePaymentOutput = await adapterRes.json();
-
-    if (!adapterRes.ok || !adapterData.success || !adapterData.checkoutUrl) {
+    if (!adapterData.success || !adapterData.checkoutUrl) {
       console.error("[pay-infinitepay-finalize] Adaptador retornou erro:", adapterData);
       return jsonResponse({
         success: false,

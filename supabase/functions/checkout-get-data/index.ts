@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     // 1. Fetch cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
       .from('cobrancas')
-      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras, mp_payment_link, mp_pix_copia_cola, mp_qr_code_base64, ip_checkout_url')
+      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras, mp_payment_link, mp_pix_copia_cola, mp_qr_code_base64, ip_checkout_url, checkout_url')
       .eq('id', cobrancaId)
       .maybeSingle();
 
@@ -66,12 +66,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Fetch photographer profile (public info only)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nome, avatar_url')
-      .eq('user_id', cobranca.user_id)
-      .maybeSingle();
+    // 2. Fetch photographer profile & gallery settings for logo & theme
+    const [profileRes, gallerySettingsRes, galleryThemeRes] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('nome, avatar_url')
+        .eq('user_id', cobranca.user_id)
+        .maybeSingle(),
+      supabase
+        .from('gallery_settings')
+        .select('studio_logo_url, studio_name, active_theme_id, default_theme_id, theme_type, theme_overrides')
+        .eq('user_id', cobranca.user_id)
+        .maybeSingle(),
+      supabase
+        .from('gallery_themes')
+        .select('primary_color')
+        .eq('user_id', cobranca.user_id)
+        .maybeSingle(),
+    ]);
+
+    const profile = profileRes.data;
+    const gallerySettings = gallerySettingsRes.data;
+    const galleryTheme = galleryThemeRes.data;
+
+    // Logotipo: prioriza gallery_settings.studio_logo_url, depois profiles.avatar_url
+    const logoUrl = gallerySettings?.studio_logo_url || profile?.avatar_url || null;
 
     // 2b. Fetch payer hints — pré-preenchimento + flags de campos ausentes.
     const { data: cliente } = await supabase
@@ -113,38 +132,14 @@ Deno.serve(async (req) => {
       cpfCnpj: !payerHints.cpfCnpj,
     };
 
-    // 2d. Fetch user's theme for public pages
-    let customPrimaryColor = null;
-    try {
-      const { data: accountTheme } = await supabase
-        .from('gallery_settings')
-        .select('active_theme_id, default_theme_id, theme_type')
-        .eq('user_id', cobranca.user_id)
-        .maybeSingle();
-
-      const themeId = accountTheme?.active_theme_id || accountTheme?.default_theme_id;
-
-      if (themeId && themeId !== 'lunari') {
-        const { data: theme } = await supabase
-          .from('gallery_themes')
-          .select('primary_color')
-          .eq('id', themeId)
-          .maybeSingle();
-        if (theme?.primary_color) customPrimaryColor = theme.primary_color;
-      }
-
-      if (!customPrimaryColor && accountTheme?.theme_type === 'custom') {
-        const { data: theme } = await supabase
-          .from('gallery_themes')
-          .select('primary_color')
-          .eq('user_id', cobranca.user_id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (theme?.primary_color) customPrimaryColor = theme.primary_color;
-      }
-    } catch (err) {
-      console.warn('Error fetching gallery theme for checkout:', err);
+    // 2d. Resolver cor primária do tema com fallback oficial Lunari (#C6A36A)
+    let customPrimaryColor = galleryTheme?.primary_color || null;
+    if (!customPrimaryColor && gallerySettings?.theme_overrides) {
+      const overrides = gallerySettings.theme_overrides as Record<string, any>;
+      if (overrides.primaryColor) customPrimaryColor = overrides.primaryColor;
+    }
+    if (!customPrimaryColor) {
+      customPrimaryColor = '#C6A36A'; // Paleta oficial Lunari
     }
 
     const provedor = (cobranca.provedor || 'asaas').toLowerCase();
@@ -154,13 +149,13 @@ Deno.serve(async (req) => {
       const providerBlock: Record<string, unknown> = {};
 
       if (provedor === 'mercadopago') {
-        providerBlock.initPoint = cobranca.mp_payment_link || null;
+        providerBlock.initPoint = cobranca.mp_payment_link || cobranca.checkout_url || null;
         providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
         providerBlock.pixQrCodeBase64 = cobranca.mp_qr_code_base64 || null;
       } else if (provedor === 'pix_manual') {
         providerBlock.pixCopiaECola = cobranca.mp_pix_copia_cola || null;
       } else if (provedor === 'infinitepay') {
-        providerBlock.checkoutUrl = cobranca.ip_checkout_url || null;
+        providerBlock.checkoutUrl = cobranca.ip_checkout_url || cobranca.checkout_url || null;
       }
 
       return new Response(
@@ -174,8 +169,8 @@ Deno.serve(async (req) => {
             status: cobranca.status,
           },
           photographer: {
-            name: profile?.nome || null,
-            logoUrl: profile?.avatar_url || null,
+            name: profile?.nome || gallerySettings?.studio_name || null,
+            logoUrl,
             userId: cobranca.user_id,
           },
           settings: {
@@ -194,7 +189,6 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
-
 
     // 3. Fetch Asaas integration settings
     const { data: integracao } = await supabase
@@ -244,7 +238,6 @@ Deno.serve(async (req) => {
     const globalIreiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
     const globalRepassarAntecipacao = globalIreiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
 
-    // If per-charge overrides exist, use them; otherwise use global
     const repassarTaxas = hasOverrides ? (chargeOverrides.repassarTaxasProcessamento ?? !globalAbsorverTaxa) : !globalAbsorverTaxa;
     const absorverTaxa = !repassarTaxas;
     const ireiAntecipar = hasOverrides ? (chargeOverrides.anteciparParcelas ?? globalIreiAntecipar) : globalIreiAntecipar;
@@ -252,90 +245,21 @@ Deno.serve(async (req) => {
       ? (hasOverrides ? (chargeOverrides.repassarTaxaAntecipacao ?? globalRepassarAntecipacao) : globalRepassarAntecipacao)
       : false;
 
-    // 4. Fetch real fees from Asaas API
+    // 4. Fetch Asaas account fees
     let accountFees: AccountFees | null = null;
-
-    if ((repassarTaxas || repassarTaxaAntecipacao) && (settings.habilitarCartao !== false)) {
-      try {
-        const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
-          headers: { access_token: integracao.access_token },
-        });
-
-        if (feesResp.ok) {
-          const feesData = await feesResp.json();
-          const payment = feesData.payment || {};
-          const creditCard = payment.creditCard || {};
-          const pix = payment.pix || {};
-          const anticipation = feesData.anticipation || {};
-          const anticipationCC = anticipation.creditCard || {};
-
-          const oneInstallment = creditCard.oneInstallmentPercentage;
-          const upToSix = creditCard.upToSixInstallmentsPercentage;
-          const upToTwelve = creditCard.upToTwelveInstallmentsPercentage;
-          const upToTwentyOne = creditCard.upToTwentyOneInstallmentsPercentage;
-
-          const tiers: Array<{ min: number; max: number; percentageFee: number }> = [];
-
-          if (oneInstallment !== undefined) {
-            if (upToSix !== undefined || upToTwelve !== undefined) {
-              tiers.push({ min: 1, max: 1, percentageFee: oneInstallment });
-              if (upToSix !== undefined) tiers.push({ min: 2, max: 6, percentageFee: upToSix });
-              if (upToTwelve !== undefined) tiers.push({ min: 7, max: 12, percentageFee: upToTwelve });
-              if (upToTwentyOne !== undefined) tiers.push({ min: 13, max: 21, percentageFee: upToTwentyOne });
-            } else {
-              tiers.push({ min: 1, max: 21, percentageFee: oneInstallment });
-            }
-          } else {
-            tiers.push({ min: 1, max: 21, percentageFee: 2.99 });
-          }
-
-          let discountInfo: AccountFees['discount'] = undefined;
-          const hasDiscount = creditCard.hasValidDiscount === true;
-          const discountExpiration = creditCard.discountExpiration;
-          const discountStillValid = hasDiscount && (!discountExpiration || new Date(discountExpiration) > new Date());
-
-          if (discountStillValid) {
-            const discountTiers: Array<{ min: number; max: number; percentageFee: number }> = [];
-            const dOne = creditCard.discountOneInstallmentPercentage;
-            const dSix = creditCard.discountUpToSixInstallmentsPercentage;
-            const dTwelve = creditCard.discountUpToTwelveInstallmentsPercentage;
-            const dTwentyOne = creditCard.discountUpToTwentyOneInstallmentsPercentage;
-
-            if (dOne !== undefined) {
-              if (dSix !== undefined || dTwelve !== undefined) {
-                discountTiers.push({ min: 1, max: 1, percentageFee: dOne });
-                if (dSix !== undefined) discountTiers.push({ min: 2, max: 6, percentageFee: dSix });
-                if (dTwelve !== undefined) discountTiers.push({ min: 7, max: 12, percentageFee: dTwelve });
-                if (dTwentyOne !== undefined) discountTiers.push({ min: 13, max: 21, percentageFee: dTwentyOne });
-              } else {
-                discountTiers.push({ min: 1, max: 21, percentageFee: dOne });
-              }
-            }
-
-            if (discountTiers.length > 0) {
-              discountInfo = { active: true, expiration: discountExpiration, tiers: discountTiers };
-            }
-          }
-
-          accountFees = {
-            creditCard: {
-              operationValue: creditCard.operationValue ?? 0.49,
-              detachedMonthlyFeeValue: anticipationCC.detachedMonthlyFeeValue ?? 1.25,
-              installmentMonthlyFeeValue: anticipationCC.installmentMonthlyFeeValue ?? 1.70,
-              tiers,
-            },
-            pix: { fixedFeeValue: pix.fixedFeeValue ?? pix.operationValue ?? 0.99 },
-            ...(discountInfo ? { discount: discountInfo } : {}),
-          };
-
-          console.log('📊 Fees loaded for checkout');
-        }
-      } catch (err) {
-        console.warn('Error fetching Asaas fees:', err);
+    try {
+      const feesResponse = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
+        headers: { access_token: integracao.access_token },
+      });
+      if (feesResponse.ok) {
+        accountFees = await feesResponse.json();
+      } else {
+        console.warn('Could not fetch Asaas fees, status:', feesResponse.status);
       }
+    } catch (err) {
+      console.warn('Error fetching Asaas fees:', err);
     }
 
-    // 5. Return checkout data with new settings format
     return new Response(
       JSON.stringify({
         success: true,
@@ -347,8 +271,8 @@ Deno.serve(async (req) => {
           status: cobranca.status,
         },
         photographer: {
-          name: profile?.nome || null,
-          logoUrl: profile?.avatar_url || null,
+          name: profile?.nome || gallerySettings?.studio_name || null,
+          logoUrl,
           userId: cobranca.user_id,
         },
         settings: {
@@ -359,22 +283,18 @@ Deno.serve(async (req) => {
           absorverTaxa,
           ireiAntecipar,
           repassarTaxaAntecipacao,
-          // Legacy compat
-          incluirTaxaAntecipacao: repassarTaxaAntecipacao,
         },
         accountFees,
         payerHints,
         payerMissing,
         theme: { primaryColor: customPrimaryColor },
       }),
-
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
-  } catch (error) {
-    console.error('Checkout get data error:', error);
+  } catch (error: any) {
+    console.error('Error in checkout-get-data:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Erro interno do servidor' }),
+      JSON.stringify({ success: false, error: error.message || 'Erro interno ao buscar dados do checkout' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

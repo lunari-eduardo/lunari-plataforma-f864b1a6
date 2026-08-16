@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
     } else if (provedor === "infinitepay") {
       adapterData = await createInfinitePayPayment(supabase, adapterPayload, SUPABASE_URL, PUBLIC_SITE_URL);
     } else if (provedor === "asaas") {
-      adapterData = await createAsaasPayment(supabase, adapterPayload);
+      adapterData = await createAsaasPayment(supabase, adapterPayload, PUBLIC_SITE_URL);
     } else {
       return errorResponse(`Provedor desconhecido: ${provedor}`, 400);
     }

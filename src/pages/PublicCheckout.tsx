@@ -515,9 +515,7 @@ export default function PublicCheckout() {
         {/* Header — logo/nome do fotógrafo + selo em uma linha compacta */}
         <div className="flex items-center justify-between gap-3">
           {photographer.logoUrl ? (
-            <img src={photographer.logoUrl} alt={photographer.name || 'Estúdio'} className="h-8 object-contain opacity-90" />
-          ) : photographer.name ? (
-            <h1 className="text-sm font-medium text-neutral-500 truncate">{photographer.name}</h1>
+            <img src={photographer.logoUrl} alt="Logotipo" className="h-8 max-w-[160px] object-contain opacity-90" />
           ) : <span />}
           <div className="flex items-center gap-1 text-[10px] text-primary shrink-0">
             <Lock className="h-3 w-3" />

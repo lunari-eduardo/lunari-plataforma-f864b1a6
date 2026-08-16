@@ -53,27 +53,26 @@ export function PublicThemeWrapper({ children, primaryColor, className = '' }: P
   }, []);
 
   const themeStyles = useMemo(() => {
+    const effectiveColor = primaryColor || '#C6A36A';
     // We always resolve against the 'light' base for these pages.
-    const tokens = resolveGalleryColorTokens('light', primaryColor);
+    const tokens = resolveGalleryColorTokens('light', effectiveColor);
     
     const styles: React.CSSProperties = {
       // Inject standard gallery tokens for components that might use them directly
       ...(tokens as any),
     };
 
-    if (primaryColor) {
-      const primaryHsl = hexToHsl(primaryColor);
-      const primaryFgHex = tokens['--gallery-primary-fg'];
-      const primaryFgHsl = hexToHsl(primaryFgHex);
+    const primaryHsl = hexToHsl(effectiveColor);
+    const primaryFgHex = tokens['--gallery-primary-fg'];
+    const primaryFgHsl = hexToHsl(primaryFgHex);
 
-      if (primaryHsl) {
-        // Override standard Tailwind variables so native shadcn/ui components pick it up
-        styles['--primary'] = primaryHsl;
-        styles['--ring'] = primaryHsl;
-      }
-      if (primaryFgHsl) {
-        styles['--primary-foreground'] = primaryFgHsl;
-      }
+    if (primaryHsl) {
+      // Override standard Tailwind variables so native shadcn/ui components pick it up
+      styles['--primary'] = primaryHsl;
+      styles['--ring'] = primaryHsl;
+    }
+    if (primaryFgHsl) {
+      styles['--primary-foreground'] = primaryFgHsl;
     }
 
     return styles;

@@ -10,9 +10,13 @@ function cleanEmail(v?: string | null): string | undefined {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : undefined;
 }
 
+function digitsOnly(v?: string | null): string {
+  return v ? String(v).replace(/\D/g, "") : "";
+}
+
 function normalizePhone(v?: string | null): string | undefined {
   if (!v) return undefined;
-  const digits = v.replace(/\D/g, "");
+  const digits = digitsOnly(v);
   const local = digits.startsWith("55") && (digits.length === 12 || digits.length === 13) ? digits.slice(2) : digits;
   return local.length === 10 || local.length === 11 ? local : undefined;
 }
@@ -57,6 +61,9 @@ export async function createInfinitePayPayment(
   }
 
   const clientPhone = normalizePhone(cliente?.whatsapp || cliente?.telefone);
+  const doc = digitsOnly(cliente?.cpfCnpj);
+  const validEmail = cleanEmail(cliente?.email);
+
   const customerPayload: Record<string, string> = {
     name: cliente?.nome?.trim() || "Cliente",
   };
@@ -65,9 +72,12 @@ export async function createInfinitePayPayment(
     customerPayload.phone_number = `+55${clientPhone}`;
   }
 
-  const validEmail = cleanEmail(cliente?.email);
   if (validEmail) {
     customerPayload.email = validEmail;
+  }
+
+  if (doc) {
+    customerPayload.document = doc;
   }
 
   const valorEmCentavos = Math.round(Number(valor) * 100);
@@ -91,7 +101,7 @@ export async function createInfinitePayPayment(
 
   if (cliente?.cep && cliente?.endereco && cliente?.numero) {
     const address: Record<string, string> = {
-      cep: cliente.cep.replace(/\D/g, ""),
+      cep: digitsOnly(cliente.cep),
       street: cliente.endereco,
       number: cliente.numero,
     };
@@ -100,7 +110,7 @@ export async function createInfinitePayPayment(
     payload.address = address;
   }
 
-  console.log(`[infinitepay-adapter] Criando link InfinitePay para cobranca=${cobrancaId}, handle=${cleanHandle}, valorEmCentavos=${valorEmCentavos}`);
+  console.log(`[infinitepay-adapter] Criando link InfinitePay para cobranca=${cobrancaId}, handle=${cleanHandle}, valorEmCentavos=${valorEmCentavos}, customer=${JSON.stringify(customerPayload)}`);
 
   const ipRes = await fetch("https://api.checkout.infinitepay.io/links", {
     method: "POST",

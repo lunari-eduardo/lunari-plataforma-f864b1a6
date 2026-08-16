@@ -26,11 +26,9 @@ export default function CheckoutShell({
           {photographer?.logoUrl ? (
             <img
               src={photographer.logoUrl}
-              alt={photographer.name || 'Estúdio'}
-              className="h-8 object-contain opacity-90"
+              alt="Logotipo"
+              className="h-8 max-w-[160px] object-contain opacity-90"
             />
-          ) : photographer?.name ? (
-            <h1 className="text-sm font-medium text-neutral-500 truncate">{photographer.name}</h1>
           ) : (
             <span />
           )}

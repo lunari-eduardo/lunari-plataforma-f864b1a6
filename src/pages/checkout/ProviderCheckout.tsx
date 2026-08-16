@@ -3,8 +3,8 @@
  * (Mercado Pago, InfinitePay e PIX manual), dentro da mesma casca branded.
  *
  * Regra comum: os dados faltantes do pagador são coletados pelo `PayerGate`
- * e gravados no CRM antes de qualquer ida a site externo. A saída para o
- * provedor acontece por clique do usuário — nunca por redirect automático.
+ * e gravados no CRM. Quando o cliente clica em "Continuar", para links externos
+ * (InfinitePay / Mercado Pago) a transição e redirecionamento são imediatos.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
@@ -125,17 +125,17 @@ export default function ProviderCheckout({
     }
   };
 
-  const goMercadoPago = async () => {
+  const goMercadoPago = async (currentPayer: PayerValue = payer) => {
     if (!provider.initPoint) {
       setError('Link do Mercado Pago indisponível. Peça um novo link ao fotógrafo.');
       return;
     }
     setBusy(true);
-    await savePayerToCrm(cobrancaId, payer);
+    await savePayerToCrm(cobrancaId, currentPayer);
     window.location.href = provider.initPoint;
   };
 
-  const goInfinitePay = async () => {
+  const goInfinitePay = async (currentPayer: PayerValue = payer) => {
     setBusy(true);
     setError(null);
     try {
@@ -150,10 +150,10 @@ export default function ProviderCheckout({
         body: JSON.stringify({
           cobrancaId,
           payerPatch: {
-            nome: payer.nome.trim() || undefined,
-            email: payer.email.trim() || undefined,
-            telefone: unmaskDigits(payer.telefone) || undefined,
-            cpfCnpj: unmaskDigits(payer.cpfCnpj) || undefined,
+            nome: currentPayer.nome.trim() || undefined,
+            email: currentPayer.email.trim() || undefined,
+            telefone: unmaskDigits(currentPayer.telefone) || undefined,
+            cpfCnpj: unmaskDigits(currentPayer.cpfCnpj) || undefined,
           },
         }),
       });
@@ -165,19 +165,39 @@ export default function ProviderCheckout({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao processar');
       setBusy(false);
+      setGateDone(false);
+    }
+  };
+
+  const handleGateDone = async () => {
+    if (provedor === 'infinitepay') {
+      await goInfinitePay(payer);
+    } else if (provedor === 'mercadopago' && !pixPayload) {
+      await goMercadoPago(payer);
+    } else {
+      setGateDone(true);
     }
   };
 
   if (!gateDone) {
     return (
-      <PayerGate
-        cobrancaId={cobrancaId}
-        value={payer}
-        onChange={onPayerChange}
-        required={required}
-        onDone={() => setGateDone(true)}
-        ctaLabel="Continuar"
-      />
+      <div className="space-y-4">
+        {error && (
+          <div className="flex items-start gap-2 text-destructive text-sm bg-destructive/5 border border-destructive/20 rounded-md p-3">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+        <PayerGate
+          cobrancaId={cobrancaId}
+          value={payer}
+          onChange={onPayerChange}
+          required={required}
+          onDone={handleGateDone}
+          ctaLabel={provedor === 'infinitepay' ? 'Ir para o pagamento seguro' : 'Continuar'}
+          loading={busy}
+        />
+      </div>
     );
   }
 
@@ -227,12 +247,12 @@ export default function ProviderCheckout({
           </p>
         </div>
       ) : provedor === 'mercadopago' ? (
-        <Button className="w-full h-12 gap-2 text-base font-medium" onClick={goMercadoPago} disabled={busy}>
+        <Button className="w-full h-12 gap-2 text-base font-medium" onClick={() => goMercadoPago()} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
           Pagar com Mercado Pago
         </Button>
       ) : provedor === 'infinitepay' ? (
-        <Button className="w-full h-12 gap-2 text-base font-medium" onClick={goInfinitePay} disabled={busy}>
+        <Button className="w-full h-12 gap-2 text-base font-medium" onClick={() => goInfinitePay()} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
           Ir para o pagamento seguro
         </Button>

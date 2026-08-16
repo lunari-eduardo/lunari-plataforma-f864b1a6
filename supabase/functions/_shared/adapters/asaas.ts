@@ -1,5 +1,5 @@
 // supabase/functions/_shared/adapters/asaas.ts
-// Adaptador direto do Asaas para o create-cobranca
+// Adaptador direto do Asaas para o create-cobranca e checkout-process-payment
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
 import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput } from "../payment-types.ts";
@@ -21,7 +21,7 @@ function normalizePhone(v?: string | null): string | undefined {
   return local.length === 10 || local.length === 11 ? local : undefined;
 }
 
-async function ensureAsaasCustomer(
+export async function ensureAsaasCustomer(
   baseUrl: string,
   apiKey: string,
   cliente: any
@@ -93,7 +93,8 @@ async function ensureAsaasCustomer(
 
 export async function createAsaasPayment(
   supabase: SupabaseClient,
-  input: AdapterCreatePaymentInput
+  input: AdapterCreatePaymentInput,
+  publicSiteUrl: string = "https://app.lunarihub.com"
 ): Promise<AdapterCreatePaymentOutput> {
   const {
     cobrancaId,
@@ -101,12 +102,24 @@ export async function createAsaasPayment(
     valor,
     descricao,
     cliente,
-    billingType = "PIX",
+    billingType,
     creditCard,
     creditCardHolderInfo,
     installmentCount,
     integrationData,
   } = input;
+
+  const socialShareUrl = `${publicSiteUrl}/l/${cobrancaId}`;
+
+  // Se a requisição for para geração de LINK de pagamento (sem cartão e sem PIX presencial)
+  // Devolve imediatamente o link do checkout público Lunari
+  if (billingType === "LINK" || (!creditCard && billingType !== "PIX")) {
+    return {
+      success: true,
+      providerOrderId: cobrancaId,
+      checkoutUrl: socialShareUrl,
+    };
+  }
 
   let apiKey = integrationData?.accessToken;
   let dadosExtras = integrationData?.dadosExtras;
@@ -118,6 +131,9 @@ export async function createAsaasPayment(
       .eq("user_id", userId)
       .eq("provedor", "asaas")
       .eq("status", "ativo")
+      .order("is_default", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (integErr || !integ?.access_token) {
@@ -155,7 +171,7 @@ export async function createAsaasPayment(
 
   const paymentPayload: Record<string, any> = {
     customer: customerId,
-    billingType: billingType === "UNDEFINED" ? "UNDEFINED" : (billingType || "PIX"),
+    billingType: billingType || "PIX",
     value: Math.round(Number(valor) * 100) / 100,
     dueDate: tomorrow,
     description: descricao || "Serviço fotográfico",
@@ -230,7 +246,7 @@ export async function createAsaasPayment(
   return {
     success: true,
     providerOrderId: payData.id,
-    checkoutUrl: payData.invoiceUrl || payData.bankSlipUrl,
+    checkoutUrl: payData.invoiceUrl || payData.bankSlipUrl || socialShareUrl,
     pixCopiaCola,
     pixQrCodeBase64,
     dadosExtras: {
