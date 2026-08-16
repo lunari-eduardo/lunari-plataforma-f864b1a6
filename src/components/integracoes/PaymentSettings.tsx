@@ -132,13 +132,25 @@ export function PaymentSettings() {
     const params = new URLSearchParams(location.search);
     const isCallback = params.get('mp_callback');
     const code = params.get('code');
-    if (!isCallback || !code || hasProcessedCallback.current) return;
-    hasProcessedCallback.current = true;
-    const redirectUri = `${window.location.origin}${window.location.pathname}?mp_callback=true`;
-    connectMercadoPagoRef.current.mutate(
-      { code, redirect_uri: redirectUri },
-      { onSettled: () => navigateRef.current('/app/integracoes', { replace: true }) }
-    );
+    const errorParam = params.get('error') || params.get('error_description');
+
+    if (!isCallback || hasProcessedCallback.current) return;
+
+    if (errorParam) {
+      hasProcessedCallback.current = true;
+      toast.error(`Erro ao autorizar Mercado Pago: ${errorParam}`);
+      navigateRef.current('/app/integracoes', { replace: true });
+      return;
+    }
+
+    if (code) {
+      hasProcessedCallback.current = true;
+      const redirectUri = `${window.location.origin}${window.location.pathname}?mp_callback=true`;
+      connectMercadoPagoRef.current.mutate(
+        { code, redirect_uri: redirectUri },
+        { onSettled: () => navigateRef.current('/app/integracoes', { replace: true }) }
+      );
+    }
   }, [location.search]);
 
   // Sync form state from data
@@ -205,9 +217,16 @@ export function PaymentSettings() {
     setDrawerOpen(false);
   };
 
-  const handleConnectMercadoPago = () => {
-    const url = getMercadoPagoOAuthUrl();
-    if (url) window.location.href = url;
+  const handleConnectMercadoPago = async () => {
+    try {
+      const url = await getMercadoPagoOAuthUrl();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (err) {
+      console.error('Erro ao conectar Mercado Pago:', err);
+      toast.error('Erro ao conectar Mercado Pago');
+    }
   };
 
   const handleSaveMpSettings = async () => {

@@ -270,16 +270,10 @@ export function PaymentConfigDrawer({
                   </Button>
                 </>
               ) : (
-                <>
-                  {!mpAppId ? (
-                    <p className="text-sm text-muted-foreground">Integração Mercado Pago não disponível no momento.</p>
-                  ) : (
-                    <Button className="w-full" onClick={handleConnectMercadoPago}>
-                      <Link2 className="h-4 w-4 mr-2" />
-                      {mpIntegrationStatus === 'erro_autenticacao' ? 'Reconectar' : 'Conectar'} Mercado Pago
-                    </Button>
-                  )}
-                </>
+                <Button className="w-full" onClick={handleConnectMercadoPago}>
+                  <Link2 className="h-4 w-4 mr-2" />
+                  {mpIntegrationStatus === 'erro_autenticacao' ? 'Reconectar' : 'Conectar'} Mercado Pago
+                </Button>
               )}
             </>
           )}

@@ -72,10 +72,26 @@ function toJsonData(data: PixManualData | InfinitePayData | AsaasData | Record<s
 }
 
 export function usePaymentIntegration() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const mpAppIdQuery = useQuery({
+    queryKey: ['mercadopago-app-id'],
+    queryFn: async () => {
+      if (import.meta.env.VITE_MERCADOPAGO_APP_ID) {
+        return import.meta.env.VITE_MERCADOPAGO_APP_ID as string;
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke('mercadopago-get-app-id');
+        if (error || !data?.success || !data?.appId) {
+          return '';
+        }
+        return data.appId as string;
+      } catch {
+        return '';
+      }
+    },
+    staleTime: 60 * 60 * 1000,
+  });
 
-  const mpAppId = import.meta.env.VITE_MERCADOPAGO_APP_ID || '';
+  const mpAppId = import.meta.env.VITE_MERCADOPAGO_APP_ID || mpAppIdQuery.data || '';
 
   const query = useQuery({
     queryKey: ['payment-integration', user?.id],
@@ -319,10 +335,27 @@ export function usePaymentIntegration() {
     onError: (error) => { console.error('Error updating MP settings:', error); toast.error('Erro ao salvar configurações'); },
   });
 
-  const getMercadoPagoOAuthUrl = () => {
-    if (!mpAppId) return null;
+  const getMercadoPagoOAuthUrl = async () => {
+    let appId = mpAppId;
+    if (!appId) {
+      try {
+        const { data, error } = await supabase.functions.invoke('mercadopago-get-app-id');
+        if (!error && data?.success && data?.appId) {
+          appId = data.appId;
+        }
+      } catch (err) {
+        console.error('Erro ao buscar App ID do Mercado Pago:', err);
+      }
+    }
+
+    if (!appId) {
+      toast.error('Configuração do Mercado Pago não encontrada no servidor');
+      return null;
+    }
+
     const redirectUri = `${window.location.origin}/app/integracoes?mp_callback=true`;
-    return `https://auth.mercadopago.com.br/authorization?client_id=${mpAppId}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const state = user?.id || '';
+    return `https://auth.mercadopago.com.br/authorization?client_id=${appId}&response_type=code&platform_id=mp&state=${encodeURIComponent(state)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
   return {
