@@ -27,6 +27,10 @@ import {
   History,
   Trash2,
   User,
+  CheckCircle2,
+  Copy,
+  Ban,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,6 +42,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { formatDateForInput, safeParseInputDate, formatDateForStorage } from '@/utils/dateUtils';
 import { toTitleCase } from '@/hooks/useTitleCase';
+import { buildPaymentShareUrl } from '@/utils/domainUtils';
 
 import { PanelSection, PanelField } from './PanelSection';
 import ClientSearchCombobox from '../ClientSearchCombobox';
@@ -212,13 +217,14 @@ export default function SessionPanel({
   });
 
   /* ---------------------------------- Cobrança --------------------------------- */
-  const { cobrancas } = useCobranca({
+  const { cobrancas, cancelCharge } = useCobranca({
     sessionId: appointment?.sessionId,
     clienteId: !appointment?.sessionId ? form.clienteId || undefined : undefined,
   });
   const cobranca = cobrancas[0];
-  const cobrancaLink =
-    cobranca?.mpPaymentLink || cobranca?.ipCheckoutUrl || cobranca?.mpPixCopiaCola || '';
+  const cobrancaLink = cobranca
+    ? (cobranca.mpPaymentLink || cobranca.ipCheckoutUrl || buildPaymentShareUrl(cobranca.id))
+    : '';
 
   /* --------------------------------- Handlers ---------------------------------- */
   const handlePackageSelect = (packageId: string, packageData?: any) => {
@@ -617,26 +623,28 @@ export default function SessionPanel({
 
             {/* -------------------------------- SESSÃO --------------------------------- */}
             <PanelSection icon={Calendar} title="Sessão">
-              <PanelField label="Categoria">
-                <CategorySelector
-                  categorias={categorias as unknown as string[]}
-                  value={form.categoria}
-                  onValueChange={(categoria) =>
-                    setForm(prev => ({ ...prev, categoria, packageId: '' }))
-                  }
-                  placeholder="Filtrar pacotes..."
-                />
-              </PanelField>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <PanelField label="Categoria">
+                  <CategorySelector
+                    categorias={categorias as unknown as string[]}
+                    value={form.categoria}
+                    onValueChange={(categoria) =>
+                      setForm(prev => ({ ...prev, categoria, packageId: '' }))
+                    }
+                    placeholder="Filtrar pacotes..."
+                  />
+                </PanelField>
 
-              <PanelField label="Pacote">
-                <PackageSearchCombobox
-                  value={form.packageId}
-                  onSelect={handlePackageSelect}
-                  placeholder="Selecionar pacote..."
-                  filtrarPorCategoria={form.categoria}
-                  hidePrice
-                />
-              </PanelField>
+                <PanelField label="Pacote">
+                  <PackageSearchCombobox
+                    value={form.packageId}
+                    onSelect={handlePackageSelect}
+                    placeholder="Selecionar pacote..."
+                    filtrarPorCategoria={form.categoria}
+                    hidePrice
+                  />
+                </PanelField>
+              </div>
             </PanelSection>
 
             {/* ------------------------------ FINANCEIRO ------------------------------- */}
@@ -666,17 +674,17 @@ export default function SessionPanel({
               icon={CreditCard}
               title="Cobrança"
               action={
-                isEdit &&
-                (!cobranca ||
-                  ['pago', 'pago_manual', 'cancelado', 'expirado', 'estornado'].includes(
-                    cobranca.status,
-                  )) ? (
-                  <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleGerarCobranca}>
-                    <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                isEdit && form.clienteId ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+                    onClick={handleGerarCobranca}
+                  >
+                    <Plus className="h-3 w-3" />
                     {cobranca ? 'Nova cobrança' : 'Gerar cobrança'}
                   </Button>
                 ) : undefined
-
               }
             >
               {!isEdit ? (
@@ -708,62 +716,126 @@ export default function SessionPanel({
                   )}
                 </div>
               ) : !cobranca ? (
-                <p className="text-xs text-muted-foreground">Nenhuma cobrança criada.</p>
+                <div className="flex items-center justify-between gap-3 py-1">
+                  <span className="text-xs text-muted-foreground">Nenhuma cobrança criada</span>
+                  <Button
+                    size="sm"
+                    className="h-8 rounded-lg text-xs gap-1.5"
+                    onClick={handleGerarCobranca}
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Gerar cobrança
+                  </Button>
+                </div>
               ) : ['pago', 'pago_manual'].includes(cobranca.status) ? (
-                <p className="text-sm text-lunar-success">✓ Pago</p>
-              ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) ? (
-                <p className="text-xs text-muted-foreground">
-                  Cobrança {cobranca.status}. Gere uma nova cobrança para reenviar ao cliente.
-                </p>
-
-              ) : (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs text-muted-foreground">
-                    <span className="text-foreground">Aguardando pagamento</span>
-                    {' • '}
-                    {cobranca.provedor === 'pix_manual' ? 'PIX' : cobranca.tipoCobranca.toUpperCase()}
-                    {' • '}
-                    R$ {cobranca.valor.toFixed(2)}
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      <span>Pago</span>
+                      <span className="text-muted-foreground font-normal">• R$ {cobranca.valor.toFixed(2)}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
+                      {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs rounded-md"
+                    onClick={handleGerarCobranca}
+                  >
+                    Histórico
+                  </Button>
+                </div>
+              ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium text-muted-foreground capitalize">
+                      Cobrança {cobranca.status} (R$ {cobranca.valor.toFixed(2)})
+                    </span>
+                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                      Gere uma nova cobrança para enviar ao cliente.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 rounded-lg text-xs gap-1.5 shrink-0"
+                    onClick={handleGerarCobranca}
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Nova cobrança
+                  </Button>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        Aguardando pagamento
+                      </span>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">
+                      R$ {cobranca.valor.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/40">
                     {cobrancaLink && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 rounded-lg text-xs"
+                        className="h-7 rounded-md text-xs gap-1.5"
                         onClick={() => window.open(cobrancaLink, '_blank', 'noopener')}
                       >
-                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                        Ver cobrança
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Abrir link
                       </Button>
                     )}
                     {cobrancaLink && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="h-8 rounded-lg text-xs"
+                        className="h-7 rounded-md text-xs gap-1.5"
                         onClick={() => {
                           navigator.clipboard?.writeText(cobrancaLink);
-                          toast('Link copiado');
+                          toast.success('Link de checkout copiado!');
                         }}
                       >
-                        <Send className="h-3.5 w-3.5 mr-1.5" />
-                        Reenviar
+                        <Copy className="h-3.5 w-3.5" />
+                        Copiar link
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-md text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                      onClick={async () => {
+                        if (confirm('Deseja realmente cancelar esta cobrança pendente?')) {
+                          await cancelCharge(cobranca.id);
+                        }
+                      }}
+                    >
+                      <Ban className="h-3.5 w-3.5" />
+                      Cancelar cobrança
+                    </Button>
                   </div>
                 </div>
               )}
             </PanelSection>
 
-            {/* ------------------------------ INFORMAÇÕES ------------------------------ */}
-            <PanelSection icon={FileText} title="Informações">
-              <PanelField label="Observações" htmlFor="sp-obs">
+            {/* ------------------------------ DESCRIÇÃO -------------------------------- */}
+            <PanelSection icon={FileText} title="Descrição">
+              <PanelField label="Descrição" htmlFor="sp-desc">
                 <Textarea
-                  id="sp-obs"
+                  id="sp-desc"
                   value={form.description}
                   onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Notas sobre a sessão..."
+                  placeholder="Descrição da sessão..."
                   className="min-h-[72px] rounded-lg text-base sm:text-sm resize-none"
                 />
               </PanelField>
