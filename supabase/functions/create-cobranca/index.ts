@@ -16,6 +16,9 @@ import {
   assertNotAmbiguousSessionCharge,
 } from "../_shared/cobrancaBinding.ts";
 import { generatePixPayload } from "../_shared/pix-utils.ts";
+import { createMercadoPagoPayment } from "../_shared/adapters/mercadopago.ts";
+import { createInfinitePayPayment } from "../_shared/adapters/infinitepay.ts";
+import { createAsaasPayment } from "../_shared/adapters/asaas.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -176,7 +179,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      // Se ocorreu conflito de chave única (Postgres 23505) por concorrência simultânea
       if (insertError.code === "23505" && idempotencyKey) {
         console.log(`[create-cobranca] Unique violation capturada (23505) em concorrência. Buscando cobrança existente...`);
         const { data: raceFound } = await supabase
@@ -264,7 +266,7 @@ Deno.serve(async (req) => {
         .from("cobrancas")
         .update({
           pix_copia_cola: emvPayload,
-          mp_pix_copia_cola: emvPayload, // Retrocompatibilidade
+          mp_pix_copia_cola: emvPayload,
           updated_at: new Date().toISOString(),
         })
         .eq("id", cobrancaId);
@@ -281,8 +283,7 @@ Deno.serve(async (req) => {
       } as CreateCobrancaResponse, 200);
     }
 
-    // 8. DESPACHO PARA ADAPTADOR DE GATEWAY (Server-to-Server com Service Role)
-    const adapterUrl = `${SUPABASE_URL}/functions/v1/create-${provedor}-payment`;
+    // 8. DESPACHO PARA O ADAPTADOR CORRESPONDENTE
     const adapterPayload: AdapterCreatePaymentInput = {
       cobrancaId,
       userId,
@@ -297,21 +298,19 @@ Deno.serve(async (req) => {
       correlationId: binding.correlation_id,
     };
 
-    console.log(`[create-cobranca] Despachando para adaptador: ${adapterUrl}`);
+    let adapterData: AdapterCreatePaymentOutput;
 
-    const adapterRes = await fetch(adapterUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        "Content-Type": "application/json",
-        "x-lunari-internal-caller": "create-cobranca",
-      },
-      body: JSON.stringify(adapterPayload),
-    });
+    if (provedor === "mercadopago") {
+      adapterData = await createMercadoPagoPayment(supabase, adapterPayload, SUPABASE_URL, PUBLIC_SITE_URL);
+    } else if (provedor === "infinitepay") {
+      adapterData = await createInfinitePayPayment(supabase, adapterPayload, SUPABASE_URL, PUBLIC_SITE_URL);
+    } else if (provedor === "asaas") {
+      adapterData = await createAsaasPayment(supabase, adapterPayload);
+    } else {
+      return errorResponse(`Provedor desconhecido: ${provedor}`, 400);
+    }
 
-    const adapterData: AdapterCreatePaymentOutput = await adapterRes.json();
-
-    if (!adapterRes.ok || !adapterData.success) {
+    if (!adapterData.success) {
       console.error(`[create-cobranca] Falha no adaptador ${provedor}:`, adapterData);
       await supabase
         .from("cobrancas")

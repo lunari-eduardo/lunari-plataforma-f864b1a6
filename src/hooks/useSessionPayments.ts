@@ -189,7 +189,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
           .from('usuarios_integracoes')
           .select('dados_extras')
           .eq('user_id', user.id)
-          .eq('tipo', 'asaas')
+          .eq('provedor', 'asaas')
           .maybeSingle();
 
         const [transacoesResult, cobrancasResult] = await Promise.all([
@@ -426,6 +426,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                 else if (parcela.status === 'recebido') statusRecebimento = 'recebido';
                 else if (parcela.status === 'antecipado') statusRecebimento = 'antecipado';
 
+                const isSandboxAsaas = origem === 'asaas' && asaasSandbox;
+
                 allPayments.push({
                   id: parcelaId,
                   valor: valorBruto,
@@ -435,7 +437,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                   numeroParcela: parcela.numero_parcela,
                   totalParcelas: c.total_parcelas || parcelas.length,
                   origem,
-                  editavel: false,
+                  editavel: isSandboxAsaas,
                   observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
                   valorLiquido: taxaTotalCalc > 0 ? valorLiq : undefined,
                   taxaTotal: taxaTotalCalc > 0 ? taxaTotalCalc : undefined,
@@ -446,8 +448,7 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
                   createdAt: parcela.created_at || undefined,
                   cobrancaId: c.id,
                   parcelaId: parcela.id,
-                  sandbox: (origem === 'asaas' && asaasSandbox) || undefined,
-
+                  sandbox: isSandboxAsaas || undefined,
                 });
               }
               continue; // Não adicionar a cobrança agregada
@@ -486,6 +487,8 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               }
             }
 
+            const isSandboxAsaas = origem === 'asaas' && asaasSandbox;
+
             allPayments.push({
               id: paymentId,
               valor: valorBruto,
@@ -493,13 +496,12 @@ export function useSessionPayments(sessionId: string, initialPayments: SessionPa
               tipo: 'pago',
               statusPagamento: 'pago',
               origem,
-              editavel: false,
+              editavel: isSandboxAsaas,
               observacoes: `${provedorLabel}${c.descricao ? ` - ${c.descricao}` : ''}`,
               valorLiquido: valorLiq,
               taxaTotal,
               cobrancaId: c.id,
-              sandbox: (origem === 'asaas' && asaasSandbox) || undefined,
-
+              sandbox: isSandboxAsaas || undefined,
             });
           }
         }

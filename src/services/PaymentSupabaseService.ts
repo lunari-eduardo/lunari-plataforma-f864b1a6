@@ -594,6 +594,32 @@ export class PaymentSupabaseService {
         return false;
       }
 
+      // Tratar exclusão de cobranças de gateway (Asaas, MP, IP ou parcelas)
+      let cobrancaIdToDelete: string | null = null;
+      if (paymentId.startsWith('asaas-parcela-')) {
+        const parcelaId = paymentId.replace('asaas-parcela-', '');
+        const { data: parcela } = await supabase
+          .from('cobranca_parcelas')
+          .select('cobranca_id')
+          .eq('id', parcelaId)
+          .maybeSingle();
+        if (parcela?.cobranca_id) {
+          cobrancaIdToDelete = parcela.cobranca_id;
+        }
+        await supabase.from('cobranca_parcelas').delete().eq('id', parcelaId);
+      } else if (paymentId.startsWith('asaas-') || paymentId.startsWith('mp-') || paymentId.startsWith('ip-')) {
+        cobrancaIdToDelete = paymentId.replace(/^(asaas-|mp-|ip-)/, '');
+      }
+
+      if (cobrancaIdToDelete) {
+        const isValidCobrancaUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cobrancaIdToDelete);
+        if (isValidCobrancaUUID) {
+          await supabase.from('cobranca_parcelas').delete().eq('cobranca_id', cobrancaIdToDelete);
+          await supabase.from('cobrancas').delete().eq('id', cobrancaIdToDelete).eq('user_id', userData.user.id);
+          console.log('✅ Cobrança excluída da tabela cobrancas:', cobrancaIdToDelete);
+        }
+      }
+
       // Verificar se paymentId é um UUID válido
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId);
 
@@ -643,23 +669,20 @@ export class PaymentSupabaseService {
         }
       }
 
-      if (idsParaDeletar.length === 0) {
-        console.warn('⚠️ Nenhuma transação encontrada para deletar:', paymentId);
-        return true; // Considerar sucesso se já não existe
+      if (idsParaDeletar.length > 0) {
+        // Deletar todas as transações encontradas
+        const { error: deleteError } = await supabase
+          .from('clientes_transacoes')
+          .delete()
+          .in('id', idsParaDeletar);
+
+        if (deleteError) {
+          console.error('❌ Erro ao deletar transações:', deleteError);
+          return false;
+        }
+
+        console.log(`✅ ${idsParaDeletar.length} transação(ões) deletada(s) com sucesso`);
       }
-
-      // Deletar todas as transações encontradas
-      const { error: deleteError } = await supabase
-        .from('clientes_transacoes')
-        .delete()
-        .in('id', idsParaDeletar);
-
-      if (deleteError) {
-        console.error('❌ Erro ao deletar transações:', deleteError);
-        return false;
-      }
-
-      console.log(`✅ ${idsParaDeletar.length} transação(ões) deletada(s) com sucesso`);
 
       // Disparar evento para atualizar UI
       window.dispatchEvent(new CustomEvent('payment-deleted', {
@@ -700,6 +723,34 @@ export class PaymentSupabaseService {
         return false;
       }
 
+      // Se for cobrança de gateway (ex: asaas-uuid), atualizar status em cobrancas
+      let cobrancaIdToUpdate: string | null = null;
+      if (paymentId.startsWith('asaas-parcela-')) {
+        const parcelaId = paymentId.replace('asaas-parcela-', '');
+        const { data: parcela } = await supabase
+          .from('cobranca_parcelas')
+          .select('cobranca_id')
+          .eq('id', parcelaId)
+          .maybeSingle();
+        if (parcela?.cobranca_id) {
+          cobrancaIdToUpdate = parcela.cobranca_id;
+        }
+      } else if (paymentId.startsWith('asaas-') || paymentId.startsWith('mp-') || paymentId.startsWith('ip-')) {
+        cobrancaIdToUpdate = paymentId.replace(/^(asaas-|mp-|ip-)/, '');
+      }
+
+      if (cobrancaIdToUpdate) {
+        const isValidCobrancaUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cobrancaIdToUpdate);
+        if (isValidCobrancaUUID) {
+          await supabase
+            .from('cobrancas')
+            .update({ status: 'estornado', updated_at: new Date().toISOString() })
+            .eq('id', cobrancaIdToUpdate)
+            .eq('user_id', user.id);
+          console.log('✅ Status de cobrança atualizado para estornado:', cobrancaIdToUpdate);
+        }
+      }
+
       const descricaoBase = `Estorno${motivo ? `: ${motivo}` : ''}`;
       const descricao = keepAsCredit
         ? `${descricaoBase} [Mantido como crédito do cliente]`
@@ -719,11 +770,10 @@ export class PaymentSupabaseService {
         });
 
       if (error) {
-        console.error('❌ Erro ao criar estorno:', error);
-        return false;
+        console.error('❌ Erro ao criar estorno em clientes_transacoes:', error);
+      } else {
+        console.log('✅ Estorno criado com sucesso em clientes_transacoes:', { paymentId, valor });
       }
-
-      console.log('✅ Estorno criado com sucesso:', { paymentId, valor });
 
       // Se marcado como "manter como crédito", concede o valor no ledger do cliente
       if (keepAsCredit) {
@@ -740,7 +790,6 @@ export class PaymentSupabaseService {
         });
         if (creditErr) {
           console.error('⚠️ Estorno gravado, mas falha ao registrar crédito:', creditErr);
-          // Não falha a operação: estorno já foi feito. Apenas alerta.
         } else {
           console.log('✅ Crédito registrado no ledger do cliente');
         }
