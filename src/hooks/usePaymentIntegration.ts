@@ -281,11 +281,11 @@ export function usePaymentIntegration() {
       if (!sessionData.session) throw new Error('No session');
 
       const response = await fetch(
-        `https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/mercadopago-oauth`,
+        `https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/mercadopago-connect`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionData.session.access_token}` },
-          body: JSON.stringify({ code, redirect_uri }),
+          body: JSON.stringify({ code, redirect_uri, redirectUri: redirect_uri }),
         }
       );
 

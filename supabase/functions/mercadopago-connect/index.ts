@@ -41,7 +41,8 @@ serve(async (req) => {
     const body = await req.json();
     console.log('[mercadopago-connect] Request body:', JSON.stringify(body));
 
-    const { code, redirectUri } = body;
+    const { code, redirectUri, redirect_uri } = body;
+    const finalRedirectUri = redirectUri || redirect_uri || `${supabaseUrl}/functions/v1/mercadopago-connect`;
 
     if (!code) {
       console.error('[mercadopago-connect] Missing authorization code');
@@ -55,7 +56,7 @@ serve(async (req) => {
       client_id: mpAppId,
       client_secret: mpClientSecret,
       code: code,
-      redirect_uri: redirectUri || `${supabaseUrl}/functions/v1/mercadopago-connect`,
+      redirect_uri: finalRedirectUri,
     };
 
     console.log('[mercadopago-connect] Exchanging code for token at:', tokenUrl);
