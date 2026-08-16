@@ -20,7 +20,6 @@ import {
   getProviderLabel,
   getPixKeyTypeLabel,
 } from '@/hooks/usePaymentIntegration';
-import { settingsDiverge } from '@/utils/paymentSettingsContext';
 import { pixLogo, infinitepayLogo, mercadopagoLogo, asaasLogo } from '@/assets/payment-logos';
 import { useAuth } from '@/contexts/AuthContext';
 import { PaymentConfigDrawer } from './PaymentConfigDrawer';
@@ -86,7 +85,6 @@ export function PaymentSettings() {
     updateMercadoPagoSettings,
     getMercadoPagoOAuthUrl,
     mpAppId,
-    migrateFromGallery,
   } = usePaymentIntegration();
 
   // Drawer state
@@ -288,12 +286,6 @@ export function PaymentSettings() {
                         Padrão
                       </Badge>
                     )}
-                    {(integration.provedor === 'asaas' || integration.provedor === 'mercadopago') &&
-                      settingsDiverge(integration.dadosExtrasRaw, integration.provedor) && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 gap-0.5 flex-shrink-0 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-600">
-                        Config. independente
-                      </Badge>
-                    )}
                   </div>
                   <span className="text-xs text-muted-foreground ml-auto mr-2 hidden sm:block truncate max-w-[180px]">{summary}</span>
                   <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => openDrawer(integration.provedor)}>
@@ -401,9 +393,6 @@ export function PaymentSettings() {
         updateAsaasSettings={updateAsaasSettings}
         userId={user?.id}
         asaasFees={asaasFees} setAsaasFees={setAsaasFees}
-        migrateFromGallery={migrateFromGallery}
-        asaasDadosExtrasRaw={asaasIntegration?.dadosExtrasRaw}
-        mpDadosExtrasRaw={mpIntegration?.dadosExtrasRaw}
       />
     </div>
   );

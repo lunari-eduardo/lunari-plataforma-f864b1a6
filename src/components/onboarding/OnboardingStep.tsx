@@ -25,9 +25,9 @@ export function OnboardingStep({
 }: OnboardingStepProps) {
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col items-center text-center space-y-2">
-        <h2 className="text-xl md:text-2xl font-light text-white tracking-wide">{title}</h2>
-        {subtitle && <p className="text-white/60 text-sm font-light">{subtitle}</p>}
+      <div className="space-y-1.5 text-left">
+        <h2 className="text-2xl md:text-[28px] font-normal text-white tracking-tight leading-snug">{title}</h2>
+        {subtitle && <p className="text-neutral-400 text-sm font-normal">{subtitle}</p>}
       </div>
 
       <div className="space-y-2">
@@ -45,7 +45,7 @@ export function OnboardingStep({
             id="onboarding-step-error"
             role="alert"
             aria-live="polite"
-            className="text-xs text-red-400 text-center font-light"
+            className="text-xs text-red-400 text-left font-light"
           >
             {error}
           </p>

@@ -144,7 +144,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Buscar nicho..."
-                className="w-full h-9 pl-9 pr-3 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#C97A4A]/60"
+                className="w-full h-9 pl-9 pr-3 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#C6A36A]/60"
               />
             </div>
           </div>
@@ -176,12 +176,12 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
                       'transition-colors duration-100',
                       isHighlighted && !isSelected && 'bg-white/[0.06]',
                       isSelected
-                        ? 'bg-[#C97A4A]/15 text-[#C97A4A] font-medium border-l-2 border-[#C97A4A]'
+                        ? 'bg-[#C6A36A]/15 text-[#C6A36A] font-medium border-l-2 border-[#C6A36A]'
                         : 'text-white/90',
                     )}
                   >
                     <span>{nicho}</span>
-                    {isSelected && <Check className="w-4 h-4 text-[#C97A4A]" />}
+                    {isSelected && <Check className="w-4 h-4 text-[#C6A36A]" />}
                   </button>
                 );
               })
@@ -199,11 +199,11 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col items-center text-center space-y-2">
-        <h2 className="text-xl md:text-2xl font-light text-white tracking-wide">
+      <div className="space-y-1.5 text-left">
+        <h2 className="text-2xl md:text-[28px] font-normal text-white tracking-tight leading-snug">
           Qual é o seu nicho principal?
         </h2>
-        <p className="text-white/60 text-sm font-light">
+        <p className="text-neutral-400 text-sm font-normal">
           Isso nos ajuda a personalizar sua experiência
         </p>
       </div>
@@ -223,7 +223,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
               'text-left text-sm font-light text-white placeholder:text-white/40',
               'transition-colors duration-150',
               'hover:bg-white/[0.06]',
-              'focus:outline-none focus:border-[#C97A4A]/60 focus:bg-white/[0.06]',
+              'focus:outline-none focus:border-[#C6A36A]/60 focus:bg-white/[0.06]',
               error && 'border-red-400/60',
             )}
           >
@@ -242,7 +242,7 @@ export function NichoCombobox({ value, onChange, error }: NichoComboboxProps) {
         {dropdownContent}
 
         {error && (
-          <p role="alert" aria-live="polite" className="text-xs text-red-400 text-center font-light">
+          <p role="alert" aria-live="polite" className="text-xs text-red-400 text-left font-light">
             {error}
           </p>
         )}

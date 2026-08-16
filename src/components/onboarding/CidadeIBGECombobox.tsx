@@ -29,7 +29,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="bg-[#C97A4A]/30 text-white rounded px-0.5">
+      <mark className="bg-[#C6A36A]/30 text-white rounded px-0.5">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}
@@ -199,7 +199,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
                       'transition-colors duration-100',
                       isHighlighted && !isSelected && 'bg-white/[0.06]',
                       isSelected
-                        ? 'bg-[#C97A4A]/15 text-[#C97A4A] font-medium border-l-2 border-[#C97A4A]'
+                        ? 'bg-[#C6A36A]/15 text-[#C6A36A] font-medium border-l-2 border-[#C6A36A]'
                         : 'text-white/90',
                     )}
                   >
@@ -210,7 +210,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
                       <span className="text-[10px] font-medium text-white/40 bg-white/[0.06] px-1.5 py-0.5 rounded">
                         {city.uf}
                       </span>
-                      {isSelected && <Check className="w-4 h-4 text-[#C97A4A]" />}
+                      {isSelected && <Check className="w-4 h-4 text-[#C6A36A]" />}
                     </span>
                   </button>
                 );
@@ -229,9 +229,9 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col items-center text-center space-y-2">
-        <h2 className="text-xl md:text-2xl font-light text-white tracking-wide">Onde você mora?</h2>
-        <p className="text-white/60 text-sm font-light">Selecione sua cidade</p>
+      <div className="space-y-1.5 text-left">
+        <h2 className="text-2xl md:text-[28px] font-normal text-white tracking-tight leading-snug">Onde você mora?</h2>
+        <p className="text-neutral-400 text-sm font-normal">Selecione sua cidade</p>
       </div>
 
       <div className="space-y-2" ref={containerRef}>
@@ -257,7 +257,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
               'w-full h-12 pl-11 pr-10 rounded-xl bg-white/[0.04] border border-white/10',
               'text-sm font-light text-white placeholder:text-white/40',
               'transition-colors duration-150',
-              'focus:outline-none focus:border-[#C97A4A]/60 focus:bg-white/[0.06]',
+              'focus:outline-none focus:border-[#C6A36A]/60 focus:bg-white/[0.06]',
               error && 'border-red-400/60',
             )}
           />
@@ -276,7 +276,7 @@ export function CidadeIBGECombobox({ value, onChange, error }: CidadeIBGECombobo
         {dropdownContent}
 
         {error && (
-          <p role="alert" aria-live="polite" className="text-xs text-red-400 text-center font-light">
+          <p role="alert" aria-live="polite" className="text-xs text-red-400 text-left font-light">
             {error}
           </p>
         )}

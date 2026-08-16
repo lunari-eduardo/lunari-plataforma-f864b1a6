@@ -14,37 +14,38 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
   ];
 
   return (
-    <div className="w-full px-2 pb-2">
-      <div className="flex items-center justify-between">
+    <div className="w-full pb-2">
+      <div className="flex items-center">
         {steps.map((step, index) => {
           const isComplete = step.number < currentStep;
           const isActive = step.number === currentStep;
-          const isReached = step.number <= currentStep;
 
           return (
             <React.Fragment key={step.number}>
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center shrink-0">
                 <div
                   className={`
-                    w-8 h-8 md:w-9 md:h-9 rounded-full border flex items-center justify-center
+                    w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center
                     transition-all duration-300
                     ${
-                      isReached
-                        ? 'bg-[#C97A4A] border-[#C97A4A] text-white shadow-[0_4px_14px_-4px_rgba(201,122,74,0.6)]'
-                        : 'bg-white/[0.04] border-white/15 text-white/50'
+                      isComplete
+                        ? 'bg-[#C6A36A] border border-[#C6A36A] text-[#121212]'
+                        : isActive
+                        ? 'bg-transparent border border-[#C6A36A] text-[#E4CFA8]'
+                        : 'bg-transparent border border-white/15 text-white/40'
                     }
                   `}
                 >
                   {isComplete ? (
-                    <Check className="w-4 h-4" strokeWidth={2.5} />
+                    <Check className="w-4 h-4 text-[#121212]" strokeWidth={2.5} />
                   ) : (
                     <span className="text-xs md:text-sm font-medium">{step.number}</span>
                   )}
                 </div>
                 <span
                   className={`
-                    mt-2 text-[11px] font-light tracking-wide hidden sm:block
-                    ${isActive ? 'text-[#C97A4A]' : isReached ? 'text-white/80' : 'text-white/40'}
+                    mt-2 text-[11px] font-normal tracking-wide
+                    ${isComplete || isActive ? 'text-[#D4A560]' : 'text-white/40'}
                   `}
                 >
                   {step.label}
@@ -52,13 +53,14 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
               </div>
 
               {index < steps.length - 1 && (
-                <div
-                  className={`
-                    flex-1 h-[2px] mx-1 md:mx-2 rounded-full
-                    transition-all duration-500
-                    ${isComplete ? 'bg-[#C97A4A]' : 'bg-white/10'}
-                  `}
-                />
+                <div className="flex-1 mx-2 self-start mt-4 md:mt-4.5">
+                  <div
+                    className={`
+                      h-[1px] w-full rounded-full transition-all duration-500
+                      ${step.number < currentStep ? 'bg-[#C6A36A]' : 'bg-white/10'}
+                    `}
+                  />
+                </div>
               )}
             </React.Fragment>
           );
@@ -67,3 +69,4 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
     </div>
   );
 }
+

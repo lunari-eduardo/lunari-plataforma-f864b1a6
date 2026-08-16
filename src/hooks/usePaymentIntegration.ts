@@ -3,12 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
-import { getContextSettings, setContextSettings, migrateSettings } from '@/utils/paymentSettingsContext';
+import { getUnifiedPaymentSettings, setUnifiedPaymentSettings } from '@/utils/paymentSettingsContext';
 
 export type PaymentProvider = 'pix_manual' | 'infinitepay' | 'mercadopago' | 'asaas';
 export type PixKeyType = 'cpf' | 'cnpj' | 'email' | 'telefone' | 'aleatoria';
-
-const CONTEXT: 'gestao' | 'gallery' = 'gestao';
 
 export interface PixManualData {
   chavePix: string;
@@ -51,7 +49,7 @@ export interface PaymentIntegration {
   status: 'ativo' | 'inativo' | 'erro_autenticacao';
   isDefault: boolean;
   dadosExtras: PixManualData | InfinitePayData | MercadoPagoData | AsaasData | null;
-  /** Raw dados_extras for context-aware operations */
+  /** Raw dados_extras */
   dadosExtrasRaw: any;
   conectadoEm: string | null;
   mpUserId?: string | null;
@@ -109,12 +107,11 @@ export function usePaymentIntegration() {
 
       const mappedIntegrations: PaymentIntegration[] = (integrations || []).map((i) => {
         const rawExtras = i.dados_extras as any;
-        // For Asaas and MP, read context-specific settings
         let resolvedExtras: any = rawExtras;
         if (i.provedor === 'asaas' && rawExtras) {
-          resolvedExtras = getContextSettings<AsaasData>(rawExtras, CONTEXT);
+          resolvedExtras = getUnifiedPaymentSettings<AsaasData>(rawExtras);
         } else if (i.provedor === 'mercadopago' && rawExtras) {
-          resolvedExtras = getContextSettings<MercadoPagoData>(rawExtras, CONTEXT);
+          resolvedExtras = getUnifiedPaymentSettings<MercadoPagoData>(rawExtras);
         }
 
         return {
@@ -214,7 +211,7 @@ export function usePaymentIntegration() {
 
       const { data: existing } = await supabase.from('usuarios_integracoes').select('id, dados_extras').eq('user_id', user.id).eq('provedor', 'asaas').maybeSingle();
 
-      const updatedExtras = setContextSettings(existing?.dados_extras || {}, CONTEXT, settings, 'asaas');
+      const updatedExtras = setUnifiedPaymentSettings(existing?.dados_extras || {}, settings);
 
       if (existing) {
         const { error } = await supabase.from('usuarios_integracoes').update({ status: 'ativo', access_token: apiKey, dados_extras: toJsonData(updatedExtras), is_default: setDefault, conectado_em: new Date().toISOString() }).eq('id', existing.id);
@@ -239,12 +236,12 @@ export function usePaymentIntegration() {
       const { data: existing } = await supabase.from('usuarios_integracoes').select('id, dados_extras').eq('user_id', user.id).eq('provedor', 'asaas').single();
       if (!existing) throw new Error('Asaas não configurado');
 
-      const currentSettings = getContextSettings<AsaasData>(existing.dados_extras, CONTEXT);
+      const currentSettings = getUnifiedPaymentSettings<AsaasData>(existing.dados_extras);
       const defaults: AsaasData = {
         environment: 'sandbox', habilitarPix: true, habilitarCartao: true, habilitarBoleto: false, maxParcelas: 12, absorverTaxa: false, taxaAntecipacao: false, taxaAntecipacaoCreditoAvista: 0, taxaAntecipacaoCreditoParcelado: 0,
       };
       const merged = { ...defaults, ...currentSettings, ...settings };
-      const updatedExtras = setContextSettings(existing.dados_extras, CONTEXT, merged, 'asaas');
+      const updatedExtras = setUnifiedPaymentSettings(existing.dados_extras, merged);
 
       const { error } = await supabase.from('usuarios_integracoes').update({ dados_extras: toJsonData(updatedExtras) }).eq('id', existing.id);
       if (error) throw error;
@@ -310,32 +307,16 @@ export function usePaymentIntegration() {
       const { data: existing } = await supabase.from('usuarios_integracoes').select('id, dados_extras').eq('user_id', user.id).eq('provedor', 'mercadopago').single();
       if (!existing) throw new Error('Mercado Pago não configurado');
 
-      const currentSettings = getContextSettings<MercadoPagoData>(existing.dados_extras, CONTEXT);
+      const currentSettings = getUnifiedPaymentSettings<MercadoPagoData>(existing.dados_extras);
       const defaults: MercadoPagoData = { habilitarPix: true, habilitarCartao: true, maxParcelas: 12, absorverTaxa: false };
       const merged = { ...defaults, ...currentSettings, ...settings };
-      const updatedExtras = setContextSettings(existing.dados_extras, CONTEXT, merged, 'mercadopago');
+      const updatedExtras = setUnifiedPaymentSettings(existing.dados_extras, merged);
 
       const { error } = await supabase.from('usuarios_integracoes').update({ dados_extras: toJsonData(updatedExtras) }).eq('id', existing.id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payment-integration'] }); toast.success('Configurações atualizadas!'); },
     onError: (error) => { console.error('Error updating MP settings:', error); toast.error('Erro ao salvar configurações'); },
-  });
-
-  const migrateFromGallery = useMutation({
-    mutationFn: async (provedor: 'asaas' | 'mercadopago') => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data: existing } = await supabase.from('usuarios_integracoes').select('id, dados_extras').eq('user_id', user.id).eq('provedor', provedor).single();
-      if (!existing) throw new Error('Integração não encontrada');
-
-      const updatedExtras = migrateSettings(existing.dados_extras, 'gallery', 'gestao', provedor);
-
-      const { error } = await supabase.from('usuarios_integracoes').update({ dados_extras: toJsonData(updatedExtras) }).eq('id', existing.id);
-      if (error) throw error;
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payment-integration'] }); toast.success('Configurações migradas da Gallery com sucesso!'); },
-    onError: (error) => { console.error('Error migrating settings:', error); toast.error('Erro ao migrar configurações'); },
   });
 
   const getMercadoPagoOAuthUrl = () => {
@@ -356,7 +337,6 @@ export function usePaymentIntegration() {
     connectMercadoPago,
     updateMercadoPagoSettings,
     getMercadoPagoOAuthUrl,
-    migrateFromGallery,
   };
 }
 
@@ -380,3 +360,4 @@ export function getPixKeyTypeLabel(type: PixKeyType): string {
   };
   return labels[type] || type;
 }
+

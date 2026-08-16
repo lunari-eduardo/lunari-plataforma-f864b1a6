@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Loader2 } from 'lucide-react';
+import { User, Loader2, ArrowRight } from 'lucide-react';
 import { OnboardingStep } from '@/components/onboarding/OnboardingStep';
 import { NichoCombobox } from '@/components/onboarding/NichoCombobox';
 import { CidadeIBGECombobox, CidadeIBGE } from '@/components/onboarding/CidadeIBGECombobox';
@@ -111,22 +111,22 @@ export default function Onboarding() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Overlay para legibilidade */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70 pointer-events-none" />
+      {/* Overlay para legibilidade idêntico ao login */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60 pointer-events-none" />
 
-      {/* Modal vidro escuro */}
+      {/* Modal vidro escuro estilo card image 2 */}
       <div
-        className="relative z-10 w-full max-w-[440px] rounded-2xl
-                   bg-[#0a0a0a]/70 backdrop-blur-xl
+        className="relative z-10 w-full max-w-[460px] rounded-[28px]
+                   bg-[#121212]/90 backdrop-blur-2xl
                    border border-white/10
-                   shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)]
-                   p-6 md:p-8 space-y-6
+                   shadow-[0_24px_70px_rgba(0,0,0,0.8)]
+                   p-7 sm:p-9 md:p-10 space-y-8
                    animate-in fade-in zoom-in-95 duration-300
                    motion-reduce:animate-none"
       >
         <StepIndicator currentStep={stepIndicatorValue} />
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {currentStep === 0 && (
             <OnboardingStep
               title="Como você quer ser chamado(a)?"
@@ -137,7 +137,7 @@ export default function Onboarding() {
                 setFormData((p) => ({ ...p, nome: value }));
                 setErrors((p) => ({ ...p, nome: '' }));
               }}
-              placeholder="Seu nome"
+              placeholder="Seu nome ou apelido"
               error={errors.nome}
               autoFocus
             />
@@ -165,18 +165,18 @@ export default function Onboarding() {
             />
           )}
 
-          {/* Botões */}
+          {/* Botões de Ação */}
           <div className="flex gap-3 pt-2">
             {currentStep > 0 && (
               <button
                 type="button"
                 onClick={handleBack}
                 disabled={isLoading}
-                className="flex-1 h-12 rounded-xl text-sm font-light text-white/80
-                           bg-white/[0.04] hover:bg-white/[0.08]
+                className="h-12 md:h-13 px-5 rounded-xl text-sm font-normal text-white/70
+                           bg-white/[0.04] hover:bg-white/[0.08] hover:text-white
                            border border-white/10 hover:border-white/20
                            transition-all duration-150
-                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C97A4A]/60
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6A36A]/60
                            disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Voltar
@@ -188,22 +188,27 @@ export default function Onboarding() {
               onClick={handleNext}
               disabled={isLoading}
               aria-busy={isLoading}
-              className="flex-1 h-12 rounded-xl text-sm font-medium text-white
-                         bg-gradient-to-b from-[#C97A4A] to-[#A8633A]
-                         hover:from-[#D4845A] hover:to-[#B66E40]
+              className="flex-1 h-12 md:h-13 rounded-xl text-sm md:text-base font-medium text-[#1A1A1A]
+                         bg-[#EDE8E1] hover:bg-[#F5F2EC] active:bg-[#E2DDD5]
                          active:scale-[0.99]
-                         shadow-[0_8px_24px_-8px_rgba(201,122,74,0.6)]
+                         shadow-[0_4px_20px_rgba(237,232,225,0.12)]
                          transition-all duration-150
                          flex items-center justify-center gap-2
-                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C97A4A]/60
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C6A36A]/60
                          disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin text-[#1A1A1A]" />
               ) : currentStep === 2 ? (
-                'Começar 🚀'
+                <>
+                  <span>Começar</span>
+                  <ArrowRight className="h-4 w-4 text-[#736B5E]" />
+                </>
               ) : (
-                'Continuar'
+                <>
+                  <span>Continuar</span>
+                  <ArrowRight className="h-4 w-4 text-[#736B5E]" />
+                </>
               )}
             </button>
           </div>
