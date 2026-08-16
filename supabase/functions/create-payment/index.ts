@@ -1,5 +1,5 @@
-// supabase/functions/mercadopago-create-link/index.ts
-// PROXY DE COMPATIBILIDADE: Redireciona chamadas legadas do Mercado Pago para o create-cobranca
+// supabase/functions/create-payment/index.ts
+// PROXY DE COMPATIBILIDADE: Redireciona todas as chamadas legadas para o orquestrador central create-cobranca
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/auth-guard.ts";
@@ -23,11 +23,11 @@ serve(async (req) => {
       headers: {
         Authorization: authHeader || `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         "Content-Type": "application/json",
-        "x-lunari-legacy-proxy": "mercadopago-create-link",
+        "x-lunari-legacy-proxy": "create-payment",
       },
       body: JSON.stringify({
         ...body,
-        provedor: "mercadopago",
+        provedor: body.provedor || body.provider,
         idempotencyKey: body.idempotencyKey || crypto.randomUUID(),
       }),
     });
@@ -39,7 +39,7 @@ serve(async (req) => {
     });
   } catch (err: any) {
     return new Response(
-      JSON.stringify({ success: false, error: err.message || "Erro no proxy mercadopago-create-link" }),
+      JSON.stringify({ success: false, error: err.message || "Erro no proxy create-payment" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -1,257 +1,176 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// supabase/functions/mercadopago-webhook/index.ts
+// Webhook do Mercado Pago com reconciliação determinística O(1) e máquina de estados
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
+import { corsHeaders, jsonResponse } from "../_shared/auth-guard.ts";
+import { normalizeGatewayStatus, canTransition } from "../_shared/state-machine.ts";
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    let body: any = {};
+    const url = new URL(req.url);
+    const topic = url.searchParams.get("topic") || url.searchParams.get("type");
+    const idFromQuery = url.searchParams.get("id") || url.searchParams.get("data.id");
 
-    const body = await req.json();
-    console.log('[mercadopago-webhook] Received:', JSON.stringify(body));
+    try {
+      body = await req.json();
+    } catch {
+      // Notificação IPN do Mercado Pago pode vir apenas via query params
+    }
 
-    const { type, data, action } = body;
+    console.log("[mercadopago-webhook] Recebido:", JSON.stringify({ body, query: Object.fromEntries(url.searchParams.entries()) }));
 
-    if (type === 'payment' || action?.includes('payment')) {
-      const paymentId = data?.id;
-      if (!paymentId) {
-        console.log('[mercadopago-webhook] No payment ID found, skipping');
-        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
+    // 1. Log preliminar do webhook para auditoria
+    await supabase.from("webhook_logs").insert({
+      provedor: "mercadopago",
+      payload: { body, query: Object.fromEntries(url.searchParams.entries()) },
+      headers: Object.fromEntries(req.headers.entries()),
+      status: "received",
+    }).then(() => {}, (err) => console.warn("[mercadopago-webhook] Falha no log:", err));
 
-      console.log('[mercadopago-webhook] Processing payment:', paymentId);
+    const type = body.type || topic;
+    const action = body.action;
+    const paymentId = body.data?.id || idFromQuery;
 
-      // ===== ESTRATÉGIA 1: Buscar cobrança diretamente por mp_payment_id (PIX) =====
-      let { data: cobranca } = await supabase
-        .from('cobrancas')
-        .select('*')
-        .eq('mp_payment_id', String(paymentId))
+    if (!paymentId || (type !== "payment" && !action?.includes("payment") && topic !== "payment")) {
+      console.log("[mercadopago-webhook] Evento ignorado (não é de pagamento ou ID ausente):", { type, action, paymentId });
+      return jsonResponse({ received: true });
+    }
+
+    console.log(`[mercadopago-webhook] Processando pagamento Mercado Pago: ${paymentId}`);
+
+    // 2. BUSCA O(1) DA COBRANÇA NO BANCO
+    let { data: cobranca } = await supabase
+      .from("cobrancas")
+      .select("*")
+      .or(`mp_payment_id.eq.${paymentId},provider_transaction_id.eq.${paymentId},id.eq.${paymentId}`)
+      .maybeSingle();
+
+    let paymentData: any = null;
+
+    // Se a cobrança já foi encontrada, usamos o token do fotógrafo dono para consultar dados de taxas atualizados
+    if (cobranca) {
+      const { data: integ } = await supabase
+        .from("usuarios_integracoes")
+        .select("access_token")
+        .eq("user_id", cobranca.user_id)
+        .eq("provedor", "mercadopago")
+        .eq("status", "ativo")
         .maybeSingle();
 
-      let payment: any = null;
-      let accessToken: string | null = null;
-
-      // ===== ESTRATÉGIA 2: Se não encontrou, consultar MP e buscar por preference_id (LINK) =====
-      if (!cobranca) {
-        console.log('[mercadopago-webhook] Cobrança não encontrada por mp_payment_id, tentando outras estratégias...');
-
-        const { data: integrations } = await supabase
-          .from('usuarios_integracoes')
-          .select('user_id, access_token')
-          .eq('provedor', 'mercadopago')
-          .eq('status', 'ativo');
-
-        console.log('[mercadopago-webhook] Encontradas', integrations?.length || 0, 'integrações ativas');
-
-        for (const integration of (integrations || [])) {
-          if (!integration.access_token) continue;
-
-          try {
-            const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-              headers: { 'Authorization': `Bearer ${integration.access_token}` }
-            });
-
-            if (mpResp.ok) {
-              payment = await mpResp.json();
-              accessToken = integration.access_token;
-              console.log('[mercadopago-webhook] Pagamento consultado com sucesso:', {
-                status: payment.status,
-                preference_id: payment.preference_id,
-                external_reference: payment.external_reference,
-                amount: payment.transaction_amount,
-                net_received: payment.transaction_details?.net_received_amount,
-                fee_details: payment.fee_details,
-              });
-              break;
-            }
-          } catch (e) {
-            console.log('[mercadopago-webhook] Erro ao consultar com token:', e);
+      if (integ?.access_token) {
+        try {
+          const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: { Authorization: `Bearer ${integ.access_token}` },
+          });
+          if (mpRes.ok) {
+            paymentData = await mpRes.json();
           }
+        } catch (e) {
+          console.warn("[mercadopago-webhook] Falha não impeditiva ao consultar pagamento no MP:", e);
         }
+      }
+    } else {
+      // Cobrança não encontrada por payment_id (ex: pagamento via Link de Preferência onde payment_id só nasce agora)
+      // Fazemos busca por token do fotógrafo ou varredura de integrações
+      const { data: integrations } = await supabase
+        .from("usuarios_integracoes")
+        .select("user_id, access_token")
+        .eq("provedor", "mercadopago")
+        .eq("status", "ativo");
 
-        if (!payment) {
-          console.log('[mercadopago-webhook] Não foi possível consultar pagamento no MP');
-          return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      for (const integ of integrations || []) {
+        if (!integ.access_token) continue;
+        try {
+          const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: { Authorization: `Bearer ${integ.access_token}` },
+          });
+          if (mpRes.ok) {
+            paymentData = await mpRes.json();
+            break;
+          }
+        } catch {
+          // Continua busca
         }
+      }
 
-        // ===== ESTRATÉGIA 2A: Buscar por preference_id =====
-        if (payment.preference_id) {
-          console.log('[mercadopago-webhook] Buscando por preference_id:', payment.preference_id);
-          
-          const { data: byPref } = await supabase
-            .from('cobrancas')
-            .select('*')
-            .eq('mp_preference_id', payment.preference_id)
+      if (paymentData) {
+        // Reconciliação direta por external_reference (cobranca.id) ou preference_id
+        if (paymentData.external_reference) {
+          const { data: byExtRef } = await supabase
+            .from("cobrancas")
+            .select("*")
+            .eq("id", paymentData.external_reference)
             .maybeSingle();
-
-          if (byPref) {
-            console.log('[mercadopago-webhook] Cobrança encontrada por preference_id:', byPref.id);
-            cobranca = byPref;
-          }
+          if (byExtRef) cobranca = byExtRef;
         }
 
-        // ===== ESTRATÉGIA 2B: Buscar por external_reference =====
-        if (!cobranca && payment.external_reference) {
-          console.log('[mercadopago-webhook] Buscando por external_reference:', payment.external_reference);
-          
-          const parts = payment.external_reference.split('|');
-          if (parts.length >= 2) {
-            const [userId, clienteId, sessionId] = parts;
-            
-            let query = supabase
-              .from('cobrancas')
-              .select('*')
-              .eq('user_id', userId)
-              .eq('cliente_id', clienteId)
-              .eq('status', 'pendente')
-              .eq('tipo_cobranca', 'link');
-
-            if (sessionId) {
-              query = query.eq('session_id', sessionId);
-            }
-
-            const { data: byRef } = await query
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (byRef) {
-              console.log('[mercadopago-webhook] Cobrança encontrada por external_reference:', byRef.id);
-              cobranca = byRef;
-            }
-          }
+        if (!cobranca && paymentData.preference_id) {
+          const { data: byPref } = await supabase
+            .from("cobrancas")
+            .select("*")
+            .or(`mp_preference_id.eq.${paymentData.preference_id},provider_order_id.eq.${paymentData.preference_id}`)
+            .maybeSingle();
+          if (byPref) cobranca = byPref;
         }
-
-        // Atualizar mp_payment_id para referência futura
-        if (cobranca && !cobranca.mp_payment_id) {
-          console.log('[mercadopago-webhook] Atualizando mp_payment_id na cobrança:', cobranca.id);
-          await supabase
-            .from('cobrancas')
-            .update({ 
-              mp_payment_id: String(paymentId),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', cobranca.id);
-        }
-      }
-
-      // Se ainda não encontrou cobrança, encerrar
-      if (!cobranca) {
-        console.log('[mercadopago-webhook] Cobrança não encontrada para payment_id:', paymentId);
-        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
-      console.log('[mercadopago-webhook] Cobrança encontrada:', {
-        id: cobranca.id,
-        session_id: cobranca.session_id,
-        cliente_id: cobranca.cliente_id,
-        valor: cobranca.valor,
-        tipo_cobranca: cobranca.tipo_cobranca
-      });
-
-      // Se ainda não consultamos o pagamento, buscar agora
-      if (!payment) {
-        const { data: integration } = await supabase
-          .from('usuarios_integracoes')
-          .select('access_token')
-          .eq('user_id', cobranca.user_id)
-          .eq('provedor', 'mercadopago')
-          .eq('status', 'ativo')
-          .single();
-
-        if (!integration?.access_token) {
-          console.log('[mercadopago-webhook] No MP token found for user, skipping');
-          return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-
-        accessToken = integration.access_token;
-
-        const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` },
-        });
-
-        if (!mpResponse.ok) {
-          console.error('[mercadopago-webhook] Failed to fetch payment from MP');
-          return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-
-        payment = await mpResponse.json();
-      }
-
-      console.log('[mercadopago-webhook] Payment status:', payment.status);
-
-      // Mapear status do MP para status interno
-      const statusMap: Record<string, string> = {
-        approved: 'pago',
-        cancelled: 'cancelado',
-        refunded: 'cancelado',
-        rejected: 'cancelado',
-      };
-      const newStatus = statusMap[payment.status] || 'pendente';
-
-      // ===== EXTRAIR DADOS DE TAXAS DA API DO MP =====
-      // net_received_amount inclui taxas de PIX e cartão
-      const netReceived = payment.transaction_details?.net_received_amount ?? null;
-      const totalFees = payment.fee_details?.reduce(
-        (sum: number, f: any) => sum + (f.amount || 0), 0
-      ) ?? 0;
-
-      console.log('[mercadopago-webhook] Dados de taxas MP:', {
-        transaction_amount: payment.transaction_amount,
-        net_received_amount: netReceived,
-        fee_details: payment.fee_details,
-        total_fees: totalFees,
-      });
-
-      // ===== ATUALIZAR COBRANÇA (com valor_liquido para taxas) =====
-      // O trigger ensure_transaction_on_cobranca_paid será disparado quando status mudar para 'pago'
-      // Ele automaticamente cria a transação com taxa_gateway = valor - valor_liquido
-      const updateData: Record<string, any> = {
-        status: newStatus,
-        mp_payment_id: String(paymentId),
-        data_pagamento: payment.status === 'approved' ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Gravar valor_liquido apenas quando aprovado e disponível
-      if (newStatus === 'pago' && netReceived !== null && netReceived !== undefined) {
-        updateData.valor_liquido = netReceived;
-        console.log('[mercadopago-webhook] Gravando valor_liquido:', netReceived, '(taxa_gateway será calculada pelo trigger)');
-      }
-
-      const { error: updateError } = await supabase
-        .from('cobrancas')
-        .update(updateData)
-        .eq('id', cobranca.id);
-
-      if (updateError) {
-        console.error('[mercadopago-webhook] Erro ao atualizar cobrança:', updateError);
-        return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
-      console.log('[mercadopago-webhook] Cobrança atualizada para status:', newStatus);
-
-      // A criação de transação e atualização de valor_pago são feitas automaticamente
-      // pelo trigger ensure_transaction_on_cobranca_paid quando status muda para 'pago'.
-      // Não é necessário criar transação manualmente aqui.
-      if (newStatus === 'pago') {
-        console.log('[mercadopago-webhook] Pagamento aprovado — trigger ensure_transaction_on_cobranca_paid cuidará da transação e recompute_session_paid');
       }
     }
 
-    return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!cobranca) {
+      console.warn(`[mercadopago-webhook] Nenhuma cobrança encontrada para payment_id=${paymentId}`);
+      return jsonResponse({ received: true, not_found: true });
+    }
 
-  } catch (error) {
-    console.error('[mercadopago-webhook] Error:', error);
-    return new Response(JSON.stringify({ received: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // 3. NORMALIZAÇÃO DO EVENTO VIA MÁQUINA DE ESTADOS
+    const rawStatus = paymentData?.status || "approved";
+    const { nextStatus, isPaymentConfirmed } = normalizeGatewayStatus("mercadopago", rawStatus, paymentData);
+
+    console.log(`[mercadopago-webhook] Transição: status_atual=${cobranca.status} -> proximo_status=${nextStatus} (raw=${rawStatus})`);
+
+    if (!canTransition(cobranca.status, nextStatus)) {
+      console.warn(`[mercadopago-webhook] Transição inválida ignorada: ${cobranca.status} -> ${nextStatus}`);
+      return jsonResponse({ received: true, skipped_transition: true });
+    }
+
+    // 4. ATUALIZAR COBRANÇA
+    const netReceived = paymentData?.transaction_details?.net_received_amount ?? null;
+    const updateData: Record<string, any> = {
+      status: nextStatus,
+      mp_payment_id: String(paymentId),
+      provider_transaction_id: String(paymentId),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isPaymentConfirmed) {
+      updateData.data_pagamento = new Date().toISOString();
+      if (netReceived !== null && netReceived !== undefined) {
+        updateData.valor_liquido = netReceived;
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from("cobrancas")
+      .update(updateData)
+      .eq("id", cobranca.id);
+
+    if (updateError) {
+      console.error("[mercadopago-webhook] Erro ao atualizar cobrança:", updateError);
+      return jsonResponse({ received: false, error: updateError.message }, 500);
+    }
+
+    console.log(`[mercadopago-webhook] Cobrança ${cobranca.id} atualizada com sucesso para status=${nextStatus}`);
+    return jsonResponse({ received: true, status: nextStatus, cobrancaId: cobranca.id });
+  } catch (error: any) {
+    console.error("[mercadopago-webhook] Erro inesperado:", error);
+    return jsonResponse({ received: true, error: error.message });
   }
 });

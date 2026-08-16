@@ -196,20 +196,44 @@ export function PaymentStatusCard({
     setIsRebilling(true);
     setSelectedProvider(provider);
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData?.session) {
-        toast.error('Sessão expirada. Recarregue a página e tente novamente.');
-        setIsRebilling(false);
-        return;
+      // 1. Obter cliente_id da galeria/sessão para garantir payload canônico
+      let finalClienteId: string | null = null;
+      let finalSessionId: string | null = sessionId || null;
+      let galeriaNome: string | null = null;
+
+      if (galleryId) {
+        const { data: gal } = await supabase
+          .from('galerias')
+          .select('cliente_id, session_id, nome_sessao')
+          .eq('id', galleryId)
+          .maybeSingle();
+        finalClienteId = gal?.cliente_id || null;
+        finalSessionId = gal?.session_id || finalSessionId;
+        galeriaNome = gal?.nome_sessao || null;
       }
-      
-      const response = await supabase.functions.invoke('gallery-create-payment', {
+
+      if (!finalClienteId && finalSessionId) {
+        const { data: sess } = await supabase
+          .from('clientes_sessoes')
+          .select('cliente_id')
+          .or(`id.eq.${finalSessionId},session_id.eq.${finalSessionId}`)
+          .maybeSingle();
+        finalClienteId = sess?.cliente_id || null;
+      }
+
+      const chargeValor = valorPendente > 0 ? valorPendente : valor;
+
+      const response = await supabase.functions.invoke('create-cobranca', {
         body: {
-          galleryId,
-          valorTotal: valor,
-          extraCount: extraCount || 0,
-          descricao: descricao || undefined,
-          provider,
+          galeriaId: galleryId || undefined,
+          clienteId: finalClienteId,
+          sessionId: finalSessionId || undefined,
+          valor: chargeValor,
+          qtdFotos: extraCount || 0,
+          descricao: descricao || (galeriaNome ? `Fotos extras - ${galeriaNome}` : 'Fotos extras'),
+          provedor: provider as any,
+          finalidade: 'fotos_extras',
+          idempotencyKey: crypto.randomUUID(),
         },
       });
 
@@ -241,12 +265,10 @@ export function PaymentStatusCard({
         return;
       }
 
-      if (data?.success && (data.checkoutUrl || data.galleryUrl)) {
-        const urlToShow = (provider === 'asaas' && data.galleryUrl) ? data.galleryUrl : data.checkoutUrl;
-        setNewCheckoutUrl(urlToShow || data.checkoutUrl);
-        if (data.providerFallback) {
-          toast.warning(`Provedor solicitado indisponível. Usando ${data.providerFallback}.`);
-        }
+      if (data?.success && (data.checkoutUrl || data.paymentLink || data.socialShareUrl)) {
+        const urlToShow = data.socialShareUrl || data.checkoutUrl || data.paymentLink;
+        setNewCheckoutUrl(urlToShow);
+        toast.success('Nova cobrança gerada com sucesso!');
         onStatusUpdated?.();
         return;
       }

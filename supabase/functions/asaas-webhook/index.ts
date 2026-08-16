@@ -291,22 +291,32 @@ async function markEventProcessed(adminClient: any, eventType: string, paymentId
 }
 
 async function findCobranca(adminClient: any, payment: any) {
-  // Try by asaas_installment_id first (installment group)
-  if (payment?.installment) {
+  // 1. Busca prioritária O(1) por externalReference (UUID da cobrança Lunari)
+  if (payment?.externalReference) {
     const { data } = await adminClient
       .from("cobrancas")
       .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
-      .eq("asaas_installment_id", payment.installment)
+      .eq("id", payment.externalReference)
       .maybeSingle();
     if (data) return data;
   }
 
-  // Fallback: by mp_payment_id
+  // 2. Busca por asaas_installment_id / provider_order_id (grupo parcelado)
+  if (payment?.installment) {
+    const { data } = await adminClient
+      .from("cobrancas")
+      .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
+      .or(`asaas_installment_id.eq.${payment.installment},provider_order_id.eq.${payment.installment}`)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  // 3. Busca por payment.id
   if (payment?.id) {
     const { data } = await adminClient
       .from("cobrancas")
       .select("id, status, valor, total_parcelas, asaas_installment_id, dados_extras, user_id")
-      .eq("mp_payment_id", payment.id)
+      .or(`asaas_payment_id.eq.${payment.id},provider_order_id.eq.${payment.id},provider_transaction_id.eq.${payment.id},mp_payment_id.eq.${payment.id}`)
       .maybeSingle();
     if (data) return data;
   }
@@ -518,6 +528,29 @@ Deno.serve(async (req) => {
           // Only mark as processed if upsert succeeded
           if (upsertSuccess && payment.id) {
             await markEventProcessed(adminClient, event, payment.id);
+
+            // Sincronizar status da cobranca principal
+            const parentStatus = (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED" || event === "PAYMENT_ANTICIPATED")
+              ? "pago"
+              : (event === "PAYMENT_REFUNDED")
+              ? "estornado"
+              : (event === "PAYMENT_CHARGEBACK_REQUESTED")
+              ? "chargeback"
+              : (event === "PAYMENT_DELETED")
+              ? "cancelado"
+              : null;
+
+            if (parentStatus) {
+              const cobrancaUpdate: Record<string, any> = {
+                status: parentStatus,
+                updated_at: new Date().toISOString(),
+              };
+              if (parentStatus === "pago") {
+                cobrancaUpdate.data_pagamento = new Date().toISOString();
+                if (payment.netValue) cobrancaUpdate.valor_liquido = payment.netValue;
+              }
+              await adminClient.from("cobrancas").update(cobrancaUpdate).eq("id", cobranca.id);
+            }
           }
 
           // Enrich cliente do CRM a partir do customer no Asaas (fire-and-forget)

@@ -193,26 +193,32 @@ export function AsaasCheckoutSection({
   const generatePix = useCallback(async () => {
     setPixLoading(true);
     try {
-      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+      const response = await supabase.functions.invoke('create-cobranca', {
         body: {
           clienteId,
           sessionId,
           valor,
           descricao,
+          provedor: 'asaas',
           billingType: 'PIX',
+          idempotencyKey: crypto.randomUUID(),
         },
       });
 
       if (response.error) throw new Error(response.error.message);
       if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar PIX');
 
-      setPixQrCode(response.data.pixQrCode ? `data:image/png;base64,${response.data.pixQrCode}` : null);
-      setPixCopiaECola(response.data.pixCopiaECola || null);
+      const qrCode = response.data.pixQrCodeBase64
+        ? (response.data.pixQrCodeBase64.startsWith('data:') ? response.data.pixQrCodeBase64 : `data:image/png;base64,${response.data.pixQrCodeBase64}`)
+        : null;
+
+      setPixQrCode(qrCode);
+      setPixCopiaECola(response.data.pixCopiaCola || null);
 
       onPaymentCreated({
         cobrancaId: response.data.cobrancaId,
-        pixCopiaECola: response.data.pixCopiaECola,
-        pixQrCode: response.data.pixQrCode,
+        pixCopiaECola: response.data.pixCopiaCola,
+        pixQrCode: response.data.pixQrCodeBase64,
         paid: false,
       });
 
@@ -227,24 +233,26 @@ export function AsaasCheckoutSection({
   const generateBoleto = useCallback(async () => {
     setBoletoLoading(true);
     try {
-      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+      const response = await supabase.functions.invoke('create-cobranca', {
         body: {
           clienteId,
           sessionId,
           valor,
           descricao,
+          provedor: 'asaas',
           billingType: 'BOLETO',
+          idempotencyKey: crypto.randomUUID(),
         },
       });
 
       if (response.error) throw new Error(response.error.message);
       if (!response.data?.success) throw new Error(response.data?.error || 'Erro ao gerar boleto');
 
-      setBoletoUrl(response.data.boletoUrl || null);
+      setBoletoUrl(response.data.checkoutUrl || null);
 
       onPaymentCreated({
         cobrancaId: response.data.cobrancaId,
-        boletoUrl: response.data.boletoUrl,
+        boletoUrl: response.data.checkoutUrl,
         paid: false,
       });
 
@@ -314,12 +322,13 @@ export function AsaasCheckoutSection({
 
     setCardLoading(true);
     try {
-      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+      const response = await supabase.functions.invoke('create-cobranca', {
         body: {
           clienteId,
           sessionId,
           valor,
           descricao,
+          provedor: 'asaas',
           billingType: 'CREDIT_CARD',
           installmentCount: parseInt(cardInstallments),
           creditCard: {
@@ -337,20 +346,21 @@ export function AsaasCheckoutSection({
             postalCode: cardCep.replace(/\D/g, ''),
             addressNumber: 'S/N',
           },
+          idempotencyKey: crypto.randomUUID(),
         },
       });
 
       if (response.error) throw new Error(response.error.message);
       if (!response.data?.success) throw new Error(response.data?.error || 'Erro no pagamento');
 
-      const isPaid = response.data.paid || response.data.creditCardStatus === 'CONFIRMED';
+      const isPaid = response.data.status === 'pago' || response.data.creditCardStatus === 'CONFIRMED';
       
-      if (isPaid) {
+      if (isPaid || response.data.success) {
         setCardSuccess(true);
-        toast.success('Pagamento aprovado!');
+        toast.success('Pagamento processado com sucesso!');
         onPaymentCreated({
           cobrancaId: response.data.cobrancaId,
-          paid: true,
+          paid: isPaid,
         });
       } else {
         throw new Error('Pagamento não aprovado. Tente outro cartão.');

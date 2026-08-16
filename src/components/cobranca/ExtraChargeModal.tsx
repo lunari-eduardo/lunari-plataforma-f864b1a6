@@ -125,13 +125,32 @@ export function ExtraChargeModal({
     setSubmitting(true);
     setResult(null);
     try {
+      // 1. Obter cliente_id e session_id da galeria
+      const { data: gal, error: galErr } = await supabase
+        .from('galerias')
+        .select('cliente_id, session_id, nome_sessao, fotos_incluidas')
+        .eq('id', galeriaId)
+        .maybeSingle();
+
+      if (galErr || !gal?.cliente_id) {
+        toast.error('Cliente não vinculado a esta galeria.');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke<GalleryPaymentResponse>(
-        'gallery-create-payment',
+        'create-cobranca',
         {
           body: {
-            galleryId: galeriaId,
-            provider,
-            descricao: descricao?.trim() || undefined,
+            galeriaId,
+            clienteId: gal.cliente_id,
+            sessionId: gal.session_id || undefined,
+            valor: calc.valor_a_cobrar,
+            qtdFotos: calc.extras_a_cobrar,
+            snapshotFotosIncluidas: gal.fotos_incluidas,
+            descricao: descricao?.trim() || `Fotos extras - ${gal.nome_sessao || 'Galeria'}`,
+            provedor: provider as any,
+            finalidade: 'fotos_extras',
+            idempotencyKey: crypto.randomUUID(),
           },
         },
       );

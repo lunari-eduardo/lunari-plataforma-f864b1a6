@@ -2,15 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Cobranca, TipoCobranca, CobrancaResponse, CreateCobrancaRequest, ProvedorPagamento } from '@/types/cobranca';
 import { toast } from 'sonner';
-import { generatePixPayload } from '@/utils/pixUtils';
+import { buildPaymentShareUrl } from '@/utils/domainUtils';
 
 interface UseCobrancaOptions {
   clienteId?: string;
   sessionId?: string;
 }
-
-// Note: Provider detection is now explicit via request.provedor
-// Gallery uses gallery-create-payment (Service Role) - NOT affected by these changes
 
 export function useCobranca(options: UseCobrancaOptions = {}) {
   const [cobrancas, setCobrancas] = useState<Cobranca[]>([]);
@@ -45,21 +42,21 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
         sessionId: c.session_id || undefined,
         valor: c.valor,
         descricao: c.descricao || undefined,
-        tipoCobranca: c.tipo_cobranca as TipoCobranca,
-        status: c.status as Cobranca['status'],
+        tipoCobranca: (c.tipo_cobranca as TipoCobranca) || 'link',
+        status: (c.status as Cobranca['status']) || 'pendente',
         provedor: (c.provedor as ProvedorPagamento) || 'mercadopago',
         // Mercado Pago fields
-        mpPaymentId: c.mp_payment_id || undefined,
-        mpPreferenceId: c.mp_preference_id || undefined,
+        mpPaymentId: c.mp_payment_id || c.provider_transaction_id || undefined,
+        mpPreferenceId: c.mp_preference_id || c.provider_order_id || undefined,
         mpQrCode: c.mp_qr_code || undefined,
-        mpQrCodeBase64: c.mp_qr_code_base64 || undefined,
-        mpPixCopiaCola: c.mp_pix_copia_cola || undefined,
-        mpPaymentLink: c.mp_payment_link || undefined,
+        mpQrCodeBase64: c.mp_qr_code_base64 || c.pix_qr_code_base64 || undefined,
+        mpPixCopiaCola: c.mp_pix_copia_cola || c.pix_copia_cola || undefined,
+        mpPaymentLink: c.mp_payment_link || c.checkout_url || undefined,
         mpExpirationDate: c.mp_expiration_date || undefined,
         // InfinitePay fields
-        ipCheckoutUrl: c.ip_checkout_url || undefined,
-        ipOrderNsu: c.ip_order_nsu || undefined,
-        ipTransactionNsu: c.ip_transaction_nsu || undefined,
+        ipCheckoutUrl: c.ip_checkout_url || c.checkout_url || undefined,
+        ipOrderNsu: c.ip_order_nsu || c.id,
+        ipTransactionNsu: c.ip_transaction_nsu || c.provider_transaction_id || undefined,
         ipReceiptUrl: c.ip_receipt_url || undefined,
         // Common fields
         dataPagamento: c.data_pagamento || undefined,
@@ -80,37 +77,52 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   }, [options.clienteId, options.sessionId]);
 
-  // Create Pix charge (Mercado Pago only) - kept for legacy/history viewing
+  // Create Pix charge (delegates to unified create-cobranca)
   const createPixCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      const provedor = request.provedor || 'mercadopago';
+      const correlationId = request.correlationId || crypto.randomUUID();
+      const idempotencyKey = crypto.randomUUID();
 
-      // PIX generation is now done via checkout link (MP checkout includes PIX option)
-      // This function is kept for backward compatibility
-
-      const response = await supabase.functions.invoke('mercadopago-create-pix', {
+      const response = await supabase.functions.invoke('create-cobranca', {
         body: {
           clienteId: request.clienteId,
           sessionId: request.sessionId,
+          galeriaId: request.galeriaId,
           valor: request.valor,
           descricao: request.descricao,
+          provedor,
+          finalidade: request.finalidade || 'sessao',
+          qtdFotos: request.qtdFotos,
+          snapshotFotosIncluidas: request.snapshotFotosIncluidas,
+          valorSessaoComponente: request.valorSessaoComponente,
+          valorExtrasComponente: request.valorExtrasComponente,
+          billingType: 'PIX',
+          correlationId,
+          idempotencyKey,
         },
       });
 
       if (response.error) throw response.error;
-      
       const result = response.data as CobrancaResponse;
-      
+
       if (result.success) {
         toast.success('Pix gerado com sucesso!');
         await fetchCobrancas();
       } else {
-        throw new Error(result.error || 'Failed to create Pix');
+        throw new Error(result.error || 'Falha ao gerar Pix');
       }
-      
-      return result;
+
+      const rawUrl = result.checkoutUrl || result.paymentLink;
+      const shareUrl = result.cobrancaId ? buildPaymentShareUrl(result.cobrancaId) : rawUrl;
+
+      return {
+        ...result,
+        provedor,
+        checkoutUrl: shareUrl,
+        paymentLink: shareUrl,
+      };
     } catch (error: any) {
       console.error('Error creating Pix:', error);
       toast.error(error.message || 'Erro ao gerar Pix');
@@ -120,86 +132,53 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   };
 
-  // Create payment link (routes to correct provider based on explicit provedor param)
+  // Create payment link (routes directly to unified create-cobranca orchestrator)
   const createLinkCharge = async (request: CreateCobrancaRequest, installments?: number): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
-      // Contrato Gestão↔Gallery (2026-07-12): cobrança de fotos extras PURA
-      // continua exclusiva da edge canônica `gallery-create-payment` (Gallery).
-      // A combinada `sessao_e_extras` (link único) é permitida no Gestão.
-      if (request.finalidade === 'fotos_extras') {
-        const msg =
-          'Cobrança de fotos extras (isolada) deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
-        toast.error(msg);
-        return { success: false, error: msg };
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      // Provider comes from the modal selection, NOT auto-detected
       const provedor = request.provedor;
       
-      if (!provedor || provedor === 'pix_manual') {
+      if (!provedor) {
         throw new Error('Selecione um provedor de pagamento válido');
       }
 
-      let response;
-      
-      if (provedor === 'infinitepay') {
-        // Use Gestão-specific InfinitePay function (isolated from Gallery)
-        response = await supabase.functions.invoke('gestao-infinitepay-create-link', {
-          body: {
-            clienteId: request.clienteId,
-            sessionId: request.sessionId,
-            valor: request.valor,
-            descricao: request.descricao,
-            finalidade: request.finalidade,
-            galeriaId: request.galeriaId,
-            qtdFotos: request.qtdFotos,
-            snapshotFotosIncluidas: request.snapshotFotosIncluidas,
-            correlationId: request.correlationId,
-            valorSessaoComponente: request.valorSessaoComponente,
-            valorExtrasComponente: request.valorExtrasComponente,
-          },
-        });
-      } else {
-        // Use Mercado Pago
-        response = await supabase.functions.invoke('mercadopago-create-link', {
-          body: {
-            clienteId: request.clienteId,
-            sessionId: request.sessionId,
-            valor: request.valor,
-            descricao: request.descricao,
-            installments,
-            finalidade: request.finalidade,
-            galeriaId: request.galeriaId,
-            qtdFotos: request.qtdFotos,
-            snapshotFotosIncluidas: request.snapshotFotosIncluidas,
-            correlationId: request.correlationId,
-            valorSessaoComponente: request.valorSessaoComponente,
-            valorExtrasComponente: request.valorExtrasComponente,
-          },
-        });
-      }
+      const correlationId = request.correlationId || crypto.randomUUID();
+      const idempotencyKey = crypto.randomUUID();
+
+      const requestBody = {
+        clienteId: request.clienteId,
+        sessionId: request.sessionId,
+        galeriaId: request.galeriaId,
+        valor: request.valor,
+        descricao: request.descricao,
+        finalidade: request.finalidade || 'sessao',
+        qtdFotos: request.qtdFotos,
+        snapshotFotosIncluidas: request.snapshotFotosIncluidas,
+        correlationId,
+        valorSessaoComponente: request.valorSessaoComponente,
+        valorExtrasComponente: request.valorExtrasComponente,
+        provedor,
+        installmentCount: installments,
+        idempotencyKey,
+      };
+
+      const response = await supabase.functions.invoke('create-cobranca', {
+        body: requestBody,
+      });
 
       if (response.error) throw response.error;
-      
       const result = response.data as CobrancaResponse;
-      
+
       if (result.success) {
         toast.success('Link de pagamento gerado!');
         await fetchCobrancas();
       } else {
-        throw new Error(result.error || 'Failed to create link');
+        throw new Error(result.error || 'Falha ao gerar link de pagamento');
       }
-      
-      // Normalize the response to always have both checkoutUrl and paymentLink.
-      // Preferir URL branded /l/{id} (preview no WhatsApp com logo do fotógrafo)
-      // quando o backend retornar cobrancaId; senão manter o link original.
-      const { buildPaymentShareUrl } = await import('@/utils/domainUtils');
+
       const rawUrl = result.checkoutUrl || result.paymentLink;
       const shareUrl = result.cobrancaId ? buildPaymentShareUrl(result.cobrancaId) : rawUrl;
+
       return {
         ...result,
         provedor,
@@ -215,114 +194,51 @@ export function useCobranca(options: UseCobrancaOptions = {}) {
     }
   };
 
-  // Create PIX Manual charge locally (no Edge Function)
+  // Create PIX Manual charge via unified orchestrator
   const createPixManualCharge = async (request: CreateCobrancaRequest): Promise<CobrancaResponse> => {
     setCreatingCharge(true);
     try {
-      // Contrato Gestão↔Gallery (2026-07-12): fotos extras isoladas continuam
-      // no Gallery (gallery-create-payment). Combinada `sessao_e_extras` OK.
-      if (request.finalidade === 'fotos_extras') {
-        const msg =
-          'Cobrança de fotos extras (isolada) deve ser gerada pelo Gallery (gallery-create-payment). Use o botão "Cobrar extras".';
-        toast.error(msg);
-        return { success: false, error: msg };
-      }
+      const correlationId = request.correlationId || crypto.randomUUID();
+      const idempotencyKey = crypto.randomUUID();
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Fetch PIX Manual configuration from user's integrations
-      const { data: integracao, error: integError } = await supabase
-        .from('usuarios_integracoes')
-        .select('dados_extras')
-        .eq('user_id', user.id)
-        .eq('provedor', 'pix_manual')
-        .eq('status', 'ativo')
-        .single();
-
-      if (integError || !integracao?.dados_extras) {
-        throw new Error('PIX Manual não configurado. Configure nas Integrações.');
-      }
-
-      const dadosExtras = integracao.dados_extras as {
-        chavePix: string;
-        nomeTitular: string;
+      const requestBody = {
+        clienteId: request.clienteId,
+        sessionId: request.sessionId,
+        galeriaId: request.galeriaId,
+        valor: request.valor,
+        descricao: request.descricao,
+        finalidade: request.finalidade || 'sessao',
+        qtdFotos: request.qtdFotos,
+        snapshotFotosIncluidas: request.snapshotFotosIncluidas,
+        correlationId,
+        valorSessaoComponente: request.valorSessaoComponente,
+        valorExtrasComponente: request.valorExtrasComponente,
+        provedor: 'pix_manual' as ProvedorPagamento,
+        idempotencyKey,
       };
 
-      if (!dadosExtras.chavePix || !dadosExtras.nomeTitular) {
-        throw new Error('Configuração PIX incompleta. Verifique a chave e nome do titular.');
-      }
-
-      // Generate PIX EMV payload locally
-      const pixPayload = generatePixPayload({
-        chavePix: dadosExtras.chavePix,
-        nomeBeneficiario: dadosExtras.nomeTitular,
-        valor: request.valor,
-        identificador: request.sessionId?.substring(0, 20) || '***',
+      const response = await supabase.functions.invoke('create-cobranca', {
+        body: requestBody,
       });
 
-      // Save charge to database — respeita finalidade recebida.
-      const finalidadeReq = request.finalidade ?? 'sessao';
-      const insertPayload: Record<string, unknown> = {
-        user_id: user.id,
-        cliente_id: request.clienteId,
-        session_id: request.sessionId || null,
-        valor: request.valor,
-        descricao: request.descricao || null,
-        tipo_cobranca: 'pix',
-        provedor: 'pix_manual',
-        status: 'pendente',
-        mp_pix_copia_cola: pixPayload, // Reuse existing field
-        finalidade: finalidadeReq,
-        correlation_id: request.correlationId || crypto.randomUUID(),
-      };
+      if (response.error) throw response.error;
+      const result = response.data as CobrancaResponse;
 
-      if (finalidadeReq === 'sessao_e_extras') {
-        insertPayload.galeria_id = request.galeriaId ?? null;
-        insertPayload.qtd_fotos = request.qtdFotos ?? null;
-        insertPayload.snapshot_fotos_incluidas = request.snapshotFotosIncluidas ?? null;
-        insertPayload.valor_sessao_componente = request.valorSessaoComponente ?? null;
-        insertPayload.valor_extras_componente = request.valorExtrasComponente ?? null;
+      if (result.success) {
+        toast.success('PIX gerado com sucesso!');
+        await fetchCobrancas();
+      } else {
+        throw new Error(result.error || 'Falha ao gerar PIX Manual');
       }
 
-      if (finalidadeReq === 'sessao' && request.sessionId) {
-        const { assertNotAmbiguousSessionChargeClient } = await import('@/components/cobranca/_chargeGuards');
-        const guard = await assertNotAmbiguousSessionChargeClient(request.sessionId, request.valor);
-        if (guard.error) throw new Error(guard.error.message);
-      }
-
-
-      const { data: cobranca, error } = await supabase
-        .from('cobrancas')
-        .insert(insertPayload as any)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success('PIX gerado com sucesso!');
-      await fetchCobrancas();
-
-      const mappedCobranca: Cobranca = {
-        id: cobranca.id,
-        userId: cobranca.user_id,
-        clienteId: cobranca.cliente_id,
-        sessionId: cobranca.session_id || undefined,
-        valor: cobranca.valor,
-        descricao: cobranca.descricao || undefined,
-        tipoCobranca: cobranca.tipo_cobranca as TipoCobranca,
-        status: cobranca.status as Cobranca['status'],
-        provedor: 'pix_manual',
-        mpPixCopiaCola: pixPayload,
-        createdAt: cobranca.created_at,
-        updatedAt: cobranca.updated_at,
-      };
+      const rawUrl = result.checkoutUrl || result.paymentLink;
+      const shareUrl = result.cobrancaId ? buildPaymentShareUrl(result.cobrancaId) : rawUrl;
 
       return {
-        success: true,
-        cobranca: mappedCobranca,
-        pixPayload,
+        ...result,
         provedor: 'pix_manual',
+        checkoutUrl: shareUrl,
+        paymentLink: shareUrl,
       };
     } catch (error: any) {
       console.error('Error creating PIX Manual:', error);

@@ -56,7 +56,7 @@ export const createGalleryPayment = defineCommand({
     },
   ],
   async handler(input, ctx) {
-    const { data, error } = await supabase.functions.invoke("gallery-create-payment", {
+    const { data, error } = await supabase.functions.invoke("create-payment", {
       body: input,
     });
 

@@ -240,12 +240,13 @@ export function CombinedChargeModal({
     if (invalid) return;
     setAsaasPixLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('gestao-asaas-create-payment', {
+      const { data, error } = await supabase.functions.invoke('create-cobranca', {
         body: {
           clienteId,
           sessionId,
           valor: valorTotal,
           descricao: descricao?.trim() || undefined,
+          provedor: 'asaas',
           billingType: 'PIX',
           finalidade: 'sessao_e_extras',
           galeriaId: galeriaId ?? null,
@@ -253,19 +254,20 @@ export function CombinedChargeModal({
           snapshotFotosIncluidas: snapshotFotosIncluidas ?? null,
           valorSessaoComponente,
           valorExtrasComponente,
+          idempotencyKey: crypto.randomUUID(),
         },
       });
       if (error) throw error;
       const payload = (data ?? {}) as {
         success?: boolean;
         error?: string;
-        pixQrCode?: string;
-        pixCopiaECola?: string;
+        pixQrCodeBase64?: string;
+        pixCopiaCola?: string;
         cobrancaId?: string;
       };
       if (payload.success === false) throw new Error(payload.error || 'Falha Asaas PIX.');
-      setAsaasPixQrCode(payload.pixQrCode ? `data:image/png;base64,${payload.pixQrCode}` : null);
-      setAsaasPixCopiaECola(payload.pixCopiaECola || null);
+      setAsaasPixQrCode(payload.pixQrCodeBase64 ? `data:image/png;base64,${payload.pixQrCodeBase64}` : null);
+      setAsaasPixCopiaECola(payload.pixCopiaCola || null);
       setAsaasPixModalOpen(true);
       if (payload.cobrancaId) setCurrentChargeId(payload.cobrancaId);
       queryClient.invalidateQueries({ queryKey: ['cobrancas'] });

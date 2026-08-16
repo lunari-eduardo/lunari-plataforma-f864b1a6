@@ -1,9 +1,13 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
+// supabase/functions/checkout-process-payment/index.ts
+// Terminal público de checkout transparente do Asaas, validando formulário do cliente,
+// enriquecendo CRM e delegando a execução ao adaptador create-asaas-payment.
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
+import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
+import { AdapterCreatePaymentInput, AdapterCreatePaymentOutput, ClienteContact } from "../_shared/payment-types.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface PayerContact {
   name?: string;
@@ -14,9 +18,8 @@ interface PayerContact {
 
 interface RequestBody {
   cobrancaId: string;
-  billingType: 'PIX' | 'CREDIT_CARD';
+  billingType: "PIX" | "CREDIT_CARD";
   installmentCount?: number;
-  /** Dados coletados inline no checkout público (email/CPF/telefone/nome faltantes). */
   payerContact?: PayerContact;
   creditCard?: {
     holderName: string;
@@ -35,538 +38,156 @@ interface RequestBody {
   };
 }
 
-
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: RequestBody = await req.json();
     const { cobrancaId, billingType, installmentCount, creditCard, creditCardHolderInfo, payerContact } = body;
 
     if (!cobrancaId || !billingType) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'cobrancaId e billingType são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse("cobrancaId e billingType são obrigatórios", 400);
     }
 
-    // ——— Normalizadores/validadores comuns ———
-    const isAsciiEmail = (v?: string | null) => {
-      if (!v) return false;
-      const s = String(v).trim();
-      if (/[^\x00-\x7F]/.test(s)) return false;
-      return /^[\x21-\x7E]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s);
-    };
-    const digitsOnly = (v?: string | null) => (v ? String(v).replace(/\D/g, '') : '');
-    const normalizePhone = (v?: string | null): string | null => {
-      const d = digitsOnly(v);
-      if (!d) return null;
-      const local = d.length > 11 && d.startsWith('55') ? d.slice(2) : d;
-      return local.length === 10 || local.length === 11 ? local : null;
-    };
-
-
-    // 1. Fetch and validate cobrança
+    // 1. Buscar cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
-      .from('cobrancas')
-      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, dados_extras')
-      .eq('id', cobrancaId)
+      .from("cobrancas")
+      .select("id, user_id, cliente_id, session_id, valor, descricao, status, provedor, dados_extras")
+      .eq("id", cobrancaId)
       .maybeSingle();
 
     if (cobrancaError || !cobranca) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Cobrança não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse("Cobrança não encontrada", 404);
     }
 
-    if (cobranca.status !== 'pendente') {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: cobranca.status === 'pago' ? 'Esta cobrança já foi paga' : 'Cobrança não disponível',
-          code: 'INVALID_STATUS',
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (cobranca.status !== "pendente") {
+      return jsonResponse({
+        success: false,
+        error: cobranca.status === "pago" ? "Esta cobrança já foi paga" : "Cobrança não disponível para pagamento",
+        code: "INVALID_STATUS",
+      }, 400);
     }
 
-    const userId = cobranca.user_id;
-    const valor = cobranca.valor;
-
-    // 2. Fetch photographer's Asaas integration
-    const { data: integracao } = await supabase
-      .from('usuarios_integracoes')
-      .select('access_token, dados_extras')
-      .eq('user_id', userId)
-      .eq('provedor', 'asaas')
-      .eq('status', 'ativo')
-      .order('is_default', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!integracao?.access_token) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Integração Asaas não configurada' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const asaasApiKey = integracao.access_token;
-    const settings = (integracao.dados_extras || {}) as {
-      environment?: string;
-      maxParcelas?: number;
-      absorverTaxa?: boolean;
-      ireiAntecipar?: boolean;
-      repassarTaxaAntecipacao?: boolean;
-      incluirTaxaAntecipacao?: boolean;
-    };
-
-    const asaasBaseUrl = settings.environment === 'production'
-      ? 'https://api.asaas.com'
-      : 'https://api-sandbox.asaas.com';
-
-    // 3. Get or create Asaas customer — mescla dados do CRM com payerContact (inline collection)
-    let asaasCustomerId: string | null = null;
-
+    // 2. Enriquecimento de contato do cliente no CRM
     const { data: cliente } = await supabase
-      .from('clientes')
-      .select('nome, email, telefone, whatsapp, cpf_cnpj')
-      .eq('id', cobranca.cliente_id)
+      .from("clientes")
+      .select("id, nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, numero, complemento, bairro, cidade, estado")
+      .eq("id", cobranca.cliente_id)
       .maybeSingle();
 
-    // Merge: CRM primeiro, payerContact preenche o que faltar.
-    const mergedEmail = isAsciiEmail(cliente?.email) ? String(cliente!.email).trim()
-      : isAsciiEmail(payerContact?.email) ? String(payerContact!.email).trim()
-      : null;
-    const mergedName = cliente?.nome?.trim() || payerContact?.name?.trim() || null;
-    const mergedPhone = normalizePhone(cliente?.whatsapp || cliente?.telefone) || normalizePhone(payerContact?.phone);
-    const cpfFromCrm = digitsOnly((cliente as any)?.cpf_cnpj);
-    const cpfFromInline = digitsOnly(payerContact?.cpfCnpj);
-    const mergedCpf = (cpfFromCrm.length === 11 || cpfFromCrm.length === 14)
-      ? cpfFromCrm
-      : (cpfFromInline.length === 11 || cpfFromInline.length === 14 ? cpfFromInline : null);
-
-    // Persistir de volta no CRM tudo que veio inline e ainda está vazio no CRM.
-    if (payerContact) {
+    if (payerContact && cobranca.cliente_id) {
       const patch: Record<string, string> = {};
-      const isEmpty = (v: unknown) => v == null || (typeof v === 'string' && v.trim() === '');
+      const isEmpty = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "");
+
       if (payerContact.name?.trim() && isEmpty(cliente?.nome)) patch.nome = payerContact.name.trim();
-      if (isAsciiEmail(payerContact.email) && isEmpty(cliente?.email)) patch.email = String(payerContact.email).trim();
-      const phInline = normalizePhone(payerContact.phone);
-      if (phInline && isEmpty(cliente?.whatsapp) && isEmpty(cliente?.telefone)) {
-        (patch as any).whatsapp = phInline;
+      if (payerContact.email?.trim() && isEmpty(cliente?.email)) patch.email = payerContact.email.trim().toLowerCase();
+      if (payerContact.phone?.trim() && isEmpty(cliente?.whatsapp) && isEmpty(cliente?.telefone)) {
+        patch.whatsapp = payerContact.phone.trim();
       }
-      if (cpfFromInline && cpfFromInline.length >= 11 && isEmpty((cliente as any)?.cpf_cnpj)) {
-        (patch as any).cpf_cnpj = cpfFromInline;
+      if (payerContact.cpfCnpj?.trim() && isEmpty(cliente?.cpf_cnpj)) {
+        patch.cpf_cnpj = payerContact.cpfCnpj.trim();
       }
+
       if (Object.keys(patch).length > 0) {
-        await supabase.from('clientes').update(patch).eq('id', cobranca.cliente_id);
-        console.log(`📝 CRM enriquecido a partir do checkout: ${Object.keys(patch).join(', ')}`);
+        await supabase.from("clientes").update(patch).eq("id", cobranca.cliente_id);
+        console.log(`[checkout-process-payment] CRM enriquecido:`, Object.keys(patch));
       }
     }
 
-    // 3a. Busca customer existente (por email → por externalReference)
-    if (mergedEmail) {
-      const searchResp = await fetch(`${asaasBaseUrl}/v3/customers?email=${encodeURIComponent(mergedEmail)}`, {
-        headers: { access_token: asaasApiKey },
-      });
-      if (searchResp.ok) {
-        const searchData = await searchResp.json();
-        if (searchData.data?.length > 0) asaasCustomerId = searchData.data[0].id;
-      }
-    }
-    if (!asaasCustomerId) {
-      const refResp = await fetch(`${asaasBaseUrl}/v3/customers?externalReference=${encodeURIComponent(cobranca.cliente_id)}`, {
-        headers: { access_token: asaasApiKey },
-      });
-      if (refResp.ok) {
-        const refData = await refResp.json();
-        if (refData.data?.length > 0) asaasCustomerId = refData.data[0].id;
-      }
-    }
-
-    const customerPayload: Record<string, unknown> = {
-      name: mergedName || 'Cliente',
-      email: mergedEmail || undefined,
-      phone: mergedPhone || undefined,
-      mobilePhone: mergedPhone || undefined,
-      cpfCnpj: mergedCpf || undefined,
-      externalReference: cobranca.cliente_id,
+    const mergedCliente: ClienteContact = {
+      id: cobranca.cliente_id || undefined,
+      nome: payerContact?.name || cliente?.nome || creditCard?.holderName || "Cliente",
+      email: payerContact?.email || cliente?.email || creditCardHolderInfo?.email,
+      telefone: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || creditCardHolderInfo?.phone,
+      whatsapp: payerContact?.phone || cliente?.whatsapp || cliente?.telefone || creditCardHolderInfo?.phone,
+      cpfCnpj: payerContact?.cpfCnpj || cliente?.cpf_cnpj || creditCardHolderInfo?.cpfCnpj,
+      cep: cliente?.cep || creditCardHolderInfo?.postalCode,
+      endereco: cliente?.endereco,
+      numero: cliente?.numero || creditCardHolderInfo?.addressNumber,
+      complemento: cliente?.complemento,
+      bairro: cliente?.bairro,
+      cidade: cliente?.cidade,
+      uf: cliente?.estado,
     };
 
-    if (asaasCustomerId) {
-      // Atualiza customer com dados mesclados; retry sem email se rejeitado.
-      const doPut = async (body: Record<string, unknown>) => {
-        const res = await fetch(`${asaasBaseUrl}/v3/customers/${asaasCustomerId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-          body: JSON.stringify(body),
-        });
-        return { ok: res.ok, data: await res.json().catch(() => null) };
-      };
-      const clean = Object.fromEntries(Object.entries(customerPayload).filter(([, v]) => v !== undefined && v !== null && v !== ''));
-      const upd = await doPut(clean);
-      if (!upd.ok) {
-        const errs = Array.isArray(upd.data?.errors) ? upd.data.errors : [];
-        const emailErr = errs.some((e: any) => String(e?.code || '').toLowerCase().includes('invalid_email') || String(e?.description || '').toLowerCase().includes('email'));
-        if (emailErr && 'email' in clean) {
-          const { email: _drop, ...rest } = clean; void _drop;
-          const retry = await doPut(rest);
-          if (!retry.ok) console.warn('[checkout-process] customer update falhou mesmo sem email', retry.data);
-        } else {
-          console.warn('[checkout-process] customer update falhou', upd.data);
-        }
-      }
-    } else {
-      const cleanCreate = Object.fromEntries(Object.entries(customerPayload).filter(([, v]) => v !== undefined && v !== null && v !== ''));
-      const createResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-        body: JSON.stringify(cleanCreate),
-      });
-      const createData = await createResp.json();
-      if (createResp.ok && createData.id) {
-        asaasCustomerId = createData.id;
-      } else {
-        const errs = Array.isArray(createData?.errors) ? createData.errors : [];
-        const emailErr = errs.some((e: any) => String(e?.code || '').toLowerCase().includes('invalid_email') || String(e?.description || '').toLowerCase().includes('email'));
-        if (emailErr && 'email' in cleanCreate) {
-          const { email: _drop, ...rest } = cleanCreate; void _drop;
-          const retryResp = await fetch(`${asaasBaseUrl}/v3/customers`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-            body: JSON.stringify(rest),
-          });
-          const retryData = await retryResp.json();
-          if (retryResp.ok && retryData.id) {
-            asaasCustomerId = retryData.id;
-            console.warn('[checkout-process] customer criado sem email (rejeitado pelo Asaas)');
-          } else {
-            console.error('[checkout-process] customer create falhou (retry):', retryData);
-            return new Response(
-              JSON.stringify({ success: false, error: 'Erro ao criar cliente no Asaas', code: 'ASAAS_CUSTOMER_ERROR' }),
-              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-        } else {
-          console.error('[checkout-process] customer create falhou:', createData);
-          return new Response(
-            JSON.stringify({ success: false, error: 'Erro ao criar cliente no Asaas', code: 'ASAAS_CUSTOMER_ERROR' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-    }
-
-    // 3b. Guard-rail: PIX exige CPF/CNPJ no customer Asaas.
-    if (billingType === 'PIX' && !mergedCpf) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'CPF/CNPJ do pagador é obrigatório para gerar PIX no Asaas.', code: 'MISSING_CPF' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-
-    // 4. Resolve fee settings (per-charge overrides from cobranca.dados_extras > global settings)
-    const chargeOverrides = (cobranca.dados_extras || {}) as {
-      repassarTaxasProcessamento?: boolean;
-      anteciparParcelas?: boolean;
-      repassarTaxaAntecipacao?: boolean;
-    };
-    const hasOverrides = Object.keys(chargeOverrides).length > 0;
-
-    const legacyAntecipar = settings.incluirTaxaAntecipacao === true;
-    const globalAbsorverTaxa = !!settings.absorverTaxa;
-    const globalIreiAntecipar = settings.ireiAntecipar ?? legacyAntecipar;
-    const globalRepassarAntecipacao = globalIreiAntecipar ? (settings.repassarTaxaAntecipacao ?? legacyAntecipar) : false;
-
-    const repassarTaxas = hasOverrides ? (chargeOverrides.repassarTaxasProcessamento ?? !globalAbsorverTaxa) : !globalAbsorverTaxa;
-    const ireiAntecipar = hasOverrides ? (chargeOverrides.anteciparParcelas ?? globalIreiAntecipar) : globalIreiAntecipar;
-    const repassarAntecipacao = ireiAntecipar
-      ? (hasOverrides ? (chargeOverrides.repassarTaxaAntecipacao ?? globalRepassarAntecipacao) : globalRepassarAntecipacao)
-      : false;
-
-    let valorFinal = valor;
-
-    if (billingType === 'CREDIT_CARD' && (repassarTaxas || repassarAntecipacao)) {
-      const installments = installmentCount && installmentCount > 1 ? installmentCount : 1;
-
-      try {
-        const feesResp = await fetch(`${asaasBaseUrl}/v3/myAccount/fees`, {
-          headers: { access_token: asaasApiKey },
-        });
-
-        if (feesResp.ok) {
-          const feesData = await feesResp.json();
-          const payment = feesData.payment || {};
-          const ccFees = payment.creditCard || {};
-          const anticipationCC = (feesData.anticipation || {}).creditCard || {};
-
-          const operationValue = ccFees.operationValue ?? 0.49;
-          let percentageFee = 0;
-
-          const hasDiscount = ccFees.hasValidDiscount === true;
-          const discountExpiration = ccFees.discountExpiration;
-          const discountValid = hasDiscount && (!discountExpiration || new Date(discountExpiration) > new Date());
-
-          if (discountValid) {
-            if (installments === 1) percentageFee = ccFees.discountOneInstallmentPercentage ?? ccFees.oneInstallmentPercentage ?? 2.99;
-            else if (installments <= 6) percentageFee = ccFees.discountUpToSixInstallmentsPercentage ?? ccFees.upToSixInstallmentsPercentage ?? 3.49;
-            else if (installments <= 12) percentageFee = ccFees.discountUpToTwelveInstallmentsPercentage ?? ccFees.upToTwelveInstallmentsPercentage ?? 3.99;
-            else percentageFee = ccFees.discountUpToTwentyOneInstallmentsPercentage ?? ccFees.upToTwentyOneInstallmentsPercentage ?? 4.29;
-          } else {
-            if (installments === 1) percentageFee = ccFees.oneInstallmentPercentage ?? 2.99;
-            else if (installments <= 6) percentageFee = ccFees.upToSixInstallmentsPercentage ?? 3.49;
-            else if (installments <= 12) percentageFee = ccFees.upToTwelveInstallmentsPercentage ?? 3.99;
-            else percentageFee = ccFees.upToTwentyOneInstallmentsPercentage ?? 4.29;
-          }
-
-          const processingCost = (valor * percentageFee / 100) + operationValue;
-
-          let anticipationCost = 0;
-          if (ireiAntecipar && repassarAntecipacao) {
-            const detachedMonthlyFee = anticipationCC.detachedMonthlyFeeValue ?? 1.25;
-            const installmentMonthlyFee = anticipationCC.installmentMonthlyFeeValue ?? 1.70;
-            const taxaMensal = installments === 1 ? detachedMonthlyFee : installmentMonthlyFee;
-
-            if (taxaMensal > 0) {
-              const valorParcela = valor / installments;
-              let valorLiquido = 0;
-              for (let i = 1; i <= installments; i++) {
-                const taxaTotal = taxaMensal * i;
-                valorLiquido += valorParcela * (1 - taxaTotal / 100);
-              }
-              anticipationCost = Math.round((valor - valorLiquido) * 100) / 100;
-            }
-          }
-
-          valorFinal = Math.round((valor + (repassarTaxas ? processingCost : 0) + (repassarAntecipacao ? anticipationCost : 0)) * 100) / 100;
-          console.log(`📊 Fee calc: repassarTaxas=${repassarTaxas}, antecipar=${ireiAntecipar}, repassarAntecipacao=${repassarAntecipacao}, processing=R$${processingCost.toFixed(2)}, anticipation=R$${anticipationCost.toFixed(2)}, total=R$${valorFinal.toFixed(2)}`);
-        }
-      } catch (feeErr) {
-        console.warn('Error fetching Asaas fees for payment:', feeErr);
-      }
-    }
-
-    // 5. Create payment in Asaas
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 3);
-
-    const paymentBody: Record<string, unknown> = {
-      customer: asaasCustomerId,
+    // 3. Invocar o adaptador create-asaas-payment via Service Role
+    const adapterUrl = `${SUPABASE_URL}/functions/v1/create-asaas-payment`;
+    const adapterPayload: AdapterCreatePaymentInput = {
+      cobrancaId: cobranca.id,
+      userId: cobranca.user_id,
+      valor: Number(cobranca.valor),
+      descricao: cobranca.descricao || "Serviço fotográfico",
+      cliente: mergedCliente,
+      integrationData: {},
       billingType,
-      value: valorFinal,
-      dueDate: dueDate.toISOString().split('T')[0],
-      description: cobranca.descricao || 'Cobrança Lunari',
-      externalReference: cobranca.session_id || cobranca.cliente_id,
+      creditCard,
+      creditCardHolderInfo,
+      installmentCount,
     };
 
-    if (billingType === 'CREDIT_CARD' && installmentCount && installmentCount > 1) {
-      const maxParcelas = settings.maxParcelas || 12;
-      paymentBody.installmentCount = Math.min(installmentCount, maxParcelas);
-      paymentBody.installmentValue = valorFinal / (paymentBody.installmentCount as number);
-    }
+    console.log(`[checkout-process-payment] Delegando ao create-asaas-payment para cobranca=${cobranca.id}, billingType=${billingType}`);
 
-    if (billingType === 'CREDIT_CARD' && creditCard) {
-      paymentBody.creditCard = creditCard;
-      paymentBody.creditCardHolderInfo = creditCardHolderInfo;
-    }
-
-    console.log(`💳 Creating Asaas payment: ${billingType}, R$ ${valorFinal}, customer: ${asaasCustomerId}`);
-
-    const paymentResp = await fetch(`${asaasBaseUrl}/v3/payments`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', access_token: asaasApiKey },
-      body: JSON.stringify(paymentBody),
+    const adapterRes = await fetch(adapterUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        "x-lunari-internal-caller": "checkout-process-payment",
+      },
+      body: JSON.stringify(adapterPayload),
     });
 
-    const paymentData = await paymentResp.json();
+    const adapterData: AdapterCreatePaymentOutput = await adapterRes.json();
 
-    if (!paymentResp.ok) {
-      const errorMsg = paymentData.errors?.[0]?.description || 'Erro ao processar pagamento';
-      console.error('Asaas payment error:', paymentData);
-      return new Response(
-        JSON.stringify({ success: false, error: errorMsg }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!adapterRes.ok || !adapterData.success) {
+      console.error("[checkout-process-payment] Adaptador Asaas retornou erro:", adapterData);
+      return jsonResponse({
+        success: false,
+        error: adapterData.error || "Erro ao processar pagamento",
+        code: adapterData.errorCode || "ASAAS_ERROR",
+      }, 400);
     }
 
-    console.log(`✅ Asaas payment created: ${paymentData.id}, status: ${paymentData.status}`);
-
-    // 6. Get PIX QR code if needed
-    let pixData: { encodedImage?: string; payload?: string } | null = null;
-    if (billingType === 'PIX') {
-      const pixResp = await fetch(`${asaasBaseUrl}/v3/payments/${paymentData.id}/pixQrCode`, {
-        headers: { access_token: asaasApiKey },
-      });
-      if (pixResp.ok) {
-        pixData = await pixResp.json();
-      }
-    }
-
-    // 7. Resolve installment data
-    const resolvedInstallmentCount = paymentBody.installmentCount as number | undefined;
-    const totalParcelas = resolvedInstallmentCount && resolvedInstallmentCount > 1 ? resolvedInstallmentCount : 1;
-    const asaasInstallmentId = paymentData.installment || null;
-
-    // ========================================================
-    // CRITICAL FIX: Update cobrança pai FIRST (before parcelas)
-    // This prevents the reconcile trigger from thinking 1 parcela = full payment
-    // ========================================================
-    const updateData: Record<string, unknown> = {
-      mp_payment_id: paymentData.id,
-      total_parcelas: totalParcelas,
-      asaas_installment_id: asaasInstallmentId,
+    // 4. Atualizar registro da cobrança
+    const updatePayload: Record<string, any> = {
+      provider_order_id: adapterData.providerOrderId || null,
+      asaas_payment_id: adapterData.providerOrderId || null,
+      checkout_url: adapterData.checkoutUrl || null,
+      pix_copia_cola: adapterData.pixCopiaCola || null,
+      pix_qr_code_base64: adapterData.pixQrCodeBase64 || null,
+      mp_pix_copia_cola: adapterData.pixCopiaCola || null, // Retrocompatibilidade
+      dados_extras: {
+        ...(cobranca.dados_extras || {}),
+        ...(adapterData.dadosExtras || {}),
+      },
       updated_at: new Date().toISOString(),
     };
 
-    if (billingType === 'PIX' && pixData) {
-      updateData.mp_qr_code_base64 = pixData.encodedImage;
-      updateData.mp_pix_copia_cola = pixData.payload;
+    if (billingType === "PIX") {
+      updatePayload.tipo_cobranca = "pix";
+    } else if (billingType === "CREDIT_CARD") {
+      updatePayload.tipo_cobranca = "cartao";
+      if (installmentCount) updatePayload.total_parcelas = installmentCount;
     }
 
-    // Always update cobrança BEFORE creating parcelas
-    await supabase
-      .from('cobrancas')
-      .update(updateData)
-      .eq('id', cobrancaId);
+    await supabase.from("cobrancas").update(updatePayload).eq("id", cobranca.id);
 
-    console.log(`📋 Cobrança ${cobrancaId} updated: total_parcelas=${totalParcelas}, mp_payment_id=${paymentData.id}`);
+    console.log(`[checkout-process-payment] Cobrança ${cobranca.id} processada com sucesso!`);
 
-    // 8. If credit card CONFIRMED immediately, create parcelas
-    // REGRA: valor_bruto = cobranca.valor / totalParcelas (valor original do fotógrafo, NUNCA o inflado)
-    // taxa_gateway = max(0, valor_bruto - netValue) — quando repassar, netValue > bruto → taxa = 0
-    let paid = false;
-    if (billingType === 'CREDIT_CARD' && paymentData.status === 'CONFIRMED') {
-      try {
-        const valorBrutoParcela = Math.round((valor / totalParcelas) * 100) / 100;
-
-        if (totalParcelas > 1 && asaasInstallmentId) {
-          // Parcelado: buscar TODOS os payments do installment
-          const installmentsResp = await fetch(
-            `${asaasBaseUrl}/v3/payments?installment=${asaasInstallmentId}&limit=100`,
-            { headers: { access_token: asaasApiKey } }
-          );
-
-          if (installmentsResp.ok) {
-            const installmentsData = await installmentsResp.json();
-            const payments = installmentsData.data || [];
-            console.log(`💰 CC CONFIRMED (installment): ${payments.length} payments found`);
-
-            let allOk = true;
-            for (const p of payments) {
-              const netValue = p.netValue ?? valorBrutoParcela;
-              // When repassarTaxas=true, netValue > valorBruto → taxa = 0
-              const taxaGateway = Math.max(0, Math.round((valorBrutoParcela - netValue) * 100) / 100);
-              const isPaid = ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes(p.status);
-
-              const { error: parcelaError } = await supabase
-                .from('cobranca_parcelas')
-                .upsert({
-                  cobranca_id: cobrancaId,
-                  asaas_payment_id: p.id,
-                  numero_parcela: p.installmentNumber || 1,
-                  valor_bruto: valorBrutoParcela,
-                  valor_liquido: netValue,
-                  taxa_gateway: taxaGateway,
-                  status: isPaid ? (p.status === 'CONFIRMED' ? 'confirmado' : 'recebido') : 'pendente',
-                  billing_type: 'CREDIT_CARD',
-                  data_pagamento: isPaid ? (p.paymentDate || new Date().toISOString().split('T')[0]) : null,
-                  data_vencimento: p.dueDate || null,
-                  data_credito: p.creditDate || null,
-                }, { onConflict: 'asaas_payment_id' })
-                .select()
-                .maybeSingle();
-
-              if (parcelaError) {
-                console.error(
-                  `❌ Error creating parcela ${p.installmentNumber} | cobranca=${cobrancaId} payment=${p.id}:`,
-                  parcelaError,
-                );
-                allOk = false;
-              }
-
-            }
-            if (allOk && payments.length > 0) paid = true;
-          } else {
-            console.warn('Could not fetch installment payments, falling back to single parcela');
-          }
-        }
-
-        // Single payment (or fallback)
-        if (!paid) {
-          const detailResp = await fetch(`${asaasBaseUrl}/v3/payments/${paymentData.id}`, {
-            headers: { access_token: asaasApiKey },
-          });
-
-          if (detailResp.ok) {
-            const detail = await detailResp.json();
-            const netValue = detail.netValue ?? valorBrutoParcela;
-            const taxaGateway = Math.max(0, Math.round((valorBrutoParcela - netValue) * 100) / 100);
-
-            console.log(`💰 CC CONFIRMED: bruto=${valorBrutoParcela}, netValue=${netValue}, taxa=${taxaGateway}`);
-
-            const { error: parcelaError } = await supabase
-              .from('cobranca_parcelas')
-              .upsert({
-                cobranca_id: cobrancaId,
-                asaas_payment_id: paymentData.id,
-                numero_parcela: 1,
-                valor_bruto: valorBrutoParcela,
-                valor_liquido: netValue,
-                taxa_gateway: taxaGateway,
-                status: 'confirmado',
-                billing_type: 'CREDIT_CARD',
-                data_pagamento: new Date().toISOString().split('T')[0],
-                data_vencimento: paymentData.dueDate || new Date().toISOString().split('T')[0],
-              }, { onConflict: 'asaas_payment_id' })
-              .select()
-              .maybeSingle();
-
-            if (parcelaError) {
-              console.error(
-                `❌ Error creating parcela for CONFIRMED CC | cobranca=${cobrancaId} payment=${paymentData.id}:`,
-                parcelaError,
-              );
-            } else {
-              paid = true;
-            }
-
-          } else {
-            console.warn('Could not fetch payment details for CONFIRMED CC');
-          }
-        }
-      } catch (detailErr) {
-        console.warn('Error in CC confirmation flow:', detailErr);
-      }
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        cobrancaId,
-        asaasPaymentId: paymentData.id,
-        paid,
-        creditCardStatus: billingType === 'CREDIT_CARD' ? paymentData.status : undefined,
-        pixQrCode: pixData?.encodedImage,
-        pixCopiaECola: pixData?.payload,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Checkout process payment error:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return jsonResponse({
+      success: true,
+      paymentId: adapterData.providerOrderId,
+      cobrancaId: cobranca.id,
+      pixQrCode: adapterData.pixCopiaCola,
+      pixQrCodeBase64: adapterData.pixQrCodeBase64,
+      invoiceUrl: adapterData.checkoutUrl,
+      billingType,
+    }, 200);
+  } catch (err: any) {
+    console.error("[checkout-process-payment] Exceção inesperada:", err);
+    return errorResponse(err.message || "Erro interno ao processar checkout", 500);
   }
 });

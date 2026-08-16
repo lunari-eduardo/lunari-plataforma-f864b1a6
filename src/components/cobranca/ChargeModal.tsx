@@ -385,14 +385,16 @@ export function ChargeModal({
     await persistPayerToCrm();
     setAsaasPixLoading(true);
     try {
-      const response = await supabase.functions.invoke('gestao-asaas-create-payment', {
+      const response = await supabase.functions.invoke('create-cobranca', {
         body: {
           clienteId,
           sessionId,
           valor,
           descricao: descricao || undefined,
+          provedor: 'asaas',
           billingType: 'PIX',
           finalidade: binding.finalidade,
+          idempotencyKey: crypto.randomUUID(),
         },
       });
 
@@ -401,9 +403,11 @@ export function ChargeModal({
         throw new Error(mapBackendError(response.data?.code, response.data?.error));
       }
 
-      const qrCode = response.data.pixQrCode ? `data:image/png;base64,${response.data.pixQrCode}` : null;
+      const qrCode = response.data.pixQrCodeBase64
+        ? (response.data.pixQrCodeBase64.startsWith('data:') ? response.data.pixQrCodeBase64 : `data:image/png;base64,${response.data.pixQrCodeBase64}`)
+        : null;
       setAsaasPixQrCode(qrCode);
-      setAsaasPixCopiaECola(response.data.pixCopiaECola || null);
+      setAsaasPixCopiaECola(response.data.pixCopiaCola || null);
       setAsaasPixModalOpen(true);
       setCurrentChargeId(response.data.cobrancaId);
     } catch (err) {
@@ -417,9 +421,6 @@ export function ChargeModal({
   const handleAsaasGenerateLink = async () => {
     const binding = await buildBindingPayload();
     if (!binding) return;
-    // Link Asaas NÃO bloqueia por dados faltantes — o próprio cliente completa
-    // no checkout público (`/checkout/:id`). Aqui só validamos que temos um nome
-    // para identificar o pagador na cobrança gerada.
     if (!payer.nome?.trim()) {
       const { toast } = await import('sonner');
       toast.error('Informe pelo menos o nome do pagador antes de gerar o link.');
@@ -429,52 +430,30 @@ export function ChargeModal({
 
     setAsaasLinkLoading(true);
     try {
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('Não autenticado');
-
-      // Build per-charge overrides metadata
-      const chargeOverrides = {
-        repassarTaxasProcessamento: overrideRepassarTaxas,
-        anteciparParcelas: overrideAntecipar,
-        repassarTaxaAntecipacao: overrideAntecipar ? overrideRepassarAntecipacao : false,
-      };
-
-      // Create cobrança record locally with per-charge overrides stored in dados_extras
-      const insertPayload: Record<string, unknown> = {
-        user_id: session.user.id,
-        cliente_id: clienteId,
-        session_id: sessionId || null,
+      const result = await createLinkCharge({
+        clienteId,
+        sessionId,
         valor,
         descricao: descricao || 'Cobrança Asaas',
-        tipo_cobranca: 'link',
+        tipoCobranca: 'link',
         provedor: 'asaas',
-        status: 'pendente',
-        dados_extras: chargeOverrides,
         finalidade: binding.finalidade,
-        correlation_id: crypto.randomUUID(),
-      };
-      // Este modal sempre cobra a sessão; extras têm modal dedicado.
-
-      const { data: cobranca, error: insertError } = await supabase
-        .from('cobrancas')
-        .insert(insertPayload as any)
-        .select('id')
-        .single();
-
-      if (insertError || !cobranca) throw new Error('Erro ao criar cobrança');
-
-      // URL branded para WhatsApp: /l/{id} devolve OG dinâmico com logo do
-      // fotógrafo e redireciona humanos para /checkout/{id} (PublicCheckout).
-      const checkoutUrl = buildPaymentShareUrl(cobranca.id);
-
-      setCurrentCharge({
-        paymentLink: checkoutUrl,
-        checkoutUrl: checkoutUrl,
-        status: 'pendente',
       });
-      setCurrentChargeId(cobranca.id);
-      setAsaasMode('link');
+
+      if (result.success) {
+        const linkUrl = result.checkoutUrl || result.paymentLink;
+        if (linkUrl) {
+          setCurrentCharge({
+            paymentLink: linkUrl,
+            checkoutUrl: linkUrl,
+            status: 'pendente',
+          });
+          if (result.cobrancaId) {
+            setCurrentChargeId(result.cobrancaId);
+          }
+          setAsaasMode('link');
+        }
+      }
     } catch (err) {
       const { toast } = await import('sonner');
       toast.error(err instanceof Error ? err.message : 'Erro ao gerar link');
