@@ -106,25 +106,11 @@ export class WorkflowSupabaseService {
         patch.valor_total = valorBase;
       }
       if (!rcPacote) {
-        patch.regras_congeladas = {
-          modelo: 'completo',
-          dataCongelamento: new Date().toISOString(),
-          pacote: {
-            id: pkg.id,
-            nome: pkg.nome,
-            valorBase,
-            valorFotoExtra: Number(pkg.valor_foto_extra) || 0,
-            fotosIncluidas: Number(pkg.fotos_incluidas) || 0,
-            categoria: categoriaNome,
-            categoriaId,
-            produtosIncluidos: produtos,
-          },
-          produtos,
-          precificacaoFotoExtra: {
-            modelo: 'fixo',
-            valorFixo: Number(pkg.valor_foto_extra) || 0,
-          },
-        };
+        const { pricingFreezingService } = await import('@/services/PricingFreezingService');
+        patch.regras_congeladas = await pricingFreezingService.congelarDadosCompletos(
+          pkg.id,
+          categoriaNome
+        );
       }
 
       const { data: updated } = await supabase
@@ -361,29 +347,11 @@ export class WorkflowSupabaseService {
           console.warn('⚠️ Freezing sem .pacote — reconstruindo a partir de packageData');
           if (packageData) {
             valorBasePacote = Number(packageData.valor_base) || 0;
-            regrasCongeladas = {
-              modelo: 'completo',
-              dataCongelamento: new Date().toISOString(),
-              pacote: {
-                id: packageData.id,
-                nome: packageData.nome,
-                valorBase: valorBasePacote,
-                valorFotoExtra: Number(packageData.valor_foto_extra) || 0,
-                fotosIncluidas: Number(packageData.fotos_incluidas) || 0,
-                categoria: (packageData as any).categorias?.nome || categoria || 'Sessão',
-                categoriaId: packageData.categoria_id,
-                produtosIncluidos: Array.isArray(packageData.produtos_incluidos)
-                  ? packageData.produtos_incluidos
-                  : [],
-              },
-              produtos: Array.isArray(packageData.produtos_incluidos)
-                ? packageData.produtos_incluidos
-                : [],
-              precificacaoFotoExtra: {
-                modelo: 'fixo',
-                valorFixo: Number(packageData.valor_foto_extra) || 0,
-              },
-            };
+            const categoriaFinal = (packageData as any).categorias?.nome || categoria || 'Sessão';
+            regrasCongeladas = await pricingFreezingService.congelarDadosCompletos(
+              packageData.id,
+              categoriaFinal
+            );
           } else {
             valorBasePacote = 0;
             regrasCongeladas = {

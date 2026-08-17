@@ -20,9 +20,16 @@ import { formatarMoeda } from '@/utils/currencyUtils';
 interface TabelaPrecosModalProps {
   categoriaId: string;
   categoriaNome: string;
+  tabelaInicial?: TabelaPrecos | null;
+  onSaved?: () => void;
 }
 
-export default function TabelaPrecosModal({ categoriaId, categoriaNome }: TabelaPrecosModalProps) {
+export default function TabelaPrecosModal({ 
+  categoriaId, 
+  categoriaNome,
+  tabelaInicial,
+  onSaved
+}: TabelaPrecosModalProps) {
   const [open, setOpen] = useState(false);
   const [tabela, setTabela] = useState<TabelaPrecos | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,20 +38,24 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome }: Tabela
   // Carregar tabela da categoria ao abrir modal
   useEffect(() => {
     if (open) {
-      const tabelaExistente = obterTabelaCategoria(categoriaId);
-      if (tabelaExistente) {
-        setTabela(tabelaExistente);
+      if (tabelaInicial) {
+        setTabela(tabelaInicial);
       } else {
-        // Criar tabela exemplo se não existir
-        const novaTabela = {
-          ...criarTabelaExemplo(),
-          id: crypto.randomUUID(),
-          nome: `Tabela ${categoriaNome}`
-        };
-        setTabela(novaTabela);
+        const tabelaExistente = obterTabelaCategoria(categoriaId);
+        if (tabelaExistente) {
+          setTabela(tabelaExistente);
+        } else {
+          // Criar tabela exemplo se não existir
+          const novaTabela = {
+            ...criarTabelaExemplo(),
+            id: crypto.randomUUID(),
+            nome: `Tabela ${categoriaNome}`
+          };
+          setTabela(novaTabela);
+        }
       }
     }
-  }, [open, categoriaId, categoriaNome]);
+  }, [open, categoriaId, categoriaNome, tabelaInicial]);
 
   const salvarTabela = async () => {
     if (!tabela) return;
@@ -66,6 +77,7 @@ export default function TabelaPrecosModal({ categoriaId, categoriaNome }: Tabela
         toast.success('Tabela de preços progressivos salva com sucesso!');
       }
       
+      onSaved?.();
       setOpen(false);
     } catch (error) {
       console.error('Erro ao salvar tabela:', error);

@@ -156,25 +156,11 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
 
           // regras_congeladas: reconstruir se ausente/sem .pacote
           if (!rcPacote) {
-            patch.regras_congeladas = {
-              modelo: "completo",
-              dataCongelamento: new Date().toISOString(),
-              pacote: {
-                id: pkg.id,
-                nome: pkg.nome,
-                valorBase: Number(pkg.valor_base) || 0,
-                valorFotoExtra: Number(pkg.valor_foto_extra) || 0,
-                fotosIncluidas: Number(pkg.fotos_incluidas) || 0,
-                categoria: categoriaNome,
-                categoriaId,
-                produtosIncluidos: produtos,
-              },
-              produtos,
-              precificacaoFotoExtra: {
-                modelo: "fixo",
-                valorFixo: Number(pkg.valor_foto_extra) || 0,
-              },
-            };
+            const { pricingFreezingService } = await import("@/services/PricingFreezingService");
+            patch.regras_congeladas = await pricingFreezingService.congelarDadosCompletos(
+              pkg.id,
+              categoriaNome
+            );
           }
 
           await supabase.from("clientes_sessoes").update(patch).eq("id", session.id);

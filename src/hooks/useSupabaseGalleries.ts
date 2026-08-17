@@ -325,6 +325,11 @@ export function useSupabaseGalleries() {
           use_custom_theme: (data as any).useCustomTheme || false,
           theme_overrides: (data as any).themeOverrides || {},
           cover_id: (data as any).coverId ?? null,
+          regras_congeladas: (data as any).regrasCongeladas || null,
+          regras_override: (data as any).regrasOverride ?? false,
+          venda_modo: (data as any).venda_modo ?? null,
+          venda_pagamento_provedor: (data as any).venda_pagamento_provedor ?? null,
+          venda_tipo_cobranca: (data as any).venda_tipo_cobranca ?? null,
         } as any)
         .select()
         .single();

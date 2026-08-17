@@ -144,77 +144,148 @@ class PricingFreezingService {
 
   /**
    * Congela regras específicas de precificação de foto extra (VERSÃO ASSÍNCRONA)
+   * Consulta diretamente o Supabase com fallback resiliente
    */
   private async congelarRegrasPrecoFotoExtraAsync(categoria?: string, categoriaId?: string, pacoteDados?: any) {
-    let config = obterConfiguracaoPrecificacao();
-    
-    // 🆕 Tentar carregar a configuração de forma assíncrona para garantir que não estamos
-    // usando o fallback 'fixo' se o cache do adapter ainda não foi populado.
     try {
-      const { PricingConfigurationService } = await import('@/services/PricingConfigurationService');
-      const adapter = (PricingConfigurationService as any).adapter;
-      if (adapter && typeof adapter.loadConfigurationAsync === 'function') {
-        const asyncConfig = await adapter.loadConfigurationAsync();
-        if (asyncConfig) {
-          config = asyncConfig;
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+
+      let modelo: 'fixo' | 'global' | 'categoria' = 'fixo';
+
+      if (userId) {
+        const { data: modeloData } = await supabase
+          .from('modelo_de_preco')
+          .select('modelo')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (modeloData?.modelo) {
+          modelo = modeloData.modelo as 'fixo' | 'global' | 'categoria';
         }
       }
-    } catch (e) {
-      console.warn('⚠️ Não foi possível carregar configuração assíncrona, usando cache');
-    }
 
-    const regras: any = {
-      modelo: config.modelo
-    };
+      const regras: any = {
+        modelo
+      };
 
-    switch (config.modelo) {
-      case 'fixo':
-        regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
-        console.log('📦 Modelo fixo: valor congelado do pacote:', regras.valorFixo);
-        break;
-      
-      case 'global':
-        let tabelaGlobal = obterTabelaGlobal();
-        
-        // 🆕 Tentar carregar tabela global de forma assíncrona se não estiver no cache
-        if (!tabelaGlobal) {
-          try {
-            const { PricingConfigurationService } = await import('@/services/PricingConfigurationService');
-            const adapter = (PricingConfigurationService as any).adapter;
-            if (adapter && typeof adapter.loadGlobalTableAsync === 'function') {
-              tabelaGlobal = await adapter.loadGlobalTableAsync();
+      switch (modelo) {
+        case 'fixo':
+          regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
+          console.log('📦 Modelo fixo: valor congelado do pacote:', regras.valorFixo);
+          break;
+
+        case 'global': {
+          let tabelaGlobal = null;
+          if (userId) {
+            const { data: tgData } = await supabase
+              .from('tabelas_precos')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('tipo', 'global')
+              .maybeSingle();
+
+            if (tgData) {
+              tabelaGlobal = {
+                id: tgData.id,
+                user_id: tgData.user_id,
+                nome: tgData.nome,
+                faixas: Array.isArray(tgData.faixas)
+                  ? (tgData.faixas as any[]).map((f: any) => ({
+                      min: f.min ?? f.de ?? 1,
+                      max: f.max ?? (f.ate === 999999 ? null : (f.ate ?? null)),
+                      valor: f.valor ?? f.valor_foto_extra ?? 0,
+                    }))
+                  : [],
+                usar_valor_fixo_pacote: tgData.usar_valor_fixo_pacote ?? false,
+                created_at: tgData.created_at,
+                updated_at: tgData.updated_at
+              };
             }
-          } catch (e) {
-            console.warn('⚠️ Erro ao carregar tabela global assíncrona', e);
           }
-        }
-        
-        regras.tabelaGlobal = tabelaGlobal;
-        console.log('📊 Tabela global congelada:', tabelaGlobal?.nome);
-        break;
-      
-      case 'categoria':
-        if (categoria || categoriaId) {
-          const tabelaCategoria = await this.resolverTabelaCategoriaAsync(categoria, categoriaId);
-          
-          // 🆕 NOVA LÓGICA: Verificar flag usar_valor_fixo_pacote
-          if (tabelaCategoria?.usar_valor_fixo_pacote) {
-            // Se flag ativa, congelar como modelo FIXO em vez de categoria
+
+          if (tabelaGlobal) {
+            regras.tabelaGlobal = tabelaGlobal;
+            console.log('📊 Tabela global congelada (DB):', tabelaGlobal.nome);
+          } else {
             regras.modelo = 'fixo';
             regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
-            console.log('📦 Categoria com flag fixo ativa: usando valorFixo do pacote:', regras.valorFixo);
-          } else {
-            // Comportamento atual: usar tabela progressiva
-            regras.tabelaCategoria = tabelaCategoria;
-            console.log('📊 Tabela categoria congelada (ASYNC):', tabelaCategoria?.nome, 'para categoria:', categoria || categoriaId, 'resolvida:', !!tabelaCategoria);
+            console.warn('⚠️ Modelo global sem tabela configurada no DB, fallback para fixo');
           }
-        } else {
-          console.warn('⚠️ Modelo categoria mas sem categoria ou categoriaId fornecido');
+          break;
         }
-        break;
-    }
 
-    return regras;
+        case 'categoria': {
+          let tabelaCategoria = null;
+          let resolvedCatId = categoriaId;
+
+          if (userId) {
+            if (!resolvedCatId && categoria) {
+              const { data: cat } = await supabase
+                .from('categorias')
+                .select('id')
+                .eq('nome', categoria)
+                .eq('user_id', userId)
+                .maybeSingle();
+              resolvedCatId = cat?.id;
+            }
+
+            if (resolvedCatId) {
+              const { data: tcData } = await supabase
+                .from('tabelas_precos')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('tipo', 'categoria')
+                .eq('categoria_id', resolvedCatId)
+                .maybeSingle();
+
+              if (tcData) {
+                tabelaCategoria = {
+                  id: tcData.id,
+                  user_id: tcData.user_id,
+                  nome: tcData.nome,
+                  faixas: Array.isArray(tcData.faixas)
+                    ? (tcData.faixas as any[]).map((f: any) => ({
+                        min: f.min ?? f.de ?? 1,
+                        max: f.max ?? (f.ate === 999999 ? null : (f.ate ?? null)),
+                        valor: f.valor ?? f.valor_foto_extra ?? 0,
+                      }))
+                    : [],
+                  usar_valor_fixo_pacote: tcData.usar_valor_fixo_pacote ?? false,
+                  created_at: tcData.created_at,
+                  updated_at: tcData.updated_at
+                };
+              }
+            }
+          }
+
+          if (tabelaCategoria) {
+            if (tabelaCategoria.usar_valor_fixo_pacote) {
+              regras.modelo = 'fixo';
+              regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
+              console.log('📦 Categoria com flag fixo ativa: usando valorFixo do pacote:', regras.valorFixo);
+            } else {
+              regras.tabelaCategoria = tabelaCategoria;
+              console.log('📊 Tabela categoria congelada (DB):', tabelaCategoria.nome, 'para cat:', resolvedCatId);
+            }
+          } else {
+            regras.modelo = 'fixo';
+            regras.valorFixo = pacoteDados?.valorFotoExtra || 0;
+            console.warn('⚠️ Modelo categoria sem tabela configurada para a categoria, fallback para fixo');
+          }
+          break;
+        }
+      }
+
+      return regras;
+    } catch (e) {
+      console.error('❌ Erro no congelamento assíncrono de foto extra:', e);
+      return {
+        modelo: 'fixo',
+        valorFixo: pacoteDados?.valorFotoExtra || 0
+      };
+    }
   }
 
   /**
