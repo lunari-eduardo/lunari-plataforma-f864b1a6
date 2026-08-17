@@ -662,7 +662,13 @@ export default function ClientGallery() {
 
   // 6. Mutation for confirming selection via Edge Function
   const confirmMutation = useMutation({
-    mutationFn: async (pricingData: { selectedCount: number; extraCount: number; valorUnitario: number; valorTotal: number }) => {
+    mutationFn: async (pricingData: { 
+      selectedCount: number; 
+      extraCount: number; 
+      valorUnitario: number; 
+      valorTotal: number;
+      payer?: { nome?: string; email?: string; phone?: string; cpfCnpj?: string };
+    }) => {
       // Check if we should request payment (sale_with_payment mode + extras)
       const saleMode = transformedGallery?.saleSettings?.mode;
       const shouldRequestPayment = saleMode === 'sale_with_payment' && pricingData.valorTotal > 0;
@@ -682,6 +688,7 @@ export default function ClientGallery() {
           valorTotal: pricingData.valorTotal,
           requestPayment: shouldRequestPayment,
           visitorId: visitorId || undefined,
+          payer: pricingData.payer,
         }),
       });
       
@@ -1940,24 +1947,41 @@ export default function ClientGallery() {
       valorTotal: resultado.valorACobrar,
     };
 
-    // ðŸ§­ Etapa intermediária "Dados de cobrança": SÓ aparece quando faltar
-    // algum dado (nome/email/whatsapp/CPF) OU quando algum estiver inválido.
-    // Quando o cliente já tem tudo preenchido e válido, pulamos direto para
+    // Etapa intermediária "Dados de cobrança": SÓ aparece quando faltar
+    // algum dado obrigatório do provedor ativo.
+    // Quando o cliente já tem tudo preenchido e válido no CRM, pulamos direto para
     // o `confirm-selection` — sem tela intermediária.
     const saleMode = gallery.saleSettings?.mode;
     const shouldRequestPayment = saleMode === 'sale_with_payment' && payload.valorTotal > 0;
+    const hints = (galleryResponse as any)?.payerHints;
     const missing = (galleryResponse as any)?.payerHintsMissing;
-    const needsPreCheckout = shouldRequestPayment && (
-      !missing || missing.name || missing.email || missing.phone || missing.cpfCnpj
+
+    const isComplete = hintsAreComplete(hints) || (
+      missing &&
+      !missing.name &&
+      !missing.email &&
+      !missing.phone &&
+      (!missing.cpfRequired || !missing.cpfCnpj)
     );
+
+    const payerData = hints ? {
+      nome: hints.fullName || hints.name,
+      email: hints.email,
+      phone: hints.phone,
+      cpfCnpj: hints.cpfCnpj,
+    } : undefined;
+
     // Guardar payload permite retomar após coleta.
     setPendingConfirmPayload(payload);
-    if (needsPreCheckout) {
+    if (shouldRequestPayment && !isComplete) {
       setCurrentStep('pre_checkout_contact');
       return;
     }
 
-    confirmMutation.mutate(payload);
+    confirmMutation.mutate({
+      ...payload,
+      payer: payerData,
+    });
   };
 
   // Submit da etapa "Dados de cobrança": persiste via RPC e dispara confirm-selection.
@@ -2007,7 +2031,15 @@ export default function ClientGallery() {
       // Reidrata payerHints antes de submeter — evita loop de "faltando dado".
       await refetchGallery();
       if (pendingConfirmPayload) {
-        confirmMutation.mutate(pendingConfirmPayload);
+        confirmMutation.mutate({
+          ...pendingConfirmPayload,
+          payer: {
+            nome: values.nome,
+            email: values.email,
+            phone: values.phone,
+            cpfCnpj: values.cpfCnpj,
+          },
+        });
       }
     } catch (e: any) {
       console.error('[handlePreCheckoutSubmit] exception:', e);

@@ -231,11 +231,21 @@ export function useWorkflowMonthSessions() {
         return;
       }
       const fullSession = detail.fullSession ?? detail.session;
-      if (fullSession) {
-        const sessionDate = new Date(fullSession.data_sessao);
+      if (fullSession && fullSession.data_sessao) {
+        let sYear = 0;
+        let sMonth = 0;
+        if (typeof fullSession.data_sessao === 'string') {
+          const parts = fullSession.data_sessao.split('-').map(Number);
+          sYear = parts[0] || 0;
+          sMonth = parts[1] || 0;
+        } else {
+          const sessionDate = new Date(fullSession.data_sessao);
+          sYear = sessionDate.getFullYear();
+          sMonth = sessionDate.getMonth() + 1;
+        }
         if (
-          sessionDate.getFullYear() === currentMonth.year &&
-          sessionDate.getMonth() + 1 === currentMonth.month
+          sYear === currentMonth.year &&
+          sMonth === currentMonth.month
         ) {
           mergeUpdate(fullSession);
         }

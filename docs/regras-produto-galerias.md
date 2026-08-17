@@ -1,7 +1,7 @@
 # Regras de Produto e Arquitetura das Galerias Lunari
 
 > **Documento Vivo de Regras de Negócio e Contratos de Arquitetura**  
-> Última atualização: 17 de Agosto de 2026
+> Última atualização: 17 de Agosto de 2026 (Atualizado: Regra de Bypass de Coleta de Dados / CRM Payer Hints)
 
 ---
 
@@ -76,23 +76,70 @@ As seguintes Edge Functions são consumidas diretamente pelo cliente final na ga
 
 ---
 
-## 5. Ciclo de Vida da Seleção & Gating
+## 5. Dados do Pagador (Payer Hints) e Bypass da Tela de Contato
 
-### 5.1. Máquina de Estados de Seleção
+### 5.1. Origem dos Dados (CRM do Fotógrafo)
+- Quando a galeria está associada a um cliente (`galerias.cliente_id` ou via sessão `galerias.session_id` -> `clientes_sessoes.cliente_id`), o `gallery-access` deve buscar automaticamente os dados cadastrais do cliente em `clientes` (`nome`, `email`, `telefone`, `whatsapp`, `cpf_cnpj`).
+- Caso seja galeria pública com identificação de visitante, utiliza os dados já preenchidos em `galeria_visitantes`.
+
+### 5.2. Regra de Exibição da Tela "Dados de Cobrança" (`PreCheckoutContactStep`)
+- **Se todos os dados exigidos pelo provedor já existirem no CRM e forem válidos**: A tela intermediária de "Dados de cobrança" **NUNCA DEVE APARECER**. O sistema deve avançar diretamente para o checkout (Mercado Pago, InfinitePay ou Asaas) com os dados pré-preenchidos.
+- **Se faltar algum dado obrigatório** (ex: CPF ausente para Asaas/InfinitePay ou email para Mercado Pago): A tela `PreCheckoutContactStep` é aberta apenas com os campos faltantes destacados, já trazendo os demais campos pré-preenchidos.
+
+---
+
+## 6. Ciclo de Vida da Seleção & Gating
+
+### 6.1. Máquina de Estados de Seleção
 - `em_andamento`: Cliente navegando e marcando/desmarcando fotos.
 - `aguardando_pagamento`: Cliente confirmou seleção que possui valor a pagar. A seleção fica **travada** (`selectionLocked: true`), impedindo alterações de fotos até a quitação ou regeneração.
 - `selecao_completa`: Seleção quitada ou finalizada sem saldo pendente. Galeria travada e fotógrafo notificado.
 - `processando_selecao`: Estado transitório enquanto o webhook de pagamento ou rotina de reconciliação processa.
 
-### 5.2. Idempotência e Regeneração (`regenerate_charge`)
+### 6.2. Idempotência e Regeneração (`regenerate_charge`)
 - Quando o cliente retorna de um pagamento não concluído ou clica em "Ir para pagamento", a ação `regenerate_charge` revalida os extras, abate valores já pagos em cobranças anteriores e gera/retorna o checkout vivo atualizado.
 
 ---
 
-## 6. Checklist de Auditoria para Mudanças em Galerias
+---
+
+## 7. Congelamento de Regras de Precificação e Extras (Snapshot Imutável)
+
+### 7.1. Princípio do Congelamento de Preço (Snapshot)
+- Uma sessão e uma galeria devem manter os preços e descontos contratados na data da criação, independentemente de futuras alterações globais ou tabelas de preços que o fotógrafo venha a mudar no estúdio.
+- O campo `regras_congeladas` (JSONB) em `clientes_sessoes` e `galerias` armazena a fotografia completa das regras no instante do congelamento.
+
+### 7.2. Hierarquia e Resolução de Preço de Fotos Extras
+Ao criar uma sessão (via Agenda, Workflow ou importação) ou uma galeria:
+1. **Verificação do Modelo Ativo (`modelo_de_preco.modelo`)**:
+   - `categoria`: Consulta a tabela associada à categoria do pacote em `tabelas_precos`.
+     - Se configurada com `usar_valor_fixo_pacote = true`: utiliza o valor unitário fixo definido no pacote.
+     - Se `usar_valor_fixo_pacote = false`: embute a `tabelaCategoria` com suas faixas de desconto progressivo (`faixas: [{ min, max, valor }]`).
+   - `global`: Consulta a tabela global em `tabelas_precos`.
+     - Se `usar_valor_fixo_pacote = true`: utiliza o valor fixo do pacote.
+     - Se `usar_valor_fixo_pacote = false`: embute a `tabelaGlobal` com suas faixas progressivas.
+   - `fixo`: Embute `precificacaoFotoExtra: { modelo: 'fixo', valorFixo: pacote.valor_foto_extra }`.
+2. **Cálculo do `valor_foto_extra` Base**:
+   - O campo numérico `valor_foto_extra` na sessão e na galeria deve refletir o valor unitário da **1ª foto extra** segundo as faixas do snapshot (calculado pela função SQL canônica `_extra_unit_price_for_quantity(regras_congeladas, valor_fixo, 1)`).
+
+### 7.3. Fluxo de Herança: Agenda → Sessão no Workflow → Galeria
+1. Ao salvar um agendamento na Agenda, o trigger `trg_ensure_workflow_session_on_confirm` cria a linha em `clientes_sessoes`.
+2. O trigger `trg_ensure_regras_congeladas_on_insert` monta o snapshot `regras_congeladas` respeitando o modelo ativo (`categoria`/`global`/`fixo`).
+3. Ao criar a galeria de seleção no Studio a partir dessa sessão, a galeria **herda integralmente** o snapshot `regras_congeladas` da sessão, preservando as faixas progressivas ativas.
+4. **Sincronização Imediata no Frontend**:
+   - Mutations da Agenda (`useCreateAppointmentMutation`, `useUpdateAppointmentMutation`, etc.) emitem o evento de domínio `workflow-cache-silent-refresh` com `{ force: true }`.
+   - O `WorkflowCacheContext` captura o evento e revalida imediatamente a lista de sessões do mês em background, garantindo que o Workflow exiba a nova sessão instantaneamente ao navegar entre telas, sem necessidade de reload (F5).
+
+---
+
+## 8. Checklist de Auditoria para Mudanças em Galerias
 Sempre que for alterar código relacionado a galerias:
 1. [ ] A alteração quebra URLs com UUID ou URLs com `public_token`?
 2. [ ] Todas as Edge Functions modificadas foram publicadas com `verify_jwt: false`?
 3. [ ] O fluxo respeita a prioridade `galerias.venda_pagamento_provedor`?
-4. [ ] Foram preservados os fallbacks para `visitorId` em galerias públicas?
-5. [ ] O gating de travamento de seleção (`selectionLocked`) permanece íntegro?
+4. [ ] O cliente com cadastro completo no CRM é redirecionado diretamente ao pagamento sem tela intermediária?
+5. [ ] Foram preservados os fallbacks para `visitorId` em galerias públicas?
+6. [ ] O gating de travamento de seleção (`selectionLocked`) permanece íntegro?
+7. [ ] O snapshot de `regras_congeladas` respeita a tabela de categoria/global ativa do fotógrafo?
+8. [ ] A criação de agendamento na Agenda reflete imediatamente no Workflow sem necessidade de F5?
+

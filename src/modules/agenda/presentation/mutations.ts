@@ -23,6 +23,42 @@ type MutOpts<T> = {
   onError?: (err: CapabilityError) => void;
 };
 
+function notifyWorkflowSync(dateLike?: any) {
+  if (typeof window === "undefined") return;
+  try {
+    let year: number | undefined;
+    let month: number | undefined;
+    const dateVal = typeof dateLike === "object" && dateLike?.date ? dateLike.date : dateLike;
+
+    if (typeof dateVal === "string") {
+      const parts = dateVal.split("-").map(Number);
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        year = parts[0];
+        month = parts[1];
+      }
+    } else if (dateVal instanceof Date && !isNaN(dateVal.getTime())) {
+      year = dateVal.getFullYear();
+      month = dateVal.getMonth() + 1;
+    }
+
+    if (year && month) {
+      window.dispatchEvent(
+        new CustomEvent("workflow-cache-silent-refresh", {
+          detail: { year, month, force: true },
+        }),
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("workflow-cache-silent-refresh", {
+          detail: { force: true },
+        }),
+      );
+    }
+  } catch {
+    /* noop */
+  }
+}
+
 export function useCreateAppointmentMutation(opts: MutOpts<unknown> = {}) {
   const qc = useQueryClient();
   return useCapabilityMutation(createAppointment, {
@@ -30,6 +66,7 @@ export function useCreateAppointmentMutation(opts: MutOpts<unknown> = {}) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
       qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+      notifyWorkflowSync((data as any)?.date);
       opts.onSuccess?.(data);
     },
   });
@@ -41,6 +78,7 @@ export function useConfirmAppointmentMutation(opts: MutOpts<unknown> = {}) {
     ...opts,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
+      notifyWorkflowSync((data as any)?.date);
       opts.onSuccess?.(data);
     },
   });
@@ -53,6 +91,7 @@ export function useRescheduleAppointmentMutation(opts: MutOpts<unknown> = {}) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
       qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+      notifyWorkflowSync((data as any)?.date);
       opts.onSuccess?.(data);
     },
   });
@@ -65,6 +104,7 @@ export function useCancelAppointmentMutation(opts: MutOpts<unknown> = {}) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
       qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+      notifyWorkflowSync((data as any)?.date);
       opts.onSuccess?.(data);
     },
   });
@@ -110,7 +150,9 @@ export function useUpdateAppointmentMutation(opts: MutOpts<unknown> = {}) {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: agendaKeys.appointments() });
       qc.invalidateQueries({ queryKey: agendaKeys.availability() });
+      notifyWorkflowSync((data as any)?.date);
       opts.onSuccess?.(data);
     },
   });
 }
+

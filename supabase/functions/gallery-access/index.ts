@@ -580,35 +580,65 @@ serve(async (req) => {
       cpfCnpj: string | null;
     } | null = null;
     try {
-      const hints = await resolvePayerHints({
-        supabase,
-        clienteId: gallery.cliente_id,
-      });
+      // 1. Resolve clienteId efetivo (galeria.cliente_id ou via clientes_sessoes)
+      let effectiveClienteId = (gallery as any).cliente_id || null;
+      if (!effectiveClienteId && (gallery as any).session_id) {
+        const { data: sessao } = await supabase
+          .from('clientes_sessoes')
+          .select('cliente_id')
+          .or(`id.eq.${(gallery as any).session_id},session_id.eq.${(gallery as any).session_id}`)
+          .maybeSingle();
+        effectiveClienteId = sessao?.cliente_id || null;
+      }
 
-      // Descobre provider ativo (default) para decidir requisitos.
-      let provider: 'asaas' | 'infinitepay' | 'mercadopago' | null = null;
+      let hints: any = {};
+      if (effectiveClienteId) {
+        hints = await resolvePayerHints({
+          supabase,
+          clienteId: effectiveClienteId,
+        });
+      }
+
+      // Se visitante já tiver dados em galeria_visitantes, mesclar/usar
+      if (visitorId && visitorData) {
+        hints = {
+          name: hints.name || (visitorData as any).nome || undefined,
+          firstName: hints.firstName || ((visitorData as any).nome ? String((visitorData as any).nome).trim().split(/\s+/)[0] : undefined),
+          email: hints.email || normalizeEmail((visitorData as any).email),
+          phone: hints.phone || normalizePhone((visitorData as any).telefone),
+          cpfCnpj: hints.cpfCnpj || normalizeCpfCnpj((visitorData as any).cpf_cnpj),
+        };
+      }
+
+      // 2. Descobre provider ativo com precedência canônica:
+      // (1) Configurado na galeria (venda_pagamento_provedor)
+      // (2) Fallback: Provedor padrão do fotógrafo (is_default) em usuarios_integracoes
+      let provider: 'asaas' | 'infinitepay' | 'mercadopago' | null = (gallery as any).venda_pagamento_provedor || null;
       let billingType: 'PIX' | 'CREDIT_CARD' | 'BOLETO' | null = null;
-      const { data: integracoes } = await supabase
-        .from('usuarios_integracoes')
-        .select('provedor, dados_extras, is_default')
-        .eq('user_id', gallery.user_id)
-        .eq('status', 'ativo')
-        .in('provedor', ['asaas', 'infinitepay', 'mercadopago']);
-      if (integracoes && integracoes.length > 0) {
-        const chosen = integracoes.find((i: any) => i.is_default) || integracoes[0];
-        provider = chosen.provedor as any;
-        if (provider === 'asaas') {
-          const raw = (chosen.dados_extras || {}) as Record<string, any>;
-          const s = { ...raw, ...(raw.gallery_settings || {}) };
-          billingType = s.habilitarPix ? 'PIX' : s.habilitarCartao ? 'CREDIT_CARD' : s.habilitarBoleto ? 'BOLETO' : 'PIX';
+
+      if (!provider) {
+        const { data: integracoes } = await supabase
+          .from('usuarios_integracoes')
+          .select('provedor, dados_extras, is_default')
+          .eq('user_id', gallery.user_id)
+          .eq('status', 'ativo')
+          .in('provedor', ['asaas', 'infinitepay', 'mercadopago']);
+        if (integracoes && integracoes.length > 0) {
+          const chosen = integracoes.find((i: any) => i.is_default) || integracoes[0];
+          provider = chosen.provedor as any;
+          if (provider === 'asaas') {
+            const raw = (chosen.dados_extras || {}) as Record<string, any>;
+            const s = { ...raw, ...(raw.gallery_settings || {}) };
+            billingType = s.habilitarPix ? 'PIX' : s.habilitarCartao ? 'CREDIT_CARD' : s.habilitarBoleto ? 'BOLETO' : 'PIX';
+          }
         }
       }
 
-      const cpfRequired = provider === 'asaas';
+      const cpfRequired = provider === 'asaas' || provider === 'infinitepay';
       payerHintsMissing = {
         email: !hints.email,
         phone: !hints.phone,
-        name: !hints.firstName,
+        name: !hints.firstName && !hints.name,
         cpfCnpj: cpfRequired && !hints.cpfCnpj,
         provider,
         billingType,
