@@ -120,6 +120,8 @@ interface CheckoutData {
   payerHints?: PayerHints;
   payerMissing?: PayerMissing;
   theme?: { primaryColor: string | null };
+  galleryToken?: string | null;
+  isPaid?: boolean;
 }
 
 type Tab = 'pix' | 'card';
@@ -455,9 +457,9 @@ export default function PublicCheckout() {
     );
   }
 
-  if (pixConfirmed || cardSuccess) {
+  if (pixConfirmed || cardSuccess || data?.isPaid || data?.cobranca?.status === 'pago') {
     return (
-      <PublicThemeWrapper primaryColor={data.theme?.primaryColor || undefined}>
+      <PublicThemeWrapper primaryColor={data?.theme?.primaryColor || undefined}>
         <div className="min-h-screen flex items-center justify-center p-4">
           <Sonner />
           <div className="max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-500">
@@ -468,6 +470,14 @@ export default function PublicCheckout() {
             <h1 className="text-2xl font-bold text-neutral-900">Pagamento confirmado!</h1>
             <p className="text-neutral-600">Obrigado! Seu pagamento foi processado com sucesso.</p>
           </div>
+          {data?.galleryToken && (
+            <Button
+              className="w-full h-11 text-sm font-medium"
+              onClick={() => window.location.href = `/g/${data.galleryToken}`}
+            >
+              Voltar para a Galeria
+            </Button>
+          )}
           {data?.photographer?.name && (
             <p className="text-xs text-neutral-500 pt-4 border-t border-neutral-100">
               {data.photographer.name}

@@ -98,36 +98,116 @@ function firstName(name?: string): string | undefined {
 
 export interface ResolveHintsArgs {
   supabase: any;
-  clienteId: string;
+  clienteId?: string | null;
+  galleryId?: string | null;
+  sessionId?: string | null;
+  visitorId?: string | null;
 }
 
 export async function resolvePayerHints({
   supabase,
   clienteId,
+  galleryId,
+  sessionId,
+  visitorId,
 }: ResolveHintsArgs): Promise<PayerHints> {
-  const { data: cliente } = await supabase
-    .from("clientes")
-    .select(
-      "nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, endereco_numero, endereco_complemento, bairro, cidade, uf",
-    )
-    .eq("id", clienteId)
-    .maybeSingle();
+  let resolvedClienteId = clienteId || null;
+  let rawName: string | undefined;
+  let rawEmail: string | undefined;
+  let rawPhone: string | undefined;
+  let rawCpf: string | undefined;
+  let rawCep: string | undefined;
+  let rawAddress: string | undefined;
+  let rawNumber: string | undefined;
+  let rawComplement: string | undefined;
+  let rawBairro: string | undefined;
+  let rawCity: string | undefined;
+  let rawState: string | undefined;
 
-  if (!cliente) return {};
+  // 1. Se temos galleryId mas não temos clienteId, buscar cliente_id e dados denormalizados na galeria
+  if (galleryId) {
+    const { data: gal } = await supabase
+      .from("galerias")
+      .select("cliente_id, cliente_nome, cliente_email, cliente_telefone, session_id")
+      .eq("id", galleryId)
+      .maybeSingle();
+
+    if (gal) {
+      if (!resolvedClienteId && gal.cliente_id) resolvedClienteId = gal.cliente_id;
+      if (!sessionId && gal.session_id) sessionId = gal.session_id;
+      if (gal.cliente_nome && !rawName) rawName = gal.cliente_nome;
+      if (gal.cliente_email && !rawEmail) rawEmail = gal.cliente_email;
+      if (gal.cliente_telefone && !rawPhone) rawPhone = gal.cliente_telefone;
+    }
+  }
+
+  // 2. Se temos sessionId mas não temos clienteId, buscar em clientes_sessoes
+  if (sessionId && !resolvedClienteId) {
+    const { data: sessao } = await supabase
+      .from("clientes_sessoes")
+      .select("cliente_id")
+      .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
+      .maybeSingle();
+
+    if (sessao?.cliente_id) {
+      resolvedClienteId = sessao.cliente_id;
+    }
+  }
+
+  // 3. Buscar registro principal do cliente se cliente_id foi resolvido
+  if (resolvedClienteId) {
+    const { data: cliente } = await supabase
+      .from("clientes")
+      .select(
+        "nome, email, telefone, whatsapp, cpf_cnpj, cep, endereco, endereco_numero, endereco_complemento, bairro, cidade, uf",
+      )
+      .eq("id", resolvedClienteId)
+      .maybeSingle();
+
+    if (cliente) {
+      rawName = cliente.nome || rawName;
+      rawEmail = cliente.email || rawEmail;
+      rawPhone = cliente.whatsapp || cliente.telefone || rawPhone;
+      rawCpf = cliente.cpf_cnpj || rawCpf;
+      rawCep = cliente.cep || rawCep;
+      rawAddress = cliente.endereco || rawAddress;
+      rawNumber = cliente.endereco_numero || rawNumber;
+      rawComplement = cliente.endereco_complemento || rawComplement;
+      rawBairro = cliente.bairro || rawBairro;
+      rawCity = cliente.cidade || rawCity;
+      rawState = cliente.uf || rawState;
+    }
+  }
+
+  // 4. Se temos visitorId, mesclar dados de galeria_visitantes
+  if (visitorId) {
+    const { data: visitor } = await supabase
+      .from("galeria_visitantes")
+      .select("nome, email, telefone, cpf_cnpj")
+      .eq("id", visitorId)
+      .maybeSingle();
+
+    if (visitor) {
+      if (visitor.nome && !rawName) rawName = visitor.nome;
+      if (visitor.email && !rawEmail) rawEmail = visitor.email;
+      if (visitor.telefone && !rawPhone) rawPhone = visitor.telefone;
+      if (visitor.cpf_cnpj && !rawCpf) rawCpf = visitor.cpf_cnpj;
+    }
+  }
 
   const hints: PayerHints = {
-    name: cliente.nome?.trim() || undefined,
-    firstName: firstName(cliente.nome),
-    email: normalizeEmail(cliente.email),
-    phone: normalizePhone(cliente.whatsapp || cliente.telefone),
-    cpfCnpj: normalizeCpfCnpj(cliente.cpf_cnpj),
-    postalCode: normalizeCep(cliente.cep),
-    address: cliente.endereco?.trim() || undefined,
-    addressNumber: cliente.endereco_numero?.trim() || undefined,
-    complement: cliente.endereco_complemento?.trim() || undefined,
-    province: cliente.bairro?.trim() || undefined,
-    cityName: cliente.cidade?.trim() || undefined,
-    state: cliente.uf?.trim() || undefined,
+    name: rawName?.trim() || undefined,
+    firstName: firstName(rawName),
+    email: normalizeEmail(rawEmail),
+    phone: normalizePhone(rawPhone),
+    cpfCnpj: normalizeCpfCnpj(rawCpf),
+    postalCode: normalizeCep(rawCep),
+    address: rawAddress?.trim() || undefined,
+    addressNumber: rawNumber?.trim() || undefined,
+    complement: rawComplement?.trim() || undefined,
+    province: rawBairro?.trim() || undefined,
+    cityName: rawCity?.trim() || undefined,
+    state: rawState?.trim() || undefined,
   };
 
   return hints;
@@ -142,3 +222,4 @@ export function payerHintsFlags(h: PayerHints): string {
     `addr=${h.postalCode && h.addressNumber ? "Y" : "N"}(${h.postalCode ? "cep" : ""}${h.addressNumber ? "+num" : ""}${h.cityName ? "+city" : ""})`,
   ].join(" ");
 }
+

@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
+import { resolvePayerHints } from "../_shared/payer-hints.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +41,7 @@ interface CreatePaymentRequest {
   galleryId?: string;
   sessionId?: string;
   clienteId?: string;
+  visitorId?: string;
   valor?: number;
   descricao?: string;
   qtdFotosExtras?: number;
@@ -74,6 +76,7 @@ serve(async (req) => {
       galleryId: reqGalleryId,
       sessionId: reqSessionId,
       clienteId: reqClienteId,
+      visitorId: reqVisitorId,
       valor: reqValor,
       descricao: reqDescricao,
       qtdFotosExtras: reqQtdFotos,
@@ -207,26 +210,47 @@ serve(async (req) => {
       provedor = integracao.provedor;
     }
 
-    // Se cliente_id for nulo (ex: visitante em galeria pública), buscar ou criar registro temporário de cliente para vincular a cobrança
-    if (!clienteId && photographerId) {
-      const guestName = payer?.nome || "Cliente Galeria";
-      const guestEmail = payer?.email || null;
-      const guestPhone = payer?.phone || null;
+    // 3.5 Resolver dados do pagador em cascata e garantir cliente_id
+    const hints = await resolvePayerHints({
+      supabase,
+      clienteId: clienteId || null,
+      galleryId: galleryId || null,
+      sessionId: sessionId || null,
+      visitorId: reqVisitorId || null,
+    });
 
+    const effectivePayer = {
+      nome: payer?.nome || hints.name || "Cliente Galeria",
+      email: payer?.email || hints.email,
+      phone: payer?.phone || hints.phone,
+      cpfCnpj: payer?.cpfCnpj || hints.cpfCnpj,
+    };
+
+    // Se cliente_id for nulo, criar registro de cliente para vincular a cobrança
+    if (!clienteId && photographerId) {
       const { data: newGuest } = await supabase
         .from("clientes")
         .insert({
           user_id: photographerId,
-          nome: guestName,
-          email: guestEmail,
-          telefone: guestPhone,
-          whatsapp: guestPhone,
-          cpf_cnpj: payer?.cpfCnpj || null,
+          nome: effectivePayer.nome,
+          email: effectivePayer.email || null,
+          telefone: effectivePayer.phone || null,
+          whatsapp: effectivePayer.phone || null,
+          cpf_cnpj: effectivePayer.cpfCnpj || null,
         })
         .select("id")
         .single();
 
       clienteId = newGuest?.id || null;
+    } else if (clienteId && (payer?.cpfCnpj || payer?.email || payer?.phone)) {
+      // Se recebemos novos dados do cliente (ex: CPF preenchido no checkout), atualizar no CRM se estava vazio
+      const patchData: Record<string, string> = {};
+      if (payer.cpfCnpj && !hints.cpfCnpj) patchData.cpf_cnpj = payer.cpfCnpj;
+      if (payer.email && !hints.email) patchData.email = payer.email;
+      if (payer.phone && !hints.phone) patchData.telefone = payer.phone;
+      if (Object.keys(patchData).length > 0) {
+        await supabase.from("clientes").update(patchData).eq("id", clienteId);
+      }
     }
 
     if (!clienteId) {
@@ -246,13 +270,13 @@ serve(async (req) => {
       finalidade: "fotos_extras",
       qtdFotos: qtdFotosExtras,
       snapshotFotosIncluidas: fotosIncluidas,
-      payerContact: payer ? {
-        nome: payer.nome,
-        email: payer.email,
-        telefone: payer.phone,
-        whatsapp: payer.phone,
-        cpfCnpj: payer.cpfCnpj,
-      } : undefined,
+      payerContact: {
+        nome: effectivePayer.nome,
+        email: effectivePayer.email,
+        telefone: effectivePayer.phone,
+        whatsapp: effectivePayer.phone,
+        cpfCnpj: effectivePayer.cpfCnpj,
+      },
       correlationId: preloaded?.correlationId || reqCorrelationId || crypto.randomUUID(),
     };
 

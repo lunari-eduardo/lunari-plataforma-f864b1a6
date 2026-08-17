@@ -730,10 +730,9 @@ export default function ClientGallery() {
       }
 
       // Checkout externo (InfinitePay/MercadoPago) - redirect immediately
-      if (data.requiresPayment && data.checkoutUrl) {
-        console.log('ðŸ’³ Redirecionando para checkout externo:', data.checkoutUrl);
-        // Fase 6: overlay imediato + breadcrumb + replace (tira galeria do histórico).
-        // O overlay mostra transição visual enquanto o browser resolve DNS/TLS.
+      const effectiveCheckoutUrl = data.checkoutUrl || (data as any)?.data?.checkoutUrl || (data as any)?.url || (data as any)?.paymentLink;
+      if (data.requiresPayment && effectiveCheckoutUrl) {
+        console.log('💳 Redirecionando para checkout externo:', effectiveCheckoutUrl);
         try {
           sessionStorage.setItem(`gallery_checkout_pending_${identifier}`, JSON.stringify({
             cobrancaId: data.cobrancaId ?? null,
@@ -743,29 +742,21 @@ export default function ClientGallery() {
           }));
         } catch { /* ignore quota */ }
         setIsRedirectingToCheckout(true);
-        // rAF garante que o overlay pintou antes do navigate
         requestAnimationFrame(() => {
-          window.location.replace(data.checkoutUrl);
+          window.location.replace(effectiveCheckoutUrl);
         });
         return;
       }
-      
-
       
       // GUARD: If backend says payment is required but no checkout data arrived,
-      // do NOT confirm — this is likely a config/payload issue
+      // refetch gallery to let gallery-access handle the pending payment state
       if (data.requiresPayment) {
-        console.error('âš ï¸ Backend indicated requiresPayment=true but no valid checkout data arrived. Payload:', JSON.stringify(data));
-        toast.error('Pagamento pendente', {
-          description: 'Não foi possível carregar o checkout. Recarregue a página e tente novamente.',
-          duration: 8000,
-        });
-        // Refetch gallery to let gallery-access handle the pending payment state
-        refetchGallery();
+        console.warn('⚠️ Backend indicated requiresPayment=true, sincronizando estado da galeria...', data);
+        await refetchGallery();
         return;
       }
       
-      // ðŸ›¡ï¸ CONTRACT GUARD: se a galeria exige pagamento (sale_with_payment + extras > 0)
+      // ðŸ›¡ï¸  CONTRACT GUARD: se a galeria exige pagamento (sale_with_payment + extras > 0)
       // e o backend voltou requiresPayment=false, NUNCA finalize localmente.
       // Isso impede a tela "Seleção Confirmada" de aparecer indevidamente e força
       // refetch para cair na PaymentPendingScreen — nunca perder rastreamento de pagamento.
@@ -923,6 +914,8 @@ export default function ClientGallery() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
+              galleryId: galleryId,
+              galleryToken: identifier,
               sessionId: sessionId,
               visitorId: visitorId || undefined,
               orderNsu, transactionNsu, slug, receiptUrl,
@@ -1734,6 +1727,8 @@ export default function ClientGallery() {
 
     return (
       <PaymentPendingScreen
+        galleryId={galleryId}
+        galleryToken={identifier}
         cobrancaId={galleryResponse?.cobrancaId}
         sessionId={sessionId || undefined}
         checkoutUrl={pendingCheckoutUrl}

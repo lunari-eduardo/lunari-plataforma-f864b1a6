@@ -63,6 +63,13 @@ export default function ProviderCheckout({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef(0);
 
+  // Sincroniza gateDone caso payerHints cheguem após o mount inicial
+  useEffect(() => {
+    if (missing.length === 0) {
+      setGateDone(true);
+    }
+  }, [missing.length]);
+
   const pixPayload = provider.pixCopiaECola || null;
 
   // QR do PIX (manual ou MP) — gerado localmente a partir do copia-e-cola.

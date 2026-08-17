@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.2';
+import { resolvePayerHints } from '../_shared/payer-hints.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
     // 1. Fetch cobrança
     const { data: cobranca, error: cobrancaError } = await supabase
       .from('cobrancas')
-      .select('id, user_id, cliente_id, session_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras, mp_payment_link, mp_pix_copia_cola, mp_qr_code_base64, ip_checkout_url, checkout_url')
+      .select('id, user_id, cliente_id, session_id, galeria_id, valor, descricao, status, provedor, tipo_cobranca, dados_extras, mp_payment_link, mp_pix_copia_cola, mp_qr_code_base64, ip_checkout_url, checkout_url')
       .eq('id', cobrancaId)
       .maybeSingle();
 
@@ -54,11 +55,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (cobranca.status !== 'pendente') {
+    if (cobranca.status !== 'pendente' && cobranca.status !== 'pago') {
       return new Response(
         JSON.stringify({
           success: false,
-          error: cobranca.status === 'pago' ? 'Esta cobrança já foi paga' : 'Esta cobrança não está mais disponível',
+          error: 'Esta cobrança não está mais disponível',
           code: 'INVALID_STATUS',
           status: cobranca.status,
         }),
@@ -89,41 +90,32 @@ Deno.serve(async (req) => {
     const gallerySettings = gallerySettingsRes.data;
     const galleryTheme = galleryThemeRes.data;
 
+    let galleryToken: string | null = null;
+    if (cobranca.galeria_id) {
+      const { data: gal } = await supabase
+        .from('galerias')
+        .select('public_token')
+        .eq('id', cobranca.galeria_id)
+        .maybeSingle();
+      galleryToken = gal?.public_token || null;
+    }
+
     // Logotipo: prioriza gallery_settings.studio_logo_url, depois profiles.avatar_url
     const logoUrl = gallerySettings?.studio_logo_url || profile?.avatar_url || null;
 
-    // 2b. Fetch payer hints — pré-preenchimento + flags de campos ausentes.
-    const { data: cliente } = await supabase
-      .from('clientes')
-      .select('nome, email, telefone, whatsapp, cpf_cnpj')
-      .eq('id', cobranca.cliente_id)
-      .maybeSingle();
-
-    const isAsciiEmail = (v?: string | null) => {
-      if (!v) return false;
-      const s = String(v).trim();
-      if (!s) return false;
-      if (/[^\x00-\x7F]/.test(s)) return false;
-      return /^[\x21-\x7E]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(s);
-    };
-    const normalizePhone = (v?: string | null): string | null => {
-      if (!v) return null;
-      const d = String(v).replace(/\D/g, '');
-      if (d.length < 10 || d.length > 13) return null;
-      const local = d.length > 11 && d.startsWith('55') ? d.slice(2) : d;
-      return local.length === 10 || local.length === 11 ? local : null;
-    };
-    const cpfDigits = (v?: string | null) => (v ? String(v).replace(/\D/g, '') : '');
-    const isValidCpfLen = (v?: string | null) => {
-      const d = cpfDigits(v);
-      return d.length === 11 || d.length === 14;
-    };
+    // 2b. Fetch payer hints — pré-preenchimento + flags de campos ausentes via cascata canônica.
+    const resolvedHints = await resolvePayerHints({
+      supabase,
+      clienteId: cobranca.cliente_id || null,
+      galleryId: cobranca.galeria_id || null,
+      sessionId: cobranca.session_id || null,
+    });
 
     const payerHints = {
-      fullName: cliente?.nome?.trim() || null,
-      email: isAsciiEmail(cliente?.email) ? String(cliente!.email).trim() : null,
-      phone: normalizePhone(cliente?.whatsapp || cliente?.telefone),
-      cpfCnpj: isValidCpfLen(cliente?.cpf_cnpj) ? cpfDigits(cliente?.cpf_cnpj) : null,
+      fullName: resolvedHints.name || null,
+      email: resolvedHints.email || null,
+      phone: resolvedHints.phone || null,
+      cpfCnpj: resolvedHints.cpfCnpj || null,
     };
     const payerMissing = {
       name: !payerHints.fullName,
@@ -162,6 +154,8 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           provedor,
+          isPaid: cobranca.status === 'pago',
+          galleryToken,
           cobranca: {
             id: cobranca.id,
             valor: cobranca.valor,
@@ -264,6 +258,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         provedor: 'asaas',
+        isPaid: cobranca.status === 'pago',
+        galleryToken,
         cobranca: {
           id: cobranca.id,
           valor: cobranca.valor,

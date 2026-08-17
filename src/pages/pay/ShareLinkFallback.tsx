@@ -27,7 +27,7 @@ export default function ShareLinkFallback() {
     (async () => {
       const { data } = await supabase
         .from('cobrancas')
-        .select('id')
+        .select('id, status, galeria_id, galerias(public_token)')
         .eq('id', cobrancaId)
         .maybeSingle();
       if (!alive) return;
@@ -35,8 +35,12 @@ export default function ShareLinkFallback() {
         setNotFound(true);
         return;
       }
-      // Rota única — o painel do provedor é resolvido dentro de /checkout/:id
-      setTarget(`/checkout/${data.id}`);
+      const galleryToken = (data.galerias as any)?.public_token;
+      if (data.status === 'pago' && galleryToken) {
+        setTarget(`/g/${galleryToken}?payment=success`);
+      } else {
+        setTarget(`/checkout/${data.id}`);
+      }
     })();
     return () => {
       alive = false;

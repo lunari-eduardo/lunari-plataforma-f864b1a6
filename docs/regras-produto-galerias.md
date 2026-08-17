@@ -101,9 +101,30 @@ As seguintes Edge Functions são consumidas diretamente pelo cliente final na ga
 - `gallery-create-payment` deve sempre resolver o fotógrafo proprietário, o cliente (ou criar visitante temporário se galeria pública), e garantir que `qtdFotos` seja um inteiro >= 1 (com fallback automático para `Math.max(1, fotos_selecionadas - fotos_incluidas)` caso não venha no body).
 - **Validação Anti-Overcharge (`assertExtraPaymentWithinIdeal`)**: `create-cobranca` valida se o valor cobrado não excede o saldo ideal da galeria usando `calculate_gallery_extra_payment(galeria_id, true)`. Quando a galeria está em transição de seleção (`confirm-selection`) ou já em `aguardando_pagamento`, o gate de pré-seleção é liberado para permitir a cobrança do valor calculado.
 
-### 6.4. Idempotência e Reutilização de Cobranças Vivas (`regenerate_charge`)
-- Quando o cliente clica em "Ir para pagamento" em uma galeria em `aguardando_pagamento`, `client-selection` executa `regenerate_pending_charge`.
-- Se já existir uma cobrança pendente e válida no banco (`reused: true`), os dados da cobrança ativa (`checkout_url`, `payment_link`, `cobranca_id`, `provedor`, `status`) são retornados imediatamente, redirecionando o cliente sem criar cobranças duplicadas e sem cair em erro de valor zerado (`NO_AMOUNT_DUE`).
+### 6.5. Retorno Pós-Pagamento do Gateway e Redirecionamento à Galeria (`/l/:cobrancaId`)
+- Quando o cliente conclui o pagamento no gateway externo (InfinitePay, Mercado Pago) e clica em "Continuar", ele é redirecionado para a URL de retorno `${PUBLIC_SITE_URL}/l/:cobrancaId`.
+- **Comportamento para Navegadores Humanos (`!treatAsBot`)**:
+  - Se a cobrança pertence a uma galeria (`cobranca.galeria_id`) e está em status `pago`: **Redireciona imediatamente via HTTP 302 para a galeria do cliente** (`${PUBLIC_SITE_URL}/g/:token?payment=success`).
+  - Se a cobrança é de sessão avulsa/sem galeria: Redireciona via HTTP 302 para a página SPA de checkout (`${PUBLIC_SITE_URL}/checkout/:id`), que exibe a tela de confirmação de pagamento.
+  - **Nunca renderizar strings HTML estáticas/brutas para navegadores humanos no retorno do checkout.**
+- **Comportamento para Bots e Crawlers Sociais (`treatAsBot`)**:
+  - Retorna o payload HTML Open Graph com `Content-Type: text/html; charset=utf-8` para renderização do card com logo do fotógrafo, valor e link nos mensageiros (WhatsApp, Telegram, etc.).
+
+### 6.6. Resolução Universal de Dados do Pagador (`resolvePayerHints`) e Pré-Preenchimento
+- **Diretriz Absoluta**: Se os dados do cliente (Nome, Email, Telefone, CPF/CNPJ, Endereço) já existem no sistema, **NUNCA** devem ser solicitados novamente nem aparecer em branco em nenhum formulário ou checkout.
+- A resolução em cascata canônica consulta ordenadamente:
+  1. Tabela `clientes` via `cliente_id`.
+  2. Tabela `galerias` (`cliente_nome`, `cliente_email`, `cliente_telefone`, `session_id`, `cliente_id`).
+  3. Tabela `clientes_sessoes` -> `clientes` via `session_id`.
+  4. Tabela `galeria_visitantes` via `visitor_id`.
+- Se o pagador fornecer novos dados durante o checkout (ex: CPF para emissão de PIX), estes dados são imediatamente persistidos/atualizados na ficha do cliente no CRM se as colunas estiverem vazias.
+- O endpoint `check-payment-status` suporta resolução flexível por `cobrancaId`, `orderNsu`, `sessionId`, `galleryId` e `galleryToken`, garantindo que nenhuma verificação retorne 404 indevido.
+
+### 6.7. Reativação de Galerias de Seleção com Quitações Anteriores
+- Quando uma galeria concluída é reaberta pelo fotógrafo para o cliente escolher fotos adicionais:
+  - A RPC `reopen_gallery_selection` zera `valor_extras = 0` e cancela cobranças pendentes antigas, **preservando intactos** os contadores `total_fotos_extras_vendidas` e `valor_total_vendido`.
+  - Ao confirmar a nova seleção, a RPC `calculate_gallery_extra_payment` desconta o crédito previamente pago (`valor_já_pago`) e apura o valor delta real a cobrar.
+  - O frontend redireciona imediatamente para o checkout externo ou formulário inline sem falsos erros de recarregamento.
 
 ---
 
@@ -141,9 +162,11 @@ Sempre que for alterar código relacionado a galerias:
 1. [ ] A alteração quebra URLs com UUID ou URLs com `public_token`?
 2. [ ] Todas as Edge Functions modificadas foram publicadas com `verify_jwt: false`?
 3. [ ] O fluxo respeita a prioridade `galerias.venda_pagamento_provedor`?
-4. [ ] O cliente com cadastro completo no CRM é redirecionado diretamente ao pagamento sem tela intermediária?
+4. [ ] O cliente com dados existentes no CRM/galeria/sessão tem o checkout **100% pré-preenchido** sem tela intermediária desnecessária?
 5. [ ] Foram preservados os fallbacks para `visitorId` em galerias públicas?
 6. [ ] O gating de travamento de seleção (`selectionLocked`) permanece íntegro?
 7. [ ] O snapshot de `regras_congeladas` respeita a tabela de categoria/global ativa do fotógrafo?
 8. [ ] A criação de agendamento na Agenda reflete imediatamente no Workflow sem necessidade de F5?
 9. [ ] O pipeline de criação e regeneração de pagamentos (`confirm-selection`, `gallery-create-payment`, `client-selection`) retorna `checkoutUrl` e preserva idempotência sem travar em `NO_AMOUNT_DUE`?
+10. [ ] O retorno pós-pagamento do gateway (`/l/:cobrancaId`) redireciona o cliente final de volta à galeria (`/g/:token?payment=success`) sem exibir código HTML bruto?
+11. [ ] A reativação de galeria com compras anteriores apura o saldo delta corretamente e permite novo pagamento e confirmação sem bloqueios?

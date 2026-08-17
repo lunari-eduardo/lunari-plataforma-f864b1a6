@@ -181,7 +181,7 @@ serve(async (req) => {
 
     const { data: cobranca, error: cErr } = await supabase
       .from("cobrancas")
-      .select("id, valor, descricao, status, provedor, user_id, cliente_id")
+      .select("id, valor, descricao, status, provedor, user_id, cliente_id, galeria_id")
       .eq("id", id)
       .maybeSingle();
 
@@ -190,15 +190,37 @@ serve(async (req) => {
       return renderInvalid(canonicalUrl);
     }
 
+    let galleryToken: string | null = null;
+    if (cobranca.galeria_id) {
+      const { data: gal } = await supabase
+        .from("galerias")
+        .select("public_token")
+        .eq("id", cobranca.galeria_id)
+        .maybeSingle();
+      galleryToken = gal?.public_token || null;
+    }
+
     const targetPath = targetPathFor(cobranca.provedor, cobranca.id);
     const absoluteTarget = `${PUBLIC_SITE_URL}${targetPath}`;
     const status = cobranca.status;
     const isFinalState = status === "pago" || status === "cancelado" || status === "expirado";
 
     // ─────────────────────────────────────────────────────────────
-    // Ramo HUMANO — cobrança pagável → 302 imediato
+    // Ramo HUMANO (Browser) — Redireciona sempre para a SPA React
     // ─────────────────────────────────────────────────────────────
-    if (!treatAsBot && !isFinalState) {
+    if (!treatAsBot) {
+      // Se pagamento já foi concluído e é uma galeria, redireciona direto para a galeria
+      if (status === "pago" && galleryToken) {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            ...NO_STORE_HEADERS,
+            Location: `${PUBLIC_SITE_URL}/g/${galleryToken}?payment=success`,
+          },
+        });
+      }
+
+      // Caso padrão: vai para a rota React de checkout (/checkout/:id)
       return new Response(null, {
         status: 302,
         headers: {
@@ -209,7 +231,7 @@ serve(async (req) => {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Ramo HUMANO em estado final OU ramo BOT — HTML branded
+    // Ramo BOT / CRAWLER (WhatsApp, Facebook, iMessage, etc.) — HTML branded
     // ─────────────────────────────────────────────────────────────
     const [{ data: profile }, { data: cliente }] = await Promise.all([
       supabase.from("profiles").select("nome, empresa, logo_url").eq("user_id", cobranca.user_id).maybeSingle(),
@@ -233,6 +255,7 @@ serve(async (req) => {
       title = `Pagamento concluído — ${brandName}`;
       desc = `Cobrança de ${valorFmt} paga com sucesso.`;
       bodyMessage = "Pagamento concluído";
+      linkHref = galleryToken ? `${PUBLIC_SITE_URL}/g/${galleryToken}` : absoluteTarget;
     } else if (status === "cancelado" || status === "expirado") {
       title = `Link não disponível — ${brandName}`;
       desc = "Este link de pagamento não está mais ativo.";
@@ -257,9 +280,14 @@ serve(async (req) => {
       linkHref,
     });
 
-    // Estado final é `no-store` (dado sensível/mutável); ramo bot ativo pode cachear.
     const headers = isFinalState ? HUMAN_HTML_HEADERS : BOT_HTML_HEADERS;
-    return new Response(html, { status: 200, headers });
+    return new Response(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        ...headers,
+      },
+    });
   } catch (err) {
     console.error("[payment-link-preview] erro", err);
     return renderInvalid(canonicalUrl);

@@ -29,12 +29,19 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    const { cobrancaId, orderNsu, sessionId, forceUpdate } = await req.json();
+    const { cobrancaId, orderNsu, sessionId, galleryId, galeriaId, galleryToken, forceUpdate } = await req.json();
+    const effectiveGalleryId = galleryId || galeriaId || null;
 
-    console.log("[check-payment-status] Request:", { cobrancaId, orderNsu, sessionId, forceUpdate });
+    console.log("[check-payment-status] Request:", { cobrancaId, orderNsu, sessionId, galleryId: effectiveGalleryId, galleryToken, forceUpdate });
 
-    // RESOLUÇÃO SEGUE MESMA ORDEM DO WEBHOOK: ip_order_nsu → id
-    const cobranca = await findCobranca(supabase, { cobrancaId, orderNsu, sessionId });
+    // RESOLUÇÃO SEGUE ORDEM CANÔNICA: cobrancaId/ip_order_nsu → sessionId → galeriaId/token
+    const cobranca = await findCobranca(supabase, {
+      cobrancaId,
+      orderNsu,
+      sessionId,
+      galleryId: effectiveGalleryId,
+      galleryToken,
+    });
 
     if (!cobranca) {
       console.log("[check-payment-status] Cobranca not found");
@@ -45,6 +52,19 @@ serve(async (req) => {
 
     // Já pago — retornar
     if (cobranca.status === "pago") {
+      if (cobranca.galeria_id && cobranca.extras_contabilizados !== true) {
+        try {
+          await supabase.rpc('finalize_gallery_payment', {
+            p_cobranca_id: cobranca.id,
+            p_receipt_url: null,
+            p_paid_at: cobranca.data_pagamento || new Date().toISOString(),
+            p_manual_method: null,
+            p_manual_obs: null,
+          });
+        } catch (healErr) {
+          console.warn("[check-payment-status] Auto-heal na leitura falhou:", healErr);
+        }
+      }
       return jsonResponse({ found: true, status: "pago", updated: false, source: "already_paid", cobrancaId: cobranca.id });
     }
 
@@ -79,6 +99,20 @@ serve(async (req) => {
         throw new Error("Failed to update cobranca");
       }
 
+      if (cobranca.galeria_id) {
+        try {
+          await supabase.rpc('finalize_gallery_payment', {
+            p_cobranca_id: cobranca.id,
+            p_receipt_url: null,
+            p_paid_at: now,
+            p_manual_method: null,
+            p_manual_obs: null,
+          });
+        } catch (healErr) {
+          console.warn("[check-payment-status] Auto-heal pós forceUpdate falhou:", healErr);
+        }
+      }
+
       console.log(`[check-payment-status] Non-Asaas cobranca ${cobranca.id} updated to 'pago' via forceUpdate`);
       return jsonResponse({ found: true, status: "pago", updated: true, source: "manual_verification", cobrancaId: cobranca.id });
     }
@@ -108,7 +142,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId }: any) {
+async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId, galleryId, galleryToken }: any) {
   // 1. By cobrancaId (ip_order_nsu first, then id)
   if (cobrancaId) {
     const { data: byNsu } = await supabase.from("cobrancas").select("*").eq("ip_order_nsu", cobrancaId).maybeSingle();
@@ -122,14 +156,59 @@ async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId }: 
   if (orderNsu) {
     const { data: byNsu } = await supabase.from("cobrancas").select("*").eq("ip_order_nsu", orderNsu).maybeSingle();
     if (byNsu) return byNsu;
+
+    const { data: byId } = await supabase.from("cobrancas").select("*").eq("id", orderNsu).maybeSingle();
+    if (byId) return byId;
   }
 
-  // 3. By sessionId
+  // 3. By galleryToken (resolve gallery id first)
+  let resolvedGalleryId = galleryId || null;
+  if (!resolvedGalleryId && galleryToken) {
+    const { data: gal } = await supabase
+      .from("galerias")
+      .select("id")
+      .or(`public_token.eq.${galleryToken},id.eq.${galleryToken}`)
+      .maybeSingle();
+    if (gal?.id) {
+      resolvedGalleryId = gal.id;
+    }
+  }
+
+  // 4. By galleryId: busca última cobrança da galeria (prioriza pendente/aguardando_confirmacao, senão mais recente)
+  if (resolvedGalleryId) {
+    const { data: pending } = await supabase
+      .from("cobrancas")
+      .select("*")
+      .eq("galeria_id", resolvedGalleryId)
+      .in("status", ["pendente", "aguardando_confirmacao"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (pending) return pending;
+
+    const { data: latest } = await supabase
+      .from("cobrancas")
+      .select("*")
+      .eq("galeria_id", resolvedGalleryId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latest) return latest;
+  }
+
+  // 5. By sessionId
   if (sessionId) {
     const { data: bySession } = await supabase
       .from("cobrancas").select("*").eq("session_id", sessionId).eq("status", "pendente")
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (bySession) return bySession;
+
+    const { data: latestSession } = await supabase
+      .from("cobrancas").select("*").eq("session_id", sessionId)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (latestSession) return latestSession;
   }
 
   return null;

@@ -580,35 +580,13 @@ serve(async (req) => {
       cpfCnpj: string | null;
     } | null = null;
     try {
-      // 1. Resolve clienteId efetivo (galeria.cliente_id ou via clientes_sessoes)
-      let effectiveClienteId = (gallery as any).cliente_id || null;
-      if (!effectiveClienteId && (gallery as any).session_id) {
-        const { data: sessao } = await supabase
-          .from('clientes_sessoes')
-          .select('cliente_id')
-          .or(`id.eq.${(gallery as any).session_id},session_id.eq.${(gallery as any).session_id}`)
-          .maybeSingle();
-        effectiveClienteId = sessao?.cliente_id || null;
-      }
-
-      let hints: any = {};
-      if (effectiveClienteId) {
-        hints = await resolvePayerHints({
-          supabase,
-          clienteId: effectiveClienteId,
-        });
-      }
-
-      // Se visitante já tiver dados em galeria_visitantes, mesclar/usar
-      if (visitorId && visitorData) {
-        hints = {
-          name: hints.name || (visitorData as any).nome || undefined,
-          firstName: hints.firstName || ((visitorData as any).nome ? String((visitorData as any).nome).trim().split(/\s+/)[0] : undefined),
-          email: hints.email || normalizeEmail((visitorData as any).email),
-          phone: hints.phone || normalizePhone((visitorData as any).telefone),
-          cpfCnpj: hints.cpfCnpj || normalizeCpfCnpj((visitorData as any).cpf_cnpj),
-        };
-      }
+      const hints = await resolvePayerHints({
+        supabase,
+        clienteId: (gallery as any).cliente_id || null,
+        galleryId: gallery.id,
+        sessionId: (gallery as any).session_id || null,
+        visitorId: visitorId || null,
+      });
 
       // 2. Descobre provider ativo com precedência canônica:
       // (1) Configurado na galeria (venda_pagamento_provedor)

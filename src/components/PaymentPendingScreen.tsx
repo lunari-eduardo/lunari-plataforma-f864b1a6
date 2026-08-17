@@ -21,6 +21,8 @@ export type PendingAction =
   | { kind: 'resume_modal'; provedor: string }; // Asaas/PIX modais internos
 
 interface PaymentPendingScreenProps {
+  galleryId?: string;
+  galleryToken?: string;
   cobrancaId?: string;
   sessionId?: string;
   checkoutUrl?: string;
@@ -150,6 +152,8 @@ function Timeline({ steps }: { steps: Step[] }) {
 
 /* ---------- Componente principal ---------- */
 export function PaymentPendingScreen({
+  galleryId,
+  galleryToken,
   cobrancaId,
   sessionId,
   checkoutUrl,
@@ -179,13 +183,19 @@ export function PaymentPendingScreen({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkPayment = async () => {
-    if (!cobrancaId && !sessionId) return;
+    if (!cobrancaId && !sessionId && !galleryId && !galleryToken) return;
     setIsChecking(true);
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/check-payment-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cobrancaId, sessionId, forceUpdate: false }),
+        body: JSON.stringify({
+          galleryId,
+          galleryToken,
+          cobrancaId,
+          sessionId,
+          forceUpdate: false,
+        }),
       });
       const result = await response.json();
       if (result.status === 'pago') {

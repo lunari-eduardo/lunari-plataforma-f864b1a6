@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // 1. Carregar cobrança
     const { data: cobranca, error: cobError } = await supabase
       .from("cobrancas")
-      .select("id, user_id, cliente_id, valor, descricao, status, provedor, ip_checkout_url, checkout_url")
+      .select("id, user_id, cliente_id, session_id, galeria_id, valor, descricao, status, provedor, ip_checkout_url, checkout_url")
       .eq("id", cobrancaId)
       .maybeSingle();
 
@@ -60,9 +60,12 @@ Deno.serve(async (req) => {
     }
 
     // 3. Resolver hints consolidados
-    const hints = cobranca.cliente_id
-      ? await resolvePayerHints({ supabase, clienteId: cobranca.cliente_id })
-      : {};
+    const hints = await resolvePayerHints({
+      supabase,
+      clienteId: cobranca.cliente_id || null,
+      galleryId: cobranca.galeria_id || null,
+      sessionId: cobranca.session_id || null,
+    });
 
     const clientNome = payerPatch?.nome || hints.name || "Cliente";
     const clientPhone = payerPatch?.telefone || hints.phone;
