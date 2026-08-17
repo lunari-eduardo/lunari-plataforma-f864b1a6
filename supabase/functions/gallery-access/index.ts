@@ -24,13 +24,50 @@ serve(async (req) => {
     const password = body.password
     const visitorId = body.visitorId
 
-    // 1. Fetch gallery with photographer's global settings
+    // 1. Fetch gallery with photographer's global settings (supports UUID, public_token, alias)
     console.log(`Fetching gallery with token: ${publicToken}`)
-    const { data: gallery, error: galleryError } = await supabase
-      .from('galerias')
-      .select('*')
-      .eq('public_token', publicToken)
-      .maybeSingle()
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(publicToken);
+    
+    let gallery: any = null;
+    let galleryError: any = null;
+
+    if (isUUID) {
+      const res = await supabase
+        .from('galerias')
+        .select('*')
+        .eq('id', publicToken)
+        .maybeSingle();
+      gallery = res.data;
+      galleryError = res.error;
+    }
+
+    if (!gallery && !galleryError) {
+      const res = await supabase
+        .from('galerias')
+        .select('*')
+        .eq('public_token', publicToken)
+        .maybeSingle();
+      gallery = res.data;
+      galleryError = res.error;
+    }
+
+    if (!gallery && !galleryError) {
+      const { data: alias } = await supabase
+        .from('gallery_token_aliases')
+        .select('gallery_id')
+        .eq('old_token', publicToken)
+        .maybeSingle();
+
+      if (alias?.gallery_id) {
+        const res = await supabase
+          .from('galerias')
+          .select('*')
+          .eq('id', alias.gallery_id)
+          .maybeSingle();
+        gallery = res.data;
+        galleryError = res.error;
+      }
+    }
 
     if (galleryError) {
       console.error('Database error fetching gallery:', galleryError)

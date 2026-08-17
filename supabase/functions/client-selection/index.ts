@@ -72,26 +72,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Resolve galleryId from token (primary) or alias (fallback)
+    // Resolve galleryId from token (primary), UUID (legacy), or alias (fallback)
     let tokenGallery: { id: string } | null = null;
-    const { data: primaryGallery, error: tokenError } = await supabase
-      .from('galerias')
-      .select('id')
-      .eq('public_token', galleryToken)
-      .single();
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(galleryToken);
 
-    if (!tokenError && primaryGallery) {
-      tokenGallery = primaryGallery;
-    } else {
-      // Fallback: check token aliases for old/rotated tokens
-      const { data: alias } = await supabase
-        .from('gallery_token_aliases')
-        .select('gallery_id')
-        .eq('old_token', galleryToken)
-        .single();
-      if (alias?.gallery_id) {
-        tokenGallery = { id: alias.gallery_id };
-        console.log(`[client-selection] Resolved via token alias: ${galleryToken} -> ${alias.gallery_id}`);
+    if (isUUID) {
+      const { data: uuidGallery, error: uuidError } = await supabase
+        .from('galerias')
+        .select('id')
+        .eq('id', galleryToken)
+        .maybeSingle();
+
+      if (!uuidError && uuidGallery) {
+        tokenGallery = uuidGallery;
+      }
+    }
+
+    if (!tokenGallery) {
+      const { data: primaryGallery, error: tokenError } = await supabase
+        .from('galerias')
+        .select('id')
+        .eq('public_token', galleryToken)
+        .maybeSingle();
+
+      if (!tokenError && primaryGallery) {
+        tokenGallery = primaryGallery;
+      } else {
+        // Fallback: check token aliases for old/rotated tokens
+        const { data: alias } = await supabase
+          .from('gallery_token_aliases')
+          .select('gallery_id')
+          .eq('old_token', galleryToken)
+          .maybeSingle();
+        if (alias?.gallery_id) {
+          tokenGallery = { id: alias.gallery_id };
+          console.log(`[client-selection] Resolved via token alias: ${galleryToken} -> ${alias.gallery_id}`);
+        }
       }
     }
 
