@@ -275,10 +275,11 @@ export async function assertExtraPaymentWithinIdeal(
   supabase: any,
   galeriaId: string,
   valor: number,
+  bypassPreSelecaoGate = true,
 ): Promise<{ error?: BindingError; snapshot?: Record<string, unknown> }> {
   const { data, error } = await supabase.rpc(
     "calculate_gallery_extra_payment",
-    { p_gallery_id: galeriaId },
+    { p_gallery_id: galeriaId, p_bypass_pre_selecao_gate: bypassPreSelecaoGate },
   );
 
   if (error || !data || data.success === false) {

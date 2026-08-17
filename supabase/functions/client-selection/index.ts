@@ -186,6 +186,41 @@ Deno.serve(async (req) => {
         const { data: rpcData, error: rpcError } = await supabase.rpc('regenerate_pending_charge', { p_gallery_id: galleryId });
         if (rpcError) throw rpcError;
 
+        const isReused = (rpcData as any)?.reused === true;
+        const reusedCobrancaId = (rpcData as any)?.cobranca_id;
+
+        if (isReused && reusedCobrancaId) {
+          const { data: existingCobranca } = await supabase
+            .from('cobrancas')
+            .select('id, checkout_url, ip_checkout_url, mp_payment_link, pix_copia_cola, mp_pix_copia_cola, pix_qr_code_base64, mp_qr_code_base64, provedor, status, valor')
+            .eq('id', reusedCobrancaId)
+            .maybeSingle();
+
+          if (existingCobranca) {
+            const checkoutUrl = existingCobranca.checkout_url || existingCobranca.ip_checkout_url || existingCobranca.mp_payment_link;
+            return new Response(
+              JSON.stringify({
+                success: true,
+                data: {
+                  ...rpcData,
+                  charge: {
+                    success: true,
+                    reused: true,
+                    cobrancaId: existingCobranca.id,
+                    checkoutUrl,
+                    paymentLink: checkoutUrl,
+                    provedor: existingCobranca.provedor,
+                    status: existingCobranca.status,
+                    pixCopiaCola: existingCobranca.pix_copia_cola || existingCobranca.mp_pix_copia_cola || undefined,
+                    pixQrCodeBase64: existingCobranca.pix_qr_code_base64 || existingCobranca.mp_qr_code_base64 || undefined,
+                  },
+                },
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
         const provedor = (rpcData as any)?.provedor || null;
         const valorACobrar = Number((rpcData as any)?.calc?.valor_a_cobrar || 0);
         const isFullyPaid = (rpcData as any)?.calc?.is_fully_paid === true;
@@ -225,6 +260,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               galleryId,
               valor: valorACobrar,
+              qtdFotosExtras: Number((rpcData as any)?.calc?.extras_a_cobrar || (rpcData as any)?.calc?.extras_necessarias || 1),
               provedor: provedor || undefined,
               provider: provedor || undefined,
               descricao: 'Regeneração via cliente',

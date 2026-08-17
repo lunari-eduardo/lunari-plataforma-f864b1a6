@@ -96,10 +96,14 @@ As seguintes Edge Functions são consumidas diretamente pelo cliente final na ga
 - `selecao_completa`: Seleção quitada ou finalizada sem saldo pendente. Galeria travada e fotógrafo notificado.
 - `processando_selecao`: Estado transitório enquanto o webhook de pagamento ou rotina de reconciliação processa.
 
-### 6.2. Idempotência e Regeneração (`regenerate_charge`)
-- Quando o cliente retorna de um pagamento não concluído ou clica em "Ir para pagamento", a ação `regenerate_charge` revalida os extras, abate valores já pagos em cobranças anteriores e gera/retorna o checkout vivo atualizado.
+### 6.3. Pipeline de Criação de Cobranças da Galeria (`gallery-create-payment` & `create-cobranca`)
+- A criação de cobranças para fotos extras é intermediada pela Edge Function `gallery-create-payment`, que atua como fachada com Service Role delegando ao orquestrador central `create-cobranca`.
+- `gallery-create-payment` deve sempre resolver o fotógrafo proprietário, o cliente (ou criar visitante temporário se galeria pública), e garantir que `qtdFotos` seja um inteiro >= 1 (com fallback automático para `Math.max(1, fotos_selecionadas - fotos_incluidas)` caso não venha no body).
+- **Validação Anti-Overcharge (`assertExtraPaymentWithinIdeal`)**: `create-cobranca` valida se o valor cobrado não excede o saldo ideal da galeria usando `calculate_gallery_extra_payment(galeria_id, true)`. Quando a galeria está em transição de seleção (`confirm-selection`) ou já em `aguardando_pagamento`, o gate de pré-seleção é liberado para permitir a cobrança do valor calculado.
 
----
+### 6.4. Idempotência e Reutilização de Cobranças Vivas (`regenerate_charge`)
+- Quando o cliente clica em "Ir para pagamento" em uma galeria em `aguardando_pagamento`, `client-selection` executa `regenerate_pending_charge`.
+- Se já existir uma cobrança pendente e válida no banco (`reused: true`), os dados da cobrança ativa (`checkout_url`, `payment_link`, `cobranca_id`, `provedor`, `status`) são retornados imediatamente, redirecionando o cliente sem criar cobranças duplicadas e sem cair em erro de valor zerado (`NO_AMOUNT_DUE`).
 
 ---
 
@@ -142,4 +146,4 @@ Sempre que for alterar código relacionado a galerias:
 6. [ ] O gating de travamento de seleção (`selectionLocked`) permanece íntegro?
 7. [ ] O snapshot de `regras_congeladas` respeita a tabela de categoria/global ativa do fotógrafo?
 8. [ ] A criação de agendamento na Agenda reflete imediatamente no Workflow sem necessidade de F5?
-
+9. [ ] O pipeline de criação e regeneração de pagamentos (`confirm-selection`, `gallery-create-payment`, `client-selection`) retorna `checkoutUrl` e preserva idempotência sem travar em `NO_AMOUNT_DUE`?

@@ -11,10 +11,12 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
+const GCP_VERSION = "v2.2.1";
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json", "x-gcp-version": GCP_VERSION },
   });
 }
 
@@ -22,6 +24,7 @@ function errorResponse(error: string, status = 400, code?: string, details?: unk
   return jsonResponse(
     {
       success: false,
+      version: GCP_VERSION,
       error,
       code: code || (status === 401 ? "UNAUTHORIZED" : status === 403 ? "FORBIDDEN" : "BAD_REQUEST"),
       ...(details ? { details } : {}),
@@ -40,8 +43,12 @@ interface CreatePaymentRequest {
   valor?: number;
   descricao?: string;
   qtdFotosExtras?: number;
+  extraCount?: number;
   fotosIncluidasGaleria?: number;
+  snapshotFotosIncluidas?: number;
+  snapshotRegrasCongeladas?: any;
   provedor?: "asaas" | "mercadopago" | "infinitepay" | "pix_manual";
+  provider?: "asaas" | "mercadopago" | "infinitepay" | "pix_manual";
   payer?: {
     nome?: string;
     email?: string;
@@ -49,6 +56,9 @@ interface CreatePaymentRequest {
     cpfCnpj?: string;
   };
   preloaded?: Record<string, any>;
+  context?: string;
+  expectedVersion?: string;
+  correlationId?: string;
 }
 
 serve(async (req) => {
@@ -59,12 +69,33 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: CreatePaymentRequest = await req.json();
-    // 1. Resolver fotógrafo dono e cliente
-    let photographerId: string | null = null;
-    let clienteId: string | null = preloaded?.gallery?.cliente_id ?? body.clienteId ?? null;
-    let galeriaObj: any = null;
 
-    if (galleryId) {
+    const {
+      galleryId: reqGalleryId,
+      sessionId: reqSessionId,
+      clienteId: reqClienteId,
+      valor: reqValor,
+      descricao: reqDescricao,
+      qtdFotosExtras: reqQtdFotos,
+      extraCount: reqExtraCount,
+      fotosIncluidasGaleria: reqFotosIncluidas,
+      snapshotFotosIncluidas: reqSnapshotFotosIncluidas,
+      provedor: reqProvedor,
+      provider: reqProvider,
+      payer,
+      preloaded,
+      correlationId: reqCorrelationId,
+    } = body;
+
+    const galleryId = preloaded?.gallery?.id ?? reqGalleryId ?? null;
+    const sessionId = preloaded?.sessionIdTexto ?? preloaded?.gallery?.session_id ?? reqSessionId ?? null;
+
+    // 1. Resolver fotógrafo dono e cliente
+    let photographerId: string | null = preloaded?.gallery?.user_id ?? null;
+    let clienteId: string | null = preloaded?.gallery?.cliente_id ?? reqClienteId ?? null;
+    let galeriaObj: any = preloaded?.gallery ?? null;
+
+    if (galleryId && (!galeriaObj || !photographerId || !clienteId)) {
       const { data: galeria, error: galError } = await supabase
         .from("galerias")
         .select("id, user_id, cliente_id, session_id, nome_sessao, fotos_incluidas, fotos_selecionadas, valor_extras, venda_pagamento_provedor, configuracoes")
@@ -78,7 +109,7 @@ serve(async (req) => {
       galeriaObj = galeria;
       photographerId = galeria.user_id;
       clienteId = clienteId || galeria.cliente_id;
-    } else if (sessionId) {
+    } else if (sessionId && (!photographerId || !clienteId)) {
       const { data: sessao, error: sessError } = await supabase
         .from("clientes_sessoes")
         .select("user_id, session_id, cliente_id")
@@ -93,8 +124,12 @@ serve(async (req) => {
       clienteId = clienteId || sessao.cliente_id;
     }
 
-    const valor = preloaded?.valorCanonico ?? body.valor ?? (galeriaObj?.valor_extras ? Number(galeriaObj.valor_extras) : undefined);
+    const valor = preloaded?.valorCanonico ?? reqValor ?? (galeriaObj?.valor_extras ? Number(galeriaObj.valor_extras) : undefined);
     const finalSessionId = preloaded?.sessionIdTexto ?? sessionId;
+    const rawQtd = preloaded?.extrasACobrar ?? reqQtdFotos ?? reqExtraCount;
+    const fallbackQtd = galeriaObj ? Math.max(1, (galeriaObj.fotos_selecionadas || 0) - (galeriaObj.fotos_incluidas || 0)) : 1;
+    const qtdFotosExtras = (rawQtd !== undefined && rawQtd !== null && Number(rawQtd) > 0) ? Number(rawQtd) : fallbackQtd;
+    const fotosIncluidas = preloaded?.gallery?.fotos_incluidas ?? reqSnapshotFotosIncluidas ?? reqFotosIncluidas ?? galeriaObj?.fotos_incluidas ?? 0;
 
     if (valor === undefined || valor === null || Number(valor) <= 0) {
       return errorResponse("valor deve ser maior que zero", 400);
@@ -116,6 +151,7 @@ serve(async (req) => {
       console.warn("[gallery-create-payment] Fotógrafo sem acesso à Gallery:", photographerId);
       return jsonResponse({
         success: false,
+        version: GCP_VERSION,
         error: "O fotógrafo não possui plano ativo com integração Gallery.",
         errorCode: "NO_GALLERY_ACCESS",
       }, 403);
@@ -125,7 +161,7 @@ serve(async (req) => {
     // (1) Explícito no body / preloaded (provedor ou provider)
     // (2) Configurado na galeria (venda_pagamento_provedor ou configuracoes.saleSettings.paymentMethod)
     // (3) Fallback: Provedor padrão do fotógrafo (is_default) em usuarios_integracoes
-    let provedor = body.provedor || (body as any).provider || preloaded?.provedor || preloaded?.provider;
+    let provedor = reqProvedor || reqProvider || preloaded?.provedor || preloaded?.provider;
 
     if (!provedor && galeriaObj) {
       provedor = galeriaObj.venda_pagamento_provedor || galeriaObj.configuracoes?.saleSettings?.paymentMethod || null;
@@ -162,6 +198,7 @@ serve(async (req) => {
       if (!integracao) {
         return jsonResponse({
           success: false,
+          version: GCP_VERSION,
           error: "Fotógrafo não possui provedor de pagamento configurado ou ativo",
           errorCode: "NO_PAYMENT_PROVIDER",
         }, 400);
@@ -184,6 +221,7 @@ serve(async (req) => {
           email: guestEmail,
           telefone: guestPhone,
           whatsapp: guestPhone,
+          cpf_cnpj: payer?.cpfCnpj || null,
         })
         .select("id")
         .single();
@@ -203,13 +241,19 @@ serve(async (req) => {
       sessionId: finalSessionId,
       galeriaId: galleryId,
       valor: Number(valor),
-      descricao: descricao || `${qtdFotosExtras || 0} fotos extras - ${galeriaObj?.nome_sessao || "Galeria"}`,
+      descricao: reqDescricao || `${qtdFotosExtras || 0} fotos extras - ${galeriaObj?.nome_sessao || "Galeria"}`,
       provedor,
       finalidade: "fotos_extras",
       qtdFotos: qtdFotosExtras,
-      snapshotFotosIncluidas: fotosIncluidasGaleria ?? galeriaObj?.fotos_incluidas ?? 0,
-      payerContact: payer,
-      correlationId: preloaded?.correlationId || crypto.randomUUID(),
+      snapshotFotosIncluidas: fotosIncluidas,
+      payerContact: payer ? {
+        nome: payer.nome,
+        email: payer.email,
+        telefone: payer.phone,
+        whatsapp: payer.phone,
+        cpfCnpj: payer.cpfCnpj,
+      } : undefined,
+      correlationId: preloaded?.correlationId || reqCorrelationId || crypto.randomUUID(),
     };
 
     console.log(`[gallery-create-payment] Invocando create-cobranca para fotógrafo=${photographerId}, provedor=${provedor}, valor=${valor}`);
@@ -230,6 +274,7 @@ serve(async (req) => {
       console.error("[gallery-create-payment] create-cobranca retornou erro:", cobData);
       return jsonResponse({
         success: false,
+        version: GCP_VERSION,
         error: cobData.error || "Erro ao processar cobrança da galeria",
         errorCode: cobData.errorCode || "COBRANCA_FAILED",
       }, 400);
@@ -237,6 +282,7 @@ serve(async (req) => {
 
     return jsonResponse({
       success: true,
+      version: GCP_VERSION,
       checkoutUrl: cobData.checkoutUrl,
       paymentLink: cobData.paymentLink,
       socialShareUrl: cobData.socialShareUrl,
