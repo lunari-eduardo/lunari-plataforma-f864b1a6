@@ -127,9 +127,29 @@ serve(async (req) => {
       clienteId = clienteId || sessao.cliente_id;
     }
 
-    const valor = preloaded?.valorCanonico ?? reqValor ?? (galeriaObj?.valor_extras ? Number(galeriaObj.valor_extras) : undefined);
+    let valor = preloaded?.valorCanonico ?? reqValor ?? (body as any)?.valorTotal ?? null;
+    
+    // Se valor não foi repassado explicitamente, consultar o cálculo canônico da galeria (delta seguro)
+    if ((valor === null || valor === undefined || Number(valor) <= 0) && galleryId) {
+      try {
+        const { data: canonCalc } = await supabase.rpc("calculate_gallery_extra_payment", {
+          p_gallery_id: galleryId,
+          p_bypass_pre_selecao_gate: true,
+        });
+        if (canonCalc?.success && Number(canonCalc.valor_a_cobrar) > 0) {
+          valor = Number(canonCalc.valor_a_cobrar);
+        }
+      } catch (calcErr) {
+        console.warn("[gallery-create-payment] RPC calculate_gallery_extra_payment fallback:", calcErr);
+      }
+    }
+
+    if ((valor === null || valor === undefined || Number(valor) <= 0) && galeriaObj?.valor_extras) {
+      valor = Number(galeriaObj.valor_extras);
+    }
+
     const finalSessionId = preloaded?.sessionIdTexto ?? sessionId;
-    const rawQtd = preloaded?.extrasACobrar ?? reqQtdFotos ?? reqExtraCount;
+    const rawQtd = preloaded?.extrasACobrar ?? reqQtdFotos ?? reqExtraCount ?? (body as any)?.qtdFotos;
     const fallbackQtd = galeriaObj ? Math.max(1, (galeriaObj.fotos_selecionadas || 0) - (galeriaObj.fotos_incluidas || 0)) : 1;
     const qtdFotosExtras = (rawQtd !== undefined && rawQtd !== null && Number(rawQtd) > 0) ? Number(rawQtd) : fallbackQtd;
     const fotosIncluidas = preloaded?.gallery?.fotos_incluidas ?? reqSnapshotFotosIncluidas ?? reqFotosIncluidas ?? galeriaObj?.fotos_incluidas ?? 0;

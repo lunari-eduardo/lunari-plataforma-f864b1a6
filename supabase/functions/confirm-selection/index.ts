@@ -634,6 +634,12 @@ Deno.serve(async (req) => {
 
           const gcpBody: Record<string, unknown> = {
               galleryId,
+              clienteId: gallery.cliente_id || null,
+              sessionId: sessionIdTextoPre || gallery.session_id || null,
+              valor: strictValorTotal,
+              valorTotal: strictValorTotal,
+              qtdFotosExtras: strictExtras,
+              extraCount: strictExtras,
               provedor: integracao.provedor,
               provider: integracao.provedor,
               context: 'confirm_selection',
@@ -648,7 +654,7 @@ Deno.serve(async (req) => {
                 gallery: {
                   id: galleryId,
                   user_id: gallery.user_id,
-                  cliente_id: gallery.cliente_id || null, // [v2.2.1-final (deploy 2026-08-03)] Garantir null em galeria pública
+                  cliente_id: gallery.cliente_id || null,
                   session_id: gallery.session_id,
                   nome_sessao: gallery.nome_sessao,
                   public_token: galleryToken,

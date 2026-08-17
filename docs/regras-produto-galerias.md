@@ -170,3 +170,24 @@ Sempre que for alterar código relacionado a galerias:
 9. [ ] O pipeline de criação e regeneração de pagamentos (`confirm-selection`, `gallery-create-payment`, `client-selection`) retorna `checkoutUrl` e preserva idempotência sem travar em `NO_AMOUNT_DUE`?
 10. [ ] O retorno pós-pagamento do gateway (`/l/:cobrancaId`) redireciona o cliente final de volta à galeria (`/g/:token?payment=success`) sem exibir código HTML bruto?
 11. [ ] A reativação de galeria com compras anteriores apura o saldo delta corretamente e permite novo pagamento e confirmação sem bloqueios?
+12. [ ] A verificação de status de pagamento (`check-payment-status` / `PaymentPendingScreen`) valida quitação total (`is_fully_paid !== false`) antes de exibir tela de pagamento confirmado?
+
+---
+
+## 9. Ciclo de Reativação de Galeria e Cobrança Delta Incremental
+
+### 9.1. Princípio do Desconto Cumulativo de Valores Já Pagos
+Quando um fotógrafo reabre uma galeria (`Reativar Seleção`), o cliente tem permissão para selecionar fotos adicionais:
+1. **Dedução de Crédito Anterior**: O valor pago em ciclos anteriores (`galerias.valor_total_vendido` e `galerias.total_fotos_extras_vendidas`) é abatido do valor ideal do lote total.
+2. **Cálculo Delta Canônico**: A RPC canônica `calculate_gallery_extra_payment` é a única fonte de verdade para apurar:
+   - `extras_necessarias`: total de fotos selecionadas além das incluídas.
+   - `extras_pagas`: total de extras quitadas em ciclos anteriores.
+   - `extras_a_cobrar`: `Math.max(0, extras_necessarias - extras_pagas)`.
+   - `valor_a_cobrar`: `Math.max(0, valor_total_ideal - valor_pago)`.
+   - `is_fully_paid`: `true` apenas quando `valor_a_cobrar <= 0` e `extras_a_cobrar <= 0`.
+
+### 9.2. Blindagem contra Falsos-Positivos de Quitação
+- **`check-payment-status`**: Ao consultar por galeria ou token, se a galeria tiver saldo a cobrar em aberto (`valor_a_cobrar > 0`), **nunca** retorna cobranças pagas do passado como quitadas. Retorna a cobrança pendente do ciclo atual ou `is_fully_paid: false`.
+- **`PaymentPendingScreen`**: O frontend não exibe tela de "Pagamento confirmado" enquanto houver `is_fully_paid === false` ou se a cobrança pendente do ciclo atual não estiver quitada.
+- **Redirecionamento ao Checkout**: Ao confirmar nova seleção com novas fotos extras, a edge function `confirm-selection` gera a cobrança delta exata via `gallery-create-payment` e redireciona o cliente para o checkout correspondente (InfinitePay, Mercado Pago ou Asaas).
+

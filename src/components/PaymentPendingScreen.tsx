@@ -198,7 +198,7 @@ export function PaymentPendingScreen({
         }),
       });
       const result = await response.json();
-      if (result.status === 'pago') {
+      if (result.status === 'pago' && result.is_fully_paid !== false) {
         setStatus('confirmed');
         if (intervalRef.current) clearInterval(intervalRef.current);
         setTimeout(() => onPaymentConfirmed(), 2000);
@@ -218,6 +218,11 @@ export function PaymentPendingScreen({
   useEffect(() => {
     startTimeRef.current = Date.now();
     let pollTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    // Se estiver aguardando cobrança ser gerada (sem cobrancaId), não iniciar polling automático contínuo
+    if (awaitingCharge && !cobrancaId) {
+      return;
+    }
 
     const scheduleNextPoll = () => {
       if (pollTimeout) clearTimeout(pollTimeout);

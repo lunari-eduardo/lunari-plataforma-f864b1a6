@@ -164,18 +164,39 @@ async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId, ga
   // 3. By galleryToken (resolve gallery id first)
   let resolvedGalleryId = galleryId || null;
   if (!resolvedGalleryId && galleryToken) {
-    const { data: gal } = await supabase
-      .from("galerias")
-      .select("id")
-      .or(`public_token.eq.${galleryToken},id.eq.${galleryToken}`)
-      .maybeSingle();
-    if (gal?.id) {
-      resolvedGalleryId = gal.id;
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(galleryToken);
+    if (isUUID) {
+      resolvedGalleryId = galleryToken;
+    } else {
+      const { data: gal } = await supabase
+        .from("galerias")
+        .select("id")
+        .eq("public_token", galleryToken)
+        .maybeSingle();
+      if (gal?.id) {
+        resolvedGalleryId = gal.id;
+      }
     }
   }
 
-  // 4. By galleryId: busca última cobrança da galeria (prioriza pendente/aguardando_confirmacao, senão mais recente)
+  // 4. By galleryId: busca cobrança ativa considerando saldo canônico da galeria
   if (resolvedGalleryId) {
+    // Verificar saldo canônico atual da galeria
+    let canonicalCalc: any = null;
+    try {
+      const { data: calc } = await supabase.rpc("calculate_gallery_extra_payment", {
+        p_gallery_id: resolvedGalleryId,
+        p_bypass_pre_selecao_gate: true,
+      });
+      canonicalCalc = calc;
+    } catch (e) {
+      console.warn("[check-payment-status] calculate_gallery_extra_payment error:", e);
+    }
+
+    const valorACobrar = Number(canonicalCalc?.valor_a_cobrar ?? 0);
+    const isFullyPaid = canonicalCalc?.is_fully_paid === true && valorACobrar <= 0;
+
+    // Prioriza cobrança pendente do ciclo atual
     const { data: pending } = await supabase
       .from("cobrancas")
       .select("*")
@@ -187,6 +208,22 @@ async function findCobranca(supabase: any, { cobrancaId, orderNsu, sessionId, ga
 
     if (pending) return pending;
 
+    // Se a galeria ainda possui saldo a cobrar (ex: nova seleção delta após reabertura),
+    // NUNCA retornar uma cobrança paga antiga como quitada!
+    if (!isFullyPaid && valorACobrar > 0) {
+      console.log(`[check-payment-status] Galeria ${resolvedGalleryId} possui saldo a cobrar R$ ${valorACobrar} (delta não quitado).`);
+      return {
+        id: null,
+        galeria_id: resolvedGalleryId,
+        status: "pendente",
+        valor: valorACobrar,
+        provedor: "aguardando_cobranca",
+        is_fully_paid: false,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    // Se a galeria estiver 100% quitada, buscar a última cobrança (que deve ser 'pago')
     const { data: latest } = await supabase
       .from("cobrancas")
       .select("*")
