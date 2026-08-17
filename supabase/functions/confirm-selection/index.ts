@@ -634,6 +634,7 @@ Deno.serve(async (req) => {
 
           const gcpBody: Record<string, unknown> = {
               galleryId,
+              provedor: integracao.provedor,
               provider: integracao.provedor,
               context: 'confirm_selection',
               expectedVersion: EXPECTED_GCP_VERSION,

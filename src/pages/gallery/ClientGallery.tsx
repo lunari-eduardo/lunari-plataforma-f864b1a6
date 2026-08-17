@@ -56,6 +56,7 @@ import ClientDeliverGallery from '@/pages/gallery/ClientDeliverGallery';
 import { applyTheme, DEFAULT_THEME, type ThemePresetId, type VisualThemeMode } from '@/lib/visualTheme';
 import { resolveGalleryColorTokens } from '@/components/gallery/themes/tokens';
 import { sortPhotosByNaturalFilename } from '@/lib/photoOrdering';
+import { GalleryWelcomeModal } from '@/components/gallery/GalleryWelcomeModal';
 
 // Helper to convert HEX to HSL values for CSS variables
 function hexToHsl(hex: string): string | null {
@@ -111,8 +112,20 @@ export default function ClientGallery() {
     // Se retornando de pagamento, pular tela de boas-vindas
     const params = new URLSearchParams(window.location.search);
     const isPaymentReturn = params.get('payment') === 'success';
-    return !isPaymentReturn;
+    if (isPaymentReturn) return false;
+    const key = `gallery_welcome_${identifier || ''}`;
+    return !sessionStorage.getItem(key);
   });
+
+  const handleCloseWelcome = () => {
+    setShowWelcome(false);
+    if (identifier) {
+      sessionStorage.setItem(`gallery_welcome_${identifier}`, 'true');
+    }
+    if (supabaseGallery?.id) {
+      sessionStorage.setItem(`gallery_welcome_${supabaseGallery.id}`, 'true');
+    }
+  };
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [currentStep, setCurrentStep] = useState<SelectionStep>(() => {
     // Se o backend já retornou que a galeria está finalizada no payload inicial (ou redirecionado), iniciar em 'confirmed'
@@ -2206,13 +2219,7 @@ export default function ClientGallery() {
     );
   }
 
-  // Welcome screen is now integrated into the access screen.
-  // If we reach here, user is authenticated. 
-  // We only show welcome if it was explicitly requested AND we haven't skipped it.
-  if (showWelcome && !requiresPassword && !requiresVisitor) {
-    // If it was already shown or we don't need it, we skip it
-    setShowWelcome(false);
-  }
+
 
   // Pre-checkout contact step — universal para todos provedores
   if (currentStep === 'pre_checkout_contact' && pendingConfirmPayload) {
@@ -2665,6 +2672,19 @@ export default function ClientGallery() {
 
       {/* Contact collection modal — coleta email/telefone/nome/CPF antes do redirect ao checkout */}
       {contactModalNode}
+
+      {/* Modal de boas-vindas com transição suave de desfoque (2s) */}
+      {gallery?.settings?.welcomeMessage && (
+        <GalleryWelcomeModal
+          open={showWelcome}
+          onClose={handleCloseWelcome}
+          message={gallery.settings.welcomeMessage}
+          sessionName={gallery.sessionName}
+          clientName={gallery.clientName}
+          studioName={galleryResponse?.studioSettings?.studio_name}
+          isDark={effectiveBackgroundMode === 'dark'}
+        />
+      )}
     </div>
   );
 }

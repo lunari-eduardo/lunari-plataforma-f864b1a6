@@ -748,13 +748,19 @@ export default function GalleryCreate() {
       setSelectedPaymentMethod(paymentData.defaultIntegration.provedor as PaymentMethod);
     }
   }, [paymentData?.defaultIntegration, selectedPaymentMethod, settings?.defaultPaymentMethod]);
+
+  const getEffectivePaymentMethod = (): PaymentMethod | null => {
+    if (saleMode !== 'sale_with_payment') return null;
+    return selectedPaymentMethod || settings?.defaultPaymentMethod || (paymentData?.defaultIntegration?.provedor as PaymentMethod) || null;
+  };
+
   const getSaleSettings = (): SaleSettings => ({
     mode: saleMode,
     pricingModel,
     chargeType,
     fixedPrice,
     discountPackages,
-    paymentMethod: saleMode === 'sale_with_payment' ? selectedPaymentMethod || undefined : undefined
+    paymentMethod: getEffectivePaymentMethod() || undefined
   });
   // Create Supabase gallery when entering step 3 (for uploads)
   const createSupabaseGalleryForUploads = async (): Promise<boolean> => {
@@ -838,7 +844,7 @@ export default function GalleryCreate() {
         regrasCongeladas: finalRegrasCongeladas,
         // Sync legacy top-level sale fields
         venda_modo: saleMode,
-        venda_pagamento_provedor: selectedPaymentMethod,
+        venda_pagamento_provedor: getEffectivePaymentMethod(),
         venda_tipo_cobranca: chargeType,
         // Include all configuration settings including font
         configuracoes: {
@@ -999,7 +1005,7 @@ export default function GalleryCreate() {
               valorFotoExtra: saleMode !== 'no_sale' ? valorFotoExtraFinal : 0,
               // Sync legacy top-level sale fields
               venda_modo: saleMode,
-              venda_pagamento_provedor: selectedPaymentMethod,
+              venda_pagamento_provedor: getEffectivePaymentMethod(),
               venda_tipo_cobranca: chargeType,
               // Include regrasCongeladas for standalone progressive pricing
               ...(finalRegrasCongeladas && {
@@ -1109,7 +1115,7 @@ export default function GalleryCreate() {
               titleCaseMode: titleCaseMode
             },
             venda_modo: saleMode,
-            venda_pagamento_provedor: selectedPaymentMethod,
+            venda_pagamento_provedor: getEffectivePaymentMethod(),
             venda_tipo_cobranca: chargeType,
             ...(finalRegrasCongeladas && {
               regrasCongeladas: finalRegrasCongeladas
@@ -1168,7 +1174,7 @@ export default function GalleryCreate() {
             titleCaseMode: titleCaseMode
           },
           venda_modo: saleMode,
-          venda_pagamento_provedor: selectedPaymentMethod,
+          venda_pagamento_provedor: getEffectivePaymentMethod(),
           venda_tipo_cobranca: chargeType,
         });
         if (result?.id) {
@@ -1310,6 +1316,21 @@ export default function GalleryCreate() {
 
   const removeDiscountPackage = (id: string) => {
     setDiscountPackages(discountPackages.filter((pkg) => pkg.id !== id));
+  };
+  const getPaymentMethodLabel = () => {
+    const method = getEffectivePaymentMethod();
+    switch (method) {
+      case 'mercadopago':
+        return 'Mercado Pago';
+      case 'infinitepay':
+        return 'InfinitePay';
+      case 'asaas':
+        return 'Asaas';
+      case 'pix_manual':
+        return 'PIX Manual';
+      default:
+        return method || 'Não definido';
+    }
   };
   const getSaleModeLabel = () => {
     switch (saleMode) {
@@ -1770,9 +1791,9 @@ export default function GalleryCreate() {
                                 </div>
                                 <div className="space-y-1">
                                   <Label className="text-xs text-muted-foreground">Até</Label>
-                                  {index === discountPackages.length - 1 ? <Input type="text" value={pkg.maxPhotos === null ? 'âˆž' : pkg.maxPhotos} onChange={(e) => {
+                                  {index === discountPackages.length - 1 ? <Input type="text" value={pkg.maxPhotos === null ? '∞' : pkg.maxPhotos} onChange={(e) => {
                           const val = e.target.value;
-                          if (val === '' || val === 'âˆž') {
+                          if (val === '' || val === '∞') {
                             updateDiscountPackage(pkg.id, 'maxPhotos', null);
                           } else {
                             const num = parseInt(val);
@@ -1780,7 +1801,7 @@ export default function GalleryCreate() {
                               updateDiscountPackage(pkg.id, 'maxPhotos', num);
                             }
                           }
-                        }} placeholder="âˆž" className="h-8 text-center" /> : <Input type="number" min={pkg.minPhotos} value={pkg.maxPhotos ?? ''} onChange={(e) => updateDiscountPackage(pkg.id, 'maxPhotos', parseInt(e.target.value) || pkg.minPhotos)} className="h-8" />}
+                        }} placeholder="∞" className="h-8 text-center" /> : <Input type="number" min={pkg.minPhotos} value={pkg.maxPhotos ?? ''} onChange={(e) => updateDiscountPackage(pkg.id, 'maxPhotos', parseInt(e.target.value) || pkg.minPhotos)} className="h-8" />}
                                 </div>
                                 <div className="space-y-1">
                                   <Label className="text-xs text-muted-foreground">R$</Label>
@@ -1812,7 +1833,7 @@ export default function GalleryCreate() {
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{preset.name}</p>
                                     <p className="text-xs text-muted-foreground truncate">
-                                      {preset.packages.length} faixa{preset.packages.length !== 1 ? 's' : ''} Â· {priceLabel}
+                                      {preset.packages.length} faixa{preset.packages.length !== 1 ? 's' : ''} · {priceLabel}
                                     </p>
                                   </div>
                                   <Button type="button" variant="outline" size="sm" onClick={() => loadPreset(preset.id)} className="h-7 text-xs">
@@ -1869,7 +1890,7 @@ export default function GalleryCreate() {
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-sm text-muted-foreground mb-2">Faixas a salvar:</p>
                     {discountPackages.map((pkg) => <p key={pkg.id} className="text-sm">
-                        {pkg.minPhotos} - {pkg.maxPhotos === null ? 'âˆž' : pkg.maxPhotos} fotos: R$ {pkg.pricePerPhoto.toFixed(2)}
+                        {pkg.minPhotos} - {pkg.maxPhotos === null ? '∞' : pkg.maxPhotos} fotos: R$ {pkg.pricePerPhoto.toFixed(2)}
                       </p>)}
                   </div>
                 </div>
@@ -2084,7 +2105,7 @@ export default function GalleryCreate() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Aresta longa â€¢ Fotos são redimensionadas proporcionalmente
+                    Aresta longa • Fotos são redimensionadas proporcionalmente
                   </p>
                 </div>
 
@@ -2302,6 +2323,14 @@ export default function GalleryCreate() {
                     <span className="text-muted-foreground">Modo de venda</span>
                     <span className="font-medium">{getSaleModeLabel()}</span>
                   </div>
+                  {saleMode === 'sale_with_payment' && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Método de pagamento</span>
+                      <Badge variant="outline" className="font-medium border-primary/40 text-primary">
+                        {getPaymentMethodLabel()}
+                      </Badge>
+                    </div>
+                  )}
                   {saleMode !== 'no_sale' && <>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Modelo de preço</span>
@@ -2370,7 +2399,7 @@ export default function GalleryCreate() {
 
             <div className="p-4 rounded-lg bg-primary/10 text-sm">
               <p className="text-primary font-medium mb-1">
-                âœ¨ Pronto para criar!
+                ✨ Pronto para criar!
               </p>
               <p className="text-muted-foreground">
                 Após criar a galeria, você poderá enviar o link de seleção para o cliente.
@@ -2381,7 +2410,7 @@ export default function GalleryCreate() {
         return null;
     }
   };
-  return <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(6rem,env(safe-area-inset-bottom))] animate-fade-in">
+  return <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" onClick={handleBack}>
@@ -2416,12 +2445,12 @@ export default function GalleryCreate() {
       </div>
 
       {/* Step Content */}
-      <div className="lunari-card p-6 md:p-8">
+      <div className="lunari-card p-6 md:p-8 mb-6">
         {renderStep()}
       </div>
 
       {/* Fixed Navigation */}
-      <div className="fixed bottom-0 left-0 lg:left-64 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+      <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         <div className="max-w-[79rem] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
           <Button
             variant="outline"

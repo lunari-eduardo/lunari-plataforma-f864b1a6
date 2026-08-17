@@ -3,7 +3,32 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
-import { corsHeaders, jsonResponse, errorResponse } from "../_shared/auth-guard.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-lunari-internal-caller, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function errorResponse(error: string, status = 400, code?: string, details?: unknown) {
+  return jsonResponse(
+    {
+      success: false,
+      error,
+      code: code || (status === 401 ? "UNAUTHORIZED" : status === 403 ? "FORBIDDEN" : "BAD_REQUEST"),
+      ...(details ? { details } : {}),
+    },
+    status
+  );
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -34,18 +59,6 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const body: CreatePaymentRequest = await req.json();
-    const { galleryId, sessionId, descricao, qtdFotosExtras, fotosIncluidasGaleria, preloaded, payer } = body;
-
-    const valor = preloaded?.valorCanonico ?? body.valor;
-    const finalSessionId = preloaded?.sessionIdTexto ?? sessionId;
-
-    if (valor === undefined || valor === null || Number(valor) <= 0) {
-      return errorResponse("valor deve ser maior que zero", 400);
-    }
-    if (!galleryId && !sessionId) {
-      return errorResponse("galleryId ou sessionId é obrigatório", 400);
-    }
-
     // 1. Resolver fotógrafo dono e cliente
     let photographerId: string | null = null;
     let clienteId: string | null = preloaded?.gallery?.cliente_id ?? body.clienteId ?? null;
@@ -54,7 +67,7 @@ serve(async (req) => {
     if (galleryId) {
       const { data: galeria, error: galError } = await supabase
         .from("galerias")
-        .select("id, user_id, cliente_id, session_id, nome_sessao, fotos_incluidas")
+        .select("id, user_id, cliente_id, session_id, nome_sessao, fotos_incluidas, fotos_selecionadas, valor_extras, venda_pagamento_provedor, configuracoes")
         .eq("id", galleryId)
         .maybeSingle();
 
@@ -80,6 +93,16 @@ serve(async (req) => {
       clienteId = clienteId || sessao.cliente_id;
     }
 
+    const valor = preloaded?.valorCanonico ?? body.valor ?? (galeriaObj?.valor_extras ? Number(galeriaObj.valor_extras) : undefined);
+    const finalSessionId = preloaded?.sessionIdTexto ?? sessionId;
+
+    if (valor === undefined || valor === null || Number(valor) <= 0) {
+      return errorResponse("valor deve ser maior que zero", 400);
+    }
+    if (!galleryId && !sessionId) {
+      return errorResponse("galleryId ou sessionId é obrigatório", 400);
+    }
+
     if (!photographerId) {
       return errorResponse("Não foi possível identificar o fotógrafo", 404);
     }
@@ -98,8 +121,32 @@ serve(async (req) => {
       }, 403);
     }
 
-    // 3. Identificar provedor ativo se não enviado explicitamente
-    let provedor = body.provedor || preloaded?.provedor;
+    // 3. Identificar provedor com precedência canônica:
+    // (1) Explícito no body / preloaded (provedor ou provider)
+    // (2) Configurado na galeria (venda_pagamento_provedor ou configuracoes.saleSettings.paymentMethod)
+    // (3) Fallback: Provedor padrão do fotógrafo (is_default) em usuarios_integracoes
+    let provedor = body.provedor || (body as any).provider || preloaded?.provedor || preloaded?.provider;
+
+    if (!provedor && galeriaObj) {
+      provedor = galeriaObj.venda_pagamento_provedor || galeriaObj.configuracoes?.saleSettings?.paymentMethod || null;
+    }
+
+    if (provedor) {
+      // Validar se o fotógrafo tem esse provedor ativo
+      const { data: integracaoAtiva } = await supabase
+        .from("usuarios_integracoes")
+        .select("provedor, status")
+        .eq("user_id", photographerId)
+        .eq("provedor", provedor)
+        .eq("status", "ativo")
+        .maybeSingle();
+
+      if (!integracaoAtiva) {
+        console.warn(`[gallery-create-payment] Provedor configurado (${provedor}) não está ativo para fotógrafo ${photographerId}. Buscando fallback...`);
+        provedor = null;
+      }
+    }
+
     if (!provedor) {
       const { data: integracao } = await supabase
         .from("usuarios_integracoes")
@@ -115,7 +162,7 @@ serve(async (req) => {
       if (!integracao) {
         return jsonResponse({
           success: false,
-          error: "Fotógrafo não possui provedor de pagamento configurado",
+          error: "Fotógrafo não possui provedor de pagamento configurado ou ativo",
           errorCode: "NO_PAYMENT_PROVIDER",
         }, 400);
       }

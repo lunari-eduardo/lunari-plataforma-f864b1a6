@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -153,7 +153,7 @@ export default function DeliverCreate() {
             <Progress value={storageUsedPercent} className="h-2.5" />
             <p className="text-xs text-muted-foreground">
               {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
-              {planName && <span className="ml-1">Â· {planName}</span>}
+              {planName && <span className="ml-1">· {planName}</span>}
             </p>
           </div>
         )}
@@ -706,7 +706,7 @@ export default function DeliverCreate() {
     }
   };
 
-  return <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(6rem,env(safe-area-inset-bottom))] animate-fade-in">
+  return <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list')}>
@@ -748,13 +748,13 @@ export default function DeliverCreate() {
       </div>
 
       {/* Step Content */}
-      <div className="lunari-card p-6 md:p-8">
+      <div className="lunari-card p-6 md:p-8 mb-6">
         {renderStep()}
       </div>
 
       {/* Fixed Navigation */}
-      <div className="fixed bottom-0 left-0 lg:left-64 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
-        <div className="w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
+      <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+        <div className="max-w-[79rem] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
           <Button variant="outline" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             {currentStep === 1 ? 'Cancelar' : 'Voltar'}

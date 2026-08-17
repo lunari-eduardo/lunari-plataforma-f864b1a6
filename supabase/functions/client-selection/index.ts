@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
         const gcpUrl = `${supabaseUrlEnv}/functions/v1/gallery-create-payment`;
 
-        console.log('[regenerate_charge][step:3] calling gallery-create-payment', { provedor });
+        console.log('[regenerate_charge][step:3] calling gallery-create-payment', { provedor, valorACobrar });
 
         const gcpAc = new AbortController();
         const gcpTimer = setTimeout(() => gcpAc.abort(), 25_000);
@@ -208,6 +208,8 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               galleryId,
+              valor: valorACobrar,
+              provedor: provedor || undefined,
               provider: provedor || undefined,
               descricao: 'Regeneração via cliente',
               expectedVersion: EXPECTED_GCP_VERSION,
