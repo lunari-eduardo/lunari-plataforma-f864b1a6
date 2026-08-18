@@ -122,8 +122,7 @@ export function StepPricing({ model, onChange }: StepPricingProps) {
           {currentOption.explanationText}
         </p>
         <p className="text-[11px] text-white/40 font-light pt-1 border-t border-white/[0.06]">
-          Você poderá alterar essa configuração posteriormente em:{' '}
-          <strong className="text-white/80 font-medium">Configurações → Modelos de preço</strong>. Os valores e regras podem ser ajustados conforme cada categoria ou pacote.
+          Você poderá ajustar valores, faixas de desconto e regras de precificação no Lunari sempre que desejar.
         </p>
       </div>
     </div>

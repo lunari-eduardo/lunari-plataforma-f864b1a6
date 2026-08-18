@@ -142,8 +142,7 @@ export function StepContracts({
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2.5 text-xs text-white/50 font-light">
             <Info className="w-4 h-4 text-[#C6A36A] shrink-0" />
             <span>
-              Você poderá editar, duplicar ou criar novos contratos depois em{' '}
-              <strong className="text-white/80 font-medium">Configurações → Contratos</strong>.
+              Você poderá editar, duplicar ou criar novos modelos de contratos no Lunari quando quiser.
             </span>
           </div>
         </div>

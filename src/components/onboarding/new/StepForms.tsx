@@ -143,8 +143,7 @@ export function StepForms({ wantsForms, selectedSlugs, onChange }: StepFormsProp
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2.5 text-xs text-white/50 font-light">
             <Info className="w-4 h-4 text-[#C6A36A] shrink-0" />
             <span>
-              Os modelos escolhidos serão adicionados ao seu Lunari. Você poderá editar tudo depois em{' '}
-              <strong className="text-white/80 font-medium">Configurações → Formulários</strong>.
+              Os modelos escolhidos serão adicionados à sua conta. Você poderá editar perguntas e criar novos formulários no Lunari quando quiser.
             </span>
           </div>
         </div>
