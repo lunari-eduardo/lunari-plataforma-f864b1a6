@@ -73,7 +73,7 @@ export default function DayPreviewPopover({ day, events, onEventClick, onViewDay
                   e.stopPropagation();
                   onEventClick(event);
                 }}
-                className="w-full px-3 py-2 flex items-start gap-2.5 hover:bg-accent/50 transition-colors text-left group"
+                className="w-full px-3 py-2 flex items-start gap-2.5 hover:bg-muted/40 dark:hover:bg-white/5 rounded-lg transition-colors text-left group"
               >
                 <div className="mt-0.5 flex items-center gap-1.5 shrink-0">
                   <span className={`h-2 w-2 rounded-full ${getEventDotColor(event)}`} />
@@ -108,7 +108,7 @@ export default function DayPreviewPopover({ day, events, onEventClick, onViewDay
             e.stopPropagation();
             onViewDay(day);
           }}
-          className="w-full px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+          className="w-full px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 dark:hover:bg-primary/15 rounded-lg transition-colors flex items-center justify-center gap-1.5"
         >
           Ver dia completo
           <ChevronRight className="h-3.5 w-3.5" />

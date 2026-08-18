@@ -14,6 +14,7 @@ interface AgendaHeaderProps {
   onNavigateToday: () => void;
   onOpenAvailability: () => void;
   onOpenShare?: () => void;
+  extraAction?: React.ReactNode;
 }
 
 export default function AgendaHeader({
@@ -24,7 +25,8 @@ export default function AgendaHeader({
   onNavigateNext,
   onNavigateToday,
   onOpenAvailability,
-  onOpenShare
+  onOpenShare,
+  extraAction
 }: AgendaHeaderProps) {
   const { isMobile, isTablet, classes } = useResponsiveLayout();
   const { hasPro } = useAccessControl();
@@ -148,6 +150,7 @@ export default function AgendaHeader({
               <ViewToggleButton key={key} viewKey={key} label={label} />
             ))}
           </div>
+          {extraAction}
           <ManageButton />
         </div>
 
@@ -172,7 +175,10 @@ export default function AgendaHeader({
         {/* Second Line: View Toggles and Manage Button */}
         <div className="flex items-center justify-center w-full gap-4">
           <ViewToggleGroup />
-          <ManageButton />
+          <div className="flex items-center gap-2">
+            {extraAction}
+            <ManageButton />
+          </div>
         </div>
 
         {/* Day Title for Daily View */}
@@ -194,8 +200,11 @@ export default function AgendaHeader({
           <ViewToggleGroup />
         </div>
 
-        {/* Manage Schedules Button - Far Right */}
-        <ManageButton />
+        {/* Manage Schedules Button & Extra Actions - Far Right */}
+        <div className="flex items-center gap-2">
+          {extraAction}
+          <ManageButton />
+        </div>
       </div>
 
       {view === 'day' && (

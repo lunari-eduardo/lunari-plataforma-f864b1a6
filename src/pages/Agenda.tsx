@@ -44,7 +44,6 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { CalendarDays } from 'lucide-react';
 import PageContainer from '@/components/layout/PageContainer';
-import PageHeader from '@/components/layout/PageHeader';
 import { AgendaLegend } from '@/components/agenda/AgendaLegend';
 import { PersonalEventModal } from '@/components/agenda/PersonalEventModal';
 import { MeetingModal } from '@/components/agenda/MeetingModal';
@@ -411,13 +410,18 @@ export default function Agenda() {
   const isYearView = view === 'year';
 
   return (
-    <div className={`w-full mx-auto ${isYearView ? 'max-w-[1600px] px-4 md:px-6' : ''} pb-20 md:pb-10`}>
+    <div className={`w-full mx-auto ${isYearView ? 'max-w-[1600px] px-4 md:px-6' : ''} pb-20 md:pb-10 pt-2`}>
       <AgendaShell full={isYearView}>
-        <PageHeader
-          title="Agenda"
-          description="Agendamentos, reuniões, compromissos e tarefas"
-          className="pb-3"
-          action={
+        <AgendaHeader
+          view={view}
+          date={date}
+          onViewChange={setView}
+          onNavigatePrevious={handleNavigatePrevious}
+          onNavigateNext={handleNavigateNext}
+          onNavigateToday={handleNavigateToday}
+          onOpenAvailability={openAvailabilityModal}
+          onOpenShare={view === 'day' ? openShareModal : undefined}
+          extraAction={
             !showSidebar && sidebarApplicable ? (
               <Sheet>
                 <SheetTrigger asChild>
@@ -439,17 +443,6 @@ export default function Agenda() {
               </Sheet>
             ) : undefined
           }
-        />
-
-        <AgendaHeader
-          view={view}
-          date={date}
-          onViewChange={setView}
-          onNavigatePrevious={handleNavigatePrevious}
-          onNavigateNext={handleNavigateNext}
-          onNavigateToday={handleNavigateToday}
-          onOpenAvailability={openAvailabilityModal}
-          onOpenShare={view === 'day' ? openShareModal : undefined}
         />
 
         {/* Legenda visual com todos os tipos */}

@@ -6,6 +6,8 @@ import UnifiedEventCard from './UnifiedEventCard';
 import DayPreviewPopover from './DayPreviewPopover';
 import { useAvailability } from '@/hooks/useAvailability';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { cn } from '@/lib/utils';
+
 interface MonthlyViewProps {
   date: Date;
   unifiedEvents: UnifiedEvent[];
@@ -15,6 +17,20 @@ interface MonthlyViewProps {
   onEventClick: (event: UnifiedEvent) => void;
   onDayClick: (date: Date) => void;
 }
+
+const getMobileDotColor = (event: UnifiedEvent) => {
+  const agendaType = event.agendaType || (event.originalData as any)?.agendaType || 'session';
+  if (agendaType === 'personal') return 'bg-purple-500';
+  if (agendaType === 'meeting') return 'bg-cyan-500';
+  if (event.type === 'task' || agendaType === 'task') return 'bg-amber-500';
+  if (event.type === 'appointment') {
+    const origem = (event.originalData as any)?.origem;
+    if (origem === 'orcamento') return 'bg-emerald-500';
+    if (event.status === 'a confirmar') return 'bg-orange-500';
+    return 'bg-blue-500';
+  }
+  return 'bg-blue-500';
+};
 // Hook personalizado para contadores de dia
 const useDayMetrics = (day: Date, unifiedEvents: UnifiedEvent[], availability: any[]) => {
   return useMemo(() => {
@@ -190,19 +206,14 @@ const DayCell = ({
     leaveTimer.current = setTimeout(() => setShowPreview(false), 150);
   }, [isMobile]);
 
-  // Estilos dinâmicos para dia todo
+  // Estilos dinâmicos para dia todo (sem bordas pesadas, apenas cor sutil de baixa opacidade)
   const cellStyle = fullDaySlot ? {
     backgroundColor: fullDaySlot.color 
       ? `${fullDaySlot.color}15`
-      : 'hsl(var(--muted))',
-    borderColor: fullDaySlot.color || 'hsl(var(--border))'
+      : 'hsl(var(--destructive) / 0.08)',
   } : {};
 
-  const cellClassName = `${classes.calendarCell} md:min-h-[104px] lg:min-h-[116px] xl:min-h-[124px] cursor-pointer transition-colors ${
-    fullDaySlot 
-      ? 'border-2' 
-      : 'bg-card/60 hover:bg-muted/40 border border-border/40 hover:border-border'
-  }`;
+  const cellClassName = `${classes.calendarCell} md:min-h-[104px] lg:min-h-[116px] xl:min-h-[124px] cursor-pointer transition-colors bg-card/60 hover:bg-muted/40 border border-border/40 hover:border-border`;
 
   return (
     <div 
@@ -229,12 +240,12 @@ const DayCell = ({
       </div>
 
       <div className="space-y-px md:space-y-1">
-        {/* Label do dia todo */}
-        {fullDaySlot && (
+        {/* Label do dia todo (desktop) */}
+        {!isMobile && fullDaySlot && (
           <div className="flex items-center gap-1">
             <div 
               className="w-2 h-2 rounded-full flex-shrink-0" 
-              style={{ backgroundColor: fullDaySlot.color || 'hsl(var(--muted-foreground))' }}
+              style={{ backgroundColor: fullDaySlot.color || 'hsl(var(--destructive))' }}
             />
             <span className="text-[10px] md:text-xs font-medium truncate">
               {fullDaySlot.label || 'Dia todo'}
@@ -243,19 +254,33 @@ const DayCell = ({
         )}
         
         {isMobile ? (
-          !fullDaySlot && (
-            <div className="flex items-center gap-2">
-              {sessionCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px]">
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary" aria-hidden />
-                  {sessionCount}
+          fullDaySlot ? (
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+              <span className="text-[9px] text-red-600 dark:text-red-400 font-medium truncate">
+                {fullDaySlot.label || 'Bloqueado'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-1 mt-0.5 max-w-full">
+              {dayEvents.slice(0, 3).map((ev, i) => (
+                <span
+                  key={ev.id || i}
+                  className={cn('h-1.5 w-1.5 rounded-full shrink-0', getMobileDotColor(ev))}
+                  aria-hidden
+                />
+              ))}
+              {dayEvents.length > 3 && (
+                <span className="text-[9px] font-semibold text-muted-foreground leading-none">
+                  +{dayEvents.length - 3}
                 </span>
               )}
-              {availCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-[10px]">
-                  <span className="h-2.5 w-2.5 rounded-full bg-availability" aria-hidden />
-                  {availCount}
-                </span>
+              {availCount > 0 && dayEvents.length === 0 && (
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"
+                  title={`${availCount} disponíveis`}
+                  aria-hidden
+                />
               )}
             </div>
           )

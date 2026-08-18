@@ -117,13 +117,11 @@ export default function WeeklyView({
                   "border-b border-border/40",
                   !isLast && "border-r border-border/40",
                   isTablet ? 'p-1' : 'p-1 md:p-2',
-                  fullDaySlot && "border-b-2",
                   todayCol && !fullDaySlot && "bg-primary/5 dark:bg-primary/10"
                 )}
                 style={{
                   ...(fullDaySlot ? {
-                    backgroundColor: `${fullDaySlot.color || 'hsl(var(--lunar-accent))'}15`,
-                    borderBottomColor: fullDaySlot.color || 'hsl(var(--lunar-accent))'
+                    backgroundColor: `${fullDaySlot.color || 'hsl(var(--destructive))'}15`,
                   } : {})
                 }}
                 onClick={() => onDayClick?.(day)}
