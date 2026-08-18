@@ -113,11 +113,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // 6. Verificar onboarding ANTES da subscription wall
   // (novos usuários sem trial precisam completar onboarding para ativar o trial)
   if (location.pathname !== '/onboarding') {
-    const needsOnboarding = !profile || 
-      !profile.is_onboarding_complete || 
-      !profile.nome?.trim() || 
-      !profile.nicho?.trim() ||
-      !profile.cidade_ibge_id;
+    const needsOnboarding = !profile || !profile.is_onboarding_complete;
       
     if (needsOnboarding) {
       return <Navigate to="/onboarding" replace />;

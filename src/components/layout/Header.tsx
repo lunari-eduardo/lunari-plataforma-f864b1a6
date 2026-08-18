@@ -1,8 +1,7 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, User, CreditCard, Palette, LifeBuoy, Plug, Package, Gift } from 'lucide-react';
-import { AppearanceModal } from '@/components/preferences/AppearanceModal';
+import { Moon, Sun, User, CreditCard, LifeBuoy, Plug, Package, Gift } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
@@ -56,7 +55,6 @@ export default function Header() {
   
   const { getProfileOrDefault } = useUserProfile();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   const currentProfile = getProfileOrDefault();
   const currentTitle = getPageTitleFromPath(location.pathname);
@@ -171,15 +169,6 @@ export default function Header() {
                 <Gift className="mr-2 h-4 w-4" />
                 <span>Indique e Ganhe</span>
               </DropdownMenuItem>
-              {/* Itens admin removidos — painel administrativo migrado para admin.lunarihub.com */}
-              <DropdownMenuSeparator className="bg-border/30" />
-              <DropdownMenuItem
-                className="text-sm cursor-pointer"
-                onClick={() => setAppearanceOpen(true)}
-              >
-                <Palette className="mr-2 h-4 w-4" />
-                <span>Aparência</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem
                 className="text-sm cursor-pointer"
@@ -195,7 +184,6 @@ export default function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <AppearanceModal open={appearanceOpen} onOpenChange={setAppearanceOpen} />
         </div>
       </header>
     </>
