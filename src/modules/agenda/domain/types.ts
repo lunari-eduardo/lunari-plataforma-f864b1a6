@@ -29,6 +29,9 @@ export const ProdutoIncluidoSchema = z.object({
 });
 export type ProdutoIncluido = z.infer<typeof ProdutoIncluidoSchema>;
 
+export const AgendaItemTypeSchema = z.enum(["session", "personal", "meeting"]);
+export type AgendaItemType = z.infer<typeof AgendaItemTypeSchema>;
+
 export const AppointmentSchema = z.object({
   id: z.string(),
   sessionId: z.string().optional(),
@@ -37,6 +40,9 @@ export const AppointmentSchema = z.object({
   date: IsoDateSchema,
   time: TimeSchema,
   type: z.string(),
+  agendaType: AgendaItemTypeSchema.optional(),
+  durationMinutes: z.number().int().positive().optional(),
+  location: z.string().optional(),
   client: z.string(),
   status: AppointmentStatusSchema,
   description: z.string().optional(),

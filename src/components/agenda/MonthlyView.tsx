@@ -268,7 +268,7 @@ const DayCell = ({
                 </div>
               ))}
               {hasMoreEvents && (
-                <div className="text-xs p-0.5 md:p-1 text-muted-foreground font-medium">
+                <div className="text-[10px] md:text-[11px] font-semibold px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground w-fit hover:bg-primary/15 hover:text-primary transition-colors mt-0.5">
                   +{dayEvents.length - maxDisplayEvents} mais
                 </div>
               )}

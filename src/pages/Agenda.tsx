@@ -45,6 +45,9 @@ import { Button } from '@/components/ui/button';
 import { CalendarDays } from 'lucide-react';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import { AgendaLegend } from '@/components/agenda/AgendaLegend';
+import { PersonalEventModal } from '@/components/agenda/PersonalEventModal';
+import { MeetingModal } from '@/components/agenda/MeetingModal';
 
 
 /** Shell de largura: ano usa 1600px (grade de 12 meses), demais views usam o padrão. */
@@ -63,6 +66,18 @@ export default function Agenda() {
   
   // Task modal state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskInitialDate, setTaskInitialDate] = useState<string | null>(null);
+
+  // Personal Event modal state
+  const [isPersonalEventModalOpen, setIsPersonalEventModalOpen] = useState(false);
+  const [selectedPersonalEvent, setSelectedPersonalEvent] = useState<Appointment | null>(null);
+
+  // Meeting modal state
+  const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState<Appointment | null>(null);
+
+  // Slot info for new item
+  const [newItemSlot, setNewItemSlot] = useState<{ date: Date; time: string } | null>(null);
   
   // Navigation hook
   const {
@@ -165,10 +180,44 @@ export default function Agenda() {
     openAppointmentDialog(slot);
   }, [openAppointmentDialog]);
 
+  // Specific slot creation handlers
+  const handleCreatePersonalEventSlot = useCallback((slot: { date: Date; time: string }) => {
+    setNewItemSlot(slot);
+    setSelectedPersonalEvent(null);
+    setIsPersonalEventModalOpen(true);
+  }, []);
+
+  const handleCreateMeetingSlot = useCallback((slot: { date: Date; time: string }) => {
+    setNewItemSlot(slot);
+    setSelectedMeeting(null);
+    setIsMeetingModalOpen(true);
+  }, []);
+
+  const handleCreateTaskSlot = useCallback((slot: { date: Date; time: string }) => {
+    setTaskInitialDate(format(slot.date, 'yyyy-MM-dd'));
+    setIsTaskModalOpen(true);
+  }, []);
+
   // Handle event click (existing appointment or budget)
   const handleEventClick = useCallback((event: UnifiedEvent) => {
     if (event.type === 'appointment') {
       const appointment = event.originalData as Appointment;
+      const agendaType = appointment.agendaType || 
+        (appointment.type === 'personal' || appointment.type === 'pessoal' ? 'personal' : 
+         appointment.type === 'meeting' || appointment.type === 'reuniao' ? 'meeting' : 'session');
+
+      if (agendaType === 'personal') {
+        setSelectedPersonalEvent(appointment);
+        setIsPersonalEventModalOpen(true);
+        return;
+      }
+
+      if (agendaType === 'meeting') {
+        setSelectedMeeting(appointment);
+        setIsMeetingModalOpen(true);
+        return;
+      }
+
       if (isFromBudget(appointment)) {
         // Buscar o orçamento original
         const budgetId = getBudgetId(appointment);
@@ -233,6 +282,38 @@ export default function Agenda() {
       throw error;
     }
   }, [deleteAppointment, setIsDetailsOpen, setIsBudgetAppointmentModalOpen]);
+
+  // Handlers para Eventos Pessoais
+  const handleSavePersonalEvent = useCallback(async (data: any) => {
+    if (data.id) {
+      await updateAppointment(data.id, data);
+      toast.success('Evento pessoal atualizado com sucesso!');
+    } else {
+      await addAppointment(data);
+      toast.success('Evento pessoal criado com sucesso!');
+    }
+  }, [addAppointment, updateAppointment]);
+
+  const handleDeletePersonalEvent = useCallback(async (id: string) => {
+    await deleteAppointment(id, 'remove');
+    toast.success('Evento pessoal excluído com sucesso.');
+  }, [deleteAppointment]);
+
+  // Handlers para Reuniões
+  const handleSaveMeeting = useCallback(async (data: any) => {
+    if (data.id) {
+      await updateAppointment(data.id, data);
+      toast.success('Reunião atualizada com sucesso!');
+    } else {
+      await addAppointment(data);
+      toast.success('Reunião agendada com sucesso!');
+    }
+  }, [addAppointment, updateAppointment]);
+
+  const handleDeleteMeeting = useCallback(async (id: string) => {
+    await deleteAppointment(id, 'remove');
+    toast.success('Reunião excluída com sucesso.');
+  }, [deleteAppointment]);
 
   // Handle budget appointment save (reschedule)
   const handleSaveBudgetAppointment = useCallback(async (data: {
@@ -304,7 +385,14 @@ export default function Agenda() {
         );
       case 'day':
         return (
-          <DailyView {...commonProps} onOpenAvailability={openAvailabilityModal} />
+          <DailyView
+            {...commonProps}
+            onCreateSession={handleCreateSlot}
+            onCreateMeeting={handleCreateMeetingSlot}
+            onCreatePersonalEvent={handleCreatePersonalEventSlot}
+            onCreateTask={handleCreateTaskSlot}
+            onOpenAvailability={openAvailabilityModal}
+          />
         );
       default:
         return null;
@@ -327,7 +415,7 @@ export default function Agenda() {
       <AgendaShell full={isYearView}>
         <PageHeader
           title="Agenda"
-          description="Agendamentos, disponibilidade e tarefas do dia"
+          description="Agendamentos, reuniões, compromissos e tarefas"
           className="pb-3"
           action={
             !showSidebar && sidebarApplicable ? (
@@ -364,7 +452,10 @@ export default function Agenda() {
           onOpenShare={view === 'day' ? openShareModal : undefined}
         />
 
-        <div className={showSidebar ? 'mt-4 grid grid-cols-[260px_1fr] gap-4' : 'mt-4'}>
+        {/* Legenda visual com todos os tipos */}
+        <AgendaLegend className="mb-3 px-0.5" />
+
+        <div className={showSidebar ? 'mt-2 grid grid-cols-[260px_1fr] gap-4' : 'mt-2'}>
           {showSidebar && (
             <AgendaSidebar
               date={date}
@@ -386,7 +477,10 @@ export default function Agenda() {
               selectedDate={date}
               tasks={tasks}
               viewMode={view}
-              onCreateTask={() => setIsTaskModalOpen(true)}
+              onCreateTask={() => {
+                setTaskInitialDate(format(date, 'yyyy-MM-dd'));
+                setIsTaskModalOpen(true);
+              }}
               onDayClick={handleDayClick}
             />
 
@@ -402,14 +496,37 @@ export default function Agenda() {
         </div>
       </AgendaShell>
 
+      {/* Modal de Evento Pessoal */}
+      <PersonalEventModal
+        open={isPersonalEventModalOpen}
+        onOpenChange={setIsPersonalEventModalOpen}
+        event={selectedPersonalEvent}
+        initialDate={newItemSlot?.date || date}
+        initialTime={newItemSlot?.time || '10:00'}
+        onSave={handleSavePersonalEvent}
+        onDelete={handleDeletePersonalEvent}
+      />
 
+      {/* Modal de Reunião */}
+      <MeetingModal
+        open={isMeetingModalOpen}
+        onOpenChange={setIsMeetingModalOpen}
+        event={selectedMeeting}
+        initialDate={newItemSlot?.date || date}
+        initialTime={newItemSlot?.time || '14:00'}
+        onSave={handleSaveMeeting}
+        onDelete={handleDeleteMeeting}
+      />
 
       {/* Task creation modal */}
       <TaskFormModal
         open={isTaskModalOpen}
-        onOpenChange={setIsTaskModalOpen}
+        onOpenChange={(open) => {
+          setIsTaskModalOpen(open);
+          if (!open) setTaskInitialDate(null);
+        }}
         mode="create"
-        initial={{ dueDate: format(date, 'yyyy-MM-dd') }}
+        initial={{ dueDate: taskInitialDate || format(date, 'yyyy-MM-dd') }}
         onSubmit={async (data) => {
           await addTask({
             ...data,
@@ -419,6 +536,7 @@ export default function Agenda() {
             source: 'manual',
           } as any);
           setIsTaskModalOpen(false);
+          setTaskInitialDate(null);
           toast.success('Tarefa criada com sucesso');
         }}
       />

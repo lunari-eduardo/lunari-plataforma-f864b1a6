@@ -2,7 +2,7 @@ import { UnifiedEvent } from '@/modules/agenda/presentation';
 import { getBudgetStatusConfig } from '@/utils/statusConfig';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrcamentoData } from '@/hooks/useOrcamentoData';
-import { FileText } from 'lucide-react';
+import { FileText, Camera, Video, User, CheckSquare, MapPin } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface UnifiedEventCardProps {
@@ -23,6 +23,7 @@ export default function UnifiedEventCard({
   const { pacotes: pacotesData, getCategoriaNameById } = useOrcamentoData();
 
   const isFromClosedBudget = isAppointment && (event.originalData as any).origem === 'orcamento';
+  const agendaType = event.agendaType || (event.originalData as any)?.agendaType || 'session';
 
   const getPackageInfo = () => {
     if (isAppointment) {
@@ -66,6 +67,30 @@ export default function UnifiedEventCard({
 
   // Style: use semantic tokens via inline style for flexibility
   const getCardStyle = (): React.CSSProperties => {
+    if (agendaType === 'personal') {
+      return {
+        backgroundColor: 'hsl(var(--event-personal-bg))',
+        color: 'hsl(var(--event-personal-fg))',
+        borderLeft: '3px solid hsl(var(--event-personal))',
+      };
+    }
+
+    if (agendaType === 'meeting') {
+      return {
+        backgroundColor: 'hsl(var(--event-meeting-bg))',
+        color: 'hsl(var(--event-meeting-fg))',
+        borderLeft: '3px solid hsl(var(--event-meeting))',
+      };
+    }
+
+    if (event.type === 'task' || agendaType === 'task') {
+      return {
+        backgroundColor: 'hsl(var(--event-task-bg))',
+        color: 'hsl(var(--event-task-fg))',
+        borderLeft: '3px solid hsl(var(--event-task))',
+      };
+    }
+
     if (isAppointment) {
       if (isFromClosedBudget) {
         return {
@@ -91,89 +116,119 @@ export default function UnifiedEventCard({
     return {};
   };
 
-  const budgetClassFallback = !isAppointment
+  const budgetClassFallback = !isAppointment && event.type !== 'task'
     ? `${getBudgetStatusConfig(event.status).bgColor} ${getBudgetStatusConfig(event.status).textColor} ${getBudgetStatusConfig(event.status).borderColor} border-2 border-dashed hover:bg-opacity-80`
     : '';
 
-  // Render indicators row (origem orçamento apenas — sem indicadores de pagamento)
-  const renderIndicators = (size: 'sm' | 'xs' = 'sm') => {
-    if (!isFromClosedBudget) return null;
-    const iconClass = size === 'sm' ? 'h-3 w-3' : 'h-2.5 w-2.5';
-    return (
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <FileText className={iconClass} style={{ color: 'hsl(var(--event-budget))' }} />
-      </div>
-    );
+  const renderTypeIcon = (size: 'sm' | 'xs' = 'sm') => {
+    const iconClass = size === 'sm' ? 'h-3.5 w-3.5' : 'h-3 w-3';
+    if (agendaType === 'personal') {
+      return <User className={`${iconClass} text-purple-600 dark:text-purple-400 shrink-0`} />;
+    }
+    if (agendaType === 'meeting') {
+      return <Video className={`${iconClass} text-cyan-600 dark:text-cyan-400 shrink-0`} />;
+    }
+    if (event.type === 'task' || agendaType === 'task') {
+      return <CheckSquare className={`${iconClass} text-amber-600 dark:text-amber-400 shrink-0`} />;
+    }
+    if (isFromClosedBudget) {
+      return <FileText className={`${iconClass} text-emerald-600 dark:text-emerald-400 shrink-0`} />;
+    }
+    return null;
   };
 
-  const tooltipContent = isAppointment ? (
+  const tooltipContent = (
     <div className="space-y-1 text-xs">
-      <div className="font-semibold">{event.client}</div>
-      <div className="text-muted-foreground">
-        {event.time} · {description || packageName || category}
+      <div className="font-semibold flex items-center gap-1.5">
+        {renderTypeIcon('xs')}
+        <span>{event.title || event.client}</span>
       </div>
-    </div>
-  ) : (
-    <div className="text-xs">
-      <div className="font-semibold">{event.client}</div>
-      <div className="text-muted-foreground">Orçamento · {event.time}</div>
+      <div className="text-muted-foreground">
+        {event.time} · {
+          agendaType === 'personal' ? 'Evento pessoal' :
+          agendaType === 'meeting' ? (event.originalData?.location ? `Reunião (${event.originalData.location})` : 'Reunião') :
+          description || packageName || category || 'Sessão'
+        }
+      </div>
     </div>
   );
 
   const renderCardContent = () => {
+    const mainTitle = agendaType === 'personal' ? event.title : (event.client || event.title);
+    const subLabel =
+      agendaType === 'personal'
+        ? (description || 'Evento pessoal')
+        : agendaType === 'meeting'
+        ? (event.originalData?.location ? `Reunião • ${event.originalData.location}` : 'Reunião')
+        : category && packageName && category !== packageName
+        ? `${category} · ${packageName}`
+        : packageName || category || (description ? description : 'Sessão');
+
     if (variant === 'daily') {
       return (
         <div className="space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="font-semibold text-sm truncate flex-1">{event.client}</div>
-            {renderIndicators('sm')}
-          </div>
-          {description && <div className="text-xs opacity-80 truncate">{description}</div>}
-          {(category || packageName) && (
-            <div className="text-xs opacity-70 truncate">
-              {category && packageName && category !== packageName
-                ? `${category} · ${packageName}`
-                : packageName || category}
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              {renderTypeIcon('sm')}
+              <span className="font-semibold text-sm truncate">{mainTitle}</span>
             </div>
-          )}
+            {isFromClosedBudget && (
+              <FileText className="h-3 w-3 shrink-0" style={{ color: 'hsl(var(--event-budget))' }} />
+            )}
+          </div>
+          {subLabel && <div className="text-xs opacity-75 truncate">{subLabel}</div>}
         </div>
       );
     }
     if (variant === 'weekly') {
       return (
         <div className="flex items-center justify-between gap-1">
-          <div className="font-medium text-xs truncate flex-1">{event.client}</div>
-          {renderIndicators('xs')}
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            {renderTypeIcon('xs')}
+            <span className="font-medium text-xs truncate">{mainTitle}</span>
+          </div>
         </div>
       );
     }
     if (variant === 'monthly') {
       if (isMobile) {
-        return <div className="text-xs font-medium truncate">{event.client}</div>;
+        return (
+          <div className="flex items-center gap-1 text-xs font-medium truncate">
+            {renderTypeIcon('xs')}
+            <span className="truncate">{mainTitle}</span>
+          </div>
+        );
       }
       return (
         <div className="space-y-0.5">
           <div className="flex items-center justify-between gap-1">
-            <div className="font-medium text-xs truncate flex-1">{event.client}</div>
-            {renderIndicators('xs')}
+            <div className="flex items-center gap-1 min-w-0 flex-1">
+              {renderTypeIcon('xs')}
+              <span className="font-medium text-xs truncate">{mainTitle}</span>
+            </div>
           </div>
-          {description && <div className="text-xs opacity-80 truncate">{description}</div>}
-          {category && <div className="text-xs opacity-70 truncate">{category}</div>}
+          {subLabel && <div className="text-[10px] opacity-75 truncate pl-4">{subLabel}</div>}
         </div>
       );
     }
     if (compact) {
       return (
         <div className="space-y-0.5">
-          <div className="font-medium text-xs truncate">{event.client}</div>
+          <div className="flex items-center gap-1">
+            {renderTypeIcon('xs')}
+            <span className="font-medium text-xs truncate">{mainTitle}</span>
+          </div>
           <div className="text-xs opacity-70">{event.time}</div>
         </div>
       );
     }
     return (
       <div className="space-y-1">
-        <div className="font-semibold text-sm truncate">{event.client}</div>
-        {description && <div className="text-xs opacity-80 truncate">{description}</div>}
+        <div className="flex items-center gap-1.5">
+          {renderTypeIcon('sm')}
+          <span className="font-semibold text-sm truncate">{mainTitle}</span>
+        </div>
+        {subLabel && <div className="text-xs opacity-80 truncate">{subLabel}</div>}
       </div>
     );
   };

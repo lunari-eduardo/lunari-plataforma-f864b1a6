@@ -31,6 +31,22 @@ interface DailyViewProps {
     date: Date;
     time: string;
   }) => void;
+  onCreateSession?: (slot: {
+    date: Date;
+    time: string;
+  }) => void;
+  onCreateMeeting?: (slot: {
+    date: Date;
+    time: string;
+  }) => void;
+  onCreatePersonalEvent?: (slot: {
+    date: Date;
+    time: string;
+  }) => void;
+  onCreateTask?: (slot: {
+    date: Date;
+    time: string;
+  }) => void;
   onEventClick: (event: UnifiedEvent) => void;
   onOpenAvailability?: (date: Date, time: string) => void;
 }
@@ -39,6 +55,10 @@ export default function DailyView({
   date,
   unifiedEvents,
   onCreateSlot,
+  onCreateSession,
+  onCreateMeeting,
+  onCreatePersonalEvent,
+  onCreateTask,
   onEventClick,
   onOpenAvailability
 }: DailyViewProps) {
@@ -387,6 +407,10 @@ export default function DailyView({
                     </span>
                     <div onClick={e => e.stopPropagation()}>
                       <TimeSlotOptionsMenu
+                        onCreateSession={() => (onCreateSession || onCreateSlot)({ date, time })}
+                        onCreateMeeting={() => onCreateMeeting?.({ date, time })}
+                        onCreatePersonalEvent={() => onCreatePersonalEvent?.({ date, time })}
+                        onCreateTask={() => onCreateTask?.({ date, time })}
                         onAvailable={() => {
                           handleRemoveAvailability(time);
                           if (onOpenAvailability) onOpenAvailability(date, time);
@@ -433,6 +457,10 @@ export default function DailyView({
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                       <ConflictIndicator date={date} time={time} />
                       <TimeSlotOptionsMenu
+                        onCreateSession={() => (onCreateSession || onCreateSlot)({ date, time })}
+                        onCreateMeeting={() => onCreateMeeting?.({ date, time })}
+                        onCreatePersonalEvent={() => onCreatePersonalEvent?.({ date, time })}
+                        onCreateTask={() => onCreateTask?.({ date, time })}
                         onAvailable={() => handleMarkAvailable(time)}
                         onBlock={() => handleBlockSlot(time)}
                         onRemove={() => handleRemoveTimeSlot(time)}

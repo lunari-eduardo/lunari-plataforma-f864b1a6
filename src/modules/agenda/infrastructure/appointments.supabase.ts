@@ -31,7 +31,16 @@ function assertIsoDate(value: string): string {
   return value;
 }
 
+function inferAgendaType(type: string | null | undefined): "session" | "personal" | "meeting" {
+  if (!type) return "session";
+  const lower = type.toLowerCase();
+  if (lower === 'personal' || lower === 'personal_event' || lower === 'pessoal' || lower === 'evento_pessoal') return 'personal';
+  if (lower === 'meeting' || lower === 'reuniao' || lower === 'reunião') return 'meeting';
+  return 'session';
+}
+
 function mapRow(row: any): DomainAppointment {
+  const agendaType = inferAgendaType(row.type);
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -39,6 +48,8 @@ function mapRow(row: any): DomainAppointment {
     date: row.date, // já vem yyyy-MM-dd do Postgres
     time: row.time,
     type: row.type,
+    agendaType,
+    durationMinutes: row.duration_minutes ? Number(row.duration_minutes) : undefined,
     client: (row.clientes as any)?.nome || row.title,
     status: row.status,
     description: row.description ?? undefined,
@@ -67,6 +78,18 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
 
     if (error || !fresh) {
       console.error("❌ [agenda.repo] Não foi possível hidratar appointment:", error);
+      return;
+    }
+
+    // Se for evento pessoal ou reunião, sincroniza Google mas NÃO cria sessão de workflow (clientes_sessoes)
+    const itemType = inferAgendaType(fresh.type);
+    if (itemType === 'personal' || itemType === 'meeting') {
+      try {
+        const { syncAppointmentToGoogleCalendar } = await import("@/services/googleCalendarSync");
+        await syncAppointmentToGoogleCalendar(appointmentId, "update");
+      } catch (syncError) {
+        console.warn("⚠️ [agenda.repo] Google Calendar sync falhou (não fatal):", syncError);
+      }
       return;
     }
 
@@ -249,6 +272,12 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
     const sessionId = input.sessionId || generateUniversalSessionId("agenda");
     const dateStr = assertIsoDate(input.date);
 
+    const effectiveType = input.agendaType === 'personal'
+      ? (input.type && input.type !== 'Sessão' ? input.type : 'pessoal')
+      : input.agendaType === 'meeting'
+      ? (input.type && input.type !== 'Sessão' ? input.type : 'reunião')
+      : (input.type || 'Sessão');
+
     const { data, error } = await supabase
       .from("appointments")
       .insert({
@@ -257,7 +286,8 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
         title: input.title,
         date: dateStr,
         time: input.time,
-        type: input.type,
+        type: effectiveType,
+        duration_minutes: input.durationMinutes || null,
         status: input.status,
         description: input.description,
         package_id: input.packageId,
@@ -289,6 +319,11 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
     if (patch.date !== undefined) updateData.date = assertIsoDate(patch.date);
     if (patch.time !== undefined) updateData.time = patch.time;
     if (patch.type !== undefined) updateData.type = patch.type;
+    if (patch.agendaType !== undefined) {
+      if (patch.agendaType === 'personal' && !patch.type) updateData.type = 'pessoal';
+      if (patch.agendaType === 'meeting' && !patch.type) updateData.type = 'reunião';
+    }
+    if (patch.durationMinutes !== undefined) updateData.duration_minutes = patch.durationMinutes;
     if (patch.status !== undefined) updateData.status = patch.status;
     if (patch.description !== undefined) updateData.description = patch.description;
     if (patch.packageId !== undefined) updateData.package_id = patch.packageId;

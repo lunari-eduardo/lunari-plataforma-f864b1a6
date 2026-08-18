@@ -58,15 +58,23 @@ export default function MiniMonthCalendar({
     }
 
     for (const ev of unifiedEvents) {
-      if (ev.type !== 'appointment') continue;
       const key = format(ev.date, 'yyyy-MM-dd');
-      const apt = ev.originalData as Appointment;
-      if ((apt as any).origem === 'orcamento') {
-        setIfHigher(key, 'hsl(var(--event-budget))', 4);
-      } else if (apt.status === 'confirmado') {
-        setIfHigher(key, 'hsl(var(--event-confirmed))', 3);
-      } else {
-        setIfHigher(key, 'hsl(var(--event-pending))', 2);
+      const agendaType = ev.agendaType || (ev.originalData as any)?.agendaType || 'session';
+      if (agendaType === 'personal') {
+        setIfHigher(key, 'hsl(var(--event-personal))', 4);
+      } else if (agendaType === 'meeting') {
+        setIfHigher(key, 'hsl(var(--event-meeting))', 4);
+      } else if (ev.type === 'task' || agendaType === 'task') {
+        setIfHigher(key, 'hsl(var(--event-task))', 2);
+      } else if (ev.type === 'appointment') {
+        const apt = ev.originalData as Appointment;
+        if ((apt as any).origem === 'orcamento') {
+          setIfHigher(key, 'hsl(var(--event-budget))', 4);
+        } else if (apt.status === 'confirmado') {
+          setIfHigher(key, 'hsl(var(--event-confirmed))', 3);
+        } else {
+          setIfHigher(key, 'hsl(var(--event-pending))', 2);
+        }
       }
     }
 

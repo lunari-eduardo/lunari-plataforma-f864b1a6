@@ -12,6 +12,7 @@
  */
 
 export type AppointmentStatus = "confirmado" | "a confirmar";
+export type AgendaItemType = "session" | "personal" | "meeting";
 
 export interface ProdutoIncluido {
   id: string;
@@ -29,6 +30,9 @@ export interface Appointment {
   date: Date;
   time: string;
   type: string;
+  agendaType?: AgendaItemType;
+  durationMinutes?: number;
+  location?: string;
   client: string;
   status: AppointmentStatus;
   description?: string;

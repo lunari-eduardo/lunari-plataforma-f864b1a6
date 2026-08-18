@@ -17,7 +17,8 @@ import {
 
 export interface UnifiedEvent {
   id: string;
-  type: "appointment" | "budget";
+  type: "appointment" | "budget" | "task";
+  agendaType?: "session" | "personal" | "meeting" | "task";
   title: string;
   date: Date;
   time: string;
@@ -36,6 +37,10 @@ export function useUnifiedEventsRangeQuery(
 
   const unifiedEvents = useMemo<UnifiedEvent[]>(() => {
     return appointments.map((appointment) => {
+      const agendaType = appointment.agendaType || 
+        (appointment.type === 'personal' || appointment.type === 'pessoal' ? 'personal' : 
+         appointment.type === 'meeting' || appointment.type === 'reuniao' ? 'meeting' : 'session');
+
       const legacy: LegacyAppointment = {
         id: appointment.id,
         sessionId: appointment.sessionId,
@@ -43,6 +48,9 @@ export function useUnifiedEventsRangeQuery(
         date: parseDateFromStorage(appointment.date),
         time: appointment.time,
         type: appointment.type,
+        agendaType,
+        durationMinutes: appointment.durationMinutes,
+        location: appointment.location,
         client: appointment.client,
         status: appointment.status,
         description: appointment.description,
@@ -59,6 +67,7 @@ export function useUnifiedEventsRangeQuery(
       return {
         id: `appointment-${legacy.id}`,
         type: "appointment" as const,
+        agendaType,
         title: legacy.title,
         date: legacy.date,
         time: legacy.time,
