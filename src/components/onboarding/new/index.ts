@@ -1,4 +1,5 @@
 export * from './OnboardingLayout';
+export * from './LunariSymbolGold';
 export * from './StepWelcome';
 export * from './StepBusiness';
 export * from './StepPhotographyTypes';

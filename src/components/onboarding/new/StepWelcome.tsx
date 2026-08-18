@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, ArrowRight, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Clock, Sparkle } from 'lucide-react';
+import { LunariSymbolGold } from './LunariSymbolGold';
 import { TOTAL_CONFIG_STEPS } from '@/hooks/useOnboarding';
 
 interface StepWelcomeProps {
@@ -23,96 +24,94 @@ export function StepWelcome({ lastSavedStep, onStart, onResume, onSkip }: StepWe
   const stoppedAtName = isResuming ? STEP_NAMES[lastSavedStep] || 'Configuração' : null;
 
   return (
-    <div className="space-y-8 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {/* Ícone de Destaque */}
-      <div className="flex justify-center">
-        <div className="w-16 h-16 rounded-2xl bg-[#C6A36A]/10 border border-[#C6A36A]/20 flex items-center justify-center shadow-[0_0_30px_rgba(198,163,106,0.15)]">
-          <Sparkles className="w-8 h-8 text-[#C6A36A]" />
+    <div className="space-y-6 sm:space-y-7 text-center animate-in fade-in zoom-in-[0.98] duration-300 py-2 sm:py-4">
+      {/* 1. Logotipo do Lunari em Dourado */}
+      <div className="flex flex-col items-center justify-center gap-4">
+        <div className="relative group">
+          <div className="absolute -inset-4 bg-[#C6A36A]/15 blur-xl rounded-full opacity-60 pointer-events-none" />
+          <LunariSymbolGold size={76} className="relative z-10 drop-shadow-[0_10px_25px_rgba(198,163,106,0.3)] transition-transform duration-300 hover:scale-105" />
+        </div>
+
+        {/* Estrela de 4 pontas / Sparkle */}
+        <div className="flex items-center justify-center text-[#C6A36A]/80">
+          <Sparkle className="w-3.5 h-3.5 fill-[#C6A36A]/80 text-[#C6A36A]" />
         </div>
       </div>
 
-      {/* Título e Texto */}
-      <div className="space-y-3">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.05] border border-white/10 text-[#C6A36A]">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          Configuração Inicial
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-normal text-white tracking-tight">
-          Vamos preparar seu Lunari
+      {/* 2. Título "Vamos preparar seu Lunari" */}
+      <div className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl md:text-[32px] font-light text-white tracking-tight leading-tight">
+          Vamos preparar <span className="font-normal text-[#C6A36A] drop-shadow-[0_2px_10px_rgba(198,163,106,0.25)]">seu Lunari</span>
         </h1>
-        <p className="text-white/70 text-sm sm:text-base max-w-md mx-auto leading-relaxed font-light">
+        {/* Linha de brilho sutil dourado */}
+        <div className="w-24 h-[1px] bg-gradient-to-r from-transparent via-[#C6A36A]/50 to-transparent mx-auto" />
+      </div>
+
+      {/* 3. Textos Explicativos */}
+      <div className="space-y-2 max-w-lg mx-auto">
+        <p className="text-white/70 text-xs sm:text-sm md:text-[14.5px] leading-relaxed font-light">
           Em poucos passos, vamos configurar as informações básicas do seu negócio, seus tipos de fotografia, documentos e algumas preferências.
         </p>
-        <p className="text-white/40 text-xs font-light">
-          Você poderá alterar tudo depois sempre que precisar.
+        <p className="text-[#C6A36A] text-xs sm:text-sm font-normal tracking-wide pt-1">
+          Você poderá alterar tudo depois.
         </p>
       </div>
 
-      {/* Card de Retomada se o usuário já tiver começado */}
+      {/* Card de Retomada se o usuário parou no meio */}
       {isResuming && (
-        <div className="p-4 rounded-2xl bg-white/[0.03] border border-[#C6A36A]/30 text-left flex items-center justify-between gap-3">
-          <div className="space-y-0.5">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-[#C6A36A]/30 text-left flex items-center justify-between gap-3 max-w-md mx-auto">
+          <div className="space-y-0.5 min-w-0">
             <p className="text-xs font-medium text-[#C6A36A] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-3.5 h-3.5 shrink-0" />
               Continue de onde parou
             </p>
-            <p className="text-sm text-white/90 font-light">
+            <p className="text-xs text-white/80 font-light truncate">
               Você parou em <strong className="font-semibold text-white">{stoppedAtName}</strong>
             </p>
           </div>
           <button
             type="button"
             onClick={onResume}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#C6A36A] text-[#121212] hover:bg-[#D4B37D] transition-colors cursor-pointer shrink-0"
+            className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#C6A36A] text-[#121212] hover:bg-[#D4B37D] transition-colors cursor-pointer shrink-0"
           >
             Continuar
           </button>
         </div>
       )}
 
-      {/* Lista de Recursos que serão preparados */}
-      <div className="grid grid-cols-2 gap-2.5 text-left py-2">
-        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-[#C6A36A] shrink-0" />
-          <span className="text-xs text-white/80 font-light">Perfil e Contato</span>
-        </div>
-        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-[#C6A36A] shrink-0" />
-          <span className="text-xs text-white/80 font-light">Categorias de Ensaios</span>
-        </div>
-        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-[#C6A36A] shrink-0" />
-          <span className="text-xs text-white/80 font-light">Contratos Prontos</span>
-        </div>
-        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-[#C6A36A] shrink-0" />
-          <span className="text-xs text-white/80 font-light">Formulários e Briefings</span>
-        </div>
+      {/* 4. Indicador "1 de 6" */}
+      <div className="flex items-center justify-center gap-4 py-2">
+        <div className="w-16 sm:w-24 h-[1.5px] bg-[#C6A36A]/90 rounded-full" />
+        <span className="text-xs font-light text-white/60 tracking-widest uppercase">
+          1 de 6
+        </span>
+        <div className="w-16 sm:w-24 h-[1.5px] bg-white/10 rounded-full" />
       </div>
 
-      {/* Botões de Ação */}
-      <div className="space-y-3 pt-2">
+      {/* 5. Ações (Botão Dourado Metálico + Configurar depois) */}
+      <div className="space-y-4 pt-1 max-w-md mx-auto">
         <button
           type="button"
           onClick={isResuming ? onResume : onStart}
-          className="w-full h-13 rounded-xl text-base font-medium text-[#1A1A1A]
-                     bg-[#EDE8E1] hover:bg-[#F5F2EC] active:bg-[#E2DDD5]
-                     active:scale-[0.99]
-                     shadow-[0_4px_25px_rgba(237,232,225,0.18)]
-                     transition-all duration-150
+          className="w-full h-12 sm:h-13 rounded-2xl text-sm sm:text-base font-semibold text-[#221606]
+                     bg-gradient-to-r from-[#B99256] via-[#E2BE80] to-[#B68E51]
+                     hover:brightness-110 active:scale-[0.99]
+                     shadow-[0_8px_30px_rgba(198,163,106,0.3)]
+                     border border-[#E2BE80]/40
+                     transition-all duration-200
                      flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>{isResuming ? 'Continuar configuração' : 'Começar configuração'}</span>
-          <ArrowRight className="h-4 w-4 text-[#736B5E]" />
         </button>
 
-        {/* Ação secundária sutil "Configurar depois" */}
+        {/* Configurar depois com seta */}
         <button
           type="button"
           onClick={onSkip}
-          className="text-xs font-normal text-white/40 hover:text-white/70 transition-colors py-2 px-4 cursor-pointer"
+          className="inline-flex items-center justify-center gap-1.5 text-xs text-[#C6A36A]/75 hover:text-[#E2BE80] transition-colors py-1.5 px-3 cursor-pointer group font-light"
         >
-          Configurar depois
+          <span>Configurar depois</span>
+          <ArrowRight className="w-3.5 h-3.5 text-[#C6A36A]/75 group-hover:text-[#E2BE80] group-hover:translate-x-0.5 transition-all" />
         </button>
       </div>
     </div>
