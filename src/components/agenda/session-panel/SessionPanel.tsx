@@ -31,6 +31,7 @@ import {
   Copy,
   Ban,
   Plus,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -211,9 +212,22 @@ export default function SessionPanel({
   );
   const clientDisplayName = cliente?.nome || form.clientName;
 
+  const handleCobrarAoSalvarChange = (checked: boolean) => {
+    setCobrarAoSalvar(checked);
+    if (checked) {
+      setForm(prev => ({ ...prev, paidAmount: 0 }));
+    }
+  };
+
   const paidInput = useNumberInput({
     value: form.paidAmount,
-    onChange: (value) => setForm(prev => ({ ...prev, paidAmount: parseFloat(value) || 0 })),
+    onChange: (value) => {
+      const parsed = parseFloat(value) || 0;
+      setForm(prev => ({ ...prev, paidAmount: parsed }));
+      if (parsed > 0 && cobrarAoSalvar) {
+        setCobrarAoSalvar(false);
+      }
+    },
   });
 
   /* ---------------------------------- Cobrança --------------------------------- */
@@ -556,67 +570,110 @@ export default function SessionPanel({
             <PanelSection
               icon={User}
               title="Cliente"
-              action={
-                form.clienteId ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 rounded-lg text-xs"
-                    onClick={() => setShowClientEdit(true)}
-                  >
-                    Editar cliente
-                  </Button>
-                ) : undefined
-              }
             >
               {form.clienteId ? (
-                <div className="flex items-center gap-2.5">
-                  <span className="text-base font-medium text-foreground truncate">
-                    {clientDisplayName}
-                  </span>
-                  <span className="shrink-0 rounded-md border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
-                    CRM
-                  </span>
+                <div className="flex items-center justify-between gap-2.5 p-2.5 rounded-lg border border-border/60 bg-muted/20">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-accent-gold/15 flex items-center justify-center shrink-0">
+                      <User className="h-4 w-4 text-accent-gold" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground truncate">
+                          {clientDisplayName}
+                        </span>
+                        <span className="shrink-0 rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          CRM
+                        </span>
+                      </div>
+                      {cliente?.telefone && (
+                        <span className="text-xs text-muted-foreground block truncate">
+                          {cliente.telefone}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => setForm(prev => ({ ...prev, clienteId: '', clientName: '' }))}
+                      title="Trocar cliente"
+                    >
+                      Trocar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs rounded-md"
+                      onClick={() => setShowClientEdit(true)}
+                    >
+                      Editar
+                    </Button>
+                  </div>
                 </div>
               ) : newClientMode ? (
-                <div className="space-y-2">
-                  <Input
-                    value={newClient.nome}
-                    onChange={(e) => setNewClient(p => ({ ...p, nome: toTitleCase(e.target.value) }))}
-                    placeholder="Nome do cliente"
-                    className="h-10 rounded-lg text-base sm:text-sm"
-                  />
-                  <Input
-                    value={newClient.telefone}
-                    onChange={(e) => setNewClient(p => ({ ...p, telefone: e.target.value }))}
-                    placeholder="Telefone"
-                    className="h-10 rounded-lg text-base sm:text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setNewClientMode(false)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Buscar no CRM
-                  </button>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <UserPlus className="h-3.5 w-3.5 text-accent-gold" />
+                      Cadastrar novo cliente
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setNewClientMode(false);
+                        setNewClient({ nome: '', telefone: '' });
+                      }}
+                      className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Buscar no CRM
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Input
+                      value={newClient.nome}
+                      onChange={(e) => setNewClient(p => ({ ...p, nome: toTitleCase(e.target.value) }))}
+                      placeholder="Nome do cliente *"
+                      className="h-10 rounded-lg text-base sm:text-sm"
+                      autoFocus
+                    />
+                    <Input
+                      value={newClient.telefone}
+                      onChange={(e) => setNewClient(p => ({ ...p, telefone: e.target.value }))}
+                      placeholder="WhatsApp / Telefone"
+                      className="h-10 rounded-lg text-base sm:text-sm"
+                    />
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <ClientSearchCombobox
-                    value={form.clienteId}
-                    onSelect={(id) => {
-                      const c = clientes.find(x => x.id === id);
-                      setForm(prev => ({ ...prev, clienteId: id, clientName: c?.nome || prev.clientName }));
-                    }}
-                    placeholder="Buscar cliente no CRM..."
-                  />
-                  <button
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <ClientSearchCombobox
+                      value={form.clienteId}
+                      onSelect={(id) => {
+                        const c = clientes.find(x => x.id === id);
+                        setForm(prev => ({ ...prev, clienteId: id, clientName: c?.nome || prev.clientName }));
+                      }}
+                      placeholder="Buscar cliente no CRM..."
+                    />
+                  </div>
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setNewClientMode(true)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
+                    className="h-10 px-3 rounded-lg shrink-0 gap-1.5 border-border/80 hover:border-accent-gold/60 hover:bg-accent-gold/10 text-xs font-medium text-foreground transition-all shadow-xs"
+                    title="Cadastrar novo cliente"
                   >
-                    Novo cliente
-                  </button>
+                    <Plus className="h-4 w-4 text-accent-gold" />
+                    <span>Novo</span>
+                  </Button>
                 </div>
               )}
             </PanelSection>
@@ -659,13 +716,22 @@ export default function SessionPanel({
                     type="number"
                     min="0"
                     step="0.01"
-                    value={paidInput.displayValue}
+                    value={cobrarAoSalvar ? '' : paidInput.displayValue}
                     onChange={paidInput.handleChange}
                     onFocus={paidInput.handleFocus}
-                    placeholder="0,00"
-                    className="h-10 rounded-lg pl-10 text-base sm:text-sm"
+                    placeholder={cobrarAoSalvar ? 'Desativado (cobrança ao salvar ativa)' : '0,00'}
+                    disabled={cobrarAoSalvar}
+                    className={cn(
+                      'h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity',
+                      cobrarAoSalvar && 'opacity-50 cursor-not-allowed bg-muted/30',
+                    )}
                   />
                 </div>
+                {cobrarAoSalvar && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Entrada manual desativada pois <strong className="font-medium text-foreground">"Cobrar ao salvar"</strong> está ativo.
+                  </p>
+                )}
               </PanelField>
             </PanelSection>
 
@@ -691,7 +757,10 @@ export default function SessionPanel({
                 <div className="space-y-2">
                   <label
                     htmlFor="sp-cobrar-ao-salvar"
-                    className="flex items-start justify-between gap-3 cursor-pointer"
+                    className={cn(
+                      'flex items-start justify-between gap-3',
+                      form.paidAmount > 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+                    )}
                   >
                     <span className="min-w-0">
                       <span className="block text-sm text-foreground">Cobrar ao salvar</span>
@@ -703,17 +772,22 @@ export default function SessionPanel({
                     <Switch
                       id="sp-cobrar-ao-salvar"
                       checked={cobrarAoSalvar}
-                      onCheckedChange={setCobrarAoSalvar}
+                      disabled={form.paidAmount > 0}
+                      onCheckedChange={handleCobrarAoSalvarChange}
                     />
                   </label>
-                  {cobrarAoSalvar && (
+                  {form.paidAmount > 0 ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Cobrança ao salvar desativada pois uma <strong className="font-medium text-foreground">entrada manual (R$ {form.paidAmount.toFixed(2)})</strong> já foi informada.
+                    </p>
+                  ) : cobrarAoSalvar ? (
                     <p className="text-[11px] text-muted-foreground">
                       Valor sugerido:{' '}
-                      <span className="text-foreground">
+                      <span className="text-foreground font-medium">
                         R$ {(valorPacote > 0 ? valorPacote : form.paidAmount || 0).toFixed(2)}
                       </span>
                     </p>
-                  )}
+                  ) : null}
                 </div>
               ) : !cobranca ? (
                 <div className="flex items-center justify-between gap-3 py-1">
