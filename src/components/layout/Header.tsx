@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Moon, Sun, User, CreditCard, Palette, LifeBuoy } from 'lucide-react';
+import { Moon, Sun, User, CreditCard, Palette, LifeBuoy, Plug, Package, Gift } from 'lucide-react';
 import { AppearanceModal } from '@/components/preferences/AppearanceModal';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { Button } from '@/components/ui/button';
@@ -123,50 +123,72 @@ export default function Header() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel className="text-xs text-foreground">
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="text-sm text-foreground">
                 {currentProfile.nome || currentProfile.empresa || 'Minha Conta'}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem 
-                className="text-xs cursor-pointer"
+                className="text-sm cursor-pointer"
                 onClick={() => navigate('/app/minha-conta')}
               >
-                <User className="mr-2 h-3 w-3" />
+                <User className="mr-2 h-4 w-4" />
                 <span>Minha Conta</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                className="text-xs cursor-pointer"
+                className="text-sm cursor-pointer"
                 onClick={() => navigate('/minha-assinatura')}
               >
-                <CreditCard className="mr-2 h-3 w-3" />
+                <CreditCard className="mr-2 h-4 w-4" />
                 <span>Minha Assinatura</span>
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-xs cursor-pointer"
+                className="text-sm cursor-pointer"
                 onClick={() => navigate('/app/suporte')}
               >
-                <LifeBuoy className="mr-2 h-3 w-3" />
+                <LifeBuoy className="mr-2 h-4 w-4" />
                 <span>Suporte</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-border/30" />
+              <DropdownMenuItem
+                className="text-sm cursor-pointer"
+                onClick={() => navigate('/app/minha-conta?tab=integracoes')}
+              >
+                <Plug className="mr-2 h-4 w-4" />
+                <span>Integrações e Pagamentos</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-sm cursor-pointer"
+                onClick={() => navigate('/app/minha-conta?tab=planos')}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                <span>Planos e Créditos</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-sm cursor-pointer"
+                onClick={() => navigate('/app/minha-conta?tab=indicacoes')}
+              >
+                <Gift className="mr-2 h-4 w-4" />
+                <span>Indique e Ganhe</span>
               </DropdownMenuItem>
               {/* Itens admin removidos — painel administrativo migrado para admin.lunarihub.com */}
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem
-                className="text-xs cursor-pointer"
+                className="text-sm cursor-pointer"
                 onClick={() => setAppearanceOpen(true)}
               >
-                <Palette className="mr-2 h-3 w-3" />
+                <Palette className="mr-2 h-4 w-4" />
                 <span>Aparência</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border/30" />
               <DropdownMenuItem
-                className="text-xs cursor-pointer"
+                className="text-sm cursor-pointer"
                 onClick={() => handleSignOut('local')}
               >
                 Sair
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-xs cursor-pointer text-muted-foreground"
+                className="text-sm cursor-pointer text-muted-foreground"
                 onClick={handleSignOutAllDevices}
               >
                 Sair de todos os dispositivos
