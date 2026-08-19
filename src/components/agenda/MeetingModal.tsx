@@ -9,6 +9,16 @@ import { formatDateForInput, safeParseInputDate } from '@/utils/dateUtils';
 import ClientSearchCombobox from './ClientSearchCombobox';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import type { Appointment } from '@/modules/agenda/presentation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface MeetingModalProps {
   open: boolean;
@@ -50,6 +60,8 @@ export function MeetingModal({
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'confirmado' | 'a confirmar'>('confirmado');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const selectedClient = useMemo(
     () => clientes.find((c) => c.id === clienteId),
@@ -274,12 +286,7 @@ export function MeetingModal({
                 variant="ghost"
                 size="sm"
                 className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive h-9"
-                onClick={async () => {
-                  if (confirm('Deseja excluir esta reunião?')) {
-                    await onDelete(event.id);
-                    onOpenChange(false);
-                  }
-                }}
+                onClick={() => setConfirmDeleteOpen(true)}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" />
                 Excluir
@@ -310,6 +317,38 @@ export function MeetingModal({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal interno de confirmação de exclusão */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir reunião?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a reunião "{event?.title || 'esta reunião'}"? Esta ação removerá o compromisso da sua agenda.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={async () => {
+                if (!event || !onDelete) return;
+                setDeleting(true);
+                try {
+                  await onDelete(event.id);
+                  setConfirmDeleteOpen(false);
+                  onOpenChange(false);
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Excluindo...' : 'Excluir reunião'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

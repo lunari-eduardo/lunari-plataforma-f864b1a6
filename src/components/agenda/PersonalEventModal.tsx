@@ -7,6 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Clock, Calendar, Trash2 } from 'lucide-react';
 import { formatDateForInput, safeParseInputDate } from '@/utils/dateUtils';
 import type { Appointment } from '@/modules/agenda/presentation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PersonalEventModalProps {
   open: boolean;
@@ -46,6 +56,8 @@ export function PersonalEventModal({
   const [durationMinutes, setDurationMinutes] = useState('60');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -217,12 +229,7 @@ export function PersonalEventModal({
                 variant="ghost"
                 size="sm"
                 className="text-xs text-destructive hover:bg-destructive/10 hover:text-destructive h-9"
-                onClick={async () => {
-                  if (confirm('Deseja excluir este evento pessoal?')) {
-                    await onDelete(event.id);
-                    onOpenChange(false);
-                  }
-                }}
+                onClick={() => setConfirmDeleteOpen(true)}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" />
                 Excluir
@@ -253,6 +260,38 @@ export function PersonalEventModal({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal interno de confirmação de exclusão */}
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir evento pessoal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir "{event?.title || 'este evento'}"? Esta ação removerá o compromisso da sua agenda.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={async () => {
+                if (!event || !onDelete) return;
+                setDeleting(true);
+                try {
+                  await onDelete(event.id);
+                  setConfirmDeleteOpen(false);
+                  onOpenChange(false);
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Excluindo...' : 'Excluir evento'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

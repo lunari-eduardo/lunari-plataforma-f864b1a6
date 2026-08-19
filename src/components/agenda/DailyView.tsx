@@ -365,11 +365,6 @@ export default function DailyView({
                     title={!isOccupied && !blocked ? 'Clique para editar' : ''}
                   >
                     {time}
-                    {startingEvents.length > 1 && (
-                      <span className="block text-[10px] text-muted-foreground/70">
-                        ({startingEvents.length})
-                      </span>
-                    )}
                   </span>
                 )}
               </div>
@@ -393,24 +388,9 @@ export default function DailyView({
               >
                 {hasStartingEvents ? (
                   <div className="space-y-2">
-                    {startingEvents.map((event, eventIndex) => (
-                      <div key={event.id} className="flex items-center gap-2">
-                        <div className="flex-1" onClick={e => e.stopPropagation()}>
-                          <UnifiedEventCard event={event} onClick={onEventClick} variant="daily" />
-                        </div>
-                        {eventIndex === startingEvents.length - 1 && (
-                          <button 
-                            onClick={e => {
-                              e.stopPropagation();
-                              onCreateSlot({ date, time });
-                            }} 
-                            className="flex-shrink-0 p-1.5 rounded-md bg-lunar-accent/10 hover:bg-lunar-accent/20 text-lunar-accent border border-lunar-accent/30 transition-colors" 
-                            title="Adicionar outro agendamento no mesmo horário" 
-                            aria-label="Adicionar agendamento"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        )}
+                    {startingEvents.map((event) => (
+                      <div key={event.id} onClick={e => e.stopPropagation()}>
+                        <UnifiedEventCard event={event} onClick={onEventClick} variant="daily" />
                       </div>
                     ))}
                   </div>
