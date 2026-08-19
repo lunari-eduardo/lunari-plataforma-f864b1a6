@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,6 +55,7 @@ export default function DeliverDetail() {
     fetchGalleryPhotos,
     updateGallery,
     deleteGallery,
+    publishGallery,
     sendGallery,
     deletePhoto,
     isLoading: galleriesLoading,
@@ -182,9 +183,14 @@ export default function DeliverDetail() {
   const handlePublish = async () => {
     if (!id) return;
     try {
-      await sendGallery(id);
+      if (publishGallery) {
+        await publishGallery(id);
+      } else {
+        await sendGallery(id);
+      }
+      toast.success('Entrega publicada com sucesso!');
     } catch {
-      toast.error('Erro ao publicar');
+      toast.error('Erro ao publicar galeria');
     }
   };
 

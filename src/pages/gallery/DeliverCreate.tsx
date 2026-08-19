@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { addDays } from 'date-fns';
+import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +42,7 @@ const steps = [
 export default function DeliverCreate() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { clients, isLoading: isLoadingClients, createClient } = useGalleryClients();
   const { settings, updateSettings } = useSettings();
   const { settings: gallerySettings } = useGallerySettings();
@@ -47,6 +50,7 @@ export default function DeliverCreate() {
   const { canCreateTransfer, isAdmin, isLoading: isLoadingStorage, storageUsedBytes, storageLimitBytes, storageUsedPercent, hasTransferPlan, planName } = useTransferStorage();
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Step 1: Data
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -256,14 +260,19 @@ export default function DeliverCreate() {
   };
 
   const handlePublish = async () => {
-    if (!supabaseGalleryId) return;
+    if (!supabaseGalleryId || isPublishing) return;
 
+    setIsPublishing(true);
     try {
-      // Update gallery with final settings
+      const expirationDate = addDays(new Date(), expirationDays);
+
+      // 1. Atualiza a galeria com todas as configurações finais e prazo de expiração
       await updateGallery({
         id: supabaseGalleryId,
         data: {
           mensagemBoasVindas: welcomeMessageEnabled ? (welcomeMessage.trim() || undefined) : undefined,
+          prazoSelecaoDias: expirationDays,
+          prazoSelecao: expirationDate,
           configuracoes: {
             imageResizeOption: 2560,
             allowDownload: true,
@@ -281,15 +290,26 @@ export default function DeliverCreate() {
         },
       });
 
-      // Persist last used font
+      // 2. Persistir fonte preferida do usuário
       updateSettings({ lastSessionFont: sessionFont });
 
-      // Publish gallery (generate token) without marking as "sent"
-      toast.success('Entrega criada com sucesso!');
+      // 3. Executar a publicação atômica no Supabase (gerando token e definindo status como publicado/enviado)
+      if (publishGallery) {
+        await publishGallery(supabaseGalleryId);
+      }
+
+      // 4. Invalidar caches para sincronização imediata do dashboard, listagens e detalhes
+      queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      queryClient.invalidateQueries({ queryKey: ['transfer-storage'] });
+      queryClient.invalidateQueries({ queryKey: ['client-gallery', supabaseGalleryId] });
+
+      toast.success('Entrega criada e publicada com sucesso!');
       navigate(`/app/gallery/transfer/${supabaseGalleryId}`);
     } catch (error) {
       console.error('Error publishing deliver gallery:', error);
       toast.error('Erro ao publicar galeria');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -772,12 +792,21 @@ export default function DeliverCreate() {
           ) : (
             <Button
               onClick={handlePublish}
-              disabled={(photoCount === 0 && uploadedPhotos.length === 0)}
+              disabled={isPublishing || (photoCount === 0 && uploadedPhotos.length === 0)}
               variant="terracotta"
-              className="gap-2"
+              className="gap-2 shadow-sm"
             >
-              <Upload className="h-4 w-4" />
-              Publicar Entrega
+              {isPublishing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Publicando entrega...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Publicar Entrega
+                </>
+              )}
             </Button>
           )}
         </div>

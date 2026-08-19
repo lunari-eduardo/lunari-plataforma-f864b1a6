@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Monitor, Check, Pipette, Sparkles, Eye } from 'lucide-react';
+import { Sun, Moon, Monitor, Check, Plus, SlidersHorizontal, Eye } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
 import { FontSelect } from '@/components/FontSelect';
 import { TitleCaseMode } from '@/types/gallery';
 import { ThemeConfig } from '@/components/settings/ThemeConfig';
 import { CoverConfig } from '@/components/settings/CoverConfig';
 import { WatermarkSettings } from '@/components/settings/WatermarkSettings';
 import { GalleryThemePreviewBlock } from '@/components/settings/customization/GalleryThemePreviewBlock';
+import { CustomColorPickerModal } from '@/components/settings/customization/CustomColorPickerModal';
 import { GlobalSettings } from '@/types/gallery';
 import { UpdateSettingsOptions } from '@/hooks/useGallerySettings';
 import { isColorDark } from '@/components/gallery/themes/tokens';
@@ -27,13 +27,14 @@ interface CustomizationAppearanceTabProps {
   studioName?: string;
 }
 
-// Novas cores padrão solicitadas pelo estúdio
-export const SUGGESTED_COLORS = [
-  { label: 'Conhaque', value: '#804621' },
+// Cores padrão com nomes simples e diretos
+export const PRESET_COLORS = [
+  { label: 'Dourado Lunari', value: '#D1BE9F' },
+  { label: 'Marrom', value: '#804621' },
   { label: 'Terracota', value: '#c46426' },
-  { label: 'Sálvia', value: '#99b691' },
-  { label: 'Petróleo', value: '#6fb6bf' },
-  { label: 'Lavanda', value: '#b489bb' },
+  { label: 'Verde', value: '#99b691' },
+  { label: 'Azul', value: '#6fb6bf' },
+  { label: 'Lilás', value: '#b489bb' },
   { label: 'Grafite', value: '#343433' },
 ];
 
@@ -49,12 +50,7 @@ export function CustomizationAppearanceTab({
   const [localPrimaryColor, setLocalPrimaryColor] = useState(
     settings.customTheme?.primaryColor || '#D1BE9F'
   );
-  const [hexInputText, setHexInputText] = useState(
-    (settings.customTheme?.primaryColor || '#D1BE9F').toUpperCase()
-  );
-  const [themeModeOption, setThemeModeOption] = useState<'padrao' | 'custom'>(
-    settings.customTheme?.primaryColor && settings.customTheme.primaryColor.toUpperCase() !== '#D1BE9F' ? 'custom' : 'padrao'
-  );
+  const [isColorModalOpen, setIsColorModalOpen] = useState(false);
 
   const userTouchedTypographyRef = useRef(false);
 
@@ -63,8 +59,6 @@ export function CustomizationAppearanceTab({
       setLocalPhotoSpacing(settings.defaultPhotoSpacing ?? 6);
       const color = settings.customTheme?.primaryColor || '#D1BE9F';
       setLocalPrimaryColor(color);
-      setHexInputText(color.toUpperCase());
-      setThemeModeOption(color.toUpperCase() !== '#D1BE9F' ? 'custom' : 'padrao');
 
       if (!userTouchedTypographyRef.current) {
         if (settings.lastSessionFont) {
@@ -83,7 +77,6 @@ export function CustomizationAppearanceTab({
   const handlePrimaryColorChange = (color: string) => {
     const formattedColor = color.startsWith('#') ? color : `#${color}`;
     setLocalPrimaryColor(formattedColor);
-    setHexInputText(formattedColor.toUpperCase());
     const currentCustom = settings.customTheme || {
       id: 'custom',
       name: 'Custom',
@@ -96,42 +89,27 @@ export function CustomizationAppearanceTab({
         themeType: 'custom',
         customTheme: { ...currentCustom, primaryColor: formattedColor },
       },
-      { successMessage: 'Cor primária salva.' }
+      { successMessage: 'Cor da galeria salva.' }
     );
   };
 
-  const handleHexInputChange = (value: string) => {
-    let clean = value.trim();
-    if (!clean.startsWith('#')) {
-      clean = `#${clean}`;
-    }
-    setHexInputText(clean.toUpperCase());
-
-    // Se for um hex válido (3 ou 6 caracteres hexadecimais após a #)
-    if (/^#([0-9A-F]{3}){1,2}$/i.test(clean)) {
-      setLocalPrimaryColor(clean);
-      const currentCustom = settings.customTheme || {
-        id: 'custom',
-        name: 'Custom',
-        backgroundMode: 'light',
-        accentColor: clean,
-        emphasisColor: clean,
-      };
-      updateSettings(
-        {
-          themeType: 'custom',
-          customTheme: { ...currentCustom, primaryColor: clean },
-        },
-        { successMessage: 'Cor primária salva.' }
-      );
-    }
-  };
+  const isPresetSelected = PRESET_COLORS.some(
+    (p) => p.value.toLowerCase() === localPrimaryColor.toLowerCase()
+  );
 
   const currentRadius = settings.themeOverrides?.surface?.borderRadius || '0px';
   const isButtonDarkText = !isColorDark(localPrimaryColor);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Modal Interno de Seleção de Cor Personalizada */}
+      <CustomColorPickerModal
+        open={isColorModalOpen}
+        onOpenChange={setIsColorModalOpen}
+        currentColor={localPrimaryColor}
+        onApplyColor={handlePrimaryColorChange}
+      />
+
       {/* Botão Mobile para abrir o Preview */}
       <div className="lg:hidden flex justify-end">
         <Dialog>
@@ -250,190 +228,135 @@ export function CustomizationAppearanceTab({
           </div>
         </div>
 
-        {/* Cor Primária */}
+        {/* Cor da Galeria (Botões de Ação) */}
         <div className="lunari-card p-6 sm:p-7 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <Label className="text-base font-semibold text-foreground">Cor de Ação & Destaque</Label>
+              <Label className="text-base font-semibold text-foreground">Cor da Galeria (Botões de Ação)</Label>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Utilizada nos botões de confirmação, seleções ativas e detalhes interativos da galeria
+                Cor aplicada nos botões de confirmação, seleções ativas e destaques da galeria
               </p>
             </div>
-            {themeModeOption === 'padrao' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 w-fit">
-                <Sparkles className="w-3 h-3" /> Assinatura Lunari
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-muted/60 border border-border/50 text-foreground uppercase">
+                {localPrimaryColor}
               </span>
-            )}
+            </div>
           </div>
 
-          {/* Cartões Padrão Lunari vs Personalizado */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <button
-              type="button"
-              onClick={() => {
-                setThemeModeOption('padrao');
-                handlePrimaryColorChange('#D1BE9F');
-              }}
-              className={`p-4 rounded-xl border text-left transition-all duration-200 relative overflow-hidden ${
-                themeModeOption === 'padrao'
-                  ? 'border-primary/80 ring-2 ring-primary/20 bg-primary/[0.04]'
-                  : 'border-border/80 hover:border-foreground/20 bg-background/50 hover:bg-background/80'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-[#D1BE9F] shadow-sm border border-black/10 flex items-center justify-center">
-                    {themeModeOption === 'padrao' && <Check className="w-3 h-3 text-stone-800" />}
-                  </div>
-                  <span className="font-semibold text-sm">Padrão Lunari</span>
-                </div>
-                <span className="text-[11px] font-mono text-muted-foreground">#D1BE9F</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Tom dourado fosco nobre e atemporal, harmoniza com qualquer estilo de fotografia.
-              </p>
-            </button>
+          {/* Grade de Cores Predefinidas + Botão Personalizado */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-3">
+            {PRESET_COLORS.map((preset) => {
+              const isSelected = localPrimaryColor.toLowerCase() === preset.value.toLowerCase();
+              const isDark = isColorDark(preset.value);
 
-            <button
-              type="button"
-              onClick={() => setThemeModeOption('custom')}
-              className={`p-4 rounded-xl border text-left transition-all duration-200 relative overflow-hidden ${
-                themeModeOption === 'custom'
-                  ? 'border-primary/80 ring-2 ring-primary/20 bg-primary/[0.04]'
-                  : 'border-border/80 hover:border-foreground/20 bg-background/50 hover:bg-background/80'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex -space-x-1.5">
-                    <div className="w-5 h-5 rounded-full bg-[#804621] border-2 border-background shadow-sm" />
-                    <div className="w-5 h-5 rounded-full bg-[#99b691] border-2 border-background shadow-sm" />
-                    <div className="w-5 h-5 rounded-full bg-[#6fb6bf] border-2 border-background shadow-sm" />
-                  </div>
-                  <span className="font-semibold text-sm">Personalizado</span>
-                </div>
-                <span className="text-[11px] font-medium text-primary">Cores da Marca</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Selecione uma paleta exclusiva ou insira a cor exata da identidade do seu estúdio.
-              </p>
-            </button>
-          </div>
-
-          {themeModeOption === 'custom' && (
-            <div className="pt-5 border-t border-border/50 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-              {/* Seletor Customizado + Preview Realista */}
-              <div className="p-4 rounded-xl bg-muted/20 border border-border/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  {/* Color Swatch Trigger */}
-                  <label 
-                    className="relative cursor-pointer group flex-shrink-0"
-                    title="Clique para escolher qualquer cor"
-                  >
-                    <input
-                      type="color"
-                      value={localPrimaryColor}
-                      onChange={(e) => {
-                        setLocalPrimaryColor(e.target.value);
-                        setHexInputText(e.target.value.toUpperCase());
-                      }}
-                      onBlur={(e) => handlePrimaryColorChange(e.target.value)}
-                      className="sr-only"
-                    />
-                    <div
-                      className="w-12 h-12 rounded-xl border-2 border-background shadow-md transition-transform group-hover:scale-105 flex items-center justify-center"
-                      style={{ backgroundColor: localPrimaryColor }}
-                    >
-                      <Pipette
-                        className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: isButtonDarkText ? '#1A1614' : '#FAF9F7' }}
-                      />
-                    </div>
-                  </label>
-
-                  {/* Input Hexadecimal */}
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground font-medium">Código Hexadecimal</Label>
-                    <div className="relative flex items-center">
-                      <Input
-                        type="text"
-                        maxLength={7}
-                        value={hexInputText}
-                        onChange={(e) => handleHexInputChange(e.target.value)}
-                        onBlur={() => handlePrimaryColorChange(localPrimaryColor)}
-                        className="h-9 w-28 font-mono text-sm font-semibold uppercase bg-background border-border/80 text-foreground"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Demonstração visual do Botão de Ação */}
-                <div className="sm:border-l sm:border-border/60 sm:pl-4 flex flex-col justify-center">
-                  <span className="text-[11px] text-muted-foreground font-medium mb-1.5">
-                    Demonstração do Botão:
-                  </span>
+              return (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => handlePrimaryColorChange(preset.value)}
+                  className={`group relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+                    isSelected
+                      ? 'border-primary/90 bg-primary/[0.07] ring-2 ring-primary/20 shadow-xs'
+                      : 'border-border/70 hover:border-border hover:bg-muted/40 bg-background/50'
+                  }`}
+                >
                   <div
-                    className="px-4 py-2 rounded-lg text-xs font-semibold tracking-wide text-center shadow-sm select-none transition-all duration-200"
-                    style={{
-                      backgroundColor: localPrimaryColor,
-                      color: isButtonDarkText ? '#1A1614' : '#FAF9F7',
-                    }}
+                    className={`w-7 h-7 rounded-lg shadow-sm flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                      isSelected ? 'ring-2 ring-offset-2 ring-primary/40 ring-offset-background' : ''
+                    }`}
+                    style={{ backgroundColor: preset.value }}
                   >
-                    Confirmar Seleção
+                    {isSelected && (
+                      <Check className={`w-3.5 h-3.5 stroke-[3] ${isDark ? 'text-white' : 'text-neutral-900'}`} />
+                    )}
                   </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-semibold block text-foreground truncate">
+                      {preset.label}
+                    </span>
+                    <span className="text-[10px] font-mono text-muted-foreground uppercase">
+                      {preset.value}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+
+            {/* Botão de Cor Personalizada com Modal Interno */}
+            <button
+              type="button"
+              onClick={() => setIsColorModalOpen(true)}
+              className={`group relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+                !isPresetSelected
+                  ? 'border-primary/90 bg-primary/[0.07] ring-2 ring-primary/20 shadow-xs'
+                  : 'border-dashed border-border/80 hover:border-primary/60 hover:bg-muted/40 bg-background/30'
+              }`}
+            >
+              {!isPresetSelected ? (
+                <div
+                  className="w-7 h-7 rounded-lg shadow-sm flex items-center justify-center shrink-0 ring-2 ring-offset-2 ring-primary/40 ring-offset-background"
+                  style={{ backgroundColor: localPrimaryColor }}
+                >
+                  <Check className={`w-3.5 h-3.5 stroke-[3] ${isButtonDarkText ? 'text-neutral-900' : 'text-white'}`} />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-muted border border-border/60 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
+                  <Plus className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-semibold block text-foreground truncate">
+                    {!isPresetSelected ? 'Personalizada' : 'Outra Cor...'}
+                  </span>
+                  <SlidersHorizontal className="w-2.5 h-2.5 text-muted-foreground opacity-60" />
+                </div>
+                <span className="text-[10px] text-muted-foreground truncate block">
+                  {!isPresetSelected ? localPrimaryColor.toUpperCase() : 'Definir no seletor'}
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* Banner de Demonstração Elegante do Botão */}
+          <div className="pt-2">
+            <div className="p-4 rounded-xl bg-muted/20 border border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-lg shadow-xs border border-black/10 shrink-0"
+                  style={{ backgroundColor: localPrimaryColor }}
+                />
+                <div>
+                  <p className="text-xs font-medium text-foreground">Demonstração na Galeria do Cliente</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Os botões de confirmação e ações primárias serão renderizados com este estilo
+                  </p>
                 </div>
               </div>
 
-              {/* Cores Sugeridas / Paleta Oficial Atualizada */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Cores Predefinidas
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Toque para aplicar instantaneamente
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                  {SUGGESTED_COLORS.map((sug) => {
-                    const isSelected = localPrimaryColor.toLowerCase() === sug.value.toLowerCase();
-                    const isDark = isColorDark(sug.value);
-
-                    return (
-                      <button
-                        key={sug.value}
-                        type="button"
-                        onClick={() => handlePrimaryColorChange(sug.value)}
-                        className={`group relative flex flex-col items-center p-2.5 rounded-xl border transition-all duration-200 ${
-                          isSelected
-                            ? 'border-primary/80 bg-primary/[0.06] shadow-sm ring-1 ring-primary/30'
-                            : 'border-border/60 hover:border-border hover:bg-muted/30'
-                        }`}
-                      >
-                        <div
-                          className={`w-9 h-9 rounded-full shadow-sm flex items-center justify-center transition-transform duration-200 group-hover:scale-105 ${
-                            isSelected ? 'ring-2 ring-offset-2 ring-primary/50 ring-offset-background' : ''
-                          }`}
-                          style={{ backgroundColor: sug.value }}
-                        >
-                          {isSelected && (
-                            <Check className={`w-4 h-4 ${isDark ? 'text-white' : 'text-neutral-900'}`} />
-                          )}
-                        </div>
-                        <span className="text-xs font-medium text-foreground mt-2 truncate max-w-full">
-                          {sug.label}
-                        </span>
-                        <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                          {sug.value}
-                        </span>
-                      </button>
-                    );
-                  })}
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                {!isPresetSelected && (
+                  <button
+                    type="button"
+                    onClick={() => setIsColorModalOpen(true)}
+                    className="text-xs text-primary hover:underline font-medium px-2 py-1"
+                  >
+                    Ajustar Cor
+                  </button>
+                )}
+                <div
+                  className="px-4 py-2 rounded-lg text-xs font-semibold tracking-wide text-center shadow-xs select-none cursor-default transition-all"
+                  style={{
+                    backgroundColor: localPrimaryColor,
+                    color: isButtonDarkText ? '#1A1614' : '#FAF9F7',
+                  }}
+                >
+                  Confirmar Seleção
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Theme Config (Grid layout — Seleção + Entrega) */}
