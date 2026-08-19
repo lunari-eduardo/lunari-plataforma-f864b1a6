@@ -26,23 +26,31 @@ export const AI_AGENDA_ALLOWED: ReadonlySet<string> = new Set([
   "agenda.availability.list",
   "agenda.availability.findNext",
   "agenda.slot.check",
-  // Commands (não-destrutivos)
+  // Commands
   "agenda.appointments.create",
   "agenda.appointments.confirm",
   "agenda.appointments.reschedule",
   "agenda.appointments.update",
+  "agenda.appointments.cancel",
   "agenda.availability.add",
+  "agenda.availability.clearDate",
+  "agenda.availability.deleteSlot",
+  "agenda.blockDate",
+  "agenda.unblockDate",
+  "agenda.blockSlot",
+  "agenda.unblockSlot",
+  "agenda.createPersonalEvent",
+  "agenda.createMeeting",
+  "agenda.createSession",
 ]);
 
 /**
  * Capabilities que exigem aprovação humana quando invocadas pela IA.
- * Motivo: efeito colateral irreversível (estorno financeiro, remoção de slots).
+ * Motivo: efeito colateral irreversível (estorno financeiro, cancelamentos).
  */
 export const REQUIRES_APPROVAL: ReadonlySet<string> = new Set([
   "agenda.appointments.cancel",
   "agenda.appointments.reschedule",
-  "agenda.availability.clearDate",
-  "agenda.availability.deleteSlot",
 ]);
 
 import {

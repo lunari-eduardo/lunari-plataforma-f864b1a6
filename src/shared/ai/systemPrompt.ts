@@ -67,7 +67,21 @@ export function buildAssistantSystemPrompt(
     ? `\n\n[HINTS]\n${JSON.stringify(ctx.hints)}`
     : "";
 
+  const now = new Date();
+  const nowStr = now.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const isoDateStr = now.toISOString().split("T")[0];
+
   const system = [
+    `[CONTEXTO TEMPORAL]`,
+    `Hoje é ${nowStr}, às ${timeStr} (Data ISO atual: ${isoDateStr}).`,
+    `Use esta data como referência exata para interpretar "hoje", "amanhã", "próxima sexta", "mês que vem", "dez de dezembro deste ano", etc.`,
+    ``,
     `[CONTEXTO DE PÁGINA]`,
     `A usuária está em: ${ctx.page} (rota: ${
       (snapshot as { route?: string }).route ?? "?"
@@ -76,6 +90,15 @@ export function buildAssistantSystemPrompt(
     "```json",
     safeStringify(snapshot),
     "```",
+    ``,
+    `[DIRETRIZES OPERACIONAIS DE AGENDA E CLIENTES]`,
+    `- BLOQUEIOS: Para bloquear um dia inteiro na agenda, chame 'agenda.blockDate' (com date em YYYY-MM-DD e reason opcional). Para desbloquear um dia, use 'agenda.unblockDate'. Para bloquear horário específico, use 'agenda.blockSlot'. Para desbloquear horário, use 'agenda.unblockSlot'.`,
+    `- COMPROMISSOS & EVENTOS: Para criar eventos pessoais (médico, dentista, pessoal, etc.), use 'agenda.createPersonalEvent'. Para reuniões, use 'agenda.createMeeting'. Para sessões fotográficas, use 'agenda.createSession'.`,
+    `- IDENTIFICAÇÃO DE CLIENTES (ÁGIL E PRÁTICO):`,
+    `  * Ao agendar para um cliente mencionado por nome, chame 'clientes.searchAndMatch'.`,
+    `  * Se houver apenas 1 cliente correspondente (ou se o nome e sobrenome coincidirem com um único cadastro), PROSSIGA DIRETAMENTE com o agendamento usando esse cliente sem fazer perguntas desnecessárias.`,
+    `  * APENAS quando houver ambiguidade real (ex: o usuário citar apenas "agende a Juliana" e existirem 2 ou mais Julianas cadastradas como "Juliana Santos" e "Juliana Lima"), pergunte ao usuário qual delas utilizar, exibindo telefone ou e-mail para rápida identificação.`,
+    `  * Se o cliente não existir no cadastro, agende com o nome informado pelo usuário e informe que o cadastro pode ser criado quando desejar.`,
     ``,
     `[CAPABILITIES DISPONÍVEIS NESTE TURNO — ${capabilitySummary.length}]`,
     `Você só pode chamar tools cujo id apareça nesta lista. Não invente ids.`,

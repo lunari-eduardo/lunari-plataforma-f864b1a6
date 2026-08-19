@@ -99,6 +99,79 @@ export const searchClientesCap = defineQuery({
   },
 });
 
+export const searchAndMatchClientesCap = defineQuery({
+  id: "clientes.searchAndMatch",
+  title: "Buscar e desambiguar clientes",
+  description:
+    "Busca clientes pelo nome ou termo para identificar o cliente correto ou detectar homônimos quando houver ambiguidade.",
+  input: z.object({ nameOrQuery: z.string().min(1).describe("Nome ou termo de busca do cliente") }),
+  output: z.object({
+    matchCount: z.number().int().nonnegative(),
+    isAmbiguous: z.boolean(),
+    exactMatch: ClienteRowSchema.nullable(),
+    candidates: z.array(
+      z.object({
+        id: z.string(),
+        nome: z.string(),
+        email: z.string().nullable().optional(),
+        telefone: z.string().nullable().optional(),
+        cidade: z.string().nullable().optional(),
+        tipo: z.string().nullable().optional(),
+      })
+    ),
+  }),
+  permissions: ["clientes:read"],
+  handler: async ({ nameOrQuery }) => {
+    const term = nameOrQuery.trim();
+    if (!term) return ok({ matchCount: 0, isAmbiguous: false, exactMatch: null, candidates: [] });
+    const like = `%${term}%`;
+    const { data, error } = await supabase
+      .from("clientes")
+      .select(SELECT_COLS)
+      .or(`nome.ilike.${like},email.ilike.${like},telefone.ilike.${like}`)
+      .limit(10);
+
+    if (error) return err(domainError("DB", error.message));
+    const items = data ?? [];
+
+    // 1. Se exatamente 1 cliente foi retornado, é ele (sem ambiguidade)
+    if (items.length === 1) {
+      return ok({
+        matchCount: 1,
+        isAmbiguous: false,
+        exactMatch: items[0],
+        candidates: items,
+      });
+    }
+
+    // 2. Se houver correspondência exata de nome completo (case-insensitive)
+    const exact = items.find((c) => c.nome?.trim().toLowerCase() === term.toLowerCase());
+    if (exact) {
+      return ok({
+        matchCount: items.length,
+        isAmbiguous: false,
+        exactMatch: exact,
+        candidates: items,
+      });
+    }
+
+    // 3. Múltiplos clientes encontrados (ambiguidade real)
+    return ok({
+      matchCount: items.length,
+      isAmbiguous: items.length > 1,
+      exactMatch: null,
+      candidates: items.map((c) => ({
+        id: c.id,
+        nome: c.nome,
+        email: c.email,
+        telefone: c.telefone,
+        cidade: c.cidade,
+        tipo: c.tipo,
+      })),
+    });
+  },
+});
+
 export const listClienteSessoesCap = defineQuery({
   id: "clientes.listSessoes",
   title: "Listar sessões do cliente",

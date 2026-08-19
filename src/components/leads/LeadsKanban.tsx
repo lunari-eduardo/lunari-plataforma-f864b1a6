@@ -515,13 +515,17 @@ export default function LeadsKanban({
           try {
             const newLead = await addLead(data);
 
+            // Criar cliente automaticamente no CRM e vincular ao lead
+            // convertToClient verifica duplicatas por e-mail antes de criar
+            await convertToClient(newLead.id);
+
             // Add creation interaction
             addInteraction(
               newLead.id,
               "criacao",
               `Lead criado com status "${statuses.find((s) => s.key === data.status)?.name || data.status}"`,
               true,
-              `Cliente criado automaticamente no CRM`,
+              `Lead registrado no funil`,
             );
             toast({
               title: "Lead criado",
