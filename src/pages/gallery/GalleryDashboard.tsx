@@ -97,7 +97,8 @@ function mapSupabaseStatus(galeria: Galeria): GalleryStatus {
     galeria.statusPagamento,
     galeria.finalizedAt,
     galeria.statusSelecao,
-    galeria.prazoSelecao
+    galeria.prazoSelecao,
+    galeria.tipo
   );
 }
 
@@ -277,13 +278,16 @@ export default function Dashboard() {
     return matchesSearch && matchesStatus;
   });
 
+  const isDeliverPublished = (status: string) => ['enviado', 'sent', 'publicada', 'selection_started', 'selecao_iniciada'].includes(status);
+  const isDeliverExpired = (status: string) => ['expirado', 'expirada', 'expired'].includes(status);
+
   const filteredDeliverGalleries = deliverGalleries.filter((gallery) => {
     const matchesSearch =
       gallery.clientName.toLowerCase().includes(search.toLowerCase()) ||
       gallery.sessionName.toLowerCase().includes(search.toLowerCase());
     if (deliverStatusFilter === 'all') return matchesSearch;
-    if (deliverStatusFilter === 'published') return matchesSearch && gallery.status === 'enviado';
-    if (deliverStatusFilter === 'expired') return matchesSearch && gallery.status === 'expirado';
+    if (deliverStatusFilter === 'published') return matchesSearch && isDeliverPublished(gallery.status);
+    if (deliverStatusFilter === 'expired') return matchesSearch && isDeliverExpired(gallery.status);
     return matchesSearch;
   });
 
@@ -302,8 +306,8 @@ export default function Dashboard() {
 
   const deliverStats = {
     total: deliverGalleries.length,
-    published: deliverGalleries.filter(g => g.status === 'enviado').length,
-    expired: deliverGalleries.filter(g => g.status === 'expirado').length,
+    published: deliverGalleries.filter(g => isDeliverPublished(g.status)).length,
+    expired: deliverGalleries.filter(g => isDeliverExpired(g.status)).length,
   };
 
   const deleteTarget = allGalleries.find(g => g.id === deleteGalleryId);

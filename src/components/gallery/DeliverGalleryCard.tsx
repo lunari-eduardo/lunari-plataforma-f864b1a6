@@ -22,8 +22,12 @@ interface DeliverGalleryCardProps {
 }
 
 function getDeliverStatus(gallery: Gallery): { label: string; variant: 'default' | 'destructive' | 'secondary' } {
-  if (gallery.status === 'expired') return { label: 'Expirada', variant: 'destructive' };
-  if (gallery.status === 'sent') return { label: 'Publicada', variant: 'default' };
+  if (gallery.status === 'expired' || gallery.status === 'expirado' || gallery.status === 'expirada') {
+    return { label: 'Expirada', variant: 'destructive' };
+  }
+  if (['sent', 'enviado', 'publicada', 'selection_started', 'selecao_iniciada'].includes(gallery.status)) {
+    return { label: 'Publicada', variant: 'default' };
+  }
   return { label: 'Rascunho', variant: 'secondary' };
 }
 

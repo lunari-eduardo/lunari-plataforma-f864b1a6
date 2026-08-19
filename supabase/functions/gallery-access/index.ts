@@ -194,17 +194,18 @@ serve(async (req) => {
       });
     }
 
-    // 2.5 TRACKING: Marcar galeria como acessada/em seleção no primeiro acesso
+    // 2.5 TRACKING: Marcar galeria de seleção como acessada/em seleção no primeiro acesso
     // Isso garante que o fotógrafo veja que o cliente abriu o link no Kanban, 
     // mesmo que ele ainda não tenha selecionado a primeira foto.
-    if (gallery.status === 'enviado') {
+    // NUNCA aplicar a galerias de entrega (transfer), que devem permanecer 'enviado' / 'publicada'.
+    if (gallery.tipo !== 'entrega' && gallery.status === 'enviado') {
       try {
         await supabase
           .from('galerias')
           .update({ status: 'selecao_iniciada', updated_at: new Date().toISOString() })
           .eq('id', gallery.id);
           
-        console.log(`[gallery-access] Tracking: Galeria ${gallery.id} marcada como selecao_iniciada no primeiro acesso`);
+        console.log(`[gallery-access] Tracking: Galeria de seleção ${gallery.id} marcada como selecao_iniciada no primeiro acesso`);
       } catch (err) {
         console.error('[gallery-access] Erro ao atualizar status para selecao_iniciada:', err);
       }

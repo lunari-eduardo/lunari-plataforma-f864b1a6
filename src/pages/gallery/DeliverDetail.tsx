@@ -41,9 +41,9 @@ import { ThemePreviewCanvas } from '@/components/dashboard/themes/ThemePreviewCa
 import { isPast } from 'date-fns';
 
 function getDeliverStatusInfo(status: string, prazoSelecao: Date | null) {
-  const isExpired = status === 'expirado' || status === 'expirada' || (prazoSelecao && isPast(prazoSelecao) && ['enviado', 'publicada'].includes(status));
+  const isExpired = status === 'expirado' || status === 'expirada' || status === 'expired' || (prazoSelecao && isPast(prazoSelecao) && ['enviado', 'publicada', 'sent', 'selecao_iniciada', 'selection_started'].includes(status));
   if (isExpired) return { label: 'Expirada', variant: 'destructive' as const, color: 'text-destructive' };
-  if (status === 'enviado' || status === 'publicada') return { label: 'Publicada', variant: 'default' as const, color: 'text-primary' };
+  if (['enviado', 'publicada', 'sent', 'selecao_iniciada', 'selection_started'].includes(status)) return { label: 'Publicada', variant: 'default' as const, color: 'text-primary' };
   return { label: 'Rascunho', variant: 'secondary' as const, color: 'text-muted-foreground' };
 }
 

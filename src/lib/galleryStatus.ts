@@ -9,14 +9,15 @@ export function getEffectiveGalleryStatus(
   statusPagamento?: string | null,
   finalizedAt?: Date | string | null,
   statusSelecao?: string | null,
-  prazoSelecao?: Date | string | null
+  prazoSelecao?: Date | string | null,
+  tipo?: string | null
 ): 'created' | 'sent' | 'selection_started' | 'selection_completed' | 'expired' | 'cancelled' {
   
   // Normalização inicial do status bruto (Português/Inglês)
   const normalizedRawStatus = (status || '').toLowerCase();
 
-  // Se já foi finalizada ou paga, o status efetivo é sempre concluída
-  if (finalizedAt || statusPagamento === 'pago' || statusPagamento === 'pago_manual' || statusSelecao === 'selecao_completa') {
+  // Se já foi finalizada ou paga, o status efetivo é sempre concluída (para seleção)
+  if (tipo !== 'entrega' && (finalizedAt || statusPagamento === 'pago' || statusPagamento === 'pago_manual' || statusSelecao === 'selecao_completa')) {
     return 'selection_completed';
   }
 
@@ -30,6 +31,11 @@ export function getEffectiveGalleryStatus(
   
   if (isPastDeadline && isActiveStatus) {
     return 'expired';
+  }
+
+  // Para galerias de entrega (transfer), qualquer estado ativo equivale a 'sent' (Publicada)
+  if (tipo === 'entrega' && isActiveStatus) {
+    return 'sent';
   }
 
   const statusMap: Record<string, 'created' | 'sent' | 'selection_started' | 'selection_completed' | 'expired' | 'cancelled'> = {

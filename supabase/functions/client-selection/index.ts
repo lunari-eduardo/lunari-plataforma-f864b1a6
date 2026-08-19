@@ -563,8 +563,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 8. Update gallery status to selecao_iniciada if it was just 'enviado'
-    if (gallery.status === 'enviado') {
+    // 8. Update gallery status to selecao_iniciada if it was just 'enviado' (apenas para galerias de seleção)
+    if (gallery.tipo !== 'entrega' && gallery.status === 'enviado') {
       await supabase
         .from('galerias')
         .update({ status: 'selecao_iniciada', updated_at: new Date().toISOString() })
