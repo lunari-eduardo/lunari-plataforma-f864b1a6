@@ -618,7 +618,7 @@ export default function DeliverDetail() {
               </h3>
               {coverPhotoId && (
                 <span className="text-xs font-normal text-muted-foreground inline-flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  <Star className="h-3 w-3 fill-[#cbb384] text-[#cbb384]" />
                   Capa selecionada
                 </span>
               )}
@@ -664,7 +664,7 @@ export default function DeliverDetail() {
                     key={photo.id}
                     className={cn(
                       'group relative aspect-square rounded-lg overflow-hidden bg-muted border-2 transition-all',
-                      isCover && 'border-amber-400 ring-2 ring-amber-400/30',
+                      isCover && 'border-[#cbb384] ring-2 ring-[#cbb384]/30',
                       !isCover && showHighlight && 'border-blue-400 ring-1 ring-blue-400/30',
                       !isCover && !showHighlight && 'border-transparent'
                     )}
@@ -679,7 +679,7 @@ export default function DeliverDetail() {
 
                     {/* Badge CAPA */}
                     {isCover && (
-                      <div className="absolute top-1.5 left-1.5 bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 z-10">
+                      <div className="absolute top-1.5 left-1.5 bg-[#cbb384] text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 z-10 shadow-sm">
                         <Star className="h-2.5 w-2.5 fill-current" />
                         CAPA
                       </div>
@@ -712,7 +712,7 @@ export default function DeliverDetail() {
                       <Button
                         variant={isCover ? 'default' : 'secondary'}
                         size="icon"
-                        className={cn('h-8 w-8', isCover && 'bg-amber-400 hover:bg-amber-300 text-black')}
+                        className={cn('h-8 w-8', isCover && 'bg-[#cbb384] hover:bg-[#bfa574] text-white')}
                         onClick={() => handleSetCover(photo.id)}
                         title={isCover ? 'Remover capa' : 'Definir como capa'}
                       >

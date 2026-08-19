@@ -387,7 +387,7 @@ export default function DeliverCreate() {
 
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Shield className="h-4 w-4 text-[#cbb384]" />
                 Permissão da Galeria
               </Label>
               <RadioGroup
@@ -406,15 +406,15 @@ export default function DeliverCreate() {
                     htmlFor="gallery-public"
                     className={cn(
                       'flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200',
-                      'hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40',
+                      'hover:-translate-y-0.5 hover:shadow-md hover:border-[#cbb384]/50',
                       galleryPermission === 'public'
-                        ? 'border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm'
+                        ? 'border-[#cbb384] bg-[#ddd1b6]/20 ring-1 ring-[#cbb384]/30 shadow-sm'
                         : 'border-border/60 bg-card hover:bg-muted/30'
                     )}
                   >
                     <div className={cn(
                       'p-2.5 rounded-lg transition-colors',
-                      galleryPermission === 'public' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                      galleryPermission === 'public' ? 'bg-[#ddd1b6]/50 dark:bg-[#ddd1b6]/15 text-[#cbb384]' : 'bg-muted text-muted-foreground'
                     )}>
                       <Globe className="h-5 w-5" />
                     </div>
@@ -430,15 +430,15 @@ export default function DeliverCreate() {
                     htmlFor="gallery-private"
                     className={cn(
                       'flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200',
-                      'hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40',
+                      'hover:-translate-y-0.5 hover:shadow-md hover:border-[#cbb384]/50',
                       galleryPermission === 'private'
-                        ? 'border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm'
+                        ? 'border-[#cbb384] bg-[#ddd1b6]/20 ring-1 ring-[#cbb384]/30 shadow-sm'
                         : 'border-border/60 bg-card hover:bg-muted/30'
                     )}
                   >
                     <div className={cn(
                       'p-2.5 rounded-lg transition-colors',
-                      galleryPermission === 'private' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                      galleryPermission === 'private' ? 'bg-[#ddd1b6]/50 dark:bg-[#ddd1b6]/15 text-[#cbb384]' : 'bg-muted text-muted-foreground'
                     )}>
                       <Lock className="h-5 w-5" />
                     </div>
@@ -451,6 +451,7 @@ export default function DeliverCreate() {
               </RadioGroup>
             </div>
 
+            {/* Client Section - Only show for private galleries */}
             {galleryPermission === 'private' && (
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-2">
@@ -474,13 +475,14 @@ export default function DeliverCreate() {
                       size="icon"
                       onClick={() => setIsClientModalOpen(true)}
                       disabled={isLoadingClients}
-                      className="hover:border-amber-500/50"
+                      className="hover:border-[#cbb384]/50"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
+                {/* Password */}
                 <div className="space-y-2">
                   <Label htmlFor="password">Senha de acesso *</Label>
                   <Input
@@ -494,6 +496,7 @@ export default function DeliverCreate() {
               </div>
             )}
 
+            {/* Session Name + Expiration - 2 columns */}
             <div className="grid gap-4 md:grid-cols-2 pt-2">
               <div className="space-y-2">
                 <Label htmlFor="sessionName">Nome da sessão *</Label>
@@ -506,7 +509,7 @@ export default function DeliverCreate() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expiration" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Calendar className="h-4 w-4 text-[#cbb384]" />
                   Prazo de expiração (dias)
                 </Label>
                 <Input
@@ -530,7 +533,7 @@ export default function DeliverCreate() {
           <div className="space-y-6 animate-fade-in">
             <div className="border-b border-border/40 pb-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <Sparkles className="h-5 w-5 text-[#cbb384]" />
                 <h2 className="text-lg font-semibold text-foreground">Design e Personalização Visual</h2>
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -538,6 +541,7 @@ export default function DeliverCreate() {
               </p>
             </div>
 
+            {/* Font Select */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-foreground">Tipografia do Título</Label>
               <FontSelect
@@ -549,9 +553,10 @@ export default function DeliverCreate() {
               />
             </div>
 
+            {/* Tema da Galeria */}
             <div className="space-y-4 pt-4 border-t border-border/40">
               <div className="flex items-center gap-2">
-                <Palette className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Palette className="h-4 w-4 text-[#cbb384]" />
                 <Label className="text-base font-semibold">Tema da Galeria</Label>
               </div>
               
@@ -560,24 +565,24 @@ export default function DeliverCreate() {
                   className={cn(
                     "p-3.5 border rounded-xl cursor-pointer transition-all duration-200 text-center hover:-translate-y-0.5 hover:shadow-sm",
                     !useCustomTheme
-                      ? "border-amber-500/70 bg-amber-500/[0.05] ring-1 ring-amber-500/30"
-                      : "border-border/60 hover:border-amber-500/40 hover:bg-muted/40"
+                      ? "border-[#cbb384] bg-[#ddd1b6]/20 ring-1 ring-[#cbb384]/30"
+                      : "border-border/60 hover:border-[#cbb384]/40 hover:bg-muted/40"
                   )}
                   onClick={() => setUseCustomTheme(false)}
                 >
-                  <p className={cn("font-semibold text-sm", !useCustomTheme ? "text-amber-700 dark:text-amber-300" : "text-foreground")}>Herdar Padrão</p>
+                  <p className={cn("font-semibold text-sm", !useCustomTheme ? "text-[#7a6035] dark:text-[#e4d5b7]" : "text-foreground")}>Herdar Padrão</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Configurações da conta</p>
                 </div>
                 <div 
                   className={cn(
                     "p-3.5 border rounded-xl cursor-pointer transition-all duration-200 text-center hover:-translate-y-0.5 hover:shadow-sm",
                     useCustomTheme
-                      ? "border-amber-500/70 bg-amber-500/[0.05] ring-1 ring-amber-500/30"
-                      : "border-border/60 hover:border-amber-500/40 hover:bg-muted/40"
+                      ? "border-[#cbb384] bg-[#ddd1b6]/20 ring-1 ring-[#cbb384]/30"
+                      : "border-border/60 hover:border-[#cbb384]/40 hover:bg-muted/40"
                   )}
                   onClick={() => setUseCustomTheme(true)}
                 >
-                  <p className={cn("font-semibold text-sm", useCustomTheme ? "text-amber-700 dark:text-amber-300" : "text-foreground")}>Personalizar</p>
+                  <p className={cn("font-semibold text-sm", useCustomTheme ? "text-[#7a6035] dark:text-[#e4d5b7]" : "text-foreground")}>Personalizar</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Estilo exclusivo</p>
                 </div>
               </div>
@@ -594,11 +599,12 @@ export default function DeliverCreate() {
               )}
             </div>
 
+            {/* Capa da Galeria de Entrega (Hero) */}
             <div className="space-y-4 pt-4 border-t border-border/40">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Sparkles className="h-4 w-4 text-[#cbb384]" />
                 <Label className="text-base font-semibold">Capa da Galeria (Hero)</Label>
-                <span className="text-[10px] uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-medium ml-auto">Hero</span>
+                <span className="text-[10px] uppercase tracking-wider bg-[#ddd1b6]/50 text-[#7a6035] dark:text-[#e4d5b7] px-2.5 py-0.5 rounded-full border border-[#cbb384]/30 font-medium ml-auto">Hero</span>
               </div>
               <p className="text-xs text-muted-foreground -mt-2">
                 Apresentação inicial da galeria para impactar no primeiro acesso.
@@ -616,6 +622,7 @@ export default function DeliverCreate() {
               />
             </div>
 
+            {/* Layout e Espaçamento */}
             <div className="grid gap-6 md:grid-cols-2 pt-4 border-t border-border/40">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -653,7 +660,7 @@ export default function DeliverCreate() {
                     onClick={() => setClientMode('light')}
                     className={cn(
                       "gap-1.5 rounded-xl transition-all",
-                      clientMode === 'light' && "bg-amber-600 hover:bg-amber-700 text-white"
+                      clientMode === 'light' && "bg-[#cbb384] hover:bg-[#bfa574] text-white shadow-sm border-transparent"
                     )}
                   >
                     <Sun className="h-3.5 w-3.5" />
@@ -666,7 +673,7 @@ export default function DeliverCreate() {
                     onClick={() => setClientMode('dark')}
                     className={cn(
                       "gap-1.5 rounded-xl transition-all",
-                      clientMode === 'dark' && "bg-neutral-900 dark:bg-amber-500/20 text-foreground border-amber-500/40"
+                      clientMode === 'dark' && "bg-neutral-900 dark:bg-card text-foreground border-[#cbb384]/50 shadow-sm"
                     )}
                   >
                     <Moon className="h-3.5 w-3.5" />
@@ -688,6 +695,7 @@ export default function DeliverCreate() {
               </p>
             </div>
 
+            {/* Folder Manager */}
             {supabaseGalleryId && (
               <FolderManager
                 galleryId={supabaseGalleryId}
@@ -759,13 +767,14 @@ export default function DeliverCreate() {
               </div>
             )}
 
-            <div className="p-5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.03] space-y-4 shadow-sm">
+            {/* Luxury Summary Card */}
+            <div className="p-5 rounded-2xl border border-[#cbb384]/40 bg-[#ddd1b6]/10 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Sparkles className="h-4 w-4 text-[#cbb384]" />
                   Resumo da Galeria
                 </h3>
-                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                <span className="text-[11px] font-semibold text-[#7a6035] dark:text-[#e4d5b7] bg-[#ddd1b6]/50 px-2.5 py-0.5 rounded-full border border-[#cbb384]/30">
                   Pronta para Publicação
                 </span>
               </div>
@@ -785,7 +794,7 @@ export default function DeliverCreate() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground">Total de Fotos</span>
-                  <p className="font-semibold text-amber-700 dark:text-amber-300">{photoCount || uploadedPhotos.length} fotos</p>
+                  <p className="font-semibold text-[#7a6035] dark:text-[#e4d5b7]">{photoCount || uploadedPhotos.length} fotos</p>
                 </div>
               </div>
             </div>
@@ -799,6 +808,7 @@ export default function DeliverCreate() {
 
   return (
     <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list?tab=transfer')}>
           <ArrowLeft className="h-5 w-5" />
@@ -811,6 +821,7 @@ export default function DeliverCreate() {
         </div>
       </div>
 
+      {/* Luxury Step Indicator */}
       <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2 scrollbar-none">
         {steps.map((step, index) => {
           const Icon = step.icon;
@@ -821,15 +832,15 @@ export default function DeliverCreate() {
               <div
                 className={cn(
                   'flex items-center gap-2 px-3.5 py-2 rounded-full transition-all duration-300 whitespace-nowrap text-sm',
-                  isActive && 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-500/40 ring-2 ring-amber-500/15 shadow-[0_2px_12px_rgba(197,168,128,0.15)] font-semibold',
-                  isCompleted && 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-medium',
+                  isActive && 'bg-[#ddd1b6]/50 text-[#66502a] dark:text-[#f0e6d2] border border-[#cbb384] ring-2 ring-[#cbb384]/20 shadow-[0_2px_12px_rgba(203,179,132,0.2)] font-semibold',
+                  isCompleted && 'bg-[#ddd1b6]/30 text-[#856b3e] dark:text-[#cbb384] border border-[#cbb384]/30 font-medium',
                   !isActive && !isCompleted && 'text-muted-foreground hover:text-foreground hover:bg-muted/40 border border-transparent'
                 )}
               >
                 {isCompleted ? (
-                  <Check className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Check className="h-4 w-4 text-[#cbb384]" />
                 ) : (
-                  <Icon className={cn('h-4 w-4 transition-transform duration-200', isActive && 'text-amber-600 dark:text-amber-400 scale-110')} />
+                  <Icon className={cn('h-4 w-4 transition-transform duration-200', isActive && 'text-[#cbb384] scale-110')} />
                 )}
                 <span className="hidden sm:inline">{step.name}</span>
               </div>
@@ -837,7 +848,7 @@ export default function DeliverCreate() {
                 <div
                   className={cn(
                     'h-0.5 w-4 md:w-12 mx-1 md:mx-2 rounded-full transition-colors duration-300',
-                    isCompleted ? 'bg-amber-500/60 dark:bg-amber-500/40' : 'bg-border/60'
+                    isCompleted ? 'bg-[#cbb384]/60 dark:bg-[#cbb384]/40' : 'bg-border/60'
                   )}
                 />
               )}
@@ -846,10 +857,12 @@ export default function DeliverCreate() {
         })}
       </div>
 
+      {/* Step Content Card */}
       <div className="lunari-card p-6 md:p-8 mb-6 border border-border/60 dark:border-border/40 shadow-sm rounded-2xl">
         {renderStep()}
       </div>
 
+      {/* Fixed Bottom Navigation */}
       <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
         <div className="max-w-[79rem] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
           <Button
@@ -865,8 +878,7 @@ export default function DeliverCreate() {
             <Button
               onClick={handleNext}
               disabled={isCreatingGallery || isUploading}
-              variant="terracotta"
-              className="active:scale-[0.98] transition-all rounded-xl shadow-sm"
+              className="bg-[#cbb384] hover:bg-[#bfa574] text-white active:scale-[0.98] transition-all rounded-xl shadow-sm font-medium"
             >
               {isCreatingGallery ? (
                 <>
@@ -884,8 +896,7 @@ export default function DeliverCreate() {
             <Button
               onClick={handlePublish}
               disabled={isPublishing || (photoCount === 0 && uploadedPhotos.length === 0)}
-              variant="terracotta"
-              className="gap-2 shadow-md active:scale-[0.98] transition-all rounded-xl"
+              className="bg-[#cbb384] hover:bg-[#bfa574] text-white gap-2 shadow-md active:scale-[0.98] transition-all rounded-xl font-medium"
             >
               {isPublishing ? (
                 <>

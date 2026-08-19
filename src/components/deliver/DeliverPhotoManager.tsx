@@ -130,7 +130,7 @@ export function DeliverPhotoManager({
         <div className="flex items-center gap-3">
           {coverPhotoId && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <Star className="h-3 w-3 fill-[#cbb384] text-[#cbb384]" />
               Capa
             </p>
           )}
@@ -161,7 +161,7 @@ export function DeliverPhotoManager({
             <div
               key={photo.id}
               className={`group relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                isCover ? 'border-amber-400 ring-2 ring-amber-400/30' : 
+                isCover ? 'border-[#cbb384] ring-2 ring-[#cbb384]/30' : 
                 isHighlighted ? 'border-blue-400' : 'border-transparent hover:border-border'
               } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
             >
@@ -179,7 +179,7 @@ export function DeliverPhotoManager({
               )}
 
               {isCover && (
-                <div className="absolute top-1.5 left-1.5 bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 z-10">
+                <div className="absolute top-1.5 left-1.5 bg-[#cbb384] text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 z-10 shadow-sm">
                   <Star className="h-2.5 w-2.5 fill-current" />
                   CAPA
                 </div>
@@ -190,7 +190,7 @@ export function DeliverPhotoManager({
                   onClick={() => handleSetCover(photo.id)}
                   className={`p-2 rounded-full transition-colors ${
                     isCover
-                      ? 'bg-amber-400 text-black hover:bg-amber-300'
+                      ? 'bg-[#cbb384] text-white hover:bg-[#bfa574]'
                       : 'bg-white/90 text-black hover:bg-white'
                   }`}
                   title={isCover ? 'Remover capa' : 'Definir como capa'}

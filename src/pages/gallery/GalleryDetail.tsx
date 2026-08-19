@@ -578,16 +578,16 @@ export default function GalleryDetail() {
           };
           if (vendido > 0 && pendente > 0) {
             return (
-              <button {...commonProps} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:opacity-80 transition">
-                <Clock className="h-3.5 w-3.5" />
+              <button {...commonProps} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-[#ddd1b6]/50 text-[#7a6035] dark:text-[#e4d5b7] border-[#cbb384]/40 hover:opacity-80 transition">
+                <Clock className="h-3.5 w-3.5 text-[#cbb384]" />
                 Parcial · Pago R$ {vendido.toFixed(2)} / Pendente R$ {pendente.toFixed(2)}
               </button>
             );
           }
           if (pendente > 0) {
             return (
-              <button {...commonProps} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:opacity-80 transition">
-                <Clock className="h-3.5 w-3.5" />
+              <button {...commonProps} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-[#ddd1b6]/50 text-[#7a6035] dark:text-[#e4d5b7] border-[#cbb384]/40 hover:opacity-80 transition">
+                <Clock className="h-3.5 w-3.5 text-[#cbb384]" />
                 Pendente R$ {pendente.toFixed(2)}
               </button>
             );
@@ -609,7 +609,7 @@ export default function GalleryDetail() {
           const cls = isExpired
             ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30'
             : isUrgent
-              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+              ? 'bg-[#ddd1b6]/50 text-[#7a6035] dark:text-[#e4d5b7] border-[#cbb384]/40'
               : 'bg-muted text-muted-foreground border-border';
           const label = isExpired ? 'Expira hoje (12m)' : `Expira em ${diffDays} dia${diffDays === 1 ? '' : 's'}`;
           return (
@@ -617,7 +617,7 @@ export default function GalleryDetail() {
               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cls}`}
               title={`Galerias são excluídas automaticamente após 12 meses. Expira em ${format(exp, "dd/MM/yyyy", { locale: ptBR })}.`}
             >
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5 text-[#cbb384]" />
               {label}
             </span>
           );

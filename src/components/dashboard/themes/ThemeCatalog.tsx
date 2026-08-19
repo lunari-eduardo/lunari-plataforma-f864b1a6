@@ -35,15 +35,15 @@ export function ThemeCatalog({
             <button
               onClick={() => onSelect(theme.id)}
               className={cn(
-                "w-full flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all group/card overflow-hidden",
+                "w-full flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all duration-200 group/card overflow-hidden hover:-translate-y-0.5 hover:shadow-md",
                 isSelected 
-                  ? "border-primary bg-primary/5 shadow-xl ring-1 ring-primary/20" 
-                  : "border-border bg-card hover:border-primary/50 hover:bg-accent/20"
+                  ? "border-[#cbb384] bg-[#ddd1b6]/15 shadow-md ring-1 ring-[#cbb384]/30" 
+                  : "border-border/60 bg-card hover:border-[#cbb384]/50 hover:bg-accent/20"
               )}
             >
               {/* Thumbnail Real */}
               <div 
-                className="w-full aspect-[4/3] rounded-xl border border-border overflow-hidden bg-muted relative group-hover/card:shadow-lg transition-all"
+                className="w-full aspect-[4/3] rounded-xl border border-border/60 overflow-hidden bg-muted relative group-hover/card:shadow-md transition-all"
               >
                 <div className="absolute inset-0 scale-[0.4] origin-top-left w-[250%] h-[250%] pointer-events-none opacity-90 group-hover/card:opacity-100 transition-opacity">
                    {/* Mini preview canvas em modo thumbnail */}
@@ -59,15 +59,15 @@ export function ThemeCatalog({
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="font-bold text-sm tracking-tight">{theme.name}</span>
+                <span className={cn("font-bold text-sm tracking-tight", isSelected ? "text-[#7a6035] dark:text-[#e4d5b7]" : "text-foreground")}>{theme.name}</span>
                 <span className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] font-medium opacity-70">
                   {theme.id === 'editorial' ? 'Editorial' : theme.id === 'clean' ? 'Classic' : 'Contemporâneo'}
                 </span>
               </div>
 
               {isSelected && (
-                <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md animate-in zoom-in-50 duration-200 z-10">
-                  <Check className="h-4 w-4" />
+                <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-[#cbb384] text-white flex items-center justify-center shadow-md animate-in zoom-in-50 duration-200 z-10">
+                  <Check className="h-3.5 w-3.5" />
                 </div>
               )}
             </button>

@@ -343,25 +343,29 @@ export default function Dashboard() {
               Nova Galeria
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" align="end" sideOffset={8}>
+          <PopoverContent className="w-56 p-2 rounded-xl shadow-lg border border-border/60" align="end" sideOffset={8}>
             <div className="space-y-1">
               <button
                 onClick={() => navigate('/app/gallery/new/select')}
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-[#ddd1b6]/20 transition-colors text-left"
               >
-                <MousePointerClick className="h-4 w-4 text-primary shrink-0" />
+                <div className="p-1.5 rounded-md bg-[#ddd1b6]/40 dark:bg-[#ddd1b6]/15">
+                  <MousePointerClick className="h-4 w-4 text-[#cbb384] shrink-0" />
+                </div>
                 <div>
-                  <p>Seleção</p>
+                  <p className="font-semibold text-foreground">Seleção</p>
                   <p className="text-xs text-muted-foreground font-normal">Cliente seleciona fotos</p>
                 </div>
               </button>
               <button
                 onClick={() => navigate('/app/gallery/new/transfer')}
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors text-left"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-[#ddd1b6]/20 transition-colors text-left"
               >
-                <Send className="h-4 w-4 text-primary shrink-0" />
+                <div className="p-1.5 rounded-md bg-[#ddd1b6]/40 dark:bg-[#ddd1b6]/15">
+                  <Send className="h-4 w-4 text-[#cbb384] shrink-0" />
+                </div>
                 <div>
-                  <p>Transfer</p>
+                  <p className="font-semibold text-foreground">Transfer</p>
                   <p className="text-xs text-muted-foreground font-normal">Entrega final de fotos</p>
                 </div>
               </button>

@@ -1370,8 +1370,8 @@ export default function GalleryCreate() {
                 </p>
               </div>
               {/* Assisted Mode Badge */}
-              {isAssistedMode && <Badge variant="secondary" className="gap-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-medium">
-                  <Link2 className="h-3 w-3" />
+              {isAssistedMode && <Badge variant="secondary" className="gap-1.5 bg-[#ddd1b6]/50 text-[#7a6035] dark:text-[#e4d5b7] border border-[#cbb384]/30 font-medium">
+                  <Link2 className="h-3 w-3 text-[#cbb384]" />
                   Vinculada à sessão do Studio
                 </Badge>}
             </div>
@@ -1389,14 +1389,14 @@ export default function GalleryCreate() {
                   <RadioGroupItem value="public" id="gallery-public" className="peer sr-only" />
                   <Label htmlFor="gallery-public" className={cn(
                     "flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200",
-                    "hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40",
+                    "hover:-translate-y-0.5 hover:shadow-md hover:border-[#cbb384]/50",
                     galleryPermission === 'public'
-                      ? "border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm"
+                      ? "border-[#cbb384] bg-[#ddd1b6]/20 ring-1 ring-[#cbb384]/30 shadow-sm"
                       : "border-border/60 bg-card hover:bg-muted/30"
                   )}>
                     <div className={cn(
                       'p-2.5 rounded-lg transition-colors',
-                      galleryPermission === 'public' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                      galleryPermission === 'public' ? 'bg-[#ddd1b6]/50 dark:bg-[#ddd1b6]/15 text-[#cbb384]' : 'bg-muted text-muted-foreground'
                     )}>
                       <Globe className="h-5 w-5" />
                     </div>
@@ -1410,14 +1410,14 @@ export default function GalleryCreate() {
                   <RadioGroupItem value="private" id="gallery-private" className="peer sr-only" />
                   <Label htmlFor="gallery-private" className={cn(
                     "flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200",
-                    "hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40",
+                    "hover:-translate-y-0.5 hover:shadow-md hover:border-[#cbb384]/50",
                     galleryPermission === 'private'
-                      ? "border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm"
+                      ? "border-[#cbb384] bg-[#ddd1b6]/20 ring-1 ring-[#cbb384]/30 shadow-sm"
                       : "border-border/60 bg-card hover:bg-muted/30"
                   )}>
                     <div className={cn(
                       'p-2.5 rounded-lg transition-colors',
-                      galleryPermission === 'private' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                      galleryPermission === 'private' ? 'bg-[#ddd1b6]/50 dark:bg-[#ddd1b6]/15 text-[#cbb384]' : 'bg-muted text-muted-foreground'
                     )}>
                       <Lock className="h-5 w-5" />
                     </div>
@@ -2462,15 +2462,15 @@ export default function GalleryCreate() {
               <div
                 className={cn(
                   'flex items-center gap-2 px-3.5 py-2 rounded-full transition-all duration-300 whitespace-nowrap text-sm',
-                  isActive && 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-500/40 ring-2 ring-amber-500/15 shadow-[0_2px_12px_rgba(197,168,128,0.15)] font-semibold',
-                  isCompleted && 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-medium',
+                  isActive && 'bg-[#ddd1b6]/50 text-[#66502a] dark:text-[#f0e6d2] border border-[#cbb384] ring-2 ring-[#cbb384]/20 shadow-[0_2px_12px_rgba(203,179,132,0.2)] font-semibold',
+                  isCompleted && 'bg-[#ddd1b6]/30 text-[#856b3e] dark:text-[#cbb384] border border-[#cbb384]/30 font-medium',
                   !isActive && !isCompleted && 'text-muted-foreground hover:text-foreground hover:bg-muted/40 border border-transparent'
                 )}
               >
                 {isCompleted ? (
-                  <Check className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <Check className="h-4 w-4 text-[#cbb384]" />
                 ) : (
-                  <Icon className={cn('h-4 w-4 transition-transform duration-200', isActive && 'text-amber-600 dark:text-amber-400 scale-110')} />
+                  <Icon className={cn('h-4 w-4 transition-transform duration-200', isActive && 'text-[#cbb384] scale-110')} />
                 )}
                 <span className="hidden sm:inline">{step.name}</span>
               </div>
@@ -2478,7 +2478,7 @@ export default function GalleryCreate() {
                 <div
                   className={cn(
                     'h-0.5 w-4 md:w-12 mx-1 md:mx-2 rounded-full transition-colors duration-300',
-                    isCompleted ? 'bg-amber-500/60 dark:bg-amber-500/40' : 'bg-border/60'
+                    isCompleted ? 'bg-[#cbb384]/60 dark:bg-[#cbb384]/40' : 'bg-border/60'
                   )}
                 />
               )}
@@ -2519,7 +2519,7 @@ export default function GalleryCreate() {
               onClick={handleSaveDraft}
               disabled={isAdvancing || isSavingDraft || isGoingBack}
               className={cn(
-                "active:scale-[0.98] transition-all rounded-xl hover:border-amber-500/40",
+                "active:scale-[0.98] transition-all rounded-xl hover:border-[#cbb384]/40",
                 isSavingDraft && "cursor-wait"
               )}
             >
@@ -2533,11 +2533,10 @@ export default function GalleryCreate() {
             </Button>
             
             <Button
-              variant="terracotta"
               onClick={handleNext}
               disabled={isAdvancing || isSavingDraft || isGoingBack}
               className={cn(
-                "active:scale-[0.98] transition-all rounded-xl shadow-sm",
+                "bg-[#cbb384] hover:bg-[#bfa574] text-white active:scale-[0.98] transition-all rounded-xl shadow-sm font-medium",
                 isAdvancing && "cursor-wait"
               )}
             >
