@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CoverCatalog } from '@/components/deliver/CoverCatalog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSupabaseGalleries, GaleriaPhoto } from '@/hooks/useSupabaseGalleries';
 import { supabase } from '@/integrations/supabase/client';
 import { ReactivateGalleryDialog } from '@/components/ReactivateGalleryDialog';
@@ -49,6 +50,7 @@ function getDeliverStatusInfo(status: string, prazoSelecao: Date | null) {
 export default function DeliverDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const {
     galleries,
     getGallery,
@@ -68,6 +70,7 @@ export default function DeliverDetail() {
   const [photosLoading, setPhotosLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
   const [reactivateSuccessOpen, setReactivateSuccessOpen] = useState(false);
   const [reactivateDays, setReactivateDays] = useState(7);
@@ -181,16 +184,52 @@ export default function DeliverDetail() {
   };
 
   const handlePublish = async () => {
-    if (!id) return;
+    if (!id || isPublishing) return;
+    setIsPublishing(true);
     try {
-      if (publishGallery) {
-        await publishGallery(id);
-      } else {
-        await sendGallery(id);
+      // 1. Garante que se o prazo estiver nulo ou no passado, estende por padrão (ex: 30 dias)
+      let newExpiration = gallery.prazoSelecao;
+      if (!newExpiration || isPast(newExpiration)) {
+        newExpiration = addDays(new Date(), gallery.prazoSelecaoDias || 30);
+        setExpirationDate(newExpiration);
       }
+
+      const nowIso = new Date().toISOString();
+
+      // 2. Invoca a RPC prepare_gallery_share com p_mark_as_sent: true
+      await supabase.rpc('prepare_gallery_share', {
+        p_gallery_id: id,
+        p_mark_as_sent: true,
+      });
+
+      // 3. Atualiza explicitamente na tabela galerias para garantir que status = 'enviado' e prazo estão gravados
+      const { error: updateError } = await supabase
+        .from('galerias')
+        .update({
+          status: 'enviado',
+          published_at: nowIso,
+          enviado_em: nowIso,
+          updated_at: nowIso,
+          prazo_selecao: newExpiration ? newExpiration.toISOString() : null,
+        })
+        .eq('id', id);
+
+      if (updateError) {
+        console.error('Error updating gallery status:', updateError);
+      }
+
+      // 4. Invalida todas as queries do TanStack Query
+      await queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      await queryClient.invalidateQueries({ queryKey: ['galerias'] });
+      await queryClient.invalidateQueries({ queryKey: ['client-gallery', id] });
+      await queryClient.refetchQueries({ queryKey: ['galleries'] });
+
       toast.success('Entrega publicada com sucesso!');
-    } catch {
+    } catch (error) {
+      console.error('Erro ao publicar galeria:', error);
       toast.error('Erro ao publicar galeria');
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -299,9 +338,9 @@ export default function DeliverDetail() {
               </Button>
             )}
             {isDraft && (
-              <Button onClick={handlePublish} className="gap-2">
-                <Send className="h-4 w-4" />
-                Publicar entrega
+              <Button onClick={handlePublish} disabled={isPublishing} className="gap-2">
+                {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isPublishing ? 'Publicando...' : 'Publicar entrega'}
               </Button>
             )}
             <DeleteGalleryDialog galleryName={gallery.nomeSessao || 'esta galeria'} onDelete={handleDelete} />
@@ -358,9 +397,9 @@ export default function DeliverDetail() {
               <Send className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Publique primeiro</h3>
               <p className="text-muted-foreground mb-6">Publique a entrega para habilitar o compartilhamento.</p>
-              <Button onClick={handlePublish} className="gap-2">
-                <Send className="h-4 w-4" />
-                Publicar entrega
+              <Button onClick={handlePublish} disabled={isPublishing} className="gap-2">
+                {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isPublishing ? 'Publicando...' : 'Publicar entrega'}
               </Button>
             </div>
           ) : (

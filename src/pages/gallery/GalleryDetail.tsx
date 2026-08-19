@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -316,6 +316,7 @@ export default function GalleryDetail() {
         console.log('[Polling] Payment confirmed! Refreshing data...');
         
         // Refresh all relevant queries
+        queryClient.invalidateQueries({ queryKey: ['galleries'] });
         queryClient.invalidateQueries({ queryKey: ['galerias'] });
         queryClient.invalidateQueries({ queryKey: ['galeria-cobranca'] });
         refetchCobranca();
@@ -451,7 +452,9 @@ export default function GalleryDetail() {
       // sendGallery now uses prepare_gallery_share RPC internally (no client-side token gen)
       await sendSupabaseGallery(supabaseGallery.id);
       // Refresh gallery data to pick up the token set by RPC
+      queryClient.invalidateQueries({ queryKey: ['galleries'] });
       queryClient.invalidateQueries({ queryKey: ['galerias'] });
+      queryClient.invalidateQueries({ queryKey: ['client-gallery', supabaseGallery.id] });
     } catch (error) {
       console.error('Error sending gallery:', error);
     }
@@ -460,8 +463,10 @@ export default function GalleryDetail() {
   const handleReopenSelection = async (days: number) => {
     await reopenSupabaseSelection({ id: supabaseGallery.id, days } as any);
     // Aguarda o refetch para garantir que publicToken esteja atualizado.
+    await queryClient.invalidateQueries({ queryKey: ['galleries'] });
     await queryClient.invalidateQueries({ queryKey: ['galerias'] });
-    await queryClient.refetchQueries({ queryKey: ['galerias'] });
+    await queryClient.invalidateQueries({ queryKey: ['client-gallery', supabaseGallery.id] });
+    await queryClient.refetchQueries({ queryKey: ['galleries'] });
   };
 
   const handleDeleteGallery = async () => {
@@ -1103,6 +1108,7 @@ export default function GalleryDetail() {
                     saldoPendente={calculatedExtraTotal}
                     variant="compact"
                     onStatusUpdated={() => {
+                      queryClient.invalidateQueries({ queryKey: ['galleries'] });
                       queryClient.invalidateQueries({ queryKey: ['galerias'] });
                       queryClient.invalidateQueries({ queryKey: ['galeria-cobrancas-pagas'] });
                       queryClient.invalidateQueries({ queryKey: ['galeria-cobranca-pendente'] });
@@ -1347,6 +1353,7 @@ export default function GalleryDetail() {
                 variant="full"
                 showPendingAmount={true}
                 onStatusUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ['galleries'] });
                   queryClient.invalidateQueries({ queryKey: ['galerias'] });
                   queryClient.invalidateQueries({ queryKey: ['galeria-cobrancas-pagas'] });
                   queryClient.invalidateQueries({ queryKey: ['galeria-cobranca-pendente'] });

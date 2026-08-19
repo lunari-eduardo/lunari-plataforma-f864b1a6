@@ -25,13 +25,32 @@ const pageTitles: Record<string, string> = {
   "/app/tarefas": "Tarefas",
   "/app/analise-vendas": "Análise de Vendas",
   "/app/minha-conta": "Minha Conta",
-  "/app/integracoes": "Integrações"
+  "/app/integracoes": "Integrações",
+  "/app/planos-e-creditos": "Planos e Créditos",
+  // Módulo Gallery
+  "/app/gallery": "Galerias",
+  "/app/gallery/dashboard": "Painel da Galeria",
+  "/app/gallery/list": "Minhas Galerias",
+  "/app/gallery/new/select": "Nova Galeria de Seleção",
+  "/app/gallery/new/transfer": "Nova Entrega",
+  "/app/gallery/settings": "Configurações da Galeria",
+  "/app/gallery/settings/defaults": "Padrões da Galeria",
+  "/app/gallery/settings/customization": "Personalização",
 };
 
 const dynamicRoutePatterns: { pattern: RegExp; title: string }[] = [
   { pattern: /^\/app\/clientes\/[^/]+$/, title: 'Clientes' },
   { pattern: /^\/app\/orcamentos\/[^/]+$/, title: 'Orçamentos' },
   { pattern: /^\/app\/galerias\/[^/]+$/, title: 'Galerias' },
+  // Módulo Gallery rotas dinâmicas
+  { pattern: /^\/app\/gallery\/select\/[^/]+\/edit$/, title: 'Editar Galeria' },
+  { pattern: /^\/app\/gallery\/transfer\/[^/]+\/edit$/, title: 'Editar Entrega' },
+  { pattern: /^\/app\/gallery\/select\/[^/]+$/, title: 'Galeria de Seleção' },
+  { pattern: /^\/app\/gallery\/transfer\/[^/]+$/, title: 'Detalhes da Entrega' },
+  { pattern: /^\/app\/gallery\/settings\/.*$/, title: 'Configurações da Galeria' },
+  { pattern: /^\/app\/comercial\/construtor\/[^/]+$/, title: 'Editor de Proposta' },
+  { pattern: /^\/app\/comercial\/compartilhamentos\/[^/]+$/, title: 'Análise de Compartilhamento' },
+  { pattern: /^\/app\/comercial\/.*$/, title: 'Comercial' },
 ];
 
 const getPageTitleFromPath = (pathname: string): string => {

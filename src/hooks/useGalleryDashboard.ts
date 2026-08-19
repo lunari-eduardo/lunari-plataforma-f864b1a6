@@ -414,17 +414,30 @@ export function useGalleryDashboard() {
     mutationFn: async (id: string) => {
       const { data, error } = await supabase.rpc('prepare_gallery_share', { 
         p_gallery_id: id,
-        p_mark_as_sent: false 
+        p_mark_as_sent: true 
       });
       
       if (error) throw error;
       const result = data as any;
       if (result?.error) throw new Error(result.error);
       
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from('galerias')
+        .update({
+          status: 'enviado',
+          published_at: nowIso,
+          enviado_em: nowIso,
+          updated_at: nowIso,
+        })
+        .eq('id', id);
+
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      queryClient.invalidateQueries({ queryKey: ['galerias'] });
+      queryClient.invalidateQueries({ queryKey: ['client-gallery', id] });
     },
   });
 
@@ -437,9 +450,22 @@ export function useGalleryDashboard() {
         p_mark_as_sent: true 
       });
       if (error) throw error;
+
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from('galerias')
+        .update({
+          status: 'enviado',
+          published_at: nowIso,
+          enviado_em: nowIso,
+          updated_at: nowIso,
+        })
+        .eq('id', id);
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      queryClient.invalidateQueries({ queryKey: ['galerias'] });
+      queryClient.invalidateQueries({ queryKey: ['client-gallery', id] });
     }
   });
 

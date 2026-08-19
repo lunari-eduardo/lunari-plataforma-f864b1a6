@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -282,6 +282,7 @@ export default function GalleryEdit() {
   const handleUploadComplete = (photos: UploadedPhoto[]) => {
     setLocalPhotoCount(prev => (prev || 0) + photos.length);
     // Invalidate queries to sync with database
+    queryClient.invalidateQueries({ queryKey: ['galleries'] });
     queryClient.invalidateQueries({ queryKey: ['galerias'] });
     queryClient.invalidateQueries({ queryKey: ['galeria-fotos', id] });
   };
@@ -569,8 +570,10 @@ export default function GalleryEdit() {
     try {
       await reopenSelection({ id: gallery.id, days } as any);
       // Aguarda o refetch para garantir que publicToken esteja atualizado.
+      await queryClient.invalidateQueries({ queryKey: ['galleries'] });
       await queryClient.invalidateQueries({ queryKey: ['galerias'] });
-      await queryClient.refetchQueries({ queryKey: ['galerias'] });
+      await queryClient.invalidateQueries({ queryKey: ['client-gallery', gallery.id] });
+      await queryClient.refetchQueries({ queryKey: ['galleries'] });
     } catch (error) {
       console.error('Error reactivating gallery:', error);
       throw error;
