@@ -28,17 +28,36 @@ export const createSession = defineCommand({
     const { appointments } = getAgendaDeps();
     const duration = input.durationMinutes || 60;
     const sessionType = input.type?.trim() || "Sessão";
-    const title = `${input.clientName.trim()} - ${sessionType}`;
+    const cleanClientName = input.clientName.trim();
+    const title = `${cleanClientName} - ${sessionType}`;
+
+    let clienteId = input.clienteId && input.clienteId.trim() !== "" ? input.clienteId.trim() : undefined;
+    if (!clienteId && cleanClientName) {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: existing } = await supabase
+          .from("clientes")
+          .select("id")
+          .ilike("nome", cleanClientName)
+          .maybeSingle();
+        if (existing?.id) {
+          clienteId = existing.id;
+        }
+      } catch (err) {
+        console.warn("⚠️ [createSession] Erro ao buscar cliente prévio:", err);
+      }
+    }
+
     const created = await appointments.create({
       title,
-      client: input.clientName.trim(),
-      clienteId: input.clienteId,
+      client: cleanClientName,
+      clienteId,
       date: input.date,
       time: input.time,
       type: sessionType,
       agendaType: "session",
       durationMinutes: duration,
-      packageId: input.packageId,
+      packageId: input.packageId && input.packageId.trim() !== "" ? input.packageId.trim() : undefined,
       status: "confirmado",
       description: input.description?.trim() || undefined,
     });

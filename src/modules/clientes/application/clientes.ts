@@ -75,27 +75,65 @@ export const getClienteCap = defineQuery({
   },
 });
 
+async function searchClientesMultiTerm(term: string, limit = 10) {
+  const cleanTerm = term.trim();
+  if (cleanTerm.length < 2) return [];
+
+  const tokens = cleanTerm
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+
+  // 1. Busca direta por substring contígua (nome, email, telefone, cpf_cnpj)
+  const like = `%${cleanTerm}%`;
+  const { data: directData, error: directError } = await supabase
+    .from("clientes")
+    .select(SELECT_COLS)
+    .or(`nome.ilike.${like},email.ilike.${like},telefone.ilike.${like},cpf_cnpj.ilike.${like}`)
+    .limit(limit);
+
+  if (directError) {
+    console.error("❌ Erro na busca direta de clientes:", directError);
+  }
+  const directItems = directData ?? [];
+
+  // Se tem apenas 1 token, a busca direta já é suficiente
+  if (tokens.length <= 1) {
+    return directItems;
+  }
+
+  // 2. Busca tokenizada (multi-termo): todos os tokens devem estar presentes no nome
+  // Ex: "Eduardo Diehl" -> nome ILIKE '%Eduardo%' AND nome ILIKE '%Diehl%'
+  let tokenQuery = supabase.from("clientes").select(SELECT_COLS);
+  for (const token of tokens) {
+    tokenQuery = tokenQuery.ilike("nome", `%${token}%`);
+  }
+  const { data: tokenData, error: tokenError } = await tokenQuery.limit(limit);
+  if (tokenError) {
+    console.error("❌ Erro na busca tokenizada de clientes:", tokenError);
+  }
+  const tokenItems = tokenData ?? [];
+
+  // Junta os resultados sem duplicatas mantendo a ordem
+  const map = new Map<string, any>();
+  for (const item of [...directItems, ...tokenItems]) {
+    map.set(item.id, item);
+  }
+
+  return Array.from(map.values()).slice(0, limit);
+}
+
 export const searchClientesCap = defineQuery({
   id: "clientes.search",
   title: "Buscar clientes",
   description:
-    "Busca por nome, email, telefone ou CPF/CNPJ (contém, case-insensitive). Limite 20.",
+    "Busca por nome, email, telefone ou CPF/CNPJ (contém, multi-termo, case-insensitive). Limite 20.",
   input: z.object({ q: z.string() }).strict(),
   output: z.object({ items: z.array(ClienteRowSchema) }),
   permissions: ["clientes:read"],
   handler: async ({ q }) => {
-    const term = q.trim();
-    if (term.length < 2) return ok({ items: [] });
-    const like = `%${term}%`;
-    const { data, error } = await supabase
-      .from("clientes")
-      .select(SELECT_COLS)
-      .or(
-        `nome.ilike.${like},email.ilike.${like},telefone.ilike.${like},cpf_cnpj.ilike.${like}`,
-      )
-      .limit(20);
-    if (error) return err(domainError("DB", error.message));
-    return ok({ items: data ?? [] });
+    const items = await searchClientesMultiTerm(q, 20);
+    return ok({ items: items as any });
   },
 });
 
@@ -124,17 +162,10 @@ export const searchAndMatchClientesCap = defineQuery({
   handler: async ({ nameOrQuery }) => {
     const term = nameOrQuery.trim();
     if (!term) return ok({ matchCount: 0, isAmbiguous: false, exactMatch: null, candidates: [] });
-    const like = `%${term}%`;
-    const { data, error } = await supabase
-      .from("clientes")
-      .select(SELECT_COLS)
-      .or(`nome.ilike.${like},email.ilike.${like},telefone.ilike.${like}`)
-      .limit(10);
 
-    if (error) return err(domainError("DB", error.message));
-    const items = data ?? [];
+    const items = await searchClientesMultiTerm(term, 10);
 
-    // 1. Se exatamente 1 cliente foi retornado, é ele (sem ambiguidade)
+    // 1. Se exatamente 1 cliente foi retornado, ele é a correspondência direta
     if (items.length === 1) {
       return ok({
         matchCount: 1,

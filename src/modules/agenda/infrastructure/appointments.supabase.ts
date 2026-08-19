@@ -278,6 +278,12 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       ? (input.type && input.type !== 'Sessão' ? input.type : 'reunião')
       : (input.type || 'Sessão');
 
+    const sanitizeUuid = (val: string | null | undefined): string | null => {
+      if (!val || typeof val !== "string") return null;
+      const clean = val.trim();
+      return clean.length > 0 ? clean : null;
+    };
+
     const { data, error } = await supabase
       .from("appointments")
       .insert({
@@ -289,12 +295,12 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
         type: effectiveType,
         duration_minutes: input.durationMinutes || null,
         status: input.status,
-        description: input.description,
-        package_id: input.packageId,
+        description: input.description || null,
+        package_id: sanitizeUuid(input.packageId),
         paid_amount: input.paidAmount || 0,
-        orcamento_id: input.orcamentoId,
+        orcamento_id: sanitizeUuid(input.orcamentoId),
         origem: input.origem || "agenda",
-        cliente_id: input.clienteId || null,
+        cliente_id: sanitizeUuid(input.clienteId),
       })
       .select(`*, clientes ( nome )`)
       .single();
@@ -314,6 +320,12 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
   async update(id: string, patch: Partial<NewAppointment>): Promise<void> {
     const session = await requireSession();
 
+    const sanitizeUuid = (val: string | null | undefined): string | null => {
+      if (!val || typeof val !== "string") return null;
+      const clean = val.trim();
+      return clean.length > 0 ? clean : null;
+    };
+
     const updateData: Record<string, any> = {};
     if (patch.title !== undefined) updateData.title = patch.title;
     if (patch.date !== undefined) updateData.date = assertIsoDate(patch.date);
@@ -325,12 +337,12 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
     }
     if (patch.durationMinutes !== undefined) updateData.duration_minutes = patch.durationMinutes;
     if (patch.status !== undefined) updateData.status = patch.status;
-    if (patch.description !== undefined) updateData.description = patch.description;
-    if (patch.packageId !== undefined) updateData.package_id = patch.packageId;
+    if (patch.description !== undefined) updateData.description = patch.description || null;
+    if (patch.packageId !== undefined) updateData.package_id = sanitizeUuid(patch.packageId);
     if (patch.paidAmount !== undefined) updateData.paid_amount = patch.paidAmount;
-    if (patch.orcamentoId !== undefined) updateData.orcamento_id = patch.orcamentoId;
+    if (patch.orcamentoId !== undefined) updateData.orcamento_id = sanitizeUuid(patch.orcamentoId);
     if (patch.origem !== undefined) updateData.origem = patch.origem;
-    if (patch.clienteId !== undefined) updateData.cliente_id = patch.clienteId;
+    if (patch.clienteId !== undefined) updateData.cliente_id = sanitizeUuid(patch.clienteId);
 
     const { error } = await supabase
       .from("appointments")

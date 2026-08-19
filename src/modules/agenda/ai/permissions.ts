@@ -26,15 +26,11 @@ export const AI_AGENDA_ALLOWED: ReadonlySet<string> = new Set([
   "agenda.availability.list",
   "agenda.availability.findNext",
   "agenda.slot.check",
-  // Commands
-  "agenda.appointments.create",
+  // Commands de Alto Nível
   "agenda.appointments.confirm",
   "agenda.appointments.reschedule",
   "agenda.appointments.update",
   "agenda.appointments.cancel",
-  "agenda.availability.add",
-  "agenda.availability.clearDate",
-  "agenda.availability.deleteSlot",
   "agenda.blockDate",
   "agenda.unblockDate",
   "agenda.blockSlot",

@@ -54,7 +54,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 /** Auditoria de turno do assistente (best-effort — nunca derruba o stream). */
 async function logInvocation(
@@ -316,6 +316,8 @@ Deno.serve(async (req) => {
       system: systemPrompt,
       messages: coreMessages,
       tools: Object.keys(tools).length > 0 ? tools : undefined,
+      temperature: 0.2,
+      maxTokens: 2048,
       stopWhen: stepCountIs(8),
       // metadata útil para debug via AI Gateway logs
       providerOptions: {

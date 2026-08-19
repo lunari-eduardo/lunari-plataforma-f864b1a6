@@ -271,16 +271,23 @@ export class WorkflowSupabaseService {
       }
 
       // Get client data if available - create if missing
-      let clienteId = appointmentData.cliente_id;
-      if (!clienteId && appointmentData.title) {
-        console.log('👤 Searching for client by name:', appointmentData.title);
+      let clienteId = appointmentData.cliente_id || appointmentData.clienteId;
+      const rawClientName = appointmentData.client || appointmentData.title || '';
+      // Limpa prefixos automáticos como "Sessão - ", "Ensaio - ", "Reunião - " se presentes
+      const cleanClientName = rawClientName
+        .replace(/^(sessão|ensaio|reunião|reuniao)\s*[-–—:]\s*/i, '')
+        .replace(/\s*[-–—:]\s*(sessão|ensaio|reunião|reuniao)$/i, '')
+        .trim();
+
+      if (!clienteId && cleanClientName) {
+        console.log('👤 Searching for client by name:', cleanClientName);
         // Try to find client by name
         const { data: cliente } = await supabase
           .from('clientes')
           .select('id')
-          .eq('nome', appointmentData.title)
+          .ilike('nome', cleanClientName)
           .eq('user_id', user.user.id)
-          .single();
+          .maybeSingle();
         
         if (cliente) {
           clienteId = cliente.id;
@@ -294,13 +301,13 @@ export class WorkflowSupabaseService {
             
           console.log('✅ Linked existing client to appointment:', clienteId);
         } else {
-          console.log('👤 Creating new client for:', appointmentData.title);
-          // Create new client
+          console.log('👤 Creating new client for:', cleanClientName);
+          // Create new client with cleanClientName
           const { data: newClient, error: clientError } = await supabase
             .from('clientes')
             .insert({
               user_id: user.user.id,
-              nome: appointmentData.title,
+              nome: cleanClientName,
               telefone: 'Não informado',
               origem: 'agenda'
             })

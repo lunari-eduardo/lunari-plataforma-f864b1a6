@@ -28,10 +28,28 @@ export const createMeeting = defineCommand({
     const { appointments } = getAgendaDeps();
     const duration = input.durationMinutes || 60;
     const client = input.clientName?.trim() || input.title.trim();
+
+    let clienteId = input.clienteId && input.clienteId.trim() !== "" ? input.clienteId.trim() : undefined;
+    if (!clienteId && input.clientName?.trim()) {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: existing } = await supabase
+          .from("clientes")
+          .select("id")
+          .ilike("nome", input.clientName.trim())
+          .maybeSingle();
+        if (existing?.id) {
+          clienteId = existing.id;
+        }
+      } catch (err) {
+        console.warn("⚠️ [createMeeting] Erro ao buscar cliente prévio:", err);
+      }
+    }
+
     const created = await appointments.create({
       title: input.title.trim(),
       client,
-      clienteId: input.clienteId,
+      clienteId,
       date: input.date,
       time: input.time,
       type: "reunião",

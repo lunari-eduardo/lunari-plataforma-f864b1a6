@@ -305,8 +305,18 @@ export function AssistantChat() {
               <MessageContent>
                 {message.parts.map((part, i) => {
                   if (part.type === "text") {
+                    const isLastAssistantMessage =
+                      message.role === "assistant" &&
+                      messages[messages.length - 1]?.id === message.id;
+                    const isStreaming = status === "streaming" && isLastAssistantMessage;
+
                     return message.role === "assistant" ? (
-                      <MessageResponse key={i}>{part.text}</MessageResponse>
+                      <div key={i} className="inline">
+                        <MessageResponse>{part.text}</MessageResponse>
+                        {isStreaming && (
+                          <span className="inline-block w-1.5 h-3.5 ml-1 bg-primary/70 animate-pulse align-middle rounded-[2px]" />
+                        )}
+                      </div>
                     ) : (
                       <span key={i} className="whitespace-pre-wrap">{part.text}</span>
                     );
@@ -354,7 +364,7 @@ export function AssistantChat() {
                           key={i}
                           className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
                         >
-                          <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                          <Loader2 className="h-3 w-3 animate-spin shrink-0 text-primary" />
                           <span>{label}…</span>
                         </div>
                       );
@@ -380,9 +390,18 @@ export function AssistantChat() {
             </Message>
           ))}
 
-          {status === "submitted" && (
-            <div className="px-1 py-2">
-              <Shimmer>Pensando…</Shimmer>
+          {(status === "submitted" || executingToolCount > 0) && (
+            <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-muted-foreground bg-muted/30 border border-border/40 rounded-lg w-fit animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/80 animate-bounce [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/80 animate-bounce [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 rounded-full bg-primary/80 animate-bounce" />
+              </div>
+              <span className="font-medium tracking-tight">
+                {executingToolCount > 0
+                  ? "Executando ação no Lunari..."
+                  : "Lu está pensando..."}
+              </span>
             </div>
           )}
 

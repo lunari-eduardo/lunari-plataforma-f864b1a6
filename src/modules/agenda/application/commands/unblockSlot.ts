@@ -21,7 +21,10 @@ export const unblockSlot = defineCommand({
   async handler({ date, time }, ctx) {
     const { availability } = getAgendaDeps();
     const all = await availability.list();
-    const matches = all.filter((s) => s.date === date && s.time === time);
+    const normalizedTime = time.length === 4 ? `0${time}` : time.slice(0, 5);
+    const matches = all.filter(
+      (s) => s.date === date && (s.time === normalizedTime || s.time.startsWith(normalizedTime))
+    );
     for (const m of matches) {
       await availability.delete(m.id);
     }
