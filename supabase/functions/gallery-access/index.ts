@@ -673,6 +673,9 @@ serve(async (req) => {
             // Capa (apenas Galeria de Entrega): override por galeria + default do fotógrafo
             coverId: (gallery as any).cover_id ?? null,
             defaultCoverId: (settings as any)?.default_cover_id ?? 'fullscreen',
+            subtitulo: galleryConfig?.subtitulo || undefined,
+            dataEvento: galleryConfig?.dataEvento || undefined,
+            categoria: galleryConfig?.categoria || undefined,
           },
           // Sale settings canônicos (colunas > JSON). Frontend consome exclusivamente daqui.
           saleSettings: normalizedSaleSettings,

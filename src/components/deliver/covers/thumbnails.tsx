@@ -37,10 +37,25 @@ export const SplitThumbnail: ComponentType<Props> = ({ className }) => (
 
 export const EditorialThumbnail: ComponentType<Props> = ({ className }) => (
   <Frame className={className}>
-    <rect x="80" y="0" width="80" height="100" fill="hsl(var(--foreground))" opacity="0.18" />
-    <text x="10" y="22" fontSize="6" fill="hsl(var(--foreground))" opacity="0.4">01 ——</text>
-    <rect x="10" y="40" width="58" height="8" fill="hsl(var(--foreground))" opacity="0.6" />
-    <rect x="10" y="52" width="42" height="8" fill="hsl(var(--foreground))" opacity="0.6" />
-    <rect x="10" y="72" width="20" height="4" fill="none" stroke="hsl(var(--foreground))" strokeOpacity="0.4" />
+    {/* Top bar info */}
+    <rect x="10" y="8" width="22" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
+    <rect x="10" y="12" width="6" height="1" fill="hsl(var(--foreground))" opacity="0.25" />
+    <rect x="142" y="8" width="8" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
+    <rect x="144" y="12" width="6" height="1" fill="hsl(var(--foreground))" opacity="0.25" />
+
+    {/* Photo frame on right */}
+    <rect x="74" y="16" width="76" height="66" fill="hsl(var(--foreground))" opacity="0.22" />
+
+    {/* Big typography overlapping */}
+    <rect x="10" y="44" width="76" height="9" fill="hsl(var(--foreground))" opacity="0.8" />
+    <rect x="10" y="55" width="86" height="9" fill="hsl(var(--foreground))" opacity="0.8" />
+
+    {/* Subtitle */}
+    <rect x="10" y="68" width="26" height="2" fill="hsl(var(--foreground))" opacity="0.4" />
+    <rect x="10" y="72" width="8" height="1" fill="hsl(var(--foreground))" opacity="0.25" />
+
+    {/* Bottom date and CTA */}
+    <rect x="10" y="90" width="30" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
+    <rect x="122" y="90" width="28" height="2" fill="hsl(var(--foreground))" opacity="0.5" />
   </Frame>
 );

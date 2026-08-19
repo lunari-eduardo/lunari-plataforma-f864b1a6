@@ -497,19 +497,18 @@ export function GaleriasTab({ cliente }: GaleriasTabProps) {
                 </div>
 
                 {/* Direita: Ações */}
-                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
                   {item.publicToken && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
+                    <button
+                      type="button"
                       onClick={(e) => handleCopyPublicLink(e, item.publicToken)}
-                      className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                      className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                       title="Copiar link da galeria"
                     >
                       {copiedToken === item.publicToken ? (
                         <>
                           <Check className="h-3.5 w-3.5 text-emerald-500" />
-                          <span className="hidden sm:inline text-[11px]">Copiado</span>
+                          <span className="hidden sm:inline text-[11px] text-emerald-500">Copiado</span>
                         </>
                       ) : (
                         <>
@@ -517,28 +516,26 @@ export function GaleriasTab({ cliente }: GaleriasTabProps) {
                           <span className="hidden sm:inline text-[11px]">Link</span>
                         </>
                       )}
-                    </Button>
+                    </button>
                   )}
 
-                  <Button
-                    size="sm"
-                    variant="ghost"
+                  <button
+                    type="button"
                     onClick={() => handleOpenGallery(item)}
-                    className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1"
+                    className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors font-medium"
                   >
                     <span>Ver Galeria</span>
                     <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Button>
+                  </button>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                       >
                         <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
                       <DropdownMenuItem onClick={() => navigate(item.tipo === 'entrega' ? `/app/gallery/transfer/${item.id}/edit` : `/app/gallery/select/${item.id}/edit`)}>

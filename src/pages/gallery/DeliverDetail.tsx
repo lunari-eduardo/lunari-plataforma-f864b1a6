@@ -91,7 +91,9 @@ export default function DeliverDetail() {
   const [themeOverrides, setThemeOverrides] = useState<any>({});
   const [coverId, setCoverId] = useState<string | null>(null);
   const [previewViewport, setPreviewViewport] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
-
+  const [subtitle, setSubtitle] = useState('');
+  const [category, setCategory] = useState('');
+  const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
 
   const gallery = useMemo(() => getGallery(id || ''), [id, galleries]);
 
@@ -99,6 +101,17 @@ export default function DeliverDetail() {
   useEffect(() => {
     if (gallery) {
       setSessionName(gallery.nomeSessao || '');
+      setSubtitle((gallery.configuracoes as any)?.subtitulo || '');
+      setCategory((gallery.configuracoes as any)?.categoria || '');
+      const rawDate = (gallery.configuracoes as any)?.dataEvento;
+      if (rawDate) {
+        try {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) setEventDate(d);
+        } catch {}
+      } else {
+        setEventDate(undefined);
+      }
       setWelcomeMessage(gallery.mensagemBoasVindas || '');
       setWelcomeEnabled(!!gallery.mensagemBoasVindas);
       setInternalNotes((gallery.configuracoes as any)?.notasInternas || '');
@@ -167,13 +180,15 @@ export default function DeliverDetail() {
           notasInternas: internalNotes,
           coverPhotoId: coverPhotoId || undefined,
           photoSpacing: themeOverrides?.layout?.gap ?? photoSpacing,
+          subtitulo: subtitle.trim() || undefined,
+          categoria: category.trim() || undefined,
+          dataEvento: eventDate ? eventDate.toISOString() : undefined,
         },
         themeId: useCustomTheme ? activeThemeId : null,
         useCustomTheme: useCustomTheme,
         themeOverrides: themeOverrides,
         coverId: coverId,
         prazoSelecao: expirationDate,
-
       }});
       navigate('/app/gallery/list?tab=transfer');
     } catch (error) {
@@ -765,6 +780,57 @@ export default function DeliverDetail() {
             <div className="space-y-2">
               <Label htmlFor="sessionName">Nome da sessão</Label>
               <Input id="sessionName" value={sessionName} onChange={e => setSessionName(e.target.value)} />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="subtitle">Subtítulo da Capa</Label>
+                <Input
+                  id="subtitle"
+                  value={subtitle}
+                  onChange={e => setSubtitle(e.target.value)}
+                  placeholder="Ex: Wedding Story"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria / Tag</Label>
+                <Input
+                  id="category"
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  placeholder="Ex: WEDDING ou ENSAIO"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <CalendarIcon className="h-4 w-4 text-[#cbb384]" />
+                  Data do Evento / Sessão
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal border-border/60 hover:border-[#cbb384]/50",
+                        !eventDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 text-[#cbb384]" />
+                      {eventDate ? format(eventDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border border-border/60" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={eventDate}
+                      onSelect={setEventDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <Separator />

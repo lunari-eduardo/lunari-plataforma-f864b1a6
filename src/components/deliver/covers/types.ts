@@ -5,6 +5,10 @@ import type { ComponentType, LazyExoticComponent } from 'react';
 export interface CoverVariantProps {
   coverPhoto: PhotoPaths | null;
   sessionName: string;
+  subtitle?: string;
+  sessionDate?: string | Date | null;
+  category?: string;
+  issueNumber?: string;
   studioName?: string;
   sessionFont?: string;
   titleCaseMode?: TitleCaseMode;

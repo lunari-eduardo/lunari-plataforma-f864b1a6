@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { addDays } from 'date-fns';
-import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette, Loader2, Sparkles, Shield } from 'lucide-react';
+import { addDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette, Loader2, Sparkles, Shield, Tag } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,8 @@ import { DEFAULT_THEME_ID } from '@/components/gallery/themes/registry';
 import { CoverCatalog } from '@/components/deliver/CoverCatalog';
 import { COVER_REGISTRY } from '@/components/deliver/covers/registry';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as UiCalendar } from '@/components/ui/calendar';
 
 const steps = [
   { id: 1, name: 'Dados', icon: User },
@@ -48,7 +51,10 @@ export default function DeliverCreate() {
   const { settings, updateSettings } = useSettings();
   const { settings: gallerySettings } = useGallerySettings();
   const { createGallery, updateGallery, publishGallery } = useSupabaseGalleries() as any;
-  const { canCreateTransfer, isAdmin, isLoading: isLoadingStorage, storageUsedBytes, storageLimitBytes, storageUsedPercent, hasTransferPlan, planName } = useTransferStorage();
+  const transferStorage = useTransferStorage();
+  const { storageUsedBytes, storageLimitBytes, storageUsedPercent, canCreateTransfer, isUnlimited, planName, isLoading: isLoadingStorage } = transferStorage as any;
+
+  const hasTransferPlan = !isUnlimited && storageLimitBytes > 0;
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -66,6 +72,9 @@ export default function DeliverCreate() {
 
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [sessionName, setSessionName] = useState('');
+  const [subtitle, setSubtitle] = useState('Wedding Story');
+  const [eventDate, setEventDate] = useState<Date | undefined>(new Date());
+  const [category, setCategory] = useState('WEDDING');
   const [galleryPermission, setGalleryPermission] = useState<GalleryPermission>('public');
   const [galleryPassword, setGalleryPassword] = useState('');
   const [expirationDays, setExpirationDays] = useState(30);
@@ -198,6 +207,9 @@ export default function DeliverCreate() {
               titleCaseMode,
               clientMode,
               photoSpacing: useCustomTheme ? (themeOverrides?.layout?.gap ?? photoSpacing) : photoSpacing,
+              subtitulo: subtitle.trim() || undefined,
+              dataEvento: eventDate ? eventDate.toISOString() : undefined,
+              categoria: category.trim() || undefined,
             },
             themeId: useCustomTheme ? activeThemeId : null,
             useCustomTheme: useCustomTheme,
@@ -235,6 +247,9 @@ export default function DeliverCreate() {
           titleCaseMode,
           clientMode,
           photoSpacing: useCustomTheme ? (themeOverrides?.layout?.gap ?? photoSpacing) : photoSpacing,
+          subtitulo: subtitle.trim() || undefined,
+          dataEvento: eventDate ? eventDate.toISOString() : undefined,
+          categoria: category.trim() || undefined,
         },
         themeId: useCustomTheme ? activeThemeId : null,
         useCustomTheme: useCustomTheme,
@@ -316,6 +331,9 @@ export default function DeliverCreate() {
             coverPhotoId: coverPhotoId || undefined,
             clientMode,
             photoSpacing: useCustomTheme ? (themeOverrides?.layout?.gap ?? photoSpacing) : photoSpacing,
+            subtitulo: subtitle.trim() || undefined,
+            dataEvento: eventDate ? eventDate.toISOString() : undefined,
+            categoria: category.trim() || undefined,
           },
           coverId: coverId,
         },
@@ -523,6 +541,70 @@ export default function DeliverCreate() {
                 <p className="text-xs text-muted-foreground">
                   Disponível para download por {expirationDays} dias após a publicação
                 </p>
+              </div>
+            </div>
+
+            {/* Editorial & Capa Info */}
+            <div className="space-y-4 pt-4 border-t border-border/40">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[#cbb384]" />
+                  Apresentação Editorial da Capa
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Essas informações são exibidas com tipografia nobre na capa da galeria.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="subtitle">Subtítulo da Capa</Label>
+                  <Input
+                    id="subtitle"
+                    value={subtitle}
+                    onChange={(e) => setSubtitle(e.target.value)}
+                    placeholder="Ex: Wedding Story"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Categoria / Tag</Label>
+                  <Input
+                    id="category"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="Ex: WEDDING ou ENSAIO"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-[#cbb384]" />
+                    Data do Evento / Sessão
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal border-border/60 hover:border-[#cbb384]/50",
+                          !eventDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-4 w-4 text-[#cbb384]" />
+                        {eventDate ? format(eventDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border border-border/60" align="start">
+                      <UiCalendar
+                        mode="single"
+                        selected={eventDate}
+                        onSelect={setEventDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
           </div>

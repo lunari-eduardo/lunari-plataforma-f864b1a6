@@ -22,6 +22,8 @@ interface DeliverGalleryData {
     clientName?: string;
     welcomeMessage?: string;
     expirationDate?: string | null;
+    createdAt?: string | null;
+    nomePacote?: string;
     settings?: {
       sessionFont?: string;
       titleCaseMode?: TitleCaseMode;
@@ -31,6 +33,9 @@ interface DeliverGalleryData {
       themeOverrides?: any;
       coverId?: string | null;
       defaultCoverId?: string | null;
+      subtitulo?: string;
+      dataEvento?: string;
+      categoria?: string;
     };
   };
   photos: Array<{
@@ -182,6 +187,10 @@ export default function ClientDeliverGallery({ data }: Props) {
     gallery.settings?.coverId ?? gallery.settings?.defaultCoverId ?? null
   );
 
+  const subtitleProp = (gallery.settings as any)?.subtitulo || (gallery as any).nomePacote || undefined;
+  const sessionDateProp = (gallery.settings as any)?.dataEvento || gallery.expirationDate || (gallery as any).createdAt || undefined;
+  const categoryProp = (gallery.settings as any)?.categoria || undefined;
+
   // Album view for Transfer galleries
   if (hasFolders && folderViewMode === 'albums') {
     return (
@@ -190,6 +199,9 @@ export default function ClientDeliverGallery({ data }: Props) {
           coverId={resolvedCoverId}
           coverPhoto={coverPhoto}
           sessionName={gallery.sessionName}
+          subtitle={subtitleProp}
+          sessionDate={sessionDateProp}
+          category={categoryProp}
           studioName={studioSettings?.studio_name}
           sessionFont={sessionFont}
           titleCaseMode={gallery.settings?.titleCaseMode}
@@ -273,6 +285,9 @@ export default function ClientDeliverGallery({ data }: Props) {
         coverPhoto={coverPhoto}
         coverId={resolvedCoverId}
         sessionFont={sessionFont}
+        subtitle={subtitleProp}
+        sessionDate={sessionDateProp}
+        category={categoryProp}
         handleDownloadAll={handleDownloadAll}
         isDownloading={isDownloading}
         handleDownloadSingle={handleDownloadSingle}
@@ -290,7 +305,9 @@ export default function ClientDeliverGallery({ data }: Props) {
 
 
 function ClientDeliverGalleryContent({ 
-  data, photos, allPhotos, coverPhoto, coverId, sessionFont, handleDownloadAll, 
+  data, photos, allPhotos, coverPhoto, coverId, sessionFont, 
+  subtitle, sessionDate, category,
+  handleDownloadAll, 
   isDownloading, handleDownloadSingle, showWelcome, handleCloseWelcome,
   lightboxIndex, setLightboxIndex, activeFolderId, setActiveFolderId, setFolderViewMode
 }: any) {
@@ -299,6 +316,10 @@ function ClientDeliverGalleryContent({
   const hasFolders = folders.length > 0;
   const { theme, cssVars } = useGalleryDisplayTheme();
   const [headerVisible, setHeaderVisible] = useState(false);
+  
+  const subtitleProp = subtitle ?? (gallery.settings as any)?.subtitulo ?? (gallery as any).nomePacote ?? undefined;
+  const sessionDateProp = sessionDate ?? (gallery.settings as any)?.dataEvento ?? gallery.expirationDate ?? (gallery as any).createdAt ?? undefined;
+  const categoryProp = category ?? (gallery.settings as any)?.categoria ?? undefined;
   
   useEffect(() => {
     const handleScroll = () => {
@@ -323,6 +344,9 @@ function ClientDeliverGalleryContent({
           coverId={coverId}
           coverPhoto={coverPhoto}
           sessionName={gallery.sessionName}
+          subtitle={subtitleProp}
+          sessionDate={sessionDateProp}
+          category={categoryProp}
           studioName={studioSettings?.studio_name}
           sessionFont={sessionFont}
           titleCaseMode={gallery.settings?.titleCaseMode}
