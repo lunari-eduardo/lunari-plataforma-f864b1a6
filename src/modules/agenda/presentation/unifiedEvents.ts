@@ -22,6 +22,7 @@ export interface UnifiedEvent {
   title: string;
   date: Date;
   time: string;
+  durationMinutes?: number;
   client: string;
   status: string;
   description?: string;
@@ -41,6 +42,8 @@ export function useUnifiedEventsRangeQuery(
         (appointment.type === 'personal' || appointment.type === 'pessoal' ? 'personal' : 
          appointment.type === 'meeting' || appointment.type === 'reuniao' ? 'meeting' : 'session');
 
+      const durationMinutes = Number(appointment.durationMinutes) || 60;
+
       const legacy: LegacyAppointment = {
         id: appointment.id,
         sessionId: appointment.sessionId,
@@ -49,7 +52,7 @@ export function useUnifiedEventsRangeQuery(
         time: appointment.time,
         type: appointment.type,
         agendaType,
-        durationMinutes: appointment.durationMinutes,
+        durationMinutes,
         location: appointment.location,
         client: appointment.client,
         status: appointment.status,
@@ -71,6 +74,7 @@ export function useUnifiedEventsRangeQuery(
         title: legacy.title,
         date: legacy.date,
         time: legacy.time,
+        durationMinutes,
         client: legacy.client,
         status: legacy.status,
         description: legacy.description,

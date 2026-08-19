@@ -17,6 +17,7 @@ export interface ClassifySlotArgs {
   date: string;
   /** HH:mm. */
   time: string;
+  durationMinutes?: number;
   excludeAppointmentId?: string;
 }
 
@@ -43,7 +44,7 @@ export function classifySlot(
   availability: readonly AvailabilitySlot[],
   args: ClassifySlotArgs,
 ): SlotCheckResult {
-  const slot = { date: args.date, time: args.time };
+  const slot = { date: args.date, time: args.time, durationMinutes: args.durationMinutes || 60 };
 
   const sameSlotApps = findConflicts(appointments, slot, {
     excludeId: args.excludeAppointmentId,

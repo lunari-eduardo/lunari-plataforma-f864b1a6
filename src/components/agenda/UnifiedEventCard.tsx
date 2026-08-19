@@ -137,14 +137,25 @@ export default function UnifiedEventCard({
     return null;
   };
 
+  const duration = event.durationMinutes || (event.originalData as any)?.durationMinutes || 60;
+  const hasCustomDuration = duration !== 60;
+  const durationBadge = duration >= 60 
+    ? (duration % 60 === 0 ? `${duration / 60}h` : `${Math.floor(duration / 60)}h${duration % 60}m`)
+    : `${duration}m`;
+
   const tooltipContent = (
     <div className="space-y-1 text-xs">
       <div className="font-semibold flex items-center gap-1.5">
         {renderTypeIcon('xs')}
         <span>{event.title || event.client}</span>
+        {hasCustomDuration && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-muted-foreground/20 shrink-0">
+            {durationBadge}
+          </span>
+        )}
       </div>
       <div className="text-muted-foreground">
-        {event.time} · {
+        {event.time} {hasCustomDuration ? `(${durationBadge})` : ''} · {
           agendaType === 'personal' ? 'Evento pessoal' :
           agendaType === 'meeting' ? (event.originalData?.location ? `Reunião (${event.originalData.location})` : 'Reunião') :
           description || packageName || category || 'Sessão'
@@ -171,6 +182,11 @@ export default function UnifiedEventCard({
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               {renderTypeIcon('sm')}
               <span className="font-semibold text-sm truncate">{mainTitle}</span>
+              {hasCustomDuration && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/15 shrink-0 leading-none">
+                  {durationBadge}
+                </span>
+              )}
             </div>
             {isFromClosedBudget && (
               <FileText className="h-3 w-3 shrink-0" style={{ color: 'hsl(var(--event-budget))' }} />

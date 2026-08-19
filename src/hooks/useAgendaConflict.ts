@@ -19,6 +19,7 @@ export interface GuardExecOpts {
 export interface GuardArgs {
   date: Date;
   time: string;
+  durationMinutes?: number;
   status: AppointmentStatus;
   ignoreAppointmentId?: string;
   /** Quando true, prossegue automaticamente sobre pendentes (sem dialog). */
@@ -88,6 +89,7 @@ export function useAgendaConflict() {
       const pre = checkSlot({
         date: args.date,
         time: args.time,
+        durationMinutes: args.durationMinutes,
         ignoreAppointmentId: args.ignoreAppointmentId,
         targetStatus: args.status,
       });

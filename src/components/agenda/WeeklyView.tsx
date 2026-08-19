@@ -9,6 +9,7 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatTimeBr, formatDayName } from '@/utils/agendaUtils';
 import { cn } from '@/lib/utils';
+import { isSlotCoveredByEvent } from '@/modules/agenda/domain/conflict';
 
 interface WeeklyViewProps {
   date: Date;
@@ -52,10 +53,17 @@ export default function WeeklyView({
 
     unifiedEvents.forEach(event => {
       if (event.type === 'appointment') {
+        const dur = event.durationMinutes || (event.originalData as any)?.durationMinutes || 60;
         weekDays.forEach(day => {
           if (isSameDay(event.date, day)) {
-            const key = `${format(day, 'yyyy-MM-dd')}_${event.time}`;
-            eventMap.set(key, event);
+            timeSlots.forEach(t => {
+              if (isSlotCoveredByEvent(t, event.time, dur)) {
+                const key = `${format(day, 'yyyy-MM-dd')}_${t}`;
+                if (!eventMap.has(key) || event.time === t) {
+                  eventMap.set(key, event);
+                }
+              }
+            });
           }
         });
       }

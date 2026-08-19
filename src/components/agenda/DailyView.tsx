@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import TimeSlotOptionsMenu from './TimeSlotOptionsMenu';
+import { isSlotCoveredByEvent, getEventEndTime } from '@/modules/agenda/domain/conflict';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -317,7 +319,15 @@ export default function DailyView({
       <div className="space-y-1" ref={slotsContainerRef}>
 
         {timeSlots.map((time, index) => {
-          const events = getEventsForSlot(time);
+          const startingEvents = dayEvents.filter(event => event.time === time);
+          const spanningEvents = dayEvents.filter(event => {
+            if (event.time === time) return false;
+            const dur = event.durationMinutes || (event.originalData as any)?.durationMinutes || 60;
+            return isSlotCoveredByEvent(time, event.time, dur);
+          });
+          const hasStartingEvents = startingEvents.length > 0;
+          const hasSpanningEvents = !hasStartingEvents && spanningEvents.length > 0;
+          const isOccupied = hasStartingEvents || hasSpanningEvents;
           const isEditing = editingTimeSlot === index;
           
           const blocked = isBlockedSlot(time);
@@ -343,21 +353,21 @@ export default function DailyView({
                     onMouseDown={(e) => e.stopPropagation()}
                   >
                     <TimeInput 
-                      value={time} 
-                      onChange={newTime => handleSaveTimeSlot(index, newTime)} 
-                      onBlur={() => setEditingTimeSlot(null)} 
-                    />
+                    value={time} 
+                    onChange={newTime => handleSaveTimeSlot(index, newTime)} 
+                    onBlur={() => setEditingTimeSlot(null)} 
+                  />
                   </div>
                 ) : (
                   <span 
-                    onClick={() => events.length === 0 && !blocked && handleEditTimeSlot(index, time)} 
-                    className={`block text-xs ${events.length === 0 && !blocked ? 'cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5' : ''}`} 
-                    title={events.length === 0 && !blocked ? 'Clique para editar' : ''}
+                    onClick={() => !isOccupied && !blocked && handleEditTimeSlot(index, time)} 
+                    className={`block text-xs ${!isOccupied && !blocked ? 'cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5' : ''}`} 
+                    title={!isOccupied && !blocked ? 'Clique para editar' : ''}
                   >
                     {time}
-                    {events.length > 1 && (
+                    {startingEvents.length > 1 && (
                       <span className="block text-[10px] text-muted-foreground/70">
-                        ({events.length})
+                        ({startingEvents.length})
                       </span>
                     )}
                   </span>
@@ -371,20 +381,24 @@ export default function DailyView({
                     setUnlockConfirmTime(time);
                     return;
                   }
-                  if (events.length === 0) {
+                  if (hasSpanningEvents) {
+                    onEventClick(spanningEvents[0]);
+                    return;
+                  }
+                  if (!hasStartingEvents) {
                     onCreateSlot({ date, time });
                   }
                 }} 
                 className={`flex-1 p-2 min-h-[50px] cursor-pointer ${blocked ? 'bg-destructive/5' : 'bg-card/60'}`}
               >
-                {events.length > 0 ? (
+                {hasStartingEvents ? (
                   <div className="space-y-2">
-                    {events.map((event, eventIndex) => (
+                    {startingEvents.map((event, eventIndex) => (
                       <div key={event.id} className="flex items-center gap-2">
                         <div className="flex-1" onClick={e => e.stopPropagation()}>
                           <UnifiedEventCard event={event} onClick={onEventClick} variant="daily" />
                         </div>
-                        {eventIndex === events.length - 1 && (
+                        {eventIndex === startingEvents.length - 1 && (
                           <button 
                             onClick={e => {
                               e.stopPropagation();
@@ -399,6 +413,66 @@ export default function DailyView({
                         )}
                       </div>
                     ))}
+                  </div>
+                ) : hasSpanningEvents ? (
+                  <div className="space-y-1.5">
+                    {spanningEvents.map((spanningEvent) => {
+                      const agendaType = spanningEvent.agendaType || (spanningEvent.originalData as any)?.agendaType || 'session';
+                      const dur = spanningEvent.durationMinutes || (spanningEvent.originalData as any)?.durationMinutes || 60;
+                      const endTime = getEventEndTime(spanningEvent.time, dur);
+                      const title = agendaType === 'personal' ? spanningEvent.title : (spanningEvent.client || spanningEvent.title);
+
+                      const getSpanningStyle = () => {
+                        if (agendaType === 'personal') {
+                          return 'border-l-[3px] border-purple-500 bg-purple-500/10 text-purple-800 dark:text-purple-200';
+                        }
+                        if (agendaType === 'meeting') {
+                          return 'border-l-[3px] border-cyan-500 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200';
+                        }
+                        if (spanningEvent.type === 'task') {
+                          return 'border-l-[3px] border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-200';
+                        }
+                        return 'border-l-[3px] border-blue-500 bg-blue-500/10 text-blue-800 dark:text-blue-200';
+                      };
+
+                      return (
+                        <div
+                          key={spanningEvent.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEventClick(spanningEvent);
+                          }}
+                          className={cn(
+                            "flex items-center justify-between p-2 rounded-md transition-all hover:opacity-90 cursor-pointer",
+                            getSpanningStyle()
+                          )}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="text-xs opacity-60">↳</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold truncate flex items-center gap-1.5">
+                                <span className="opacity-75 font-normal">Em andamento:</span>
+                                <span className="truncate">{title}</span>
+                              </div>
+                              <div className="text-[11px] opacity-75 truncate">
+                                Iniciado às {spanningEvent.time} · Término previsto às {endTime}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                            <TimeSlotOptionsMenu
+                              onCreateSession={() => (onCreateSession || onCreateSlot)({ date, time })}
+                              onCreateMeeting={() => onCreateMeeting?.({ date, time })}
+                              onCreatePersonalEvent={() => onCreatePersonalEvent?.({ date, time })}
+                              onCreateTask={() => onCreateTask?.({ date, time })}
+                              onAvailable={() => handleMarkAvailable(time)}
+                              onBlock={() => handleBlockSlot(time)}
+                              onRemove={() => handleRemoveTimeSlot(time)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : blocked ? (
                   <div className="flex items-center justify-between">

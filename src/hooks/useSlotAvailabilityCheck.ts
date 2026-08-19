@@ -21,6 +21,7 @@ export type SlotCheckResult =
 interface CheckSlotArgs {
   date: Date;
   time: string;
+  durationMinutes?: number;
   ignoreAppointmentId?: string;
   /** Status pretendido para o agendamento sendo gravado (reservado para uso futuro). */
   targetStatus?: AppointmentStatus;
@@ -58,7 +59,7 @@ export const useSlotAvailabilityCheck = () => {
   const { availability } = useAvailability();
 
   const checkSlot = useCallback(
-    ({ date, time, ignoreAppointmentId }: CheckSlotArgs): SlotCheckResult => {
+    ({ date, time, durationMinutes, ignoreAppointmentId }: CheckSlotArgs): SlotCheckResult => {
       const wantedDate = toISODate(date);
       const wantedTime = normalizeHHmm(time);
 
@@ -72,6 +73,7 @@ export const useSlotAvailabilityCheck = () => {
           title: app.title,
           date: toISODate(appDate),
           time: normalizeHHmm(app.time),
+          durationMinutes: app.durationMinutes ? Number(app.durationMinutes) : 60,
           type: app.type ?? '',
           client: app.client ?? '',
           status: app.status as DomainAppointment['status'],
@@ -85,6 +87,7 @@ export const useSlotAvailabilityCheck = () => {
       const result = classifySlot(domainAppointments, domainAvailability, {
         date: wantedDate,
         time: wantedTime,
+        durationMinutes: durationMinutes ? Number(durationMinutes) : 60,
         excludeAppointmentId: ignoreAppointmentId,
       });
 

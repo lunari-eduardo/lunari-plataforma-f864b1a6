@@ -49,7 +49,7 @@ function mapRow(row: any): DomainAppointment {
     time: row.time,
     type: row.type,
     agendaType,
-    durationMinutes: row.duration_minutes ? Number(row.duration_minutes) : undefined,
+    durationMinutes: row.duration_minutes ? Number(row.duration_minutes) : 60,
     client: (row.clientes as any)?.nome || row.title,
     status: row.status,
     description: row.description ?? undefined,
@@ -233,7 +233,7 @@ async function handleConfirmedSideEffects(appointmentId: string, userId: string)
 // A1/A2: projeção estreita para listagem. `mapRow` só lê estas colunas —
 // evita trafegar description, metadata, updated_at etc. em cada linha.
 const APPT_LIST_COLS =
-  "id, session_id, title, date, time, type, status, description, package_id, paid_amount, orcamento_id, origem, cliente_id, clientes ( nome )";
+  "id, session_id, title, date, time, type, status, description, duration_minutes, package_id, paid_amount, orcamento_id, origem, cliente_id, clientes ( nome )";
 
 export class SupabaseAppointmentsRepository implements AppointmentsRepository {
   async listByRange(range: DateRange): Promise<DomainAppointment[]> {
@@ -348,6 +348,7 @@ export class SupabaseAppointmentsRepository implements AppointmentsRepository {
       patch.title !== undefined ||
       patch.type !== undefined ||
       patch.description !== undefined ||
+      patch.durationMinutes !== undefined ||
       patch.clienteId !== undefined
     ) {
       // Mudança relevante em appointment já confirmado — antecipa Google sync
