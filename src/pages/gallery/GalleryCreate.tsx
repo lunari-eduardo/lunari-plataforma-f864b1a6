@@ -1362,43 +1362,68 @@ export default function GalleryCreate() {
     switch (currentStep) {
       case 1:
         return <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-lg">
-                Dados do cliente e detalhes da sessão
-              </p>
+            <div className="flex items-center justify-between border-b border-border/40 pb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Identificação e Acesso</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Dados do cliente e detalhes da sessão
+                </p>
+              </div>
               {/* Assisted Mode Badge */}
-              {isAssistedMode && <Badge variant="secondary" className="gap-1.5">
+              {isAssistedMode && <Badge variant="secondary" className="gap-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-medium">
                   <Link2 className="h-3 w-3" />
                   Vinculada à sessão do Studio
                 </Badge>}
             </div>
 
             {/* Gallery Permission */}
-            <div className="space-y-4">
-              <Label className="text-base font-medium">Permissão da Galeria</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-foreground">Permissão da Galeria</Label>
               <RadioGroup value={galleryPermission} onValueChange={(v) => {
               setGalleryPermission(v as GalleryPermission);
               if (v === 'public') {
                 setSelectedClient(null);
               }
-            }} className="grid grid-cols-2 gap-4">
+            }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <RadioGroupItem value="public" id="gallery-public" className="peer sr-only" />
-                  <Label htmlFor="gallery-public" className={cn("flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", "hover:border-primary/50 hover:bg-muted/50", galleryPermission === 'public' ? "border-primary bg-primary/5" : "border-border")}>
-                    <Globe className={cn("h-5 w-5", galleryPermission === 'public' ? "text-primary" : "text-muted-foreground")} />
+                  <Label htmlFor="gallery-public" className={cn(
+                    "flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                    "hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40",
+                    galleryPermission === 'public'
+                      ? "border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm"
+                      : "border-border/60 bg-card hover:bg-muted/30"
+                  )}>
+                    <div className={cn(
+                      'p-2.5 rounded-lg transition-colors',
+                      galleryPermission === 'public' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                    )}>
+                      <Globe className="h-5 w-5" />
+                    </div>
                     <div>
-                      <p className="font-medium">Pública</p>
-                      <p className="text-xs text-muted-foreground">Sem senha</p>
+                      <p className="font-semibold text-foreground">Pública</p>
+                      <p className="text-xs text-muted-foreground">Sem senha · Acesso direto</p>
                     </div>
                   </Label>
                 </div>
                 <div>
                   <RadioGroupItem value="private" id="gallery-private" className="peer sr-only" />
-                  <Label htmlFor="gallery-private" className={cn("flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", "hover:border-primary/50 hover:bg-muted/50", galleryPermission === 'private' ? "border-primary bg-primary/5" : "border-border")}>
-                    <Lock className={cn("h-5 w-5", galleryPermission === 'private' ? "text-primary" : "text-muted-foreground")} />
+                  <Label htmlFor="gallery-private" className={cn(
+                    "flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200",
+                    "hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40",
+                    galleryPermission === 'private'
+                      ? "border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm"
+                      : "border-border/60 bg-card hover:bg-muted/30"
+                  )}>
+                    <div className={cn(
+                      'p-2.5 rounded-lg transition-colors',
+                      galleryPermission === 'private' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                    )}>
+                      <Lock className="h-5 w-5" />
+                    </div>
                     <div>
-                      <p className="font-medium">Privada</p>
-                      <p className="text-xs text-muted-foreground">Requer senha</p>
+                      <p className="font-semibold text-foreground">Privada</p>
+                      <p className="text-xs text-muted-foreground">Requer senha de acesso</p>
                     </div>
                   </Label>
                 </div>
@@ -2426,38 +2451,56 @@ export default function GalleryCreate() {
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
+      {/* Luxury Step Indicator */}
+      <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2 scrollbar-none">
         {steps.map((step, index) => {
-        const Icon = step.icon;
-        const isActive = currentStep === step.id;
-        const isCompleted = currentStep > step.id;
-        return <div key={step.id} className="flex items-center">
-              <div className={cn('flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap', isActive && 'bg-primary text-primary-foreground', isCompleted && 'bg-primary/20 text-primary', !isActive && !isCompleted && 'text-muted-foreground')}>
-                {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                <span className="text-sm font-medium hidden sm:block">
-                  {step.name}
-                </span>
+          const Icon = step.icon;
+          const isActive = currentStep === step.id;
+          const isCompleted = currentStep > step.id;
+          return (
+            <div key={step.id} className="flex items-center">
+              <div
+                className={cn(
+                  'flex items-center gap-2 px-3.5 py-2 rounded-full transition-all duration-300 whitespace-nowrap text-sm',
+                  isActive && 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-500/40 ring-2 ring-amber-500/15 shadow-[0_2px_12px_rgba(197,168,128,0.15)] font-semibold',
+                  isCompleted && 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-medium',
+                  !isActive && !isCompleted && 'text-muted-foreground hover:text-foreground hover:bg-muted/40 border border-transparent'
+                )}
+              >
+                {isCompleted ? (
+                  <Check className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <Icon className={cn('h-4 w-4 transition-transform duration-200', isActive && 'text-amber-600 dark:text-amber-400 scale-110')} />
+                )}
+                <span className="hidden sm:inline">{step.name}</span>
               </div>
-              {index < steps.length - 1 && <div className={cn('h-px w-4 md:w-12 mx-1 md:mx-2', isCompleted ? 'bg-primary' : 'bg-border')} />}
-            </div>;
-      })}
+              {index < steps.length - 1 && (
+                <div
+                  className={cn(
+                    'h-0.5 w-4 md:w-12 mx-1 md:mx-2 rounded-full transition-colors duration-300',
+                    isCompleted ? 'bg-amber-500/60 dark:bg-amber-500/40' : 'bg-border/60'
+                  )}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Step Content */}
-      <div className="lunari-card p-6 md:p-8 mb-6">
+      {/* Step Content Card */}
+      <div className="lunari-card p-6 md:p-8 mb-6 border border-border/60 dark:border-border/40 shadow-sm rounded-2xl">
         {renderStep()}
       </div>
 
-      {/* Fixed Navigation */}
-      <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+      {/* Fixed Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
         <div className="max-w-[79rem] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={isAdvancing || isSavingDraft || isGoingBack}
             className={cn(
-              "active:scale-[0.97] transition-transform duration-150",
+              "active:scale-[0.98] transition-all rounded-xl",
               isGoingBack && "cursor-wait"
             )}
           >
@@ -2470,13 +2513,13 @@ export default function GalleryCreate() {
           </Button>
           
           <div className="flex items-center gap-2">
-            {/* Save Draft button - always available */}
+            {/* Save Draft button */}
             <Button
               variant="outline"
               onClick={handleSaveDraft}
               disabled={isAdvancing || isSavingDraft || isGoingBack}
               className={cn(
-                "active:scale-[0.97] transition-transform duration-150",
+                "active:scale-[0.98] transition-all rounded-xl hover:border-amber-500/40",
                 isSavingDraft && "cursor-wait"
               )}
             >
@@ -2494,7 +2537,7 @@ export default function GalleryCreate() {
               onClick={handleNext}
               disabled={isAdvancing || isSavingDraft || isGoingBack}
               className={cn(
-                "active:scale-[0.97] transition-transform duration-150",
+                "active:scale-[0.98] transition-all rounded-xl shadow-sm",
                 isAdvancing && "cursor-wait"
               )}
             >

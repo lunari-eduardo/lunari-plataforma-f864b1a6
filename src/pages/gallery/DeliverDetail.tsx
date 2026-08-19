@@ -144,7 +144,7 @@ export default function DeliverDetail() {
     return (
       <div className="text-center py-24">
         <h2 className="text-2xl font-bold mb-2">Galeria não encontrada</h2>
-        <Button variant="outline" onClick={() => navigate('/app/gallery/list')}>Voltar</Button>
+        <Button variant="outline" onClick={() => navigate('/app/gallery/list?tab=transfer')}>Voltar</Button>
       </div>
     );
   }
@@ -175,7 +175,7 @@ export default function DeliverDetail() {
         prazoSelecao: expirationDate,
 
       }});
-      navigate('/app/gallery/list');
+      navigate('/app/gallery/list?tab=transfer');
     } catch (error) {
       console.error('Erro ao salvar:', error);
     } finally {
@@ -236,7 +236,7 @@ export default function DeliverDetail() {
   const handleDelete = async () => {
     if (!id) return;
     await deleteGallery(id);
-    navigate('/app/gallery/list');
+    navigate('/app/gallery/list?tab=transfer');
   };
 
   const handlePhotoDelete = async (photoId: string) => {
@@ -315,7 +315,7 @@ export default function DeliverDetail() {
     <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-[max(4rem,env(safe-area-inset-bottom))] animate-fade-in">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate('/app/gallery/list')}>
+        <Button variant="ghost" size="sm" className="w-fit gap-2" onClick={() => navigate('/app/gallery/list?tab=transfer')}>
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
@@ -327,7 +327,7 @@ export default function DeliverDetail() {
               <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
-              {gallery.clienteNome || 'Sem cliente'} Â· {format(gallery.createdAt, "dd MMM yyyy", { locale: ptBR })} Â· {photos.length} fotos
+              {gallery.clienteNome || 'Sem cliente'} · {format(gallery.createdAt, "dd MMM yyyy", { locale: ptBR })} · {photos.length} fotos
             </p>
           </div>
           <div className="flex items-center gap-2">

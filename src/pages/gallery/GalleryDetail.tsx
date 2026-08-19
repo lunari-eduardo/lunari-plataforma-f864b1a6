@@ -580,7 +580,7 @@ export default function GalleryDetail() {
             return (
               <button {...commonProps} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 hover:opacity-80 transition">
                 <Clock className="h-3.5 w-3.5" />
-                Parcial Â· Pago R$ {vendido.toFixed(2)} / Pendente R$ {pendente.toFixed(2)}
+                Parcial · Pago R$ {vendido.toFixed(2)} / Pendente R$ {pendente.toFixed(2)}
               </button>
             );
           }
@@ -672,7 +672,7 @@ export default function GalleryDetail() {
 
         return (
           <div className="flex flex-col gap-6">
-            {/* Ãrea 1 — Identificação */}
+            {/* Área 1 — Identificação */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
                 <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list')} className="shrink-0 -ml-2">
@@ -765,7 +765,7 @@ export default function GalleryDetail() {
               </div>
             </div>
 
-            {/* Ãrea 2 — Cards informativos */}
+            {/* Área 2 — Cards informativos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <InfoCard icon={User} label="Cliente" value={supabaseGallery.clienteNome || '—'} />
               <InfoCard icon={Calendar} label="Data da sessão" value={format(deadline, "dd MMM yyyy", { locale: ptBR })} />

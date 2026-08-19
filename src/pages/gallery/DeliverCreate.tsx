@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { addDays } from 'date-fns';
-import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, User, Image, MessageSquare, Check, Upload, Globe, Lock, Calendar, Sun, Moon, Plus, HardDrive, ArrowUpCircle, Trash2, Palette, Loader2, Sparkles, Shield } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,8 +35,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const steps = [
   { id: 1, name: 'Dados', icon: User },
-  { id: 2, name: 'Fotos', icon: Image },
-  { id: 3, name: 'Mensagem', icon: MessageSquare },
+  { id: 2, name: 'Visual', icon: Sparkles },
+  { id: 3, name: 'Fotos', icon: Image },
+  { id: 4, name: 'Mensagem', icon: MessageSquare },
 ];
 
 export default function DeliverCreate() {
@@ -54,7 +55,6 @@ export default function DeliverCreate() {
 
   // Step 1: Data
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  // Pre-select client from CRM routing if available
   useEffect(() => {
     if (location.state?.preselectClient && clients.length > 0 && !selectedClient) {
       const clientToSelect = clients.find(c => c.id === location.state.preselectClient);
@@ -70,14 +70,17 @@ export default function DeliverCreate() {
   const [galleryPassword, setGalleryPassword] = useState('');
   const [expirationDays, setExpirationDays] = useState(30);
 
-  // Font & case
+  // Step 2: Visual (Font, Theme, Cover, Layout)
   const [sessionFont, setSessionFont] = useState('playfair');
   const [titleCaseMode, setTitleCaseMode] = useState<TitleCaseMode>('normal');
-
-  // Theme
   const [clientMode, setClientMode] = useState<'light' | 'dark'>('dark');
+  const [photoSpacing, setPhotoSpacing] = useState(6);
+  const [useCustomTheme, setUseCustomTheme] = useState(false);
+  const [activeThemeId, setActiveThemeId] = useState<string>(DEFAULT_THEME_ID);
+  const [themeOverrides, setThemeOverrides] = useState<any>({});
+  const [coverId, setCoverId] = useState<string | null>(null);
 
-  // Step 2: Photos
+  // Step 3: Photos
   const [supabaseGalleryId, setSupabaseGalleryId] = useState<string | null>(null);
   const [isCreatingGallery, setIsCreatingGallery] = useState(false);
   const [uploadedPhotos, setUploadedPhotos] = useState<UploadedPhoto[]>([]);
@@ -85,19 +88,11 @@ export default function DeliverCreate() {
   const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
   const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null);
   const [photoCount, setPhotoCount] = useState(0);
-
-  // Folder management
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
 
-  // Step 3: Message
+  // Step 4: Message & Confirmation
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [welcomeMessageEnabled, setWelcomeMessageEnabled] = useState(true);
-  const [photoSpacing, setPhotoSpacing] = useState(6);
-  const [useCustomTheme, setUseCustomTheme] = useState(false);
-  const [activeThemeId, setActiveThemeId] = useState<string>(DEFAULT_THEME_ID);
-  const [themeOverrides, setThemeOverrides] = useState<any>({});
-  // null = herda capa padrão do fotógrafo
-  const [coverId, setCoverId] = useState<string | null>(null);
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -117,7 +112,7 @@ export default function DeliverCreate() {
     }
   }, [settings]);
 
-  // Initialize welcome toggle from global settings (but don't pre-fill text)
+  // Initialize welcome toggle from global settings
   useEffect(() => {
     if (gallerySettings) {
       const globalEnabled = gallerySettings.welcomeMessageEnabled ?? true;
@@ -125,7 +120,6 @@ export default function DeliverCreate() {
     }
   }, [gallerySettings]);
 
-  // If storage check is loading, show skeleton
   if (isLoadingStorage) {
     return (
       <div className="max-w-5xl mx-auto py-16 flex items-center justify-center">
@@ -134,41 +128,39 @@ export default function DeliverCreate() {
     );
   }
 
-  // Block creation if over limit
   if (!canCreateTransfer) {
     return (
       <div className="max-w-lg mx-auto py-16 space-y-6 text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-          <HardDrive className="h-8 w-8 text-muted-foreground" />
+        <div className="w-16 h-16 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+          <HardDrive className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold">
-            {hasTransferPlan ? 'Armazenamento esgotado' : 'Sem plano Transfer ativo'}
-          </h2>
+          <h2 className="text-xl font-bold">Armazenamento Esgotado</h2>
           <p className="text-sm text-muted-foreground">
-            {hasTransferPlan
-              ? 'Você atingiu o limite do seu plano. Faça upgrade ou exclua galerias para liberar espaço.'
-              : 'Você precisa de um plano Transfer para criar galerias de entrega.'}
+            Você atingiu o limite de {formatStorageSize(storageLimitBytes)} do seu plano.
+            Para criar novas galerias de entrega, faça upgrade do seu plano ou exclua galerias antigas.
           </p>
         </div>
 
-        {hasTransferPlan && (
-          <div className="space-y-2 max-w-xs mx-auto">
-            <Progress value={storageUsedPercent} className="h-2.5" />
-            <p className="text-xs text-muted-foreground">
-              {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
-              {planName && <span className="ml-1">· {planName}</span>}
-            </p>
+        <div className="p-4 rounded-lg bg-muted/50 space-y-2 text-left">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Uso atual</span>
+            <span>{storageUsedPercent.toFixed(0)}%</span>
           </div>
-        )}
+          <Progress value={Math.min(storageUsedPercent, 100)} className="h-2" />
+          <p className="text-xs text-muted-foreground text-center">
+            {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
+            {planName && <span className="ml-1">· {planName}</span>}
+          </p>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Button onClick={() => navigate('/app/gallery/settings')} className="gap-2">
-            <Send className="w-4 h-4" />
+            <ArrowUpCircle className="w-4 h-4" />
             {hasTransferPlan ? 'Fazer Upgrade' : 'Ver Planos'}
           </Button>
           {hasTransferPlan && (
-            <Button variant="outline" onClick={() => navigate('/app/gallery/list')} className="gap-2">
+            <Button variant="outline" onClick={() => navigate('/app/gallery/list?tab=transfer')} className="gap-2">
               <Trash2 className="h-4 w-4" />
               Gerenciar Galerias
             </Button>
@@ -186,9 +178,38 @@ export default function DeliverCreate() {
     }
   };
 
-  // Create gallery in Supabase when entering step 2
   const ensureGalleryCreated = async () => {
-    if (supabaseGalleryId) return supabaseGalleryId;
+    if (supabaseGalleryId) {
+      try {
+        await updateGallery({
+          id: supabaseGalleryId,
+          data: {
+            nomeSessao: sessionName,
+            permissao: galleryPermission,
+            prazoSelecaoDias: expirationDays,
+            configuracoes: {
+              imageResizeOption: 2560,
+              allowDownload: true,
+              allowComments: false,
+              allowExtraPhotos: false,
+              watermark: { type: 'none', opacity: 0, position: 'center' },
+              watermarkDisplay: 'none',
+              sessionFont,
+              titleCaseMode,
+              clientMode,
+              photoSpacing: useCustomTheme ? (themeOverrides?.layout?.gap ?? photoSpacing) : photoSpacing,
+            },
+            themeId: useCustomTheme ? activeThemeId : null,
+            useCustomTheme: useCustomTheme,
+            themeOverrides: themeOverrides,
+            coverId: coverId,
+          },
+        });
+        return supabaseGalleryId;
+      } catch (e) {
+        console.error('Error updating existing gallery:', e);
+      }
+    }
 
     setIsCreatingGallery(true);
     try {
@@ -203,22 +224,22 @@ export default function DeliverCreate() {
         galleryPassword: galleryPermission === 'private' ? galleryPassword : undefined,
         prazoSelecaoDias: expirationDays,
         tipo: 'entrega',
-          configuracoes: {
-            imageResizeOption: 2560,
-            allowDownload: true,
-            allowComments: false,
-            allowExtraPhotos: false,
-            watermark: { type: 'none', opacity: 0, position: 'center' },
-            watermarkDisplay: 'none',
-            sessionFont,
-            titleCaseMode,
-            clientMode,
-            photoSpacing,
-          },
-          themeId: useCustomTheme ? activeThemeId : null,
-          useCustomTheme: useCustomTheme,
-          themeOverrides: themeOverrides,
-          coverId: coverId,
+        configuracoes: {
+          imageResizeOption: 2560,
+          allowDownload: true,
+          allowComments: false,
+          allowExtraPhotos: false,
+          watermark: { type: 'none', opacity: 0, position: 'center' },
+          watermarkDisplay: 'none',
+          sessionFont,
+          titleCaseMode,
+          clientMode,
+          photoSpacing: useCustomTheme ? (themeOverrides?.layout?.gap ?? photoSpacing) : photoSpacing,
+        },
+        themeId: useCustomTheme ? activeThemeId : null,
+        useCustomTheme: useCustomTheme,
+        themeOverrides: themeOverrides,
+        coverId: coverId,
       });
       setSupabaseGalleryId(result.id);
       return result.id;
@@ -241,19 +262,30 @@ export default function DeliverCreate() {
         toast.error('Informe a senha para galeria privada');
         return;
       }
-      const id = await ensureGalleryCreated();
-      if (!id) return;
-    }
-    if (currentStep === 2 && photoCount === 0 && uploadedPhotos.length === 0) {
-      toast.error('Envie pelo menos uma foto');
+      setCurrentStep(2);
       return;
     }
-    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+
+    if (currentStep === 2) {
+      const id = await ensureGalleryCreated();
+      if (!id) return;
+      setCurrentStep(3);
+      return;
+    }
+
+    if (currentStep === 3) {
+      if (photoCount === 0 && uploadedPhotos.length === 0) {
+        toast.error('Envie pelo menos uma foto');
+        return;
+      }
+      setCurrentStep(4);
+      return;
+    }
   };
 
   const handleBack = () => {
     if (currentStep === 1) {
-      navigate('/app/gallery/list');
+      navigate('/app/gallery/list?tab=transfer');
     } else {
       setCurrentStep((prev) => Math.max(prev - 1, 1));
     }
@@ -266,7 +298,6 @@ export default function DeliverCreate() {
     try {
       const expirationDate = addDays(new Date(), expirationDays);
 
-      // 1. Atualiza a galeria com todas as configurações finais e prazo de expiração
       await updateGallery({
         id: supabaseGalleryId,
         data: {
@@ -284,22 +315,20 @@ export default function DeliverCreate() {
             titleCaseMode,
             coverPhotoId: coverPhotoId || undefined,
             clientMode,
-            photoSpacing,
+            photoSpacing: useCustomTheme ? (themeOverrides?.layout?.gap ?? photoSpacing) : photoSpacing,
           },
           coverId: coverId,
         },
       });
 
-      // 2. Persistir fonte preferida do usuário
       updateSettings({ lastSessionFont: sessionFont });
 
-      // 3. Executar a publicação atômica no Supabase (gerando token e definindo status como publicado/enviado)
       if (publishGallery) {
         await publishGallery(supabaseGalleryId);
       }
 
-      // 4. Invalidar caches para sincronização imediata do dashboard, listagens e detalhes
       queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      queryClient.invalidateQueries({ queryKey: ['galerias'] });
       queryClient.invalidateQueries({ queryKey: ['transfer-storage'] });
       queryClient.invalidateQueries({ queryKey: ['client-gallery', supabaseGalleryId] });
 
@@ -320,7 +349,6 @@ export default function DeliverCreate() {
 
   const handleCoverChange = async (photoId: string | null) => {
     setCoverPhotoId(photoId);
-    // Persist immediately if gallery exists
     if (supabaseGalleryId) {
       try {
         const { data: gallery } = await (await import('@/integrations/supabase/client')).supabase
@@ -350,13 +378,18 @@ export default function DeliverCreate() {
       case 1:
         return (
           <div className="space-y-6 animate-fade-in">
-            <p className="text-muted-foreground text-lg">
-              Dados da entrega e detalhes da sessão
-            </p>
+            <div className="border-b border-border/40 pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Identificação e Acesso</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Defina o cliente, privacidade e dados essenciais da sessão.
+              </p>
+            </div>
 
-            {/* Gallery Permission */}
-            <div className="space-y-4">
-              <Label className="text-base font-medium">Permissão da Galeria</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                Permissão da Galeria
+              </Label>
               <RadioGroup
                 value={galleryPermission}
                 onValueChange={(v) => {
@@ -365,22 +398,29 @@ export default function DeliverCreate() {
                     setSelectedClient(null);
                   }
                 }}
-                className="grid grid-cols-2 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 <div>
                   <RadioGroupItem value="public" id="gallery-public" className="peer sr-only" />
                   <Label
                     htmlFor="gallery-public"
                     className={cn(
-                      'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                      'hover:border-primary/50 hover:bg-muted/50',
-                      galleryPermission === 'public' ? 'border-primary bg-primary/5' : 'border-border'
+                      'flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200',
+                      'hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40',
+                      galleryPermission === 'public'
+                        ? 'border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm'
+                        : 'border-border/60 bg-card hover:bg-muted/30'
                     )}
                   >
-                    <Globe className={cn('h-5 w-5', galleryPermission === 'public' ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className={cn(
+                      'p-2.5 rounded-lg transition-colors',
+                      galleryPermission === 'public' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                    )}>
+                      <Globe className="h-5 w-5" />
+                    </div>
                     <div>
-                      <p className="font-medium">Pública</p>
-                      <p className="text-xs text-muted-foreground">Sem senha</p>
+                      <p className="font-semibold text-foreground">Pública</p>
+                      <p className="text-xs text-muted-foreground">Sem senha · Acesso direto via link</p>
                     </div>
                   </Label>
                 </div>
@@ -389,27 +429,33 @@ export default function DeliverCreate() {
                   <Label
                     htmlFor="gallery-private"
                     className={cn(
-                      'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                      'hover:border-primary/50 hover:bg-muted/50',
-                      galleryPermission === 'private' ? 'border-primary bg-primary/5' : 'border-border'
+                      'flex items-center gap-3.5 p-4 rounded-xl border cursor-pointer transition-all duration-200',
+                      'hover:-translate-y-0.5 hover:shadow-md hover:border-amber-500/40',
+                      galleryPermission === 'private'
+                        ? 'border-amber-500/70 bg-amber-500/[0.04] ring-1 ring-amber-500/30 shadow-sm'
+                        : 'border-border/60 bg-card hover:bg-muted/30'
                     )}
                   >
-                    <Lock className={cn('h-5 w-5', galleryPermission === 'private' ? 'text-primary' : 'text-muted-foreground')} />
+                    <div className={cn(
+                      'p-2.5 rounded-lg transition-colors',
+                      galleryPermission === 'private' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
+                    )}>
+                      <Lock className="h-5 w-5" />
+                    </div>
                     <div>
-                      <p className="font-medium">Privada</p>
-                      <p className="text-xs text-muted-foreground">Requer senha</p>
+                      <p className="font-semibold text-foreground">Privada</p>
+                      <p className="text-xs text-muted-foreground">Protegida por senha de segurança</p>
                     </div>
                   </Label>
                 </div>
               </RadioGroup>
             </div>
 
-            {/* Client Section - Only show for private galleries */}
             {galleryPermission === 'private' && (
-              <div className="space-y-4">
+              <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-2">
                   <div className="flex-1 space-y-2">
-                    <Label>Cliente <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                    <Label className="text-sm font-medium">Cliente <span className="text-muted-foreground text-xs">(opcional)</span></Label>
                     {isLoadingClients ? (
                       <div className="h-10 rounded-md border border-input bg-muted animate-pulse" />
                     ) : (
@@ -428,40 +474,39 @@ export default function DeliverCreate() {
                       size="icon"
                       onClick={() => setIsClientModalOpen(true)}
                       disabled={isLoadingClients}
+                      className="hover:border-amber-500/50"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
-                {/* Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha de acesso</Label>
+                  <Label htmlFor="password">Senha de acesso *</Label>
                   <Input
                     id="password"
                     type="text"
                     value={galleryPassword}
                     onChange={(e) => setGalleryPassword(e.target.value)}
-                    placeholder="Defina uma senha"
+                    placeholder="Defina uma senha para o cliente"
                   />
                 </div>
               </div>
             )}
 
-            {/* Session Name + Expiration - 2 columns */}
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 pt-2">
               <div className="space-y-2">
                 <Label htmlFor="sessionName">Nome da sessão *</Label>
                 <Input
                   id="sessionName"
                   value={sessionName}
                   onChange={(e) => setSessionName(e.target.value)}
-                  placeholder="Ex: Ensaio Maria - Família"
+                  placeholder="Ex: Ensaio Editorial - Maria & Família"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expiration" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
+                  <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   Prazo de expiração (dias)
                 </Label>
                 <Input
@@ -473,127 +518,143 @@ export default function DeliverCreate() {
                   onChange={(e) => setExpirationDays(Number(e.target.value))}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Disponível por {expirationDays} dias após o envio
+                  Disponível para download por {expirationDays} dias após a publicação
                 </p>
               </div>
             </div>
+          </div>
+        );
 
-            {/* Font Select */}
-            <div className="space-y-2">
-              <Label>Fonte do Título</Label>
+      case 2:
+        return (
+          <div className="space-y-6 animate-fade-in">
+            <div className="border-b border-border/40 pb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <h2 className="text-lg font-semibold text-foreground">Design e Personalização Visual</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Escolha a tipografia, estilo de apresentação e layout editorial para encantar o cliente.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-foreground">Tipografia do Título</Label>
               <FontSelect
                 value={sessionFont}
                 onChange={setSessionFont}
-                previewText={sessionName || 'Ensaio Gestante'}
+                previewText={sessionName || 'Ensaio Editorial'}
                 titleCaseMode={titleCaseMode}
                 onTitleCaseModeChange={setTitleCaseMode}
               />
             </div>
 
-            {/* Photo Spacing */}
-            <div className="space-y-6 pt-4 border-t">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-primary" />
-                  <Label className="text-base font-medium">Tema da Galeria</Label>
+            <div className="space-y-4 pt-4 border-t border-border/40">
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Label className="text-base font-semibold">Tema da Galeria</Label>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 max-w-md">
+                <div 
+                  className={cn(
+                    "p-3.5 border rounded-xl cursor-pointer transition-all duration-200 text-center hover:-translate-y-0.5 hover:shadow-sm",
+                    !useCustomTheme
+                      ? "border-amber-500/70 bg-amber-500/[0.05] ring-1 ring-amber-500/30"
+                      : "border-border/60 hover:border-amber-500/40 hover:bg-muted/40"
+                  )}
+                  onClick={() => setUseCustomTheme(false)}
+                >
+                  <p className={cn("font-semibold text-sm", !useCustomTheme ? "text-amber-700 dark:text-amber-300" : "text-foreground")}>Herdar Padrão</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Configurações da conta</p>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-3 max-w-md">
-                  <div 
-                    className={cn(
-                      "p-3 border rounded-xl cursor-pointer transition-all text-center",
-                      !useCustomTheme ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted"
-                    )}
-                    onClick={() => setUseCustomTheme(false)}
-                  >
-                    <p className="font-medium text-sm">Herdar Padrão</p>
-                    <p className="text-[10px] text-muted-foreground">Configurações da conta</p>
-                  </div>
-                  <div 
-                    className={cn(
-                      "p-3 border rounded-xl cursor-pointer transition-all text-center",
-                      useCustomTheme ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted"
-                    )}
-                    onClick={() => setUseCustomTheme(true)}
-                  >
-                    <p className="font-medium text-sm">Personalizar</p>
-                    <p className="text-[10px] text-muted-foreground">Estilo exclusivo</p>
-                  </div>
+                <div 
+                  className={cn(
+                    "p-3.5 border rounded-xl cursor-pointer transition-all duration-200 text-center hover:-translate-y-0.5 hover:shadow-sm",
+                    useCustomTheme
+                      ? "border-amber-500/70 bg-amber-500/[0.05] ring-1 ring-amber-500/30"
+                      : "border-border/60 hover:border-amber-500/40 hover:bg-muted/40"
+                  )}
+                  onClick={() => setUseCustomTheme(true)}
+                >
+                  <p className={cn("font-semibold text-sm", useCustomTheme ? "text-amber-700 dark:text-amber-300" : "text-foreground")}>Personalizar</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Estilo exclusivo</p>
                 </div>
-
-                {useCustomTheme && (
-                  <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <ThemeCatalog 
-                      selectedThemeId={activeThemeId} 
-                      onSelect={setActiveThemeId} 
-                      onThemeOverridesChange={setThemeOverrides}
-                      initialOverrides={themeOverrides}
-                    />
-                  </div>
-                )}
               </div>
 
-              {/* Capa da Galeria de Entrega (independente do Tema) */}
-              <div className="space-y-4 pt-2">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-primary" />
-                  <Label className="text-base font-medium">Capa da Galeria</Label>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">Hero</span>
+              {useCustomTheme && (
+                <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <ThemeCatalog 
+                    selectedThemeId={activeThemeId} 
+                    onSelect={setActiveThemeId} 
+                    onThemeOverridesChange={setThemeOverrides}
+                    initialOverrides={themeOverrides}
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground -mt-2">
-                  Apresentação inicial da galeria. Independe do Tema (grid).
-                </p>
-                <CoverCatalog
-                  selectedCoverId={coverId}
-                  onSelect={setCoverId}
-                  inheritLabel={
-                    settings?.defaultCoverId
-                      ? `Usar capa padrão do meu estúdio (${
-                          COVER_REGISTRY[settings.defaultCoverId]?.name ?? settings.defaultCoverId
-                        })`
-                      : 'Usar capa padrão do meu estúdio'
-                  }
+              )}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-border/40">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Label className="text-base font-semibold">Capa da Galeria (Hero)</Label>
+                <span className="text-[10px] uppercase tracking-wider bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-medium ml-auto">Hero</span>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Apresentação inicial da galeria para impactar no primeiro acesso.
+              </p>
+              <CoverCatalog
+                selectedCoverId={coverId}
+                onSelect={setCoverId}
+                inheritLabel={
+                  settings?.defaultCoverId
+                    ? `Usar capa padrão do meu estúdio (${
+                        COVER_REGISTRY[settings.defaultCoverId]?.name ?? settings.defaultCoverId
+                      })`
+                    : 'Usar capa padrão do meu estúdio'
+                }
+              />
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 pt-4 border-t border-border/40">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Espaçamento do Grid</Label>
+                  <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-md text-foreground">
+                    {useCustomTheme ? (themeOverrides?.layout?.gap ?? 8) : photoSpacing}px
+                  </span>
+                </div>
+                <Slider
+                  value={[useCustomTheme ? (themeOverrides?.layout?.gap ?? 8) : photoSpacing]}
+                  onValueChange={(vals) => {
+                    if (useCustomTheme) {
+                      setThemeOverrides({
+                        ...themeOverrides,
+                        layout: { ...(themeOverrides.layout || {}), gap: vals[0] }
+                      });
+                    } else {
+                      setPhotoSpacing(vals[0]);
+                    }
+                  }}
+                  min={0}
+                  max={40}
+                  step={1}
+                  className="py-1"
                 />
               </div>
 
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-medium">Espaçamento (Grid)</Label>
-                  <span className="text-sm font-mono">{useCustomTheme ? (themeOverrides?.layout?.gap ?? 8) : photoSpacing}px</span>
-                </div>
-                <div className="max-w-sm">
-                  <Slider
-                    value={[useCustomTheme ? (themeOverrides?.layout?.gap ?? 8) : photoSpacing]}
-                    onValueChange={(vals) => {
-                      if (useCustomTheme) {
-                        setThemeOverrides({
-                          ...themeOverrides,
-                          layout: { ...(themeOverrides.layout || {}), gap: vals[0] }
-                        });
-                      } else {
-                        setPhotoSpacing(vals[0]);
-                      }
-                    }}
-                    min={0}
-                    max={40}
-                    step={1}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  {clientMode === 'dark' ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-primary" />}
-                  <Label className="text-base font-medium">Modo de Cor</Label>
-                </div>
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold">Modo de Cor do Cliente</Label>
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant={clientMode === 'light' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setClientMode('light')}
-                    className="gap-1 rounded-full"
+                    className={cn(
+                      "gap-1.5 rounded-xl transition-all",
+                      clientMode === 'light' && "bg-amber-600 hover:bg-amber-700 text-white"
+                    )}
                   >
                     <Sun className="h-3.5 w-3.5" />
                     Claro
@@ -603,7 +664,10 @@ export default function DeliverCreate() {
                     variant={clientMode === 'dark' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setClientMode('dark')}
-                    className="gap-1 rounded-full"
+                    className={cn(
+                      "gap-1.5 rounded-xl transition-all",
+                      clientMode === 'dark' && "bg-neutral-900 dark:bg-amber-500/20 text-foreground border-amber-500/40"
+                    )}
                   >
                     <Moon className="h-3.5 w-3.5" />
                     Escuro
@@ -614,19 +678,16 @@ export default function DeliverCreate() {
           </div>
         );
 
-      case 2:
+      case 3:
         return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-lg">
-                Fotos da Entrega
+          <div className="space-y-5 animate-fade-in">
+            <div className="border-b border-border/40 pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Fotos da Entrega</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Envie as fotos em alta resolução. O cliente poderá fazer o download com qualidade máxima.
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              As fotos serão armazenadas em alta resolução para download direto pelo cliente.
-            </p>
 
-            {/* Folder Manager */}
             {supabaseGalleryId && (
               <FolderManager
                 galleryId={supabaseGalleryId}
@@ -660,18 +721,21 @@ export default function DeliverCreate() {
           </div>
         );
 
-      case 3:
+      case 4:
         return (
           <div className="space-y-6 animate-fade-in">
-            <div>
-              <p className="text-muted-foreground text-lg mb-1">Mensagem de Boas-Vindas</p>
-              <p className="text-sm text-muted-foreground">
-                Esta mensagem será exibida quando o cliente acessar a galeria.
+            <div className="border-b border-border/40 pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Mensagem e Finalização</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Configure a mensagem de compartilhamento para o cliente e revise os detalhes antes de publicar.
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="welcome-toggle" className="text-sm font-medium">Ativar mensagem de boas-vindas</Label>
+            <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-card/60">
+              <div className="space-y-0.5">
+                <Label htmlFor="welcome-toggle" className="text-sm font-semibold cursor-pointer">Mensagem de Boas-Vindas</Label>
+                <p className="text-xs text-muted-foreground">Exibida na tela inicial ao cliente acessar a galeria</p>
+              </div>
               <Switch
                 id="welcome-toggle"
                 checked={welcomeMessageEnabled}
@@ -683,38 +747,45 @@ export default function DeliverCreate() {
             </div>
 
             {welcomeMessageEnabled && (
-              <Textarea
-                value={welcomeMessage}
-                onChange={(e) => setWelcomeMessage(e.target.value)}
-                placeholder="Olá! Suas fotos estão prontas para download. Aproveite!"
-                rows={8}
-                className="min-h-[200px]"
-              />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Texto da Mensagem</Label>
+                <Textarea
+                  value={welcomeMessage}
+                  onChange={(e) => setWelcomeMessage(e.target.value)}
+                  placeholder="Olá! Suas fotos finais estão prontas para download com máxima qualidade. Aproveite!"
+                  rows={6}
+                  className="min-h-[160px] rounded-xl"
+                />
+              </div>
             )}
 
-            {/* Summary */}
-            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-              <h3 className="text-base font-semibold">Resumo</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Sessão:</span>
-                  <p className="font-medium">{sessionName}</p>
+            <div className="p-5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.03] space-y-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  Resumo da Galeria
+                </h3>
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                  Pronta para Publicação
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm pt-1">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Sessão</span>
+                  <p className="font-semibold text-foreground truncate">{sessionName}</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Cliente:</span>
-                  <p className="font-medium">{selectedClient?.name || 'Não definido'}</p>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Cliente</span>
+                  <p className="font-semibold text-foreground truncate">{selectedClient?.name || 'Público'}</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Acesso:</span>
-                  <p className="font-medium">{galleryPermission === 'public' ? 'Público' : 'Privado'}</p>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Acesso</span>
+                  <p className="font-semibold text-foreground">{galleryPermission === 'public' ? 'Pública' : 'Privada'}</p>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Fotos:</span>
-                  <p className="font-medium">{photoCount || uploadedPhotos.length}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Expira em:</span>
-                  <p className="font-medium">{expirationDays} dias</p>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">Total de Fotos</span>
+                  <p className="font-semibold text-amber-700 dark:text-amber-300">{photoCount || uploadedPhotos.length} fotos</p>
                 </div>
               </div>
             </div>
@@ -726,22 +797,21 @@ export default function DeliverCreate() {
     }
   };
 
-  return <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list')}>
+  return (
+    <div className="max-w-[79rem] mx-auto w-full bg-background px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-32 sm:pb-36 animate-fade-in">
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/app/gallery/list?tab=transfer')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Nova Entrega</h1>
           <p className="text-muted-foreground text-sm">
-            Passo {currentStep} de {steps.length}
+            Passo {currentStep} de {steps.length} · {steps[currentStep - 1]?.name}
           </p>
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
+      <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2 scrollbar-none">
         {steps.map((step, index) => {
           const Icon = step.icon;
           const isActive = currentStep === step.id;
@@ -750,32 +820,43 @@ export default function DeliverCreate() {
             <div key={step.id} className="flex items-center">
               <div
                 className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap',
-                  isActive && 'bg-primary text-primary-foreground',
-                  isCompleted && 'bg-primary/20 text-primary',
-                  !isActive && !isCompleted && 'text-muted-foreground'
+                  'flex items-center gap-2 px-3.5 py-2 rounded-full transition-all duration-300 whitespace-nowrap text-sm',
+                  isActive && 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-500/40 ring-2 ring-amber-500/15 shadow-[0_2px_12px_rgba(197,168,128,0.15)] font-semibold',
+                  isCompleted && 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-medium',
+                  !isActive && !isCompleted && 'text-muted-foreground hover:text-foreground hover:bg-muted/40 border border-transparent'
                 )}
               >
-                {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                <span className="text-sm font-medium hidden sm:block">{step.name}</span>
+                {isCompleted ? (
+                  <Check className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <Icon className={cn('h-4 w-4 transition-transform duration-200', isActive && 'text-amber-600 dark:text-amber-400 scale-110')} />
+                )}
+                <span className="hidden sm:inline">{step.name}</span>
               </div>
               {index < steps.length - 1 && (
-                <div className={cn('h-px w-4 md:w-12 mx-1 md:mx-2', isCompleted ? 'bg-primary' : 'bg-border')} />
+                <div
+                  className={cn(
+                    'h-0.5 w-4 md:w-12 mx-1 md:mx-2 rounded-full transition-colors duration-300',
+                    isCompleted ? 'bg-amber-500/60 dark:bg-amber-500/40' : 'bg-border/60'
+                  )}
+                />
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Step Content */}
-      <div className="lunari-card p-6 md:p-8 mb-6">
+      <div className="lunari-card p-6 md:p-8 mb-6 border border-border/60 dark:border-border/40 shadow-sm rounded-2xl">
         {renderStep()}
       </div>
 
-      {/* Fixed Navigation */}
-      <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+      <div className="fixed bottom-0 left-0 md:left-16 right-0 border-t bg-background/95 backdrop-blur z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.03)]">
         <div className="max-w-[79rem] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4 flex justify-between items-center gap-2">
-          <Button variant="outline" onClick={handleBack}>
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            className="active:scale-[0.98] transition-all rounded-xl"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             {currentStep === 1 ? 'Cancelar' : 'Voltar'}
           </Button>
@@ -785,16 +866,26 @@ export default function DeliverCreate() {
               onClick={handleNext}
               disabled={isCreatingGallery || isUploading}
               variant="terracotta"
+              className="active:scale-[0.98] transition-all rounded-xl shadow-sm"
             >
-              Próximo
-              <ArrowRight className="h-4 w-4 ml-2" />
+              {isCreatingGallery ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Criando galeria...
+                </>
+              ) : (
+                <>
+                  Próximo
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
+              )}
             </Button>
           ) : (
             <Button
               onClick={handlePublish}
               disabled={isPublishing || (photoCount === 0 && uploadedPhotos.length === 0)}
               variant="terracotta"
-              className="gap-2 shadow-sm"
+              className="gap-2 shadow-md active:scale-[0.98] transition-all rounded-xl"
             >
               {isPublishing ? (
                 <>
@@ -812,12 +903,11 @@ export default function DeliverCreate() {
         </div>
       </div>
 
-      {/* Client Modal */}
       <ClientModal
         open={isClientModalOpen}
         onOpenChange={setIsClientModalOpen}
         onSave={handleClientCreate}
       />
-    </div>;
+    </div>
+  );
 }
-

@@ -1,5 +1,5 @@
-﻿import { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Loader2, AlertCircle, MousePointerClick, Send, Trash2, HardDrive, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ReactivateGalleryDialog } from '@/components/ReactivateGalleryDialog';
@@ -49,8 +49,8 @@ function TransferStorageIndicator() {
       <p className="text-xs text-muted-foreground flex items-center gap-1.5">
         <HardDrive className="h-3.5 w-3.5" />
         {formatStorageSize(storageUsedBytes)} de {formatStorageSize(storageLimitBytes)} usados
-        {planName && <span>Â· {planName}</span>}
-        {!hasTransferPlan && hasFreeStorageOnly && <span>Â· Gratuito</span>}
+        {planName && <span>· {planName}</span>}
+        {!hasTransferPlan && hasFreeStorageOnly && <span>· Gratuito</span>}
         {storageUsedPercent >= 100 && (
           <span className="ml-1 inline-flex items-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold text-destructive-foreground">Cheio</span>
         )}
@@ -152,10 +152,32 @@ function transformSupabaseToLocal(galeria: Galeria): Gallery & { tipo: 'selecao'
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'select' | 'deliver'>('select');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<'select' | 'deliver'>(() => {
+    if (tabParam === 'transfer' || tabParam === 'deliver' || location.state?.tab === 'transfer' || location.state?.tab === 'deliver') {
+      return 'deliver';
+    }
+    return 'select';
+  });
+
+  useEffect(() => {
+    if (tabParam === 'transfer' || tabParam === 'deliver' || location.state?.tab === 'transfer' || location.state?.tab === 'deliver') {
+      setActiveTab('deliver');
+    } else if (tabParam === 'select' || location.state?.tab === 'select') {
+      setActiveTab('select');
+    }
+  }, [tabParam, location.state]);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value as 'select' | 'deliver');
+    const nextTab = value as 'select' | 'deliver';
+    setActiveTab(nextTab);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', nextTab === 'deliver' ? 'transfer' : 'select');
+      return next;
+    }, { replace: true });
   };
   const [search, setSearch] = useState('');
   const [selectStatusFilter, setSelectStatusFilter] = useState<GalleryStatus | 'all'>('all');
@@ -368,7 +390,7 @@ export default function Dashboard() {
         {/* ===== SELECT TAB ===== */}
         <TabsContent value="select" className="space-y-5 mt-4">
           <p className="text-sm text-muted-foreground">
-            {selectStats.total} galerias Â· {selectStats.inProgress} em seleção Â· {selectStats.completed} concluídas Â· {selectStats.expired} expiradas
+            {selectStats.total} galerias · {selectStats.inProgress} em seleção · {selectStats.completed} concluídas · {selectStats.expired} expiradas
           </p>
 
           <div className="flex flex-col md:flex-row gap-4">
@@ -480,7 +502,7 @@ export default function Dashboard() {
         {/* ===== TRANSFER TAB ===== */}
         <TabsContent value="deliver" className="space-y-5 mt-4">
           <p className="text-sm text-muted-foreground">
-            {deliverStats.total} transfers Â· {deliverStats.published} publicadas Â· {deliverStats.expired} expiradas
+            {deliverStats.total} transfers · {deliverStats.published} publicadas · {deliverStats.expired} expiradas
           </p>
           <TransferStorageIndicator />
 
