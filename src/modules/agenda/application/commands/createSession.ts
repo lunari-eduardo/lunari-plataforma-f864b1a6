@@ -9,7 +9,7 @@ const Input = z.object({
   clienteId: z.string().optional().describe("ID do cliente no CRM se existir"),
   date: IsoDateSchema.describe("Data da sessão no formato YYYY-MM-DD"),
   time: TimeSchema.describe("Horário de início no formato HH:mm"),
-  durationMinutes: z.number().int().positive().optional().default(60).describe("Duração estimada da sessão em minutos"),
+  durationMinutes: z.number().int().nonnegative().optional().default(0).describe("Duração estimada da sessão em minutos"),
   type: z.string().optional().default("Sessão").describe("Tipo de ensaio (ex: 'Ensaio Gestante', 'Casamento', 'Família', 'Parto', 'Corporativo')"),
   packageId: z.string().optional().describe("ID do pacote se houver"),
   description: z.string().optional().describe("Observações da sessão"),

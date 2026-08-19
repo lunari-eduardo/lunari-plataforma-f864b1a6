@@ -41,7 +41,7 @@ export const AppointmentSchema = z.object({
   time: TimeSchema,
   type: z.string(),
   agendaType: AgendaItemTypeSchema.optional(),
-  durationMinutes: z.number().int().positive().optional(),
+  durationMinutes: z.number().int().nonnegative().optional(),
   location: z.string().optional(),
   client: z.string(),
   status: AppointmentStatusSchema,

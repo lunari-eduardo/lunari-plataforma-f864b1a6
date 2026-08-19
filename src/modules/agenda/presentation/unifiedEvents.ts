@@ -42,7 +42,7 @@ export function useUnifiedEventsRangeQuery(
         (appointment.type === 'personal' || appointment.type === 'pessoal' ? 'personal' : 
          appointment.type === 'meeting' || appointment.type === 'reuniao' ? 'meeting' : 'session');
 
-      const durationMinutes = Number(appointment.durationMinutes) || 60;
+      const durationMinutes = appointment.durationMinutes !== undefined ? Number(appointment.durationMinutes) : 0;
 
       const legacy: LegacyAppointment = {
         id: appointment.id,
