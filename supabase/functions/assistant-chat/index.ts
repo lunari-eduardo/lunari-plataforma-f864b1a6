@@ -225,19 +225,42 @@ Deno.serve(async (req) => {
     return json({ error: msg }, 500);
   }
 
+  // Sanitizador recursivo para Gemini: garante que arrays sempre tenham `items` definido
+  function sanitizeJsonSchemaForGemini(schema: any): any {
+    if (!schema || typeof schema !== "object") return schema;
+    if (Array.isArray(schema)) return schema.map(sanitizeJsonSchemaForGemini);
+
+    const result: Record<string, any> = { ...schema };
+    if (result.type === "array" && !result.items) {
+      result.items = { type: "string" };
+    }
+    if (result.properties && typeof result.properties === "object") {
+      const props: Record<string, any> = {};
+      for (const [key, val] of Object.entries(result.properties)) {
+        props[key] = sanitizeJsonSchemaForGemini(val);
+      }
+      result.properties = props;
+    }
+    if (result.items && typeof result.items === "object") {
+      result.items = sanitizeJsonSchemaForGemini(result.items);
+    }
+    return result;
+  }
+
   // --- Adapt tools (client → AI SDK). Sem `execute` → cliente resolve. ---
   // IMPORTANTE: `inputSchema` precisa do helper `jsonSchema()` do AI SDK 5.
   // Um objeto cru cai no caminho Zod e quebra em `parseDef` (typeName undefined).
   const tools: Record<string, any> = {};
   for (const decl of body.tools ?? []) {
     if (!decl?.name) continue;
-    const params =
+    const rawParams =
       decl.parameters && typeof decl.parameters === "object"
         ? decl.parameters
         : { type: "object", properties: {} };
+    const sanitizedParams = sanitizeJsonSchemaForGemini(rawParams);
     tools[decl.name] = {
       description: buildToolDescription(decl),
-      inputSchema: jsonSchema(params as any),
+      inputSchema: jsonSchema(sanitizedParams as any),
     };
   }
 

@@ -5,6 +5,41 @@ import { supabaseTasksRepo } from "../../infrastructure/supabase/tasksRepo";
 import { tasksStore } from "../../presentation/store/tasksStore";
 import { resolveUserId } from "../_auth";
 
+const ChecklistItemSchema = z.object({
+  id: z.string().optional(),
+  text: z.string(),
+  completed: z.boolean().default(false),
+  createdAt: z.string().optional(),
+});
+
+const AttachmentSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  type: z.enum(["document", "image", "text"]).optional(),
+  url: z.string().optional(),
+  content: z.string().optional(),
+  uploadedAt: z.string().optional(),
+  size: z.number().optional(),
+  mimeType: z.string().optional(),
+});
+
+const CaptionSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional(),
+  content: z.string(),
+  hashtags: z.array(z.string()).optional(),
+  createdAt: z.string().optional(),
+  platform: z.enum(["instagram", "facebook", "general"]).optional(),
+  characterCount: z.number().optional(),
+});
+
+const TextBlockSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional(),
+  content: z.string(),
+  order: z.number().optional(),
+});
+
 const Input = z.object({
   title: z.string().min(1, "Título obrigatório").max(200),
   description: z.string().optional(),
@@ -20,12 +55,12 @@ const Input = z.object({
   source: z.enum(["user", "automation", "ai"]).default("user"),
   // seções e payloads específicos
   activeSections: z.array(z.enum(["basic", "checklist", "content", "document"])).optional(),
-  checklistItems: z.array(z.any()).optional(),
+  checklistItems: z.array(ChecklistItemSchema).optional(),
   callToAction: z.string().optional(),
   socialPlatforms: z.array(z.string()).optional(),
-  attachments: z.array(z.any()).optional(),
-  captions: z.array(z.any()).optional(),
-  textBlocks: z.array(z.any()).optional(),
+  attachments: z.array(AttachmentSchema).optional(),
+  captions: z.array(CaptionSchema).optional(),
+  textBlocks: z.array(TextBlockSchema).optional(),
   notes: z.string().optional(),
   estimatedHours: z.number().nonnegative().optional(),
 });
