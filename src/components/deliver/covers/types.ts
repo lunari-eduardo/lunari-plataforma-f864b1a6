@@ -13,6 +13,8 @@ export interface CoverVariantProps {
   sessionFont?: string;
   titleCaseMode?: TitleCaseMode;
   isDark?: boolean;
+  textColor?: string;
+  textOverlayColor?: string;
   primaryColor?: string;
   onEnter: () => void;
 }

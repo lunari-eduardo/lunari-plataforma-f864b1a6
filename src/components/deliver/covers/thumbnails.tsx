@@ -37,25 +37,22 @@ export const SplitThumbnail: ComponentType<Props> = ({ className }) => (
 
 export const EditorialThumbnail: ComponentType<Props> = ({ className }) => (
   <Frame className={className}>
-    {/* Top bar info */}
-    <rect x="10" y="8" width="22" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
-    <rect x="10" y="12" width="6" height="1" fill="hsl(var(--foreground))" opacity="0.25" />
-    <rect x="142" y="8" width="8" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
-    <rect x="144" y="12" width="6" height="1" fill="hsl(var(--foreground))" opacity="0.25" />
+    {/* Photo frame on right with clean editorial ratio */}
+    <rect x="76" y="10" width="74" height="72" fill="hsl(var(--foreground))" opacity="0.22" rx="1" />
 
-    {/* Photo frame on right */}
-    <rect x="74" y="16" width="76" height="66" fill="hsl(var(--foreground))" opacity="0.22" />
-
-    {/* Big typography overlapping */}
-    <rect x="10" y="44" width="76" height="9" fill="hsl(var(--foreground))" opacity="0.8" />
-    <rect x="10" y="55" width="86" height="9" fill="hsl(var(--foreground))" opacity="0.8" />
+    {/* Big dominant typography crossing into the photo */}
+    {/* Outside photo (dark) */}
+    <rect x="10" y="38" width="66" height="8.5" fill="hsl(var(--foreground))" opacity="0.85" />
+    <rect x="10" y="49" width="66" height="8.5" fill="hsl(var(--foreground))" opacity="0.85" />
+    {/* Inside photo (light overlap) */}
+    <rect x="76" y="38" width="22" height="8.5" fill="hsl(var(--background))" opacity="0.9" />
+    <rect x="76" y="49" width="30" height="8.5" fill="hsl(var(--background))" opacity="0.9" />
 
     {/* Subtitle */}
-    <rect x="10" y="68" width="26" height="2" fill="hsl(var(--foreground))" opacity="0.4" />
-    <rect x="10" y="72" width="8" height="1" fill="hsl(var(--foreground))" opacity="0.25" />
+    <rect x="10" y="64" width="24" height="2" fill="hsl(var(--foreground))" opacity="0.4" />
 
-    {/* Bottom date and CTA */}
-    <rect x="10" y="90" width="30" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
-    <rect x="122" y="90" width="28" height="2" fill="hsl(var(--foreground))" opacity="0.5" />
+    {/* Bottom date and minimal CTA */}
+    <rect x="10" y="88" width="34" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
+    <rect x="120" y="88" width="30" height="2" fill="hsl(var(--foreground))" opacity="0.55" />
   </Frame>
 );
