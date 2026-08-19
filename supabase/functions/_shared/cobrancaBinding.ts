@@ -12,6 +12,7 @@ export type CobrancaFinalidade = "sessao" | "fotos_extras" | "sessao_e_extras";
 export interface RawBindingInput {
   finalidade?: CobrancaFinalidade | string | null;
   galeriaId?: string | null;
+  sessionId?: string | null;
   qtdFotos?: number | null;
   snapshotFotosIncluidas?: number | null;
   correlationId?: string | null;
@@ -57,7 +58,7 @@ export interface BindingError {
 
 /**
  * Valida o body recebido pela edge function, checa ownership da galeria
- * (quando finalidade='fotos_extras') e devolve as colunas prontas para o INSERT.
+ * (quando finalidade='fotos_extras' e galeriaId informado) e devolve as colunas prontas para o INSERT.
  *
  * Compat: se `finalidade` vier `undefined`/`null`, assume `'sessao'` para não
  * quebrar callers antigos.
@@ -69,14 +70,6 @@ export async function resolveCobrancaBinding(
   raw: RawBindingInput,
   /**
    * Whitelist de finalidades aceitas pelo caller.
-   *
-   * CONTRATO Gestão↔Gallery (2026-07-12):
-   *   - `sessao` e `sessao_e_extras` são criadas pelo Gestão (fluxo "Cobrar tudo"
-   *     em UM link único). O componente de extras é validado contra a RPC
-   *     canônica `calculate_gallery_extra_payment` pelos guards downstream.
-   *   - `fotos_extras` PURA continua EXCLUSIVA da edge canônica do Gallery
-   *     (`gallery-create-payment`). Nenhuma edge do Gestão passa essa finalidade
-   *     na whitelist — o default abaixo já a rejeita.
    */
   allowedFinalidades: CobrancaFinalidade[] = ["sessao", "sessao_e_extras"],
 ): Promise<{ binding?: ResolvedBinding; error?: BindingError }> {
@@ -102,8 +95,6 @@ export async function resolveCobrancaBinding(
         code: "INVALID_FINALIDADE",
         message:
           `Finalidade '${finalidadeRaw}' não é permitida neste endpoint. ` +
-          `Cobrança de fotos extras deve ser criada via edge canônica do Gallery ` +
-          `(POST /functions/v1/gallery-create-payment). ` +
           `Aceitas aqui: ${allowedFinalidades.join(", ")}.`,
         details: { allowedFinalidades, received: finalidadeRaw },
       },
@@ -126,13 +117,13 @@ export async function resolveCobrancaBinding(
     };
   }
 
-  // fotos_extras OR sessao_e_extras → galeriaId + qtdFotos obrigatórios
-  if (!raw.galeriaId) {
+  // fotos_extras OR sessao_e_extras → galeriaId ou sessionId obrigatório
+  if (!raw.galeriaId && !raw.sessionId) {
     return {
       error: {
         code: "MISSING_GALLERY_BINDING",
         message:
-          "Cobrança de fotos extras exige galeriaId. Vincule a galeria antes de cobrar.",
+          "Cobrança de fotos extras exige galeriaId ou sessionId. Vincule a galeria ou sessão antes de cobrar.",
       },
     };
   }
@@ -147,29 +138,33 @@ export async function resolveCobrancaBinding(
     };
   }
 
-  // Confirma ownership: a galeria precisa pertencer ao mesmo usuário.
-  const { data: gal, error: galErr } = await supabase
-    .from("galerias")
-    .select("id, user_id")
-    .eq("id", raw.galeriaId)
-    .maybeSingle();
+  let galId: string | null = null;
+  if (raw.galeriaId) {
+    // Confirma ownership: a galeria precisa pertencer ao mesmo usuário.
+    const { data: gal, error: galErr } = await supabase
+      .from("galerias")
+      .select("id, user_id")
+      .eq("id", raw.galeriaId)
+      .maybeSingle();
 
-  if (galErr || !gal) {
-    return {
-      error: {
-        code: "GALLERY_NOT_FOUND",
-        message: "Galeria não encontrada.",
-      },
-    };
-  }
+    if (galErr || !gal) {
+      return {
+        error: {
+          code: "GALLERY_NOT_FOUND",
+          message: "Galeria não encontrada.",
+        },
+      };
+    }
 
-  if (gal.user_id !== userId) {
-    return {
-      error: {
-        code: "GALLERY_FORBIDDEN",
-        message: "Esta galeria não pertence ao usuário autenticado.",
-      },
-    };
+    if (gal.user_id !== userId) {
+      return {
+        error: {
+          code: "GALLERY_FORBIDDEN",
+          message: "Esta galeria não pertence ao usuário autenticado.",
+        },
+      };
+    }
+    galId = gal.id;
   }
 
   const snapshot_fotos_incluidas =
@@ -181,7 +176,7 @@ export async function resolveCobrancaBinding(
     return {
       binding: {
         finalidade: "fotos_extras",
-        galeria_id: gal.id,
+        galeria_id: galId,
         qtd_fotos: Math.trunc(qtd),
         snapshot_fotos_incluidas,
         correlation_id,
@@ -191,20 +186,20 @@ export async function resolveCobrancaBinding(
     };
   }
 
-  // finalidade === 'sessao_e_extras' → componentes obrigatórios
-  const vSessao = Number(raw.valorSessaoComponente ?? NaN);
+  // finalidade === 'sessao_e_extras' → componentes (vSessao pode ser 0 para extras_only)
+  const vSessao = Number(raw.valorSessaoComponente ?? 0);
   const vExtras = Number(raw.valorExtrasComponente ?? NaN);
   const vTotal = Number(raw.valorTotal ?? NaN);
 
   if (
-    !Number.isFinite(vSessao) || vSessao <= 0 ||
+    !Number.isFinite(vSessao) || vSessao < 0 ||
     !Number.isFinite(vExtras) || vExtras <= 0
   ) {
     return {
       error: {
         code: "MISSING_COMBINED_BREAKDOWN",
         message:
-          "Cobrança combinada exige valorSessaoComponente e valorExtrasComponente maiores que zero.",
+          "Cobrança combinada exige valorExtrasComponente maior que zero e valorSessaoComponente não-negativo.",
       },
     };
   }
@@ -226,7 +221,7 @@ export async function resolveCobrancaBinding(
   return {
     binding: {
       finalidade: "sessao_e_extras",
-      galeria_id: gal.id,
+      galeria_id: galId,
       qtd_fotos: Math.trunc(qtd),
       snapshot_fotos_incluidas,
       correlation_id,

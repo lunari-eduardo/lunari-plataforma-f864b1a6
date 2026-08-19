@@ -282,52 +282,28 @@ export function CombinedChargeModal({
     if (invalid) return;
     setAsaasLinkLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error('Não autenticado');
-
-      const chargeOverrides = {
-        repassarTaxasProcessamento: overrideRepassarTaxas,
-        anteciparParcelas: overrideAntecipar,
-        repassarTaxaAntecipacao: overrideAntecipar ? overrideRepassarAntecipacao : false,
-      };
-
-      const insertPayload: Record<string, unknown> = {
-        user_id: session.user.id,
-        cliente_id: clienteId,
-        session_id: sessionId,
+      const response = await createLinkCharge({
+        clienteId,
+        sessionId,
         valor: valorTotal,
-        descricao: descricao?.trim() || 'Cobrança Asaas (sessão + extras)',
-        tipo_cobranca: 'link',
+        descricao: descricao?.trim() || undefined,
+        tipoCobranca: 'link',
         provedor: 'asaas',
-        status: 'pendente',
-        dados_extras: chargeOverrides,
-        finalidade: 'sessao_e_extras',
-        galeria_id: galeriaId ?? null,
-        qtd_fotos: qtdFotosExtras,
-        snapshot_fotos_incluidas: snapshotFotosIncluidas ?? null,
-        valor_sessao_componente: valorSessaoComponente,
-        valor_extras_componente: valorExtrasComponente,
-        correlation_id: crypto.randomUUID(),
-      };
+        ...commonBinding,
+      });
 
-      const { data: cobranca, error: insertError } = await supabase
-        .from('cobrancas')
-        .insert(insertPayload as any)
-        .select('id')
-        .single();
-
-      if (insertError || !cobranca) throw new Error(insertError?.message || 'Erro ao criar cobrança');
-
-      const checkoutUrl = `${getPublicShareBaseUrl()}/checkout/${cobranca.id}`;
-      setResult({
-        success: true,
-        provedor: 'asaas',
-        paymentLink: checkoutUrl,
-        checkoutUrl,
-      } as CobrancaResponse);
-      setCurrentChargeId(cobranca.id);
+      if (!response?.success) {
+        toast.error(response?.error || 'Falha ao gerar link Asaas.');
+        return;
+      }
+      setResult(response);
+      if (response.cobranca?.id || response.cobrancaId) {
+        setCurrentChargeId(response.cobranca?.id || response.cobrancaId || null);
+      }
       setAsaasMode('link');
       queryClient.invalidateQueries({ queryKey: ['cobrancas'] });
+      const link = response.checkoutUrl || response.paymentLink;
+      if (link) window.open(link, '_blank', 'noopener,noreferrer');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao gerar link Asaas.');
     } finally {

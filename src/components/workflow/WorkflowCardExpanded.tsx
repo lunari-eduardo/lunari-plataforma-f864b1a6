@@ -547,12 +547,12 @@ export function WorkflowCardExpanded({
             session={session}
             onCobrar={() => setShowChargeModal(true)}
             onCobrarExtras={() => {
-              // Com galeria: fluxo canônico Gallery (ExtraChargeModal).
-              // Sem galeria: usa CombinedChargeModal com intenção "só extras"
-              // — nunca soma sessão junto, mesmo se sessão estiver pendente.
-              if (resolvedGalleryId) {
+              // Se tiver galeria com saldo calculado na própria galeria, usa o modal canônico de galeria
+              if (resolvedGalleryId && extraCalc && extraCalc.valor_a_cobrar > 0) {
                 setShowExtraChargeModal(true);
               } else {
+                // Sem galeria OU extras inseridos manualmente na sessão do workflow:
+                // usa CombinedChargeModal com intenção "só extras" (sessão = 0, extras = extrasPendente)
                 setCombinedIntent("extras_only");
                 setShowCombinedChargeModal(true);
               }

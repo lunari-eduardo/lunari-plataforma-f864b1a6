@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
       {
         finalidade: body.finalidade,
         galeriaId: body.galeriaId,
+        sessionId: body.sessionId,
         qtdFotos: body.qtdFotos,
         snapshotFotosIncluidas: body.snapshotFotosIncluidas,
         correlationId: body.correlationId,
@@ -94,13 +95,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: false, error: bindingError?.message, code: bindingError?.code, details: bindingError?.details }, 400);
     }
 
-    // Guardas anti-overcharge em fotos extras
-    if (binding.finalidade === "fotos_extras" && binding.galeria_id) {
+    // Guardas anti-overcharge em fotos extras (apenas quando a galeria já tiver cálculo formal consolidado e não for override de sessão)
+    if (binding.finalidade === "fotos_extras" && binding.galeria_id && !sessionId) {
       const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, valor);
       if (guard.error) {
         return jsonResponse({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }, 400);
       }
-    } else if (binding.finalidade === "sessao_e_extras" && binding.galeria_id && binding.valor_extras_componente) {
+    } else if (binding.finalidade === "sessao_e_extras" && binding.galeria_id && binding.valor_extras_componente && !sessionId) {
       const guard = await assertExtraPaymentWithinIdeal(supabase, binding.galeria_id, binding.valor_extras_componente);
       if (guard.error) {
         return jsonResponse({ success: false, error: guard.error.message, code: guard.error.code, details: guard.error.details }, 400);

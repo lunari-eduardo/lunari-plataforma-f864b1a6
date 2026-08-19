@@ -397,6 +397,39 @@ export default function SessionPanel({
     }
   };
 
+  // Realtime subscription para auto-atualizar status do appointment no painel aberto
+  useEffect(() => {
+    if (!open || !appointment?.id) return;
+    
+    const channel = supabase
+      .channel(`session-panel-appointment-${appointment.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `id=eq.${appointment.id}`,
+        },
+        (payload) => {
+          const newStatus = (payload.new as any)?.status as AppointmentStatus;
+          if (newStatus && (newStatus === 'confirmado' || newStatus === 'a confirmar')) {
+            setForm(prev => {
+              if (prev.status !== newStatus) {
+                return { ...prev, status: newStatus };
+              }
+              return prev;
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, appointment?.id]);
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -406,14 +439,28 @@ export default function SessionPanel({
       const resolved = await resolveClient();
       if (!resolved) return;
 
+      // Blindagem: Se for edição, checar se o status no banco já virou 'confirmado' (via webhook de pagamento)
+      let effectiveStatus = form.status;
+      if (isEdit && appointment?.id && effectiveStatus !== 'confirmado') {
+        const { data: currentDb } = await supabase
+          .from('appointments')
+          .select('status')
+          .eq('id', appointment.id)
+          .maybeSingle();
+        if (currentDb?.status === 'confirmado') {
+          effectiveStatus = 'confirmado';
+          setForm(prev => ({ ...prev, status: 'confirmado' }));
+        }
+      }
+
       await guard({
         date: parsedDate,
         time: finalTime,
-        status: form.status,
+        status: effectiveStatus,
         ignoreAppointmentId: appointment?.id,
-        silentOnPending: form.status !== 'confirmado',
+        silentOnPending: effectiveStatus !== 'confirmado',
         exec: async () => {
-          const next = { ...form, date: parsedDate, time: finalTime };
+          const next = { ...form, status: effectiveStatus, date: parsedDate, time: finalTime };
           setForm(next);
           await onSave(buildPayload(next, resolved));
 
@@ -1055,7 +1102,7 @@ export default function SessionPanel({
       {showCharge && form.clienteId && (
         <ChargeModal
           isOpen={showCharge}
-          onClose={() => { setShowCharge(false); setChargeSessionId(null); }}
+          onClose={() => { setShowCharge(false); }}
           clienteId={form.clienteId}
           clienteNome={clientDisplayName}
           clienteWhatsapp={cliente?.telefone}
