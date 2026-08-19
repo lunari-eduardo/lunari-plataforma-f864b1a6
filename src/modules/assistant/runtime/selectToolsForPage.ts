@@ -32,7 +32,7 @@ const PAGE_MODULES: Record<string, string[]> = {
 /** Módulos que a Lu deve enxergar em qualquer página. */
 const ALWAYS_ON = ["workflow", "clientes", "agenda", "tasks"];
 
-export const MAX_TOOLS_PER_TURN = 60;
+export const MAX_TOOLS_PER_TURN = 120;
 
 function moduleOf(id: string): string {
   return id.split(".")[0] ?? "";

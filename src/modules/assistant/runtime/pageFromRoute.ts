@@ -5,16 +5,18 @@ import type { LunariPage } from "@/shared/ai";
  * Usado para montar o system prompt/snapshot contextual da Lu.
  */
 export function pageFromRoute(pathname: string): LunariPage {
-  const p = pathname.toLowerCase();
-  if (p.startsWith("/app/workflow") || p === "/app" || p === "/app/") return "workflow";
-  if (p.startsWith("/app/tarefas") || p.startsWith("/app/tasks")) return "tasks";
-  if (p.startsWith("/app/agenda")) return "agenda";
-  if (p.startsWith("/app/financ")) return "finance";
-  if (p.startsWith("/app/plano") || p.startsWith("/app/billing") || p.startsWith("/app/assinatura")) return "billing";
-  if (p.startsWith("/app/galeria") || p.startsWith("/app/gallery")) return "gallery";
-  if (p.startsWith("/app/cliente") || p.startsWith("/app/crm") || p.startsWith("/app/leads")) return "clientes";
-  if (p.startsWith("/app/formulario") || p.startsWith("/app/briefing")) return "formularios";
-  if (p.startsWith("/app/contrato")) return "contratos";
-  if (p.startsWith("/app/config")) return "configuracoes";
+  const p = pathname.toLowerCase().replace(/^\/app/, "");
+  if (p.startsWith("/workflow")) return "workflow";
+  if (p.startsWith("/tarefas") || p.startsWith("/tasks")) return "tasks";
+  if (p.startsWith("/agenda")) return "agenda";
+  if (p.startsWith("/financ")) return "finance";
+  if (p.startsWith("/precificacao") || p.startsWith("/pricing")) return "precificacao";
+  if (p.startsWith("/plano") || p.startsWith("/billing") || p.startsWith("/assinatura")) return "billing";
+  if (p.startsWith("/galeria") || p.startsWith("/gallery")) return "gallery";
+  if (p.startsWith("/cliente") || p.startsWith("/crm")) return "clientes";
+  if (p.startsWith("/leads") || p.startsWith("/comercial")) return "leads";
+  if (p.startsWith("/formulario") || p.startsWith("/briefing")) return "formularios";
+  if (p.startsWith("/contrato")) return "contratos";
+  if (p.startsWith("/config") || p.startsWith("/integracoes") || p.startsWith("/minha-conta")) return "configuracoes";
   return "workflow";
 }
