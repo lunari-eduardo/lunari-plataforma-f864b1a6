@@ -33,6 +33,7 @@ export default function PacoteForm({
     valor_base: initialData?.valor_base || 0,
     valor_foto_extra: initialData?.valor_foto_extra || 0,
     fotos_incluidas: initialData?.fotos_incluidas || 0,
+    duracao_minutos: initialData?.duracao_minutos ?? 0,
     produtosIncluidos: initialData?.produtosIncluidos || []
   });
 
@@ -68,6 +69,13 @@ export default function PacoteForm({
       if (errors.fotos_incluidas) {
         setErrors(prev => ({ ...prev, fotos_incluidas: '' }));
       }
+    }
+  });
+
+  const duracaoMinutosInput = useNumberInput({
+    value: formData.duracao_minutos ?? 0,
+    onChange: (value) => {
+      setFormData(prev => ({ ...prev, duracao_minutos: Math.max(0, parseInt(value) || 0) }));
     }
   });
 
@@ -275,6 +283,67 @@ export default function PacoteForm({
           {errors.fotos_incluidas && (
             <span className="text-2xs text-destructive">{errors.fotos_incluidas}</span>
           )}
+        </div>
+      </div>
+
+      {/* Bloco 2.5 — Duração / Tempo de Sessão na Agenda */}
+      <div className="bg-card/40 border border-border/60 rounded-lg p-3 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="duracao_minutos" className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <span>Tempo de sessão na agenda</span>
+              {(formData.duracao_minutos ?? 0) > 0 ? (
+                <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 text-emerald-500 border-emerald-500/30">
+                  {formData.duracao_minutos} min
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 text-muted-foreground border-border">
+                  Desativado (0 min)
+                </Badge>
+              )}
+            </Label>
+          </div>
+          <div className="flex items-center gap-1">
+            {[0, 30, 45, 60, 90, 120].map((dur) => (
+              <button
+                key={dur}
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, duracao_minutos: dur }))}
+                className={cn(
+                  "px-2 py-0.5 text-2xs rounded border transition-colors",
+                  (formData.duracao_minutos ?? 0) === dur
+                    ? "bg-primary text-primary-foreground border-primary font-medium"
+                    : "bg-muted/30 text-muted-foreground hover:text-foreground border-border/40 hover:bg-muted/60"
+                )}
+              >
+                {dur === 0 ? "Sem tempo" : dur >= 60 && dur % 60 === 0 ? `${dur / 60}h` : `${dur}m`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="w-32">
+            <div className="relative">
+              <Input
+                id="duracao_minutos"
+                type="number"
+                step="5"
+                min="0"
+                value={duracaoMinutosInput.displayValue}
+                onChange={duracaoMinutosInput.handleChange}
+                onFocus={duracaoMinutosInput.handleFocus}
+                placeholder="0"
+                className="h-8 text-sm pr-10"
+              />
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-2xs text-muted-foreground pointer-events-none">
+                min
+              </span>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed flex-1">
+            Serve apenas para controle de horários na agenda. Se zerado ou desativado, o agendamento ocupará apenas o horário exato registrado na agenda, dando liberdade ao fotógrafo agendar de 10 em 10 min se quiser.
+          </p>
         </div>
       </div>
 

@@ -73,7 +73,7 @@ export const useSlotAvailabilityCheck = () => {
           title: app.title,
           date: toISODate(appDate),
           time: normalizeHHmm(app.time),
-          durationMinutes: app.durationMinutes ? Number(app.durationMinutes) : 60,
+          durationMinutes: app.durationMinutes !== undefined ? Number(app.durationMinutes) : 0,
           type: app.type ?? '',
           client: app.client ?? '',
           status: app.status as DomainAppointment['status'],
@@ -87,7 +87,7 @@ export const useSlotAvailabilityCheck = () => {
       const result = classifySlot(domainAppointments, domainAvailability, {
         date: wantedDate,
         time: wantedTime,
-        durationMinutes: durationMinutes ? Number(durationMinutes) : 60,
+        durationMinutes: durationMinutes !== undefined ? Number(durationMinutes) : 0,
         excludeAppointmentId: ignoreAppointmentId,
       });
 

@@ -25,15 +25,18 @@ export function minutesToTime(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/** Calcula horário final somando duração em minutos (ex: "15:00" + 180 -> "18:00"). */
+/** Calcula horário final somando duração em minutos (ex: "15:00" + 180 -> "18:00"). Se duration <= 0, retorna o próprio startTime. */
 export function getEventEndTime(startTime: string, durationMinutes: number = 60): string {
+  const dur = typeof durationMinutes === 'number' ? durationMinutes : 60;
+  if (dur <= 0) return startTime;
   const startMin = timeToMinutes(startTime);
-  return minutesToTime(startMin + (durationMinutes || 60));
+  return minutesToTime(startMin + dur);
 }
 
 /**
  * Verifica se um slot específico ("HH:mm") está coberto por um evento que
  * inicia em `eventStartTime` com duração `durationMinutes`.
+ * Se `durationMinutes <= 0`, cobre apenas o horário exato de início (`slotTime === eventStartTime`).
  * Ex: slot "16:00" está coberto por evento das "15:00" com 180 min (15:00 - 18:00).
  */
 export function isSlotCoveredByEvent(
@@ -41,14 +44,19 @@ export function isSlotCoveredByEvent(
   eventStartTime: string,
   durationMinutes: number = 60
 ): boolean {
+  const dur = typeof durationMinutes === 'number' ? durationMinutes : 60;
+  if (dur <= 0) {
+    return slotTime === eventStartTime;
+  }
   const slotMin = timeToMinutes(slotTime);
   const startMin = timeToMinutes(eventStartTime);
-  const endMin = startMin + (durationMinutes || 60);
+  const endMin = startMin + dur;
   return slotMin >= startMin && slotMin < endMin;
 }
 
 /**
  * Verifica se dois intervalos de horário se sobrepõem na mesma data.
+ * Se uma duração for 0, é tratada como um ponto no tempo.
  */
 export function doIntervalsOverlap(
   timeA: string,
@@ -56,10 +64,25 @@ export function doIntervalsOverlap(
   timeB: string,
   durationB: number = 60
 ): boolean {
+  const durA = typeof durationA === 'number' ? durationA : 60;
+  const durB = typeof durationB === 'number' ? durationB : 60;
   const startA = timeToMinutes(timeA);
-  const endA = startA + (durationA || 60);
   const startB = timeToMinutes(timeB);
-  const endB = startB + (durationB || 60);
+
+  if (durA <= 0 && durB <= 0) {
+    return startA === startB;
+  }
+  if (durA <= 0) {
+    const endB = startB + durB;
+    return startA >= startB && startA < endB;
+  }
+  if (durB <= 0) {
+    const endA = startA + durA;
+    return startB >= startA && startB < endA;
+  }
+
+  const endA = startA + durA;
+  const endB = startB + durB;
   return startA < endB && startB < endA;
 }
 
@@ -72,12 +95,12 @@ export function findConflicts(
   slot: SlotKey & { durationMinutes?: number },
   options: { excludeId?: string; onlyConfirmed?: boolean } = {},
 ): Appointment[] {
-  const targetDuration = slot.durationMinutes || 60;
+  const targetDuration = slot.durationMinutes !== undefined ? slot.durationMinutes : 60;
   return appointments.filter((a) => {
     if (options.excludeId && a.id === options.excludeId) return false;
     if (options.onlyConfirmed && a.status !== "confirmado") return false;
     if (a.date !== slot.date) return false;
-    const appDuration = a.durationMinutes || 60;
+    const appDuration = a.durationMinutes !== undefined ? a.durationMinutes : 60;
     return doIntervalsOverlap(a.time, appDuration, slot.time, targetDuration);
   });
 }

@@ -268,6 +268,9 @@ export default function SessionPanel({
   const buildPayload = (state: PanelFormState, resolved: { clienteId: string; nome: string }) => {
     const pkg = pacotes.find((p: any) => p.id === state.packageId) as any;
     const categoryLabel = pkg?.categorias?.nome || pkg?.categoria || state.categoria || 'Sessão';
+    const duracaoMinutos = (pkg?.duracao_minutos !== undefined && pkg?.duracao_minutos !== null)
+      ? Number(pkg.duracao_minutos)
+      : (isEdit ? (appointment?.durationMinutes ?? 0) : 0);
     const base = {
       date: isEdit ? formatDateForStorage(state.date) : state.date,
       time: state.time,
@@ -280,6 +283,7 @@ export default function SessionPanel({
       description: state.description,
       packageId: state.packageId,
       paidAmount: state.paidAmount,
+      durationMinutes: duracaoMinutos,
     };
     if (isEdit) return { ...base, id: appointment!.id };
     return {
@@ -751,41 +755,10 @@ export default function SessionPanel({
               </div>
             </PanelSection>
 
-            {/* ------------------------------ FINANCEIRO ------------------------------- */}
-            <PanelSection icon={DollarSign} title="Financeiro">
-              <PanelField label="Entrada" htmlFor="sp-entrada">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    R$
-                  </span>
-                  <Input
-                    id="sp-entrada"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={cobrarAoSalvar ? '' : paidInput.displayValue}
-                    onChange={paidInput.handleChange}
-                    onFocus={paidInput.handleFocus}
-                    placeholder={cobrarAoSalvar ? 'Desativado (cobrança ao salvar ativa)' : '0,00'}
-                    disabled={cobrarAoSalvar}
-                    className={cn(
-                      'h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity',
-                      cobrarAoSalvar && 'opacity-50 cursor-not-allowed bg-muted/30',
-                    )}
-                  />
-                </div>
-                {cobrarAoSalvar && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Entrada manual desativada pois <strong className="font-medium text-foreground">"Cobrar ao salvar"</strong> está ativo.
-                  </p>
-                )}
-              </PanelField>
-            </PanelSection>
-
-            {/* ------------------------------- COBRANÇA -------------------------------- */}
+            {/* ------------------------------ FINANCEIRO UNIFICADO ------------------------------- */}
             <PanelSection
-              icon={CreditCard}
-              title="Cobrança"
+              icon={DollarSign}
+              title="Financeiro"
               action={
                 isEdit && form.clienteId ? (
                   <Button
@@ -800,153 +773,213 @@ export default function SessionPanel({
                 ) : undefined
               }
             >
-              {!isEdit ? (
+              <div className="space-y-4">
+                {/* 1. Registro de entrada manual */}
                 <div className="space-y-2">
-                  <label
-                    htmlFor="sp-cobrar-ao-salvar"
-                    className={cn(
-                      'flex items-start justify-between gap-3',
-                      form.paidAmount > 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
-                    )}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm text-foreground">Cobrar ao salvar</span>
-                      <span className="block text-[11px] text-muted-foreground">
-                        Abre o link de cobrança logo após criar. A sessão é confirmada
-                        automaticamente quando o pagamento for aprovado.
-                      </span>
-                    </span>
-                    <Switch
-                      id="sp-cobrar-ao-salvar"
-                      checked={cobrarAoSalvar}
-                      disabled={form.paidAmount > 0}
-                      onCheckedChange={handleCobrarAoSalvarChange}
-                    />
+                  <label htmlFor="sp-entrada" className="block text-xs font-semibold text-foreground">
+                    Registro de entrada manual
                   </label>
-                  {form.paidAmount > 0 ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Cobrança ao salvar desativada pois uma <strong className="font-medium text-foreground">entrada manual (R$ {form.paidAmount.toFixed(2)})</strong> já foi informada.
-                    </p>
-                  ) : cobrarAoSalvar ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Valor sugerido:{' '}
-                      <span className="text-foreground font-medium">
-                        R$ {(valorPacote > 0 ? valorPacote : form.paidAmount || 0).toFixed(2)}
-                      </span>
-                    </p>
-                  ) : null}
-                </div>
-              ) : !cobranca ? (
-                <div className="flex items-center justify-between gap-3 py-1">
-                  <span className="text-xs text-muted-foreground">Nenhuma cobrança criada</span>
-                  <Button
-                    size="sm"
-                    className="h-8 rounded-lg text-xs gap-1.5"
-                    onClick={handleGerarCobranca}
-                  >
-                    <CreditCard className="h-3.5 w-3.5" />
-                    Gerar cobrança
-                  </Button>
-                </div>
-              ) : ['pago', 'pago_manual'].includes(cobranca.status) ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="h-4 w-4 shrink-0" />
-                      <span>Pago</span>
-                      <span className="text-muted-foreground font-normal">• R$ {cobranca.valor.toFixed(2)}</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
-                      {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs rounded-md"
-                    onClick={handleGerarCobranca}
-                  >
-                    Histórico
-                  </Button>
-                </div>
-              ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
-                  <div className="min-w-0">
-                    <span className="text-xs font-medium text-muted-foreground capitalize">
-                      Cobrança {cobranca.status} (R$ {cobranca.valor.toFixed(2)})
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">
+                      R$
                     </span>
-                    <p className="text-[11px] text-muted-foreground/80 mt-0.5">
-                      Gere uma nova cobrança para enviar ao cliente.
+                    <Input
+                      id="sp-entrada"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={cobrarAoSalvar ? '' : paidInput.displayValue}
+                      onChange={paidInput.handleChange}
+                      onFocus={paidInput.handleFocus}
+                      placeholder={cobrarAoSalvar ? 'Desativado (cobrança via link ativa)' : '0,00'}
+                      disabled={cobrarAoSalvar}
+                      className={cn(
+                        'h-10 rounded-lg pl-10 text-base sm:text-sm transition-opacity',
+                        cobrarAoSalvar && 'opacity-50 cursor-not-allowed bg-muted/30',
+                      )}
+                    />
+                  </div>
+                  {cobrarAoSalvar && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Entrada manual desativada pois <strong className="font-medium text-foreground">"Cobrança via link"</strong> está ativa.
                     </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="h-8 rounded-lg text-xs gap-1.5 shrink-0"
-                    onClick={handleGerarCobranca}
-                  >
-                    <CreditCard className="h-3.5 w-3.5" />
-                    Nova cobrança
-                  </Button>
+                  )}
                 </div>
-              ) : (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-500">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                        Aguardando pagamento
-                      </span>
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
-                      </span>
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">
-                      R$ {cobranca.valor.toFixed(2)}
-                    </span>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/40">
-                    {cobrancaLink && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 rounded-md text-xs gap-1.5"
-                        onClick={() => window.open(cobrancaLink, '_blank', 'noopener')}
+                {/* Divisor */}
+                <div className="border-t border-border/60 my-1" />
+
+                {/* 2. Cobrança via link */}
+                <div>
+                  {!isEdit ? (
+                    <div className="space-y-2.5">
+                      <label
+                        htmlFor="sp-cobrar-ao-salvar"
+                        className={cn(
+                          'flex items-start justify-between gap-3',
+                          form.paidAmount > 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+                        )}
                       >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Abrir link
-                      </Button>
-                    )}
-                    {cobrancaLink && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 rounded-md text-xs gap-1.5"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(cobrancaLink);
-                          toast.success('Link de checkout copiado!');
-                        }}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        Copiar link
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 rounded-md text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
-                      onClick={async () => {
-                        if (confirm('Deseja realmente cancelar esta cobrança pendente?')) {
-                          await cancelCharge(cobranca.id);
-                        }
-                      }}
-                    >
-                      <Ban className="h-3.5 w-3.5" />
-                      Cancelar cobrança
-                    </Button>
-                  </div>
+                        <div className="min-w-0 space-y-1">
+                          <span className="block text-xs font-semibold text-foreground">
+                            Cobrança via link
+                          </span>
+                          <span className="block text-[11px] text-muted-foreground leading-relaxed">
+                            Ao criar o agendamento pendente, abre link de cobrança e você configura o valor.
+                          </span>
+                          <span className="block text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                            A sessão é confirmada automaticamente no pagamento.
+                          </span>
+                        </div>
+                        <Switch
+                          id="sp-cobrar-ao-salvar"
+                          checked={cobrarAoSalvar}
+                          disabled={form.paidAmount > 0}
+                          onCheckedChange={handleCobrarAoSalvarChange}
+                        />
+                      </label>
+                      {form.paidAmount > 0 ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Cobrança via link desativada pois uma <strong className="font-medium text-foreground">entrada manual (R$ {form.paidAmount.toFixed(2)})</strong> já foi informada.
+                        </p>
+                      ) : cobrarAoSalvar ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Valor sugerido:{' '}
+                          <span className="text-foreground font-medium">
+                            R$ {(valorPacote > 0 ? valorPacote : form.paidAmount || 0).toFixed(2)}
+                          </span>
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : !cobranca ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-3 py-1">
+                        <div className="min-w-0">
+                          <span className="block text-xs font-semibold text-foreground">Cobrança via link</span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            Nenhuma cobrança criada para esta sessão.
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-lg text-xs gap-1.5"
+                          onClick={handleGerarCobranca}
+                        >
+                          <CreditCard className="h-3.5 w-3.5" />
+                          Gerar cobrança
+                        </Button>
+                      </div>
+                    </div>
+                  ) : ['pago', 'pago_manual'].includes(cobranca.status) ? (
+                    <div className="space-y-1.5">
+                      <span className="block text-xs font-semibold text-foreground">Cobrança via link</span>
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            <span>Pago</span>
+                            <span className="text-muted-foreground font-normal">• R$ {cobranca.valor.toFixed(2)}</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">
+                            {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs rounded-md"
+                          onClick={handleGerarCobranca}
+                        >
+                          Histórico
+                        </Button>
+                      </div>
+                    </div>
+                  ) : ['cancelado', 'expirado', 'estornado'].includes(cobranca.status) ? (
+                    <div className="space-y-1.5">
+                      <span className="block text-xs font-semibold text-foreground">Cobrança via link</span>
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-muted-foreground capitalize">
+                            Cobrança {cobranca.status} (R$ {cobranca.valor.toFixed(2)})
+                          </span>
+                          <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                            Gere uma nova cobrança para enviar ao cliente.
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-lg text-xs gap-1.5 shrink-0"
+                          onClick={handleGerarCobranca}
+                        >
+                          <CreditCard className="h-3.5 w-3.5" />
+                          Nova cobrança
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <span className="block text-xs font-semibold text-foreground">Cobrança via link</span>
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-500">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Aguardando pagamento
+                            </span>
+                            <span className="text-xs text-muted-foreground capitalize">
+                              {cobranca.provedor === 'pix_manual' ? 'PIX Manual' : cobranca.provedor}
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-foreground">
+                            R$ {cobranca.valor.toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/40">
+                          {cobrancaLink && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 rounded-md text-xs gap-1.5"
+                              onClick={() => window.open(cobrancaLink, '_blank', 'noopener')}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              Abrir link
+                            </Button>
+                          )}
+                          {cobrancaLink && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 rounded-md text-xs gap-1.5"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(cobrancaLink);
+                                toast.success('Link de checkout copiado!');
+                              }}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              Copiar link
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 rounded-md text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                            onClick={async () => {
+                              if (confirm('Deseja realmente cancelar esta cobrança pendente?')) {
+                                await cancelCharge(cobranca.id);
+                              }
+                            }}
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                            Cancelar cobrança
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </PanelSection>
 
             {/* ------------------------------ DESCRIÇÃO -------------------------------- */}

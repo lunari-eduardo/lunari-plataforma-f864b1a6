@@ -47,6 +47,7 @@ export interface Pacote {
   valor_base: number;
   valor_foto_extra: number;
   fotos_incluidas: number; // Número máximo de fotos que o cliente pode selecionar
+  duracao_minutos?: number; // Duração estimada da sessão em minutos para controle de agenda (0 = sem ocupação extra)
   produtosIncluidos: ProdutoIncluido[];
   created_at?: string;
   updated_at?: string;
@@ -80,6 +81,7 @@ export interface PacoteFormData {
   valor_base: number;
   valor_foto_extra: number;
   fotos_incluidas: number; // Número máximo de fotos que o cliente pode selecionar
+  duracao_minutos?: number; // Duração estimada da sessão em minutos (0 = sem ocupação extra)
   produtosIncluidos: ProdutoIncluido[];
 }
 

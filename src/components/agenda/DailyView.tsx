@@ -322,7 +322,8 @@ export default function DailyView({
           const startingEvents = dayEvents.filter(event => event.time === time);
           const spanningEvents = dayEvents.filter(event => {
             if (event.time === time) return false;
-            const dur = event.durationMinutes || (event.originalData as any)?.durationMinutes || 60;
+            const dur = event.durationMinutes !== undefined ? event.durationMinutes : ((event.originalData as any)?.durationMinutes ?? 0);
+            if (dur <= 0) return false;
             return isSlotCoveredByEvent(time, event.time, dur);
           });
           const hasStartingEvents = startingEvents.length > 0;
@@ -398,7 +399,7 @@ export default function DailyView({
                   <div className="space-y-1.5">
                     {spanningEvents.map((spanningEvent) => {
                       const agendaType = spanningEvent.agendaType || (spanningEvent.originalData as any)?.agendaType || 'session';
-                      const dur = spanningEvent.durationMinutes || (spanningEvent.originalData as any)?.durationMinutes || 60;
+                      const dur = spanningEvent.durationMinutes !== undefined ? spanningEvent.durationMinutes : ((spanningEvent.originalData as any)?.durationMinutes ?? 0);
                       const endTime = getEventEndTime(spanningEvent.time, dur);
                       const title = agendaType === 'personal' ? spanningEvent.title : (spanningEvent.client || spanningEvent.title);
 

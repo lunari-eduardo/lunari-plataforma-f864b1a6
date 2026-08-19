@@ -44,7 +44,7 @@ export function classifySlot(
   availability: readonly AvailabilitySlot[],
   args: ClassifySlotArgs,
 ): SlotCheckResult {
-  const slot = { date: args.date, time: args.time, durationMinutes: args.durationMinutes || 60 };
+  const slot = { date: args.date, time: args.time, durationMinutes: args.durationMinutes !== undefined ? args.durationMinutes : 0 };
 
   const sameSlotApps = findConflicts(appointments, slot, {
     excludeId: args.excludeAppointmentId,

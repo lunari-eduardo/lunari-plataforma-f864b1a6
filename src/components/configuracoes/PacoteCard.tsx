@@ -50,11 +50,18 @@ export default function PacoteCard({
                 {pacote.nome}
               </h3>
             </div>
-            {categoria && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5">
-                {categoria.nome}
-              </Badge>
-            )}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {categoria && (
+                <Badge variant="outline" className="text-xs px-2 py-0.5">
+                  {categoria.nome}
+                </Badge>
+              )}
+              {pacote.duracao_minutos && pacote.duracao_minutos > 0 ? (
+                <Badge variant="secondary" className="text-2xs px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
+                  ⏱️ {pacote.duracao_minutos} min
+                </Badge>
+              ) : null}
+            </div>
           </div>
           
           {/* Actions */}

@@ -137,8 +137,8 @@ export default function UnifiedEventCard({
     return null;
   };
 
-  const duration = event.durationMinutes || (event.originalData as any)?.durationMinutes || 60;
-  const hasCustomDuration = duration !== 60;
+  const duration = event.durationMinutes !== undefined ? event.durationMinutes : ((event.originalData as any)?.durationMinutes ?? 0);
+  const hasCustomDuration = duration > 0 && duration !== 60;
   const durationBadge = duration >= 60 
     ? (duration % 60 === 0 ? `${duration / 60}h` : `${Math.floor(duration / 60)}h${duration % 60}m`)
     : `${duration}m`;

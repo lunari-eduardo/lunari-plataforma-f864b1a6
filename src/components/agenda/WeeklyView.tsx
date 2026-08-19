@@ -53,7 +53,7 @@ export default function WeeklyView({
 
     unifiedEvents.forEach(event => {
       if (event.type === 'appointment') {
-        const dur = event.durationMinutes || (event.originalData as any)?.durationMinutes || 60;
+        const dur = event.durationMinutes !== undefined ? event.durationMinutes : ((event.originalData as any)?.durationMinutes ?? 0);
         weekDays.forEach(day => {
           if (isSameDay(event.date, day)) {
             timeSlots.forEach(t => {
