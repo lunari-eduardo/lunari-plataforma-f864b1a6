@@ -329,7 +329,11 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
 
         onMarkPaid={async (id) => {
           await financas.marcarComoPago(id);
-          setDetailLinha(null);
+          // O painel permanece aberto
+        }}
+        onMarkPending={async (id) => {
+          await financas.marcarComoPendente(id);
+          // O painel permanece aberto
         }}
         onOpenOrigin={extrato.abrirOrigem}
       />

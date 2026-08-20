@@ -87,6 +87,8 @@ export function useNovoFinancas() {
     removerTransacao: removerTransacaoSupabase,
     marcarComoPago: marcarComoPagoSupabase,
     marcarComoPagoAsync,
+    marcarComoPendente: marcarComoPendenteSupabase,
+    marcarComoPendenteAsync,
     calcularMetricasPorGrupo,
   } = useFinancialTransactionsSupabase(filtroMesAno);
 
@@ -403,6 +405,7 @@ export function useNovoFinancas() {
   // Funções de compatibilidade para chamadas antigas
   const adicionarTransacao = createTransactionEngine;
   const atualizarTransacaoCompativel = atualizarTransacao;
+  const marcarComoPendente = marcarComoPendenteSupabase;
 
   // ============= EXPORTS =============
   
@@ -428,6 +431,7 @@ export function useNovoFinancas() {
     atualizarTransacaoCompativel,
     removerTransacao,
     marcarComoPago,
+    marcarComoPendente,
     createTransactionEngine,
     createRecurringTransactionsEngine,
     calcularMetricasPorGrupo,

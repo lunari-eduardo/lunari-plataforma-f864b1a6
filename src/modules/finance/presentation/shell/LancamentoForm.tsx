@@ -37,6 +37,8 @@ import {
 
 
 
+import { useCreditCardsSupabase } from '@/hooks/useCreditCardsSupabase';
+
 // ─────────────────────────────────────────────────────────────
 // Constantes
 // ─────────────────────────────────────────────────────────────
@@ -70,6 +72,10 @@ interface FormState {
   vencimento: string | null;
   recebimento: string | null;
   formaPagamento: string | null;
+  cartaoId: string | null;
+  numeroParcelas: number;
+  isRecorrente: boolean;
+  isValorFixo: boolean;
   observacoes: string;
   pago: boolean;
 }
@@ -85,12 +91,15 @@ function initialState(tipo: LancamentoTipo): FormState {
     vencimento: hoje(),
     recebimento: hoje(),
     formaPagamento: null,
+    cartaoId: null,
+    numeroParcelas: 1,
+    isRecorrente: false,
+    isValorFixo: true,
     observacoes: '',
     // Receitas: default = já recebido. Despesas/investimento: default = pendente.
     pago: meta.natureza === 'entrada',
   };
 }
-
 
 // ─────────────────────────────────────────────────────────────
 // Componente
@@ -105,7 +114,6 @@ interface Props {
   onSelectVendaAvulsa?: () => void;
 }
 
-
 export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false, onSelectVendaAvulsa }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
   const { toast } = useToast();
@@ -114,6 +122,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
     adicionarItemFinanceiro,
     createTransactionEngine,
   } = useNovoFinancas();
+  const { data: cartoes = [] } = useCreditCardsSupabase();
 
   // Pré-form contextual (Receita Operacional → origem)
   const [origem, setOrigem] = useState<OrigemReceitaOperacional | null>(null);
@@ -121,7 +130,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
   const [state, setState] = useState<FormState>(() => initialState(tipo));
   const [submitting, setSubmitting] = useState(false);
-  
 
   useEffect(() => {
     // reset quando muda o tipo
@@ -129,12 +137,16 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
     setOrigem(null);
   }, [tipo]);
 
-
   const grupo = meta.gruposPermitidos[0];
   const itens = obterItensPorGrupo(grupo as any);
   const categoriaOptions = useMemo<SmartSelectOption[]>(
     () => itens.map((i: any) => ({ value: i.id, label: i.nome })),
     [itens],
+  );
+
+  const cartoesOptions = useMemo<SmartSelectOption[]>(
+    () => cartoes.filter(c => c.ativo).map(c => ({ value: c.id, label: c.nome })),
+    [cartoes]
   );
 
   const setField = <K extends keyof FormState>(k: K, v: FormState[K]) =>
@@ -149,7 +161,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
   const observacoesFilled = state.observacoes.trim().length > 0;
   const competenciaFilled = state.competencia !== hoje();
-  const disclosureFilled = (observacoesFilled ? 1 : 0) + (competenciaFilled ? 1 : 0);
+  const disclosureFilled = (observacoesFilled ? 1 : 0) + (competenciaFilled ? 1 : 0) + (state.isRecorrente ? 1 : 0);
 
   const canSubmit = state.valor > 0 && !!state.itemId && !submitting;
 
@@ -159,6 +171,17 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
   async function handleSubmit() {
     if (!canSubmit) return;
+    
+    // Validação específica para cartão
+    const isCartao = state.formaPagamento === 'cartao_credito' || state.formaPagamento === 'cartao_debito';
+    if (isCartao && !state.cartaoId) {
+      toast({
+        title: 'Selecione um cartão',
+        description: 'Por favor, selecione qual cartão foi utilizado.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Compõe observações preservando metadados sem coluna dedicada.
     const partes: string[] = [];
@@ -168,7 +191,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
     if ((showDescricaoAtivo || showDescricao) && state.descricao.trim()) {
       partes.push(state.descricao.trim());
     }
-    if (state.formaPagamento) {
+    if (state.formaPagamento && !isCartao) { // Se for cartão a flag na base cuida
       const fp = FORMAS_PAGAMENTO.find((f) => f.value === state.formaPagamento);
       if (fp) partes.push(`Forma: ${fp.label}`);
     }
@@ -187,9 +210,16 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         itemId: state.itemId,
         valorTotal: state.valor,
         dataPrimeiraOcorrencia: dataPrimeira,
+        dataCompra: dataPrimeira, // Para cartões, a data de compra será a selecionada em "Quando"
         observacoes,
         pago: state.pago,
         dataPagamento: state.pago ? dataPrimeira : undefined,
+        formaPagamento: state.formaPagamento || undefined,
+        cartaoCreditoId: isCartao ? state.cartaoId : undefined,
+        isParcelado: state.formaPagamento === 'cartao_credito' && state.numeroParcelas > 1,
+        numeroDeParcelas: state.formaPagamento === 'cartao_credito' ? state.numeroParcelas : 1,
+        isRecorrente: state.isRecorrente,
+        isValorFixo: state.isValorFixo,
       });
       onCreated?.();
       onClose();
@@ -203,8 +233,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       setSubmitting(false);
     }
   }
-
-
 
   // ─────────────────────────────────────────────────────────
   // Pré-form: Origem da receita operacional
@@ -259,7 +287,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
                   </motion.button>
                 );
               })}
-
             </div>
           </div>
           <footer
@@ -282,6 +309,8 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   // ─────────────────────────────────────────────────────────
   // Form principal
   // ─────────────────────────────────────────────────────────
+
+  const isCartaoSelected = state.formaPagamento === 'cartao_credito' || state.formaPagamento === 'cartao_debito';
 
   return (
     <motion.div
@@ -310,10 +339,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
             />
           </div>
         </div>
-
-
-
-
 
         {/* Essencial */}
         <SectionHeader label="Essencial" />
@@ -384,7 +409,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
         {showVencimento && (
-          <FieldRow label={state.pago ? 'Pago em' : 'Vencimento'} required>
+          <FieldRow label={state.pago ? 'Pago em' : (isCartaoSelected ? 'Data da compra' : 'Vencimento')} required>
             <DateField
               value={state.vencimento}
               onChange={(v) => setField('vencimento', v)}
@@ -392,21 +417,98 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
 
-
         {/* Origem / pagamento */}
         <SectionHeader label="Pagamento" />
         <FieldRow label="Forma">
           <SmartSelect
             value={state.formaPagamento}
-            onChange={(v) => setField('formaPagamento', v)}
+            onChange={(v) => {
+              setField('formaPagamento', v);
+              // Ao desmarcar cartão, reseta estado de cartão
+              if (v !== 'cartao_credito' && v !== 'cartao_debito') {
+                setField('cartaoId', null);
+                setField('numeroParcelas', 1);
+              } else {
+                // Desmarca recorrência quando seleciona cartão
+                setField('isRecorrente', false);
+              }
+            }}
             options={FORMAS_PAGAMENTO}
             placeholder="Não informado"
           />
         </FieldRow>
+        
+        {isCartaoSelected && (
+          <FieldRow label="Cartão" required>
+            <SmartSelect
+              value={state.cartaoId}
+              onChange={(v) => setField('cartaoId', v)}
+              options={cartoesOptions}
+              placeholder="Selecionar cartão cadastrado"
+              emptyMessage="Nenhum cartão ativo cadastrado."
+            />
+          </FieldRow>
+        )}
+        
+        {state.formaPagamento === 'cartao_credito' && (
+          <FieldRow label="Parcelas">
+            <TextField
+              type="number"
+              value={state.numeroParcelas.toString()}
+              onChange={(v) => {
+                const num = parseInt(v);
+                if (!isNaN(num) && num > 0) {
+                  setField('numeroParcelas', num);
+                } else if (v === '') {
+                  // Permite apagar temporariamente, mas não salva
+                  setState(s => ({...s, numeroParcelas: 0 as any}));
+                }
+              }}
+              placeholder="Ex: 1 para à vista"
+            />
+          </FieldRow>
+        )}
 
         {/* Mais opções */}
         <div className="mt-3">
           <DisclosureSection title="Mais opções" filledCount={disclosureFilled}>
+            
+            {meta.natureza === 'saida' && !isCartaoSelected && (
+              <div className="mb-4 space-y-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="recorrente"
+                    checked={state.isRecorrente}
+                    onChange={(e) => setField('isRecorrente', e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-accent-gold focus:ring-accent-gold"
+                  />
+                  <label htmlFor="recorrente" className="text-[12.5px] font-medium text-foreground">
+                    Despesa recorrente
+                  </label>
+                </div>
+                {state.isRecorrente && (
+                  <div className="pl-6 space-y-2">
+                    <p className="text-[11.5px] text-muted-foreground leading-snug">
+                      Gerará lançamentos automáticos para os meses seguintes do ano civil.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="valorFixo"
+                        checked={state.isValorFixo}
+                        onChange={(e) => setField('isValorFixo', e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-border text-accent-gold focus:ring-accent-gold"
+                      />
+                      <label htmlFor="valorFixo" className="text-[12px] text-foreground">
+                        O valor é fixo mensalmente (pode ser ajustado depois se variar)
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {showCompetencia && (
               <FieldRow label="Competência" hint="Mês contábil de referência">
                 <DateField

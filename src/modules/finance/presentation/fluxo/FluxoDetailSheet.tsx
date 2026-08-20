@@ -16,6 +16,7 @@ interface FluxoDetailSheetProps {
   onSave: (id: string, patch: { valor?: number; data_vencimento?: string; observacoes?: string }) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
   onMarkPaid: (id: string) => Promise<void> | void;
+  onMarkPending?: (id: string) => Promise<void> | void;
   onOpenOrigin?: (linha: LinhaExtrato) => void;
 }
 
@@ -25,18 +26,21 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
   onSave,
   onDelete,
   onMarkPaid,
+  onMarkPending,
   onOpenOrigin,
 }: FluxoDetailSheetProps) {
   const [valor, setValor] = useState('');
   const [data, setData] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [localStatus, setLocalStatus] = useState<string>('');
 
   useEffect(() => {
     if (linha) {
       setValor(String(linha.valor.toFixed(2)).replace('.', ','));
       setData(linha.data);
       setObservacoes(linha.observacoes ?? '');
+      setLocalStatus(linha.status);
     }
   }, [linha]);
 
@@ -59,6 +63,18 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
     }
   };
 
+  const handleMarkPaid = async () => {
+    setLocalStatus('Pago');
+    await onMarkPaid(linha.referenciaId);
+  };
+  
+  const handleMarkPending = async () => {
+    setLocalStatus('Faturado');
+    if (onMarkPending) {
+      await onMarkPending(linha.referenciaId);
+    }
+  };
+
   const headerExtra = (
     <div className="flex items-center gap-2 flex-wrap">
       <span
@@ -71,8 +87,11 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
       >
         {isReceita ? 'Entrada' : 'Saída'}
       </span>
-      <span className="inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground">
-        {linha.status}
+      <span className={cn(
+        "inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground",
+        localStatus === 'Pago' && "border-lunar-success/30 text-lunar-success bg-lunar-success/10"
+      )}>
+        {localStatus}
       </span>
       <span className="inline-flex items-center h-6 px-2 rounded-full border border-border text-[11px] text-muted-foreground capitalize">
         {linha.origem}
@@ -97,9 +116,14 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
       }
       right={
         <>
-          {linha.status !== 'Pago' && editable && (
-            <Button variant="outline" size="sm" onClick={() => onMarkPaid(linha.referenciaId)}>
+          {localStatus !== 'Pago' && editable && (
+            <Button variant="outline" size="sm" onClick={handleMarkPaid}>
               Marcar pago
+            </Button>
+          )}
+          {localStatus === 'Pago' && editable && onMarkPending && (
+            <Button variant="outline" size="sm" onClick={handleMarkPending}>
+              Marcar pendente
             </Button>
           )}
           {editable && (

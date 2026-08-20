@@ -312,9 +312,6 @@ export class SupabaseFinancialTransactionsAdapter {
     return this.createMultipleTransactions(transactions as any);
   }
 
-  /**
-   * FASE 2: Criar transações parceladas (N parcelas mensais)
-   */
   static async createParceledTransactions(params: {
     itemId: string;
     valorTotal: number;
@@ -324,7 +321,12 @@ export class SupabaseFinancialTransactionsAdapter {
     formaPagamento?: string;
   }): Promise<FinancialTransactionDB[]> {
     const { itemId, valorTotal, dataPrimeiraOcorrencia, numeroDeParcelas, observacoes, formaPagamento } = params;
-    const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
+    
+    // Calcula valor base da parcela, truncando para 2 casas decimais (ex: 100/3 = 33.33)
+    const valorParcelaBase = Math.floor((valorTotal / numeroDeParcelas) * 100) / 100;
+    // Calcula diferença que sobrou (ex: 100 - (33.33 * 3) = 0.01)
+    const diferenca = roundToTwoDecimals(valorTotal - (valorParcelaBase * numeroDeParcelas));
+    
     const parentId = `parcela_${Date.now()}`;
 
     const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
@@ -332,9 +334,12 @@ export class SupabaseFinancialTransactionsAdapter {
     for (let i = 0; i < numeroDeParcelas; i++) {
       const dataVencimento = this.calculateParcelDate(dataPrimeiraOcorrencia, i);
       
+      // Joga a diferença de centavos na primeira parcela
+      const valorDestaParcela = i === 0 ? roundToTwoDecimals(valorParcelaBase + diferenca) : valorParcelaBase;
+      
       transactions.push({
         item_id: itemId,
-        valor: valorParcela,
+        valor: valorDestaParcela,
         data_vencimento: dataVencimento,
         status: (dataVencimento <= getCurrentDateString() ? 'Faturado' : 'Agendado') as StatusTransacao,
         parcela_atual: i + 1,
@@ -378,7 +383,9 @@ export class SupabaseFinancialTransactionsAdapter {
 
     if (cartaoError || !cartaoData) throw new Error('Cartão de crédito não encontrado');
 
-    const valorParcela = roundToTwoDecimals(valorTotal / numeroDeParcelas); // Garantir precisão
+    const valorParcelaBase = Math.floor((valorTotal / numeroDeParcelas) * 100) / 100;
+    const diferenca = roundToTwoDecimals(valorTotal - (valorParcelaBase * numeroDeParcelas));
+    
     const parentId = `cartao_${Date.now()}`;
     // Default: cartão grava forma_pagamento='cartao_credito' a menos que cliente sobrescreva.
     const formaPagamentoEfetiva = formaPagamento || 'cartao_credito';
@@ -393,9 +400,11 @@ export class SupabaseFinancialTransactionsAdapter {
         i
       );
 
+      const valorDestaParcela = i === 0 ? roundToTwoDecimals(valorParcelaBase + diferenca) : valorParcelaBase;
+
       transactions.push({
         item_id: itemId,
-        valor: valorParcela,
+        valor: valorDestaParcela,
         data_vencimento: dataVencimento,
         status: (dataVencimento <= getCurrentDateString() ? 'Faturado' : 'Agendado') as StatusTransacao,
         credit_card_id: cartaoCreditoId,
@@ -440,37 +449,42 @@ export class SupabaseFinancialTransactionsAdapter {
     const [ano, mes, dia] = dataCompra.split('-').map(Number);
     
     // 1. Determinar o período da fatura (qual fatura a compra pertence)
-    let mesPeriodoFatura = mes;
-    let anoPeriodoFatura = ano;
+    let mesFatura = mes;
+    let anoFatura = ano;
     
-    // Se compra após fechamento, vai para período da próxima fatura
+    // Se compra após fechamento, vai para a fatura do mês seguinte
     if (dia > diaFechamento) {
-      mesPeriodoFatura++;
-      if (mesPeriodoFatura > 12) {
-        mesPeriodoFatura = 1;
-        anoPeriodoFatura++;
+      mesFatura++;
+      if (mesFatura > 12) {
+        mesFatura = 1;
+        anoFatura++;
       }
     }
     
-    // 2. Fatura sempre vence NO MÊS SEGUINTE ao período
-    let mesVencimentoPrimeiraFatura = mesPeriodoFatura + 1;
-    let anoVencimentoPrimeiraFatura = anoPeriodoFatura;
-    
-    if (mesVencimentoPrimeiraFatura > 12) {
-      mesVencimentoPrimeiraFatura = 1;
-      anoVencimentoPrimeiraFatura++;
+    // 2. Determinar o vencimento da primeira parcela
+    let mesVencimentoPrimeira = mesFatura;
+    let anoVencimentoPrimeira = anoFatura;
+
+    // Se o dia de vencimento for MENOR ou IGUAL ao dia de fechamento, 
+    // o vencimento é no MÊS SEGUINTE ao período da fatura.
+    if (diaVencimento <= diaFechamento) {
+      mesVencimentoPrimeira++;
+      if (mesVencimentoPrimeira > 12) {
+        mesVencimentoPrimeira = 1;
+        anoVencimentoPrimeira++;
+      }
     }
     
-    // 3. Calcular vencimento da parcela atual
-    let mesVencimento = mesVencimentoPrimeiraFatura + parcelaIndex;
-    let anoVencimento = anoVencimentoPrimeiraFatura;
+    // 3. Calcular vencimento da parcela atual (adicionar o índice)
+    let mesVencimento = mesVencimentoPrimeira + parcelaIndex;
+    let anoVencimento = anoVencimentoPrimeira;
     
     while (mesVencimento > 12) {
       mesVencimento -= 12;
       anoVencimento++;
     }
     
-    // 4. Dia de vencimento
+    // 4. Ajustar para último dia do mês se necessário (ex: dia 31 em fevereiro)
     const ultimoDiaMes = new Date(anoVencimento, mesVencimento, 0).getDate();
     const diaVencimentoAjustado = Math.min(diaVencimento, ultimoDiaMes);
     

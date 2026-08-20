@@ -465,6 +465,35 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     },
   });
 
+  const marcarComoPendenteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { markTransactionPending } = await import('@/modules/finance/application/commands/markTransactionPending');
+      const res = await runCapability(markTransactionPending, { id, source: 'user' });
+      unwrapOrThrow(res);
+      return { id };
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['financial-transactions'] });
+      const rollback = patchAllMonthQueries(
+        (t) => t.id === id,
+        (t) => ({
+          ...t,
+          status: (new Date(t.data_vencimento).getTime() <= new Date().getTime() ? 'Faturado' : 'Agendado') as StatusTransacao,
+        }),
+      );
+      return { rollback };
+    },
+    onError: (error, _input, ctx) => {
+      ctx?.rollback?.();
+      console.error('Erro ao marcar como pendente:', error);
+      toast({ title: 'Erro', description: 'Erro ao desmarcar pagamento', variant: 'destructive' });
+    },
+    onSettled: () => {
+      invalidateAll();
+      refetchDashboardActive(queryClient);
+    },
+  });
+
   // ============= AGRUPAMENTO + MÉTRICAS =============
 
   const transacoesPorGrupoRaw = transacoes.reduce((acc, t) => {
@@ -506,6 +535,8 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
     removerTransacao: removerTransacaoMutation.mutate,
     marcarComoPago: marcarComoPagoMutation.mutate,
     marcarComoPagoAsync: marcarComoPagoMutation.mutateAsync,
+    marcarComoPendente: marcarComoPendenteMutation.mutate,
+    marcarComoPendenteAsync: marcarComoPendenteMutation.mutateAsync,
     calcularMetricasPorGrupo,
   };
 }
