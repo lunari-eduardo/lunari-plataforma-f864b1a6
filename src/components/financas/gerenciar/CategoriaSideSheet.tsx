@@ -14,6 +14,7 @@ interface Props {
   item?: ItemFinanceiro | null;
 
   createName: string;
+  onCreateNameChange: (v: string) => void;
   editName: string;
   onEditNameChange: (v: string) => void;
 
