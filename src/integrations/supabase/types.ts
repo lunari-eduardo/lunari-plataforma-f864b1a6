@@ -2053,16 +2053,19 @@ export type Database = {
       cobrancas: {
         Row: {
           asaas_installment_id: string | null
+          checkout_url: string | null
           cliente_id: string | null
           correlation_id: string | null
           created_at: string | null
           dados_extras: Json | null
           data_pagamento: string | null
           descricao: string | null
+          error_message: string | null
           extras_contabilizados: boolean
           finalidade: string
           galeria_id: string | null
           id: string
+          idempotency_key: string | null
           ip_checkout_url: string | null
           ip_invoice_slug: string | null
           ip_order_nsu: string | null
@@ -2078,7 +2081,11 @@ export type Database = {
           mp_qr_code_base64: string | null
           obs_manual: string | null
           parcelas_pagas: number | null
+          pix_copia_cola: string | null
+          pix_qr_code_base64: string | null
           provedor: string | null
+          provider_order_id: string | null
+          provider_transaction_id: string | null
           qtd_fotos: number | null
           session_id: string | null
           snapshot_fotos_incluidas: number | null
@@ -2096,16 +2103,19 @@ export type Database = {
         }
         Insert: {
           asaas_installment_id?: string | null
+          checkout_url?: string | null
           cliente_id?: string | null
           correlation_id?: string | null
           created_at?: string | null
           dados_extras?: Json | null
           data_pagamento?: string | null
           descricao?: string | null
+          error_message?: string | null
           extras_contabilizados?: boolean
           finalidade?: string
           galeria_id?: string | null
           id?: string
+          idempotency_key?: string | null
           ip_checkout_url?: string | null
           ip_invoice_slug?: string | null
           ip_order_nsu?: string | null
@@ -2121,7 +2131,11 @@ export type Database = {
           mp_qr_code_base64?: string | null
           obs_manual?: string | null
           parcelas_pagas?: number | null
+          pix_copia_cola?: string | null
+          pix_qr_code_base64?: string | null
           provedor?: string | null
+          provider_order_id?: string | null
+          provider_transaction_id?: string | null
           qtd_fotos?: number | null
           session_id?: string | null
           snapshot_fotos_incluidas?: number | null
@@ -2139,16 +2153,19 @@ export type Database = {
         }
         Update: {
           asaas_installment_id?: string | null
+          checkout_url?: string | null
           cliente_id?: string | null
           correlation_id?: string | null
           created_at?: string | null
           dados_extras?: Json | null
           data_pagamento?: string | null
           descricao?: string | null
+          error_message?: string | null
           extras_contabilizados?: boolean
           finalidade?: string
           galeria_id?: string | null
           id?: string
+          idempotency_key?: string | null
           ip_checkout_url?: string | null
           ip_invoice_slug?: string | null
           ip_order_nsu?: string | null
@@ -2164,7 +2181,11 @@ export type Database = {
           mp_qr_code_base64?: string | null
           obs_manual?: string | null
           parcelas_pagas?: number | null
+          pix_copia_cola?: string | null
+          pix_qr_code_base64?: string | null
           provedor?: string | null
+          provider_order_id?: string | null
+          provider_transaction_id?: string | null
           qtd_fotos?: number | null
           session_id?: string | null
           snapshot_fotos_incluidas?: number | null
@@ -5057,6 +5078,7 @@ export type Database = {
         Row: {
           categoria_id: string
           created_at: string
+          duracao_minutos: number | null
           fotos_incluidas: number
           id: string
           nome: string
@@ -5069,6 +5091,7 @@ export type Database = {
         Insert: {
           categoria_id: string
           created_at?: string
+          duracao_minutos?: number | null
           fotos_incluidas?: number
           id?: string
           nome: string
@@ -5081,6 +5104,7 @@ export type Database = {
         Update: {
           categoria_id?: string
           created_at?: string
+          duracao_minutos?: number | null
           fotos_incluidas?: number
           id?: string
           nome?: string
@@ -6699,6 +6723,36 @@ export type Database = {
           transfer_storage_bytes?: number | null
           updated_at?: string | null
           yearly_price_cents?: number
+        }
+        Relationships: []
+      }
+      user_onboarding_state: {
+        Row: {
+          completed_steps: number[]
+          created_at: string
+          current_step: number
+          data: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_steps?: number[]
+          created_at?: string
+          current_step?: number
+          data?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_steps?: number[]
+          created_at?: string
+          current_step?: number
+          data?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
