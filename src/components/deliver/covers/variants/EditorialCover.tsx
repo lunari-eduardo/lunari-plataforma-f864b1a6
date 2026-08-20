@@ -52,7 +52,7 @@ export default function EditorialCover({
     spec.title.height,
     sessionFont || 'serif',
     spec.orientation === 'vertical' ? 12 : 18,
-    spec.orientation === 'vertical' ? 24 : 32
+    spec.orientation === 'vertical' ? 24 : 34
   );
 
   const titleIntersection = useMemo(() => {
