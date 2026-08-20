@@ -83,7 +83,9 @@ export interface GallerySettings {
   sessionFont?: string;
   titleCaseMode?: TitleCaseMode;
   photoSpacing?: number;
+  subtitulo?: string;
 }
+
 
 export interface GalleryPhoto {
   id: string;

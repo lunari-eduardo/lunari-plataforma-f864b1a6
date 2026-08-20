@@ -21,7 +21,9 @@ interface UseGestaoPackagesResult {
  * Only available for PRO + Gallery users
  */
 export function useGestaoPackages(): UseGestaoPackagesResult {
-  const { user, hasGestaoIntegration } = useAuth();
+  const { user } = useAuth();
+  const hasGestaoIntegration = !!(user as any)?.hasGestaoIntegration;
+
 
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ['gestao-pacotes', user?.id],
@@ -53,6 +55,7 @@ export function useGestaoPackages(): UseGestaoPackagesResult {
   return {
     packages,
     isLoading,
-    hasGestaoIntegration,
+    hasGestaoIntegration: !!(user as any)?.hasGestaoIntegration,
+
   };
 }

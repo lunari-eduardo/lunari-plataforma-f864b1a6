@@ -14,7 +14,9 @@ export interface ItemFinanceiroSupabase extends ItemFinanceiro {
   is_default?: boolean;
   is_system?: boolean;
   archived_at?: string | null;
+  group_code?: string | null;
 }
+
 
 // Itens padrão que são inseridos automaticamente para novos usuários
 const DEFAULT_FINANCIAL_ITEMS: Array<{ nome: string; grupo_principal: GrupoPrincipal }> = [

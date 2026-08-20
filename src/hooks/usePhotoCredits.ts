@@ -11,7 +11,9 @@ export interface PhotoCreditsData {
 }
 
 export function usePhotoCredits() {
-  const { user, accessLevel } = useAuth();
+  const { user } = useAuth();
+  const accessLevel = (user as any)?.accessLevel;
+
   
   const isAdmin = accessLevel === 'admin';
 

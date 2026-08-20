@@ -34,3 +34,18 @@ export const SplitThumbnail: ComponentType<Props> = ({ className }) => (
     <rect x="108" y="70" width="24" height="6" fill="none" stroke="hsl(var(--foreground))" strokeOpacity="0.4" />
   </Frame>
 );
+
+export const EditorialThumbnail: ComponentType<Props> = ({ className }) => (
+  <Frame className={className}>
+    {/* Costura em 42% (aprox 67px de 160) */}
+    <rect x="67" y="0" width="93" height="100" fill="hsl(var(--foreground))" opacity="0.18" />
+    {/* Título cruzando a costura */}
+    <rect x="10" y="38" width="75" height="6" fill="hsl(var(--foreground))" opacity="0.65" />
+    <rect x="10" y="48" width="85" height="6" fill="hsl(var(--foreground))" opacity="0.65" />
+    {/* Detalhes */}
+    <rect x="10" y="62" width="30" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
+    <rect x="10" y="90" width="25" height="2" fill="hsl(var(--foreground))" opacity="0.35" />
+    <rect x="135" y="90" width="15" height="2" fill="hsl(var(--foreground))" opacity="0.45" />
+  </Frame>
+);
+

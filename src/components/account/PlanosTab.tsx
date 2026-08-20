@@ -18,14 +18,17 @@ import transferLogo from '@/assets/gallery-transfer-logo.png';
 
 export default function PlanosTab() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
+  const isAdmin = (user as any)?.isAdmin;
+
   const { photoCredits, creditsPurchased, creditsSubscription, isLoading: isLoadingCredits } = usePhotoCredits();
   const { purchases } = useCreditPackages();
   const { storageUsedBytes, storageLimitBytes, storageUsedPercent, hasTransferPlan, hasFreeStorageOnly, planName, isLoading: isLoadingTransfer } = useTransferStorage();
   const { getPlanPrice } = useUnifiedPlans();
 
-  const comboProMonthly = getPlanPrice('combo_pro_select2k', 'monthly');
-  const comboFullMonthly = getPlanPrice('combo_completo', 'monthly');
+  const comboProMonthly = getPlanPrice('combo_pro_select2k', 'MONTHLY');
+  const comboFullMonthly = getPlanPrice('combo_completo', 'MONTHLY');
+
   const formatPriceBRL = (cents: number) => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (

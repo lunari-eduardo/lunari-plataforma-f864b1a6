@@ -175,6 +175,8 @@ export default function DeliverDetail() {
         nomeSessao: sessionName,
         mensagemBoasVindas: welcomeEnabled ? (welcomeMessage.trim() || null) : null,
         permissao: isPrivate ? 'private' : 'public',
+        coverId: coverId,
+        prazoSelecao: expirationDate,
         configuracoes: {
           ...gallery.configuracoes,
           notasInternas: internalNotes,
@@ -183,13 +185,13 @@ export default function DeliverDetail() {
           subtitulo: subtitle.trim() || undefined,
           categoria: category.trim() || undefined,
           dataEvento: eventDate ? eventDate.toISOString() : undefined,
-        },
+        } as any,
         themeId: useCustomTheme ? activeThemeId : null,
         useCustomTheme: useCustomTheme,
         themeOverrides: themeOverrides,
-        coverId: coverId,
-        prazoSelecao: expirationDate,
       }});
+
+
       navigate('/app/gallery/list?tab=transfer');
     } catch (error) {
       console.error('Erro ao salvar:', error);

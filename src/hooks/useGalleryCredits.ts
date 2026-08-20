@@ -11,10 +11,11 @@ export interface GalleryCreditsData {
 }
 
 export function useGalleryCredits() {
-  const { user, accessLevel } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  const isAdmin = accessLevel === 'admin';
+  const isAdmin = (user as any)?.isAdmin || (user as any)?.accessLevel === 'admin';
+
 
   const { data, isLoading } = useQuery({
     queryKey: ['gallery-credits', user?.id],

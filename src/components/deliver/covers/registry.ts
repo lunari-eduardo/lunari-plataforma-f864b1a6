@@ -4,11 +4,13 @@ import {
   FullscreenThumbnail,
   FloatingFrameThumbnail,
   SplitThumbnail,
+  EditorialThumbnail,
 } from './thumbnails';
 
 const FullscreenCover = lazy(() => import('./variants/FullscreenCover'));
 const FloatingFrameCover = lazy(() => import('./variants/FloatingFrameCover'));
 const SplitCover = lazy(() => import('./variants/SplitCover'));
+const EditorialCover = lazy(() => import('./variants/EditorialCover'));
 
 export const COVER_REGISTRY: Record<string, CoverVariant> = {
   fullscreen: {
@@ -32,7 +34,15 @@ export const COVER_REGISTRY: Record<string, CoverVariant> = {
     Component: SplitCover,
     Thumbnail: SplitThumbnail,
   },
+  editorial: {
+    id: 'editorial',
+    name: 'Editorial',
+    description: 'Tipografia monumental atravessando a costura da imagem',
+    Component: EditorialCover,
+    Thumbnail: EditorialThumbnail,
+  },
 };
+
 
 export const DEFAULT_COVER_ID = 'fullscreen';
 
