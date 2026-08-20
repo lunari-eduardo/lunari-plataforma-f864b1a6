@@ -4,6 +4,7 @@ import { usePublicMaterial } from '@/hooks/usePublicMaterial';
 import { useTrackedMaterial } from '@/hooks/useTrackedMaterial';
 import { useShareTracking } from '@/hooks/useShareTracking';
 import { NativePdfViewer } from './components/editor/NativePdfViewer';
+import { VisualRenderer } from './components/editor/VisualRenderer';
 import { Loader2, MessageCircle } from 'lucide-react';
 import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
 
