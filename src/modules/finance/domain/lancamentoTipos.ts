@@ -59,8 +59,6 @@ export type CampoLancamento =
   | "formaPagamento"
   | "observacoes";
 
-export type OrigemReceitaOperacional = "sessao" | "venda_avulsa" | "outro";
-
 export interface LancamentoTipoMeta {
   id: LancamentoTipo;
   /** Rótulo curto exibido no menu contextual. */
@@ -80,14 +78,6 @@ export interface LancamentoTipoMeta {
   gruposPermitidos: Grupo[];
   /** Direção contábil (in/out) — usada para tint sutil e cálculos derivados. */
   natureza: "entrada" | "saida";
-  /**
-   * Chip discreto de contexto pré-form (ex.: Receita Operacional apresenta
-   * Sessão / Venda avulsa / Outro antes do formulário).
-   */
-  contextoPreForm?: {
-    label: string;
-    opcoes: Array<{ id: OrigemReceitaOperacional; label: string; descricao: string; icone: LucideIcon }>;
-  };
   /**
    * Datas relevantes — evita apresentar campos sem sentido para o contexto.
    *  - Receitas → competência + recebimento
@@ -112,41 +102,23 @@ export interface LancamentoTipoMeta {
 export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
   receita_operacional: {
     id: "receita_operacional",
-    label: "Receita Operacional",
-    descricao: "Vendas avulsas de produtos, pacotes e outras receitas do estúdio.",
-    tituloDrawer: "Nova Receita Operacional",
-    subtituloDrawer: "Registre uma nova entrada do seu estúdio.",
+    label: "Venda avulsa",
+    descricao: "Produtos, fotos, ou outros itens vendidos fora de uma sessão.",
+    tituloDrawer: "Nova Venda Avulsa",
+    subtituloDrawer: "Registre uma venda avulsa do estúdio.",
     icone: ArrowUpRight,
     gruposPermitidos: ["Receita Operacional"],
     natureza: "entrada",
-    contextoPreForm: {
-      label: "Origem da receita",
-      opcoes: [
-        {
-          id: "venda_avulsa",
-          label: "Venda avulsa",
-          descricao: "Produtos, pacotes e itens editáveis",
-          icone: Package,
-        },
-        {
-          id: "outro",
-          label: "Outro",
-          descricao: "Outras receitas operacionais",
-          icone: Receipt,
-        },
-      ],
-    },
     datas: ["competencia", "recebimento"],
     camposEssenciais: ["grupo", "categoria", "valor", "competencia", "recebimento", "formaPagamento"],
     camposProibidos: ["vencimento"],
   },
 
-
   receita_nao_operacional: {
     id: "receita_nao_operacional",
-    label: "Receita Não Operacional",
-    descricao: "Entradas fora da operação: juros, reembolsos, aportes.",
-    tituloDrawer: "Nova Receita Não Operacional",
+    label: "Outra entrada",
+    descricao: "Juros, reembolsos, aportes e outros valores recebidos.",
+    tituloDrawer: "Nova Outra Entrada",
     subtituloDrawer: "Entrada fora da atividade principal do estúdio.",
     icone: Banknote,
     gruposPermitidos: ["Receita Não Operacional"],
@@ -158,9 +130,9 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
 
   despesa_fixa: {
     id: "despesa_fixa",
-    label: "Despesa Fixa",
-    descricao: "Gastos recorrentes: aluguel, software, internet.",
-    tituloDrawer: "Nova Despesa Fixa",
+    label: "Conta fixa",
+    descricao: "Aluguel, softwares, internet e outros gastos recorrentes.",
+    tituloDrawer: "Nova Conta Fixa",
     subtituloDrawer: "Registre um custo recorrente do estúdio.",
     icone: ArrowDownRight,
     gruposPermitidos: ["Despesa Fixa"],
@@ -180,9 +152,9 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
 
   despesa_variavel: {
     id: "despesa_variavel",
-    label: "Despesa Variável",
-    descricao: "Gastos pontuais: marketing, transporte, insumos.",
-    tituloDrawer: "Nova Despesa Variável",
+    label: "Gasto do dia a dia",
+    descricao: "Marketing, transporte, materiais e outros gastos.",
+    tituloDrawer: "Novo Gasto",
     subtituloDrawer: "Registre um novo gasto do seu estúdio.",
     icone: ArrowDownRight,
     gruposPermitidos: ["Despesa Variável"],
@@ -202,9 +174,9 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
 
   investimento: {
     id: "investimento",
-    label: "Investimento",
-    descricao: "Equipamentos, acervo, móveis, imóveis, veículos.",
-    tituloDrawer: "Novo Investimento",
+    label: "Compra / Investimento",
+    descricao: "Equipamentos, computadores, móveis e outros bens.",
+    tituloDrawer: "Nova Compra / Investimento",
     subtituloDrawer: "Registre a aquisição de um ativo do estúdio.",
     icone: Landmark,
     gruposPermitidos: ["Investimento"],

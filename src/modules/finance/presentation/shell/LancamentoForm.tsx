@@ -20,7 +20,6 @@ import {
   getLancamentoTipoMeta,
   isCampoPermitido,
   type LancamentoTipo,
-  type OrigemReceitaOperacional,
 } from '@/modules/finance/domain/lancamentoTipos';
 import {
   CurrencyField,
@@ -110,11 +109,9 @@ interface Props {
   onClose: () => void;
   onCreated?: () => void;
   isMobile?: boolean;
-  /** Callback opcional: quando o usuário escolhe "Venda avulsa" no pré-form. */
-  onSelectVendaAvulsa?: () => void;
 }
 
-export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false, onSelectVendaAvulsa }: Props) {
+export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
   const { toast } = useToast();
   const {
@@ -124,17 +121,12 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   } = useNovoFinancas();
   const { cartoes = [] } = useCreditCardsSupabase();
 
-  // Pré-form contextual (Receita Operacional → origem)
-  const [origem, setOrigem] = useState<OrigemReceitaOperacional | null>(null);
-  const precisaOrigem = tipo === 'receita_operacional' && !origem;
-
   const [state, setState] = useState<FormState>(() => initialState(tipo));
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     // reset quando muda o tipo
     setState(initialState(tipo));
-    setOrigem(null);
   }, [tipo]);
 
   const grupo = meta.gruposPermitidos[0];
@@ -195,9 +187,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
       const fp = FORMAS_PAGAMENTO.find((f) => f.value === state.formaPagamento);
       if (fp) partes.push(`Forma: ${fp.label}`);
     }
-    if (origem) {
-      partes.push(`Origem: ${origem.replace('_', ' ')}`);
-    }
     if (state.observacoes.trim()) partes.push(state.observacoes.trim());
     const observacoes = partes.join(' · ');
 
@@ -235,78 +224,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   }
 
   // ─────────────────────────────────────────────────────────
-  // Pré-form: Origem da receita operacional
-  // ─────────────────────────────────────────────────────────
-
-  if (precisaOrigem && meta.contextoPreForm) {
-    const ctx = meta.contextoPreForm;
-    return (
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="preform"
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -8 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          className="contents"
-        >
-          <div className={`flex-1 min-h-0 overflow-y-auto ${isMobile ? 'px-5 py-5' : 'px-6 py-6'}`}>
-            <p className="text-[11.5px] font-medium uppercase tracking-wide text-muted-foreground mb-3">
-              {ctx.label}
-            </p>
-            <div className="grid gap-2">
-              {ctx.opcoes.map((op, i) => {
-                const Icon = op.icone;
-                return (
-                  <motion.button
-                    key={op.id}
-                    type="button"
-                    onClick={() => {
-                      if (op.id === 'venda_avulsa') {
-                        onSelectVendaAvulsa?.();
-                        return;
-                      }
-                      setOrigem(op.id);
-                    }}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.22, delay: 0.04 * i, ease: 'easeOut' }}
-                    whileHover={{ y: -1 }}
-                    whileTap={{ scale: 0.985 }}
-                    className="group flex items-start gap-3 rounded-xl border border-border/60 bg-background p-3 text-left transition-colors hover:border-accent-gold/60 hover:bg-accent-gold/5"
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-gold/10 text-accent-gold shrink-0">
-                      <Icon className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-medium text-foreground">{op.label}</div>
-                      <div className="text-[11.5px] text-muted-foreground leading-snug">
-                        {op.descricao}
-                      </div>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-          <footer
-            className={`flex items-center justify-end gap-2 border-t border-border/40 shrink-0 ${isMobile ? 'px-5 py-3' : 'px-6 py-4'}`}
-            style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' } : undefined}
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              className={`rounded-md font-medium text-muted-foreground transition-colors hover:text-foreground ${isMobile ? 'px-4 py-2 text-[13px]' : 'px-3 py-1.5 text-[12px]'}`}
-            >
-              Cancelar
-            </button>
-          </footer>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────
   // Form principal
   // ─────────────────────────────────────────────────────────
 
@@ -314,7 +231,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
 
   return (
     <motion.div
-      key={`form-${tipo}-${origem ?? 'none'}`}
+      key={`form-${tipo}`}
       initial={{ opacity: 0, x: 8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
