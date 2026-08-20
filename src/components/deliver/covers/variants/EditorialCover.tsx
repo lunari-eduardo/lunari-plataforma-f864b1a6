@@ -49,16 +49,48 @@ export default function EditorialCover({
     line1,
     line2,
     spec.title.width,
+    spec.title.height,
     sessionFont || 'serif',
     spec.orientation === 'vertical' ? 12 : 18,
-    32
+    spec.orientation === 'vertical' ? 24 : 32
   );
 
-  const { titleColor: overlayColor, ctaColor, isLight } = useSeamContrast(
+  // Calculate real screen rectangles for sampling
+  // Title intersection rect: Part of the title box that is over the photo
+  const titleIntersection = useMemo(() => {
+    if (spec.orientation === 'vertical') {
+      const intersectX = Math.max(spec.title.x, spec.seamPx);
+      const intersectWidth = Math.max(0, (spec.title.x + spec.title.width) - intersectX);
+      return { 
+        x: intersectX, 
+        y: spec.title.y - (spec.title.height / 2), 
+        width: intersectWidth, 
+        height: spec.title.height 
+      };
+    } else {
+      const intersectY = Math.max(spec.title.y - (spec.title.height / 2), spec.seamPx);
+      const intersectHeight = Math.max(0, (spec.title.y + (spec.title.height / 2)) - intersectY);
+      return { 
+        x: spec.title.x - (spec.title.width / 2), 
+        y: intersectY, 
+        width: spec.title.width, 
+        height: intersectHeight 
+      };
+    }
+  }, [spec]);
+
+  const ctaRect = useMemo(() => ({
+    x: spec.cta.x - 100, // Anchor right, approx width
+    y: spec.cta.y,
+    width: 100,
+    height: 40
+  }), [spec]);
+
+  const { titleColor: overlayColor, ctaColor } = useSeamContrast(
     coverUrl,
-    spec.title,
     spec.photo,
-    spec.cta,
+    titleIntersection,
+    ctaRect,
     isDark
   );
 
@@ -80,9 +112,32 @@ export default function EditorialCover({
     ? `inset(0 0 0 ${spec.seamPx}px)`
     : `inset(${spec.seamPx}px 0 0 0)`;
 
-  const clipBase = spec.orientation === 'vertical'
+  const clipTheme = spec.orientation === 'vertical'
     ? `inset(0 ${size.width - spec.seamPx}px 0 0)`
     : `inset(0 0 ${size.height - spec.seamPx}px 0)`;
+
+  // Title Box positioning:
+  // Desktop: Anchor left, centered vertically
+  // Mobile: Anchor top, centered horizontally
+  const titleBoxStyle: React.CSSProperties = spec.orientation === 'vertical' ? {
+    left: `${spec.title.x}px`,
+    top: `${spec.title.y}px`,
+    width: `${spec.title.width}px`,
+    height: `${spec.title.height}px`,
+    transform: 'translateY(-50%)',
+    display: 'flex',
+    alignItems: 'center'
+  } : {
+    left: `${spec.title.x}px`,
+    top: `${spec.title.y}px`,
+    width: `${spec.title.width}px`,
+    height: `${spec.title.height}px`,
+    transform: 'translate(-50%, -50%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center'
+  };
 
   return (
     <section
@@ -91,13 +146,13 @@ export default function EditorialCover({
         isDark ? 'bg-[#12100E]' : 'bg-[#F7F4EE]'
       }`}
     >
-      {/* 1. PHOTO LAYER (FULL BLEED) */}
+      {/* 1. PHOTO LAYER */}
       <div
-        className="absolute inset-0 z-20 transition-transform duration-1000 ease-out"
+        className="absolute inset-0 z-10"
         style={{ clipPath: clipPhoto }}
       >
         <div
-          className="w-full h-full bg-cover bg-center"
+          className="w-full h-full bg-cover bg-center transition-transform duration-[2000ms] ease-out scale-100 hover:scale-105"
           style={{ backgroundImage: `url(${coverUrl})` }}
         />
         {/* Subtle Vignette for contrast near seam */}
@@ -105,50 +160,42 @@ export default function EditorialCover({
           className="absolute inset-0 pointer-events-none"
           style={{
             background: spec.orientation === 'vertical'
-              ? `linear-gradient(to right, ${isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'}, transparent 20%)`
-              : `linear-gradient(to bottom, ${isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'}, transparent 20%)`
+              ? `linear-gradient(to right, ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'}, transparent 20%)`
+              : `linear-gradient(to bottom, ${isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.1)'}, transparent 20%)`
           }}
         />
       </div>
 
-      {/* 2. BASE TITLE (IN THE THEME SIDE) */}
+      {/* 2. BASE TITLE LAYER (FULL SCREEN CLIPPED TO THEME SIDE) */}
       <div
-        className="absolute z-10 flex items-center"
-        style={{
-          left: `${spec.title.x}px`,
-          top: `${spec.title.y}px`,
-          width: `${spec.title.width}px`,
-          height: `${spec.title.height}px`,
-          clipPath: clipBase,
-        }}
+        className="absolute inset-0 z-20 pointer-events-none"
+        style={{ clipPath: clipTheme }}
       >
-        <TitleComposition
-          line1={line1}
-          line2={line2}
-          fontSize={fontSize}
-          color={baseColor}
-          fontFamily={sessionFont}
-        />
+        <div className="absolute" style={titleBoxStyle}>
+          <TitleComposition
+            line1={line1}
+            line2={line2}
+            fontSize={fontSize}
+            color={baseColor}
+            fontFamily={sessionFont}
+          />
+        </div>
       </div>
 
-      {/* 3. OVERLAY TITLE (IN THE PHOTO SIDE) */}
+      {/* 3. OVERLAY TITLE LAYER (FULL SCREEN CLIPPED TO PHOTO SIDE) */}
       <div
-        className="absolute z-30 flex items-center"
-        style={{
-          left: `${spec.title.x}px`,
-          top: `${spec.title.y}px`,
-          width: `${spec.title.width}px`,
-          height: `${spec.title.height}px`,
-          clipPath: clipPhoto,
-        }}
+        className="absolute inset-0 z-30 pointer-events-none"
+        style={{ clipPath: clipPhoto }}
       >
-        <TitleComposition
-          line1={line1}
-          line2={line2}
-          fontSize={fontSize}
-          color={overlayColor}
-          fontFamily={sessionFont}
-        />
+        <div className="absolute" style={titleBoxStyle}>
+          <TitleComposition
+            line1={line1}
+            line2={line2}
+            fontSize={fontSize}
+            color={overlayColor}
+            fontFamily={sessionFont}
+          />
+        </div>
       </div>
 
       {/* 4. DETAILS LAYER */}
@@ -157,9 +204,13 @@ export default function EditorialCover({
         {formattedSubtitle && (
           <div
             className="absolute"
-            style={{ left: `${spec.subtitle.x}px`, top: `${spec.subtitle.y}px` }}
+            style={{ 
+              left: `${spec.subtitle.x}px`, 
+              top: `${spec.subtitle.y}px`,
+              transform: spec.orientation === 'horizontal' ? 'translateY(-100%)' : 'none'
+            }}
           >
-            <div className="flex flex-col gap-2">
+            <div className={`flex flex-col gap-2 ${spec.orientation === 'horizontal' ? 'items-center w-full' : ''}`}>
               <span 
                 className="text-[10px] tracking-[0.3em] font-sans opacity-60 uppercase"
                 style={{ color: baseColor }}
@@ -188,9 +239,9 @@ export default function EditorialCover({
         <div
           className="absolute pointer-events-auto"
           style={{ 
-            right: `${size.width - spec.cta.x}px`, 
+            left: `${spec.cta.x}px`, 
             top: `${spec.cta.y}px`,
-            transform: 'translateX(0)' 
+            transform: 'translateX(-100%)' 
           }}
         >
           <button
