@@ -151,11 +151,10 @@ const steps = [{
 export default function GalleryCreate() {
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    user,
-    hasGestaoIntegration: !!(user as any)?.hasGestaoIntegration,
-    accessLevel: (user as any)?.accessLevel
-  } = useAuth();
+  const { user } = useAuth();
+  const hasGestaoIntegration = !!(user as any)?.hasGestaoIntegration;
+  const accessLevel = (user as any)?.accessLevel;
+
 
   const {
     gestaoParams,
