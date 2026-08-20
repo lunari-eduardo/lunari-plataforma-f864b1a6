@@ -1,24 +1,24 @@
 import { useVisualTheme } from '@/contexts/VisualThemeContext';
 
-/**
- * useTheme — shim compatível com API antiga.
- * Encaminha para VisualThemeContext (fonte única de verdade).
- */
 export function useTheme() {
   const { theme, setMode } = useVisualTheme();
+  
+  const currentTheme = theme.mode;
+  
+  const setTheme = (mode: 'light' | 'dark' | 'system') => {
+    setMode(mode);
+  };
 
-  const currentTheme: 'light' | 'dark' = (() => {
-    if (theme.mode === 'system') {
-      if (typeof window === 'undefined') return 'light';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-    return theme.mode;
-  })();
-
-  return {
-    theme: theme.mode,
-    setTheme: setMode,
-    toggleTheme: () => setMode(currentTheme === 'dark' ? 'light' : 'dark'),
+  const toggleTheme = () => {
+    if (currentTheme === 'light') setMode('dark');
+    else if (currentTheme === 'dark') setMode('system');
+    else setMode('light');
+  };
+  
+  return { 
+    theme: currentTheme, 
+    setTheme,
     currentTheme,
+    toggleTheme
   };
 }
