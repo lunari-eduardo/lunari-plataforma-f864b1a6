@@ -1,6 +1,10 @@
-import { useTheme as useVisualTheme } from '@/contexts/VisualThemeContext';
+import { useVisualTheme } from '@/contexts/VisualThemeContext';
 
 export function useTheme() {
-  const { theme, setTheme } = useVisualTheme();
-  return { theme, setTheme };
+  const { theme, setMode } = useVisualTheme();
+  
+  return { 
+    theme: theme.mode, 
+    setTheme: setMode 
+  };
 }
