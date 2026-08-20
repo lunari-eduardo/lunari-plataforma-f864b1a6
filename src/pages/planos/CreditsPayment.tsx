@@ -160,8 +160,8 @@ function OrderSummary({
   const isYearly = pkg.type === 'subscription' && pkg.billingCycle === 'YEARLY';
 
   // Base amount for calculation
-  const baseCents = isUpgrade && !isRenewal && pkg.type === 'subscription' && pkg.prorataValueCents != null
-    ? pkg.prorataValueCents
+  const baseCents = (isUpgrade && !isRenewal && pkg.type === 'subscription' && (pkg as any).prorataValueCents != null)
+    ? (pkg as any).prorataValueCents
     : pkg.priceCents;
 
   const finalCents = couponDiscount != null ? couponDiscount : baseCents;

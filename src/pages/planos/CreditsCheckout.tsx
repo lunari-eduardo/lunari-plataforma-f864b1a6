@@ -137,17 +137,11 @@ export default function CreditsCheckout() {
   });
 
   // Dynamic pricing from unified_plans
-  const { getPlanPrice, getPlanName: dynamicPlanName, getAllPlanPrices, isLoading: isLoadingPlans } = useUnifiedPlans();
-
-
-
-
-  // Dynamic plan prices (backward compat)
+  const { plans: dynamicPlans, getPlanPrice, getPlanName: dynamicPlanName, getAllPlanPrices, isLoading: isLoadingPlans } = useUnifiedPlans();
   const ALL_PLAN_PRICES_MAP = getAllPlanPrices();
-  const PLAN_INCLUDES_LOCAL = PLAN_INCLUDES;
 
   // Build transfer plans from dynamic data or fallback
-  const dynamicTransfer = useMemo(() => (activeSubs || []).filter(p => (p as any).includes_transfer && !(p as any).includes_studio), [activeSubs]);
+  const dynamicTransfer = useMemo(() => dynamicPlans.filter(p => p.includes_transfer && !p.includes_studio), [dynamicPlans]);
   const TRANSFER_PLANS = dynamicTransfer.length > 0
     ? dynamicTransfer.map((p) => ({
         code: p.code,
@@ -161,7 +155,7 @@ export default function CreditsCheckout() {
     : FALLBACK_TRANSFER_PLANS;
 
   // Build combo plans from dynamic data or fallback
-  const dynamicCombos = useMemo(() => (activeSubs || []).filter(p => (p as any).product_family === 'combo'), [activeSubs]);
+  const dynamicCombos = useMemo(() => dynamicPlans.filter(p => p.product_family === 'combo'), [dynamicPlans]);
   const COMBO_PLANS = dynamicCombos.length > 0
     ? dynamicCombos.map((p) => ({
         code: p.code,
