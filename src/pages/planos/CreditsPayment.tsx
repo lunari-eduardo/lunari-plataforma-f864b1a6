@@ -523,7 +523,7 @@ function SelectCardForm({ pkg, formattedPrice }: { pkg: SelectPayment; formatted
           remoteIp = ipData.ip || '';
         } catch { remoteIp = ''; }
 
-        const result = await createPayment({
+        const result = await (createPayment as any)({
           productType: 'select',
           packageId: pkg.packageId,
           credits: pkg.credits,
@@ -847,7 +847,7 @@ function SubscriptionWizard({ pkg }: { pkg: SubscriptionPayment }) {
     <OrderSummary
       pkg={pkg}
       installments={installments}
-      couponDiscount={coupon.valid ? coupon.calculateDiscount(installmentBaseCents) : null}
+      couponDiscount={coupon.valid && (coupon as any).calculateDiscount ? (coupon as any).calculateDiscount(installmentBaseCents) : null}
       couponCode={coupon.valid ? coupon.code : null}
       couponDiscountType={coupon.valid ? coupon.discountType : null}
       couponDiscountValue={coupon.valid ? coupon.discountValue : null}
