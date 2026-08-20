@@ -1,42 +1,68 @@
-# Capa Editorial — 3 correções cirúrgicas (sem quebrar a costura)
+# Capa Editorial — composição exclusiva para mobile (iPhone/Android)
 
-O efeito de costura (título único trocando de cor na borda da foto) está funcionando e **não será alterado**. Os três problemas restantes têm causas independentes e localizadas.
+Desktop permanece intocado. Toda mudança fica restrita ao ramo `orientation === 'horizontal'` (largura < 640px) da composição.
 
-## Problema 1 — Cor do texto sobre a foto só acerta depois de sair e voltar
+## Diagnóstico do mobile atual
 
-Causa (confirmada no código): a leitura de contraste (`useSeamContrast`) roda antes da geometria existir. No primeiro render `size = {0,0}`, então o retângulo de interseção do título é `0x0`; a função de luminância cai no fallback (`return isDark ? 0 : 255`) e decide texto escuro. Quando a geometria chega, o efeito reexecuta, mas o `new Image()` com `crossOrigin='anonymous'` reaproveita a entrada de cache sem cabeçalho CORS e o `onload` não repinta — a cor errada fica congelada. Ao voltar à página, a imagem já está em cache com CORS resolvido e a cor correta aparece.
+- A costura está em `0.48` da altura: metade da tela é creme vazio. No print, quase 45% da capa é espaço morto acima do subtítulo.
+- O bloco de título está centrado exatamente na costura e centralizado horizontalmente (`text-align: center`), o que empurra a massa tipográfica para o meio e deixa o topo sem nenhum elemento de ancoragem.
+- A foto ocupa apenas a metade inferior; num retrato vertical (formato dominante em ensaio) isso corta muito da pessoa e faz a imagem parecer "colada".
+- Data e CTA ficam sobre a foto no rodapé sem margem de área segura — em iPhone com home indicator e em Android com barra de gestos eles encostam na borda.
 
-Correção:
-1. Não executar amostragem enquanto `size.width === 0` ou a interseção tiver área zero — sair cedo mantendo o estado anterior.
-2. Separar o carregamento da imagem (uma vez, com `decode()` + `onerror`) da amostragem (recalculada quando a geometria muda), guardando o `HTMLImageElement`/canvas em `ref`. Assim mudanças de layout não dependem de um novo `onload`.
-3. `onerror`: refazer a tentativa uma vez **sem** `crossOrigin` para detectar apenas o caso de falha; se ainda falhar, fallback determinístico = branco com sombra de leitura sutil (nunca texto escuro invisível).
-4. Estado inicial neutro: enquanto não houver medição, a camada sobre a foto renderiza branco (aparência correta na maioria das fotos) em vez de escuro.
+## Direção escolhida
 
-## Problema 2 — Foto com corte desproporcional (parece tela cheia com faixa branca por cima)
+Entre as duas alternativas da sua mensagem, a melhor para mobile é **foto grande ocupando a maior parte da tela, com o título descendo sobre ela** — não a foto centralizada à direita (isso é a lógica de desktop encolhida, e em 390px de largura sobraria uma coluna de texto estreita demais para uma serif display).
 
-Causa: a camada da foto é `absolute inset-0` com `background-size: cover` sobre **a tela inteira** e depois recortada por `clip-path`. Ou seja, a imagem é enquadrada para 100% da largura e só a parte direita fica visível — exatamente a sensação de "foto cobrindo a tela com um bloco branco colado por cima".
+Composição nova (retrato):
 
-Correção: a foto passa a ocupar apenas o próprio retângulo (`spec.photo`), posicionada em `left/top/width/height` reais, com `object-fit: cover` **dentro desse retângulo**. Sem `clip-path` na foto (a costura vira a própria borda do elemento). O recorte volta a ser proporcional ao lado direito (desktop) / inferior (mobile).
+```text
+┌──────────────────────────┐  0%
+│  creme                   │
+│  SESSÃO MATERNIDADE      │  ← subtítulo ancorado, alinhado à esquerda
+│  TESTE DE               │
+├──────────────────────────┤  costura ≈ 32% da altura
+│  NOVA CAPA   (branco)    │  ← mesma palavra atravessando a foto
+│                          │
+│        FOTOGRAFIA        │  ← 68% da tela, full-bleed
+│                          │
+│                          │
+│  20 · AGOSTO · 2026      │
+│              VER GALERIA→│  ← respeitando safe-area
+└──────────────────────────┘  100%
+```
 
-Consequência positiva: o mapeamento de `cover` usado no cálculo de contraste passa a bater com o que é exibido, porque ambos usarão o mesmo retângulo. A função de amostragem será ajustada para simular `cover` com a proporção real de `spec.photo` (hoje ela simula um quadrado 64×64, o que distorce a região amostrada).
+Regras:
 
-## Problema 3 — Subtítulo escondido atrás do título
+1. Costura mobile sobe de `0.48` para `0.32`; a foto passa a ocupar `y: 0.32 → 1` (68% da altura).
+2. O bloco de título deixa de ser centralizado: passa a alinhamento à esquerda com margem de `0.08` da largura, igual ao desktop — mantém a mesma identidade editorial e evita a "quebra centrada" que descaracteriza a peça.
+3. O título é posicionado por **âncora na costura**, não por centro: a primeira linha termina logo acima da costura e a segunda linha nasce dentro da foto. Isso garante a travessia de cor sempre, independentemente de o título ter 1 ou 2 linhas.
+   - Título de 1 linha: a linha é centrada verticalmente na costura (metade creme, metade foto), reproduzindo o efeito do desktop.
+4. Escala tipográfica mobile: alvo de largura `0.84` da tela, teto de `18vw` mantido, piso subindo de 32px para 34px, e limite adicional de altura para que o bloco (subtítulo + 2 linhas) nunca ultrapasse 34% da altura da tela.
+5. Subtítulo continua ancorado ao topo do bloco de título, agora alinhado à esquerda (sem `items-center`), com o filete curto abaixo.
 
-Causa: o subtítulo tem posição fixa (`y = 0.35` da altura) enquanto o bloco de título é centrado verticalmente e cresce conforme o texto — em títulos de duas linhas os dois se sobrepõem.
+## Ajustes específicos de iOS/Android
 
-Correção: o subtítulo deixa de ter posição absoluta própria e passa a ser **ancorado ao bloco de título**: renderizado logo acima da primeira linha, com espaçamento proporcional ao tamanho da fonte calculada (`fontSize * 0.5`), na mesma coluna do título. Ele fica no lado creme e usa a cor base (sem participar da costura). No mobile, mesma regra com âncora horizontal centrada.
+- Altura: usar `100svh` com fallback `100dvh` no mobile. `dvh` muda quando a barra do Safari recolhe e faz a costura "pular" durante o scroll; `svh` mantém a composição estável.
+- Rodapé (data + CTA): posições passam a considerar `env(safe-area-inset-bottom)` e `env(safe-area-inset-left/right)`, com um piso de 24px.
+- Alvo de toque do CTA: mínimo 44×44px em mobile (hoje é uma linha de texto com 1px de borda).
+- Remover `hover:scale-105` da foto no mobile (hover em touch fica preso no estado ampliado) e desativar o zoom lento quando `prefers-reduced-motion`.
+- `ResizeObserver` com debounce por `requestAnimationFrame` para evitar recomposição a cada pixel durante a mudança de barra de endereço.
+
+## Contraste na travessia (mobile)
+
+A leitura de luminância continua igual, mas com o retângulo de interseção derivado da nova âncora: apenas a faixa do título que cai abaixo da costura. Como a foto mobile agora ocupa 68% da tela, a região amostrada corresponde ao topo real da imagem — hoje ela amostra uma faixa deslocada porque o retângulo é calculado a partir do centro do bloco.
 
 ## Arquivos tocados
 
-- `src/components/deliver/covers/variants/EditorialCover.tsx` — foto no retângulo próprio; subtítulo ancorado ao título; estado inicial de cor neutro.
-- `src/components/deliver/covers/editorial/useSeamContrast.ts` — guarda de geometria, carregamento único com `decode()`/`onerror`, amostragem com proporção real da foto.
-- `src/components/deliver/covers/editorial/composition.ts` — remoção do `subtitlePos` fixo (substituído por âncora derivada do título); nenhum outro valor de costura alterado.
+- `src/components/deliver/covers/editorial/composition.ts` — `MOBILE_SPEC`: nova costura, novo `photoRect`, `titleBox` alinhado à esquerda e ancorado à costura; `datePos`/`ctaPos` com margem de área segura.
+- `src/components/deliver/covers/variants/EditorialCover.tsx` — ramo horizontal: título alinhado à esquerda, posicionamento por âncora de costura, altura `svh`, safe-area no rodapé, alvo de toque do CTA, sem hover-scale no touch.
+- `src/components/deliver/covers/editorial/useFittedTitle.ts` — teto de altura para o bloco no modo horizontal.
 
-Sem mudanças de banco, dados ou regras de negócio. Camadas de recorte do título permanecem exatamente como estão.
+Sem mudanças no desktop/tablet, no banco ou em regras de negócio.
 
 ## Etapas
 
-1. Ajustar `useSeamContrast` (guarda + carregamento único + amostragem proporcional).
-2. Reposicionar a foto em `EditorialCover` para o retângulo real.
-3. Ancorar o subtítulo ao bloco de título e limpar `composition.ts`.
-4. Verificar em 1440, 1040 e 390 no preview, com foto clara e escura, e com recarga limpa (cache frio e cache quente) para confirmar a cor correta no primeiro acesso.
+1. Atualizar `MOBILE_SPEC` (costura 0.32, foto 68%, título à esquerda com âncora na costura).
+2. Ajustar o ramo horizontal do `EditorialCover` (alinhamento, âncora, safe-area, CTA tocável, svh).
+3. Ajustar o limite de altura do título no `useFittedTitle` para o modo horizontal.
+4. Verificar em 390×844 (iPhone 14), 430×932 (iPhone Pro Max), 360×800 (Android médio) e 412×915, com título de 1 e de 2 linhas, foto clara e escura, e com scroll iniciando/recolhendo a barra do Safari.
