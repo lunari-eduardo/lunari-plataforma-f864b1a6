@@ -5,7 +5,9 @@ import { getStorageLimitBytes, getPlanDisplayName, hasTransferStorage, FREE_TRAN
 import { differenceInDays } from 'date-fns';
 
 export function useTransferStorage() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
+  const isAdmin = (user as any)?.isAdmin || (user as any)?.accessLevel === 'admin';
+
 
   // Fetch active subscription with transfer storage (user may have multiple subs)
   const { data: subscription, isLoading: isLoadingSub } = useQuery({
