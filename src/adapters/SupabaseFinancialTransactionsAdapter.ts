@@ -284,7 +284,7 @@ export class SupabaseFinancialTransactionsAdapter {
     const [ano, mes] = dataInicio.split('-').map(Number);
     
     // Gerar 12 transações (uma para cada mês restante do ano)
-    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = [];
     
     for (let m = mes; m <= 12; m++) {
       const ultimoDiaMes = new Date(ano, m, 0).getDate();
@@ -305,7 +305,6 @@ export class SupabaseFinancialTransactionsAdapter {
         credit_card_id: undefined,
         data_compra: undefined,
         parent_id: `recurring_${Date.now()}`,
-        ...(formaPagamento ? { forma_pagamento: formaPagamento } : {}),
       });
     }
 
@@ -329,7 +328,7 @@ export class SupabaseFinancialTransactionsAdapter {
     
     const parentId = `parcela_${Date.now()}`;
 
-    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = [];
     
     for (let i = 0; i < numeroDeParcelas; i++) {
       const dataVencimento = this.calculateParcelDate(dataPrimeiraOcorrencia, i);
@@ -349,7 +348,6 @@ export class SupabaseFinancialTransactionsAdapter {
         credit_card_id: undefined,
         data_compra: undefined,
         parent_id: parentId,
-        ...(formaPagamento ? { forma_pagamento: formaPagamento } : {}),
       });
     }
 
@@ -387,10 +385,8 @@ export class SupabaseFinancialTransactionsAdapter {
     const diferenca = roundToTwoDecimals(valorTotal - (valorParcelaBase * numeroDeParcelas));
     
     const parentId = `cartao_${Date.now()}`;
-    // Default: cartão grava forma_pagamento='cartao_credito' a menos que cliente sobrescreva.
-    const formaPagamentoEfetiva = formaPagamento || 'cartao_credito';
 
-    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'> & { forma_pagamento?: string }> = [];
+    const transactions: Array<Omit<FinancialTransactionDB, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = [];
 
     for (let i = 0; i < numeroDeParcelas; i++) {
       const dataVencimento = this.calculateCreditCardDueDate(
@@ -414,7 +410,6 @@ export class SupabaseFinancialTransactionsAdapter {
         observacoes: observacoes ? `${observacoes} (Cartão: ${cartaoData.nome})` : `Cartão: ${cartaoData.nome}`,
         recurring_blueprint_id: undefined,
         parent_id: parentId,
-        forma_pagamento: formaPagamentoEfetiva,
       });
     }
 

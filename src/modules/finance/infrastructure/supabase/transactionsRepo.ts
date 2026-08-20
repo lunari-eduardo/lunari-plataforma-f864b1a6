@@ -34,7 +34,6 @@ function mapCreatePayload(input: CreateTransactionInput) {
     credit_card_id: input.cartaoId ?? undefined,
     data_compra: input.dataCompra ?? undefined,
     parent_id: input.parentId ?? undefined,
-    forma_pagamento: input.formaPagamento ?? undefined,
     status,
   };
 }
@@ -116,7 +115,6 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
     if (patch.dataVencimento !== undefined) dbPatch.data_vencimento = patch.dataVencimento;
     if (patch.dataCompetencia !== undefined) dbPatch.data_competencia = patch.dataCompetencia;
     if (patch.observacoes !== undefined) dbPatch.observacoes = patch.observacoes;
-    if (patch.formaPagamento !== undefined) dbPatch.forma_pagamento = patch.formaPagamento;
     const row = await SupabaseFinancialTransactionsAdapter.updateTransaction(id, dbPatch as any);
     return rowToTransacao(row);
   },
