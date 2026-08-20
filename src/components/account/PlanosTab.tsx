@@ -18,7 +18,9 @@ import transferLogo from '@/assets/gallery-transfer-logo.png';
 
 export default function PlanosTab() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
+  const isAdmin = (user as any)?.isAdmin;
+
   const { photoCredits, creditsPurchased, creditsSubscription, isLoading: isLoadingCredits } = usePhotoCredits();
   const { purchases } = useCreditPackages();
   const { storageUsedBytes, storageLimitBytes, storageUsedPercent, hasTransferPlan, hasFreeStorageOnly, planName, isLoading: isLoadingTransfer } = useTransferStorage();

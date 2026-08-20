@@ -153,9 +153,10 @@ export default function GalleryCreate() {
   const location = useLocation();
   const {
     user,
-    hasGestaoIntegration,
-    accessLevel
+    hasGestaoIntegration: !!(user as any)?.hasGestaoIntegration,
+    accessLevel: (user as any)?.accessLevel
   } = useAuth();
+
   const {
     gestaoParams,
     hasGestaoParams,
