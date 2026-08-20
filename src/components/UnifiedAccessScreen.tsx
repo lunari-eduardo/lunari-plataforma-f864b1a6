@@ -258,7 +258,7 @@ export function UnifiedAccessScreen({
                 <Button 
                   type="submit" 
                   variant="default" 
-                  size="xl"
+                  size="lg"
                   className="w-full shadow-lg transition-all duration-300 rounded-xl h-13 text-sm font-medium tracking-wide"
                   disabled={isLoading || !isFormValid()}
                   style={{ 
