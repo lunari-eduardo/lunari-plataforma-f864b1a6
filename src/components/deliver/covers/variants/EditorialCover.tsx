@@ -51,13 +51,13 @@ function DesktopTitleBlock({
           {line1}
         </h1>
         {line2 && (
-          <h1
+          <h2
             className={`block mt-2 lg:mt-3.5 whitespace-nowrap transition-all duration-300 ${fontSizeClass} ${
               isLightOnPhoto ? 'drop-shadow-[0_1px_8px_rgba(255,255,255,0.7)]' : 'drop-shadow-sm'
             }`}
           >
             {line2}
-          </h1>
+          </h2>
         )}
       </div>
 
@@ -76,7 +76,7 @@ function DesktopTitleBlock({
 }
 
 /**
- * Composição tipográfica Mobile com espaçamento vertical seguro (sem linhas sobrepostas).
+ * Composição tipográfica Mobile com espaçamento vertical seguro e sem sobreposição.
  */
 function MobileTitleBlock({
   line1,
@@ -89,39 +89,39 @@ function MobileTitleBlock({
 }: TitleTypographyProps) {
   const fontSizeClass =
     maxLineLength <= 7
-      ? 'text-[3.25rem] sm:text-6xl'
+      ? 'text-[2.75rem] sm:text-5xl'
       : maxLineLength <= 11
-      ? 'text-[2.65rem] sm:text-[3.25rem]'
+      ? 'text-[2.25rem] sm:text-[2.75rem]'
       : maxLineLength <= 16
-      ? 'text-[2.15rem] sm:text-[2.65rem]'
-      : 'text-[1.85rem] sm:text-[2.25rem]';
+      ? 'text-[1.85rem] sm:text-[2.25rem]'
+      : 'text-[1.5rem] sm:text-[1.85rem]';
 
   return (
     <div className="w-full px-2 pointer-events-none select-none">
       <div
-        className="font-normal tracking-[-0.04em] leading-[0.92] transition-colors duration-300"
+        className="font-normal tracking-[-0.04em] leading-[0.95] transition-colors duration-300"
         style={{ ...serifStyle, color }}
       >
         <h1
-          className={`font-normal block whitespace-nowrap ${fontSizeClass} ${
+          className={`font-normal block break-words sm:whitespace-nowrap ${fontSizeClass} ${
             isLightOnPhoto ? 'drop-shadow-[0_1px_6px_rgba(255,255,255,0.7)]' : ''
           }`}
         >
           {line1}
         </h1>
         {line2 && (
-          <h1
-            className={`font-normal block mt-1.5 sm:mt-2.5 whitespace-nowrap ${fontSizeClass} ${
+          <h2
+            className={`font-normal block mt-1.5 sm:mt-2.5 break-words sm:whitespace-nowrap ${fontSizeClass} ${
               isLightOnPhoto ? 'drop-shadow-[0_1px_6px_rgba(255,255,255,0.7)]' : ''
             }`}
           >
             {line2}
-          </h1>
+          </h2>
         )}
       </div>
 
       {subtitle && (
-        <div className="mt-5">
+        <div className="mt-3 sm:mt-4">
           <p
             className="text-[10px] sm:text-xs font-sans tracking-[0.28em] font-light uppercase opacity-75 transition-colors duration-300"
             style={{ color }}
@@ -259,11 +259,10 @@ export default function EditorialCover({
         </div>
 
         {/* CAMADA 2: Frame da Fotografia (Opaco: bloqueia o texto que está atrás) */}
-        {/* Posição travada com folga garantida de 18vh na base para o botão Ver Galeria */}
+        {/* Geometria unificada: top-[8vh] bottom-[16vh] right-[5vw] w-[48vw] */}
         <div
-          className="absolute top-[8vh] bottom-[18vh] right-[5vw] w-[48vw] lg:w-[46vw] xl:w-[44vw] max-w-[850px] z-20 overflow-hidden shadow-2xl rounded-none group cursor-pointer"
+          className="absolute top-[8vh] bottom-[16vh] right-[5vw] w-[48vw] z-20 overflow-hidden shadow-2xl rounded-none group cursor-pointer"
           onClick={handleScroll}
-          title="Ver galeria"
           role="button"
           tabIndex={0}
         >
@@ -278,12 +277,11 @@ export default function EditorialCover({
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 pointer-events-none transition-opacity duration-500 group-hover:opacity-30" />
         </div>
 
-        {/* CAMADA 3: Título Sobreposto (Cor inteligente, recortada pelo clip-path da foto) */}
-        {/* Imune a minimização e troca de aba (zero-JS, 100% GPU CSS) */}
+        {/* CAMADA 3: Título Sobreposto (Cor inteligente, recortada pelo clip-path exato da foto) */}
         <div
           className="absolute top-1/2 -translate-y-1/2 left-[5vw] lg:left-[6vw] z-30 pointer-events-none select-none"
           style={{
-            clipPath: 'inset(8vh 5vw 18vh calc(100vw - 5vw - 48vw))',
+            clipPath: 'inset(8vh 5vw 16vh 47vw)',
           }}
         >
           <DesktopTitleBlock
@@ -297,8 +295,8 @@ export default function EditorialCover({
           />
         </div>
 
-        {/* FOOTER DESKTOP: Data na esquerda e "Ver Galeria →" na direita (com folga garantida abaixo da foto) */}
-        <footer className="absolute bottom-[4.5vh] left-[5vw] right-[5vw] flex items-end justify-between z-40 pointer-events-auto">
+        {/* FOOTER DESKTOP: Data na esquerda e "Ver Galeria →" na direita (com folga limpa de 11vh abaixo da foto) */}
+        <footer className="absolute bottom-[5vh] left-[5vw] right-[5vw] flex items-end justify-between z-40 pointer-events-auto">
           <div>
             <p className="text-xs lg:text-sm font-sans tracking-[0.32em] font-light opacity-80">
               {formattedDate}
@@ -319,13 +317,13 @@ export default function EditorialCover({
       </div>
 
       {/* ============================================================ */}
-      {/* MOBILE LAYOUT (<md) — Recomposição com Linhas Não Sobrepostas */}
+      {/* MOBILE LAYOUT (<md) — Recomposição Estável (1 única instância)*/}
       {/* ============================================================ */}
       <div className="flex md:hidden flex-col justify-between min-h-screen w-full px-5 py-6 relative overflow-hidden">
         {/* Espaço superior de respiro */}
         <div className="w-full h-2" />
 
-        {/* Centro: Foto com Sobreposição Vertical da Tipografia */}
+        {/* Centro: Foto e Título em fluxo vertical sem duplicação */}
         <div className="relative my-auto flex flex-col items-center w-full">
           {/* Moldura da Foto */}
           <div
@@ -342,23 +340,10 @@ export default function EditorialCover({
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 pointer-events-none" />
-
-            {/* CAMADA 2 (MOBILE): Texto no interior da foto em cor de contraste */}
-            <div className="absolute bottom-0 left-0 right-0 pb-1 px-1 pointer-events-none select-none z-30">
-              <MobileTitleBlock
-                line1={line1}
-                line2={line2}
-                subtitle={displaySubtitle}
-                color={overlayTextColorMobile}
-                serifStyle={serifStyle}
-                maxLineLength={maxLineLength}
-                isLightOnPhoto={luminanceMobile.isLight}
-              />
-            </div>
           </div>
 
-          {/* CAMADA 1 (MOBILE): Título na base externa em cor base */}
-          <div className="w-full -mt-10 sm:-mt-12 relative z-10 px-1 pointer-events-none">
+          {/* Única Instância do Título Mobile */}
+          <div className="w-full mt-5 relative z-10 px-1 pointer-events-none">
             <MobileTitleBlock
               line1={line1}
               line2={line2}
