@@ -101,7 +101,7 @@ export default function DeliverDetail() {
   useEffect(() => {
     if (gallery) {
       setSessionName(gallery.nomeSessao || '');
-      setSubtitle(gallery.configuracoes?.subtitulo || '');
+      setSubtitle((gallery.configuracoes as any)?.subtitulo || '');
       setCategory((gallery.configuracoes as any)?.categoria || '');
       const rawDate = (gallery.configuracoes as any)?.dataEvento;
       if (rawDate) {
@@ -185,11 +185,12 @@ export default function DeliverDetail() {
           subtitulo: subtitle.trim() || undefined,
           categoria: category.trim() || undefined,
           dataEvento: eventDate ? eventDate.toISOString() : undefined,
-        },
+        } as any,
         themeId: useCustomTheme ? activeThemeId : null,
         useCustomTheme: useCustomTheme,
         themeOverrides: themeOverrides,
       }});
+
 
       navigate('/app/gallery/list?tab=transfer');
     } catch (error) {
