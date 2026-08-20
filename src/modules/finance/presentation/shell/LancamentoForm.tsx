@@ -122,7 +122,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
     adicionarItemFinanceiro,
     createTransactionEngine,
   } = useNovoFinancas();
-  const { data: cartoes = [] } = useCreditCardsSupabase();
+  const { cartoes = [] } = useCreditCardsSupabase();
 
   // Pré-form contextual (Receita Operacional → origem)
   const [origem, setOrigem] = useState<OrigemReceitaOperacional | null>(null);
