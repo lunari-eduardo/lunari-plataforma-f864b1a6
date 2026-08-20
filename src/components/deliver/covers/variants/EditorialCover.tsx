@@ -85,7 +85,7 @@ export default function EditorialCover({
     height: 40
   }), [spec]);
 
-  const { titleColor: overlayColor, ctaColor } = useSeamContrast(
+  const { titleColor: overlayColor, ctaColor, isLight: isPhotoLight } = useSeamContrast(
     coverUrl,
     spec.photo,
     titleIntersection,
@@ -207,7 +207,20 @@ export default function EditorialCover({
         <div className="absolute" style={titleBoxStyle}>
            <div className="flex flex-col">
             {/* Anchor spacing matching theme side */}
-            {formattedSubtitle && <div className="mb-[0.6em]" style={{ fontSize: `${fontSize * 0.1}px`, visibility: 'hidden' }}>&nbsp;</div>}
+            {formattedSubtitle && (
+              <div
+                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-center w-full' : ''}`}
+                style={{ fontSize: `${fontSize * 0.1}px` }}
+              >
+                <span 
+                  className="tracking-[0.35em] font-sans opacity-60 uppercase"
+                  style={{ color: overlayColor, fontSize: 'inherit' }}
+                >
+                  {formattedSubtitle}
+                </span>
+                <div className="w-[20%] h-px bg-current opacity-40" style={{ color: overlayColor }} />
+              </div>
+            )}
             <TitleComposition
               line1={line1}
               line2={line2}
@@ -228,7 +241,7 @@ export default function EditorialCover({
         >
           <span 
             className="text-[10px] sm:text-xs tracking-[0.25em] font-sans opacity-70"
-            style={{ color: spec.orientation === 'vertical' ? baseColor : ctaColor }}
+            style={{ color: spec.orientation === 'vertical' ? baseColor : (isPhotoLight ? '#171513' : '#FFFFFF') }}
           >
             {formattedDate}
           </span>
