@@ -10,7 +10,6 @@ export interface EditorialSpec {
   seam: number; // 0 to 1
   photoRect: Rect;
   titleBox: Rect;
-  subtitlePos: { x: number; y: number };
   datePos: { x: number; y: number };
   ctaPos: { x: number; y: number };
 }
