@@ -1,15 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getPhotoUrl } from '@/lib/photoUrl';
 import { applyTitleCase } from '@/lib/textTransform';
-import { useRegionLuminance, RegionRect } from '@/hooks/useImageLuminance';
 import type { CoverVariantProps } from '../types';
-
-import { resolveSpec, ResolvedSpec } from '../editorial/composition';
-import { splitTitle } from '../editorial/splitTitle';
-import { useFittedTitle } from '../editorial/useFittedTitle';
-import { TitleComposition } from '../editorial/TitleComposition';
 
 export default function EditorialCover({
   coverPhoto,
@@ -20,247 +14,121 @@ export default function EditorialCover({
   titleCaseMode = 'normal',
   isDark = false,
   textColor,
-  textOverlayColor,
   onEnter,
-  settings,
 }: CoverVariantProps) {
-  // 1. Tratamento de Dados
   const coverUrl = coverPhoto ? getPhotoUrl(coverPhoto, 'preview') : '/placeholder.svg';
   const rawDisplayName = applyTitleCase(sessionName, titleCaseMode);
-  const { line1, line2 } = useMemo(() => splitTitle(rawDisplayName), [rawDisplayName]);
   const displaySubtitle = subtitle ? subtitle.trim().toUpperCase() : undefined;
 
-  // Formatação de data (ex: "20 · AGOSTO · 2026")
   const formattedDate = useMemo(() => {
     if (sessionDate) {
       try {
         const d = typeof sessionDate === 'string' ? new Date(sessionDate) : sessionDate;
-        if (!isNaN(d.getTime())) {
-          return `${format(d, 'dd')} · ${format(d, 'MMMM', { locale: ptBR }).toUpperCase()} · ${format(d, 'yyyy')}`;
-        }
+        if (!isNaN(d.getTime())) return `${format(d, 'dd')} · ${format(d, 'MMMM', { locale: ptBR }).toUpperCase()} · ${format(d, 'yyyy')}`;
       } catch { /* fallback */ }
     }
-    const now = new Date();
-    return `${format(now, 'dd')} · ${format(now, 'MMMM', { locale: ptBR }).toUpperCase()} · ${format(now, 'yyyy')}`;
+    return format(new Date(), "dd '·' MMMM '·' yyyy", { locale: ptBR }).toUpperCase();
   }, [sessionDate]);
 
   const serifStyle = sessionFont
     ? { fontFamily: sessionFont }
-    : { fontFamily: "'Bodoni Moda', 'Cormorant Garamond', 'Playfair Display', 'Instrument Serif', Didot, 'Times New Roman', serif" };
-
-  // 2. Motor Geométrico (Resize Observer)
-  const containerRef = useRef<HTMLElement>(null);
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        setViewport({
-          width: containerRef.current.clientWidth || window.innerWidth,
-          height: containerRef.current.clientHeight || window.innerHeight,
-        });
-      } else if (typeof window !== 'undefined') {
-        setViewport({ width: window.innerWidth, height: window.innerHeight });
-      }
-    };
-
-    updateDimensions();
-
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setViewport({
-          width: entry.contentRect.width || window.innerWidth,
-          height: entry.contentRect.height || window.innerHeight,
-        });
-      }
-    });
-    observer.observe(containerRef.current);
-    window.addEventListener('resize', updateDimensions);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', updateDimensions);
-    };
-  }, []);
-
-  const overrides = settings?.editorialCover;
-
-  const spec: ResolvedSpec | null = useMemo(() => {
-    const w = viewport.width || (typeof window !== 'undefined' ? window.innerWidth : 1200);
-    const h = viewport.height || (typeof window !== 'undefined' ? window.innerHeight : 800);
-    return resolveSpec(w, h, overrides);
-  }, [viewport.width, viewport.height, overrides]);
-
-  // 3. Motor Tipográfico
-  const titleFontSize = useFittedTitle(
-    line1,
-    line2,
-    viewport.width || (typeof window !== 'undefined' ? window.innerWidth : 1200),
-    spec?.breakpoint || 'desktop'
-  );
-
-  // 4. Análise de Contraste Inteligente (Interseção Exata)
-  const regionInPhoto: RegionRect | null = useMemo(() => {
-    if (!spec || titleFontSize === 0) return null;
-    
-    // Estimativa da caixa delimitadora do texto
-    const textHeight = line2 ? titleFontSize * 2.2 : titleFontSize * 1.2;
-    const titleTop = spec.title.centerY - (textHeight / 2);
-    const titleBottom = spec.title.centerY + (textHeight / 2);
-    const titleLeft = spec.title.x;
-    // Largura aproximada baseada nos caracteres
-    const approxTextWidth = Math.max(line1.length, line2.length) * (titleFontSize * 0.58);
-    const titleRight = spec.title.x + approxTextWidth;
-
-    const { x, y, w, h } = spec.photo;
-    
-    // Interseção no espaço absoluto do viewport
-    const interLeft = Math.max(titleLeft, x);
-    const interRight = Math.min(titleRight, x + w);
-    const interTop = Math.max(titleTop, y);
-    const interBottom = Math.min(titleBottom, y + h);
-
-    if (interLeft >= interRight || interTop >= interBottom) return null;
-
-    // Normalização para fração do container da foto
-    return {
-      x: Math.max(0, (interLeft - x) / w),
-      y: Math.max(0, (interTop - y) / h),
-      w: Math.min(1, (interRight - interLeft) / w),
-      h: Math.min(1, (interBottom - interTop) / h)
-    };
-  }, [spec, titleFontSize, line1, line2]);
-
-  const photoAspectRatio = spec ? spec.photo.w / spec.photo.h : 1;
-  const luminance = useRegionLuminance(coverUrl, regionInPhoto, photoAspectRatio);
+    : { fontFamily: "'Bodoni Moda', 'Playfair Display', serif" };
 
   const baseTextColor = textColor || (isDark ? '#F5F2EC' : '#171513');
-  const overlayTextColor = textOverlayColor || luminance.overlayColor;
+  const bgColor = isDark ? '#12100E' : '#F7F4EE';
 
-  const handleScroll = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleScroll = () => {
     const gallerySection = document.getElementById('deliver-gallery');
-    if (gallerySection) {
-      gallerySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
-    }
+    if (gallerySection) gallerySection.scrollIntoView({ behavior: 'smooth' });
+    else window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
     onEnter?.();
   };
 
-  const actualWidth = viewport.width || (typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const actualHeight = viewport.height || (typeof window !== 'undefined' ? window.innerHeight : 800);
+  // Divisão simples de título
+  const { line1, line2 } = useMemo(() => {
+    const words = rawDisplayName.trim().split(/\s+/);
+    if (words.length > 2) {
+      const mid = Math.ceil(words.length / 2);
+      return { line1: words.slice(0, mid).join(' '), line2: words.slice(mid).join(' ') };
+    } else if (words.length === 2) {
+      return { line1: words[0], line2: words[1] };
+    }
+    return { line1: rawDisplayName, line2: '' };
+  }, [rawDisplayName]);
+
+  // Sombra leve para garantir leitura quando o texto sobrepor a foto
+  const shadow = isDark 
+    ? '0 4px 32px rgba(0,0,0,0.8), 0 1px 4px rgba(0,0,0,0.6)' 
+    : '0 4px 32px rgba(255,255,255,0.9), 0 1px 4px rgba(255,255,255,0.8)';
 
   return (
-    <section
-      ref={containerRef}
-      className={`relative w-full h-[100dvh] overflow-hidden select-none antialiased transition-colors duration-500 ${
-        isDark ? 'bg-[#12100E] text-[#F5F2EC]' : 'bg-[#F7F4EE] text-[#171513]'
-      }`}
+    <section 
+      className="relative w-full h-[100dvh] overflow-hidden select-none"
+      style={{ backgroundColor: bgColor, color: baseTextColor }}
     >
-      {spec && (
-        <>
-          {/* CAMADA 1 (z-10): Título Base */}
-          <div
-            className="absolute z-10 pointer-events-none"
-            style={{
-              left: `${spec.title.x}px`,
-              top: `${spec.title.centerY}px`,
-            }}
-          >
-            <div className="relative -translate-y-1/2">
-              <TitleComposition
-                line1={line1}
-                line2={line2}
-                subtitle={displaySubtitle}
-                fontSizePx={titleFontSize}
-                color={baseTextColor}
-                fontFamily={serifStyle.fontFamily}
-              />
-            </div>
-          </div>
+      {/* 
+        MODELO SIMPLIFICADO ESTÁTICO
+        Sem cálculos JS, sem observers, responsividade nativa usando CSS.
+      */}
 
-          {/* CAMADA 2 (z-20): Fotografia Base */}
-          <div
-            className="absolute z-20 overflow-hidden shadow-2xl rounded-none group cursor-pointer"
-            style={{
-              left: `${spec.photo.x}px`,
-              top: `${spec.photo.y}px`,
-              width: `${spec.photo.w}px`,
-              height: `${spec.photo.h}px`,
-            }}
-            onClick={handleScroll}
-            role="button"
-            tabIndex={0}
-          >
-            <div
-              className="w-full h-full bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-[1.03]"
-              style={{
-                backgroundImage: `url(${coverUrl})`,
-                backgroundColor: isDark ? '#1C1917' : '#EAE6DD',
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 pointer-events-none transition-opacity duration-500 group-hover:opacity-30" />
-          </div>
+      {/* FOTO */}
+      <div 
+        className="absolute z-10 overflow-hidden shadow-2xl cursor-pointer
+                   top-[8vh] right-[5vw] w-[85vw] h-[50vh]
+                   md:top-[10vh] md:right-[5vw] md:w-[48vw] md:h-[75vh]"
+        onClick={handleScroll}
+      >
+        <div 
+          className="w-full h-full bg-cover bg-center transition-transform duration-1000 hover:scale-[1.03]"
+          style={{ backgroundImage: `url(${coverUrl})` }}
+        />
+        <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+      </div>
 
-          {/* CAMADA 3 (z-30): Título Sobreposto & Recortado pela Geometria da Foto */}
-          <div
-            className="absolute inset-0 z-30 pointer-events-none"
-            style={{
-              clipPath: `inset(${spec.photo.y}px ${Math.max(0, actualWidth - (spec.photo.x + spec.photo.w))}px ${Math.max(0, actualHeight - (spec.photo.y + spec.photo.h))}px ${spec.photo.x}px)`,
-            }}
-          >
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: `${spec.title.x}px`,
-                top: `${spec.title.centerY}px`,
-              }}
-            >
-              <div className="relative -translate-y-1/2">
-                <TitleComposition
-                  line1={line1}
-                  line2={line2}
-                  subtitle={displaySubtitle}
-                  fontSizePx={titleFontSize}
-                  color={overlayTextColor}
-                  fontFamily={serifStyle.fontFamily}
-                />
-              </div>
-            </div>
-          </div>
+      {/* TÍTULO E SUBTÍTULO */}
+      <div 
+        className="absolute z-30 flex flex-col justify-center pointer-events-none
+                   top-[48vh] left-[5vw] w-[90vw]
+                   md:top-1/2 md:-translate-y-1/2 md:left-[5vw] md:w-[75vw]"
+      >
+        <div 
+          className="uppercase tracking-tight leading-[0.9]"
+          style={{ 
+            ...serifStyle,
+            // Escala nativa CSS que garante tamanho grande contínuo
+            fontSize: 'clamp(3rem, 11vw, 12rem)',
+            color: baseTextColor,
+            textShadow: shadow
+          }}
+        >
+          <h1 className="break-words m-0 p-0">{line1}</h1>
+          {line2 && <h2 className="break-words m-0 p-0 mt-2">{line2}</h2>}
+        </div>
 
-          {/* CAMADA 4 (z-40): Footer com Data e Botão "Ver Galeria" */}
-          <footer 
-            className="absolute z-40 flex items-end justify-between pointer-events-auto w-full"
-            style={{
-              bottom: `${actualWidth < 640 ? actualHeight * 0.04 : actualHeight * 0.05}px`,
-              paddingLeft: `${spec.title.x}px`,
-              paddingRight: `${Math.max(spec.title.x, actualWidth - (spec.photo.x + spec.photo.w))}px`,
-            }}
+        {displaySubtitle && (
+          <p 
+            className="mt-4 md:mt-8 text-[10px] md:text-xs font-sans tracking-[0.3em] font-light uppercase opacity-90"
+            style={{ textShadow: shadow }}
           >
-            <p className="text-[10px] sm:text-xs lg:text-sm font-sans tracking-[0.25em] md:tracking-[0.32em] font-light opacity-80" style={{ color: baseTextColor }}>
-              {formattedDate}
-            </p>
+            {displaySubtitle}
+          </p>
+        )}
+      </div>
 
-            <button
-              type="button"
-              onClick={handleScroll}
-              className="group inline-flex items-center gap-2 md:gap-3 text-[10px] sm:text-xs lg:text-sm font-sans tracking-[0.25em] md:tracking-[0.28em] font-light uppercase pb-1 md:pb-1.5 border-b border-current transition-all duration-300 hover:opacity-75 hover:gap-3 md:hover:gap-4.5 cursor-pointer"
-              style={{ color: baseTextColor }}
-            >
-              <span>Ver Galeria</span>
-              <span className="inline-block transition-transform duration-300 group-hover:translate-x-1 md:group-hover:translate-x-1.5">
-                →
-              </span>
-            </button>
-          </footer>
-        </>
-      )}
+      {/* RODAPÉ */}
+      <footer className="absolute bottom-[4vh] left-[5vw] right-[5vw] flex items-end justify-between z-40">
+        <p className="text-[10px] sm:text-xs font-sans tracking-[0.2em] md:tracking-[0.3em] uppercase opacity-80">
+          {formattedDate}
+        </p>
+
+        <button
+          onClick={handleScroll}
+          className="group flex items-center gap-2 text-[10px] sm:text-xs font-sans tracking-[0.2em] uppercase pb-1 border-b border-current opacity-90 hover:opacity-100 transition-opacity"
+        >
+          Ver Galeria
+          <span className="transition-transform group-hover:translate-x-1">→</span>
+        </button>
+      </footer>
     </section>
   );
 }
