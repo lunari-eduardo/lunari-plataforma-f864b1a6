@@ -339,7 +339,7 @@ export default function PhotographerApp() {
               
               {/* Rotas Públicas de Galeria */}
               <Route path="/g/:token" element={<ClientGallery />} />
-              <Route path="/c/:token" element={<ClientDeliverGallery />} />
+              <Route path="/c/:token" element={<ClientDeliverGallery data={{} as any} />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
