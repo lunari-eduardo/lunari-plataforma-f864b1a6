@@ -26,8 +26,9 @@ export default function PlanosTab() {
   const { storageUsedBytes, storageLimitBytes, storageUsedPercent, hasTransferPlan, hasFreeStorageOnly, planName, isLoading: isLoadingTransfer } = useTransferStorage();
   const { getPlanPrice } = useUnifiedPlans();
 
-  const comboProMonthly = getPlanPrice('combo_pro_select2k', 'monthly');
-  const comboFullMonthly = getPlanPrice('combo_completo', 'monthly');
+  const comboProMonthly = getPlanPrice('combo_pro_select2k', 'MONTHLY');
+  const comboFullMonthly = getPlanPrice('combo_completo', 'MONTHLY');
+
   const formatPriceBRL = (cents: number) => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
   return (
