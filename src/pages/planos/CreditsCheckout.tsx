@@ -147,7 +147,7 @@ export default function CreditsCheckout() {
   const PLAN_INCLUDES_LOCAL = PLAN_INCLUDES;
 
   // Build transfer plans from dynamic data or fallback
-  const dynamicTransfer = useMemo(() => plans.filter(p => p.includes_transfer && !p.includes_studio), [plans]);
+  const dynamicTransfer = useMemo(() => (activeSubs || []).filter(p => (p as any).includes_transfer && !(p as any).includes_studio), [activeSubs]);
   const TRANSFER_PLANS = dynamicTransfer.length > 0
     ? dynamicTransfer.map((p) => ({
         code: p.code,
@@ -161,7 +161,7 @@ export default function CreditsCheckout() {
     : FALLBACK_TRANSFER_PLANS;
 
   // Build combo plans from dynamic data or fallback
-  const dynamicCombos = useMemo(() => plans.filter(p => p.product_family === 'combo'), [plans]);
+  const dynamicCombos = useMemo(() => (activeSubs || []).filter(p => (p as any).product_family === 'combo'), [activeSubs]);
   const COMBO_PLANS = dynamicCombos.length > 0
     ? dynamicCombos.map((p) => ({
         code: p.code,
@@ -226,7 +226,7 @@ export default function CreditsCheckout() {
   const nextDueDate = currentSub?.next_due_date || urlNextDueDate;
   const currentSubscriptionId = currentSub?.id || urlSubscriptionId;
 
-  const currentPlanPrices = ALL_PLAN_PRICES[currentPlanType];
+  const currentPlanPrices = (ALL_PLAN_PRICES_MAP as any)[currentPlanType];
   const currentPriceCents = currentPlanPrices
     ? (currentBillingCycle === 'YEARLY' ? currentPlanPrices.yearly : currentPlanPrices.monthly)
     : 0;
@@ -256,7 +256,7 @@ export default function CreditsCheckout() {
     let totalCreditCents = 0;
     const idsToCancel: string[] = [];
     for (const sub of overlapping) {
-      const subPrices = ALL_PLAN_PRICES[sub.plan_type];
+      const subPrices = (ALL_PLAN_PRICES_MAP as any)[sub.plan_type];
       if (!subPrices) continue;
       const subPriceCents = sub.billing_cycle === 'YEARLY' ? subPrices.yearly : subPrices.monthly;
       const subDaysRemaining = sub.next_due_date
@@ -310,10 +310,10 @@ export default function CreditsCheckout() {
 
     // Handle cycle upgrade (e.g. combo_completo MONTHLY → YEARLY)
     if (isCycleUpgrade && existingSubForPlan) {
-      const newCyclePriceCents = getPlanPrice(planType, selectedCycle === 'YEARLY' ? 'yearly' : 'monthly');
+      const newCyclePriceCents = getPlanPrice(planType, selectedCycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
       
       // Calculate prorata credit from existing sub
-      const existingPriceCents = getPlanPrice(existingSubForPlan.plan_type, existingSubForPlan.billing_cycle === 'YEARLY' ? 'yearly' : 'monthly');
+      const existingPriceCents = getPlanPrice(existingSubForPlan.plan_type, existingSubForPlan.billing_cycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
       const existingCycleDays = existingSubForPlan.billing_cycle === 'YEARLY' ? 365 : 30;
       const existingDaysRemaining = existingSubForPlan.next_due_date
         ? Math.min(Math.max(0, differenceInDays(new Date(existingSubForPlan.next_due_date), new Date())), existingCycleDays)
@@ -340,7 +340,7 @@ export default function CreditsCheckout() {
       return;
     }
 
-    const newPriceCentsForCycle = getPlanPrice(planType, selectedCycle === 'YEARLY' ? 'yearly' : 'monthly');
+    const newPriceCentsForCycle = getPlanPrice(planType, selectedCycle === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
 
     if (isUpgradeMode && currentSubscriptionId) {
       // Same-family upgrade

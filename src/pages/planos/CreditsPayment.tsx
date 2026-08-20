@@ -156,7 +156,7 @@ function OrderSummary({
   couponDiscountValue: number | null;
 }) {
   const isUpgrade = pkg.type === 'subscription' && pkg.isUpgrade;
-  const isRenewal = pkg.type === 'subscription' && pkg.isRenewal;
+  const isRenewal = pkg.type === 'subscription' && (pkg as any).isRenewal;
   const isYearly = pkg.type === 'subscription' && pkg.billingCycle === 'YEARLY';
 
   // Base amount for calculation
