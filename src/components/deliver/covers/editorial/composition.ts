@@ -20,7 +20,6 @@ export interface ResolvedEditorialSpec {
   seamPx: number;
   photo: Rect;
   title: Rect;
-  subtitle: { x: number; y: number };
   date: { x: number; y: number };
   cta: { x: number; y: number };
   width: number;
@@ -78,10 +77,6 @@ export function resolveEditorialSpec(width: number, height: number): ResolvedEdi
       y: spec.titleBox.y * height,
       width: spec.titleBox.width * width,
       height: spec.titleBox.height * height,
-    },
-    subtitle: {
-      x: spec.subtitlePos.x * width,
-      y: spec.subtitlePos.y * height,
     },
     date: {
       x: spec.datePos.x * width,

@@ -55,9 +55,8 @@ export default function EditorialCover({
     spec.orientation === 'vertical' ? 24 : 32
   );
 
-  // Calculate real screen rectangles for sampling
-  // Title intersection rect: Part of the title box that is over the photo
   const titleIntersection = useMemo(() => {
+    if (size.width === 0) return { x: 0, y: 0, width: 0, height: 0 };
     if (spec.orientation === 'vertical') {
       const intersectX = Math.max(spec.title.x, spec.seamPx);
       const intersectWidth = Math.max(0, (spec.title.x + spec.title.width) - intersectX);
@@ -77,10 +76,10 @@ export default function EditorialCover({
         height: intersectHeight 
       };
     }
-  }, [spec]);
+  }, [spec, size.width]);
 
   const ctaRect = useMemo(() => ({
-    x: spec.cta.x - 100, // Anchor right, approx width
+    x: spec.cta.x - 100,
     y: spec.cta.y,
     width: 100,
     height: 40
@@ -116,9 +115,6 @@ export default function EditorialCover({
     ? `inset(0 ${size.width - spec.seamPx}px 0 0)`
     : `inset(0 0 ${size.height - spec.seamPx}px 0)`;
 
-  // Title Box positioning:
-  // Desktop: Anchor left, centered vertically
-  // Mobile: Anchor top, centered horizontally
   const titleBoxStyle: React.CSSProperties = spec.orientation === 'vertical' ? {
     left: `${spec.title.x}px`,
     top: `${spec.title.y}px`,
@@ -146,16 +142,20 @@ export default function EditorialCover({
         isDark ? 'bg-[#12100E]' : 'bg-[#F7F4EE]'
       }`}
     >
-      {/* 1. PHOTO LAYER */}
+      {/* 1. PHOTO LAYER - REPOSITIONED TO REAL RECTANGLE */}
       <div
-        className="absolute inset-0 z-10"
-        style={{ clipPath: clipPhoto }}
+        className="absolute z-10 overflow-hidden"
+        style={{ 
+          left: `${spec.photo.x}px`,
+          top: `${spec.photo.y}px`,
+          width: `${spec.photo.width}px`,
+          height: `${spec.photo.height}px`,
+        }}
       >
         <div
           className="w-full h-full bg-cover bg-center transition-transform duration-[2000ms] ease-out scale-100 hover:scale-105"
           style={{ backgroundImage: `url(${coverUrl})` }}
         />
-        {/* Subtle Vignette for contrast near seam */}
         <div 
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -172,13 +172,30 @@ export default function EditorialCover({
         style={{ clipPath: clipTheme }}
       >
         <div className="absolute" style={titleBoxStyle}>
-          <TitleComposition
-            line1={line1}
-            line2={line2}
-            fontSize={fontSize}
-            color={baseColor}
-            fontFamily={sessionFont}
-          />
+          <div className="flex flex-col">
+            {/* Anchored Subtitle */}
+            {formattedSubtitle && (
+              <div
+                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-center w-full' : ''}`}
+                style={{ fontSize: `${fontSize * 0.1}px` }}
+              >
+                <span 
+                  className="tracking-[0.35em] font-sans opacity-60 uppercase"
+                  style={{ color: baseColor, fontSize: 'inherit' }}
+                >
+                  {formattedSubtitle}
+                </span>
+                <div className="w-[20%] h-px bg-current opacity-40" style={{ color: baseColor }} />
+              </div>
+            )}
+            <TitleComposition
+              line1={line1}
+              line2={line2}
+              fontSize={fontSize}
+              color={baseColor}
+              fontFamily={sessionFont}
+            />
+          </div>
         </div>
       </div>
 
@@ -188,40 +205,22 @@ export default function EditorialCover({
         style={{ clipPath: clipPhoto }}
       >
         <div className="absolute" style={titleBoxStyle}>
-          <TitleComposition
-            line1={line1}
-            line2={line2}
-            fontSize={fontSize}
-            color={overlayColor}
-            fontFamily={sessionFont}
-          />
+           <div className="flex flex-col">
+            {/* Anchor spacing matching theme side */}
+            {formattedSubtitle && <div className="mb-[0.6em]" style={{ fontSize: `${fontSize * 0.1}px`, visibility: 'hidden' }}>&nbsp;</div>}
+            <TitleComposition
+              line1={line1}
+              line2={line2}
+              fontSize={fontSize}
+              color={overlayColor}
+              fontFamily={sessionFont}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 4. DETAILS LAYER */}
+      {/* 4. DETAILS LAYER (DATE & CTA) */}
       <div className="absolute inset-0 z-40 pointer-events-none">
-        {/* Subtitle */}
-        {formattedSubtitle && (
-          <div
-            className="absolute"
-            style={{ 
-              left: `${spec.subtitle.x}px`, 
-              top: `${spec.subtitle.y}px`,
-              transform: spec.orientation === 'horizontal' ? 'translateY(-100%)' : 'none'
-            }}
-          >
-            <div className={`flex flex-col gap-2 ${spec.orientation === 'horizontal' ? 'items-center w-full' : ''}`}>
-              <span 
-                className="text-[10px] tracking-[0.3em] font-sans opacity-60 uppercase"
-                style={{ color: baseColor }}
-              >
-                {formattedSubtitle}
-              </span>
-              <div className="w-6 h-px bg-current opacity-40" style={{ color: baseColor }} />
-            </div>
-          </div>
-        )}
-
         {/* Date */}
         <div
           className="absolute"
