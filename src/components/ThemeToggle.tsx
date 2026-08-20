@@ -1,6 +1,6 @@
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTheme } from '@/contexts/VisualThemeContext';
+import { useTheme } from '@/hooks/useTheme';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const cycleOrder = ['light', 'dark', 'system'] as const;

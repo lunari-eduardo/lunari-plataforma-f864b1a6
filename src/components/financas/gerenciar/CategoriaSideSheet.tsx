@@ -33,7 +33,7 @@ export default function CategoriaSideSheet({
   grupo,
   item,
   createName,
-  onCreateNameChange,
+  onCreateNameChange: (v: string) => void;
   editName,
   onEditNameChange,
   onSubmitCreate,

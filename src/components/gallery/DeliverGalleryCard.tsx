@@ -22,7 +22,7 @@ interface DeliverGalleryCardProps {
 }
 
 function getDeliverStatus(gallery: Gallery): { label: string; variant: 'default' | 'destructive' | 'secondary' } {
-  if (gallery.status === 'expired' || gallery.status === 'expirado' || gallery.status === 'expirada') {
+  if ((gallery.status as string) === 'expired' || (gallery.status as string) === 'expirado' || (gallery.status as string) === 'expirada') {
     return { label: 'Expirada', variant: 'destructive' };
   }
   if (['sent', 'enviado', 'publicada', 'selection_started', 'selecao_iniciada'].includes(gallery.status)) {
