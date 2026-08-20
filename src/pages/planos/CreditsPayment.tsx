@@ -597,12 +597,12 @@ function SubscriptionWizard({ pkg }: { pkg: SubscriptionPayment }) {
   const [ccv, setCcv] = useState('');
 
   // Step 3: Coupon
-  const { coupon, isValidating: isValidatingCoupon, validateCoupon, clearCoupon } = useCouponValidation();
+  const { result: coupon, loading: isValidatingCoupon, validate: validateCoupon, clear: clearCoupon, calculateDiscount } = useCouponValidation();
   const [couponInput, setCouponInput] = useState(pkg.couponCode || '');
 
   // If coupon came from checkout page, validate immediately
   useEffect(() => {
-    if (pkg.couponCode && !coupon.valid) {
+    if (pkg.couponCode && !coupon?.valid) {
       validateCoupon(pkg.couponCode, pkg.planType);
     }
   }, []);
@@ -615,8 +615,8 @@ function SubscriptionWizard({ pkg }: { pkg: SubscriptionPayment }) {
     ? pkg.prorataValueCents
     : pkg.priceCents;
 
-  const couponDiscountedCents = coupon.valid ? coupon.calculateDiscount(installmentBaseCents) : null;
-  const finalChargeCents = couponDiscountedCents ?? installmentBaseCents;
+  const couponDiscountedCents = coupon?.valid ? calculateDiscount(installmentBaseCents) : null;
+  const finalChargeCents = couponDiscountedCents !== null ? (installmentBaseCents - couponDiscountedCents) : installmentBaseCents;
 
   const installmentOptions = isYearly
     ? Array.from({ length: 12 }, (_, i) => {

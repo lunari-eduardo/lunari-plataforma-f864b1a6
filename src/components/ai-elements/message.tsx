@@ -410,10 +410,10 @@ export const MessageResponse = memo(
                 // @ts-ignore
                 const CodeComponent = components?.code;
                 if (CodeComponent) {
-                  return <CodeComponent {...codeProps} />;
+                  return <CodeComponent {...(codeProps as any)} />;
                 }
                 // @ts-expect-error type inference bug in react-markdown
-                return <code className={className} {...rest}>{children}</code>;
+                return <code className={className} {...(rest as any)}>{children}</code>;
               },
               ...components,
             }}

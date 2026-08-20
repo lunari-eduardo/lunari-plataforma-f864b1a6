@@ -10,7 +10,6 @@ export interface EditorialSpec {
   seam: number; // 0 to 1
   photoRect: Rect;
   titleBox: Rect;
-  subtitlePos: { x: number; y: number };
   datePos: { x: number; y: number };
   ctaPos: { x: number; y: number };
 }
@@ -20,7 +19,6 @@ export interface ResolvedEditorialSpec {
   seamPx: number;
   photo: Rect;
   title: Rect;
-  subtitle: { x: number; y: number };
   date: { x: number; y: number };
   cta: { x: number; y: number };
   width: number;
@@ -32,7 +30,6 @@ const DESKTOP_SPEC: EditorialSpec = {
   seam: 0.42,
   photoRect: { x: 0.42, y: 0, width: 0.58, height: 1 },
   titleBox: { x: 0.08, y: 0.5, width: 0.55, height: 0.4 }, // y: 0.5 is anchor for vertical center
-  subtitlePos: { x: 0.08, y: 0.35 },
   datePos: { x: 0.08, y: 0.92 },
   ctaPos: { x: 0.92, y: 0.92 },
 };
@@ -42,7 +39,6 @@ const TABLET_SPEC: EditorialSpec = {
   seam: 0.38,
   photoRect: { x: 0.38, y: 0, width: 0.62, height: 1 },
   titleBox: { x: 0.08, y: 0.5, width: 0.55, height: 0.35 },
-  subtitlePos: { x: 0.08, y: 0.35 },
   datePos: { x: 0.08, y: 0.92 },
   ctaPos: { x: 0.92, y: 0.92 },
 };
@@ -52,7 +48,6 @@ const MOBILE_SPEC: EditorialSpec = {
   seam: 0.48,
   photoRect: { x: 0, y: 0.48, width: 1, height: 0.52 },
   titleBox: { x: 0.5, y: 0.48, width: 0.84, height: 0.25 }, // x: 0.5 is anchor for horizontal center
-  subtitlePos: { x: 0.08, y: 0.25 },
   datePos: { x: 0.08, y: 0.92 },
   ctaPos: { x: 0.92, y: 0.92 },
 };
@@ -78,10 +73,6 @@ export function resolveEditorialSpec(width: number, height: number): ResolvedEdi
       y: spec.titleBox.y * height,
       width: spec.titleBox.width * width,
       height: spec.titleBox.height * height,
-    },
-    subtitle: {
-      x: spec.subtitlePos.x * width,
-      y: spec.subtitlePos.y * height,
     },
     date: {
       x: spec.datePos.x * width,
