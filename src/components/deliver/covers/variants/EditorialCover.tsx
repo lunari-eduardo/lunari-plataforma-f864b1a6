@@ -85,15 +85,16 @@ export default function EditorialCover({
     height: 40
   }), [spec]);
 
+  const baseColor = textColor || (isDark ? '#F5F2EC' : '#171513');
+
   const { titleColor: overlayColor, ctaColor, isLight: isPhotoLight } = useSeamContrast(
     coverUrl,
     spec.photo,
     titleIntersection,
     ctaRect,
-    isDark
+    isDark,
+    baseColor
   );
-
-  const baseColor = textColor || (isDark ? '#F5F2EC' : '#171513');
   const formattedSubtitle = subtitle?.toUpperCase();
 
   const formattedDate = useMemo(() => {
