@@ -45,11 +45,11 @@ const TABLET_SPEC: EditorialSpec = {
 
 const MOBILE_SPEC: EditorialSpec = {
   orientation: 'horizontal',
-  seam: 0.48,
-  photoRect: { x: 0, y: 0.48, width: 1, height: 0.52 },
-  titleBox: { x: 0.5, y: 0.48, width: 0.84, height: 0.25 }, // x: 0.5 is anchor for horizontal center
-  datePos: { x: 0.08, y: 0.92 },
-  ctaPos: { x: 0.92, y: 0.92 },
+  seam: 0.32,
+  photoRect: { x: 0, y: 0.32, width: 1, height: 0.68 },
+  titleBox: { x: 0.08, y: 0.32, width: 0.84, height: 0.34 }, // x: 0.08 is left align, y: 0.32 is seam anchor
+  datePos: { x: 0.08, y: 0.90 },
+  ctaPos: { x: 0.92, y: 0.90 },
 };
 
 export function resolveEditorialSpec(width: number, height: number): ResolvedEditorialSpec {
