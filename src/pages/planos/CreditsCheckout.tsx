@@ -124,7 +124,7 @@ const COMPARISON_ROWS = [
 export default function CreditsCheckout() {
   const navigate = useNavigate();
   const { packages, isLoadingPackages } = useCreditPackages();
-  const { subscription: activeSub, subscriptions: allSubs, transferSub, studioSub, downgradeSubscription, isDowngrading } = useAsaasSubscription();
+  const { subscription: activeSub, subscriptions: allSubs, studioSub, downgradeSubscription, isDowngrading } = useAsaasSubscription();
   const { storageUsedBytes } = useTransferStorage();
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'transfer' ? 'transfer' : 'select';
@@ -135,17 +135,17 @@ export default function CreditsCheckout() {
   });
 
   // Dynamic pricing from unified_plans
-  const { getPlanPrice, getPlanName: dynamicPlanName, getAllPlanPrices, getPlanIncludes, getTransferPlans, getComboPlans, isLoading: isLoadingPlans } = useUnifiedPlans();
+  const { getPlanPrice, getPlanName: dynamicPlanName, getAllPlanPrices, isLoading: isLoadingPlans } = useUnifiedPlans();
 
 
 
 
   // Dynamic plan prices (backward compat)
   const ALL_PLAN_PRICES = getAllPlanPrices();
-  const PLAN_INCLUDES = getPlanIncludes();
+  const PLAN_INCLUDES_LOCAL = PLAN_INCLUDES;
 
   // Build transfer plans from dynamic data or fallback
-  const dynamicTransfer = getTransferPlans();
+  const dynamicTransfer = [] as any[]; // Fallback or refactor as needed
   const TRANSFER_PLANS = dynamicTransfer
     ? dynamicTransfer.map((p) => ({
         code: p.code,
