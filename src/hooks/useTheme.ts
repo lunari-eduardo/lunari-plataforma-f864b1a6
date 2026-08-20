@@ -4,7 +4,10 @@ export function useTheme() {
   const { theme, setMode } = useVisualTheme();
   
   const currentTheme = theme.mode;
-  const setTheme = setMode;
+  
+  const setTheme = (mode: 'light' | 'dark' | 'system') => {
+    setMode(mode);
+  };
 
   const toggleTheme = () => {
     if (currentTheme === 'light') setMode('dark');
