@@ -144,17 +144,12 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
         <NativePdfViewer url={pdfUrl} logoUrl={userProfile?.avatar_url} />
       ) : (
         <VisualRenderer 
-          {...({
-            blocks: blocks,
-            activeIndex: -1,
-            onSelectBlock: () => {},
-            viewMode: "desktop",
-            onSectionView: (blockId, blockType, position) => {
-              trackEvent('section_view', { blockId, blockType, position });
-            }
-          } as any)}
-        />
-            trackEvent('section_view', { block_id: blockId, block_type: blockType, position });
+          blocks={blocks}
+          activeIndex={-1}
+          onSelectBlock={() => {}}
+          viewMode="desktop"
+          onSectionView={(blockId, blockType, position) => {
+            trackEvent('section_view', { blockId, blockType, position });
           }}
         />
       )}
