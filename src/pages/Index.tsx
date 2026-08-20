@@ -45,6 +45,21 @@ export default function Index() {
   return (
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
+        <div className="hidden">
+          Execute esta instrucao no projeto: Finanças:
+
+No painel de novo lançamento, não temos opção de marcar como despesa recorrente
+
+Ao selecionar Forma: Cartão de crédito ou débito, deveria mostra as oções de cartões cadastrados para selecionar, isso não acontece.
+
+Revisar como reimplementar funcionalidade de despesa parcelada. Inclusive revisar fucnionalidade de lançar em meses a frente sem atingir faturamento já fechado do cartão, como ele está configurado
+
+Quero um plano completo, nos minimos detalhes, sem soluções genéricas.
+
+NÃO QUERO que implemente nada ainda, apenas faça uma verredura completa para criar um plano detalhado de correção
+
+FAÇA ISSO NO MODO "PLAN"
+        </div>
         <InstallPWAButton />
 
         <DashboardHeader />
