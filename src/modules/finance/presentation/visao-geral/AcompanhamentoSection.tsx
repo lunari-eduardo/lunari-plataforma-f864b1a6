@@ -42,10 +42,29 @@ function diasAte(iso: string) {
 }
 
 function getDisplayName(t: Tx) {
-  if (t.observacoes === 'Recorrente - Valor Fixo' || t.observacoes === 'Recorrente - Editar Valor') {
-    return t.item?.nome || t.observacoes;
+  const cleanText = (text: string) => {
+    if (!text) return text;
+    const partes = text.split(' · ');
+    const validas = partes.filter(p => 
+      !p.startsWith('Forma:') && 
+      !p.startsWith('Favorecido:') && 
+      !p.startsWith('Origem:') && 
+      p !== 'Recorrente - Valor Fixo' && 
+      p !== 'Recorrente - Editar Valor'
+    );
+    return validas.length > 0 ? validas.join(' · ') : '';
+  };
+
+  const realDescription = cleanText(t.observacoes || '');
+
+  if (!t.item?.nome) {
+    return realDescription || 'Lançamento';
   }
-  return t.observacoes || t.item?.nome || 'Lançamento';
+
+  if (realDescription) {
+    return `${t.item.nome} • ${realDescription}`;
+  }
+  return t.item.nome;
 }
 
 export const AcompanhamentoSection = memo(function AcompanhamentoSection({ transacoes }: Props) {

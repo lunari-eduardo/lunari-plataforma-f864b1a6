@@ -92,8 +92,22 @@ const FluxoTimelineRow = memo(function FluxoTimelineRow({
   const Icon = iconForLinha(linha);
   const status = statusStyle(linha);
   const isReceita = linha.tipo === 'entrada';
-  const titulo = linha.cliente || linha.descricao;
-  const subtitulo = linha.projeto || linha.categoria || linha.descricao;
+  const cleanText = (text: string) => {
+    if (!text) return text;
+    const partes = text.split(' · ');
+    const validas = partes.filter(p => 
+      !p.startsWith('Forma:') && 
+      !p.startsWith('Favorecido:') && 
+      !p.startsWith('Origem:') && 
+      p !== 'Recorrente - Valor Fixo' && 
+      p !== 'Recorrente - Editar Valor'
+    );
+    return validas.length > 0 ? validas.join(' · ') : text;
+  };
+
+  const cleanDescricao = cleanText(linha.descricao);
+  const titulo = cleanText(linha.cliente || cleanDescricao);
+  const subtitulo = cleanText(linha.projeto || linha.categoria || cleanDescricao);
 
   // Marcar como pago só faz sentido em lançamentos do financeiro ainda não pagos
   const podeMarcarPago = !!onMarkPaid && linha.origem === 'financeiro' && linha.status !== 'Pago';
