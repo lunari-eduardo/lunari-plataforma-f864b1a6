@@ -1,180 +1,55 @@
-# Capa Editorial — reconstrução do zero (arquitetura "Seam")
+# Capa Editorial — causa raiz encontrada e correção definitiva
 
-## Estado atual verificado
+Sim, é possível. O efeito que você quer (um único título atravessando a costura e trocando de cor exatamente na borda da foto) está implementado quase todo certo — o que quebrou é **um erro de sistema de coordenadas no recorte (clip-path)**. Por isso o título "sumiu" do lado creme e sobrou só o fragmento "LE" em cima da água.
 
-O código da capa Editorial foi removido: `variants/EditorialCover.tsx` não existe mais, `registry.ts` já não referencia `editorial` e `thumbnails.tsx` não exporta `EditorialThumbnail`. Restam apenas `fullscreen`, `floating-frame` e `split`. O `CoverRenderer` e o contrato `CoverVariantProps` (`coverPhoto`, `sessionName`, `subtitle`, `sessionDate`, `sessionFont`, `titleCaseMode`, `isDark`, `textColor`, `onEnter`) permanecem intactos — a nova capa se conecta neles sem alterar `ClientDeliverGallery`.
+## Causa raiz (confirmada no código)
 
-Ou seja: partida limpa, sem dívida da implementação anterior.
+`clip-path: inset(...)` é calculado **relativo à caixa do próprio elemento**, não à tela. Em `EditorialCover.tsx` os recortes são calculados em coordenadas da tela e aplicados a caixas de título que começam em `x = 6% da largura` e têm `52%` de largura:
 
----
+- Título base: `inset(0 (largura - costura) 0 0)` → recorte à direita maior que a própria caixa → **título base 100% invisível**.
+- Título sobreposto: `inset(0 0 0 costura)` → corta os primeiros ~618px de uma caixa de ~765px → **sobra só o final da palavra** ("LE" no seu print).
 
-## 1. A ideia central: uma costura (seam), não uma moldura
+Efeitos colaterais visíveis no print: nenhum texto no lado creme, fragmento solto sobre a foto, e o bloco de título sem centragem vertical real (a caixa tem altura fixa mas o `items-center` não é ancorado à costura).
 
-A referência enviada não tem moldura flutuante. Tem **duas superfícies coladas**:
+## Solução definitiva
 
-```text
-┌───────────────────────┬────────────────────────────┐
-│  FUNDO DO TEMA        │   FOTOGRAFIA FULL-BLEED    │
-│                       │                            │
-│   À ESPE│RA           │                            │
-│   DE VO │CÊ           │  ← o título atravessa      │
-│         │                 a costura                │
-│   ENSAIO GESTANTE     │                            │
-│                       │                            │
-│ 19 · AGOSTO · 2026    │        VER GALERIA →       │
-└───────────────────────┴────────────────────────────┘
-                        ↑
-                    a costura
-```
-
-Isso resolve, por construção, todos os problemas que derrubaram a versão anterior:
-
-- **A geometria vira um único número**: a posição da costura (`seam`, uma fração de 0 a 1). Foto e recorte do título derivam do mesmo valor — impossível divergirem.
-- **A troca de cor acontece numa linha reta única**, não numa caixa com quatro bordas. O recorte é `inset(0 0 0 seam)` de um lado e `inset(0 calc(100% - seam) 0 0)` do outro.
-- **Não existe "atrás da foto"**: o título é sempre desenhado acima do plano da foto; o que muda é só a cor.
-- **A foto sangra até as bordas**, então nenhuma redução de largura cria vazios estranhos ou empurra elementos.
-
----
-
-## 2. Composição por faixa de viewport
-
-Cada faixa tem sua própria composição — não é a mesma reduzida.
-
-### Desktop (≥ 1024px) — costura vertical
-
-- Foto: `left: seam`, até a borda direita, altura total. `seam = 0.42`.
-- Título: bloco ancorado à esquerda em `x = 6%`, centro vertical em ~46%, largura útil até `~0.80` da tela — ou seja, avança cerca de 38% para dentro da fotografia.
-- Subtítulo: sob o título, alinhado à esquerda, sempre no lado do fundo (nunca cruza).
-- Data: canto inferior esquerdo (lado fundo). CTA: canto inferior direito (sobre a foto).
-
-### Tablet (640–1023px) — costura vertical deslocada
-
-- `seam = 0.34`, título com escala reduzida e quebra mais agressiva. Mesma linguagem.
-
-### Mobile (< 640px) — costura **horizontal**
-
-Girar a costura em 90° preserva a estética e resolve o mobile de forma nativa:
+Trocar a arquitetura de recorte por **duas camadas de tela cheia**, ambas do tamanho exato do container, com o título posicionado por coordenadas absolutas idênticas nas duas. Assim os dois `clip-path` passam a usar o **mesmo sistema de coordenadas da costura**, e o alinhamento vira matematicamente impossível de divergir.
 
 ```text
-┌────────────────────────┐
-│   FUNDO DO TEMA        │
-│                        │
-│   À ESPERA             │
-│───DE─VOCÊ──────────────│ ← costura horizontal
-│   (a segunda linha     │
-│    entra na foto)      │
-│      FOTOGRAFIA        │
-│      FULL-BLEED        │
-│                        │
-│ 19 · AGO   VER GAL. →  │
-└────────────────────────┘
+container (100% x 100dvh)
+├── layer FOTO      inset(0 0 0 seam)         → foto full-bleed do lado direito
+├── layer TÍTULO A  full-size, clip: lado creme  (cor escura)
+└── layer TÍTULO B  full-size, clip: lado foto   (cor por contraste local)
+        ambos com o mesmo <TitleComposition> na mesma posição absoluta
 ```
 
-- Foto: `top: seam` (`seam = 0.46`), até a base, largura total.
-- Título: ancorado à esquerda, posicionado de modo que a **última linha atravesse a costura** — a sobreposição é garantida pelo cálculo, não pelo acaso.
-- Subtítulo: acima da costura. Data e CTA: barra inferior sobre a foto, com contraste próprio.
+Correções incluídas na mesma passada:
 
-Nenhum elemento em fluxo normal em nenhuma faixa. Tudo absoluto dentro de um palco `100dvw × 100dvh`.
+1. **Recorte correto**: `clipTheme = inset(0 calc(100% - seam) 0 0)` e `clipPhoto = inset(0 0 0 seam)` aplicados a camadas full-size — nunca à caixa do título.
+2. **Ancoragem à costura**: a caixa do título é posicionada de forma que a palavra cruze a costura de verdade (o texto começa no lado creme e avança um percentual definido para dentro da foto), em vez de depender de largura de conteúdo.
+3. **Tipografia que cabe**: `useFittedTitle` passa a respeitar largura **e** altura disponíveis (limite por número de linhas), com mínimo/máximo por breakpoint, evitando estouro e evitando o "mínimo 32px" atropelando telas pequenas.
+4. **Centragem vertical real** do bloco de título via caixa com `top` calculado a partir do centro da composição, não valores soltos.
+5. **Contraste local corrigido**: `useSeamContrast` hoje mede a interseção usando retângulos em coordenadas de tela contra o retângulo da foto, com `Math.min(1, ...)` que distorce a região. Passa a receber a **interseção já calculada** (somente a parte do título que está sobre a foto), mapeada para as coordenadas reais da imagem considerando `object-fit: cover`.
+6. **Fallback seguro**: se a imagem falhar por CORS/erro, cai para branco com leve sombra de leitura, nunca fica invisível.
+7. **Data e CTA**: posicionados por âncoras (baixo-esquerda no lado creme, baixo-direita sobre a foto) com `transform` de compensação, para não vazarem fora da tela.
+8. **Mobile**: costura horizontal — foto full-bleed embaixo, título ancorado cruzando a borda superior da foto (nunca empilhado abaixo dela), com a mesma lógica de recorte rotacionada.
 
----
+## Se preferir eliminar a possibilidade
 
-## 3. Contraste automático — medido exatamente onde o texto entra
+Alternativa mais simples que também entrego se você quiser: título **inteiramente** no lado creme, sem cruzar a foto (composição editorial clássica, zero risco de bug de recorte/contraste). Mas a correção acima resolve o efeito real — não é uma limitação do navegador.
 
-Regra em duas regiões, como pedido:
+## Arquivos tocados
 
-- **Fora da foto**: cor do tema (`#171513` no claro, `#F5F2EC` no escuro), ou `textColor` se o fotógrafo definiu.
-- **Dentro da foto**: cor calculada da imagem.
+- `src/components/deliver/covers/variants/EditorialCover.tsx` — reescrita das camadas e âncoras.
+- `src/components/deliver/covers/editorial/composition.ts` — spec com âncoras de costura e overshoot do título.
+- `src/components/deliver/covers/editorial/useFittedTitle.ts` — ajuste largura+altura.
+- `src/components/deliver/covers/editorial/useSeamContrast.ts` — amostragem só da interseção real, com `cover` mapping.
 
-O cálculo amostra **somente a faixa da fotografia onde o título realmente incide**, não a imagem inteira:
+Sem mudanças de banco, dados ou regras de negócio.
 
-1. Converter a caixa do título para coordenadas dentro da imagem, compensando o `object-fit: cover` (escala + offset do recorte).
-2. Amostrar essa sub-região num canvas 32×32 e calcular luminância ITU-R BT.709.
-3. `luminância > 140` → texto `#12100E`; senão → `#F7F4EE`.
-4. Fallback seguro em caso de bloqueio CORS: texto claro (a foto recebe uma vinheta sutil no lado da costura, garantindo legibilidade mínima).
+## Etapas
 
-O mesmo cálculo, com sua própria região, define a cor do CTA que fica sobre a foto.
-
-Nenhum `drop-shadow` ou filtro: o contraste vem da cor, não de muleta visual.
-
----
-
-## 4. Título como uma única peça
-
-O título é renderizado por **um componente puro** que recebe apenas `{ lines, fontSizePx, fontFamily, letterSpacing, color }`. Ele é montado duas vezes, com **props idênticas exceto `color`**, dentro de wrappers cujo `style` é produzido pela **mesma função**. Assim, quebra de linha, tracking, escala e posição são iguais por construção, não por coincidência.
-
-Cada camada recebe um `clip-path` complementar derivado do mesmo `seam`. O resultado visual é uma palavra só que muda de cor ao cruzar a linha — exatamente a referência.
-
-### Escala tipográfica contínua
-
-Nada de degraus por breakpoint. A largura real de cada linha é medida uma vez com `canvas.measureText` a 100px, e o tamanho final é `clamp(min, larguraDisponível / maiorRazão, max)`. Isso garante:
-
-- título sempre ocupando a presença gráfica pretendida (~25–40% da composição);
-- nenhum overflow horizontal em largura nenhuma;
-- nenhuma quebra involuntária de palavra.
-
-### Quebra de linha deliberada
-
-Regras, em ordem: conector (`&`, `e`, `+`) → duas linhas; duas palavras → uma por linha; três ou mais → divisão equilibrada por contagem de caracteres; palavra única → linha única em escala maior. Máximo de duas linhas; um terceiro bloco reduz escala em vez de criar linha extra.
-
----
-
-## 5. Tipografia e conteúdo
-
-- Título: serif display de alto contraste — `sessionFont` quando definido, senão a pilha `'Bodoni Moda', 'Playfair Display', Didot, serif`. `tracking: -0.02em`, `line-height: 0.86`, caixa alta.
-- Subtítulo: sans discreta, ~11px, `tracking: 0.3em`, caixa alta, opacidade 0.6, com um traço curto abaixo (como na referência).
-- Data: microtipografia `19 · AGOSTO · 2026`, mono-espaçamento generoso.
-- CTA: `VER GALERIA →` com sublinhado fino, sem botão. Seta desloca 4px no hover.
-
-Somente esses quatro elementos. Sem numeração, sem nome do estúdio, sem categoria, sem ornamentos.
-
----
-
-## 6. Etapas de implementação
-
-**Etapa 1 — Geometria**
-`covers/editorial/composition.ts`: tipo `EditorialSpec` (`orientation: 'vertical' | 'horizontal'`, `seam`, caixa do título, âncoras de rodapé) e `resolveSpec(width, height)` retornando tudo em px. Invariante checada em DEV: a caixa do título precisa cruzar a costura.
-
-**Etapa 2 — Tipografia**
-`splitTitle.ts` (quebra) e `useFittedTitle.ts` (medição por canvas + `clamp`).
-
-**Etapa 3 — Bloco tipográfico**
-`TitleComposition.tsx`: componente puro, sem lógica, sem estado.
-
-**Etapa 4 — Contraste**
-`useSeamContrast.ts`: amostragem de sub-região com compensação de `object-fit: cover`; retorna cor para o título e para o CTA.
-
-**Etapa 5 — Capa**
-`variants/EditorialCover.tsx`: palco `h-[100dvh]`, `ResizeObserver`, camadas fundo → foto → título base (recortado no lado do fundo) → título sobre foto (recortado no lado da foto) → rodapé. Foto com `<img>` real (`object-cover`, `loading="eager"`, `decoding="async"`) e um leve `scale` no hover.
-
-**Etapa 6 — Registro**
-Reinserir `editorial` em `registry.ts` e recriar `EditorialThumbnail` em `thumbnails.tsx` refletindo a costura vertical.
-
-**Etapa 7 — Validação**
-Playwright em 360 / 414 / 768 / 1024 / 1440 / 1920 px, temas claro e escuro, com títulos curto, longo e de palavra única. Verificar: travessia da costura presente, troca de cor exatamente na linha, sem overflow, data e CTA legíveis, sem duplicação perceptível. Depois `tsgo` e build.
-
----
-
-## 7. Arquivos
-
-| Arquivo | Ação |
-|---|---|
-| `src/components/deliver/covers/editorial/composition.ts` | novo |
-| `src/components/deliver/covers/editorial/splitTitle.ts` | novo |
-| `src/components/deliver/covers/editorial/useFittedTitle.ts` | novo |
-| `src/components/deliver/covers/editorial/useSeamContrast.ts` | novo |
-| `src/components/deliver/covers/editorial/TitleComposition.tsx` | novo |
-| `src/components/deliver/covers/variants/EditorialCover.tsx` | novo |
-| `src/components/deliver/covers/registry.ts` | reinsere a variante `editorial` |
-| `src/components/deliver/covers/thumbnails.tsx` | nova `EditorialThumbnail` |
-
-`CoverRenderer`, `types.ts`, as outras três capas e `ClientDeliverGallery` permanecem intactos.
-
----
-
-## 8. Critérios de aceitação
-
-**Desktop**: fotografia sangrando até as bordas ocupando ~58% da largura; título dominante atravessando a costura com troca de cor exatamente nela; subtítulo, data e CTA estáveis; sem duplicação perceptível.
-
-**Mobile**: costura horizontal; título nunca empilhado abaixo da foto; ao menos uma linha do título dentro da fotografia; sem overflow; data e CTA visíveis e legíveis sobre a foto; composição visivelmente desenhada para mobile.
-
-**Ambos**: recomposição estável e contínua de 320 a 2560px, sem saltos de escala e sem geometria duplicada no código.
+1. Ajustar `composition.ts` (âncoras + overshoot + centragem).
+2. Ajustar `useFittedTitle` e `useSeamContrast`.
+3. Reescrever camadas de `EditorialCover.tsx`.
+4. Verificar em desktop (1440, 1040) e mobile (390) via preview, com foto clara e escura.
