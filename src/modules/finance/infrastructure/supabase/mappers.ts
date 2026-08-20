@@ -22,6 +22,7 @@ export interface FinTransactionRow {
   parcela_total?: number | null;
   forma_pagamento?: string | null;
   credit_card_id?: string | null;
+  parent_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -42,6 +43,7 @@ export function rowToTransacao(r: any): Transacao {
     parcelaTotal: r.parcela_total ?? null,
     formaPagamento: (r.forma_pagamento as FormaPagamento) ?? null,
     cartaoId: r.credit_card_id ?? null,
+    parentId: r.parent_id ?? null,
     userId: r.user_id,
     criadoEm: r.created_at ?? new Date().toISOString(),
     atualizadoEm: r.updated_at ?? undefined,

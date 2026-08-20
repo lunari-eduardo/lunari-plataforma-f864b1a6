@@ -9,12 +9,22 @@ import { parseFinancialInput } from '@/utils/financialPrecision';
 import { cn } from '@/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, ExternalLink, Trash2 } from 'lucide-react';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface FluxoDetailSheetProps {
   linha: LinhaExtrato | null;
   onClose: () => void;
   onSave: (id: string, patch: { valor?: number; data_vencimento?: string; observacoes?: string }) => Promise<void> | void;
-  onDelete: (id: string) => Promise<void> | void;
+  onDelete: (id: string, deleteAllSeries?: boolean) => Promise<void> | void;
   onMarkPaid: (id: string) => Promise<void> | void;
   onMarkPending?: (id: string) => Promise<void> | void;
   onOpenOrigin?: (linha: LinhaExtrato) => void;
@@ -35,6 +45,8 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
   const [saving, setSaving] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>('');
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   useEffect(() => {
     if (linha) {
       setValor(String(linha.valor.toFixed(2)).replace('.', ','));
@@ -46,7 +58,8 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
 
   if (!linha) return null;
 
-  const editable = linha.origem === 'financeiro';
+  const editable = ['financeiro', 'cartao'].includes(linha.origem);
+  const isParcelado = linha.parcela && linha.parcela.total > 1;
   const isReceita = linha.tipo === 'entrada';
 
   const handleSave = async () => {
@@ -99,6 +112,14 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
     </div>
   );
 
+  const handleDeleteClick = () => {
+    if (isParcelado) {
+      setDeleteDialogOpen(true);
+    } else {
+      onDelete(linha.referenciaId);
+    }
+  };
+
   const footer = (
     <SidePanel.Footer
       left={
@@ -106,7 +127,7 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(linha.referenciaId)}
+            onClick={handleDeleteClick}
             className="text-destructive hover:text-destructive gap-1.5"
           >
             <Trash2 className="h-4 w-4" strokeWidth={1.5} />
@@ -137,6 +158,7 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
   );
 
   return (
+    <>
     <SidePanel
       open={!!linha}
       onOpenChange={(v) => !v && onClose()}
@@ -221,6 +243,41 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
         </section>
       </div>
     </SidePanel>
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir lançamento parcelado</AlertDialogTitle>
+          <AlertDialogDescription>
+            Este é um lançamento parcelado ({linha.parcela?.atual}/{linha.parcela?.total}). Deseja excluir apenas esta parcela ou todas as parcelas deste lançamento?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 mt-4">
+          <AlertDialogCancel className="mt-0">Cancelar</AlertDialogCancel>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => {
+                onDelete(linha.referenciaId, false);
+                setDeleteDialogOpen(false);
+              }}
+            >
+              Apenas esta
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onDelete(linha.referenciaId, true);
+                setDeleteDialogOpen(false);
+              }}
+            >
+              Todas
+            </Button>
+          </div>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 });
 

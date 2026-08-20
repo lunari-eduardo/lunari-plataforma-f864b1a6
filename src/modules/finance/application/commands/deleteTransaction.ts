@@ -7,6 +7,7 @@ import { resolveUserId } from "../_auth";
 
 const Input = z.object({
   id: z.string().uuid(),
+  deleteAllSeries: z.boolean().optional(),
   source: z.enum(["user", "automation", "ai"]).default("user"),
 }).strict();
 const Output = z.object({ id: z.string() });
@@ -21,11 +22,23 @@ export const deleteTransaction = defineCommand({
   sideEffects: ["db:fin_transactions", "event:finance.transaction.deleted"],
   needsApproval: true,
   audit: "always",
-  async handler({ id, source }, ctx) {
+  async handler({ id, deleteAllSeries, source }, ctx) {
     const auth = await resolveUserId(ctx);
     if (!isOk(auth)) return auth;
     try {
-      await supabaseTransactionsRepo.remove(id);
+      if (deleteAllSeries) {
+        const transacao = await supabaseTransactionsRepo.getById(id);
+        if (transacao?.parentId) {
+          await supabaseTransactionsRepo.removeByParentId(transacao.parentId);
+          // O store precisa invalidar queries, remover do store apenas o ID atual não basta,
+          // mas como usamos react-query invalidateAll após onSuccess na view, é seguro ignorar a deleção em massa aqui.
+        } else {
+          await supabaseTransactionsRepo.remove(id);
+        }
+      } else {
+        await supabaseTransactionsRepo.remove(id);
+      }
+      
       if (ctx.runtime === "client") {
         try { transactionsStore.remove(id); } catch { /* noop */ }
       }

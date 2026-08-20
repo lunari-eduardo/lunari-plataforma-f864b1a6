@@ -399,12 +399,12 @@ export function useFinancialTransactionsSupabase(filtroMesAno: { mes: number; an
   });
 
   const removerTransacaoMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await runCapability(deleteTransaction, { id, source: 'user' } as any);
+    mutationFn: async ({ id, deleteAllSeries }: { id: string; deleteAllSeries?: boolean }) => {
+      const res = await runCapability(deleteTransaction, { id, deleteAllSeries, source: 'user' } as any);
       unwrapOrThrow(res);
       return { id };
     },
-    onMutate: async (id: string) => {
+    onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['financial-transactions'] });
       const rollback = patchAllMonthQueries(
         (t) => t.id === id,

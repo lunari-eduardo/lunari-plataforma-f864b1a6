@@ -210,6 +210,23 @@ export class SupabaseFinancialTransactionsAdapter {
       throw error;
     }
   }
+
+  /**
+   * Excluir todas transações de uma mesma série (parent_id)
+   */
+  static async deleteByParentId(parentId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('fin_transactions')
+        .delete()
+        .eq('parent_id', parentId);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao excluir série de transações:', error);
+      throw error;
+    }
+  }
   
   /**
    * Atualizar status automaticamente baseado na data

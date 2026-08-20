@@ -314,16 +314,18 @@ const FluxoFinanceiroView = memo(function FluxoFinanceiroView() {
         onSave={async (id, patch) => {
           await financas.atualizarTransacao(id, patch);
         }}
-        onDelete={async (id) => {
-          const ok = await confirm({
-            title: 'Excluir lançamento',
-            description: 'Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.',
-            confirmText: 'Excluir',
-            cancelText: 'Cancelar',
-            variant: 'destructive',
-          });
-          if (!ok) return;
-          await financas.removerTransacao(id);
+        onDelete={async (id, deleteAllSeries) => {
+          if (deleteAllSeries === undefined) {
+            const ok = await confirm({
+              title: 'Excluir lançamento',
+              description: 'Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.',
+              confirmText: 'Excluir',
+              cancelText: 'Cancelar',
+              variant: 'destructive',
+            });
+            if (!ok) return;
+          }
+          await financas.removerTransacao(id, deleteAllSeries);
           setDetailLinha(null);
         }}
 

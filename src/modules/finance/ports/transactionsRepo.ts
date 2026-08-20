@@ -71,4 +71,5 @@ export interface TransactionsRepo {
   markPaid(id: string, dataPagamento?: string): Promise<Transacao>;
   markPending(id: string): Promise<Transacao>;
   remove(id: string): Promise<void>;
+  removeByParentId(parentId: string): Promise<void>;
 }

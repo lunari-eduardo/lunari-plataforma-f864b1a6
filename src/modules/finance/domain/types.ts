@@ -61,6 +61,7 @@ export interface Transacao {
   parcelaTotal?: number | null;
   formaPagamento?: FormaPagamento | null;
   cartaoId?: string | null;
+  parentId?: string | null;
   userId: string;
   criadoEm: string;
   atualizadoEm?: string;

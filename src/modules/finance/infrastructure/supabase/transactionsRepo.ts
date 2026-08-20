@@ -139,4 +139,8 @@ export const supabaseTransactionsRepo: TransactionsRepo = {
   async remove(id) {
     await SupabaseFinancialTransactionsAdapter.deleteTransaction(id);
   },
+
+  async removeByParentId(parentId) {
+    await SupabaseFinancialTransactionsAdapter.deleteByParentId(parentId);
+  },
 };

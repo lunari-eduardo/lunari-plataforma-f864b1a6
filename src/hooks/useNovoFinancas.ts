@@ -378,9 +378,9 @@ export function useNovoFinancas() {
     }
   };
 
-  const removerTransacao = async (id: string) => {
+  const removerTransacao = async (id: string, deleteAllSeries?: boolean) => {
     try {
-      await removerTransacaoSupabase(id);
+      await removerTransacaoSupabase({ id, deleteAllSeries });
     } catch (error) {
       console.error('Erro ao remover transação:', error);
       throw error;
