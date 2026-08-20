@@ -1,55 +1,42 @@
-# Capa Editorial — causa raiz encontrada e correção definitiva
+# Capa Editorial — 3 correções cirúrgicas (sem quebrar a costura)
 
-Sim, é possível. O efeito que você quer (um único título atravessando a costura e trocando de cor exatamente na borda da foto) está implementado quase todo certo — o que quebrou é **um erro de sistema de coordenadas no recorte (clip-path)**. Por isso o título "sumiu" do lado creme e sobrou só o fragmento "LE" em cima da água.
+O efeito de costura (título único trocando de cor na borda da foto) está funcionando e **não será alterado**. Os três problemas restantes têm causas independentes e localizadas.
 
-## Causa raiz (confirmada no código)
+## Problema 1 — Cor do texto sobre a foto só acerta depois de sair e voltar
 
-`clip-path: inset(...)` é calculado **relativo à caixa do próprio elemento**, não à tela. Em `EditorialCover.tsx` os recortes são calculados em coordenadas da tela e aplicados a caixas de título que começam em `x = 6% da largura` e têm `52%` de largura:
+Causa (confirmada no código): a leitura de contraste (`useSeamContrast`) roda antes da geometria existir. No primeiro render `size = {0,0}`, então o retângulo de interseção do título é `0x0`; a função de luminância cai no fallback (`return isDark ? 0 : 255`) e decide texto escuro. Quando a geometria chega, o efeito reexecuta, mas o `new Image()` com `crossOrigin='anonymous'` reaproveita a entrada de cache sem cabeçalho CORS e o `onload` não repinta — a cor errada fica congelada. Ao voltar à página, a imagem já está em cache com CORS resolvido e a cor correta aparece.
 
-- Título base: `inset(0 (largura - costura) 0 0)` → recorte à direita maior que a própria caixa → **título base 100% invisível**.
-- Título sobreposto: `inset(0 0 0 costura)` → corta os primeiros ~618px de uma caixa de ~765px → **sobra só o final da palavra** ("LE" no seu print).
+Correção:
+1. Não executar amostragem enquanto `size.width === 0` ou a interseção tiver área zero — sair cedo mantendo o estado anterior.
+2. Separar o carregamento da imagem (uma vez, com `decode()` + `onerror`) da amostragem (recalculada quando a geometria muda), guardando o `HTMLImageElement`/canvas em `ref`. Assim mudanças de layout não dependem de um novo `onload`.
+3. `onerror`: refazer a tentativa uma vez **sem** `crossOrigin` para detectar apenas o caso de falha; se ainda falhar, fallback determinístico = branco com sombra de leitura sutil (nunca texto escuro invisível).
+4. Estado inicial neutro: enquanto não houver medição, a camada sobre a foto renderiza branco (aparência correta na maioria das fotos) em vez de escuro.
 
-Efeitos colaterais visíveis no print: nenhum texto no lado creme, fragmento solto sobre a foto, e o bloco de título sem centragem vertical real (a caixa tem altura fixa mas o `items-center` não é ancorado à costura).
+## Problema 2 — Foto com corte desproporcional (parece tela cheia com faixa branca por cima)
 
-## Solução definitiva
+Causa: a camada da foto é `absolute inset-0` com `background-size: cover` sobre **a tela inteira** e depois recortada por `clip-path`. Ou seja, a imagem é enquadrada para 100% da largura e só a parte direita fica visível — exatamente a sensação de "foto cobrindo a tela com um bloco branco colado por cima".
 
-Trocar a arquitetura de recorte por **duas camadas de tela cheia**, ambas do tamanho exato do container, com o título posicionado por coordenadas absolutas idênticas nas duas. Assim os dois `clip-path` passam a usar o **mesmo sistema de coordenadas da costura**, e o alinhamento vira matematicamente impossível de divergir.
+Correção: a foto passa a ocupar apenas o próprio retângulo (`spec.photo`), posicionada em `left/top/width/height` reais, com `object-fit: cover` **dentro desse retângulo**. Sem `clip-path` na foto (a costura vira a própria borda do elemento). O recorte volta a ser proporcional ao lado direito (desktop) / inferior (mobile).
 
-```text
-container (100% x 100dvh)
-├── layer FOTO      inset(0 0 0 seam)         → foto full-bleed do lado direito
-├── layer TÍTULO A  full-size, clip: lado creme  (cor escura)
-└── layer TÍTULO B  full-size, clip: lado foto   (cor por contraste local)
-        ambos com o mesmo <TitleComposition> na mesma posição absoluta
-```
+Consequência positiva: o mapeamento de `cover` usado no cálculo de contraste passa a bater com o que é exibido, porque ambos usarão o mesmo retângulo. A função de amostragem será ajustada para simular `cover` com a proporção real de `spec.photo` (hoje ela simula um quadrado 64×64, o que distorce a região amostrada).
 
-Correções incluídas na mesma passada:
+## Problema 3 — Subtítulo escondido atrás do título
 
-1. **Recorte correto**: `clipTheme = inset(0 calc(100% - seam) 0 0)` e `clipPhoto = inset(0 0 0 seam)` aplicados a camadas full-size — nunca à caixa do título.
-2. **Ancoragem à costura**: a caixa do título é posicionada de forma que a palavra cruze a costura de verdade (o texto começa no lado creme e avança um percentual definido para dentro da foto), em vez de depender de largura de conteúdo.
-3. **Tipografia que cabe**: `useFittedTitle` passa a respeitar largura **e** altura disponíveis (limite por número de linhas), com mínimo/máximo por breakpoint, evitando estouro e evitando o "mínimo 32px" atropelando telas pequenas.
-4. **Centragem vertical real** do bloco de título via caixa com `top` calculado a partir do centro da composição, não valores soltos.
-5. **Contraste local corrigido**: `useSeamContrast` hoje mede a interseção usando retângulos em coordenadas de tela contra o retângulo da foto, com `Math.min(1, ...)` que distorce a região. Passa a receber a **interseção já calculada** (somente a parte do título que está sobre a foto), mapeada para as coordenadas reais da imagem considerando `object-fit: cover`.
-6. **Fallback seguro**: se a imagem falhar por CORS/erro, cai para branco com leve sombra de leitura, nunca fica invisível.
-7. **Data e CTA**: posicionados por âncoras (baixo-esquerda no lado creme, baixo-direita sobre a foto) com `transform` de compensação, para não vazarem fora da tela.
-8. **Mobile**: costura horizontal — foto full-bleed embaixo, título ancorado cruzando a borda superior da foto (nunca empilhado abaixo dela), com a mesma lógica de recorte rotacionada.
+Causa: o subtítulo tem posição fixa (`y = 0.35` da altura) enquanto o bloco de título é centrado verticalmente e cresce conforme o texto — em títulos de duas linhas os dois se sobrepõem.
 
-## Se preferir eliminar a possibilidade
-
-Alternativa mais simples que também entrego se você quiser: título **inteiramente** no lado creme, sem cruzar a foto (composição editorial clássica, zero risco de bug de recorte/contraste). Mas a correção acima resolve o efeito real — não é uma limitação do navegador.
+Correção: o subtítulo deixa de ter posição absoluta própria e passa a ser **ancorado ao bloco de título**: renderizado logo acima da primeira linha, com espaçamento proporcional ao tamanho da fonte calculada (`fontSize * 0.5`), na mesma coluna do título. Ele fica no lado creme e usa a cor base (sem participar da costura). No mobile, mesma regra com âncora horizontal centrada.
 
 ## Arquivos tocados
 
-- `src/components/deliver/covers/variants/EditorialCover.tsx` — reescrita das camadas e âncoras.
-- `src/components/deliver/covers/editorial/composition.ts` — spec com âncoras de costura e overshoot do título.
-- `src/components/deliver/covers/editorial/useFittedTitle.ts` — ajuste largura+altura.
-- `src/components/deliver/covers/editorial/useSeamContrast.ts` — amostragem só da interseção real, com `cover` mapping.
+- `src/components/deliver/covers/variants/EditorialCover.tsx` — foto no retângulo próprio; subtítulo ancorado ao título; estado inicial de cor neutro.
+- `src/components/deliver/covers/editorial/useSeamContrast.ts` — guarda de geometria, carregamento único com `decode()`/`onerror`, amostragem com proporção real da foto.
+- `src/components/deliver/covers/editorial/composition.ts` — remoção do `subtitlePos` fixo (substituído por âncora derivada do título); nenhum outro valor de costura alterado.
 
-Sem mudanças de banco, dados ou regras de negócio.
+Sem mudanças de banco, dados ou regras de negócio. Camadas de recorte do título permanecem exatamente como estão.
 
 ## Etapas
 
-1. Ajustar `composition.ts` (âncoras + overshoot + centragem).
-2. Ajustar `useFittedTitle` e `useSeamContrast`.
-3. Reescrever camadas de `EditorialCover.tsx`.
-4. Verificar em desktop (1440, 1040) e mobile (390) via preview, com foto clara e escura.
+1. Ajustar `useSeamContrast` (guarda + carregamento único + amostragem proporcional).
+2. Reposicionar a foto em `EditorialCover` para o retângulo real.
+3. Ancorar o subtítulo ao bloco de título e limpar `composition.ts`.
+4. Verificar em 1440, 1040 e 390 no preview, com foto clara e escura, e com recarga limpa (cache frio e cache quente) para confirmar a cor correta no primeiro acesso.
