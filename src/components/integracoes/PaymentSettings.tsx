@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2, Star, Settings, Power, Plus, MoreVertical, CheckCircle, AlertTriangle, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
