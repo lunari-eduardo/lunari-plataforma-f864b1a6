@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCreditPackages, CreditPackage } from '@/hooks/useCreditPackages';
 import { useAsaasSubscription, AsaasSubscription } from '@/hooks/useAsaasSubscription';
 import { useTransferStorage } from '@/hooks/useTransferStorage';
-import { useUnifiedPlans } from '@/hooks/useUnifiedPlans';
+import { useUnifiedPlans, UnifiedPlan } from '@/hooks/useUnifiedPlans';
+import { PLAN_INCLUDES } from '@/lib/planConfig';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,7 @@ export default function CreditsCheckout() {
   const navigate = useNavigate();
   const { packages, isLoadingPackages } = useCreditPackages();
   const { subscription: activeSub, subscriptions: allSubs, studioSub, downgradeSubscription, isDowngrading } = useAsaasSubscription();
+  const transferSub = allSubs.find(s => PLAN_INCLUDES[s.plan_type]?.transfer);
   const { storageUsedBytes } = useTransferStorage();
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'transfer' ? 'transfer' : 'select';
@@ -141,12 +143,12 @@ export default function CreditsCheckout() {
 
 
   // Dynamic plan prices (backward compat)
-  const ALL_PLAN_PRICES = getAllPlanPrices();
+  const ALL_PLAN_PRICES_MAP = getAllPlanPrices();
   const PLAN_INCLUDES_LOCAL = PLAN_INCLUDES;
 
   // Build transfer plans from dynamic data or fallback
-  const dynamicTransfer = [] as any[]; // Fallback or refactor as needed
-  const TRANSFER_PLANS = dynamicTransfer
+  const dynamicTransfer = useMemo(() => plans.filter(p => p.includes_transfer && !p.includes_studio), [plans]);
+  const TRANSFER_PLANS = dynamicTransfer.length > 0
     ? dynamicTransfer.map((p) => ({
         code: p.code,
         name: p.name.replace('Transfer ', '').replace('transfer_', ''),
@@ -159,8 +161,8 @@ export default function CreditsCheckout() {
     : FALLBACK_TRANSFER_PLANS;
 
   // Build combo plans from dynamic data or fallback
-  const dynamicCombos = getComboPlans();
-  const COMBO_PLANS = dynamicCombos
+  const dynamicCombos = useMemo(() => plans.filter(p => p.product_family === 'combo'), [plans]);
+  const COMBO_PLANS = dynamicCombos.length > 0
     ? dynamicCombos.map((p) => ({
         code: p.code,
         name: p.name,
@@ -185,8 +187,8 @@ export default function CreditsCheckout() {
   };
 
   // Comparison row prices (dynamic)
-  const proMonthly = getPlanPrice('combo_pro_select2k', 'monthly');
-  const fullMonthly = getPlanPrice('combo_completo', 'monthly');
+  const proMonthly = getPlanPrice('combo_pro_select2k', 'MONTHLY');
+  const fullMonthly = getPlanPrice('combo_completo', 'MONTHLY');
   const comparisonRows = COMPARISON_ROWS.map((row) => {
     if (row.label === 'Preço') {
       return {
