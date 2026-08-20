@@ -53,6 +53,7 @@ export function useGestaoPackages(): UseGestaoPackagesResult {
   return {
     packages,
     isLoading,
-    hasGestaoIntegration,
+    hasGestaoIntegration: !!(user as any)?.hasGestaoIntegration,
+
   };
 }

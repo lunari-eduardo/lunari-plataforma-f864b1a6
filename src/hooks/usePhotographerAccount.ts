@@ -34,7 +34,9 @@ export interface PhotographerAccountData {
 }
 
 export function usePhotographerAccount() {
-  const { user, accessLevel } = useAuth();
+  const { user } = useAuth();
+  const accessLevel = (user as any)?.accessLevel;
+
   const isAdmin = accessLevel === 'admin';
 
   return useQuery({
