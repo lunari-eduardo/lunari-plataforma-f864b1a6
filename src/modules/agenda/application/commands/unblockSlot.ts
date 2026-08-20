@@ -30,7 +30,7 @@ export const unblockSlot = defineCommand({
     }
     await ctx.emit("agenda.availability.changed", {
       date,
-      operation: "remove",
+      operation: "delete" as any,
     });
     return ok({ success: true, date, time });
   },
