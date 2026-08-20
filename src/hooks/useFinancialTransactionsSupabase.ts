@@ -133,7 +133,9 @@ async function checkIfEquipmentAndNotify(
           : 'data_vencimento' in variables
           ? variables.data_vencimento
           : (variables as any).dataPrimeiraOcorrencia;
-      const nomeLimpo = observacoes?.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+      let nomeLimpo = observacoes?.split(' · ')[0] || '';
+      nomeLimpo = nomeLimpo.replace(/\s*\(\d+\/\d+\)$/, '').replace(/\s*\(Cartão:[^)]+\)$/, '').trim();
+      
       if (transactionId) {
         emitEquipmentCandidate({
           transacaoId: transactionId,

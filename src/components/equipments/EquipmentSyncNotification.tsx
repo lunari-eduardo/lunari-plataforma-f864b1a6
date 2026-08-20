@@ -4,6 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Wrench, Plus, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+} from '@/components/ui/alert-dialog';
 import { EQUIPMENT_SYNC_EVENT, type EquipmentCandidate, markTransactionAsProcessed } from '@/hooks/useEquipmentSync';
 import { EquipmentSyncModal } from './EquipmentSyncModal';
 import { supabase } from '@/integrations/supabase/client';
@@ -108,52 +116,53 @@ export function EquipmentSyncNotification() {
     return () => clearInterval(interval);
   }, []);
   if (queuedEquipments.length === 0) return null;
-  return <>
-      <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm">
-        {/* Pending notifications for manual processing */}
-        {queuedEquipments.slice(0, 3).map(equipment => <Card key={equipment.id} className="p-3 shadow-lg border-border bg-card">
-            <div className="flex items-start gap-3">
+  const currentEquipment = queuedEquipments[0];
+
+  return (
+    <>
+      <AlertDialog open={!showModal && queuedEquipments.length > 0} onOpenChange={() => {}}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
               <div className="p-1.5 bg-primary/10 rounded-full flex-shrink-0">
                 <Wrench className="h-4 w-4 text-primary" />
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-sm font-medium truncate">Equipamento Detectado</h4>
-                  <Badge variant="secondary" className="text-xs">
-                    Novo
-                  </Badge>
-                </div>
-                
-                <p className="text-sm text-muted-foreground truncate mb-1">
-                  {equipment.nome}
+              Equipamento Detectado
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4 pt-2">
+              <p>
+                Detectamos o registro do equipamento <strong className="text-foreground">{currentEquipment.nome}</strong> no valor de <strong className="text-foreground">R$ {currentEquipment.valor.toFixed(2)}</strong>.
+              </p>
+              <p>
+                Você pode cadastrar automaticamente esse equipamento em "Meus equipamentos" para finalidade de depreciação e precificação de pacotes.
+              </p>
+              {queuedEquipments.length > 1 && (
+                <p className="text-xs text-muted-foreground mt-4">
+                  +{queuedEquipments.length - 1} outros equipamentos detectados aguardando.
                 </p>
-                
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                  <span>R$ {equipment.valor.toFixed(2)}</span>
-                  
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => handleAddToPricing(equipment)} className="h-7 text-xs flex-1">
-                    <Plus className="h-3 w-3 mr-1" />
-                    Configurar
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleIgnore(equipment)} className="h-7 w-7 p-0">
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>)}
-        
-        {queuedEquipments.length > 3 && <Card className="p-3 text-center text-xs text-muted-foreground bg-muted/50 border-dashed">
-            <Wrench className="h-4 w-4 mx-auto mb-1 opacity-60" />
-            <div>+{queuedEquipments.length - 3} equipamentos na fila</div>
-            <div className="text-[10px] mt-1">Clique em "Configurar" nos itens acima</div>
-          </Card>}
-      </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 mt-4">
+            <Button variant="ghost" onClick={() => handleIgnore(currentEquipment)}>
+              Não cadastrar / Mais tarde
+            </Button>
+            <Button onClick={() => handleAddToPricing(currentEquipment)}>
+              Configurar agora
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {selectedEquipment && <EquipmentSyncModal equipment={selectedEquipment} open={showModal} onOpenChange={setShowModal} onSuccess={handleModalSuccess} onClose={handleModalClose} />}
-    </>;
+      {selectedEquipment && (
+        <EquipmentSyncModal 
+          equipment={selectedEquipment} 
+          open={showModal} 
+          onOpenChange={setShowModal} 
+          onSuccess={handleModalSuccess} 
+          onClose={handleModalClose} 
+        />
+      )}
+    </>
+  );
 }

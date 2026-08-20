@@ -142,8 +142,8 @@ export function useEquipmentSync() {
         // Coletar todos os IDs do grupo
         const allIds = transactions.map(t => t.id);
         
-        // Limpar sufixo de parcela do nome se houver (ex: "Câmera (1/2)" -> "Câmera")
-        const nomeLimpo = primeiraParcela.observacoes?.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+        let nomeLimpo = primeiraParcela.observacoes?.split(' · ')[0] || '';
+        nomeLimpo = nomeLimpo.replace(/\s*\(\d+\/\d+\)$/, '').replace(/\s*\(Cartão:[^)]+\)$/, '').trim();
         const nomeEquipamento = nomeLimpo || `Equipamento R$ ${valorTotal.toFixed(2)}`;
         
         const candidate: EquipmentCandidate = {
