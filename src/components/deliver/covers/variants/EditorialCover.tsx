@@ -51,8 +51,8 @@ export default function EditorialCover({
     spec.title.width,
     spec.title.height,
     sessionFont || 'serif',
-    spec.orientation === 'vertical' ? 12 : 18,
-    spec.orientation === 'vertical' ? 24 : 34
+    spec.orientation === 'vertical' ? 12 : 20,
+    spec.orientation === 'vertical' ? 24 : 42
   );
 
   const titleIntersection = useMemo(() => {
@@ -154,7 +154,7 @@ export default function EditorialCover({
         }}
       >
         <div
-          className={`w-full h-full bg-cover bg-center transition-transform duration-[2000ms] ease-out scale-100 ${spec.orientation === 'vertical' ? 'hover:scale-105' : ''}`}
+          className={`w-full h-full bg-cover transition-transform duration-[2000ms] ease-out scale-100 ${spec.orientation === 'vertical' ? 'hover:scale-105 bg-center' : 'bg-[center_top_20%]'}`}
           style={{ backgroundImage: `url(${coverUrl})` }}
         />
         <div 
