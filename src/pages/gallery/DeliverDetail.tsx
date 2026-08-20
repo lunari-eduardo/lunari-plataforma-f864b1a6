@@ -101,7 +101,7 @@ export default function DeliverDetail() {
   useEffect(() => {
     if (gallery) {
       setSessionName(gallery.nomeSessao || '');
-      setSubtitle((gallery.configuracoes as any)?.subtitulo || '');
+      setSubtitle(gallery.configuracoes?.subtitulo || '');
       setCategory((gallery.configuracoes as any)?.categoria || '');
       const rawDate = (gallery.configuracoes as any)?.dataEvento;
       if (rawDate) {
