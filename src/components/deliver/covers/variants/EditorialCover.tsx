@@ -30,7 +30,7 @@ export default function EditorialCover({
   const { line1, line2 } = useMemo(() => splitTitle(rawDisplayName), [rawDisplayName]);
   const displaySubtitle = subtitle ? subtitle.trim().toUpperCase() : undefined;
 
-  // Formatação de data
+  // Formatação de data (ex: "20 · AGOSTO · 2026")
   const formattedDate = useMemo(() => {
     if (sessionDate) {
       try {
@@ -53,38 +53,51 @@ export default function EditorialCover({
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setViewport({
+          width: containerRef.current.clientWidth || window.innerWidth,
+          height: containerRef.current.clientHeight || window.innerHeight,
+        });
+      } else if (typeof window !== 'undefined') {
+        setViewport({ width: window.innerWidth, height: window.innerHeight });
+      }
+    };
+
+    updateDimensions();
+
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setViewport({ width: entry.contentRect.width, height: entry.contentRect.height });
+        setViewport({
+          width: entry.contentRect.width || window.innerWidth,
+          height: entry.contentRect.height || window.innerHeight,
+        });
       }
     });
     observer.observe(containerRef.current);
-    
-    // Fallback inicial rápido
-    setViewport({ width: containerRef.current.clientWidth, height: containerRef.current.clientHeight });
-    
-    return () => observer.disconnect();
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateDimensions);
+    };
   }, []);
 
   const overrides = settings?.editorialCover;
 
   const spec: ResolvedSpec | null = useMemo(() => {
-    if (viewport.width === 0 || viewport.height === 0) return null;
-    return resolveSpec(viewport.width, viewport.height, overrides);
+    const w = viewport.width || (typeof window !== 'undefined' ? window.innerWidth : 1200);
+    const h = viewport.height || (typeof window !== 'undefined' ? window.innerHeight : 800);
+    return resolveSpec(w, h, overrides);
   }, [viewport.width, viewport.height, overrides]);
 
   // 3. Motor Tipográfico
-  const minFont = spec?.breakpoint === 'mobile' ? 28 : 42;
-  const maxFont = spec?.breakpoint === 'mobile' ? 100 : 280;
-  
   const titleFontSize = useFittedTitle(
     line1,
     line2,
-    spec?.title.w || 0,
-    serifStyle.fontFamily,
-    minFont,
-    maxFont
+    viewport.width || (typeof window !== 'undefined' ? window.innerWidth : 1200),
+    spec?.breakpoint || 'desktop'
   );
 
   // 4. Análise de Contraste Inteligente (Interseção Exata)
@@ -92,11 +105,13 @@ export default function EditorialCover({
     if (!spec || titleFontSize === 0) return null;
     
     // Estimativa da caixa delimitadora do texto
-    const textHeight = line2 ? titleFontSize * 2.1 : titleFontSize * 1.1;
+    const textHeight = line2 ? titleFontSize * 2.2 : titleFontSize * 1.2;
     const titleTop = spec.title.centerY - (textHeight / 2);
     const titleBottom = spec.title.centerY + (textHeight / 2);
     const titleLeft = spec.title.x;
-    const titleRight = spec.title.x + spec.title.w;
+    // Largura aproximada baseada nos caracteres
+    const approxTextWidth = Math.max(line1.length, line2.length) * (titleFontSize * 0.58);
+    const titleRight = spec.title.x + approxTextWidth;
 
     const { x, y, w, h } = spec.photo;
     
@@ -110,12 +125,12 @@ export default function EditorialCover({
 
     // Normalização para fração do container da foto
     return {
-      x: (interLeft - x) / w,
-      y: (interTop - y) / h,
-      w: (interRight - interLeft) / w,
-      h: (interBottom - interTop) / h
+      x: Math.max(0, (interLeft - x) / w),
+      y: Math.max(0, (interTop - y) / h),
+      w: Math.min(1, (interRight - interLeft) / w),
+      h: Math.min(1, (interBottom - interTop) / h)
     };
-  }, [spec, titleFontSize, line2]);
+  }, [spec, titleFontSize, line1, line2]);
 
   const photoAspectRatio = spec ? spec.photo.w / spec.photo.h : 1;
   const luminance = useRegionLuminance(coverUrl, regionInPhoto, photoAspectRatio);
@@ -137,6 +152,9 @@ export default function EditorialCover({
     onEnter?.();
   };
 
+  const actualWidth = viewport.width || (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const actualHeight = viewport.height || (typeof window !== 'undefined' ? window.innerHeight : 800);
+
   return (
     <section
       ref={containerRef}
@@ -152,13 +170,13 @@ export default function EditorialCover({
             style={{
               left: `${spec.title.x}px`,
               top: `${spec.title.centerY}px`,
-              width: `${spec.title.w}px`,
             }}
           >
             <div className="relative -translate-y-1/2">
               <TitleComposition
                 line1={line1}
                 line2={line2}
+                subtitle={displaySubtitle}
                 fontSizePx={titleFontSize}
                 color={baseTextColor}
                 fontFamily={serifStyle.fontFamily}
@@ -193,9 +211,7 @@ export default function EditorialCover({
           <div
             className="absolute inset-0 z-30 pointer-events-none"
             style={{
-              // O clip-path garante que tudo nesta div (tamanho 100dvh/vw) seja invisível
-              // EXCETO o que está dentro do bounding box da fotografia.
-              clipPath: `inset(${spec.photo.y}px ${viewport.width - (spec.photo.x + spec.photo.w)}px ${viewport.height - (spec.photo.y + spec.photo.h)}px ${spec.photo.x}px)`,
+              clipPath: `inset(${spec.photo.y}px ${Math.max(0, actualWidth - (spec.photo.x + spec.photo.w))}px ${Math.max(0, actualHeight - (spec.photo.y + spec.photo.h))}px ${spec.photo.x}px)`,
             }}
           >
             <div
@@ -203,13 +219,13 @@ export default function EditorialCover({
               style={{
                 left: `${spec.title.x}px`,
                 top: `${spec.title.centerY}px`,
-                width: `${spec.title.w}px`,
               }}
             >
               <div className="relative -translate-y-1/2">
                 <TitleComposition
                   line1={line1}
                   line2={line2}
+                  subtitle={displaySubtitle}
                   fontSizePx={titleFontSize}
                   color={overlayTextColor}
                   fontFamily={serifStyle.fontFamily}
@@ -218,33 +234,13 @@ export default function EditorialCover({
             </div>
           </div>
 
-          {/* CAMADA 4 (z-40): Subtítulo, Data e CTA */}
-          {/* Subtítulo posicionado de forma independente usando offset matemático da base do texto */}
-          {displaySubtitle && (
-            <div
-              className="absolute z-40 pointer-events-none"
-              style={{
-                left: `${spec.title.x}px`,
-                top: `${spec.title.centerY}px`,
-                transform: `translateY(${line2 ? titleFontSize * 1.1 : titleFontSize * 0.6}px)`,
-              }}
-            >
-              <p 
-                className="text-[10px] md:text-xs font-sans tracking-[0.34em] font-light uppercase opacity-75 transition-colors duration-300"
-                style={{ color: baseTextColor }}
-              >
-                {displaySubtitle}
-              </p>
-            </div>
-          )}
-
-          {/* Footer Bottom Bar */}
+          {/* CAMADA 4 (z-40): Footer com Data e Botão "Ver Galeria" */}
           <footer 
             className="absolute z-40 flex items-end justify-between pointer-events-auto w-full"
             style={{
-              bottom: `${viewport.width < 640 ? viewport.height * 0.04 : viewport.height * 0.05}px`,
-              paddingLeft: `${spec.title.x}px`, // Alinha com o texto
-              paddingRight: `${Math.max(spec.title.x, viewport.width - (spec.photo.x + spec.photo.w))}px`, // Alinha com a foto ou margem
+              bottom: `${actualWidth < 640 ? actualHeight * 0.04 : actualHeight * 0.05}px`,
+              paddingLeft: `${spec.title.x}px`,
+              paddingRight: `${Math.max(spec.title.x, actualWidth - (spec.photo.x + spec.photo.w))}px`,
             }}
           >
             <p className="text-[10px] sm:text-xs lg:text-sm font-sans tracking-[0.25em] md:tracking-[0.32em] font-light opacity-80" style={{ color: baseTextColor }}>

@@ -1,78 +1,65 @@
 import { useMemo } from 'react';
 
-// Cache de medição para evitar múltiplas renderizações em canvas idênticos
-const measurementCache = new Map<string, number>();
-
-// Variável estática para reaproveitar o mesmo canvas off-screen
-let sharedCanvas: HTMLCanvasElement | null = null;
-
-function measureTextWidth(text: string, font: string): number {
-  if (!text) return 0;
-  if (typeof window === 'undefined') return 0; // SSR safe
-
-  const cacheKey = `${text}-${font}`;
-  if (measurementCache.has(cacheKey)) {
-    return measurementCache.get(cacheKey)!;
-  }
-
-  if (!sharedCanvas) {
-    sharedCanvas = document.createElement('canvas');
-  }
-  
-  const context = sharedCanvas.getContext('2d');
-  if (!context) return 0;
-
-  context.font = font;
-  const width = context.measureText(text).width;
-  measurementCache.set(cacheKey, width);
-  
-  // Mantemos o cache com limite para evitar memory leak em trocas de fontes excessivas
-  if (measurementCache.size > 100) {
-    const firstKey = measurementCache.keys().next().value;
-    if (firstKey) measurementCache.delete(firstKey);
-  }
-
-  return width;
-}
-
 /**
- * Motor tipográfico contínuo.
- * Calcula o tamanho ideal da fonte para que a maior linha caiba perfeitamente no container.
+ * Motor tipográfico editorial contínuo.
+ * Calcula o tamanho ideal da fonte baseado na largura do viewport,
+ * no número de caracteres da maior linha e no breakpoint,
+ * garantindo uma escala monumental sem quebras involuntárias e sem encolhimento excessivo.
  */
 export function useFittedTitle(
   line1: string,
   line2: string,
-  boxWidthPx: number,
-  fontFamily: string,
-  minFontPx: number = 24,
-  maxFontPx: number = 280
-) {
-  const REF_FONT_SIZE = 100;
+  viewportWidth: number,
+  breakpoint: 'desktop' | 'compact' | 'mobile' = 'desktop'
+): number {
+  const maxLineLength = Math.max(line1.length, line2.length, 1);
 
-  const fittedFontSize = useMemo(() => {
-    if (boxWidthPx <= 0) return minFontPx;
+  const fontSize = useMemo(() => {
+    if (viewportWidth <= 0) return 64;
 
-    // Mede usando um tamanho de referência padrão
-    const fontStr = `normal ${REF_FONT_SIZE}px ${fontFamily}`;
-    
-    const width1 = measureTextWidth(line1, fontStr);
-    const width2 = measureTextWidth(line2, fontStr);
-    
-    const maxWidthAtRef = Math.max(width1, width2);
-    
-    // Se não há texto, retorna o máximo (ou mínimo)
-    if (maxWidthAtRef === 0) return maxFontPx;
-    
-    // Calculamos a proporção necessária para preencher o boxWidth.
-    // Usamos 100% da largura, pois o tracking -0.04em do CSS de destino já garante folga, 
-    // mas por segurança aplicamos um levíssimo buffer de 1% para evitar quebra de linha por arredondamento de subpixels do browser.
-    const targetWidth = boxWidthPx * 0.99; 
-    const ratio = targetWidth / maxWidthAtRef;
-    
-    const calculatedFontSize = REF_FONT_SIZE * ratio;
-    
-    return Math.floor(Math.min(Math.max(calculatedFontSize, minFontPx), maxFontPx));
-  }, [line1, line2, boxWidthPx, fontFamily, minFontPx, maxFontPx]);
+    if (breakpoint === 'desktop') {
+      // Escala monumental para Desktop (≥ 1024px)
+      // Ex: "MARIANA" (7 chars) -> ~9.5vw (135px em 1440px)
+      // Ex: "TESTE DE" (8 chars) -> ~8.0vw (115px em 1440px)
+      // Ex: "MARIANA & RAFAEL" (16 chars) -> ~6.2vw (90px em 1440px)
+      if (maxLineLength <= 7) {
+        const vwSize = viewportWidth * 0.095;
+        return Math.round(Math.min(Math.max(vwSize, 90), 180));
+      } else if (maxLineLength <= 11) {
+        const vwSize = viewportWidth * 0.08;
+        return Math.round(Math.min(Math.max(vwSize, 75), 150));
+      } else if (maxLineLength <= 16) {
+        const vwSize = viewportWidth * 0.065;
+        return Math.round(Math.min(Math.max(vwSize, 60), 125));
+      } else {
+        const vwSize = viewportWidth * 0.05;
+        return Math.round(Math.min(Math.max(vwSize, 48), 100));
+      }
+    } else if (breakpoint === 'compact') {
+      // Telas intermediárias / Tablets (640px - 1023px)
+      if (maxLineLength <= 7) {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.095, 60), 96));
+      } else if (maxLineLength <= 11) {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.08, 50), 80));
+      } else if (maxLineLength <= 16) {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.065, 42), 66));
+      } else {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.05, 34), 54));
+      }
+    } else {
+      // Mobile (< 640px)
+      // Ex: 390px tela -> 390 * 0.11 = 43px (escala imponente sobre a foto)
+      if (maxLineLength <= 7) {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.115, 38), 54));
+      } else if (maxLineLength <= 11) {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.095, 32), 46));
+      } else if (maxLineLength <= 16) {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.08, 26), 38));
+      } else {
+        return Math.round(Math.min(Math.max(viewportWidth * 0.065, 22), 32));
+      }
+    }
+  }, [line1, line2, maxLineLength, viewportWidth, breakpoint]);
 
-  return fittedFontSize;
+  return fontSize;
 }

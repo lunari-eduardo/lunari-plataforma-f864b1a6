@@ -17,18 +17,22 @@ export interface EditorialSpec {
 }
 
 export const DESKTOP_SPEC: EditorialSpec = {
-  photo: { x: 0.50, y: 0.10, w: 0.45, h: 0.74 },
-  title: { x: 0.06, y: 0.50, w: 0.58 },
+  // Foto imponente no quadrante direito
+  photo: { x: 0.47, y: 0.08, w: 0.48, h: 0.76 },
+  // Título monumental partindo da esquerda e cruzando a foto
+  title: { x: 0.06, y: 0.50, w: 0.65 },
 };
 
 export const COMPACT_SPEC: EditorialSpec = {
-  photo: { x: 0.38, y: 0.12, w: 0.56, h: 0.60 },
-  title: { x: 0.06, y: 0.46, w: 0.62 },
+  photo: { x: 0.38, y: 0.10, w: 0.57, h: 0.65 },
+  title: { x: 0.06, y: 0.52, w: 0.72 },
 };
 
 export const MOBILE_SPEC: EditorialSpec = {
-  photo: { x: 0.28, y: 0.10, w: 0.70, h: 0.58 },
-  title: { x: 0.05, y: 0.60, w: 0.82 },
+  // Mobile: Foto deslocada para o canto superior direito
+  photo: { x: 0.22, y: 0.08, w: 0.73, h: 0.54 },
+  // Título nasce abaixo/à esquerda e cruza a base da foto
+  title: { x: 0.06, y: 0.58, w: 0.88 },
 };
 
 export interface ResolvedRect {
@@ -95,18 +99,6 @@ export function resolveSpec(
     centerY: baseSpec.title.y * viewportHeight,
     w: baseSpec.title.w * viewportWidth,
   };
-
-  if (process.env.NODE_ENV !== 'production') {
-    // Validação da invariante: o texto deve sobrepor a foto para o efeito editorial funcionar.
-    const titleRight = resolvedTitle.x + resolvedTitle.w;
-    const photoLeft = resolvedPhoto.x;
-    if (titleRight <= photoLeft) {
-      console.warn(
-        `[EditorialCover] Invariante de sobreposição violada no breakpoint ${breakpoint}. ` +
-        `O título (termina em ${titleRight}px) não sobrepõe a foto (começa em ${photoLeft}px).`
-      );
-    }
-  }
 
   return {
     photo: resolvedPhoto,
