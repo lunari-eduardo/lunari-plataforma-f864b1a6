@@ -8,7 +8,6 @@ export function useSeamContrast(
   ctaRect: Rect,
   isDark = false
 ) {
-  // Default to white for photo overlay, as most photographer shots are dark/moody
   const [titleColor, setTitleColor] = useState('#FFFFFF');
   const [ctaColor, setCtaColor] = useState('#FFFFFF');
   const [isLight, setIsLight] = useState(false);
@@ -29,7 +28,6 @@ export function useSeamContrast(
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
 
-        // Cover mapping using REAL photoRect proportions
         const imgRatio = img.width / img.height;
         const targetRatio = photoRect.width / photoRect.height;
         
@@ -49,7 +47,6 @@ export function useSeamContrast(
         ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
         const getAvgLuminance = (targetRect: Rect) => {
-          // Relative to photoRect
           const relX = (targetRect.x - photoRect.x) / photoRect.width;
           const relY = (targetRect.y - photoRect.y) / photoRect.height;
           const relW = targetRect.width / photoRect.width;
@@ -60,7 +57,7 @@ export function useSeamContrast(
           const width = Math.min(size - startX, Math.max(1, Math.floor(relW * size)));
           const height = Math.min(size - startY, Math.max(1, Math.floor(relH * size)));
 
-          if (width <= 0 || height <= 0) return 0; // Assume dark if no intersection
+          if (width <= 0 || height <= 0) return 0;
 
           const data = ctx.getImageData(startX, startY, width, height).data;
           let total = 0;
@@ -76,7 +73,7 @@ export function useSeamContrast(
         const ctaLum = getAvgLuminance(ctaRect);
 
         if (isMounted) {
-          const titleIsLight = titleLum > 160; // Slightly higher threshold for safety
+          const titleIsLight = titleLum > 160;
           setIsLight(titleIsLight);
           setTitleColor(titleIsLight ? '#171513' : '#FFFFFF');
           setCtaColor(ctaLum > 160 ? '#171513' : '#FFFFFF');
@@ -100,8 +97,6 @@ export function useSeamContrast(
         sample(img);
       };
       img.onerror = () => {
-        // Fallback: try without crossOrigin to see if it's just a CORS issue on sampling
-        // (the image would still display via <img> tag but canvas would fail)
         if (isMounted) {
           setTitleColor('#FFFFFF');
           setCtaColor('#FFFFFF');
