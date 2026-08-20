@@ -97,7 +97,7 @@ export function CustomizationAppearanceTab({
     (p) => p.value.toLowerCase() === localPrimaryColor.toLowerCase()
   );
 
-  const currentRadius = settings.themeOverrides?.surface?.borderRadius || '0px';
+  const currentRadius = (settings as any).themeOverrides?.surface?.borderRadius || '0px';
   const isButtonDarkText = !isColorDark(localPrimaryColor);
 
   return (
