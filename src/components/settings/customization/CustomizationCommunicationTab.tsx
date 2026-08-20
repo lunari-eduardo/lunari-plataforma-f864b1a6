@@ -82,7 +82,7 @@ export function CustomizationCommunicationTab({
       <div className="lunari-card p-6">
         <EmailTemplates
           templates={settings.emailTemplates}
-          onTemplateSave={updateEmailTemplate}
+          onTemplateSave={updateEmailTemplate as any}
           isSaving={isUpdatingEmailTemplate}
         />
       </div>
