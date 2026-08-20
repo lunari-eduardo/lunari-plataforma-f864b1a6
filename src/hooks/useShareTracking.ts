@@ -47,7 +47,7 @@ export function useShareTracking({ token, slug }: { token?: string, slug?: strin
       // Usa sendBeacon ou fetch keepalive para garantir envio ao fechar
       // Como estamos no Supabase, a function invoke normal pode ser cancelada pelo browser.
       // Vamos usar beacon se possível, mas como exige formato específico, faremos fetch com keepalive.
-      const url = `${supabase.supabaseUrl}/functions/v1/track-share-event`;
+      const url = `${(supabase as any).supabaseUrl}/functions/v1/track-share-event`;
       const body = JSON.stringify({
         token,
         share_link_slug: slug,
@@ -61,7 +61,7 @@ export function useShareTracking({ token, slug }: { token?: string, slug?: strin
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}` // anon key
+          'Authorization': `Bearer ${(supabase as any).supabaseKey}` // anon key
         },
         body,
         keepalive: true

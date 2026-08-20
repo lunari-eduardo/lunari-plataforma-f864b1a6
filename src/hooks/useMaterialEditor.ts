@@ -81,7 +81,8 @@ export function useMaterialEditor(materialId: string | undefined) {
         isPublished: !!version.published_at,
         format,
         blocks,
-        pdfUrl
+        pdfUrl,
+        globalSettings
       };
       
       originalState.current = JSON.parse(JSON.stringify(loadedState));

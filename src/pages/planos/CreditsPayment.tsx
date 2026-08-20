@@ -156,12 +156,12 @@ function OrderSummary({
   couponDiscountValue: number | null;
 }) {
   const isUpgrade = pkg.type === 'subscription' && pkg.isUpgrade;
-  const isRenewal = pkg.type === 'subscription' && pkg.isRenewal;
+  const isRenewal = pkg.type === 'subscription' && (pkg as any).isRenewal;
   const isYearly = pkg.type === 'subscription' && pkg.billingCycle === 'YEARLY';
 
   // Base amount for calculation
-  const baseCents = isUpgrade && !isRenewal && pkg.type === 'subscription' && pkg.prorataValueCents != null
-    ? pkg.prorataValueCents
+  const baseCents = (isUpgrade && !isRenewal && pkg.type === 'subscription' && (pkg as any).prorataValueCents != null)
+    ? (pkg as any).prorataValueCents
     : pkg.priceCents;
 
   const finalCents = couponDiscount != null ? couponDiscount : baseCents;
@@ -523,7 +523,7 @@ function SelectCardForm({ pkg, formattedPrice }: { pkg: SelectPayment; formatted
           remoteIp = ipData.ip || '';
         } catch { remoteIp = ''; }
 
-        const result = await createPayment({
+        const result = await (createPayment as any)({
           productType: 'select',
           packageId: pkg.packageId,
           credits: pkg.credits,
@@ -847,7 +847,7 @@ function SubscriptionWizard({ pkg }: { pkg: SubscriptionPayment }) {
     <OrderSummary
       pkg={pkg}
       installments={installments}
-      couponDiscount={coupon.valid ? coupon.calculateDiscount(installmentBaseCents) : null}
+      couponDiscount={coupon.valid && (coupon as any).calculateDiscount ? (coupon as any).calculateDiscount(installmentBaseCents) : null}
       couponCode={coupon.valid ? coupon.code : null}
       couponDiscountType={coupon.valid ? coupon.discountType : null}
       couponDiscountValue={coupon.valid ? coupon.discountValue : null}

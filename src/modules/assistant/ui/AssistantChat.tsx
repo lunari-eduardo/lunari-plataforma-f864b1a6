@@ -375,7 +375,7 @@ export function AssistantChat() {
 
                   return null;
                 })}
-                {message.experimental_attachments?.map((att, i) => (
+                {(message as any).experimental_attachments?.map((att: any, i: number) => (
                   <div key={`att-${i}`} className="mt-2">
                     {att.contentType?.startsWith("audio/") ? (
                       <audio controls src={att.url} className="h-8 max-w-full" />

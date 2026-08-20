@@ -52,7 +52,7 @@ export default function EditorialCover({
     spec.title.height,
     sessionFont || 'serif',
     spec.orientation === 'vertical' ? 12 : 18,
-    spec.orientation === 'vertical' ? 24 : 32
+    spec.orientation === 'vertical' ? 24 : 34
   );
 
   const titleIntersection = useMemo(() => {
@@ -128,17 +128,17 @@ export default function EditorialCover({
     top: `${spec.title.y}px`,
     width: `${spec.title.width}px`,
     height: `${spec.title.height}px`,
-    transform: 'translate(-50%, -50%)',
+    transform: 'translateY(-50%)', // Anchor center of text block to the seam
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center'
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    textAlign: 'left'
   };
 
   return (
     <section
       ref={containerRef}
-      className={`relative w-full h-[100dvh] overflow-hidden antialiased transition-colors duration-700 ${
+      className={`relative w-full h-[100svh] overflow-hidden antialiased transition-colors duration-700 ${
         isDark ? 'bg-[#12100E]' : 'bg-[#F7F4EE]'
       }`}
     >
@@ -153,7 +153,7 @@ export default function EditorialCover({
         }}
       >
         <div
-          className="w-full h-full bg-cover bg-center transition-transform duration-[2000ms] ease-out scale-100 hover:scale-105"
+          className={`w-full h-full bg-cover bg-center transition-transform duration-[2000ms] ease-out scale-100 ${spec.orientation === 'vertical' ? 'hover:scale-105' : ''}`}
           style={{ backgroundImage: `url(${coverUrl})` }}
         />
         <div 
@@ -176,7 +176,7 @@ export default function EditorialCover({
             {/* Anchored Subtitle */}
             {formattedSubtitle && (
               <div
-                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-center w-full' : ''}`}
+                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-start w-full' : ''}`}
                 style={{ fontSize: `${fontSize * 0.1}px` }}
               >
                 <span 
@@ -209,7 +209,7 @@ export default function EditorialCover({
             {/* Anchor spacing matching theme side */}
             {formattedSubtitle && (
               <div
-                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-center w-full' : ''}`}
+                className={`flex flex-col gap-1.5 mb-[0.6em] ${spec.orientation === 'horizontal' ? 'items-start w-full' : ''}`}
                 style={{ fontSize: `${fontSize * 0.1}px` }}
               >
                 <span 
@@ -237,7 +237,12 @@ export default function EditorialCover({
         {/* Date */}
         <div
           className="absolute"
-          style={{ left: `${spec.date.x}px`, top: `${spec.date.y}px` }}
+          style={{ 
+            left: `${spec.date.x}px`, 
+            top: `${spec.date.y}px`,
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingLeft: 'env(safe-area-inset-left)'
+          }}
         >
           <span 
             className="text-[10px] sm:text-xs tracking-[0.25em] font-sans opacity-70"
@@ -253,12 +258,14 @@ export default function EditorialCover({
           style={{ 
             left: `${spec.cta.x}px`, 
             top: `${spec.cta.y}px`,
-            transform: 'translateX(-100%)' 
+            transform: 'translateX(-100%)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingRight: 'env(safe-area-inset-right)'
           }}
         >
           <button
             onClick={handleScroll}
-            className="group flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.25em] font-sans uppercase border-b border-current pb-1 transition-opacity hover:opacity-60"
+            className="group flex items-center gap-2 text-[10px] sm:text-xs tracking-[0.25em] font-sans uppercase border-b border-current pb-1 transition-opacity hover:opacity-60 min-h-[44px] min-w-[44px]"
             style={{ color: ctaColor }}
           >
             <span>Ver Galeria</span>

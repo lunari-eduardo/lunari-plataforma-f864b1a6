@@ -4,6 +4,7 @@ import { usePublicMaterial } from '@/hooks/usePublicMaterial';
 import { useTrackedMaterial } from '@/hooks/useTrackedMaterial';
 import { useShareTracking } from '@/hooks/useShareTracking';
 import { NativePdfViewer } from './components/editor/NativePdfViewer';
+import { VisualRenderer } from './components/editor/VisualRenderer';
 import { Loader2, MessageCircle } from 'lucide-react';
 import { PublicThemeWrapper } from '@/components/shared/PublicThemeWrapper';
 
@@ -107,7 +108,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
 
   if (!hasStarted && result.customMessage) {
     return (
-      <PublicThemeWrapper primaryColor={result.theme?.primaryColor || undefined}>
+      <PublicThemeWrapper primaryColor={(result as any).theme?.primaryColor || undefined}>
         <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
           <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-black/5">
             {userProfile?.avatar_url && (
@@ -138,7 +139,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   }
 
   return (
-    <PublicThemeWrapper primaryColor={result.theme?.primaryColor || undefined} className="flex flex-col relative pb-24">
+    <PublicThemeWrapper primaryColor={(result as any).theme?.primaryColor || undefined} className="flex flex-col relative pb-24">
       {isPdfFormat ? (
         <NativePdfViewer url={pdfUrl} logoUrl={userProfile?.avatar_url} />
       ) : (
@@ -148,7 +149,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
           onSelectBlock={() => {}}
           viewMode="desktop"
           onSectionView={(blockId, blockType, position) => {
-            trackEvent('section_view', { block_id: blockId, block_type: blockType, position });
+            trackEvent('section_view', { blockId, blockType, position });
           }}
         />
       )}

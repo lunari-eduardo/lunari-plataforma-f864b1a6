@@ -22,7 +22,7 @@ export const unblockDate = defineCommand({
     await availability.clearForDate(date);
     await ctx.emit("agenda.availability.changed", {
       date,
-      operation: "remove",
+      operation: "delete" as any,
     });
     return ok({ success: true, date });
   },

@@ -75,7 +75,7 @@ export default function GalleryCustomizationPage() {
             <CustomizationCommunicationTab 
               settings={settings} 
               updateSettings={updateSettings}
-              updateEmailTemplate={updateEmailTemplate}
+              updateEmailTemplate={updateEmailTemplate as any}
               isUpdatingEmailTemplate={isUpdatingEmailTemplate}
             />
           </TabsContent>
