@@ -4,7 +4,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { defaultWelcomeMessage } from '@/data/mockData';
 import { EmailAutomationSettings } from '@/components/settings/EmailAutomationSettings';
-import { EmailTemplates } from '@/components/settings/EmailTemplates';
 import { GlobalSettings } from '@/types/gallery';
 import { UpdateSettingsOptions } from '@/hooks/useGallerySettings';
 
@@ -75,15 +74,12 @@ export function CustomizationCommunicationTab({
       </div>
 
       <div className="lunari-card p-6">
-        <EmailAutomationSettings settings={settings} updateSettings={updateSettings} />
-      </div>
-
-      {/* Email Templates */}
-      <div className="lunari-card p-6">
-        <EmailTemplates
+        <EmailAutomationSettings 
+          settings={settings} 
+          updateSettings={updateSettings}
           templates={settings.emailTemplates}
           onTemplateSave={updateEmailTemplate as any}
-          isSaving={isUpdatingEmailTemplate}
+          isSavingTemplate={isUpdatingEmailTemplate}
         />
       </div>
     </div>

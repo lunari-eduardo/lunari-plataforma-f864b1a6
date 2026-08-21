@@ -37,6 +37,10 @@ const defaultSettings: Omit<GlobalSettings, 'customTheme' | 'emailTemplates' | '
   emailOnGallerySent: true,
   emailOnGalleryReactivated: true,
   emailOnPaymentConfirmed: true,
+  emailOnSelectionReminder: true,
+  emailOnSelectionConfirmed: true,
+  emailSummaryToPhotographer: true,
+  reminderDaysBeforeExpiration: 2,
   defaultPhotoSpacing: 6,
   defaultThemeId: 'lunari',
   themeOverrides: {},
@@ -67,6 +71,12 @@ const defaultEmailTemplates: Omit<EmailTemplate, 'id'>[] = [
     type: 'gallery_reactivated',
     subject: 'Sua galeria foi reaberta - {galeria}',
     body: 'Olá {cliente}!\n\nBoas notícias: a galeria "{galeria}" foi reaberta para você concluir sua seleção de fotos.\n\nVocê tem até {prazo} para escolher suas favoritas.\n\nAcesse: {link}\n\nCom carinho,\n{estudio}',
+  },
+  {
+    name: 'Confirmação de Pagamento',
+    type: 'payment_confirmed',
+    subject: 'Pagamento confirmado! - {galeria}',
+    body: 'Olá {cliente}!\n\nRecebemos a confirmação do seu pagamento referente à galeria "{galeria}".\n\nEm breve entraremos em contato com os próximos passos.\n\nAcesse sua galeria: {link}\n\nCom carinho,\n{estudio}',
   },
 ];
 
@@ -124,6 +134,10 @@ function rowsToSettings(
     emailOnGallerySent: settingsRow.email_on_gallery_sent ?? true,
     emailOnGalleryReactivated: settingsRow.email_on_gallery_reactivated ?? true,
     emailOnPaymentConfirmed: settingsRow.email_on_payment_confirmed ?? true,
+    emailOnSelectionReminder: settingsRow.email_on_selection_reminder ?? true,
+    emailOnSelectionConfirmed: settingsRow.email_on_selection_confirmed ?? true,
+    emailSummaryToPhotographer: settingsRow.email_summary_to_photographer ?? true,
+    reminderDaysBeforeExpiration: settingsRow.reminder_days_before_expiration ?? 2,
     defaultPhotoSpacing: settingsRow.default_photo_spacing ?? 8,
     defaultThemeId: settingsRow.default_theme_id ?? 'lunari',
     themeOverrides: settingsRow.theme_overrides || {},
@@ -232,6 +246,10 @@ export function useGallerySettings() {
           email_on_gallery_sent: true,
           email_on_gallery_reactivated: true,
           email_on_payment_confirmed: true,
+          email_on_selection_reminder: true,
+          email_on_selection_confirmed: true,
+          email_summary_to_photographer: true,
+          reminder_days_before_expiration: 2,
           default_photo_spacing: 8,
           default_theme_id: 'lunari',
           theme_overrides: {}
@@ -353,6 +371,18 @@ export function useGallerySettings() {
       }
       if (data.emailOnPaymentConfirmed !== undefined) {
         updateData.email_on_payment_confirmed = data.emailOnPaymentConfirmed;
+      }
+      if (data.emailOnSelectionReminder !== undefined) {
+        updateData.email_on_selection_reminder = data.emailOnSelectionReminder;
+      }
+      if (data.emailOnSelectionConfirmed !== undefined) {
+        updateData.email_on_selection_confirmed = data.emailOnSelectionConfirmed;
+      }
+      if (data.emailSummaryToPhotographer !== undefined) {
+        updateData.email_summary_to_photographer = data.emailSummaryToPhotographer;
+      }
+      if (data.reminderDaysBeforeExpiration !== undefined) {
+        updateData.reminder_days_before_expiration = data.reminderDaysBeforeExpiration;
       }
       if (data.defaultPhotoSpacing !== undefined) {
         updateData.default_photo_spacing = data.defaultPhotoSpacing;

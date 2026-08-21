@@ -45,7 +45,7 @@ export function SendDeliverEmailModal({
   useEffect(() => {
     if (isOpen) {
       setRecipientEmail(gallery.clienteEmail || '');
-      setSubject(`Suas fotos finais estão prontas para download ✨ - ${gallery.nomeSessao || 'Galeria'}`);
+      setSubject(`Suas fotos finais estão prontas para download - ${gallery.nomeSessao || 'Galeria'}`);
       setMessage(
         `Olá, ${gallery.clienteNome || 'Cliente'}!\n\nÉ com muita alegria que entregamos as fotos finais da sua sessão "${gallery.nomeSessao || 'Galeria'}"!\n\nSuas fotos já foram tratadas com todo o carinho e estão disponíveis para você visualizar e baixar em alta resolução.\n\nAproveite cada momento inesquecível!`
       );

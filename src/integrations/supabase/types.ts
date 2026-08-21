@@ -4023,6 +4023,10 @@ export type Database = {
           email_on_gallery_reactivated: boolean | null
           email_on_gallery_sent: boolean
           email_on_payment_confirmed: boolean
+          email_on_selection_reminder: boolean | null
+          email_on_selection_confirmed: boolean | null
+          email_summary_to_photographer: boolean | null
+          reminder_days_before_expiration: number | null
           email_sending_enabled: boolean
           favicon_url: string | null
           last_session_font: string | null
@@ -4057,6 +4061,10 @@ export type Database = {
           email_on_gallery_reactivated?: boolean | null
           email_on_gallery_sent?: boolean
           email_on_payment_confirmed?: boolean
+          email_on_selection_reminder?: boolean | null
+          email_on_selection_confirmed?: boolean | null
+          email_summary_to_photographer?: boolean | null
+          reminder_days_before_expiration?: number | null
           email_sending_enabled?: boolean
           favicon_url?: string | null
           last_session_font?: string | null
@@ -4091,6 +4099,10 @@ export type Database = {
           email_on_gallery_reactivated?: boolean | null
           email_on_gallery_sent?: boolean
           email_on_payment_confirmed?: boolean
+          email_on_selection_reminder?: boolean | null
+          email_on_selection_confirmed?: boolean | null
+          email_summary_to_photographer?: boolean | null
+          reminder_days_before_expiration?: number | null
           email_sending_enabled?: boolean
           favicon_url?: string | null
           last_session_font?: string | null

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { PDFDocument, rgb, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +10,7 @@ const FROM_EMAIL = 'Lunari <contato@mail.lunarihub.com>';
 const GALLERY_BASE_URL = 'https://app.lunarihub.com';
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
-type EventType = 'gallery_sent' | 'payment_confirmed' | 'gallery_reactivated' | 'selection_confirmed' | 'selection_reminder';
+type EventType = 'gallery_sent' | 'payment_confirmed' | 'gallery_reactivated' | 'selection_confirmed' | 'selection_reminder' | 'summary_sent';
 
 interface RequestBody {
   eventType?: EventType;
@@ -133,7 +134,7 @@ interface BuildLayoutParams {
  * do fotógrafo (cores do tema, logo do estúdio e tipografia editorial).
  */
 function buildLayout(params: BuildLayoutParams) {
-  const primaryColor = params.primaryColor || '#A4553A';
+  const primaryColor = params.primaryColor || '#C6A36A';
   
   // Header: Logo do estúdio ou Nome Fantasia estilizado
   const headerContent = params.studioLogoUrl
@@ -178,7 +179,7 @@ function buildLayout(params: BuildLayoutParams) {
     <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 20px;width:100%;">
       <tr>
         <td align="center">
-          <a href="${escapeHtml(params.buttonUrl)}" style="display:inline-block;background-color:${escapeHtml(primaryColor)};color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.04em;text-transform:uppercase;border-radius:10px;padding:16px 36px;box-shadow:0 4px 14px rgba(0,0,0,0.12);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          <a href="${escapeHtml(params.buttonUrl)}" style="display:inline-block;background-color:${escapeHtml(primaryColor)};color:#FFFFFF;text-decoration:none;font-weight:500;font-size:14px;letter-spacing:0.06em;text-transform:uppercase;border-radius:6px;padding:16px 36px;box-shadow:0 4px 14px rgba(0,0,0,0.08);font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
             ${escapeHtml(params.buttonText || 'Acessar')}
           </a>
         </td>
@@ -192,17 +193,17 @@ function buildLayout(params: BuildLayoutParams) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(params.title)}</title>
   </head>
-  <body style="margin:0;background-color:#F5F4F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2D2A26;-webkit-font-smoothing:antialiased;">
+  <body style="margin:0;background-color:#F5F4F0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#2D2A26;-webkit-font-smoothing:antialiased;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(params.preview)}</div>
     <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;background-color:#F5F4F0;padding:40px 16px 48px;">
       <tr>
         <td align="center">
-          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;max-width:580px;background:#FFFFFF;border:1px solid #E8E3DC;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,0.04);overflow:hidden;">
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;max-width:580px;background:#FFFFFF;border:1px solid #E8E3DC;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.04);overflow:hidden;">
             <tr>
               <td style="padding:44px 36px 36px;">
                 ${headerContent}
                 ${badgeHtml}
-                <h1 style="margin:0 0 22px;color:#1C1917;font-size:26px;line-height:1.25;font-weight:700;text-align:center;font-family:Georgia,'Times New Roman',serif;">
+                <h1 style="margin:0 0 22px;color:#1C1917;font-size:24px;line-height:1.3;font-weight:400;text-align:center;font-family:Georgia,'Times New Roman',serif;">
                   ${escapeHtml(params.title)}
                 </h1>
                 
@@ -237,14 +238,57 @@ function buildLayout(params: BuildLayoutParams) {
 </html>`;
 }
 
-async function sendResendEmail(to: string, subject: string, html: string, options: { replyTo?: string | null } = {}) {
+function uint8ToBase64(u8Arr: Uint8Array): string {
+  const CHUNK_SIZE = 0x8000;
+  const length = u8Arr.length;
+  let result = '';
+  let slice;
+  for (let i = 0; i < length; i += CHUNK_SIZE) {
+    slice = u8Arr.subarray(i, i + CHUNK_SIZE);
+    result += String.fromCharCode.apply(null, slice as unknown as number[]);
+  }
+  return btoa(result);
+}
+
+async function generateSummaryPdf(gallery: any): Promise<string> {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage();
+  const { width, height } = page.getSize();
+  
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  page.drawText('Resumo da Seleção de Fotos', {
+    x: 50,
+    y: height - 50,
+    size: 20,
+    font: boldFont,
+    color: rgb(0, 0, 0),
+  });
+
+  page.drawText(`Galeria: ${gallery.nome_sessao || 'Sem nome'}`, { x: 50, y: height - 80, size: 12, font });
+  page.drawText(`Cliente: ${gallery.cliente_nome || 'Não informado'}`, { x: 50, y: height - 100, size: 12, font });
+  page.drawText(`Total de Fotos: ${gallery.total_fotos || 0}`, { x: 50, y: height - 120, size: 12, font });
+  page.drawText(`Selecionadas: ${gallery.fotos_selecionadas || 0}`, { x: 50, y: height - 140, size: 12, font });
+  page.drawText(`Fotos Extras: ${gallery.total_fotos_extras_vendidas || 0}`, { x: 50, y: height - 160, size: 12, font });
+  page.drawText(`Valor das Extras: R$ ${gallery.valor_extras || 0}`, { x: 50, y: height - 180, size: 12, font });
+
+  const pdfBytes = await pdfDoc.save();
+  return uint8ToBase64(pdfBytes);
+}
+
+async function sendResendEmail(to: string, subject: string, html: string, options: { replyTo?: string | null; fromName?: string | null; attachments?: any[] } = {}) {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   if (!resendApiKey) {
     throw new Error('RESEND_API_KEY_MISSING');
   }
 
-  const payload: Record<string, unknown> = { from: FROM_EMAIL, to: [to], subject, html };
+  const cleanFromName = options.fromName ? options.fromName.replace(/[<>"\r\n]/g, '').trim() : '';
+  const fromAddress = cleanFromName ? `${cleanFromName} <contato@mail.lunarihub.com>` : FROM_EMAIL;
+
+  const payload: Record<string, unknown> = { from: fromAddress, to: [to], subject, html };
   if (isValidEmail(options.replyTo)) payload.reply_to = options.replyTo.trim();
+  if (options.attachments) payload.attachments = options.attachments;
 
   const response = await fetch(RESEND_API_URL, {
     method: 'POST',
@@ -462,9 +506,9 @@ Deno.serve(async (req: Request) => {
       if (body.customSubject && body.customSubject.trim()) {
         subject = body.customSubject.trim();
       } else if (isDeliver) {
-        subject = `Suas fotos finais estão prontas para download ✨ - ${gallery.nome_sessao || 'Galeria'}`;
+        subject = `Suas fotos finais estão prontas para download - ${gallery.nome_sessao || 'Galeria'}`;
       } else {
-        subject = replaceTemplateVariables(template?.subject || 'Suas fotos já estão prontas ✨', variables);
+        subject = replaceTemplateVariables(template?.subject || 'Suas fotos já estão prontas', variables);
       }
 
       if (body.customBody && body.customBody.trim()) {
@@ -516,8 +560,8 @@ Deno.serve(async (req: Request) => {
       });
 
       try {
-        const resendMessageId = await sendResendEmail(targetEmail, subject, html, { replyTo });
-        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de entrega enviado para o cliente', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        const resendMessageId = await sendResendEmail(targetEmail, subject, html, { replyTo, fromName: studioName });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de entrega enviado para o cliente', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
         return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado com sucesso para o cliente.', logId });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -649,8 +693,8 @@ Deno.serve(async (req: Request) => {
       });
 
       try {
-        const resendMessageId = await sendResendEmail(gallery.cliente_email, subject, html, { replyTo });
-        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de reativação enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        const resendMessageId = await sendResendEmail(gallery.cliente_email, subject, html, { replyTo, fromName: studioName });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de reativação enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
         return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -785,16 +829,48 @@ Deno.serve(async (req: Request) => {
         children: `${textToHtmlParagraphs(bodyText)}`,
       });
 
+      let clientLogId;
       try {
-        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo });
-        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-        return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
+        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo, fromName: studioName });
+        clientLogId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
         await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
       }
+
+      if (settings?.email_summary_to_photographer !== false) {
+        const photogEmail = ownerProfile?.email || replyTo;
+        if (photogEmail) {
+          try {
+            const photogIdempotencyKey = `summary_sent:${gallery.id}:${prazoKey}`;
+            const sentSummary = await alreadySent(supabase, photogIdempotencyKey);
+            if (!sentSummary) {
+              const pdfBase64 = await generateSummaryPdf(gallery);
+              const attachments = [{ filename: `resumo_selecao_${gallery.nome_sessao || 'galeria'}.pdf`, content: pdfBase64 }];
+              const photogSubject = `Resumo de Seleção Confirmada - ${gallery.nome_sessao}`;
+              const photogHtml = `<p>Olá ${nameCandidate || 'Fotógrafo'},</p><p>O cliente <b>${escapeHtml(clienteNome)}</b> acabou de confirmar a seleção da galeria <b>${escapeHtml(gallery.nome_sessao)}</b>.</p><p>Em anexo, você encontra o resumo em PDF da seleção concluída.</p>`;
+              
+              const resendMessageId = await sendResendEmail(photogEmail, photogSubject, photogHtml, { fromName: 'Lunari', attachments });
+              
+              await upsertLog(supabase, { 
+                ...baseLog, 
+                event_type: 'summary_sent', 
+                idempotency_key: photogIdempotencyKey, 
+                status: 'enviado', 
+                subject: photogSubject, 
+                resend_message_id: resendMessageId, 
+                friendly_message: 'Resumo em PDF enviado ao fotógrafo',
+                metadata: { ...baseLog.metadata, target: photogEmail }
+              });
+            }
+          } catch (err) {
+            console.error('Erro ao enviar resumo para o fotógrafo:', err);
+          }
+        }
+      }
+
+      return jsonResponse({ success: true, status: 'processado', message: 'Processamento de seleção confirmada concluído.', logId: clientLogId });
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -904,8 +980,8 @@ Deno.serve(async (req: Request) => {
       });
 
       try {
-        const resendMessageId = await sendResendEmail(gallery.cliente_email, subject, html, { replyTo });
-        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'Lembrete de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        const resendMessageId = await sendResendEmail(gallery.cliente_email, subject, html, { replyTo, fromName: studioName });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'Lembrete de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
         return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -983,7 +1059,27 @@ Deno.serve(async (req: Request) => {
 
       const replyTo = await getPhotographerReplyTo(supabase, payment.user_id);
       const galleryUrl = gallery?.public_token ? `${GALLERY_BASE_URL}/g/${encodeURIComponent(gallery.public_token)}` : undefined;
-      const subject = 'Pagamento confirmado ✨';
+
+      const { data: template } = await supabase
+        .from('gallery_email_templates')
+        .select('subject, body')
+        .eq('user_id', payment.user_id)
+        .eq('type', 'payment_confirmed')
+        .maybeSingle();
+
+      const variables = {
+        cliente: clienteNome,
+        galeria: gallery?.nome_sessao || 'Galeria',
+        link: galleryUrl || '',
+        estudio: studioName,
+        valor: formatCurrency(payment.valor),
+      };
+
+      const subject = template?.subject ? replaceTemplateVariables(template.subject, variables) : 'Pagamento confirmado ✨';
+      const bodyText = template?.body 
+        ? replaceTemplateVariables(template.body, variables)
+        : `Olá, ${clienteNome}.\n\nRecebemos a confirmação do seu pagamento com sucesso. Muito obrigado!\n\nCom carinho,\n${studioName}`;
+
       const description = payment.descricao || (payment.qtd_fotos ? `${payment.qtd_fotos} foto(s) extra(s)` : 'Pagamento da galeria');
 
       const detailsList: DetailItem[] = [
@@ -997,20 +1093,17 @@ Deno.serve(async (req: Request) => {
       const html = buildLayout({
         studioName,
         studioLogoUrl,
-        title: 'Pagamento confirmado',
+        title: subject,
         preview: `Recebemos a confirmação do seu pagamento de ${formatCurrency(payment.valor)}.`,
         buttonUrl: galleryUrl,
         buttonText: 'Acessar Galeria',
         details: detailsList,
-        children: `
-          <p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">Olá, ${escapeHtml(clienteNome)}.</p>
-          <p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">Recebemos a confirmação do seu pagamento com sucesso. Muito obrigado!</p>
-        `,
+        children: textToHtmlParagraphs(bodyText),
       });
 
       try {
-        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo });
-        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de pagamento enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo, fromName: studioName });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de pagamento enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
         return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

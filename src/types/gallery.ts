@@ -152,7 +152,7 @@ export type ThemeType = 'system' | 'custom';
 export interface EmailTemplate {
   id: string;
   name: string;
-  type: 'gallery_sent' | 'selection_reminder' | 'selection_confirmed' | 'gallery_reactivated';
+  type: 'gallery_sent' | 'selection_reminder' | 'selection_confirmed' | 'gallery_reactivated' | 'payment_confirmed';
   subject: string;
   body: string;
 }
@@ -180,6 +180,10 @@ export interface GlobalSettings {
   emailOnGallerySent?: boolean;
   emailOnGalleryReactivated?: boolean;
   emailOnPaymentConfirmed?: boolean;
+  emailOnSelectionReminder?: boolean;
+  emailOnSelectionConfirmed?: boolean;
+  emailSummaryToPhotographer?: boolean;
+  reminderDaysBeforeExpiration?: number;
 
   // Defaults aplicados automaticamente em novas galerias
   defaultSaleMode?: SaleMode;
