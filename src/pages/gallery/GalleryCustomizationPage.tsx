@@ -28,7 +28,7 @@ export default function GalleryCustomizationPage() {
 
   return (
     <>
-      <div className="max-w-[79rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-8 animate-fade-in pb-24">
+      <div className="max-w-[79rem] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-8 animate-fade-in pb-36 sm:pb-44">
         {/* Cabeçalho da Página */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/40 pb-6">
           <div>

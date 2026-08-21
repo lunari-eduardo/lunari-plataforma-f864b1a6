@@ -97,6 +97,15 @@ export function PreCheckoutContactStep({
     nome: false, email: false, phone: false, cpfCnpj: false,
   });
 
+  useEffect(() => {
+    if (prefill) {
+      setNome((prev) => prefill.fullName || prev);
+      setEmail((prev) => prefill.email || prev);
+      if (prefill.phone) setPhone((prev) => (prev !== maskPhoneBR(prefill.phone) ? maskPhoneBR(prefill.phone) : prev));
+      if (prefill.cpfCnpj) setCpfCnpj((prev) => (prev !== maskCpfCnpj(prefill.cpfCnpj) ? maskCpfCnpj(prefill.cpfCnpj) : prev));
+    }
+  }, [prefill]);
+
   const nomeRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);

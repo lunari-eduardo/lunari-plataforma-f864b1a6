@@ -40,7 +40,7 @@ export function CustomizationCommunicationTab({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 pb-6">
       {/* Welcome Message Template */}
       <div className="lunari-card p-6 space-y-4">
         <div className="flex items-center justify-between">

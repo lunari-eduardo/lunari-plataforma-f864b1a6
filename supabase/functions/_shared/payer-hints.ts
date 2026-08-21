@@ -143,14 +143,32 @@ export async function resolvePayerHints({
 
   // 2. Se temos sessionId mas não temos clienteId, buscar em clientes_sessoes
   if (sessionId && !resolvedClienteId) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId);
+    const orCondition = isUuid ? `id.eq.${sessionId},session_id.eq.${sessionId}` : `session_id.eq.${sessionId}`;
+    
     const { data: sessao } = await supabase
       .from("clientes_sessoes")
       .select("cliente_id")
-      .or(`id.eq.${sessionId},session_id.eq.${sessionId}`)
+      .or(orCondition)
       .maybeSingle();
 
     if (sessao?.cliente_id) {
       resolvedClienteId = sessao.cliente_id;
+    }
+  }
+
+  // 2.5. Se ainda não resolveu, e temos galleryId, tentar pelo galeria_id em clientes_sessoes
+  if (!resolvedClienteId && galleryId) {
+    const { data: sessaoPorGaleria } = await supabase
+      .from("clientes_sessoes")
+      .select("cliente_id")
+      .eq("galeria_id", galleryId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+      
+    if (sessaoPorGaleria?.cliente_id) {
+      resolvedClienteId = sessaoPorGaleria.cliente_id;
     }
   }
 

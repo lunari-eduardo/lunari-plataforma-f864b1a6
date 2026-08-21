@@ -1381,9 +1381,6 @@ export default function GalleryCreate() {
               <Label className="text-sm font-semibold text-foreground">Permissão da Galeria</Label>
               <RadioGroup value={galleryPermission} onValueChange={(v) => {
               setGalleryPermission(v as GalleryPermission);
-              if (v === 'public') {
-                setSelectedClient(null);
-              }
             }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <RadioGroupItem value="public" id="gallery-public" className="peer sr-only" />

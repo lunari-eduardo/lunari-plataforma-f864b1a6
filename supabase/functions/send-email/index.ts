@@ -830,20 +830,24 @@ Deno.serve(async (req: Request) => {
       });
 
       let clientLogId;
-      try {
-        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo, fromName: studioName });
-        clientLogId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
-        await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+      if (settings?.email_on_selection_confirmed !== false) {
+        try {
+          const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo, fromName: studioName });
+          clientLogId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo), fromName: studioName } });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
+          await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        }
+      } else {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio de confirmação de seleção para o cliente desativado' });
       }
 
       if (settings?.email_summary_to_photographer !== false) {
         const photogEmail = ownerProfile?.email || replyTo;
         if (photogEmail) {
           try {
-            const photogIdempotencyKey = `summary_sent:${gallery.id}:${prazoKey}`;
+            const photogIdempotencyKey = `summary_sent:${gallery.id}:${finalKey}`;
             const sentSummary = await alreadySent(supabase, photogIdempotencyKey);
             if (!sentSummary) {
               const pdfBase64 = await generateSummaryPdf(gallery);
@@ -924,6 +928,10 @@ Deno.serve(async (req: Request) => {
       if (settings?.email_sending_enabled === false) {
         await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio automático desativado' });
         return jsonResponse({ success: true, status: 'ignorado', message: 'E-mails automáticos estão desativados.' });
+      }
+      if (settings?.email_on_selection_reminder === false) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Lembrete de seleção desativado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail de lembrete de seleção está desativado.' });
       }
       if (!gallery.cliente_email) {
         await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail cadastrado' });
