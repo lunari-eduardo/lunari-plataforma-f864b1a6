@@ -41,7 +41,7 @@ export function HeroSection({
         <div className="flex flex-col items-center gap-6 text-center sm:gap-12">
           {/* Logo */}
           <div className="animate-appear opacity-0">
-            <img src="/lovable-uploads/ad17340d-9f1f-41dc-ad2b-31099ceefd35.png" alt="Lunari Logo" className="h-20 w-auto sm:h-24" />
+            <img src="/branding/logo-site-gold.png" alt="Lunari Logo" className="h-20 w-auto sm:h-24 object-contain" />
           </div>
 
           {/* Badge */}
@@ -87,7 +87,7 @@ export function HeroSection({
           {image && <div className="relative pt-12">
               <MockupFrame className="animate-appear opacity-0 delay-700" size="small">
                 <Mockup type="responsive">
-                  <img src="/lovable-uploads/d00afad7-bf0d-405b-b02e-1b48424f9ccd.png" alt="Interface do Lunari - Dashboard completo para fotógrafos" className="w-full h-auto" />
+                  <img src="/site/studio-hub-illustration.png" alt="Interface do Lunari - Dashboard completo para fotógrafos" className="w-full h-auto" />
                 </Mockup>
               </MockupFrame>
               <Glow variant="top" className="animate-appear-zoom opacity-0 delay-1000" />

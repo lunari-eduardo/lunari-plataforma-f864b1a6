@@ -153,6 +153,7 @@ export function ReactivateSuccessModal({
           eventType: 'gallery_reactivated',
           galleryId: gallery.id,
           publicToken: gallery.publicToken || undefined,
+          forceResend: true,
         },
       });
       if (error) {
@@ -186,8 +187,7 @@ export function ReactivateSuccessModal({
     !gallery.clienteEmail ||
     !emailSendingEnabled ||
     !reactivationEmailEnabled ||
-    !clientLink ||
-    emailFeedback?.status === 'enviado';
+    !clientLink;
 
   const emailStatusMessage = emailFeedback?.message
     || (!gallery.clienteEmail
@@ -283,7 +283,13 @@ export function ReactivateSuccessModal({
                 ) : (
                   <Mail className="h-4 w-4" />
                 )}
-                {isSendingEmail ? 'Enviando...' : !gallery.clienteEmail ? 'Sem e-mail' : 'Enviar e-mail'}
+                {isSendingEmail
+                  ? 'Enviando...'
+                  : !gallery.clienteEmail
+                    ? 'Sem e-mail'
+                    : emailFeedback?.status === 'enviado'
+                      ? 'Reenviar e-mail'
+                      : 'Enviar e-mail'}
               </Button>
             </div>
 

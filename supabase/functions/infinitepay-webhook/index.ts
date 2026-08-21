@@ -123,7 +123,25 @@ Deno.serve(async (req) => {
       .eq("order_nsu", order_nsu)
       .eq("provedor", "infinitepay");
 
-    console.log(`[infinitepay-webhook] Cobrança ${cobranca.id} atualizada com sucesso para status=${nextStatus}`);
+    // Disparo de e-mail de pagamento confirmado se aplicável
+    if (isPaymentConfirmed) {
+      try {
+        fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({
+            eventType: "payment_confirmed",
+            paymentId: cobranca.id,
+            galleryId: cobranca.galeria_id || undefined,
+          }),
+        }).catch((e) => console.warn("[infinitepay-webhook] send-email async error:", e));
+      } catch (e) {
+        console.warn("[infinitepay-webhook] send-email error:", e);
+      }
+    }
 
     return jsonResponse({
       success: true,

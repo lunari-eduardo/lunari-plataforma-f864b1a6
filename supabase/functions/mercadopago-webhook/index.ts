@@ -168,6 +168,27 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[mercadopago-webhook] Cobrança ${cobranca.id} atualizada com sucesso para status=${nextStatus}`);
+
+    // Disparo de e-mail de pagamento confirmado se aplicável
+    if (isPaymentConfirmed) {
+      try {
+        fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({
+            eventType: "payment_confirmed",
+            paymentId: cobranca.id,
+            galleryId: cobranca.galeria_id || undefined,
+          }),
+        }).catch((e) => console.warn("[mercadopago-webhook] send-email async error:", e));
+      } catch (e) {
+        console.warn("[mercadopago-webhook] send-email error:", e);
+      }
+    }
+
     return jsonResponse({ received: true, status: nextStatus, cobrancaId: cobranca.id });
   } catch (error: any) {
     console.error("[mercadopago-webhook] Erro inesperado:", error);

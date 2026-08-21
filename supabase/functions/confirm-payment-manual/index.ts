@@ -278,6 +278,26 @@ Deno.serve(async (req) => {
       console.warn("[confirm-payment-manual] audit_log insert failed (non-blocking)", auditErr);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 7 — Disparo de e-mail de confirmação de pagamento
+    // ─────────────────────────────────────────────────────────────
+    try {
+      fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          eventType: "payment_confirmed",
+          paymentId: cobrancaId,
+          galleryId: galeriaId,
+        }),
+      }).catch((emailErr) => console.warn("[confirm-payment-manual] send-email async error:", emailErr));
+    } catch (e) {
+      console.warn("[confirm-payment-manual] send-email error:", e);
+    }
+
     return json({
       success: true,
       cobrancaId,

@@ -9,7 +9,7 @@ const FROM_EMAIL = 'Lunari <contato@mail.lunarihub.com>';
 const GALLERY_BASE_URL = 'https://app.lunarihub.com';
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
-type EventType = 'gallery_sent' | 'payment_confirmed' | 'gallery_reactivated';
+type EventType = 'gallery_sent' | 'payment_confirmed' | 'gallery_reactivated' | 'selection_confirmed' | 'selection_reminder';
 type DeliveryStatus = 'enviado' | 'erro' | 'ignorado';
 
 interface RequestBody {
@@ -17,6 +17,8 @@ interface RequestBody {
   galleryId?: string;
   paymentId?: string;
   publicToken?: string;
+  visitorId?: string;
+  forceResend?: boolean;
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -47,7 +49,7 @@ function formatDate(value: unknown): string {
 
 function formatDateOnly(value: unknown): string {
   if (!value) return 'Sem prazo definido';
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(String(value)));
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(String(value)));
 }
 
 function daysRemaining(value: unknown): string {
@@ -213,13 +215,17 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch(() => ({})) as RequestBody;
 
-    if (body.eventType !== 'gallery_sent' && body.eventType !== 'payment_confirmed' && body.eventType !== 'gallery_reactivated') {
+    const validEvents: EventType[] = ['gallery_sent', 'payment_confirmed', 'gallery_reactivated', 'selection_confirmed', 'selection_reminder'];
+    if (!body.eventType || !validEvents.includes(body.eventType)) {
       return jsonResponse({ success: false, status: 'erro', message: 'Evento de e-mail inválido' }, 400);
     }
 
     const callerUserId = await getAuthenticatedUserId(req, supabaseUrl, anonKey, serviceKey);
     if (!callerUserId) return jsonResponse({ success: false, status: 'erro', message: 'Autenticação obrigatória' }, 401);
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 1. EVENTO: GALLERY_SENT (Envio de galeria)
+    // ─────────────────────────────────────────────────────────────────────────────
     if (body.eventType === 'gallery_sent') {
       if (!body.galleryId) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não informada' }, 400);
 
@@ -234,9 +240,15 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para enviar e-mail desta galeria' }, 403);
       }
 
-      const idempotencyKey = `gallery_sent:${gallery.id}`;
-      const sent = await alreadySent(supabase, idempotencyKey);
-      if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado anteriormente.', logId: sent.id });
+      const isForceResend = Boolean(body.forceResend);
+      const idempotencyKey = isForceResend
+        ? `gallery_sent:${gallery.id}:${Date.now()}`
+        : `gallery_sent:${gallery.id}`;
+
+      if (!isForceResend) {
+        const sent = await alreadySent(supabase, idempotencyKey);
+        if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado anteriormente.', logId: sent.id });
+      }
 
       const { data: settings } = await supabase
         .from('gallery_settings')
@@ -253,7 +265,7 @@ Deno.serve(async (req: Request) => {
         gallery_id: gallery.id,
         payment_id: null,
         idempotency_key: idempotencyKey,
-        metadata: { source: 'gallery_sent', publicTokenProvided: Boolean(body.publicToken) },
+        metadata: { source: 'gallery_sent', publicTokenProvided: Boolean(body.publicToken), isResend: isForceResend },
         updated_at: new Date().toISOString(),
       };
 
@@ -322,16 +334,19 @@ Deno.serve(async (req: Request) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
         await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.' });
+        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
       }
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 2. EVENTO: GALLERY_REACTIVATED (Reativação de galeria)
+    // ─────────────────────────────────────────────────────────────────────────────
     if (body.eventType === 'gallery_reactivated') {
       if (!body.galleryId) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não informada' }, 400);
 
       const { data: gallery, error: galleryError } = await supabase
         .from('galerias')
-        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, gallery_password, public_token, prazo_selecao')
+        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, gallery_password, public_token, prazo_selecao, total_fotos, fotos_selecionadas, total_fotos_extras_vendidas, valor_extras')
         .eq('id', body.galleryId)
         .maybeSingle();
 
@@ -340,10 +355,16 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para enviar e-mail desta galeria' }, 403);
       }
 
+      const isForceResend = Boolean(body.forceResend);
       const prazoKey = gallery.prazo_selecao ? new Date(String(gallery.prazo_selecao)).toISOString() : 'no_deadline';
-      const idempotencyKey = `gallery_reactivated:${gallery.id}:${prazoKey}`;
-      const sent = await alreadySent(supabase, idempotencyKey);
-      if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado para esta reativação.', logId: sent.id });
+      const idempotencyKey = isForceResend
+        ? `gallery_reactivated:${gallery.id}:${prazoKey}:${Date.now()}`
+        : `gallery_reactivated:${gallery.id}:${prazoKey}`;
+
+      if (!isForceResend) {
+        const sent = await alreadySent(supabase, idempotencyKey);
+        if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado para esta reativação.', logId: sent.id });
+      }
 
       const { data: settings } = await supabase
         .from('gallery_settings')
@@ -360,7 +381,7 @@ Deno.serve(async (req: Request) => {
         gallery_id: gallery.id,
         payment_id: null,
         idempotency_key: idempotencyKey,
-        metadata: { source: 'gallery_reactivated', prazo_selecao: gallery.prazo_selecao },
+        metadata: { source: 'gallery_reactivated', prazo_selecao: gallery.prazo_selecao, isResend: isForceResend },
         updated_at: new Date().toISOString(),
       };
 
@@ -400,6 +421,9 @@ Deno.serve(async (req: Request) => {
         link: galleryUrl,
         estudio: studioName,
         dias_restantes: daysRemaining(gallery.prazo_selecao),
+        total_fotos: String(gallery.total_fotos || gallery.fotos_selecionadas || 0),
+        fotos_extras: String(gallery.total_fotos_extras_vendidas || 0),
+        valor_extra: formatCurrency(gallery.valor_extras || 0),
       };
       const subject = replaceTemplateVariables(template?.subject || 'Sua galeria foi reaberta - {galeria}', variables);
       const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nBoas notícias: a galeria "{galeria}" foi reaberta para você concluir sua seleção de fotos.\n\nVocê tem até {prazo} para escolher suas favoritas.\n\nAcesse: {link}\n\nCom carinho,\n{estudio}', variables);
@@ -423,102 +447,323 @@ Deno.serve(async (req: Request) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
         await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.' });
+        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
       }
     }
 
-    if (!body.paymentId) return jsonResponse({ success: false, status: 'erro', message: 'Pagamento não informado' }, 400);
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 3. EVENTO: SELECTION_CONFIRMED (Cliente concluiu seleção)
+    // ─────────────────────────────────────────────────────────────────────────────
+    if (body.eventType === 'selection_confirmed') {
+      if (!body.galleryId) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não informada' }, 400);
 
-    const { data: payment, error: paymentError } = await supabase
-      .from('cobrancas')
-      .select('*')
-      .eq('id', body.paymentId)
-      .maybeSingle();
+      const { data: gallery, error: galleryError } = await supabase
+        .from('galerias')
+        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, public_token, prazo_selecao, total_fotos, fotos_selecionadas, total_fotos_extras_vendidas, valor_extras, finalized_at')
+        .eq('id', body.galleryId)
+        .maybeSingle();
 
-    if (paymentError || !payment) return jsonResponse({ success: false, status: 'erro', message: 'Pagamento não encontrado' }, 404);
-    if (callerUserId !== 'service-role' && callerUserId !== payment.user_id) {
-      return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para enviar e-mail deste pagamento' }, 403);
+      if (galleryError || !gallery) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não encontrada' }, 404);
+      if (callerUserId !== 'service-role' && callerUserId !== gallery.user_id) {
+        return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para esta galeria' }, 403);
+      }
+
+      let clienteNome = gallery.cliente_nome || 'Cliente';
+      let clienteEmail = gallery.cliente_email || null;
+
+      if (body.visitorId) {
+        const { data: visitor } = await supabase
+          .from('galeria_visitantes')
+          .select('nome, email, fotos_selecionadas, finalized_at')
+          .eq('id', body.visitorId)
+          .maybeSingle();
+        if (visitor) {
+          if (visitor.nome) clienteNome = visitor.nome;
+          if (visitor.email) clienteEmail = visitor.email;
+        }
+      }
+
+      const finalKey = gallery.finalized_at || new Date().toISOString().slice(0, 16);
+      const idempotencyKey = `selection_confirmed:${gallery.id}:${body.visitorId || 'owner'}:${finalKey}`;
+      const sent = await alreadySent(supabase, idempotencyKey);
+      if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail de confirmação de seleção já enviado.', logId: sent.id });
+
+      const { data: settings } = await supabase
+        .from('gallery_settings')
+        .select('studio_name, email_sending_enabled')
+        .eq('user_id', gallery.user_id)
+        .maybeSingle();
+
+      const baseLog = {
+        user_id: gallery.user_id,
+        cliente_id: gallery.cliente_id || null,
+        cliente_nome: clienteNome,
+        cliente_email: clienteEmail,
+        event_type: 'selection_confirmed',
+        gallery_id: gallery.id,
+        payment_id: null,
+        idempotency_key: idempotencyKey,
+        metadata: { source: 'selection_confirmed', visitorId: body.visitorId || null },
+        updated_at: new Date().toISOString(),
+      };
+
+      if (settings?.email_sending_enabled === false) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio automático desativado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'E-mails automáticos estão desativados.' });
+      }
+      if (!clienteEmail) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail cadastrado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
+      }
+
+      const studioName = settings?.studio_name || 'Lunari';
+      const replyTo = await getPhotographerReplyTo(supabase, gallery.user_id);
+      const token = body.publicToken || gallery.public_token;
+      const galleryUrl = token ? `${GALLERY_BASE_URL}/g/${encodeURIComponent(token)}` : undefined;
+
+      const { data: template } = await supabase
+        .from('gallery_email_templates')
+        .select('subject, body')
+        .eq('user_id', gallery.user_id)
+        .eq('type', 'selection_confirmed')
+        .maybeSingle();
+
+      const variables = {
+        cliente: clienteNome,
+        galeria: gallery.nome_sessao || 'Galeria',
+        prazo: formatDateOnly(gallery.prazo_selecao),
+        link: galleryUrl || '',
+        estudio: studioName,
+        total_fotos: String(gallery.fotos_selecionadas || 0),
+        fotos_extras: String(gallery.total_fotos_extras_vendidas || 0),
+        valor_extra: formatCurrency(gallery.valor_extras || 0),
+      };
+
+      const subject = replaceTemplateVariables(template?.subject || 'Seleção confirmada! - {galeria}', variables);
+      const bodyText = replaceTemplateVariables(
+        template?.body || 'Olá {cliente}!\n\nSua seleção da galeria "{galeria}" foi confirmada com sucesso!\n\nTotal de fotos selecionadas: {total_fotos}\nFotos extras: {fotos_extras}\nValor adicional: {valor_extra}\n\nEm breve entraremos em contato.\n\nCom carinho,\n{estudio}',
+        variables
+      );
+
+      const html = buildLayout({
+        studioName,
+        title: subject,
+        preview: 'Sua seleção de fotos foi confirmada com sucesso.',
+        buttonUrl: galleryUrl,
+        buttonText: 'Acessar galeria',
+        children: `${textToHtmlParagraphs(bodyText)}`,
+      });
+
+      try {
+        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
+        await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
+      }
     }
 
-    const idempotencyKey = `payment_confirmed:${payment.id}`;
-    const sent = await alreadySent(supabase, idempotencyKey);
-    if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado anteriormente.', logId: sent.id });
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 4. EVENTO: SELECTION_REMINDER (Lembrete de prazo)
+    // ─────────────────────────────────────────────────────────────────────────────
+    if (body.eventType === 'selection_reminder') {
+      if (!body.galleryId) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não informada' }, 400);
 
-    const [{ data: settings }, { data: client }, { data: gallery }] = await Promise.all([
-      supabase.from('gallery_settings').select('studio_name, email_sending_enabled, email_on_payment_confirmed').eq('user_id', payment.user_id).maybeSingle(),
-      payment.cliente_id ? supabase.from('clientes').select('id, nome, email').eq('id', payment.cliente_id).maybeSingle() : Promise.resolve({ data: null }),
-      payment.galeria_id ? supabase.from('galerias').select('id, cliente_nome, cliente_email, nome_sessao, public_token').eq('id', payment.galeria_id).maybeSingle() : Promise.resolve({ data: null }),
-    ]);
+      const { data: gallery, error: galleryError } = await supabase
+        .from('galerias')
+        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, public_token, prazo_selecao, total_fotos')
+        .eq('id', body.galleryId)
+        .maybeSingle();
 
-    const clienteNome = client?.nome || gallery?.cliente_nome || 'Cliente';
-    const clienteEmail = client?.email || gallery?.cliente_email || null;
-    const baseLog = {
-      user_id: payment.user_id,
-      cliente_id: payment.cliente_id || client?.id || null,
-      cliente_nome: clienteNome,
-      cliente_email: clienteEmail,
-      event_type: 'payment_confirmed',
-      gallery_id: payment.galeria_id || null,
-      payment_id: payment.id,
-      idempotency_key: idempotencyKey,
-      metadata: { provider: payment.provedor, chargeType: payment.tipo_cobranca },
-      updated_at: new Date().toISOString(),
-    };
+      if (galleryError || !gallery) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não encontrada' }, 404);
+      if (callerUserId !== 'service-role' && callerUserId !== gallery.user_id) {
+        return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para esta galeria' }, 403);
+      }
 
-    if (payment.status !== 'pago' && payment.status !== 'pago_manual') {
-      await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Pagamento ainda não confirmado' });
-      return jsonResponse({ success: true, status: 'ignorado', message: 'Pagamento ainda não confirmado.' });
-    }
-    if (settings?.email_sending_enabled === false) {
-      await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio automático desativado' });
-      return jsonResponse({ success: true, status: 'ignorado', message: 'E-mails automáticos estão desativados.' });
-    }
-    if (settings?.email_on_payment_confirmed === false) {
-      await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Confirmação de pagamento desativada' });
-      return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail de pagamento desativado.' });
-    }
-    if (!clienteEmail) {
-      await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail cadastrado' });
-      return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
+      const prazoKey = gallery.prazo_selecao ? new Date(String(gallery.prazo_selecao)).toISOString().slice(0, 10) : 'no_deadline';
+      const idempotencyKey = `selection_reminder:${gallery.id}:${prazoKey}`;
+      const sent = await alreadySent(supabase, idempotencyKey);
+      if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'Lembrete já enviado para este prazo.', logId: sent.id });
+
+      const { data: settings } = await supabase
+        .from('gallery_settings')
+        .select('studio_name, email_sending_enabled')
+        .eq('user_id', gallery.user_id)
+        .maybeSingle();
+
+      const baseLog = {
+        user_id: gallery.user_id,
+        cliente_id: gallery.cliente_id || null,
+        cliente_nome: gallery.cliente_nome || null,
+        cliente_email: gallery.cliente_email || null,
+        event_type: 'selection_reminder',
+        gallery_id: gallery.id,
+        payment_id: null,
+        idempotency_key: idempotencyKey,
+        metadata: { source: 'selection_reminder', prazo_selecao: gallery.prazo_selecao },
+        updated_at: new Date().toISOString(),
+      };
+
+      if (settings?.email_sending_enabled === false) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio automático desativado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'E-mails automáticos estão desativados.' });
+      }
+      if (!gallery.cliente_email) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail cadastrado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
+      }
+
+      const token = body.publicToken || gallery.public_token;
+      if (!token || token.length < 8) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Link da galeria indisponível' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'Link da galeria indisponível.' });
+      }
+
+      const studioName = settings?.studio_name || 'Lunari';
+      const replyTo = await getPhotographerReplyTo(supabase, gallery.user_id);
+      const galleryUrl = `${GALLERY_BASE_URL}/g/${encodeURIComponent(token)}`;
+      const { data: template } = await supabase
+        .from('gallery_email_templates')
+        .select('subject, body')
+        .eq('user_id', gallery.user_id)
+        .eq('type', 'selection_reminder')
+        .maybeSingle();
+
+      const variables = {
+        cliente: gallery.cliente_nome || 'Cliente',
+        galeria: gallery.nome_sessao || 'Galeria',
+        prazo: formatDateOnly(gallery.prazo_selecao),
+        link: galleryUrl,
+        estudio: studioName,
+        dias_restantes: daysRemaining(gallery.prazo_selecao),
+      };
+      const subject = replaceTemplateVariables(template?.subject || 'Lembrete: Sua seleção expira em breve - {galeria}', variables);
+      const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nEste é um lembrete amigável de que sua seleção da galeria "{galeria}" expira em {dias_restantes} dias.\n\nNão perca o prazo! Acesse o link abaixo:\n{link}\n\nCom carinho,\n{estudio}', variables);
+
+      const html = buildLayout({
+        studioName,
+        title: subject,
+        preview: `Sua seleção expira em ${variables.dias_restantes} dias.`,
+        buttonUrl: galleryUrl,
+        buttonText: 'Acessar minha galeria',
+        children: `${textToHtmlParagraphs(bodyText)}`,
+      });
+
+      try {
+        const resendMessageId = await sendResendEmail(gallery.cliente_email, subject, html, { replyTo });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'Lembrete de seleção enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
+        await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
+      }
     }
 
-    const studioName = settings?.studio_name || 'Lunari';
-    const replyTo = await getPhotographerReplyTo(supabase, payment.user_id);
-    const galleryUrl = gallery?.public_token ? `${GALLERY_BASE_URL}/g/${encodeURIComponent(gallery.public_token)}` : undefined;
-    const subject = 'Pagamento confirmado';
-    const description = payment.descricao || (payment.qtd_fotos ? `${payment.qtd_fotos} foto(s) extra(s)` : 'Pagamento da galeria');
-    const html = buildLayout({
-      studioName,
-      title: 'Pagamento confirmado',
-      preview: `Recebemos a confirmação do seu pagamento de ${formatCurrency(payment.valor)}.`,
-      buttonUrl: galleryUrl,
-      buttonText: 'Acessar galeria',
-      children: `
-        <p style="margin:0 0 18px;color:#211b18;font-size:16px;line-height:1.65;">Olá, ${escapeHtml(clienteNome)}.</p>
-        <p style="margin:0 0 20px;color:#211b18;font-size:16px;line-height:1.65;">Recebemos a confirmação do seu pagamento.</p>
-        <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#fbf7f4;border-radius:12px;margin:20px 0;">
-          <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;">Valor pago</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;font-weight:700;">${escapeHtml(formatCurrency(payment.valor))}</td></tr>
-          <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Forma de pagamento</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(paymentMethodLabel(payment))}</td></tr>
-          <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Data</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(formatDate(payment.data_pagamento))}</td></tr>
-          <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Descrição</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(description)}</td></tr>
-          <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Status</td><td align="right" style="padding:14px 16px;color:#2f8f4e;font-size:14px;font-weight:700;border-top:1px solid #eadfd8;">Confirmado</td></tr>
-        </table>
-      `,
-    });
+    // ─────────────────────────────────────────────────────────────────────────────
+    // 5. EVENTO: PAYMENT_CONFIRMED (Confirmação de pagamento)
+    // ─────────────────────────────────────────────────────────────────────────────
+    if (body.eventType === 'payment_confirmed') {
+      if (!body.paymentId) return jsonResponse({ success: false, status: 'erro', message: 'Pagamento não informado' }, 400);
 
-    try {
-      const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo });
-      const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail enviado para o cliente', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-      return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
-      await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-      return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.' });
+      const { data: payment, error: paymentError } = await supabase
+        .from('cobrancas')
+        .select('*')
+        .eq('id', body.paymentId)
+        .maybeSingle();
+
+      if (paymentError || !payment) return jsonResponse({ success: false, status: 'erro', message: 'Pagamento não encontrado' }, 404);
+      if (callerUserId !== 'service-role' && callerUserId !== payment.user_id) {
+        return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para enviar e-mail deste pagamento' }, 403);
+      }
+
+      const idempotencyKey = `payment_confirmed:${payment.id}`;
+      const sent = await alreadySent(supabase, idempotencyKey);
+      if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado anteriormente.', logId: sent.id });
+
+      const [{ data: settings }, { data: client }, { data: gallery }] = await Promise.all([
+        supabase.from('gallery_settings').select('studio_name, email_sending_enabled, email_on_payment_confirmed').eq('user_id', payment.user_id).maybeSingle(),
+        payment.cliente_id ? supabase.from('clientes').select('id, nome, email').eq('id', payment.cliente_id).maybeSingle() : Promise.resolve({ data: null }),
+        payment.galeria_id ? supabase.from('galerias').select('id, cliente_nome, cliente_email, nome_sessao, public_token').eq('id', payment.galeria_id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+
+      const clienteNome = client?.nome || gallery?.cliente_nome || 'Cliente';
+      const clienteEmail = client?.email || gallery?.cliente_email || null;
+      const baseLog = {
+        user_id: payment.user_id,
+        cliente_id: payment.cliente_id || client?.id || null,
+        cliente_nome: clienteNome,
+        cliente_email: clienteEmail,
+        event_type: 'payment_confirmed',
+        gallery_id: payment.galeria_id || null,
+        payment_id: payment.id,
+        idempotency_key: idempotencyKey,
+        metadata: { provider: payment.provedor, chargeType: payment.tipo_cobranca },
+        updated_at: new Date().toISOString(),
+      };
+
+      if (payment.status !== 'pago' && payment.status !== 'pago_manual') {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Pagamento ainda não confirmado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'Pagamento ainda não confirmado.' });
+      }
+      if (settings?.email_sending_enabled === false) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio automático desativado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'E-mails automáticos estão desativados.' });
+      }
+      if (settings?.email_on_payment_confirmed === false) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Confirmação de pagamento desativada' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail de pagamento desativado.' });
+      }
+      if (!clienteEmail) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail cadastrado' });
+        return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
+      }
+
+      const studioName = settings?.studio_name || 'Lunari';
+      const replyTo = await getPhotographerReplyTo(supabase, payment.user_id);
+      const galleryUrl = gallery?.public_token ? `${GALLERY_BASE_URL}/g/${encodeURIComponent(gallery.public_token)}` : undefined;
+      const subject = 'Pagamento confirmado ✨';
+      const description = payment.descricao || (payment.qtd_fotos ? `${payment.qtd_fotos} foto(s) extra(s)` : 'Pagamento da galeria');
+      const html = buildLayout({
+        studioName,
+        title: 'Pagamento confirmado',
+        preview: `Recebemos a confirmação do seu pagamento de ${formatCurrency(payment.valor)}.`,
+        buttonUrl: galleryUrl,
+        buttonText: 'Acessar galeria',
+        children: `
+          <p style="margin:0 0 18px;color:#211b18;font-size:16px;line-height:1.65;">Olá, ${escapeHtml(clienteNome)}.</p>
+          <p style="margin:0 0 20px;color:#211b18;font-size:16px;line-height:1.65;">Recebemos a confirmação do seu pagamento com sucesso.</p>
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#fbf7f4;border-radius:12px;margin:20px 0;">
+            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;">Valor pago</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;font-weight:700;">${escapeHtml(formatCurrency(payment.valor))}</td></tr>
+            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Forma de pagamento</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(paymentMethodLabel(payment))}</td></tr>
+            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Data</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(formatDate(payment.data_pagamento))}</td></tr>
+            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Descrição</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(description)}</td></tr>
+            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Status</td><td align="right" style="padding:14px 16px;color:#2f8f4e;font-size:14px;font-weight:700;border-top:1px solid #eadfd8;">Confirmado</td></tr>
+          </table>
+        `,
+      });
+
+      try {
+        const resendMessageId = await sendResendEmail(clienteEmail, subject, html, { replyTo });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de confirmação de pagamento enviado', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
+        await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
+      }
     }
+
+    return jsonResponse({ success: false, status: 'erro', message: 'Evento não tratado' }, 400);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('send-email fatal error:', error);
     return jsonResponse({ success: false, status: 'erro', message: 'Erro interno ao processar e-mail', details: errorMessage }, 500);
   }
 });
+

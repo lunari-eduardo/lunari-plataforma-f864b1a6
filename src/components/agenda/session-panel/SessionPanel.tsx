@@ -237,7 +237,7 @@ export default function SessionPanel({
   });
   const cobranca = cobrancas[0];
   const cobrancaLink = cobranca
-    ? (cobranca.mpPaymentLink || cobranca.ipCheckoutUrl || buildPaymentShareUrl(cobranca.id))
+    ? (cobranca.id ? buildPaymentShareUrl(cobranca.id) : (cobranca.mpPaymentLink || cobranca.ipCheckoutUrl || ''))
     : '';
 
   /* --------------------------------- Handlers ---------------------------------- */

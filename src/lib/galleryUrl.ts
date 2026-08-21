@@ -1,18 +1,26 @@
-// Production domain for gallery URLs
+import { getPublicShareBaseUrl } from '@/utils/domainUtils';
+
 const PRODUCTION_GALLERY_DOMAIN = 'https://app.lunarihub.com';
 
-// Supabase URL for edge functions
 const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
   : 'https://tlnjspsywycbudhewsfv.supabase.co/functions/v1';
 
 /**
- * Generates a gallery URL for the client using the production domain.
+ * Generates a gallery URL for the client using the canonical public domain.
  */
-export function getGalleryUrl(publicToken: string, photographerDomain?: string): string {
+export function getGalleryUrl(publicToken: string, type: 'select' | 'deliver' = 'select', photographerDomain?: string): string {
   if (!publicToken) return '';
-  const baseDomain = photographerDomain || PRODUCTION_GALLERY_DOMAIN;
-  return `${baseDomain}/g/${publicToken}`;
+  const baseDomain = photographerDomain || getPublicShareBaseUrl();
+  const prefix = type === 'deliver' ? 'c' : 'g';
+  return `${baseDomain}/${prefix}/${publicToken}`;
+}
+
+/**
+ * Generates a delivery gallery URL using the canonical public domain.
+ */
+export function getDeliverGalleryUrl(publicToken: string, photographerDomain?: string): string {
+  return getGalleryUrl(publicToken, 'deliver', photographerDomain);
 }
 
 /**
@@ -20,9 +28,10 @@ export function getGalleryUrl(publicToken: string, photographerDomain?: string):
  * This URL serves dynamic Open Graph meta tags for WhatsApp/social previews,
  * then redirects normal users to the actual gallery.
  */
-export function getGalleryOgUrl(publicToken: string): string {
+export function getGalleryOgUrl(publicToken: string, type: 'select' | 'deliver' = 'select'): string {
   if (!publicToken) return '';
-  return `${SUPABASE_FUNCTIONS_URL}/gallery-og?token=${publicToken}`;
+  const typeParam = type === 'deliver' ? '&type=deliver' : '';
+  return `${SUPABASE_FUNCTIONS_URL}/gallery-og?token=${publicToken}${typeParam}`;
 }
 
 /**

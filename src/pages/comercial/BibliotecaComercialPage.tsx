@@ -22,6 +22,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { getPublicShareBaseUrl } from '@/utils/domainUtils';
 
 export function formatWhatsAppNumber(phone: string): string {
   if (!phone) return '';
@@ -847,14 +848,14 @@ export default function BibliotecaComercialPage() {
                     <div className="flex w-full items-center gap-2">
                       <Input 
                         readOnly 
-                        value={`${window.location.origin}/p/${generatedShare.token}`} 
+                        value={`${getPublicShareBaseUrl()}/p/${generatedShare.token}`} 
                         className="bg-white border-green-200 text-sm h-11"
                       />
                       <Button 
                         variant="secondary"
                         className="shrink-0 bg-white hover:bg-green-100 text-green-700 border-green-200 h-11 px-4"
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/p/${generatedShare.token}`);
+                          navigator.clipboard.writeText(`${getPublicShareBaseUrl()}/p/${generatedShare.token}`);
                           toast.success('Link copiado!');
                         }}
                       >
@@ -880,7 +881,7 @@ export default function BibliotecaComercialPage() {
                       const linkText = encodeURIComponent(
                         (customMessage ? customMessage + "\n\n" : "") +
                         "Acesse sua proposta aqui: " +
-                        `${window.location.origin}/p/${generatedShare.token}`
+                        `${getPublicShareBaseUrl()}/p/${generatedShare.token}`
                       );
                       const wpUrl = `https://wa.me/${formattedPhone}?text=${linkText}`;
 

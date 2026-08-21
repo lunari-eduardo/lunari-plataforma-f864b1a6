@@ -22,7 +22,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PUBLIC_SITE_URL = (Deno.env.get("VITE_SITE_URL") || Deno.env.get("SITE_URL") || "https://app.lunarihub.com").replace(/\/$/, "");
-const FALLBACK_OG_IMAGE = `${PUBLIC_SITE_URL}/og-fallback-cobranca.jpg`;
+const FALLBACK_OG_IMAGE = `${PUBLIC_SITE_URL}/branding/logo-site-gold.png`;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BOT_UA_RE = /(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags)/i;
@@ -93,7 +93,7 @@ interface BrandedCtx {
  */
 function renderBrandedHtml(c: BrandedCtx): string {
   const linkBack = c.linkHref
-    ? `<p><a href="${escapeHtml(c.linkHref)}" style="color:#a78bfa;text-decoration:underline">continuar para o pagamento</a></p>`
+    ? `<p><a href="${escapeHtml(c.linkHref)}" style="color:#C6A36A;text-decoration:underline">continuar para o pagamento</a></p>`
     : "";
 
   return `<!doctype html>
@@ -123,12 +123,12 @@ function renderBrandedHtml(c: BrandedCtx): string {
 <meta name="twitter:image" content="${escapeHtml(c.ogImageUrl)}"/>
 
 <style>
-  html,body{margin:0;padding:0;background:#0b0b0f;color:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+  html,body{margin:0;padding:0;background:#0E0E0E;color:#FAF9F7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
   .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
   .card{max-width:420px}
-  .brand{font-size:14px;letter-spacing:.15em;text-transform:uppercase;color:#a78bfa;margin-bottom:12px}
+  .brand{font-size:14px;letter-spacing:.15em;text-transform:uppercase;color:#C6A36A;margin-bottom:12px;font-weight:600}
   h1{font-size:22px;font-weight:500;margin:0 0 16px;line-height:1.35}
-  p{color:#a3a3a3;font-size:15px;line-height:1.5;margin:0}
+  p{color:#A3A3A3;font-size:15px;line-height:1.5;margin:0}
 </style>
 </head>
 <body>
@@ -141,7 +141,7 @@ function renderBrandedHtml(c: BrandedCtx): string {
 </html>`;
 }
 
-function renderInvalid(canonicalUrl: string, brandName = "Lunari"): Response {
+function renderInvalid(canonicalUrl: string, brandName = "Fotografia"): Response {
   const html = renderBrandedHtml({
     title: "Link de pagamento não disponível",
     desc: "Este link de pagamento não foi encontrado ou já não está mais ativo.",
@@ -233,15 +233,28 @@ serve(async (req) => {
     // ─────────────────────────────────────────────────────────────
     // Ramo BOT / CRAWLER (WhatsApp, Facebook, iMessage, etc.) — HTML branded
     // ─────────────────────────────────────────────────────────────
-    const [{ data: profile }, { data: cliente }] = await Promise.all([
-      supabase.from("profiles").select("nome, empresa, logo_url").eq("user_id", cobranca.user_id).maybeSingle(),
+    const [{ data: profile }, { data: settings }, { data: cliente }] = await Promise.all([
+      supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", cobranca.user_id).maybeSingle(),
+      supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", cobranca.user_id).maybeSingle(),
       cobranca.cliente_id
         ? supabase.from("clientes").select("nome").eq("id", cobranca.cliente_id).maybeSingle()
         : Promise.resolve({ data: null as { nome: string | null } | null }),
     ]);
 
-    const brandName = (profile?.empresa || profile?.nome || "Lunari").toString().trim() || "Lunari";
-    const ogImageUrl = (profile?.logo_url || "").trim() || FALLBACK_OG_IMAGE;
+    const brandName = (
+      settings?.studio_name ||
+      profile?.empresa ||
+      profile?.nome ||
+      "Fotografia"
+    ).toString().trim() || "Fotografia";
+
+    const ogImageUrl = (
+      settings?.studio_logo_url ||
+      profile?.logo_url ||
+      profile?.avatar_url ||
+      FALLBACK_OG_IMAGE
+    ).toString().trim() || FALLBACK_OG_IMAGE;
+
     const valorFmt = formatBRL(Number(cobranca.valor || 0));
     const primeiroNome = firstName(cliente?.nome);
     const descRaw = (cobranca.descricao || "").toString().trim();
@@ -263,7 +276,7 @@ serve(async (req) => {
     } else {
       // Bot em cobrança ativa: mostra o card de preview e mantém o link textual
       const saudacao = primeiroNome ? `Olá, ${primeiroNome}! ` : "";
-      const descSuffix = descRaw ? ` — ${truncate(descRaw, 90)}` : "";
+      const descSuffix = descRaw ? ` referente a ${truncate(descRaw, 90)}` : "";
       title = `Pagamento para ${brandName} — ${valorFmt}`;
       desc = `${saudacao}Sua cobrança de ${valorFmt}${descSuffix}. Pague com PIX, cartão ou boleto em ambiente seguro.`;
       bodyMessage = `Pagamento de ${valorFmt}`;

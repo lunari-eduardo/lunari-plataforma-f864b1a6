@@ -216,7 +216,7 @@ export function SendGalleryModal({
     setEmailFeedback(null);
     try {
       const { data: emailResult, error } = await supabase.functions.invoke('send-email', {
-        body: { eventType: 'gallery_sent', galleryId: gallery.id, publicToken: resolvedToken },
+        body: { eventType: 'gallery_sent', galleryId: gallery.id, publicToken: resolvedToken, forceResend: true },
       });
 
       if (error) throw error;
@@ -240,7 +240,7 @@ export function SendGalleryModal({
   };
 
   const formattedPhone = formatPhoneDisplay(gallery.clienteTelefone);
-  const isEmailActionDisabled = isSendingEmail || !gallery.clienteEmail || !emailSendingEnabled || !galleryEmailEnabled || emailFeedback?.status === 'enviado' || emailFeedback?.status === 'ignorado';
+  const isEmailActionDisabled = isSendingEmail || !gallery.clienteEmail || !emailSendingEnabled || !galleryEmailEnabled;
   const emailStatusMessage = emailFeedback?.message
     || (!gallery.clienteEmail
       ? 'Cliente não possui e-mail cadastrado. Use Copiar Link ou WhatsApp.'
@@ -448,7 +448,13 @@ export function SendGalleryModal({
                 ) : (
                   <Mail className="h-4 w-4" />
                 )}
-                {isSendingEmail ? 'Enviando...' : !gallery.clienteEmail ? 'Sem e-mail cadastrado' : 'Enviar e-mail'}
+                {isSendingEmail
+                  ? 'Enviando...'
+                  : !gallery.clienteEmail
+                    ? 'Sem e-mail cadastrado'
+                    : emailFeedback?.status === 'enviado'
+                      ? 'Reenviar e-mail'
+                      : 'Enviar e-mail'}
               </Button>
             </div>
 

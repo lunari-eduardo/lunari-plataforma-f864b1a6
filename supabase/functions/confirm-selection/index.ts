@@ -938,6 +938,24 @@ Deno.serve(async (req) => {
         });
         if (auditErr) console.warn('[bg] Audit log error:', auditErr.message);
       } catch (e) { console.error('[bg] audit_log insert exc:', e); }
+
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            eventType: 'selection_confirmed',
+            galleryId,
+            visitorId: visitorId || undefined,
+            publicToken: galleryToken,
+          }),
+        });
+      } catch (emailErr) {
+        console.warn('[bg] Erro ao disparar send-email selection_confirmed:', emailErr);
+      }
     };
 
     const bgPromise = backgroundTasks();

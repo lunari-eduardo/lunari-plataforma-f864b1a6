@@ -9,6 +9,22 @@
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/payment-link-preview?id=:cobrancaId"
     },
     {
+      "source": "/g/:token",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?token=:token"
+    },
+    {
+      "source": "/c/:token",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?token=:token&type=deliver"
+    },
+    {
+      "source": "/formulario/:token",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/public-link-preview?type=form&token=:token"
+    },
+    {
+      "source": "/p/:token",
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/public-link-preview?type=proposal&token=:token"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/sitemap"
     },

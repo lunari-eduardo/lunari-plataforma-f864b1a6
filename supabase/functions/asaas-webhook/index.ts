@@ -550,6 +550,28 @@ Deno.serve(async (req) => {
                 if (payment.netValue) cobrancaUpdate.valor_liquido = payment.netValue;
               }
               await adminClient.from("cobrancas").update(cobrancaUpdate).eq("id", cobranca.id);
+
+              // Disparo de e-mail de pagamento confirmado se aplicável
+              if (parentStatus === "pago") {
+                try {
+                  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+                  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+                  fetch(`${supabaseUrl}/functions/v1/send-email`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${serviceRoleKey}`,
+                    },
+                    body: JSON.stringify({
+                      eventType: "payment_confirmed",
+                      paymentId: cobranca.id,
+                      galleryId: (cobranca as any).galeria_id || undefined,
+                    }),
+                  }).catch((e) => console.warn("[asaas-webhook] send-email async error:", e));
+                } catch (e) {
+                  console.warn("[asaas-webhook] send-email error:", e);
+                }
+              }
             }
           }
 

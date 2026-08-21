@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -31,13 +31,7 @@ function escapeHtml(v: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function truncate(v: string, max: number): string {
-  const s = v.trim();
-  if (s.length <= max) return s;
-  return s.slice(0, max - 1).trimEnd() + "…";
-}
-
-interface BrandedGalleryCtx {
+interface BrandedPreviewCtx {
   title: string;
   desc: string;
   brandName: string;
@@ -45,7 +39,7 @@ interface BrandedGalleryCtx {
   canonicalUrl: string;
 }
 
-function renderGalleryHtml(c: BrandedGalleryCtx): string {
+function renderHtml(c: BrandedPreviewCtx): string {
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -65,7 +59,7 @@ function renderGalleryHtml(c: BrandedGalleryCtx): string {
 <meta property="og:image:secure_url" content="${escapeHtml(c.ogImageUrl)}"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
-<meta property="og:image:alt" content="Capa de ${escapeHtml(c.title)}"/>
+<meta property="og:image:alt" content="${escapeHtml(c.title)}"/>
 
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="${escapeHtml(c.title)}"/>
@@ -93,30 +87,24 @@ function renderGalleryHtml(c: BrandedGalleryCtx): string {
 
 serve(async (req) => {
   const url = new URL(req.url);
+  const type = (url.searchParams.get("type") || "").trim().toLowerCase();
   const token = (url.searchParams.get("token") || "").trim();
-  const typeParam = (url.searchParams.get("type") || "").trim().toLowerCase();
-  const isDeliverRoute = typeParam === "deliver";
-  const targetRoute = isDeliverRoute ? `/c/${token}` : `/g/${token}`;
-  const canonicalUrl = `${PUBLIC_SITE_URL}${targetRoute}`;
+  const slug = (url.searchParams.get("slug") || "").trim();
 
+  let targetPath = "/";
+  if (type === "form") targetPath = `/formulario/${token}`;
+  else if (type === "proposal" && token) targetPath = `/p/${token}`;
+  else if (type === "proposal" && slug) targetPath = `/${slug}`;
+
+  const canonicalUrl = `${PUBLIC_SITE_URL}${targetPath}`;
   const userAgent = req.headers.get("user-agent") || "";
   const accept = req.headers.get("accept") || "";
   const isBot = BOT_UA_RE.test(userAgent);
   const wantsHtml = accept.includes("text/html") || accept.includes("*/*") || accept === "";
   const treatAsBot = isBot || !wantsHtml;
 
-  if (!token) {
-    return new Response(renderGalleryHtml({
-      title: "Galeria não encontrada",
-      desc: "O link da galeria está incompleto ou inválido.",
-      brandName: "Fotografia",
-      ogImageUrl: FALLBACK_OG_IMAGE,
-      canonicalUrl,
-    }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", ...NO_STORE_HEADERS } });
-  }
-
   // ─────────────────────────────────────────────────────────────
-  // Ramo HUMANO (Navegador) — Redireciona para a rota SPA React
+  // Ramo HUMANO (Navegador) — Redireciona 302 direto para a SPA
   // ─────────────────────────────────────────────────────────────
   if (!treatAsBot) {
     return new Response(null, {
@@ -134,80 +122,77 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Busca galeria por public_token ou id
-    let { data: gallery, error: galErr } = await supabase
-      .from("galerias")
-      .select("id, user_id, nome_sessao, tipo, status, status_selecao, cliente_nome")
-      .eq("public_token", token)
-      .maybeSingle();
+    let title = "Fotografia";
+    let desc = "Acesse o link para mais informações.";
+    let brandName = "Fotografia";
+    let ogImageUrl = FALLBACK_OG_IMAGE;
 
-    if (!gallery && !galErr) {
-      // Fallback para UUID legado
-      const { data: legacyGal } = await supabase
-        .from("galerias")
-        .select("id, user_id, nome_sessao, tipo, status, status_selecao, cliente_nome")
-        .eq("id", token)
+    if (type === "form" && token) {
+      const { data: form } = await supabase
+        .from("formularios")
+        .select("id, user_id, titulo, titulo_cliente, descricao")
+        .eq("public_token", token)
         .maybeSingle();
-      gallery = legacyGal;
+
+      if (form) {
+        const [{ data: settings }, { data: profile }] = await Promise.all([
+          supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", form.user_id).maybeSingle(),
+          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", form.user_id).maybeSingle(),
+        ]);
+
+        brandName = (settings?.studio_name || profile?.empresa || profile?.nome || "Fotografia").toString().trim();
+        ogImageUrl = (settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || FALLBACK_OG_IMAGE).toString().trim();
+        const formTitle = (form.titulo_cliente || form.titulo || "Formulário").toString().trim();
+        title = `${formTitle} — ${brandName}`;
+        desc = (form.descricao || "Por favor, preencha este formulário para alinharmos os detalhes do seu ensaio.").toString().trim();
+      }
+    } else if (type === "proposal" && token) {
+      const { data: share } = await supabase
+        .from("material_shares")
+        .select("id, material_id, user_id")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (share) {
+        const [{ data: material }, { data: settings }, { data: profile }] = await Promise.all([
+          supabase.from("commercial_materials").select("title, cover_image_url").eq("id", share.material_id).maybeSingle(),
+          supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", share.user_id).maybeSingle(),
+          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", share.user_id).maybeSingle(),
+        ]);
+
+        brandName = (settings?.studio_name || profile?.empresa || profile?.nome || "Fotografia").toString().trim();
+        ogImageUrl = (material?.cover_image_url || settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || FALLBACK_OG_IMAGE).toString().trim();
+        const proposalTitle = (material?.title || "Proposta").toString().trim();
+        title = `${proposalTitle} — ${brandName}`;
+        desc = "Confira a proposta exclusiva preparada especialmente para você.";
+      }
+    } else if (type === "proposal" && slug) {
+      const { data: shareLink } = await supabase
+        .from("material_share_links")
+        .select("id, material_id, user_id")
+        .eq("slug", slug.toLowerCase())
+        .maybeSingle();
+
+      if (shareLink) {
+        const [{ data: material }, { data: settings }, { data: profile }] = await Promise.all([
+          supabase.from("commercial_materials").select("title, cover_image_url").eq("id", shareLink.material_id).maybeSingle(),
+          supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", shareLink.user_id).maybeSingle(),
+          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", shareLink.user_id).maybeSingle(),
+        ]);
+
+        brandName = (settings?.studio_name || profile?.empresa || profile?.nome || "Fotografia").toString().trim();
+        ogImageUrl = (material?.cover_image_url || settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || FALLBACK_OG_IMAGE).toString().trim();
+        const proposalTitle = (material?.title || "Proposta").toString().trim();
+        title = `${proposalTitle} — ${brandName}`;
+        desc = "Confira a proposta exclusiva preparada para você.";
+      }
     }
 
-    if (!gallery) {
-      return new Response(renderGalleryHtml({
-        title: "Galeria não encontrada",
-        desc: "Esta galeria de fotos não foi encontrada ou não está disponível.",
-        brandName: "Fotografia",
-        ogImageUrl: FALLBACK_OG_IMAGE,
-        canonicalUrl,
-      }), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", ...NO_STORE_HEADERS } });
-    }
-
-    // Busca configurações de estúdio e perfil do fotógrafo
-    const [{ data: settings }, { data: profile }] = await Promise.all([
-      supabase
-        .from("gallery_settings")
-        .select("studio_name, studio_logo_url")
-        .eq("user_id", gallery.user_id)
-        .maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("nome, empresa, logo_url, avatar_url")
-        .eq("id", gallery.user_id)
-        .maybeSingle(),
-    ]);
-
-    const studioName = (
-      settings?.studio_name ||
-      profile?.empresa ||
-      profile?.nome ||
-      "Fotografia"
-    ).toString().trim() || "Fotografia";
-
-    const studioLogo = (
-      settings?.studio_logo_url ||
-      profile?.logo_url ||
-      profile?.avatar_url ||
-      FALLBACK_OG_IMAGE
-    ).toString().trim() || FALLBACK_OG_IMAGE;
-
-    const sessionName = (gallery.nome_sessao || "Sessão de Fotos").toString().trim();
-    const isDeliver = isDeliverRoute || gallery.tipo === "transfer" || gallery.tipo === "deliver";
-
-    let ogTitle: string;
-    let ogDescription: string;
-
-    if (isDeliver) {
-      ogTitle = `${sessionName} • Entrega de Fotos — ${studioName}`;
-      ogDescription = `Suas fotografias em alta resolução estão prontas para visualização e download.`;
-    } else {
-      ogTitle = `${sessionName} — ${studioName}`;
-      ogDescription = `Sua galeria de fotos está pronta! Acesse para escolher e aprovar suas fotos favoritas.`;
-    }
-
-    const html = renderGalleryHtml({
-      title: ogTitle,
-      desc: ogDescription,
-      brandName: studioName,
-      ogImageUrl: studioLogo,
+    const html = renderHtml({
+      title,
+      desc,
+      brandName,
+      ogImageUrl,
       canonicalUrl,
     });
 
@@ -216,14 +201,13 @@ serve(async (req) => {
       headers: BOT_HTML_HEADERS,
     });
   } catch (err) {
-    console.error("[gallery-og] error:", err);
-    return new Response(renderGalleryHtml({
-      title: "Galeria de Fotos",
-      desc: "Acesse para visualizar sua galeria de fotos.",
+    console.error("[public-link-preview] error:", err);
+    return new Response(renderHtml({
+      title: "Fotografia",
+      desc: "Acesse o link para conferir as informações.",
       brandName: "Fotografia",
       ogImageUrl: FALLBACK_OG_IMAGE,
       canonicalUrl,
     }), { status: 200, headers: BOT_HTML_HEADERS });
   }
 });
-
