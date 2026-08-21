@@ -109,9 +109,9 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
     icone: ArrowUpRight,
     gruposPermitidos: ["Receita Operacional"],
     natureza: "entrada",
-    datas: ["competencia", "recebimento"],
-    camposEssenciais: ["grupo", "categoria", "valor", "competencia", "recebimento", "formaPagamento"],
-    camposProibidos: ["vencimento"],
+    datas: ["recebimento"],
+    camposEssenciais: ["valor", "recebimento", "formaPagamento"],
+    camposProibidos: ["categoria", "vencimento"],
   },
 
   receita_nao_operacional: {
@@ -123,8 +123,8 @@ export const LANCAMENTO_TIPOS: Record<LancamentoTipo, LancamentoTipoMeta> = {
     icone: Banknote,
     gruposPermitidos: ["Receita Não Operacional"],
     natureza: "entrada",
-    datas: ["competencia", "recebimento"],
-    camposEssenciais: ["grupo", "categoria", "descricao", "valor", "competencia", "recebimento", "formaPagamento"],
+    datas: ["recebimento"],
+    camposEssenciais: ["grupo", "categoria", "descricao", "valor", "recebimento", "formaPagamento"],
     camposProibidos: ["cliente", "sessao", "produto", "vencimento"],
   },
 

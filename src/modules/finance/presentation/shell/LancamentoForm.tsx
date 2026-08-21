@@ -144,18 +144,37 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   const setField = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setState((s) => ({ ...s, [k]: v }));
 
+  const showCategoria = isCampoPermitido(tipo, 'categoria');
   const showFavorecido = isCampoPermitido(tipo, 'favorecido') && meta.natureza === 'saida';
   const showDescricaoAtivo = tipo === 'investimento';
   const showDescricao = tipo === 'receita_nao_operacional';
   const showRecebimento = meta.datas.includes('recebimento');
   const showVencimento = meta.datas.includes('vencimento');
   const showCompetencia = meta.datas.includes('competencia');
+  const isCartaoDespesa = meta.natureza === 'saida' && (state.formaPagamento === 'cartao_credito' || state.formaPagamento === 'cartao_debito');
+  const showRecorrente = meta.natureza === 'saida' && !isCartaoDespesa;
 
-  const observacoesFilled = state.observacoes.trim().length > 0;
+  const hasEssencialSection = showCategoria || showFavorecido || showDescricaoAtivo || showDescricao;
+  const hasMaisOpcoes = showRecorrente || showCompetencia;
+
   const competenciaFilled = state.competencia !== hoje();
-  const disclosureFilled = (observacoesFilled ? 1 : 0) + (competenciaFilled ? 1 : 0) + (state.isRecorrente ? 1 : 0);
+  const disclosureFilled = (showCompetencia && competenciaFilled ? 1 : 0) + (showRecorrente && state.isRecorrente ? 1 : 0);
 
-  const canSubmit = state.valor > 0 && !!state.itemId && !submitting;
+  // Auto-seleciona item padrão para Venda Avulsa
+  useEffect(() => {
+    if (tipo === 'receita_operacional' && itens.length > 0 && !state.itemId) {
+      const itemVenda = itens.find(
+        (i: any) => i.nome.toLowerCase() === 'venda avulsa' || i.nome.toLowerCase() === 'vendas avulsas'
+      );
+      if (itemVenda) {
+        setField('itemId', itemVenda.id);
+      } else {
+        setField('itemId', itens[0].id);
+      }
+    }
+  }, [tipo, itens, state.itemId]);
+
+  const canSubmit = state.valor > 0 && (tipo === 'receita_operacional' || !!state.itemId) && !submitting;
 
   // ─────────────────────────────────────────────────────────
   // Submit
@@ -164,15 +183,34 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   async function handleSubmit() {
     if (!canSubmit) return;
     
-    // Validação específica para cartão
-    const isCartao = state.formaPagamento === 'cartao_credito' || state.formaPagamento === 'cartao_debito';
-    if (isCartao && !state.cartaoId) {
+    // Validação específica para cartão de despesa
+    if (isCartaoDespesa && !state.cartaoId) {
       toast({
         title: 'Selecione um cartão',
         description: 'Por favor, selecione qual cartão foi utilizado.',
         variant: 'destructive',
       });
       return;
+    }
+
+    // Resolve itemId para Venda Avulsa automaticamente se ainda não estiver definido
+    let finalItemId = state.itemId;
+    if (tipo === 'receita_operacional' && !finalItemId) {
+      const itemVenda = itens.find(
+        (i: any) => i.nome.toLowerCase() === 'venda avulsa' || i.nome.toLowerCase() === 'vendas avulsas'
+      );
+      if (itemVenda) {
+        finalItemId = itemVenda.id;
+      } else if (itens.length > 0) {
+        finalItemId = itens[0].id;
+      } else {
+        try {
+          const novo = await adicionarItemFinanceiro('Venda Avulsa', 'Receita Operacional');
+          finalItemId = novo?.id || null;
+        } catch {
+          finalItemId = null;
+        }
+      }
     }
 
     // Compõe observações preservando metadados sem coluna dedicada.
@@ -183,7 +221,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
     if ((showDescricaoAtivo || showDescricao) && state.descricao.trim()) {
       partes.push(state.descricao.trim());
     }
-    if (state.formaPagamento && !isCartao) { // Se for cartão a flag na base cuida
+    if (state.formaPagamento && !isCartaoDespesa) {
       const fp = FORMAS_PAGAMENTO.find((f) => f.value === state.formaPagamento);
       if (fp) partes.push(`Forma: ${fp.label}`);
     }
@@ -196,7 +234,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
     setSubmitting(true);
     try {
       await createTransactionEngine({
-        itemId: state.itemId,
+        itemId: finalItemId,
         valorTotal: state.valor,
         dataPrimeiraOcorrencia: dataPrimeira,
         dataCompra: dataPrimeira, // Para cartões, a data de compra será a selecionada em "Quando"
@@ -204,10 +242,10 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         pago: state.pago,
         dataPagamento: state.pago ? dataPrimeira : undefined,
         formaPagamento: state.formaPagamento || undefined,
-        cartaoCreditoId: isCartao ? state.cartaoId : undefined,
-        isParcelado: state.formaPagamento === 'cartao_credito' && state.numeroParcelas > 1,
-        numeroDeParcelas: state.formaPagamento === 'cartao_credito' ? state.numeroParcelas : 1,
-        isRecorrente: state.isRecorrente,
+        cartaoCreditoId: isCartaoDespesa ? state.cartaoId : undefined,
+        isParcelado: isCartaoDespesa && state.formaPagamento === 'cartao_credito' && state.numeroParcelas > 1,
+        numeroDeParcelas: isCartaoDespesa && state.formaPagamento === 'cartao_credito' ? state.numeroParcelas : 1,
+        isRecorrente: showRecorrente ? state.isRecorrente : false,
         isValorFixo: state.isValorFixo,
       });
       onCreated?.();
@@ -226,8 +264,6 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
   // ─────────────────────────────────────────────────────────
   // Form principal
   // ─────────────────────────────────────────────────────────
-
-  const isCartaoSelected = state.formaPagamento === 'cartao_credito' || state.formaPagamento === 'cartao_debito';
 
   return (
     <motion.div
@@ -258,61 +294,67 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         </div>
 
         {/* Essencial */}
-        <SectionHeader label="Essencial" />
-        <FieldRow label="Categoria" required>
-          <SmartSelect
-            value={state.itemId}
-            onChange={(v) => setField('itemId', v)}
-            options={categoriaOptions}
-            placeholder="Escolher categoria"
-            emptyMessage="Nenhuma categoria neste grupo."
-            createNewLabel="Criar categoria"
-            onCreateNew={async (nome) => {
-              try {
-                const novo = await adicionarItemFinanceiro(nome, grupo as any);
-                if (novo?.id) setField('itemId', novo.id);
-              } catch (e: any) {
-                toast({
-                  title: 'Não foi possível criar',
-                  description: e?.message ?? 'Tente outro nome.',
-                  variant: 'destructive',
-                });
-              }
-            }}
-          />
-        </FieldRow>
+        {hasEssencialSection && (
+          <>
+            <SectionHeader label="Essencial" />
+            {showCategoria && (
+              <FieldRow label="Categoria" required>
+                <SmartSelect
+                  value={state.itemId}
+                  onChange={(v) => setField('itemId', v)}
+                  options={categoriaOptions}
+                  placeholder="Escolher categoria"
+                  emptyMessage="Nenhuma categoria neste grupo."
+                  createNewLabel="Criar categoria"
+                  onCreateNew={async (nome) => {
+                    try {
+                      const novo = await adicionarItemFinanceiro(nome, grupo as any);
+                      if (novo?.id) setField('itemId', novo.id);
+                    } catch (e: any) {
+                      toast({
+                        title: 'Não foi possível criar',
+                        description: e?.message ?? 'Tente outro nome.',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                />
+              </FieldRow>
+            )}
 
-        {showFavorecido && (
-          <FieldRow label="Favorecido">
-            <TextField
-              value={state.favorecido}
-              onChange={(v) => setField('favorecido', v)}
-              placeholder="Ex.: Coworking Plaza"
-              maxLength={80}
-            />
-          </FieldRow>
-        )}
+            {showFavorecido && (
+              <FieldRow label="Favorecido">
+                <TextField
+                  value={state.favorecido}
+                  onChange={(v) => setField('favorecido', v)}
+                  placeholder="Ex.: Coworking Plaza"
+                  maxLength={80}
+                />
+              </FieldRow>
+            )}
 
-        {showDescricaoAtivo && (
-          <FieldRow label="Ativo">
-            <TextField
-              value={state.descricao}
-              onChange={(v) => setField('descricao', v)}
-              placeholder="Ex.: Câmera Sony A7 IV"
-              maxLength={120}
-            />
-          </FieldRow>
-        )}
+            {showDescricaoAtivo && (
+              <FieldRow label="Ativo">
+                <TextField
+                  value={state.descricao}
+                  onChange={(v) => setField('descricao', v)}
+                  placeholder="Ex.: Câmera Sony A7 IV"
+                  maxLength={120}
+                />
+              </FieldRow>
+            )}
 
-        {showDescricao && (
-          <FieldRow label="Descrição">
-            <TextField
-              value={state.descricao}
-              onChange={(v) => setField('descricao', v)}
-              placeholder="Descreva a receita"
-              maxLength={120}
-            />
-          </FieldRow>
+            {showDescricao && (
+              <FieldRow label="Descrição">
+                <TextField
+                  value={state.descricao}
+                  onChange={(v) => setField('descricao', v)}
+                  placeholder="Descreva a receita"
+                  maxLength={120}
+                />
+              </FieldRow>
+            )}
+          </>
         )}
 
         {/* Quando */}
@@ -326,7 +368,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
         {showVencimento && (
-          <FieldRow label={state.pago ? 'Pago em' : (isCartaoSelected ? 'Data da compra' : 'Vencimento')} required>
+          <FieldRow label={state.pago ? 'Pago em' : (isCartaoDespesa ? 'Data da compra' : 'Vencimento')} required>
             <DateField
               value={state.vencimento}
               onChange={(v) => setField('vencimento', v)}
@@ -345,8 +387,8 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
               if (v !== 'cartao_credito' && v !== 'cartao_debito') {
                 setField('cartaoId', null);
                 setField('numeroParcelas', 1);
-              } else {
-                // Desmarca recorrência quando seleciona cartão
+              } else if (meta.natureza === 'saida') {
+                // Desmarca recorrência quando seleciona cartão para despesa
                 setField('isRecorrente', false);
               }
             }}
@@ -355,7 +397,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           />
         </FieldRow>
         
-        {isCartaoSelected && (
+        {isCartaoDespesa && (
           <FieldRow label="Cartão" required>
             <SmartSelect
               value={state.cartaoId}
@@ -367,7 +409,7 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
         
-        {state.formaPagamento === 'cartao_credito' && (
+        {isCartaoDespesa && state.formaPagamento === 'cartao_credito' && (
           <FieldRow label="Parcelas">
             <TextField
               type="number"
@@ -386,65 +428,70 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
           </FieldRow>
         )}
 
-        {/* Mais opções */}
+        {/* Observações sempre visíveis */}
         <div className="mt-3">
-          <DisclosureSection title="Mais opções" filledCount={disclosureFilled}>
-            
-            {meta.natureza === 'saida' && !isCartaoSelected && (
-              <div className="mb-4 space-y-3 rounded-lg border border-border/50 bg-muted/20 p-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="recorrente"
-                    checked={state.isRecorrente}
-                    onChange={(e) => setField('isRecorrente', e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-accent-gold focus:ring-accent-gold"
-                  />
-                  <label htmlFor="recorrente" className="text-[12.5px] font-medium text-foreground">
-                    Despesa recorrente
-                  </label>
-                </div>
-                {state.isRecorrente && (
-                  <div className="pl-6 space-y-2">
-                    <p className="text-[11.5px] text-muted-foreground leading-snug">
-                      Gerará lançamentos automáticos para os meses seguintes do ano civil.
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="valorFixo"
-                        checked={state.isValorFixo}
-                        onChange={(e) => setField('isValorFixo', e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-border text-accent-gold focus:ring-accent-gold"
-                      />
-                      <label htmlFor="valorFixo" className="text-[12px] text-foreground">
-                        O valor é fixo mensalmente (pode ser ajustado depois se variar)
-                      </label>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {showCompetencia && (
-              <FieldRow label="Competência" hint="Mês contábil de referência">
-                <DateField
-                  value={state.competencia}
-                  onChange={(v) => setField('competencia', v)}
-                />
-              </FieldRow>
-            )}
-            <FieldRow label="Observações" align="start">
-              <TextAreaField
-                value={state.observacoes}
-                onChange={(v) => setField('observacoes', v)}
-                placeholder="Notas internas (opcional)"
-                maxLength={500}
-                rows={3}
-              />
-            </FieldRow>
-          </DisclosureSection>
+          <FieldRow label="Observações" align="start">
+            <TextAreaField
+              value={state.observacoes}
+              onChange={(v) => setField('observacoes', v)}
+              placeholder="Notas internas (opcional)"
+              maxLength={500}
+              rows={3}
+            />
+          </FieldRow>
         </div>
+
+        {/* Mais opções (apenas se houver campos extras como recorrência ou competência) */}
+        {hasMaisOpcoes && (
+          <div className="mt-3">
+            <DisclosureSection title="Mais opções" filledCount={disclosureFilled}>
+              {showRecorrente && (
+                <div className="mb-4 space-y-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="recorrente"
+                      checked={state.isRecorrente}
+                      onChange={(e) => setField('isRecorrente', e.target.checked)}
+                      className="h-4 w-4 rounded border-border text-accent-gold focus:ring-accent-gold"
+                    />
+                    <label htmlFor="recorrente" className="text-[12.5px] font-medium text-foreground">
+                      Despesa recorrente
+                    </label>
+                  </div>
+                  {state.isRecorrente && (
+                    <div className="pl-6 space-y-2">
+                      <p className="text-[11.5px] text-muted-foreground leading-snug">
+                        Gerará lançamentos automáticos para os meses seguintes do ano civil.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="valorFixo"
+                          checked={state.isValorFixo}
+                          onChange={(e) => setField('isValorFixo', e.target.checked)}
+                          className="h-3.5 w-3.5 rounded border-border text-accent-gold focus:ring-accent-gold"
+                        />
+                        <label htmlFor="valorFixo" className="text-[12px] text-foreground">
+                          O valor é fixo mensalmente (pode ser ajustado depois se variar)
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {showCompetencia && (
+                <FieldRow label="Competência" hint="Mês contábil de referência">
+                  <DateField
+                    value={state.competencia}
+                    onChange={(v) => setField('competencia', v)}
+                  />
+                </FieldRow>
+              )}
+            </DisclosureSection>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
