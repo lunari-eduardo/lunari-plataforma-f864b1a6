@@ -19,12 +19,31 @@ const SOON_THRESHOLD_MS = 60 * 1000; // 60s
 
 let inflight: Promise<{ session: Session | null; error: Error | null }> | null = null;
 
-async function runRefresh(): Promise<{ session: Session | null; error: Error | null }> {
+async function runRefresh(attempt = 1): Promise<{ session: Session | null; error: Error | null }> {
   try {
     const { data, error } = await supabase.auth.refreshSession();
-    if (error) return { session: null, error };
+    if (error) {
+      // isAuthError && (status === 0 || status === 5xx) => network/gateway issue
+      const isNetworkIssue = 
+        error.message.includes('Failed to fetch') || 
+        error.message.includes('Network request failed') ||
+        (error as any).status === 0 || 
+        (error as any).status >= 500;
+      
+      if (isNetworkIssue && attempt < 3) {
+        console.warn(`[ensureFreshSession] Network falhou no refresh. Tentativa ${attempt}/3. Retrying in 1s...`);
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+        return runRefresh(attempt + 1);
+      }
+      return { session: null, error };
+    }
     return { session: data.session ?? null, error: null };
   } catch (e) {
+    if (attempt < 3) {
+      console.warn(`[ensureFreshSession] Catch error no refresh. Tentativa ${attempt}/3. Retrying em 1s...`, e);
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+      return runRefresh(attempt + 1);
+    }
     return { session: null, error: e as Error };
   }
 }
@@ -51,7 +70,18 @@ export async function ensureFreshSession(): Promise<{ session: Session | null; e
 
   // Coalesce: se já existe um refresh em curso, todos esperam o mesmo.
   if (!inflight) {
-    inflight = runRefresh().finally(() => {
+    inflight = runRefresh().then(result => {
+      if (result.error && (
+        result.error.message.includes('Failed to fetch') ||
+        result.error.message.includes('Network request failed') ||
+        (result.error as any).status === 0 ||
+        (result.error as any).status >= 500
+      )) {
+        console.warn('[ensureFreshSession] Mantendo sessao offline apos falha de network.');
+        return { session, error: result.error };
+      }
+      return result;
+    }).finally(() => {
       inflight = null;
     });
   }

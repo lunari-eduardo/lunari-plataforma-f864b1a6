@@ -31,6 +31,7 @@ const PhotographerApp = React.lazy(() => import("./app-photographer/Photographer
 const AdminApp = React.lazy(() => import("./app-admin/AdminApp"));
 
 import { isAuthError } from "@/lib/auth/isAuthError";
+import { RootErrorBoundary } from "./components/RootErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,34 +70,36 @@ function App() {
   }, [context, pricingError]);
 
   return (
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <VisualThemeProvider>
-            <AuthProvider>
-              <AccessControlProvider>
-                <CapabilityRuntimeProvider>
-                  <AgendaInvalidationBridge />
-                  <AgendaRealtimeListener />
-                  <WorkflowEventBridge />
-                  <WorkflowRealtimeBridge />
-                  <TasksRealtimeBridge />
-                  <AttachmentsRealtimeBridge />
-                  <FinanceRealtimeBridge />
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <React.Suspense fallback={<ContextFallback />}>
-                      {context === "admin" ? <AdminApp /> : <PhotographerApp />}
-                    </React.Suspense>
-                  </TooltipProvider>
-                </CapabilityRuntimeProvider>
-              </AccessControlProvider>
-            </AuthProvider>
-          </VisualThemeProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+    <RootErrorBoundary>
+      <BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <VisualThemeProvider>
+              <AuthProvider>
+                <AccessControlProvider>
+                  <CapabilityRuntimeProvider>
+                    <AgendaInvalidationBridge />
+                    <AgendaRealtimeListener />
+                    <WorkflowEventBridge />
+                    <WorkflowRealtimeBridge />
+                    <TasksRealtimeBridge />
+                    <AttachmentsRealtimeBridge />
+                    <FinanceRealtimeBridge />
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <React.Suspense fallback={<ContextFallback />}>
+                        {context === "admin" ? <AdminApp /> : <PhotographerApp />}
+                      </React.Suspense>
+                    </TooltipProvider>
+                  </CapabilityRuntimeProvider>
+                </AccessControlProvider>
+              </AuthProvider>
+            </VisualThemeProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </BrowserRouter>
+    </RootErrorBoundary>
   );
 }
 

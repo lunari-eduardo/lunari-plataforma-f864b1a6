@@ -86,6 +86,9 @@ export default function AdminApp() {
         <Route path="app/admin/planos" element={<Navigate to="/planos" replace />} />
         <Route path="app/admin/conteudos" element={<Navigate to="/conteudos" replace />} />
         <Route path="app/admin/suporte/*" element={<Navigate to="/suporte" replace />} />
+        
+        {/* PWA start_url fallback */}
+        <Route path="app" element={<Navigate to="/" replace />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>

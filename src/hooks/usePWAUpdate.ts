@@ -30,20 +30,20 @@ export function usePWAUpdate() {
     console.log('🔧 [PWA] Iniciando registro via vite-plugin-pwa...');
 
     const updateSW = registerSW({
-      immediate: true,
-      
       onNeedRefresh() {
         console.log('🔄 [PWA] Nova versão detectada! Preparando atualização...');
         
-        toast.info('Nova versão disponível! Atualizando em 2 segundos...', {
-          duration: 2000,
+        toast('Nova versão disponível!', {
+          description: 'Clique aqui para atualizar',
+          duration: 10000,
+          action: {
+            label: 'Atualizar',
+            onClick: () => {
+              console.log('🚀 [PWA] Aplicando atualização...');
+              updateSW(true);
+            }
+          }
         });
-        
-        // Aguardar 2 segundos e forçar atualização
-        setTimeout(() => {
-          console.log('🚀 [PWA] Aplicando atualização...');
-          updateSW(true);
-        }, 2000);
       },
       
       onOfflineReady() {

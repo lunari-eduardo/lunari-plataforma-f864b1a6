@@ -56,8 +56,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' && componentTagger(),
     VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: false,
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       manifest: {
         name: 'Lunari',
@@ -93,23 +92,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Chunks pesados e carregados sob demanda (diagramas markdown) não entram no precache.
         globIgnores: ['**/mermaid-*.js', '**/emacs-lisp-*.js', '**/cpp-*.js', '**/cynefin-*.js'],
-      navigateFallbackDenylist: [/^\/formulario\//, /^\/checkout\//, /^\/pay\//, /^\/l\//],
-      runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 horas
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
+        navigateFallbackDenylist: [/^\/formulario\//, /^\/checkout\//, /^\/pay\//, /^\/l\//],
       },
       devOptions: {
         enabled: false,

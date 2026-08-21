@@ -9,6 +9,8 @@ import { pricingMigrationService } from '@/services/PricingMigrationService';
 import { createExamplePricingData } from '@/scripts/createExamplePricingData';
 import { toast } from 'sonner';
 
+import { supabase } from '@/integrations/supabase/client';
+
 export function usePricingBootstrap() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,6 +21,15 @@ export function usePricingBootstrap() {
 
     const initializePricingSystem = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          if (isMounted) {
+            setIsInitialized(false);
+            setIsLoading(false);
+          }
+          return;
+        }
+
         console.log('🔄 Bootstrapping pricing system...');
         
         // Initialize Supabase adapter

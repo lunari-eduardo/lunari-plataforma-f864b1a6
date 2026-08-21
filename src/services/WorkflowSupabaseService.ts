@@ -121,6 +121,33 @@ export class WorkflowSupabaseService {
         .select('*')
         .maybeSingle();
 
+      const paidAmount = Number(appointment.paid_amount) || 0;
+      if (paidAmount > 0 && session.session_id && session.cliente_id) {
+        const { data: existingTx } = await supabase
+          .from('clientes_transacoes')
+          .select('id')
+          .eq('session_id', session.session_id)
+          .eq('descricao', 'Entrada do agendamento')
+          .is('cobranca_id', null)
+          .maybeSingle();
+
+        if (!existingTx) {
+          const dataHoje = new Date();
+          await supabase
+            .from('clientes_transacoes')
+            .insert({
+              user_id: userId,
+              cliente_id: session.cliente_id,
+              session_id: session.session_id,
+              tipo: 'pagamento',
+              valor: paidAmount,
+              valor_liquido: paidAmount,
+              descricao: 'Entrada do agendamento',
+              data_transacao: formatDateForStorage(dataHoje)
+            });
+        }
+      }
+
       console.log('🩹 [Workflow] Sessão stub hidratada com dados do pacote:', session.id);
       return updated || { ...session, ...patch };
     } catch (error) {
@@ -514,30 +541,39 @@ export class WorkflowSupabaseService {
         throw error;
       }
 
-      // Create initial transaction if paid_amount > 0
+      // Create initial transaction if paid_amount > 0 (Resilient fallback)
       const paidAmount = Number(appointmentData.paid_amount) || 0;
       if (paidAmount > 0 && clienteId) {
-        const dataHoje = new Date();
-        console.log('💰 Creating initial transaction:', { 
-          amount: paidAmount, 
-          dateToday: formatDateForStorage(dataHoje),
-          sessionDate: formatDateForStorage(appointmentData.date)
-        });
-        
-        await supabase
+        const { data: existingTx } = await supabase
           .from('clientes_transacoes')
-          .insert({
-            user_id: user.user.id,
-            cliente_id: clienteId,
-            session_id: sessionId,
-            tipo: 'pagamento',
-            valor: paidAmount,
-            descricao: 'Entrada do agendamento',
-            data_transacao: formatDateForStorage(dataHoje), // ✅ Data de HOJE, não da sessão
-            updated_by: user.user.id
+          .select('id')
+          .eq('session_id', sessionId)
+          .eq('descricao', 'Entrada do agendamento')
+          .is('cobranca_id', null)
+          .maybeSingle();
+
+        if (!existingTx) {
+          const dataHoje = new Date();
+          console.log('💰 Creating initial transaction (fallback):', { 
+            amount: paidAmount, 
+            dateToday: formatDateForStorage(dataHoje)
           });
-        
-        console.log('✅ Initial transaction created with today\'s date:', formatDateForStorage(dataHoje));
+          
+          await supabase
+            .from('clientes_transacoes')
+            .insert({
+              user_id: user.user.id,
+              cliente_id: clienteId,
+              session_id: sessionId,
+              tipo: 'pagamento',
+              valor: paidAmount,
+              valor_liquido: paidAmount,
+              descricao: 'Entrada do agendamento',
+              data_transacao: formatDateForStorage(dataHoje)
+            });
+          
+          console.log('✅ Initial transaction created (fallback).');
+        }
       }
 
       // Update appointment with session_id for bidirectional linking
