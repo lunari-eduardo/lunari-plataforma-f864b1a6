@@ -191,10 +191,10 @@ const FluxoDetailSheet = memo(function FluxoDetailSheet({
             Informações gerais
           </h4>
           <div className="grid grid-cols-2 gap-3">
-            <ReadOnlyField label="Cliente" value={linha.cliente ?? '—'} />
+            {isReceita && <ReadOnlyField label="Cliente" value={linha.cliente ?? '—'} />}
             <ReadOnlyField label="Categoria" value={linha.categoria ?? '—'} />
             <ReadOnlyField label="Forma de pagamento" value={linha.meioPagamento ?? linha.cartao ?? '—'} />
-            <ReadOnlyField label="Projeto" value={linha.projeto ?? '—'} />
+            {isReceita && <ReadOnlyField label="Projeto" value={linha.projeto ?? '—'} />}
           </div>
 
           <div className="space-y-1.5">
