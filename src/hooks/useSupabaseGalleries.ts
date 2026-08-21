@@ -258,14 +258,73 @@ export function useSupabaseGalleries() {
   } = useQuery({
     queryKey: ['galleries'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Buscar galerias ativas
+      const { data: activeData, error: activeError } = await supabase
         .from('galerias')
         .select('*')
         .order('created_at', { ascending: false });
       
+      if (activeError) throw activeError;
+
+      // 2. Buscar galerias arquivadas/excluídas do histórico
+      const { data: archivedData, error: archivedError } = await supabase
+        .from('galerias_arquivadas')
+        .select('*')
+        .order('archived_at', { ascending: false });
       
-      if (error) throw error;
-      return (data || []).map(transformGaleria);
+      if (archivedError && archivedError.code !== '42P01') {
+        console.error("Erro ao buscar galerias arquivadas:", archivedError);
+      }
+
+      const activeGalleries = (activeData || []).map(transformGaleria);
+      
+      // Transformar dados do histórico de forma parecida para a listagem não quebrar
+      const archivedGalleries = (archivedData || []).map((row: any) => ({
+        id: row.id,
+        userId: row.user_id,
+        clienteId: row.cliente_id,
+        status: 'archived', // status especial
+        statusPagamento: 'none',
+        fotosIncluidas: row.fotos_incluidas || 0,
+        valorFotoExtra: row.valor_foto_extra || 0,
+        regrasSelecao: null,
+        prazoSelecaoDias: null,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.archived_at || row.created_at),
+        publishedAt: null,
+        finalizedAt: row.finalized_at ? new Date(row.finalized_at) : null,
+        sessionId: row.session_id,
+        orcamentoId: null,
+        permissao: 'private',
+        nomeSessao: row.nome_sessao || 'Galeria Arquivada',
+        nomePacote: row.nome_pacote,
+        mensagemBoasVindas: null,
+        configuracoes: {},
+        totalFotos: 0,
+        fotosSelecionadas: row.fotos_selecionadas || 0,
+        valorExtras: 0,
+        valorTotalVendido: row.valor_total_vendido || 0,
+        totalFotosExtrasVendidas: row.total_fotos_extras_vendidas || 0,
+        statusSelecao: 'arquivada',
+        prazoSelecao: null,
+        enviadoEm: null,
+        clienteNome: null,
+        clienteEmail: null,
+        clienteTelefone: null,
+        publicToken: null,
+        galleryPassword: null,
+        regrasCongeladas: null,
+        regrasOverride: false,
+        tipo: row.tipo || 'selecao',
+        firstPhotoKey: null,
+        coverPhotoKey: null,
+        vendaModo: null,
+        vendaPagamentoProvedor: null,
+        vendaTipoCobranca: null,
+      } as Galeria));
+
+      // Unir as duas listas
+      return [...activeGalleries, ...archivedGalleries].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     },
     enabled: isReady,
     // Egress guard (Bloco B3): evita refetch a cada foco de aba.

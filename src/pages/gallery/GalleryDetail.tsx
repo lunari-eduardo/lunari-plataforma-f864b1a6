@@ -35,6 +35,7 @@ import {
   Link2,
   Unlink,
   Database,
+  ExternalLink,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -125,6 +126,38 @@ export default function GalleryDetail() {
   // Get Supabase gallery
   const supabaseGallery = getSupabaseGallery(id || '');
   
+  // Resolve client ID (from gallery directly, or fallback to session/name search)
+  const { data: resolvedClienteId } = useQuery({
+    queryKey: ['gallery-resolved-client', supabaseGallery?.clienteId, supabaseGallery?.sessionId, supabaseGallery?.clienteNome],
+    queryFn: async () => {
+      if (supabaseGallery?.clienteId) return supabaseGallery.clienteId;
+
+      if (supabaseGallery?.sessionId) {
+        const { data: sess } = await supabase
+          .from('clientes_sessoes')
+          .select('cliente_id')
+          .eq('session_id', supabaseGallery.sessionId)
+          .maybeSingle();
+        if (sess?.cliente_id) return sess.cliente_id;
+      }
+
+      if (supabaseGallery?.clienteNome) {
+        const { data: client } = await supabase
+          .from('clientes')
+          .select('id')
+          .ilike('nome', supabaseGallery.clienteNome.trim())
+          .limit(1)
+          .maybeSingle();
+        if (client?.id) return client.id;
+      }
+
+      return null;
+    },
+    enabled: !!supabaseGallery,
+  });
+
+  const effectiveClienteId = supabaseGallery?.clienteId || resolvedClienteId;
+
   // Fetch photos for Supabase gallery
   const { data: supabasePhotos = [], isLoading: isLoadingPhotos } = useQuery({
     queryKey: ['galeria-fotos', id],
@@ -767,7 +800,24 @@ export default function GalleryDetail() {
 
             {/* Área 2 — Cards informativos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <InfoCard icon={User} label="Cliente" value={supabaseGallery.clienteNome || '—'} />
+              <InfoCard 
+                icon={User} 
+                label="Cliente" 
+                value={
+                  effectiveClienteId ? (
+                    <Link
+                      to={`/app/clientes/${effectiveClienteId}`}
+                      className="hover:underline hover:text-primary transition-colors inline-flex items-center gap-1.5 max-w-full group"
+                      title="Ver perfil do cliente no CRM"
+                    >
+                      <span className="truncate">{supabaseGallery.clienteNome || '—'}</span>
+                      <ExternalLink className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </Link>
+                  ) : (
+                    supabaseGallery.clienteNome || '—'
+                  )
+                } 
+              />
               <InfoCard icon={Calendar} label="Data da sessão" value={format(deadline, "dd MMM yyyy", { locale: ptBR })} />
               <InfoCard icon={Image} label="Total de fotos" value={`${supabaseGallery.totalFotos} fotos`} />
             </div>
@@ -1250,9 +1300,20 @@ export default function GalleryDetail() {
             <div className="lunari-card p-5 space-y-4">
               <h3 className="font-medium">Informações do Cliente</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Nome</span>
-                  <span className="font-medium">{supabaseGallery.clienteNome || 'N/A'}</span>
+                  {effectiveClienteId ? (
+                    <Link
+                      to={`/app/clientes/${effectiveClienteId}`}
+                      className="font-medium text-primary hover:underline inline-flex items-center gap-1.5 group"
+                      title="Ver perfil do cliente no CRM"
+                    >
+                      <span>{supabaseGallery.clienteNome || 'N/A'}</span>
+                      <ExternalLink className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100" />
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{supabaseGallery.clienteNome || 'N/A'}</span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Email</span>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -21,7 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CoverCatalog } from '@/components/deliver/CoverCatalog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseGalleries, GaleriaPhoto } from '@/hooks/useSupabaseGalleries';
 import { supabase } from '@/integrations/supabase/client';
 import { ReactivateGalleryDialog } from '@/components/ReactivateGalleryDialog';
@@ -96,6 +96,38 @@ export default function DeliverDetail() {
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
 
   const gallery = useMemo(() => getGallery(id || ''), [id, galleries]);
+
+  // Resolve client ID (from gallery directly, or fallback to session/name search)
+  const { data: resolvedClienteId } = useQuery({
+    queryKey: ['gallery-resolved-client', gallery?.clienteId, gallery?.sessionId, gallery?.clienteNome],
+    queryFn: async () => {
+      if (gallery?.clienteId) return gallery.clienteId;
+
+      if (gallery?.sessionId) {
+        const { data: sess } = await supabase
+          .from('clientes_sessoes')
+          .select('cliente_id')
+          .eq('session_id', gallery.sessionId)
+          .maybeSingle();
+        if (sess?.cliente_id) return sess.cliente_id;
+      }
+
+      if (gallery?.clienteNome) {
+        const { data: client } = await supabase
+          .from('clientes')
+          .select('id')
+          .ilike('nome', gallery.clienteNome.trim())
+          .limit(1)
+          .maybeSingle();
+        if (client?.id) return client.id;
+      }
+
+      return null;
+    },
+    enabled: !!gallery,
+  });
+
+  const effectiveClienteId = gallery?.clienteId || resolvedClienteId;
 
   // Load gallery data
   useEffect(() => {
@@ -344,7 +376,18 @@ export default function DeliverDetail() {
               <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
-              {gallery.clienteNome || 'Sem cliente'} · {format(gallery.createdAt, "dd MMM yyyy", { locale: ptBR })} · {photos.length} fotos
+              {effectiveClienteId ? (
+                <Link 
+                  to={`/app/clientes/${effectiveClienteId}`}
+                  className="hover:underline hover:text-foreground font-medium text-foreground inline-flex items-center gap-1 group"
+                  title="Ver perfil do cliente no CRM"
+                >
+                  <span>{gallery.clienteNome || 'Sem cliente'}</span>
+                  <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                </Link>
+              ) : (
+                gallery.clienteNome || 'Sem cliente'
+              )} · {format(gallery.createdAt, "dd MMM yyyy", { locale: ptBR })} · {photos.length} fotos
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -840,7 +883,20 @@ export default function DeliverDetail() {
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">Cliente</h4>
               <div className="space-y-1 text-sm">
-                <div>{gallery.clienteNome || '—'}</div>
+                <div>
+                  {effectiveClienteId ? (
+                    <Link
+                      to={`/app/clientes/${effectiveClienteId}`}
+                      className="font-medium text-primary hover:underline inline-flex items-center gap-1 group"
+                      title="Ver perfil do cliente no CRM"
+                    >
+                      <span>{gallery.clienteNome || '—'}</span>
+                      <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                    </Link>
+                  ) : (
+                    gallery.clienteNome || '—'
+                  )}
+                </div>
                 <div className="text-muted-foreground">{gallery.clienteEmail || '—'}</div>
                 <div className="text-muted-foreground">{gallery.clienteTelefone || '—'}</div>
               </div>
