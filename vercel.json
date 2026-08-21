@@ -10,19 +10,47 @@
     },
     {
       "source": "/g/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
+        }
+      ],
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?token=:token"
     },
     {
       "source": "/c/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
+        }
+      ],
       "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?token=:token&type=deliver"
     },
     {
       "source": "/formulario/:token",
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/public-link-preview?type=form&token=:token"
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
+        }
+      ],
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?type=form&token=:token"
     },
     {
       "source": "/p/:token",
-      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/public-link-preview?type=proposal&token=:token"
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(whatsapp|facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|slack-imgproxy|telegrambot|discordbot|skypeuripreview|googlebot|google-inspectiontool|bingbot|yandexbot|duckduckbot|preview|embedly|redditbot|pinterest|applebot|iframely|vkshare|snapchat|line-poker|nuzzel|qwantify|baiduspider|msnbot|mediapartners-google|whatsapp-preview|w3c_validator|opengraph|metatags).*"
+        }
+      ],
+      "destination": "https://tlnjspsywycbudhewsfv.supabase.co/functions/v1/gallery-og?type=proposal&token=:token"
     },
     {
       "source": "/sitemap.xml",

@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -137,11 +137,20 @@ serve(async (req) => {
       if (form) {
         const [{ data: settings }, { data: profile }] = await Promise.all([
           supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", form.user_id).maybeSingle(),
-          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", form.user_id).maybeSingle(),
+          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("user_id", form.user_id).maybeSingle(),
         ]);
 
-        brandName = (settings?.studio_name || profile?.empresa || profile?.nome || "Fotografia").toString().trim();
-        ogImageUrl = (settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || FALLBACK_OG_IMAGE).toString().trim();
+        const studioCandidate = (settings?.studio_name || "").trim();
+        const companyCandidate = (profile?.empresa || "").trim();
+        const nameCandidate = (profile?.nome || "").trim();
+
+        if (studioCandidate && studioCandidate !== "Meu Estúdio") brandName = studioCandidate;
+        else if (companyCandidate) brandName = companyCandidate;
+        else if (nameCandidate) brandName = nameCandidate;
+
+        const candidateLogo = (profile?.logo_url || settings?.studio_logo_url || profile?.avatar_url || "").trim();
+        ogImageUrl = (candidateLogo.startsWith("http://") || candidateLogo.startsWith("https://")) ? candidateLogo : FALLBACK_OG_IMAGE;
+
         const formTitle = (form.titulo_cliente || form.titulo || "Formulário").toString().trim();
         title = `${formTitle} — ${brandName}`;
         desc = (form.descricao || "Por favor, preencha este formulário para alinharmos os detalhes do seu ensaio.").toString().trim();
@@ -157,11 +166,20 @@ serve(async (req) => {
         const [{ data: material }, { data: settings }, { data: profile }] = await Promise.all([
           supabase.from("commercial_materials").select("title, cover_image_url").eq("id", share.material_id).maybeSingle(),
           supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", share.user_id).maybeSingle(),
-          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", share.user_id).maybeSingle(),
+          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("user_id", share.user_id).maybeSingle(),
         ]);
 
-        brandName = (settings?.studio_name || profile?.empresa || profile?.nome || "Fotografia").toString().trim();
-        ogImageUrl = (material?.cover_image_url || settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || FALLBACK_OG_IMAGE).toString().trim();
+        const studioCandidate = (settings?.studio_name || "").trim();
+        const companyCandidate = (profile?.empresa || "").trim();
+        const nameCandidate = (profile?.nome || "").trim();
+
+        if (studioCandidate && studioCandidate !== "Meu Estúdio") brandName = studioCandidate;
+        else if (companyCandidate) brandName = companyCandidate;
+        else if (nameCandidate) brandName = nameCandidate;
+
+        const candidateImg = (material?.cover_image_url || profile?.logo_url || settings?.studio_logo_url || profile?.avatar_url || "").trim();
+        ogImageUrl = (candidateImg.startsWith("http://") || candidateImg.startsWith("https://")) ? candidateImg : FALLBACK_OG_IMAGE;
+
         const proposalTitle = (material?.title || "Proposta").toString().trim();
         title = `${proposalTitle} — ${brandName}`;
         desc = "Confira a proposta exclusiva preparada especialmente para você.";
@@ -177,11 +195,20 @@ serve(async (req) => {
         const [{ data: material }, { data: settings }, { data: profile }] = await Promise.all([
           supabase.from("commercial_materials").select("title, cover_image_url").eq("id", shareLink.material_id).maybeSingle(),
           supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", shareLink.user_id).maybeSingle(),
-          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", shareLink.user_id).maybeSingle(),
+          supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("user_id", shareLink.user_id).maybeSingle(),
         ]);
 
-        brandName = (settings?.studio_name || profile?.empresa || profile?.nome || "Fotografia").toString().trim();
-        ogImageUrl = (material?.cover_image_url || settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || FALLBACK_OG_IMAGE).toString().trim();
+        const studioCandidate = (settings?.studio_name || "").trim();
+        const companyCandidate = (profile?.empresa || "").trim();
+        const nameCandidate = (profile?.nome || "").trim();
+
+        if (studioCandidate && studioCandidate !== "Meu Estúdio") brandName = studioCandidate;
+        else if (companyCandidate) brandName = companyCandidate;
+        else if (nameCandidate) brandName = nameCandidate;
+
+        const candidateImg = (material?.cover_image_url || profile?.logo_url || settings?.studio_logo_url || profile?.avatar_url || "").trim();
+        ogImageUrl = (candidateImg.startsWith("http://") || candidateImg.startsWith("https://")) ? candidateImg : FALLBACK_OG_IMAGE;
+
         const proposalTitle = (material?.title || "Proposta").toString().trim();
         title = `${proposalTitle} — ${brandName}`;
         desc = "Confira a proposta exclusiva preparada para você.";

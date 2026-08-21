@@ -335,11 +335,13 @@ export default function PhotographerApp() {
 
               {/* Rotas Públicas do Comercial */}
               <Route path="/p/:token" element={<PublicProposalViewer mode="tracked" />} />
-              <Route path="/:slug" element={<PublicProposalViewer mode="public" />} />
               
               {/* Rotas Públicas de Galeria */}
               <Route path="/g/:token" element={<ClientGallery />} />
               <Route path="/c/:token" element={<ClientDeliverGallery data={{} as any} />} />
+              
+              {/* Rota Pública de Proposta por Slug (deve vir após as rotas prefixadas) */}
+              <Route path="/:slug" element={<PublicProposalViewer mode="public" />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

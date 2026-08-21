@@ -234,26 +234,32 @@ serve(async (req) => {
     // Ramo BOT / CRAWLER (WhatsApp, Facebook, iMessage, etc.) — HTML branded
     // ─────────────────────────────────────────────────────────────
     const [{ data: profile }, { data: settings }, { data: cliente }] = await Promise.all([
-      supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("id", cobranca.user_id).maybeSingle(),
-      supabase.from("gallery_settings").select("studio_name, studio_logo_url").eq("user_id", cobranca.user_id).maybeSingle(),
+      supabase.from("profiles").select("nome, empresa, logo_url, avatar_url").eq("user_id", cobranca.user_id).maybeSingle(),
+      supabase.from("gallery_settings").select("studio_name, studio_logo_url, theme_overrides").eq("user_id", cobranca.user_id).maybeSingle(),
       cobranca.cliente_id
         ? supabase.from("clientes").select("nome").eq("id", cobranca.cliente_id).maybeSingle()
         : Promise.resolve({ data: null as { nome: string | null } | null }),
     ]);
 
-    const brandName = (
-      settings?.studio_name ||
-      profile?.empresa ||
-      profile?.nome ||
-      "Fotografia"
-    ).toString().trim() || "Fotografia";
+    const studioCandidate = (settings?.studio_name || "").trim();
+    const companyCandidate = (profile?.empresa || "").trim();
+    const nameCandidate = (profile?.nome || "").trim();
 
-    const ogImageUrl = (
-      settings?.studio_logo_url ||
-      profile?.logo_url ||
-      profile?.avatar_url ||
-      FALLBACK_OG_IMAGE
-    ).toString().trim() || FALLBACK_OG_IMAGE;
+    let brandName = "Fotografia";
+    if (studioCandidate && studioCandidate !== "Meu Estúdio") {
+      brandName = studioCandidate;
+    } else if (companyCandidate) {
+      brandName = companyCandidate;
+    } else if (nameCandidate) {
+      brandName = nameCandidate;
+    }
+
+    const themeOverrides = (settings?.theme_overrides as Record<string, any>) || {};
+    const billingLogo = (themeOverrides.billing_logo_url || themeOverrides.billingLogoUrl || "").toString().trim();
+    const candidateLogo = (billingLogo || settings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || "").trim();
+    const ogImageUrl = (candidateLogo.startsWith("http://") || candidateLogo.startsWith("https://"))
+      ? candidateLogo
+      : FALLBACK_OG_IMAGE;
 
     const valorFmt = formatBRL(Number(cobranca.valor || 0));
     const primeiroNome = firstName(cliente?.nome);
@@ -274,11 +280,11 @@ serve(async (req) => {
       desc = "Este link de pagamento não está mais ativo.";
       bodyMessage = "Link de pagamento não disponível";
     } else {
-      // Bot em cobrança ativa: mostra o card de preview e mantém o link textual
+      // Bot em cobrança ativa: texto limpo sem redundâncias
       const saudacao = primeiroNome ? `Olá, ${primeiroNome}! ` : "";
-      const descSuffix = descRaw ? ` referente a ${truncate(descRaw, 90)}` : "";
+      const descSuffix = descRaw ? ` — ${truncate(descRaw, 90)}` : "";
       title = `Pagamento para ${brandName} — ${valorFmt}`;
-      desc = `${saudacao}Sua cobrança de ${valorFmt}${descSuffix}. Pague com PIX, cartão ou boleto em ambiente seguro.`;
+      desc = `${saudacao}Sua cobrança de ${valorFmt}${descSuffix}.`;
       bodyMessage = `Pagamento de ${valorFmt}`;
       linkHref = absoluteTarget;
     }

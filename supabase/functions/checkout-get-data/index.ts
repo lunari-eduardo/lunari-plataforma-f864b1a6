@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     const [profileRes, gallerySettingsRes, galleryThemeRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('nome, avatar_url')
+        .select('nome, avatar_url, logo_url')
         .eq('user_id', cobranca.user_id)
         .maybeSingle(),
       supabase
@@ -100,8 +100,10 @@ Deno.serve(async (req) => {
       galleryToken = gal?.public_token || null;
     }
 
-    // Logotipo: prioriza gallery_settings.studio_logo_url, depois profiles.avatar_url
-    const logoUrl = gallerySettings?.studio_logo_url || profile?.avatar_url || null;
+    // Logotipo de cobrança: prioriza billing_logo_url, depois studio_logo_url, depois profile.logo_url, depois avatar_url
+    const themeOverrides = (gallerySettings?.theme_overrides as Record<string, any>) || {};
+    const billingLogo = themeOverrides.billing_logo_url || themeOverrides.billingLogoUrl || null;
+    const logoUrl = billingLogo || gallerySettings?.studio_logo_url || profile?.logo_url || profile?.avatar_url || null;
 
     // 2b. Fetch payer hints — pré-preenchimento + flags de campos ausentes via cascata canônica.
     const resolvedHints = await resolvePayerHints({

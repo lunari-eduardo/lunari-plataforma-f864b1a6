@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGallerySettings } from '@/hooks/useGallerySettings';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { CustomizationAppearanceTab } from '@/components/settings/customization/CustomizationAppearanceTab';
 import { CustomizationCommunicationTab } from '@/components/settings/customization/CustomizationCommunicationTab';
 
@@ -15,6 +16,7 @@ export default function GalleryCustomizationPage() {
     updateEmailTemplate,
     isUpdatingEmailTemplate
   } = useGallerySettings();
+  const { profile } = useUserProfile();
   
   const [activeTab, setActiveTab] = useState('aparencia');
 
@@ -67,7 +69,7 @@ export default function GalleryCustomizationPage() {
               settings={settings}
               updateSettings={updateSettings}
               studioName={settings.studioName}
-              studioLogoUrl={settings.studioLogo}
+              studioLogoUrl={settings.studioLogo || profile?.logo_url || undefined}
             />
           </TabsContent>
 
