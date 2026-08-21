@@ -106,13 +106,13 @@ export function ClientGalleryHeader({
             )}
           </div>
           
-          {/* Logo do Estúdio - Centralizado */}
+          {/* Logo do Estúdio - Centralizado (reduzido em 10%) */}
           <div className="flex flex-col items-center">
             {studioLogoUrl ? (
               <img 
                 src={studioLogoUrl} 
                 alt={studioName || 'Logo'} 
-                className="h-20 sm:h-24 md:h-28 lg:h-32 w-auto object-contain"
+                className="h-[72px] sm:h-[86px] md:h-[100px] lg:h-[115px] max-w-[280px] w-auto object-contain"
               />
             ) : (
               <Logo size="md" variant="gallery" />

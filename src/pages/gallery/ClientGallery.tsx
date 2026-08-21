@@ -52,6 +52,7 @@ import { calcularPrecoProgressivoComCredito, RegrasCongeladas } from '@/lib/pric
 import { getFontFamilyById } from '@/components/FontSelect';
 import { applyTitleCase } from '@/lib/textTransform';
 import { useImageProtection } from '@/hooks/useImageProtection';
+import { useGalleryBranding } from '@/hooks/useGalleryBranding';
 import ClientDeliverGallery from '@/pages/gallery/ClientDeliverGallery';
 import { applyTheme, DEFAULT_THEME, type ThemePresetId, type VisualThemeMode } from '@/lib/visualTheme';
 import { resolveGalleryColorTokens } from '@/components/gallery/themes/tokens';
@@ -548,6 +549,12 @@ export default function ClientGallery() {
       extraTotal: 0,
     };
   }, [supabaseGallery]);
+
+  // Hook de branding: favicon dinâmico e título da aba com nome fantasia do fotógrafo (com fallback Lunari)
+  useGalleryBranding({
+    sessionName: transformedGallery?.sessionName || galleryResponse?.sessionName,
+    studioSettings: galleryResponse?.studioSettings,
+  });
 
   // Check if deadline is actually set in database
   const hasDeadline = !!supabaseGallery?.prazo_selecao;
@@ -1117,7 +1124,7 @@ export default function ClientGallery() {
           <img
             src={galleryResponse.studioSettings.studio_logo_url}
             alt=""
-            className="h-16 max-w-[200px] object-contain mb-8 opacity-80"
+            className="h-14 max-w-[180px] object-contain mb-8 opacity-80"
           />
         )}
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
@@ -1136,7 +1143,7 @@ export default function ClientGallery() {
           <img 
             src={galleryResponse.studioSettings.studio_logo_url} 
             alt="" 
-            className="h-16 max-w-[200px] object-contain mb-6 opacity-60"
+            className="h-14 max-w-[180px] object-contain mb-6 opacity-60"
           />
         )}
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
@@ -2077,7 +2084,7 @@ export default function ClientGallery() {
               <img 
                 src={galleryResponse.studioSettings.studio_logo_url} 
                 alt={galleryResponse?.studioSettings?.studio_name || 'Logo do estúdio'} 
-                className="h-[100px] sm:h-[120px] md:h-[150px] max-w-[280px] sm:max-w-[360px] md:max-w-[450px] object-contain mb-8" 
+                className="h-[90px] sm:h-[108px] md:h-[135px] max-w-[250px] sm:max-w-[324px] md:max-w-[405px] object-contain mb-8" 
               />
             )}
 
@@ -2125,7 +2132,7 @@ export default function ClientGallery() {
               <img 
                 src={galleryResponse.studioSettings.studio_logo_url} 
                 alt={galleryResponse?.studioSettings?.studio_name || 'Logo'} 
-                className="h-10 max-w-[180px] object-contain"
+                className="h-9 max-w-[162px] object-contain"
               />
             )}
           </div>
@@ -2423,7 +2430,7 @@ export default function ClientGallery() {
             <img 
               src={galleryResponse.studioSettings.studio_logo_url} 
               alt={galleryResponse?.studioSettings?.studio_name || 'Logo'} 
-              className="h-24 sm:h-28 md:h-36 lg:h-40 max-w-[320px] object-contain"
+              className="h-[86px] sm:h-[100px] md:h-[130px] lg:h-[144px] max-w-[288px] object-contain"
             />
           </header>
         )}

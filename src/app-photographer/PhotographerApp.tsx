@@ -338,7 +338,7 @@ export default function PhotographerApp() {
               
               {/* Rotas Públicas de Galeria */}
               <Route path="/g/:token" element={<ClientGallery />} />
-              <Route path="/c/:token" element={<ClientDeliverGallery data={{} as any} />} />
+              <Route path="/c/:token" element={<ClientGallery />} />
               
               {/* Rota Pública de Proposta por Slug (deve vir após as rotas prefixadas) */}
               <Route path="/:slug" element={<PublicProposalViewer mode="public" />} />

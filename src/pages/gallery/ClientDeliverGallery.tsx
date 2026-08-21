@@ -14,6 +14,7 @@ import { PhotoPaths, getPhotoUrl as getPhotoUrlLib } from '@/lib/photoUrl';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { sortPhotosByNaturalFilename } from '@/lib/photoOrdering';
+import { useGalleryBranding } from '@/hooks/useGalleryBranding';
 
 interface DeliverGalleryData {
   gallery: {
@@ -141,15 +142,10 @@ export default function ClientDeliverGallery({ data }: Props) {
     ? { storageKey: coverPhotoSource.storageKey, previewPath: coverPhotoSource.previewPath, width: coverPhotoSource.width, height: coverPhotoSource.height }
     : null;
 
-  useEffect(() => {
-    if (studioSettings?.favicon_url) {
-      const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement || document.createElement('link');
-      link.rel = 'icon';
-      link.href = studioSettings.favicon_url;
-      document.head.appendChild(link);
-    }
-    document.title = gallery.sessionName || 'Galeria';
-  }, [studioSettings, gallery.sessionName]);
+  useGalleryBranding({
+    sessionName: gallery.sessionName,
+    studioSettings,
+  });
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);

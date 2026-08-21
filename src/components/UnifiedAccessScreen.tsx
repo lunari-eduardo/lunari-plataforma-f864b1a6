@@ -113,7 +113,7 @@ export function UnifiedAccessScreen({
             <img 
               src={studioLogo} 
               alt={studioName || 'Studio'} 
-              className="h-28 md:h-36 lg:h-44 w-auto object-contain animate-fade-in"
+              className="h-[100px] md:h-[130px] lg:h-[158px] w-auto object-contain animate-fade-in"
             />
           ) : (
             <span className="text-xl tracking-[0.2em] uppercase font-light opacity-60">
