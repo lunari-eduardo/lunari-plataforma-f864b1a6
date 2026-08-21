@@ -10,7 +10,6 @@ const GALLERY_BASE_URL = 'https://app.lunarihub.com';
 const RESEND_API_URL = 'https://api.resend.com/emails';
 
 type EventType = 'gallery_sent' | 'payment_confirmed' | 'gallery_reactivated' | 'selection_confirmed' | 'selection_reminder';
-type DeliveryStatus = 'enviado' | 'erro' | 'ignorado';
 
 interface RequestBody {
   eventType?: EventType;
@@ -19,6 +18,10 @@ interface RequestBody {
   publicToken?: string;
   visitorId?: string;
   forceResend?: boolean;
+  isDeliver?: boolean;
+  customSubject?: string;
+  customBody?: string;
+  recipientEmail?: string;
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -87,7 +90,7 @@ async function getPhotographerReplyTo(supabase: any, userId: string) {
 function textToHtmlParagraphs(text: string) {
   return escapeHtml(text)
     .split(/\n{2,}/)
-    .map((paragraph) => `<p style="margin:0 0 18px;color:#211b18;font-size:16px;line-height:1.65;">${paragraph.replace(/\n/g, '<br>')}</p>`)
+    .map((paragraph) => `<p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">${paragraph.replace(/\n/g, '<br>')}</p>`)
     .join('');
 }
 
@@ -106,12 +109,78 @@ function paymentMethodLabel(payment: any): string {
   return provider || 'Pagamento';
 }
 
-function buildLayout(params: { preview: string; title: string; children: string; buttonUrl?: string; buttonText?: string; studioName: string }) {
+interface DetailItem {
+  label: string;
+  value: string;
+  isBold?: boolean;
+}
+
+interface BuildLayoutParams {
+  preview: string;
+  title: string;
+  children: string;
+  buttonUrl?: string;
+  buttonText?: string;
+  studioName: string;
+  studioLogoUrl?: string | null;
+  primaryColor?: string | null;
+  badgeText?: string | null;
+  details?: DetailItem[];
+}
+
+/**
+ * Constrói o layout HTML do e-mail com design premium, alinhado à identidade visual
+ * do fotógrafo (cores do tema, logo do estúdio e tipografia editorial).
+ */
+function buildLayout(params: BuildLayoutParams) {
+  const primaryColor = params.primaryColor || '#A4553A';
+  
+  // Header: Logo do estúdio ou Nome Fantasia estilizado
+  const headerContent = params.studioLogoUrl
+    ? `<div style="text-align:center;margin-bottom:28px;">
+        <img src="${escapeHtml(params.studioLogoUrl)}" alt="${escapeHtml(params.studioName)}" style="max-height:56px;max-width:240px;height:auto;width:auto;object-fit:contain;display:inline-block;" />
+       </div>`
+    : `<div style="text-align:center;margin-bottom:24px;">
+        <span style="font-size:13px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:${escapeHtml(primaryColor)};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+          ${escapeHtml(params.studioName)}
+        </span>
+       </div>`;
+
+  // Badge opcional (ex: "Galeria de Entrega" ou "Seleção de Fotos")
+  const badgeHtml = params.badgeText
+    ? `<div style="text-align:center;margin-bottom:16px;">
+        <span style="display:inline-block;background-color:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.08);color:#6B635B;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:20px;">
+          ${escapeHtml(params.badgeText)}
+        </span>
+       </div>`
+    : '';
+
+  // Box de detalhes / informações da sessão
+  let detailsHtml = '';
+  if (params.details && params.details.length > 0) {
+    const rows = params.details.map((d, index) => {
+      const borderStyle = index > 0 ? 'border-top:1px solid #EBE5DF;' : '';
+      return `<tr>
+        <td style="padding:11px 16px;color:#78716C;font-size:13px;${borderStyle}">${escapeHtml(d.label)}</td>
+        <td align="right" style="padding:11px 16px;color:#1C1917;font-size:13px;${d.isBold ? 'font-weight:700;' : 'font-weight:500;'}${borderStyle}">${escapeHtml(d.value)}</td>
+      </tr>`;
+    }).join('');
+
+    detailsHtml = `
+      <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#F9F8F6;border:1px solid #EAE5DF;border-radius:12px;margin:22px 0 10px;overflow:hidden;">
+        ${rows}
+      </table>
+    `;
+  }
+
+  // Botão CTA estilizado com a cor da identidade do fotógrafo
   const button = params.buttonUrl ? `
-    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 24px;width:100%;">
+    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0 20px;width:100%;">
       <tr>
         <td align="center">
-          <a href="${escapeHtml(params.buttonUrl)}" style="display:inline-block;background:#a4553a;color:#ffffff;text-decoration:none;font-weight:700;font-size:16px;line-height:1;border-radius:10px;padding:16px 24px;">${escapeHtml(params.buttonText || 'Acessar')}</a>
+          <a href="${escapeHtml(params.buttonUrl)}" style="display:inline-block;background-color:${escapeHtml(primaryColor)};color:#FFFFFF;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.04em;text-transform:uppercase;border-radius:10px;padding:16px 36px;box-shadow:0 4px 14px rgba(0,0,0,0.12);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            ${escapeHtml(params.buttonText || 'Acessar')}
+          </a>
         </td>
       </tr>
     </table>` : '';
@@ -123,19 +192,41 @@ function buildLayout(params: { preview: string; title: string; children: string;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${escapeHtml(params.title)}</title>
   </head>
-  <body style="margin:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#211b18;">
+  <body style="margin:0;background-color:#F5F4F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2D2A26;-webkit-font-smoothing:antialiased;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(params.preview)}</div>
-    <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;background:#ffffff;padding:24px 12px;">
+    <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;background-color:#F5F4F0;padding:40px 16px 48px;">
       <tr>
         <td align="center">
-          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;max-width:560px;border:1px solid #eadfd8;border-radius:18px;overflow:hidden;">
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;max-width:580px;background:#FFFFFF;border:1px solid #E8E3DC;border-radius:20px;box-shadow:0 8px 30px rgba(0,0,0,0.04);overflow:hidden;">
             <tr>
-              <td style="padding:34px 28px 26px;">
-                <p style="margin:0 0 10px;color:#a4553a;font-size:13px;font-weight:700;letter-spacing:.02em;">${escapeHtml(params.studioName)}</p>
-                <h1 style="margin:0 0 20px;color:#211b18;font-size:28px;line-height:1.18;font-weight:800;">${escapeHtml(params.title)}</h1>
-                ${params.children}
+              <td style="padding:44px 36px 36px;">
+                ${headerContent}
+                ${badgeHtml}
+                <h1 style="margin:0 0 22px;color:#1C1917;font-size:26px;line-height:1.25;font-weight:700;text-align:center;font-family:Georgia,'Times New Roman',serif;">
+                  ${escapeHtml(params.title)}
+                </h1>
+                
+                <div style="margin:0 0 8px;">
+                  ${params.children}
+                </div>
+
+                ${detailsHtml}
                 ${button}
-                <p style="margin:28px 0 0;color:#6f625c;font-size:14px;line-height:1.6;">Com carinho,<br><strong>${escapeHtml(params.studioName)}</strong></p>
+
+                <div style="margin-top:32px;padding-top:20px;border-top:1px solid #F0ECE7;text-align:center;">
+                  <p style="margin:0;color:#78716C;font-size:13px;line-height:1.6;">
+                    Com carinho,<br>
+                    <strong style="color:#1C1917;font-size:14px;">${escapeHtml(params.studioName)}</strong>
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;max-width:580px;margin-top:20px;">
+            <tr>
+              <td align="center" style="color:#A8A29E;font-size:11px;line-height:1.5;">
+                Enviado com carinho através de <a href="https://lunarihub.com" style="color:#A8A29E;text-decoration:underline;">Lunari</a>
               </td>
             </tr>
           </table>
@@ -224,14 +315,14 @@ Deno.serve(async (req: Request) => {
     if (!callerUserId) return jsonResponse({ success: false, status: 'erro', message: 'Autenticação obrigatória' }, 401);
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // 1. EVENTO: GALLERY_SENT (Envio de galeria)
+    // 1. EVENTO: GALLERY_SENT (Envio de galeria - Seleção ou Entrega)
     // ─────────────────────────────────────────────────────────────────────────────
     if (body.eventType === 'gallery_sent') {
       if (!body.galleryId) return jsonResponse({ success: false, status: 'erro', message: 'Galeria não informada' }, 400);
 
       const { data: gallery, error: galleryError } = await supabase
         .from('galerias')
-        .select('id, user_id, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, gallery_password, public_token, prazo_selecao, total_fotos, fotos_selecionadas, total_fotos_extras_vendidas, valor_extras')
+        .select('id, user_id, tipo, cliente_id, cliente_nome, cliente_email, nome_sessao, permissao, gallery_password, public_token, prazo_selecao, total_fotos, fotos_selecionadas, total_fotos_extras_vendidas, valor_extras, theme_id, use_custom_theme, theme_overrides')
         .eq('id', body.galleryId)
         .maybeSingle();
 
@@ -240,7 +331,8 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: false, status: 'erro', message: 'Sem permissão para enviar e-mail desta galeria' }, 403);
       }
 
-      const isForceResend = Boolean(body.forceResend);
+      const isDeliver = Boolean(body.isDeliver || gallery.tipo === 'entrega');
+      const isForceResend = Boolean(body.forceResend || body.customSubject || body.customBody || body.recipientEmail);
       const idempotencyKey = isForceResend
         ? `gallery_sent:${gallery.id}:${Date.now()}`
         : `gallery_sent:${gallery.id}`;
@@ -250,36 +342,51 @@ Deno.serve(async (req: Request) => {
         if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado anteriormente.', logId: sent.id });
       }
 
-      const { data: settings } = await supabase
-        .from('gallery_settings')
-        .select('studio_name, email_sending_enabled, email_on_gallery_sent')
-        .eq('user_id', gallery.user_id)
-        .maybeSingle();
+      const [{ data: settings }, { data: ownerProfile }] = await Promise.all([
+        supabase
+          .from('gallery_settings')
+          .select('*')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('nome, empresa, logo_url, email')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+      ]);
+
+      const targetEmail = (body.recipientEmail || gallery.cliente_email || '').trim();
 
       const baseLog = {
         user_id: gallery.user_id,
         cliente_id: gallery.cliente_id || null,
         cliente_nome: gallery.cliente_nome || null,
-        cliente_email: gallery.cliente_email || null,
+        cliente_email: targetEmail || null,
         event_type: 'gallery_sent',
         gallery_id: gallery.id,
         payment_id: null,
         idempotency_key: idempotencyKey,
-        metadata: { source: 'gallery_sent', publicTokenProvided: Boolean(body.publicToken), isResend: isForceResend },
+        metadata: { 
+          source: 'gallery_sent', 
+          isDeliver,
+          publicTokenProvided: Boolean(body.publicToken), 
+          isResend: isForceResend,
+          customRecipient: Boolean(body.recipientEmail)
+        },
         updated_at: new Date().toISOString(),
       };
 
-      if (settings?.email_sending_enabled === false) {
+      if (!isForceResend && settings?.email_sending_enabled === false) {
         await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio automático desativado' });
         return jsonResponse({ success: true, status: 'ignorado', message: 'E-mails automáticos estão desativados.' });
       }
-      if (settings?.email_on_gallery_sent === false) {
+      if (!isForceResend && settings?.email_on_gallery_sent === false) {
         await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Envio de galeria desativado' });
         return jsonResponse({ success: true, status: 'ignorado', message: 'Envio de e-mail de galeria está desativado.' });
       }
-      if (!gallery.cliente_email) {
-        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail cadastrado' });
-        return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
+      if (!targetEmail || !isValidEmail(targetEmail)) {
+        await upsertLog(supabase, { ...baseLog, status: 'ignorado', friendly_message: 'Cliente sem e-mail válido cadastrado' });
+        return jsonResponse({ success: false, status: 'erro', message: 'Destinatário sem e-mail válido cadastrado.' }, 400);
       }
 
       const token = body.publicToken || gallery.public_token;
@@ -288,9 +395,48 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: true, status: 'ignorado', message: 'Link da galeria indisponível.' });
       }
 
-      const studioName = settings?.studio_name || 'Lunari';
+      // 🎨 Resolução de Identidade Visual e Cores do Tema do Fotógrafo
+      const studioCandidate = (settings?.studio_name || '').trim();
+      const companyCandidate = (ownerProfile?.empresa || '').trim();
+      const nameCandidate = (ownerProfile?.nome || '').trim();
+      let studioName = 'Lunari';
+      if (studioCandidate && studioCandidate !== 'Meu Estúdio') {
+        studioName = studioCandidate;
+      } else if (companyCandidate) {
+        studioName = companyCandidate;
+      } else if (nameCandidate) {
+        studioName = nameCandidate;
+      } else if (studioCandidate) {
+        studioName = studioCandidate;
+      }
+
+      const studioLogoUrl =
+        (settings?.studio_logo_url && String(settings.studio_logo_url).trim()) ||
+        (ownerProfile?.logo_url && String(ownerProfile.logo_url).trim()) ||
+        null;
+
+      // Cor primária do tema ativo
+      let primaryColor = '#A4553A';
+      const themeId = gallery.use_custom_theme ? gallery.theme_id : (settings?.active_theme_id || settings?.default_theme_id);
+      if (themeId && themeId !== 'lunari' && themeId !== 'system') {
+        const { data: themeData } = await supabase
+          .from('gallery_themes')
+          .select('primary_color')
+          .eq('id', themeId)
+          .maybeSingle();
+        if (themeData?.primary_color) {
+          primaryColor = themeData.primary_color;
+        }
+      }
+      if (gallery.theme_overrides?.primary_color) {
+        primaryColor = gallery.theme_overrides.primary_color;
+      } else if (settings?.theme_overrides?.primary_color) {
+        primaryColor = settings.theme_overrides.primary_color;
+      }
+
       const replyTo = await getPhotographerReplyTo(supabase, gallery.user_id);
       const galleryUrl = `${GALLERY_BASE_URL}/g/${encodeURIComponent(token)}`;
+
       const { data: template } = await supabase
         .from('gallery_email_templates')
         .select('subject, body')
@@ -309,32 +455,75 @@ Deno.serve(async (req: Request) => {
         fotos_extras: String(gallery.total_fotos_extras_vendidas || 0),
         valor_extra: formatCurrency(gallery.valor_extras || 0),
       };
-      const subject = replaceTemplateVariables(template?.subject || 'Suas fotos já estão prontas ✨', variables);
-      const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nVocê já pode visualizar, escolher suas favoritas e garantir suas fotos.\n\nAcesse sua galeria: {link}\n\nCom carinho,\n{estudio}', variables);
-      const passwordLine = gallery.permissao === 'private' && gallery.gallery_password
-        ? `<p style="margin:18px 0 0;color:#211b18;font-size:15px;line-height:1.6;"><strong>Senha de acesso:</strong> ${escapeHtml(gallery.gallery_password)}</p>`
-        : '';
+
+      let subject = '';
+      let bodyText = '';
+
+      if (body.customSubject && body.customSubject.trim()) {
+        subject = body.customSubject.trim();
+      } else if (isDeliver) {
+        subject = `Suas fotos finais estão prontas para download ✨ - ${gallery.nome_sessao || 'Galeria'}`;
+      } else {
+        subject = replaceTemplateVariables(template?.subject || 'Suas fotos já estão prontas ✨', variables);
+      }
+
+      if (body.customBody && body.customBody.trim()) {
+        bodyText = body.customBody.trim();
+      } else if (isDeliver) {
+        bodyText = `Olá, ${gallery.cliente_nome || 'Cliente'}!\n\nÉ com muita alegria que entregamos as fotos finais da sua sessão "${gallery.nome_sessao || 'Galeria'}"!\n\nSuas fotos já foram tratadas com todo o carinho e estão prontas para você visualizar, recordar e baixar em alta resolução.\n\nAproveite cada momento!`;
+      } else {
+        bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nVocê já pode visualizar, escolher suas favoritas e garantir suas fotos.\n\nAcesse sua galeria pelo link abaixo.\n\nCom carinho,\n{estudio}', variables);
+      }
+
+      // Detalhes da sessão
+      const detailsList: DetailItem[] = [
+        { label: 'Sessão', value: gallery.nome_sessao || 'Sessão de Fotos', isBold: true },
+      ];
+
+      if (gallery.total_fotos || gallery.fotos_selecionadas) {
+        detailsList.push({
+          label: isDeliver ? 'Fotos entregues' : 'Total de fotos',
+          value: `${gallery.total_fotos || gallery.fotos_selecionadas} fotos`,
+        });
+      }
+
+      if (gallery.permissao === 'private' && gallery.gallery_password) {
+        detailsList.push({
+          label: 'Senha de acesso',
+          value: gallery.gallery_password,
+          isBold: true,
+        });
+      }
+
+      if (gallery.prazo_selecao) {
+        detailsList.push({
+          label: isDeliver ? 'Disponível até' : 'Prazo de seleção',
+          value: formatDateOnly(gallery.prazo_selecao),
+        });
+      }
+
       const html = buildLayout({
         studioName,
+        studioLogoUrl,
+        primaryColor,
         title: subject,
-        preview: 'Você já pode visualizar, escolher suas favoritas e garantir suas fotos.',
+        badgeText: isDeliver ? 'Entrega de Fotos' : 'Seleção de Fotos',
+        preview: isDeliver ? 'Suas fotos em alta resolução já estão disponíveis para download.' : 'Você já pode visualizar, escolher suas favoritas e garantir suas fotos.',
         buttonUrl: galleryUrl,
-        buttonText: 'Acessar minha galeria',
-        children: `
-          ${textToHtmlParagraphs(bodyText)}
-          ${passwordLine}
-        `,
+        buttonText: isDeliver ? 'Acessar e Baixar Fotos' : 'Acessar Minha Galeria',
+        details: detailsList,
+        children: textToHtmlParagraphs(bodyText),
       });
 
       try {
-        const resendMessageId = await sendResendEmail(gallery.cliente_email, subject, html, { replyTo });
-        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail enviado para o cliente', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-        return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado para o cliente.', logId });
+        const resendMessageId = await sendResendEmail(targetEmail, subject, html, { replyTo });
+        const logId = await upsertLog(supabase, { ...baseLog, status: 'enviado', subject, resend_message_id: resendMessageId, friendly_message: 'E-mail de entrega enviado para o cliente', metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
+        return jsonResponse({ success: true, status: 'enviado', message: 'E-mail enviado com sucesso para o cliente.', logId });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const friendly = errorMessage === 'RESEND_API_KEY_MISSING' ? 'Configuração do Resend ausente' : 'Falha ao enviar pelo provedor';
         await upsertLog(supabase, { ...baseLog, status: 'erro', subject, friendly_message: friendly, error_message: errorMessage, metadata: { ...baseLog.metadata, replyToConfigured: Boolean(replyTo) } });
-        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage });
+        return jsonResponse({ success: false, status: 'erro', message: 'Não foi possível enviar o e-mail agora.', error: errorMessage }, 500);
       }
     }
 
@@ -366,11 +555,18 @@ Deno.serve(async (req: Request) => {
         if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado para esta reativação.', logId: sent.id });
       }
 
-      const { data: settings } = await supabase
-        .from('gallery_settings')
-        .select('studio_name, email_sending_enabled, email_on_gallery_reactivated')
-        .eq('user_id', gallery.user_id)
-        .maybeSingle();
+      const [{ data: settings }, { data: ownerProfile }] = await Promise.all([
+        supabase
+          .from('gallery_settings')
+          .select('*')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('nome, empresa, logo_url, email')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+      ]);
 
       const baseLog = {
         user_id: gallery.user_id,
@@ -404,7 +600,12 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: true, status: 'ignorado', message: 'Link da galeria indisponível.' });
       }
 
-      const studioName = settings?.studio_name || 'Lunari';
+      const studioCandidate = (settings?.studio_name || '').trim();
+      const companyCandidate = (ownerProfile?.empresa || '').trim();
+      const nameCandidate = (ownerProfile?.nome || '').trim();
+      const studioName = (studioCandidate && studioCandidate !== 'Meu Estúdio') ? studioCandidate : (companyCandidate || nameCandidate || 'Lunari');
+      const studioLogoUrl = settings?.studio_logo_url || ownerProfile?.logo_url || null;
+
       const replyTo = await getPhotographerReplyTo(supabase, gallery.user_id);
       const galleryUrl = `${GALLERY_BASE_URL}/g/${encodeURIComponent(token)}`;
       const { data: template } = await supabase
@@ -426,17 +627,25 @@ Deno.serve(async (req: Request) => {
         valor_extra: formatCurrency(gallery.valor_extras || 0),
       };
       const subject = replaceTemplateVariables(template?.subject || 'Sua galeria foi reaberta - {galeria}', variables);
-      const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nBoas notícias: a galeria "{galeria}" foi reaberta para você concluir sua seleção de fotos.\n\nVocê tem até {prazo} para escolher suas favoritas.\n\nAcesse: {link}\n\nCom carinho,\n{estudio}', variables);
-      const passwordLine = gallery.permissao === 'private' && gallery.gallery_password
-        ? `<p style="margin:18px 0 0;color:#211b18;font-size:15px;line-height:1.6;"><strong>Senha de acesso:</strong> ${escapeHtml(gallery.gallery_password)}</p>`
-        : '';
+      const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nBoas notícias: a galeria "{galeria}" foi reaberta para você concluir sua seleção de fotos.\n\nVocê tem até {prazo} para escolher suas favoritas.\n\nCom carinho,\n{estudio}', variables);
+      
+      const detailsList: DetailItem[] = [
+        { label: 'Sessão', value: gallery.nome_sessao || 'Galeria', isBold: true },
+        { label: 'Novo Prazo', value: formatDateOnly(gallery.prazo_selecao), isBold: true },
+      ];
+      if (gallery.permissao === 'private' && gallery.gallery_password) {
+        detailsList.push({ label: 'Senha de acesso', value: gallery.gallery_password });
+      }
+
       const html = buildLayout({
         studioName,
+        studioLogoUrl,
         title: subject,
         preview: 'Sua galeria foi reaberta para você concluir a seleção.',
         buttonUrl: galleryUrl,
-        buttonText: 'Acessar minha galeria',
-        children: `${textToHtmlParagraphs(bodyText)}${passwordLine}`,
+        buttonText: 'Acessar Minha Galeria',
+        details: detailsList,
+        children: textToHtmlParagraphs(bodyText),
       });
 
       try {
@@ -488,11 +697,18 @@ Deno.serve(async (req: Request) => {
       const sent = await alreadySent(supabase, idempotencyKey);
       if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail de confirmação de seleção já enviado.', logId: sent.id });
 
-      const { data: settings } = await supabase
-        .from('gallery_settings')
-        .select('studio_name, email_sending_enabled')
-        .eq('user_id', gallery.user_id)
-        .maybeSingle();
+      const [{ data: settings }, { data: ownerProfile }] = await Promise.all([
+        supabase
+          .from('gallery_settings')
+          .select('*')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('nome, empresa, logo_url, email')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+      ]);
 
       const baseLog = {
         user_id: gallery.user_id,
@@ -516,7 +732,12 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
       }
 
-      const studioName = settings?.studio_name || 'Lunari';
+      const studioCandidate = (settings?.studio_name || '').trim();
+      const companyCandidate = (ownerProfile?.empresa || '').trim();
+      const nameCandidate = (ownerProfile?.nome || '').trim();
+      const studioName = (studioCandidate && studioCandidate !== 'Meu Estúdio') ? studioCandidate : (companyCandidate || nameCandidate || 'Lunari');
+      const studioLogoUrl = settings?.studio_logo_url || ownerProfile?.logo_url || null;
+
       const replyTo = await getPhotographerReplyTo(supabase, gallery.user_id);
       const token = body.publicToken || gallery.public_token;
       const galleryUrl = token ? `${GALLERY_BASE_URL}/g/${encodeURIComponent(token)}` : undefined;
@@ -541,16 +762,26 @@ Deno.serve(async (req: Request) => {
 
       const subject = replaceTemplateVariables(template?.subject || 'Seleção confirmada! - {galeria}', variables);
       const bodyText = replaceTemplateVariables(
-        template?.body || 'Olá {cliente}!\n\nSua seleção da galeria "{galeria}" foi confirmada com sucesso!\n\nTotal de fotos selecionadas: {total_fotos}\nFotos extras: {fotos_extras}\nValor adicional: {valor_extra}\n\nEm breve entraremos em contato.\n\nCom carinho,\n{estudio}',
+        template?.body || 'Olá {cliente}!\n\nSua seleção da galeria "{galeria}" foi confirmada com sucesso!\n\nEm breve entraremos em contato.\n\nCom carinho,\n{estudio}',
         variables
       );
 
+      const detailsList: DetailItem[] = [
+        { label: 'Sessão', value: gallery.nome_sessao || 'Galeria', isBold: true },
+        { label: 'Fotos selecionadas', value: `${gallery.fotos_selecionadas || 0} fotos`, isBold: true },
+      ];
+      if (gallery.total_fotos_extras_vendidas) {
+        detailsList.push({ label: 'Fotos extras', value: `${gallery.total_fotos_extras_vendidas} fotos` });
+      }
+
       const html = buildLayout({
         studioName,
+        studioLogoUrl,
         title: subject,
         preview: 'Sua seleção de fotos foi confirmada com sucesso.',
         buttonUrl: galleryUrl,
-        buttonText: 'Acessar galeria',
+        buttonText: 'Acessar Galeria',
+        details: detailsList,
         children: `${textToHtmlParagraphs(bodyText)}`,
       });
 
@@ -588,11 +819,18 @@ Deno.serve(async (req: Request) => {
       const sent = await alreadySent(supabase, idempotencyKey);
       if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'Lembrete já enviado para este prazo.', logId: sent.id });
 
-      const { data: settings } = await supabase
-        .from('gallery_settings')
-        .select('studio_name, email_sending_enabled')
-        .eq('user_id', gallery.user_id)
-        .maybeSingle();
+      const [{ data: settings }, { data: ownerProfile }] = await Promise.all([
+        supabase
+          .from('gallery_settings')
+          .select('*')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('nome, empresa, logo_url, email')
+          .eq('user_id', gallery.user_id)
+          .maybeSingle(),
+      ]);
 
       const baseLog = {
         user_id: gallery.user_id,
@@ -622,7 +860,12 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: true, status: 'ignorado', message: 'Link da galeria indisponível.' });
       }
 
-      const studioName = settings?.studio_name || 'Lunari';
+      const studioCandidate = (settings?.studio_name || '').trim();
+      const companyCandidate = (ownerProfile?.empresa || '').trim();
+      const nameCandidate = (ownerProfile?.nome || '').trim();
+      const studioName = (studioCandidate && studioCandidate !== 'Meu Estúdio') ? studioCandidate : (companyCandidate || nameCandidate || 'Lunari');
+      const studioLogoUrl = settings?.studio_logo_url || ownerProfile?.logo_url || null;
+
       const replyTo = await getPhotographerReplyTo(supabase, gallery.user_id);
       const galleryUrl = `${GALLERY_BASE_URL}/g/${encodeURIComponent(token)}`;
       const { data: template } = await supabase
@@ -641,14 +884,22 @@ Deno.serve(async (req: Request) => {
         dias_restantes: daysRemaining(gallery.prazo_selecao),
       };
       const subject = replaceTemplateVariables(template?.subject || 'Lembrete: Sua seleção expira em breve - {galeria}', variables);
-      const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nEste é um lembrete amigável de que sua seleção da galeria "{galeria}" expira em {dias_restantes} dias.\n\nNão perca o prazo! Acesse o link abaixo:\n{link}\n\nCom carinho,\n{estudio}', variables);
+      const bodyText = replaceTemplateVariables(template?.body || 'Olá {cliente}!\n\nEste é um lembrete amigável de que sua seleção da galeria "{galeria}" expira em {dias_restantes} dias.\n\nNão perca o prazo!\n\nCom carinho,\n{estudio}', variables);
+
+      const detailsList: DetailItem[] = [
+        { label: 'Sessão', value: gallery.nome_sessao || 'Galeria', isBold: true },
+        { label: 'Prazo Limite', value: formatDateOnly(gallery.prazo_selecao), isBold: true },
+        { label: 'Dias Restantes', value: `${variables.dias_restantes} dias` },
+      ];
 
       const html = buildLayout({
         studioName,
+        studioLogoUrl,
         title: subject,
         preview: `Sua seleção expira em ${variables.dias_restantes} dias.`,
         buttonUrl: galleryUrl,
-        buttonText: 'Acessar minha galeria',
+        buttonText: 'Acessar Minha Galeria',
+        details: detailsList,
         children: `${textToHtmlParagraphs(bodyText)}`,
       });
 
@@ -685,8 +936,9 @@ Deno.serve(async (req: Request) => {
       const sent = await alreadySent(supabase, idempotencyKey);
       if (sent) return jsonResponse({ success: true, status: 'ignorado', message: 'E-mail já enviado anteriormente.', logId: sent.id });
 
-      const [{ data: settings }, { data: client }, { data: gallery }] = await Promise.all([
-        supabase.from('gallery_settings').select('studio_name, email_sending_enabled, email_on_payment_confirmed').eq('user_id', payment.user_id).maybeSingle(),
+      const [{ data: settings }, { data: ownerProfile }, { data: client }, { data: gallery }] = await Promise.all([
+        supabase.from('gallery_settings').select('*').eq('user_id', payment.user_id).maybeSingle(),
+        supabase.from('profiles').select('nome, empresa, logo_url, email').eq('user_id', payment.user_id).maybeSingle(),
         payment.cliente_id ? supabase.from('clientes').select('id, nome, email').eq('id', payment.cliente_id).maybeSingle() : Promise.resolve({ data: null }),
         payment.galeria_id ? supabase.from('galerias').select('id, cliente_nome, cliente_email, nome_sessao, public_token').eq('id', payment.galeria_id).maybeSingle() : Promise.resolve({ data: null }),
       ]);
@@ -723,27 +975,36 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ success: true, status: 'ignorado', message: 'Cliente não possui e-mail cadastrado.' });
       }
 
-      const studioName = settings?.studio_name || 'Lunari';
+      const studioCandidate = (settings?.studio_name || '').trim();
+      const companyCandidate = (ownerProfile?.empresa || '').trim();
+      const nameCandidate = (ownerProfile?.nome || '').trim();
+      const studioName = (studioCandidate && studioCandidate !== 'Meu Estúdio') ? studioCandidate : (companyCandidate || nameCandidate || 'Lunari');
+      const studioLogoUrl = settings?.studio_logo_url || ownerProfile?.logo_url || null;
+
       const replyTo = await getPhotographerReplyTo(supabase, payment.user_id);
       const galleryUrl = gallery?.public_token ? `${GALLERY_BASE_URL}/g/${encodeURIComponent(gallery.public_token)}` : undefined;
       const subject = 'Pagamento confirmado ✨';
       const description = payment.descricao || (payment.qtd_fotos ? `${payment.qtd_fotos} foto(s) extra(s)` : 'Pagamento da galeria');
+
+      const detailsList: DetailItem[] = [
+        { label: 'Valor pago', value: formatCurrency(payment.valor), isBold: true },
+        { label: 'Forma de pagamento', value: paymentMethodLabel(payment) },
+        { label: 'Data', value: formatDate(payment.data_pagamento) },
+        { label: 'Descrição', value: description },
+        { label: 'Status', value: 'Confirmado', isBold: true },
+      ];
+
       const html = buildLayout({
         studioName,
+        studioLogoUrl,
         title: 'Pagamento confirmado',
         preview: `Recebemos a confirmação do seu pagamento de ${formatCurrency(payment.valor)}.`,
         buttonUrl: galleryUrl,
-        buttonText: 'Acessar galeria',
+        buttonText: 'Acessar Galeria',
+        details: detailsList,
         children: `
-          <p style="margin:0 0 18px;color:#211b18;font-size:16px;line-height:1.65;">Olá, ${escapeHtml(clienteNome)}.</p>
-          <p style="margin:0 0 20px;color:#211b18;font-size:16px;line-height:1.65;">Recebemos a confirmação do seu pagamento com sucesso.</p>
-          <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#fbf7f4;border-radius:12px;margin:20px 0;">
-            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;">Valor pago</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;font-weight:700;">${escapeHtml(formatCurrency(payment.valor))}</td></tr>
-            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Forma de pagamento</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(paymentMethodLabel(payment))}</td></tr>
-            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Data</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(formatDate(payment.data_pagamento))}</td></tr>
-            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Descrição</td><td align="right" style="padding:14px 16px;color:#211b18;font-size:14px;border-top:1px solid #eadfd8;">${escapeHtml(description)}</td></tr>
-            <tr><td style="padding:14px 16px;color:#6f625c;font-size:14px;border-top:1px solid #eadfd8;">Status</td><td align="right" style="padding:14px 16px;color:#2f8f4e;font-size:14px;font-weight:700;border-top:1px solid #eadfd8;">Confirmado</td></tr>
-          </table>
+          <p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">Olá, ${escapeHtml(clienteNome)}.</p>
+          <p style="margin:0 0 16px;color:#2D2A26;font-size:15px;line-height:1.7;">Recebemos a confirmação do seu pagamento com sucesso. Muito obrigado!</p>
         `,
       });
 
@@ -766,4 +1027,3 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, status: 'erro', message: 'Erro interno ao processar e-mail', details: errorMessage }, 500);
   }
 });
-

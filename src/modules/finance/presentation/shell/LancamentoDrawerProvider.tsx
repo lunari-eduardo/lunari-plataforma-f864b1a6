@@ -84,6 +84,12 @@ export const LancamentoDrawerProvider = memo(function LancamentoDrawerProvider({
   const [vendaAvulsaOpen, setVendaAvulsaOpen] = useState(false);
 
   const open = useCallback((opts: OpenLancamentoDrawerOptions) => {
+    if (opts.tipo === 'receita_operacional') {
+      setTipo(null);
+      setOnCreated(null);
+      setVendaAvulsaOpen(true);
+      return;
+    }
     setTipo(opts.tipo);
     setOnCreated(() => opts.onCreated ?? null);
   }, []);

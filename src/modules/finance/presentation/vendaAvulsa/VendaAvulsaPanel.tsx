@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { ShoppingBag, Loader2, X, UserPlus, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +22,17 @@ import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { SidePanel } from '@/modules/finance/presentation/shell/SidePanel';
 import { SectionHeader } from '@/modules/finance/presentation/shell/fields/SectionHeader';
 import { DisclosureSection } from '@/modules/finance/presentation/shell/fields/DisclosureSection';
+import { SmartSelect, PaidToggle, type SmartSelectOption } from '@/modules/finance/presentation/shell/fields';
+
+const FORMAS_PAGAMENTO: SmartSelectOption[] = [
+  { value: 'pix', label: 'PIX' },
+  { value: 'dinheiro', label: 'Dinheiro' },
+  { value: 'transferencia', label: 'Transferência' },
+  { value: 'boleto', label: 'Boleto' },
+  { value: 'cartao_debito', label: 'Cartão de débito' },
+  { value: 'cartao_credito', label: 'Cartão de crédito' },
+];
+
 
 interface VendaAvulsaPanelProps {
   aberto: boolean;
@@ -58,6 +68,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
   const [descricaoExtra, setDescricaoExtra] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [registrarPagamento, setRegistrarPagamento] = useState(true);
+  const [formaPagamento, setFormaPagamento] = useState('pix');
 
   const valorCalculado = useMemo(
     () => produtos.reduce((sum, p) => sum + p.valorVenda * p.quantidade, 0),
@@ -98,6 +109,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
     setDescricaoExtra('');
     setObservacoes('');
     setRegistrarPagamento(true);
+    setFormaPagamento('pix');
   };
 
   const handleProdutoSelect = (product: ProductComboboxItem | null) => {
@@ -142,6 +154,7 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
         descricao: descricaoFinal,
         observacoes: observacoes || undefined,
         registrarPagamento,
+        formaPagamento,
         produtos: produtos.map((p) => ({
           nome: p.nome,
           quantidade: p.quantidade,
@@ -177,17 +190,6 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
           }
           right={
             <div className="flex items-center gap-3">
-              <label
-                htmlFor="registrar-pagamento"
-                className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none"
-              >
-                <Checkbox
-                  id="registrar-pagamento"
-                  checked={registrarPagamento}
-                  onCheckedChange={(checked) => setRegistrarPagamento(!!checked)}
-                />
-                Pagamento imediato
-              </label>
               <Button
                 size="sm"
                 onClick={handleSubmit}
@@ -401,6 +403,28 @@ export default function VendaAvulsaPanel({ aberto, onFechar, onSucesso }: VendaA
               <span className="font-semibold text-foreground">R$ {valorFinal.toFixed(2)}</span>
             </div>
           )}
+        </section>
+
+        {/* Pagamento */}
+        <section className="space-y-3">
+          <SectionHeader label="Pagamento" />
+          <div className="flex items-center justify-between bg-muted/20 border border-border/50 rounded-lg p-3">
+            <PaidToggle
+              checked={registrarPagamento}
+              onChange={setRegistrarPagamento}
+              label="Recebido"
+              labelInactive="A receber"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Forma de pagamento</Label>
+            <SmartSelect
+              value={formaPagamento}
+              onChange={setFormaPagamento}
+              options={FORMAS_PAGAMENTO}
+              placeholder="Não informado"
+            />
+          </div>
         </section>
 
         {/* Mais opções */}

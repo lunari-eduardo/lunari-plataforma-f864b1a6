@@ -22,6 +22,7 @@ export interface VendaAvulsaInput {
   observacoes?: string;
   valorTotal: number;
   registrarPagamento: boolean;
+  formaPagamento?: string;
   produtos?: VendaAvulsaProduto[];
 }
 
@@ -104,7 +105,7 @@ export function useVendaAvulsa() {
             tipo: 'pagamento',
             valor: input.valorTotal,
             valor_liquido: input.valorTotal,
-            descricao: `Venda avulsa - ${input.descricao || categoria || 'produto'}`,
+            descricao: `Venda avulsa - ${input.descricao || categoria || 'produto'}${input.formaPagamento ? ` Forma: ${input.formaPagamento}` : ''}`,
             data_transacao: input.data,
             taxa_gateway: 0,
             taxa_antecipacao: 0,

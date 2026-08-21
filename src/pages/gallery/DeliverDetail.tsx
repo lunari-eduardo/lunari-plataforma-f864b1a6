@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { THEME_REGISTRY, DEFAULT_THEME_ID } from '@/components/gallery/themes/registry';
 import { ThemePreviewCanvas } from '@/components/dashboard/themes/ThemePreviewCanvas';
+import { SendDeliverEmailModal } from '@/components/deliver/SendDeliverEmailModal';
 
 import { isPast } from 'date-fns';
 
@@ -74,6 +75,8 @@ export default function DeliverDetail() {
   const [showReactivateDialog, setShowReactivateDialog] = useState(false);
   const [reactivateSuccessOpen, setReactivateSuccessOpen] = useState(false);
   const [reactivateDays, setReactivateDays] = useState(7);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   // Editable fields
   const [sessionName, setSessionName] = useState('');
@@ -342,8 +345,28 @@ export default function DeliverDetail() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string) => {
+    if (!text) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setIsLinkCopied(true);
+      toast.success('Link copiado para a área de transferência!');
+      setTimeout(() => setIsLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Erro ao copiar link:', err);
+      toast.error('Não foi possível copiar automaticamente.');
+    }
   };
 
   const openWhatsApp = async () => {
@@ -466,19 +489,34 @@ export default function DeliverDetail() {
             <>
               {/* Action buttons — inline, no cards */}
               <div className="flex flex-wrap gap-3">
-                <Button variant="outline" className="gap-2" onClick={() => copyToClipboard(galleryUrl)}>
-                  <Copy className="h-4 w-4" />
-                  Copiar link
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "gap-2 transition-all duration-200",
+                    isLinkCopied && "border-emerald-500/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+                  )}
+                  onClick={() => copyToClipboard(galleryUrl)}
+                >
+                  {isLinkCopied ? <CheckCircle className="h-4 w-4 text-emerald-500 animate-scale-in" /> : <Copy className="h-4 w-4" />}
+                  {isLinkCopied ? 'Link copiado!' : 'Copiar link'}
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={openWhatsApp}>
+                <Button variant="outline" className="gap-2 hover:border-emerald-500/50 hover:bg-emerald-500/5" onClick={openWhatsApp}>
                   <MessageSquare className="h-4 w-4" />
                   WhatsApp
                 </Button>
-                <Button variant="outline" className="gap-2" disabled>
+                <Button
+                  variant="outline"
+                  className="gap-2 hover:border-primary/50 hover:bg-primary/5"
+                  onClick={() => setShowEmailModal(true)}
+                >
                   <Mail className="h-4 w-4" />
-                  E-mail (em breve)
+                  E-mail
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={() => window.open(`/g/${gallery.publicToken}`, '_blank')}>
+                <Button
+                  variant="outline"
+                  className="gap-2 hover:border-border"
+                  onClick={() => window.open(galleryUrl || `/g/${gallery.publicToken}`, '_blank')}
+                >
                   <ExternalLink className="h-4 w-4" />
                   Ver como cliente
                 </Button>
@@ -818,183 +856,208 @@ export default function DeliverDetail() {
           )}
         </TabsContent>
 
-        {/* === DETALHES === */}
-        <TabsContent value="details" className="space-y-6 mt-6">
-          {/* Block 1 — Session info */}
-          <div className="space-y-5 p-5 rounded-lg border">
-            <div className="space-y-2">
-              <Label htmlFor="sessionName">Nome da sessão</Label>
-              <Input id="sessionName" value={sessionName} onChange={e => setSessionName(e.target.value)} />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3 pt-2">
+        {/* === DETALHES (Layout em 2 Colunas sem rolagem) === */}
+        <TabsContent value="details" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* Coluna Esquerda: Identificação da Sessão & Cliente */}
+            <div className="space-y-5 p-5 rounded-xl border bg-card/60 backdrop-blur-sm">
               <div className="space-y-2">
-                <Label htmlFor="subtitle">Subtítulo da Capa</Label>
-                <Input
-                  id="subtitle"
-                  value={subtitle}
-                  onChange={e => setSubtitle(e.target.value)}
-                  placeholder="Ex: Wedding Story"
+                <Label htmlFor="sessionName" className="font-semibold text-sm">Nome da sessão</Label>
+                <Input id="sessionName" value={sessionName} onChange={e => setSessionName(e.target.value)} />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label htmlFor="subtitle" className="text-xs font-medium text-muted-foreground">Subtítulo da Capa</Label>
+                  <Input
+                    id="subtitle"
+                    value={subtitle}
+                    onChange={e => setSubtitle(e.target.value)}
+                    placeholder="Ex: Wedding Story"
+                    className="text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="category" className="text-xs font-medium text-muted-foreground">Categoria / Tag</Label>
+                  <Input
+                    id="category"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    placeholder="Ex: WEDDING"
+                    className="text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <CalendarIcon className="h-3.5 w-3.5 text-[#cbb384]" />
+                    Data do Evento
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "w-full justify-start text-left font-normal border-border/60 hover:border-[#cbb384]/50 h-9 text-xs",
+                          !eventDate && "text-muted-foreground"
+                        )}
+                      >
+                        {eventDate ? format(eventDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border border-border/60" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={eventDate}
+                        onSelect={setEventDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</h4>
+                <div className="space-y-1 text-sm bg-muted/40 p-3 rounded-lg border border-border/40">
+                  <div>
+                    {effectiveClienteId ? (
+                      <Link
+                        to={`/app/clientes/${effectiveClienteId}`}
+                        className="font-medium text-primary hover:underline inline-flex items-center gap-1 group"
+                        title="Ver perfil do cliente no CRM"
+                      >
+                        <span>{gallery.clienteNome || 'Sem cliente'}</span>
+                        <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-foreground">{gallery.clienteNome || 'Sem cliente'}</span>
+                    )}
+                  </div>
+                  <div className="text-muted-foreground text-xs">{gallery.clienteEmail || 'Sem e-mail cadastrado'}</div>
+                  <div className="text-muted-foreground text-xs">{gallery.clienteTelefone || 'Sem telefone cadastrado'}</div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label htmlFor="internalNotes" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Observações internas</Label>
+                <Textarea
+                  id="internalNotes"
+                  placeholder="Anotações privadas sobre esta entrega..."
+                  value={internalNotes}
+                  onChange={e => setInternalNotes(e.target.value)}
+                  rows={3}
+                  className="text-sm resize-none"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoria / Tag</Label>
-                <Input
-                  id="category"
-                  value={category}
-                  onChange={e => setCategory(e.target.value)}
-                  placeholder="Ex: WEDDING ou ENSAIO"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <CalendarIcon className="h-4 w-4 text-[#cbb384]" />
-                  Data do Evento / Sessão
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal border-border/60 hover:border-[#cbb384]/50",
-                        !eventDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4 text-[#cbb384]" />
-                      {eventDate ? format(eventDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border border-border/60" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={eventDate}
-                      onSelect={setEventDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <p className="text-[11px] text-muted-foreground">Visíveis apenas para você.</p>
               </div>
             </div>
 
-            <Separator />
-
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground">Cliente</h4>
-              <div className="space-y-1 text-sm">
-                <div>
-                  {effectiveClienteId ? (
-                    <Link
-                      to={`/app/clientes/${effectiveClienteId}`}
-                      className="font-medium text-primary hover:underline inline-flex items-center gap-1 group"
-                      title="Ver perfil do cliente no CRM"
-                    >
-                      <span>{gallery.clienteNome || '—'}</span>
-                      <ExternalLink className="h-3 w-3 opacity-70 group-hover:opacity-100" />
-                    </Link>
-                  ) : (
-                    gallery.clienteNome || '—'
-                  )}
+            {/* Coluna Direita: Acesso, Expiração & Configurações */}
+            <div className="space-y-5 p-5 rounded-xl border bg-card/60 backdrop-blur-sm">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {isPrivate ? <Lock className="h-4 w-4 text-amber-500" /> : <Unlock className="h-4 w-4 text-emerald-500" />}
+                    <div>
+                      <span className="text-sm font-semibold">{isPrivate ? 'Privada (com senha)' : 'Pública'}</span>
+                      <p className="text-xs text-muted-foreground">
+                        {isPrivate ? 'Exige senha para visualização e download' : 'Qualquer pessoa com o link pode acessar'}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
                 </div>
-                <div className="text-muted-foreground">{gallery.clienteEmail || '—'}</div>
-                <div className="text-muted-foreground">{gallery.clienteTelefone || '—'}</div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label htmlFor="internalNotes">Observações internas</Label>
-              <Textarea
-                id="internalNotes"
-                placeholder="Anotações privadas sobre esta entrega..."
-                value={internalNotes}
-                onChange={e => setInternalNotes(e.target.value)}
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground">Visíveis apenas para você.</p>
-            </div>
-          </div>
-
-          {/* Block 2 — Settings */}
-          <div className="space-y-5 p-5 rounded-lg border">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {isPrivate ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                  <span className="text-sm font-medium">{isPrivate ? 'Privada (com senha)' : 'Pública'}</span>
-                </div>
-                <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-              </div>
-              {isPrivate && (
-                <div className="space-y-1">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input id="password" type="text" value={galleryPassword} onChange={e => setGalleryPassword(e.target.value)} />
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <span className="text-sm font-medium">Data de expiração</span>
-              <div className="flex items-center gap-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <CalendarIcon className="h-4 w-4" />
-                      {expirationDate ? format(expirationDate, "dd/MM/yyyy") : 'Definir data'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={expirationDate} onSelect={setExpirationDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-                {expirationDate && (
-                  <Button variant="ghost" size="sm" onClick={() => setExpirationDate(undefined)}>Remover</Button>
+                {isPrivate && (
+                  <div className="space-y-1.5 pt-1">
+                    <Label htmlFor="password" className="text-xs font-medium">Senha de acesso</Label>
+                    <Input id="password" type="text" value={galleryPassword} onChange={e => setGalleryPassword(e.target.value)} placeholder="Digite a senha da galeria" />
+                  </div>
                 )}
               </div>
-            </div>
 
-            <Separator />
+              <Separator />
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-sm font-medium">Mensagem de boas-vindas</span>
-                  <p className="text-xs text-muted-foreground">Exibida ao cliente ao abrir a galeria</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold">Data de expiração</span>
+                    <p className="text-xs text-muted-foreground">Prazo limite para o cliente baixar os arquivos</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2 text-xs">
+                          <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                          {expirationDate ? format(expirationDate, "dd/MM/yyyy", { locale: ptBR }) : 'Definir data'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border border-border/60" align="end">
+                        <Calendar mode="single" selected={expirationDate} onSelect={setExpirationDate} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    {expirationDate && (
+                      <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive h-8 px-2" onClick={() => setExpirationDate(undefined)}>Remover</Button>
+                    )}
+                  </div>
                 </div>
-                <Switch checked={welcomeEnabled} onCheckedChange={(checked) => {
-                  setWelcomeEnabled(checked);
-                  if (!checked) setWelcomeMessage('');
-                }} />
               </div>
-              {welcomeEnabled && (
-                <Textarea
-                  value={welcomeMessage}
-                  onChange={e => setWelcomeMessage(e.target.value)}
-                  placeholder="Olá! Suas fotos estão prontas..."
-                  rows={4}
-                />
-              )}
-            </div>
 
-            <Separator />
-            
+              <Separator />
 
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium">Download</span>
-                <p className="text-xs text-muted-foreground">Download sempre ativo para entregas</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold">Mensagem de boas-vindas</span>
+                    <p className="text-xs text-muted-foreground">Exibida em modal ao cliente ao abrir a galeria</p>
+                  </div>
+                  <Switch checked={welcomeEnabled} onCheckedChange={(checked) => {
+                    setWelcomeEnabled(checked);
+                    if (!checked) setWelcomeMessage('');
+                  }} />
+                </div>
+                {welcomeEnabled && (
+                  <Textarea
+                    value={welcomeMessage}
+                    onChange={e => setWelcomeMessage(e.target.value)}
+                    placeholder="Olá! Suas fotos estão prontas..."
+                    rows={4}
+                    className="text-sm resize-none"
+                  />
+                )}
               </div>
-              <Download className="h-4 w-4 text-primary" />
+
+              <Separator />
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/40">
+                <div>
+                  <span className="text-sm font-semibold">Download</span>
+                  <p className="text-xs text-muted-foreground">Download em alta resolução sempre ativo para entregas</p>
+                </div>
+                <Badge variant="secondary" className="gap-1.5 text-xs font-normal">
+                  <Download className="h-3.5 w-3.5 text-emerald-500" />
+                  Ativo
+                </Badge>
+              </div>
             </div>
           </div>
-      </TabsContent>
+        </TabsContent>
       </Tabs>
+
+      {/* Modal de envio de e-mail de entrega */}
+      <SendDeliverEmailModal
+        isOpen={showEmailModal}
+        onOpenChange={setShowEmailModal}
+        gallery={gallery}
+        photosCount={photos.length}
+        galleryUrl={galleryUrl}
+      />
 
       {/* Floating Save Button */}
       <div className="fixed bottom-6 right-6 z-50">
