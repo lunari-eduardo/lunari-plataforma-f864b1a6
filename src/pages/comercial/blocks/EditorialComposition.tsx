@@ -139,26 +139,29 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
       </div>
 
       {/* 3. COMPOSIÇÃO DE TÍTULO (SEAM ARCHITECTURE) */}
-      {/* Layer 1: Texto sobre o Fundo (Clipado para fora da imagem) */}
-      <TitleLayer 
-        className={bgTextColor} 
-        clipPath={
-          layout === 'split-left' ? 'inset(0 0 0 50%)' : 
-          layout === 'split-right' ? 'inset(0 50% 0 0)' : 
-          'inset(0 0 0 100%)' // no overlap = escondido
-        }
-      />
+      <TitleLayer layerType="bg" className={bgTextColor} />
+      <TitleLayer layerType="photo" className={photoTextColor} />
 
-      {/* Layer 2: Texto sobre a Foto (Clipado para dentro da imagem) */}
-      <TitleLayer 
-        className={photoTextColor} 
-        clipPath={
-          layout === 'split-left' ? 'inset(0 50% 0 0)' : 
-          layout === 'split-right' ? 'inset(0 0 0 50%)' : 
-          'none' // full overlap = tudo sobre a foto
+      <style dangerouslySetInnerHTML={{ __html: `
+        .editorial-seam-container {
+          container-type: size;
         }
-      />
-
+        /* Mobile: Split Horizontal (50/50) */
+        .clip-seam-left-bg { clip-path: inset(50% 0 0 0); }
+        .clip-seam-left-photo { clip-path: inset(0 0 50% 0); }
+        .clip-seam-right-bg { clip-path: inset(0 0 50% 0); }
+        .clip-seam-right-photo { clip-path: inset(50% 0 0 0); }
+        
+        /* Desktop: Split Vertical (50/50) */
+        @container (min-width: 768px) {
+          .clip-seam-left-bg { clip-path: inset(0 0 0 50%); }
+          .clip-seam-left-photo { clip-path: inset(0 50% 0 0); }
+          .clip-seam-right-bg { clip-path: inset(0 50% 0 0); }
+          .clip-seam-right-photo { clip-path: inset(0 0 0 50%); }
+        }
+        .clip-hide { clip-path: inset(0 0 0 100%); }
+        .clip-none { clip-path: none; }
+      `}} />
     </section>
   );
 }
