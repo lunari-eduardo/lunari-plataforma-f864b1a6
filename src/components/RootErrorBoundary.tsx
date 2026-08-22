@@ -47,11 +47,14 @@ export class RootErrorBoundary extends React.Component<Props, State> {
               Limpar Cache
             </Button>
           </div>
-          {process.env.NODE_ENV === 'development' && (
-            <pre className="mt-8 p-4 bg-muted rounded-md text-left text-xs max-w-2xl overflow-auto">
+          <div className="mt-8 p-4 bg-muted rounded-md text-left text-xs max-w-2xl overflow-auto w-full">
+            <h2 className="font-bold mb-2">Detalhes técnicos:</h2>
+            <pre className="whitespace-pre-wrap">
               {this.state.error?.toString()}
+              {"\n\n"}
+              {this.state.error?.stack}
             </pre>
-          )}
+          </div>
         </div>
       );
     }

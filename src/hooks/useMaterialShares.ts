@@ -39,7 +39,26 @@ export function useMaterialShares(materialId: string | undefined) {
         .single();
 
       if (matErr || !material) throw new Error('Material não encontrado');
-      if (!material.active_version_id) throw new Error('O material precisa ser publicado antes de enviar.');
+      
+      let versionId = material.active_version_id;
+
+      // Resiliência: Se não tem active_version_id, tenta buscar a última versão publicada
+      if (!versionId) {
+        const { data: lastVer } = await (supabase as any)
+          .from('material_versions')
+          .select('id')
+          .eq('material_id', materialId)
+          .not('published_at', 'is', null)
+          .order('version_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (lastVer) {
+          versionId = lastVer.id;
+        }
+      }
+
+      if (!versionId) throw new Error('O material precisa ser publicado antes de enviar.');
 
       // Gerar um token opaco criptograficamente seguro
       const token = crypto.randomUUID().replace(/-/g, '');

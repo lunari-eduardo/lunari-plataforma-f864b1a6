@@ -435,10 +435,14 @@ function normalizeBlock(raw: any): BlockData | null {
 
   // V2 nativo: garante id e content
   if (BLOCK_REGISTRY[type]) {
-    return withId(raw);
+    return withId({
+      ...raw,
+      content: raw.content ?? raw.data ?? {} // Fallback para data se content estiver vazio
+    });
   }
 
-  const d: Record<string, any> = raw.data ?? {};
+  // Prevenção de erro em documentos corrompidos ou V1 incompleto
+  const d: Record<string, any> = raw.data || {};
 
   switch (type) {
     case V1_COVER:
@@ -556,10 +560,11 @@ function normalizeBlock(raw: any): BlockData | null {
       return withId({ type: 'text', content: { title: d.title || '', body: d.body || '' }, props: { align: 'center', background: 'white' } });
 
     default:
+      console.warn(`Tipo de bloco desconhecido na normalização: ${type}`, raw);
       // Tipo desconhecido: preserva como bloco de texto livre para não perder conteúdo
       return withId({
         type: 'text',
-        content: { title: BLOCK_UNKNOWN_FALLBACK_TITLE, body: JSON.stringify(d ?? {}, null, 2) },
+        content: { title: BLOCK_UNKNOWN_FALLBACK_TITLE, body: JSON.stringify(raw ?? {}, null, 2) },
         props: { align: 'center', background: 'white' },
       });
   }
