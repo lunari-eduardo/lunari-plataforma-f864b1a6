@@ -149,35 +149,35 @@ export function useProposalOutline() {
 // Paletas prontas para o assistente de design (aplicam design_tokens)
 export const DESIGN_PRESETS: { name: string; description: string; tokens: NonNullable<GeneratedProposal['design_tokens']> }[] = [
   {
-    name: 'Editorial Clássico',
-    description: 'Tons quentes de terra, serifado elegante',
+    name: 'Editorial Lunari (PDF)',
+    description: 'Fiel ao modelo de referência, tons areia e serifado clássico',
     tokens: {
-      colors: { cream: '#F3F0EA', linen: '#E8E3DA', stone: '#C9BFB2', taupe: '#8C7B6E', accent: '#7A5C42', ink: '#1A1714', white: '#FFFFFF' },
+      colors: { 
+        cream: '#FDFBF7', 
+        linen: '#F0E9E1', 
+        stone: '#D8C7B8', 
+        taupe: '#8A7364', 
+        accent: '#7A5C42', 
+        ink: '#2C2825', 
+        white: '#FFFFFF' 
+      },
       typography: { display: 'Cormorant Garamond', body: 'Jost' },
     },
   },
   {
-    name: 'Terracota Convidativo',
-    description: 'Acolhedor, destaque em terracota',
+    name: 'Terracota Moderno',
+    description: 'Acolhedor, destaque em terracota e Inter',
     tokens: {
       colors: { cream: '#FDFBF7', linen: '#F0E9E1', stone: '#D8C7B8', taupe: '#8A7364', accent: '#C86A46', ink: '#2C2825', white: '#FFFFFF' },
       typography: { display: 'Playfair Display', body: 'Inter' },
     },
   },
   {
-    name: 'Noite Sofisticada',
-    description: 'Escuro, contraste alto, dourado discreto',
+    name: 'Noir Studio',
+    description: 'Alto contraste, fundo escuro e tipografia luxuosa',
     tokens: {
       colors: { cream: '#232019', linen: '#3A342A', stone: '#8C7B6E', taupe: '#A89B8C', accent: '#C9A227', ink: '#141210', white: '#F5F2EC' },
       typography: { display: 'Cormorant Garamond', body: 'Jost' },
-    },
-  },
-  {
-    name: 'Clean Minimal',
-    description: 'Claro, neutro, cinza pedra',
-    tokens: {
-      colors: { cream: '#FAFAF8', linen: '#EFEFEC', stone: '#C4C4C0', taupe: '#6E6E6A', accent: '#4A4A46', ink: '#212121', white: '#FFFFFF' },
-      typography: { display: 'Playfair Display', body: 'Inter' },
     },
   },
 ];
