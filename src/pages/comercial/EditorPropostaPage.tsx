@@ -181,7 +181,7 @@ export default function EditorMaterialPage() {
       blockIndex={activeIndex}
       onUpdateBlock={editor.updateBlock}
       onUpdateDesignTokens={editor.updateDesignTokens}
-      aiContext={{ materialTitle: state.title }}
+      aiContext={{ materialTitle: state.title, designTokens: state.globalSettings?.design_tokens }}
       onRemoveBlock={(index) => {
         const nextCount = state.blocks.length - 1;
         editor.removeBlock(index);
