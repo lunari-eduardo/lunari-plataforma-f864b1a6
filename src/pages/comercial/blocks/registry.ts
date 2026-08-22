@@ -560,10 +560,11 @@ function normalizeBlock(raw: any): BlockData | null {
       return withId({ type: 'text', content: { title: d.title || '', body: d.body || '' }, props: { align: 'center', background: 'white' } });
 
     default:
+      console.warn(`Tipo de bloco desconhecido na normalização: ${type}`, raw);
       // Tipo desconhecido: preserva como bloco de texto livre para não perder conteúdo
       return withId({
         type: 'text',
-        content: { title: BLOCK_UNKNOWN_FALLBACK_TITLE, body: JSON.stringify(d ?? {}, null, 2) },
+        content: { title: BLOCK_UNKNOWN_FALLBACK_TITLE, body: JSON.stringify(raw ?? {}, null, 2) },
         props: { align: 'center', background: 'white' },
       });
   }
