@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { useInlineEdit } from './inlineContext';
 import { EditableText } from './EditableText';
 import { EditableImage } from './EditableImage';
-import { fontDisplayCss } from './design';
+import { fontDisplayCss, fontBodyCss } from './design';
 
 interface EditorialCompositionProps {
   content: any;

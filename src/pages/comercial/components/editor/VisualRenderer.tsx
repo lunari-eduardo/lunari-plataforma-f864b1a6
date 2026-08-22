@@ -3,7 +3,7 @@ import { BlockData } from '@/hooks/useMaterialEditor';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { ProposalDesignTokens, tokensToCssVars, ensureFontLoaded, fontDisplayCss } from '../../blocks/design';
+import { ProposalDesignTokens, tokensToCssVars, ensureFontLoaded, fontDisplayCss, fontBodyCss } from '../../blocks/design';
 import { EditableText } from '../../blocks/EditableText';
 import { EditableImage, AddImageTile } from '../../blocks/EditableImage';
 import { InlineEditContext, useInlineEdit } from '../../blocks/inlineContext';
