@@ -140,17 +140,32 @@ export function EditableImage({
 // ============================================================
 // TILE "ADICIONAR FOTO" — exibido ao fim da galeria no editor
 // ============================================================
-export function AddImageTile({ onAdd, label = 'Adicionar foto' }: { onAdd: (url: string) => void; label?: string }) {
+export function AddImageTile({ 
+  onAdd, 
+  onAddMultiple,
+  label = 'Adicionar foto' 
+}: { 
+  onAdd: (url: string) => void; 
+  onAddMultiple?: (urls: string[]) => void;
+  label?: string; 
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const { uploadMultipleProposalImages } = require('./uploadImage');
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
     setIsUploading(true);
     try {
-      const url = await uploadProposalImage(file);
-      onAdd(url);
+      if (files.length > 1 && onAddMultiple) {
+        const urls = await uploadMultipleProposalImages(files);
+        onAddMultiple(urls);
+      } else {
+        const url = await uploadProposalImage(files[0]);
+        onAdd(url);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Erro ao enviar imagem. Verifique a conexão e tente novamente.');
