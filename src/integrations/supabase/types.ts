@@ -5736,6 +5736,36 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_ai_logs: {
+        Row: {
+          created_at: string
+          id: string
+          input: Json | null
+          kind: string
+          output: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input?: Json | null
+          kind: string
+          output?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input?: Json | null
+          kind?: string
+          output?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       proposal_templates: {
         Row: {
           blocks_json: Json
@@ -5748,6 +5778,7 @@ export type Database = {
           preview_html_path: string | null
           tags: string[] | null
           template_id: string
+          thumbnail_url: string | null
         }
         Insert: {
           blocks_json: Json
@@ -5760,6 +5791,7 @@ export type Database = {
           preview_html_path?: string | null
           tags?: string[] | null
           template_id: string
+          thumbnail_url?: string | null
         }
         Update: {
           blocks_json?: Json
@@ -5772,6 +5804,7 @@ export type Database = {
           preview_html_path?: string | null
           tags?: string[] | null
           template_id?: string
+          thumbnail_url?: string | null
         }
         Relationships: []
       }
