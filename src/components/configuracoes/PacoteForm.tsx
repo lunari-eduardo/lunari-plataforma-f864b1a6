@@ -1,13 +1,14 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { obterConfiguracaoPrecificacao } from '@/utils/precificacaoUtils';
 import { ProductSearchCombobox } from '@/components/ui/product-search-combobox';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, ChevronUp } from 'lucide-react';
+import { X, Plus, ChevronUp, AlertTriangle, Info, Tag } from 'lucide-react';
 import { useCurrencyInput } from '@/hooks/useCurrencyInput';
 import { useNumberInput } from '@/hooks/useNumberInput';
 import { 
@@ -17,6 +18,7 @@ import {
   PacoteFormData,
   PacoteFormProps
 } from '@/types/configuration';
+import type { TabelaPrecos } from '@/types/pricing';
 
 export default function PacoteForm({
   initialData,
@@ -42,9 +44,111 @@ export default function PacoteForm({
     (initialData?.produtosIncluidos?.length || 0) > 0
   );
   
-  // Verificar modelo de precificação atual
-  const configPrecificacao = obterConfiguracaoPrecificacao();
-  const isFixedPricing = configPrecificacao.modelo === 'fixo';
+  // Buscar modelo de precificação ativo do usuário
+  const { data: modeloPreco = 'fixo' } = useQuery({
+    queryKey: ['user-pricing-model'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) return 'fixo';
+      const { data } = await supabase
+        .from('modelo_de_preco')
+        .select('modelo')
+        .eq('user_id', user.user.id)
+        .maybeSingle();
+      return (data?.modelo as 'fixo' | 'global' | 'categoria') || 'fixo';
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Buscar tabelas de categoria do usuário
+  const { data: tabelasPorCategoria = {} } = useQuery({
+    queryKey: ['category-pricing-tables'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) return {};
+      const { data, error } = await supabase
+        .from('tabelas_precos')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('tipo', 'categoria');
+
+      if (error) {
+        console.error('Erro ao buscar tabelas de categoria:', error);
+        return {};
+      }
+
+      const map: Record<string, TabelaPrecos> = {};
+      data?.forEach(t => {
+        if (t.categoria_id) {
+          map[t.categoria_id] = {
+            id: t.id,
+            user_id: t.user_id,
+            nome: t.nome,
+            faixas: Array.isArray(t.faixas) ? (t.faixas as any[]) : [],
+            usar_valor_fixo_pacote: t.usar_valor_fixo_pacote ?? false,
+            created_at: t.created_at,
+            updated_at: t.updated_at
+          };
+        }
+      });
+      return map;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Buscar tabela global do usuário
+  const { data: tabelaGlobal } = useQuery({
+    queryKey: ['global-pricing-table'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) return null;
+      const { data } = await supabase
+        .from('tabelas_precos')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('tipo', 'global')
+        .maybeSingle();
+      return data;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const tabelaDaCategoria = formData.categoria_id ? tabelasPorCategoria[formData.categoria_id] : undefined;
+
+  // Análise da obrigatoriedade e feedback do modelo de precificação
+  let isFotoExtraObrigatoria = false;
+  let statusMensagem = '';
+  let statusTipo: 'alerta' | 'info' | 'progressivo' = 'info';
+
+  if (modeloPreco === 'fixo') {
+    isFotoExtraObrigatoria = true;
+    statusMensagem = 'Modelo fixo ativo: cada foto extra será cobrada por este valor.';
+    statusTipo = 'info';
+  } else if (modeloPreco === 'categoria') {
+    if (!tabelaDaCategoria) {
+      isFotoExtraObrigatoria = true;
+      statusMensagem = '⚠️ Esta categoria ainda não possui tabela progressiva configurada. O valor definido aqui será usado como valor fixo para a foto extra.';
+      statusTipo = 'alerta';
+    } else if (tabelaDaCategoria.usar_valor_fixo_pacote) {
+      isFotoExtraObrigatoria = true;
+      statusMensagem = '💡 Esta categoria está configurada para usar valor fixo por pacote. Este será o valor cobrado na galeria.';
+      statusTipo = 'info';
+    } else {
+      isFotoExtraObrigatoria = false;
+      statusMensagem = '📊 Tabela progressiva ativa para esta categoria. O valor aqui serve como referência de segurança.';
+      statusTipo = 'progressivo';
+    }
+  } else if (modeloPreco === 'global') {
+    if (!tabelaGlobal || tabelaGlobal.usar_valor_fixo_pacote) {
+      isFotoExtraObrigatoria = true;
+      statusMensagem = 'Tabela global configurada para usar valor do pacote. Este será o valor cobrado.';
+      statusTipo = 'info';
+    } else {
+      isFotoExtraObrigatoria = false;
+      statusMensagem = '📊 Tabela progressiva global ativa. O valor aqui serve como referência de segurança.';
+      statusTipo = 'progressivo';
+    }
+  }
 
   // Hooks para inputs monetários com máscara BRL
   const valorBaseInput = useCurrencyInput({
@@ -59,7 +163,12 @@ export default function PacoteForm({
 
   const valorFotoExtraInput = useCurrencyInput({
     value: formData.valor_foto_extra,
-    onChange: (value) => setFormData(prev => ({ ...prev, valor_foto_extra: value }))
+    onChange: (value) => {
+      setFormData(prev => ({ ...prev, valor_foto_extra: value }));
+      if (errors.valor_foto_extra) {
+        setErrors(prev => ({ ...prev, valor_foto_extra: '' }));
+      }
+    }
   });
 
   const fotosIncluidasInput = useNumberInput({
@@ -92,6 +201,10 @@ export default function PacoteForm({
 
     if (!formData.fotos_incluidas || formData.fotos_incluidas < 1) {
       newErrors.fotos_incluidas = 'Número de fotos é obrigatório (mín. 1)';
+    }
+
+    if (isFotoExtraObrigatoria && (!formData.valor_foto_extra || formData.valor_foto_extra <= 0)) {
+      newErrors.valor_foto_extra = 'Valor de foto extra é obrigatório para esta categoria/configuração';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -238,10 +351,7 @@ export default function PacoteForm({
         {/* Valor Foto Extra - SEMPRE editável para sistema híbrido */}
         <div className="flex-1 min-w-[140px] max-w-[180px]">
           <Label htmlFor="valor_foto_extra" className="text-2xs font-medium text-muted-foreground mb-1 block">
-            Foto Extra
-            {!isFixedPricing && (
-              <span className="ml-1 text-amber-500">(opcional)</span>
-            )}
+            Foto Extra {isFotoExtraObrigatoria ? <span className="text-destructive">*</span> : <span className="text-muted-foreground font-normal">(opcional)</span>}
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
@@ -251,13 +361,14 @@ export default function PacoteForm({
               id="valor_foto_extra"
               {...valorFotoExtraInput.inputProps}
               placeholder="0,00"
-              className="h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className={cn(
+                "h-8 pl-8 text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                errors.valor_foto_extra && "border-destructive focus:border-destructive"
+              )}
             />
           </div>
-          {!isFixedPricing && (
-            <span className="text-2xs text-muted-foreground mt-0.5 block">
-              Modelo ativo: {configPrecificacao.modelo === 'global' ? 'Tabela Global' : 'Por Categoria'}
-            </span>
+          {errors.valor_foto_extra && (
+            <span className="text-2xs text-destructive mt-0.5 block">{errors.valor_foto_extra}</span>
           )}
         </div>
 
@@ -285,6 +396,21 @@ export default function PacoteForm({
           )}
         </div>
       </div>
+
+      {/* Aviso Inteligente Contextual sobre Precificação */}
+      {formData.categoria_id && statusMensagem && (
+        <div className={cn(
+          "p-2.5 rounded-lg text-xs border flex items-start gap-2.5 transition-all",
+          statusTipo === 'alerta' ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400" :
+          statusTipo === 'progressivo' ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400" :
+          "bg-card/60 border-border/80 text-muted-foreground"
+        )}>
+          {statusTipo === 'alerta' && <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />}
+          {statusTipo === 'progressivo' && <Info className="h-4 w-4 shrink-0 text-blue-500 mt-0.5" />}
+          {statusTipo === 'info' && <Tag className="h-4 w-4 shrink-0 text-primary mt-0.5" />}
+          <span className="leading-snug">{statusMensagem}</span>
+        </div>
+      )}
 
       {/* Bloco 2.5 — Duração / Tempo de Sessão na Agenda */}
       <div className="bg-card/40 border border-border/60 rounded-lg p-3 space-y-2.5">

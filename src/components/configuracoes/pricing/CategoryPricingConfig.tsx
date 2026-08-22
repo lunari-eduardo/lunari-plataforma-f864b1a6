@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import TabelaPrecosModal from '../TabelaPrecosModal';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import type { TabelaPrecos } from '@/types/pricing';
 
 interface CategoryPricingConfigProps {
@@ -82,9 +82,20 @@ export function CategoryPricingConfig({ categorias }: CategoryPricingConfigProps
                 >
                   <div>
                     <span className="text-[13px] font-medium">{categoria.nome}</span>
-                    {temTabela && (
-                      <div className="mt-0.5 text-[11px] text-[hsl(var(--accent-gold))]">
-                        {isFixo ? 'Usa valor fixo do pacote' : 'Tabela progressiva ativa'}
+                    {temTabela ? (
+                      <div className="mt-0.5 text-[11px]">
+                        {isFixo ? (
+                          <span className="text-amber-500 font-medium">Usa valor fixo do pacote</span>
+                        ) : (
+                          <span className="text-emerald-500 font-medium">
+                            Tabela progressiva ativa ({tabela.faixas?.length || 0} faixas)
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 text-[11px] text-muted-foreground flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                        <span>Sem tabela configurada (usa valor do pacote)</span>
                       </div>
                     )}
                   </div>

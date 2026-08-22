@@ -813,17 +813,31 @@ export default function GalleryCreate() {
       if (hasSessionRegras) {
         // Assisted mode with Gestão rules — URL vence JSONB stale (mais fresca)
         const resolved = resolveAssistedExtraPrice(regrasCongeladas, gestaoParams?.preco_da_foto_extra);
-        valorFotoExtraFinal = resolved.valor;
+        valorFotoExtraFinal = resolved.valor > 0 ? resolved.valor : (fixedPrice > 0 ? fixedPrice : 0);
         finalRegrasCongeladas = resolved.regras;
       } else if (!hasSessionId && saleMode !== 'no_sale' && pricingModel === 'packages' && discountPackages.length > 0) {
         // Standalone mode with discount packages - generate regrasCongeladas
-        console.log('ðŸ“¦ Generating regrasCongeladas from standalone discount packages');
+        console.log('📦 Generating regrasCongeladas from standalone discount packages');
         finalRegrasCongeladas = buildRegrasFromDiscountPackages(discountPackages, fixedPrice, includedPhotos, packageName);
         // Use first tier price for the valorFotoExtra field
         if (finalRegrasCongeladas.precificacaoFotoExtra?.tabelaGlobal?.faixas?.length) {
           const sortedFaixas = [...finalRegrasCongeladas.precificacaoFotoExtra.tabelaGlobal.faixas].sort((a, b) => a.min - b.min);
           valorFotoExtraFinal = sortedFaixas[0]?.valor || fixedPrice;
         }
+      }
+
+      // Guard anti-zero para galerias com venda de fotos extras
+      if (saleMode !== 'no_sale' && allowExtraPhotos && valorFotoExtraFinal <= 0) {
+        // Se houver faixas progressivas nas regras congeladas, o valor da primeira faixa pode ser usado
+        const faixas = getFaixasFromRegras(finalRegrasCongeladas || regrasCongeladas);
+        if (faixas.length > 0) {
+          valorFotoExtraFinal = faixas[0]?.valor || 0;
+        }
+      }
+
+      if (saleMode !== 'no_sale' && allowExtraPhotos && valorFotoExtraFinal <= 0) {
+        toast.error('O valor da foto extra não pode ser R$ 0,00 quando a venda de fotos extras está ativa. Defina o valor na etapa de Venda.');
+        return false;
       }
       const result = await createSupabaseGallery({
         clienteId: selectedClient?.id || null,
@@ -917,6 +931,21 @@ export default function GalleryCreate() {
     setIsAdvancing(true);
     try {
     if (currentStep < 6) {
+      // Validate pricing on Step 2 (Venda)
+      if (currentStep === 2 && saleMode !== 'no_sale') {
+        const hasSessionRegras = regrasCongeladas && !overridePricing;
+        const resolved = hasSessionRegras
+          ? resolveAssistedExtraPrice(regrasCongeladas, gestaoParams?.preco_da_foto_extra)
+          : null;
+        const effectiveExtraPrice = resolved && resolved.valor > 0 ? resolved.valor : fixedPrice;
+        const hasFaixas = (regrasCongeladas && getFaixasFromRegras(regrasCongeladas).length > 0) || (pricingModel === 'packages' && discountPackages.length > 0);
+
+        if (effectiveExtraPrice <= 0 && !hasFaixas) {
+          toast.error('Informe um valor de foto extra maior que R$ 0,00 para continuar.');
+          return;
+        }
+      }
+
       // When going to step 4 (Fotos), create Supabase gallery first with configurations
       if (currentStep === 3 && !supabaseGalleryId) {
         // Validate client requirement for private galleries (ALL plans)
