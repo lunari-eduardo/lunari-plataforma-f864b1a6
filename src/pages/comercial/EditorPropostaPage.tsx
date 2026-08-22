@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMaterialEditor } from '@/hooks/useMaterialEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, UploadCloud, Upload, CheckCircle2, MessageCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Monitor, Smartphone, Maximize, MoreHorizontal, Save, Eye, X, UploadCloud, Upload, CheckCircle2, MessageCircle, Link as LinkIcon, Copy as CopyIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useMaterials } from '@/hooks/useMaterials';
+import { Layers, PanelRight, ZoomIn, ZoomOut, Undo2, Redo2, MousePointerClick, LayoutTemplate } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { EditorSidebar } from './components/editor/EditorSidebar';
 import { PropertiesSidebar } from './components/editor/PropertiesSidebar';
 import { VisualRenderer } from './components/editor/VisualRenderer';
@@ -22,18 +24,106 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMaterialPublicLink } from '@/hooks/useMaterialPublicLink';
 import { useR2Upload } from '@/hooks/useR2Upload';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function EditorMaterialPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const editor = useMaterialEditor(id || '');
+  const { duplicateMaterial } = useMaterials();
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
+  const [zoom, setZoom] = useState(1);
+  const [mobilePanel, setMobilePanel] = useState<'none' | 'structure' | 'properties'>('none');
+
+  // Salvar como modelo (proposal_templates)
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+
+  const handleSaveAsTemplate = async () => {
+    const editorNow = editor.state;
+    if (!editorNow || !templateName.trim()) return;
+    setIsSavingTemplate(true);
+    try {
+      const baseSlug = templateName.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || 'modelo';
+      const { error } = await (supabase as any)
+        .from('proposal_templates')
+        .insert({
+          template_id: `${baseSlug}-${crypto.randomUUID().slice(0, 6)}`,
+          name: templateName.trim(),
+          description: `Modelo salvo da proposta "${editorNow.title}".`,
+          tags: [],
+          blocks_json: [...editorNow.blocks, { type: 'global_settings', data: editorNow.globalSettings }],
+          design_tokens: editorNow.globalSettings?.design_tokens ?? null,
+          is_active: true,
+        });
+      if (error) throw error;
+      toast.success('Modelo salvo! Ele aparece na galeria do wizard "Escolher Modelo".');
+      setIsTemplateModalOpen(false);
+      setTemplateName('');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro ao salvar modelo: ' + (err?.message || 'tente novamente'));
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const editorState = editor.state;
+  const editorHasChanges = editor.hasChanges;
+  const editorSaveStatus = editor.saveStatus;
+  const editorSaveDraft = editor.saveDraft;
+  const editorUndo = editor.undo;
+  const editorRedo = editor.redo;
+  const inlineEditing = viewMode === 'desktop' && editorState?.format === 'blocks';
+
+  // Atalhos de teclado: undo/redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      if (e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) editorRedo();
+        else editorUndo();
+      } else if (e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        editorRedo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [editorUndo, editorRedo]);
+
+  // Autosave: debounce 2.5s após a última mudança
+  useEffect(() => {
+    if (!editorHasChanges || editorSaveStatus === 'saving') return;
+    const timer = setTimeout(() => {
+      editorSaveDraft();
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [editorHasChanges, editorState, editorSaveStatus, editorSaveDraft]);
+
   const publicLink = useMaterialPublicLink(id);
   const [isSlugModalOpen, setIsSlugModalOpen] = useState(false);
   const [slugInput, setSlugInput] = useState('');
+
+  const openSlugModal = () => {
+    if (publicLink.data?.slug) {
+      setSlugInput(publicLink.data.slug);
+      setIsSlugModalOpen(true);
+      return;
+    }
+    // Sem link ainda: gera um e já abre a personalização
+    publicLink.generateLink.mutate(undefined, {
+      onSuccess: (link) => {
+        setSlugInput(link.slug);
+        setIsSlugModalOpen(true);
+      }
+    });
+  };
 
   const { uploadFile, uploading: isUploadingPdf } = useR2Upload({
     context: 'proposals-pdf',
@@ -64,17 +154,50 @@ export default function EditorMaterialPage() {
   const activeBlock = state.blocks[activeIndex];
 
   const handleSelectBlock = (index: number) => setActiveIndex(index);
-  
+
   const handleAddBlock = (type: string) => {
     editor.addBlock(type);
     setActiveIndex(state.blocks.length);
   };
 
+  const designTokens = state.globalSettings?.design_tokens;
+
+  const structurePanel = (
+    <EditorSidebar
+      blocks={state.blocks}
+      activeIndex={activeIndex}
+      onSelectBlock={(i) => { handleSelectBlock(i); setMobilePanel('none'); }}
+      onAddBlock={handleAddBlock}
+      onMoveBlock={editor.moveBlock}
+      onReorderBlocks={editor.reorderBlocks}
+      onApplyDesignTokens={(tokens) => editor.updateGlobalSettings({ design_tokens: tokens })}
+      materialTitle={state.title}
+    />
+  );
+
+  const propertiesPanel = activeBlock ? (
+    <PropertiesSidebar
+      block={activeBlock}
+      blockIndex={activeIndex}
+      onUpdateBlock={editor.updateBlock}
+      aiContext={{ materialTitle: state.title }}
+      onRemoveBlock={(index) => {
+        const nextCount = state.blocks.length - 1;
+        editor.removeBlock(index);
+        setActiveIndex((prev) => prev > index ? prev - 1 : Math.min(prev, Math.max(0, nextCount - 1)));
+      }}
+    />
+  ) : (
+    <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-muted-foreground">
+      Selecione uma seção para editar suas propriedades.
+    </div>
+  );
+
   return (
     <>
       <div className="flex h-screen w-full flex-col bg-muted/30 overflow-hidden">
         {/* TOPBAR */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-4">
+        <header className="relative flex h-14 shrink-0 items-center justify-between border-b bg-background px-4">
           {/* Esquerda: Navegação e Status */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/app/comercial/biblioteca')} title="Voltar para a Biblioteca">
@@ -109,28 +232,83 @@ export default function EditorMaterialPage() {
             </div>
           </div>
           
-          {/* Centro: Toggles de Visualização */}
-          <div className="absolute left-1/2 top-3 -translate-x-1/2 flex items-center bg-muted/50 rounded-lg p-0.5 border border-border">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setViewMode('desktop')}
-              className={cn("h-8 px-3 rounded-md", viewMode === 'desktop' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
-            >
-              <Monitor className="h-4 w-4" />
+          {/* Centro: Toggles de Visualização + Zoom (desktop) */}
+          <div className="absolute left-1/2 top-3 -translate-x-1/2 flex items-center gap-2">
+            <div className="flex items-center bg-muted/50 rounded-lg p-0.5 border border-border">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('desktop')}
+                className={cn("h-8 px-3 rounded-md", viewMode === 'desktop' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+              >
+                <Monitor className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('mobile')}
+                className={cn("h-8 px-3 rounded-md", viewMode === 'mobile' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+              >
+                <Smartphone className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {state.format === 'blocks' && viewMode === 'desktop' && (
+              <div className="hidden md:flex items-center bg-muted/50 rounded-lg p-0.5 border border-border">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 rounded-md text-muted-foreground hover:text-foreground"
+                  disabled={zoom <= 0.5}
+                  onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
+                  title="Reduzir zoom"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="text-[11px] font-medium text-muted-foreground w-10 text-center select-none">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 rounded-md text-muted-foreground hover:text-foreground"
+                  disabled={zoom >= 1}
+                  onClick={() => setZoom((z) => Math.min(1, +(z + 0.25).toFixed(2)))}
+                  title="Ampliar zoom"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Esquerda (mobile/tablet): botões dos painéis em drawer */}
+          <div className="flex lg:hidden items-center gap-1">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setMobilePanel('structure')}>
+              <Layers className="h-4 w-4" />
+              Estrutura
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setViewMode('mobile')}
-              className={cn("h-8 px-3 rounded-md", viewMode === 'mobile' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
-            >
-              <Smartphone className="h-4 w-4" />
-            </Button>
+            {activeBlock && (
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setMobilePanel('properties')}>
+                <PanelRight className="h-4 w-4" />
+                Editar
+              </Button>
+            )}
           </div>
 
           {/* Direita: Ações */}
           <div className="flex items-center gap-2">
+            {state.format === 'blocks' && (
+              <div className="hidden sm:flex items-center gap-0.5">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={editor.undo} disabled={!editor.canUndo} title="Desfazer (Ctrl+Z)">
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={editor.redo} disabled={!editor.canRedo} title="Refazer (Ctrl+Shift+Z)">
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsPreviewOpen(true)}>
               <span className="hidden sm:inline">Pré-visualizar</span>
               <Maximize className="h-3.5 w-3.5" />
@@ -166,9 +344,24 @@ export default function EditorMaterialPage() {
                 <DropdownMenuItem onClick={editor.saveDraft} disabled={!hasChanges} className="gap-2">
                   <Save className="h-4 w-4" /> Salvar Rascunho
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2 text-muted-foreground" disabled>
-                  Duplicar Proposta
+                <DropdownMenuItem className="gap-2" onClick={() => {
+                  if (!id) return;
+                  duplicateMaterial.mutate(id, {
+                    onSuccess: (newMaterial) => {
+                      navigate(`/app/comercial/construtor/${newMaterial.id}`);
+                    }
+                  });
+                }}>
+                  <CopyIcon className="h-4 w-4" /> Duplicar Proposta
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={openSlugModal} className="gap-2">
+                  <LinkIcon className="h-4 w-4" /> Personalizar Link Público
+                </DropdownMenuItem>
+                {state.format === 'blocks' && (
+                  <DropdownMenuItem onClick={() => { setTemplateName(`${state.title} (modelo)`); setIsTemplateModalOpen(true); }} className="gap-2">
+                    <LayoutTemplate className="h-4 w-4" /> Salvar como Modelo
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                   checked={!state.globalSettings?.hideWhatsApp}
@@ -192,47 +385,35 @@ export default function EditorMaterialPage() {
           
           {state.format === 'blocks' ? (
             <>
-              {/* COLUNA ESQUERDA: ESTRUTURA */}
-              <div className="w-[280px] shrink-0 border-r bg-background flex flex-col z-10">
-                <EditorSidebar
-                  blocks={state.blocks}
-                  activeIndex={activeIndex}
-                  onSelectBlock={handleSelectBlock}
-                  onAddBlock={handleAddBlock}
-                  onMoveBlock={editor.moveBlock}
-                  onReorderBlocks={editor.reorderBlocks}
-                />
-              </div>
-              
-              {/* COLUNA CENTRAL: RENDERIZADOR VISUAL */}
-              <div className="flex-1 overflow-y-auto bg-muted/30 relative flex justify-center custom-scrollbar">
-                <VisualRenderer 
-                  blocks={state.blocks}
-                  activeIndex={activeIndex}
-                  onSelectBlock={handleSelectBlock}
-                  viewMode={viewMode}
-                />
+              {/* COLUNA ESQUERDA: ESTRUTURA (≥lg) */}
+              <div className="hidden lg:flex w-[280px] shrink-0 border-r bg-background flex-col z-10">
+                {structurePanel}
               </div>
 
-              {/* COLUNA DIREITA: PROPRIEDADES (EDIÇÃO CONTEXTUAL) */}
-              <div className="w-[340px] shrink-0 border-l bg-background flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10">
-                {activeBlock ? (
-                   <PropertiesSidebar
-                      block={activeBlock}
-                      blockIndex={activeIndex}
-                      onUpdateBlock={editor.updateBlock}
-                      onRemoveBlock={(index) => {
-                        editor.removeBlock(index);
-                        if (activeIndex >= state.blocks.length - 1) {
-                          setActiveIndex(Math.max(0, state.blocks.length - 2));
-                        }
-                      }}
-                   />
-                ) : (
-                  <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-muted-foreground">
-                    Selecione uma seção para editar suas propriedades.
+              {/* COLUNA CENTRAL: RENDERIZADOR VISUAL */}
+              <div className="flex-1 overflow-y-auto bg-muted/30 relative flex justify-center custom-scrollbar">
+                {inlineEditing && (
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-background/90 border border-border shadow-sm text-[11px] text-muted-foreground pointer-events-none">
+                    <MousePointerClick className="h-3 w-3" />
+                    Clique para selecionar · Duplo clique para editar o texto
                   </div>
                 )}
+                <div className="w-full h-full" style={viewMode === 'desktop' && zoom !== 1 ? { zoom } : undefined}>
+                  <VisualRenderer
+                    blocks={state.blocks}
+                    activeIndex={activeIndex}
+                    onSelectBlock={handleSelectBlock}
+                    viewMode={viewMode}
+                    designTokens={designTokens}
+                    inlineEditing={inlineEditing}
+                    onUpdateField={editor.updateBlockField}
+                  />
+                </div>
+              </div>
+
+              {/* COLUNA DIREITA: PROPRIEDADES (≥lg) */}
+              <div className="hidden lg:flex w-[340px] shrink-0 border-l bg-background flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.02)] z-10">
+                {propertiesPanel}
               </div>
             </>
           ) : (
@@ -266,6 +447,25 @@ export default function EditorMaterialPage() {
           )}
         </main>
       </div>
+
+      {/* DRAWERS DE ESTRUTURA/PROPRIEDADES (abaixo de lg) */}
+      <Sheet open={mobilePanel === 'structure'} onOpenChange={(open) => !open && setMobilePanel('none')}>
+        <SheetContent side="left" className="w-[300px] sm:w-[320px] p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Estrutura da Proposta</SheetTitle>
+          </SheetHeader>
+          {structurePanel}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={mobilePanel === 'properties'} onOpenChange={(open) => !open && setMobilePanel('none')}>
+        <SheetContent side="right" className="w-[340px] sm:w-[380px] p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Propriedades da Seção</SheetTitle>
+          </SheetHeader>
+          {propertiesPanel}
+        </SheetContent>
+      </Sheet>
 
       {/* MODAL FULLSCREEN PREVIEW */}
       {isPreviewOpen && (
@@ -302,11 +502,13 @@ export default function EditorMaterialPage() {
           {/* Renderiza VisualRenderer ou Iframe para Preview */}
           <div className="flex-1 overflow-y-auto bg-muted/30 flex justify-center py-8">
             {state.format === 'blocks' ? (
-               <VisualRenderer 
+               <VisualRenderer
                 blocks={state.blocks}
                 activeIndex={-1}
                 onSelectBlock={() => {}}
                 viewMode={viewMode}
+                mode="public"
+                designTokens={designTokens}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-background">
@@ -320,6 +522,40 @@ export default function EditorMaterialPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL SALVAR COMO MODELO */}
+      <Dialog open={isTemplateModalOpen} onOpenChange={setIsTemplateModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Salvar como Modelo</DialogTitle>
+            <DialogDescription>
+              O conteúdo atual desta proposta (blocos + paleta) fica disponível como modelo no wizard de criação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="template-name" className="text-sm font-medium">Nome do modelo</label>
+              <Input
+                id="template-name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Ex: Gestante Premium"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsTemplateModalOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={handleSaveAsTemplate}
+              disabled={!templateName.trim() || isSavingTemplate}
+              className="gap-2"
+            >
+              {isSavingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : <LayoutTemplate className="h-4 w-4" />}
+              Salvar Modelo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL PERSONALIZAR SLUG */}
       <Dialog open={isSlugModalOpen} onOpenChange={setIsSlugModalOpen}>

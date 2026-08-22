@@ -1,0 +1,17 @@
+name = "lunari-proposals-ai"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Deploy inicial usa o domínio gratuito do Cloudflare:
+#   https://lunari-proposals-ai.<sua-conta>.workers.dev
+# Depois (opcional) vincule um domínio próprio no dashboard (ex.: ia.lunarihub.com)
+# ou descomente:
+# routes = [
+#   { pattern = "ia.lunarihub.com", custom_domain = true }
+# ]
+
+# Segredos — configure com:
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_ANON_KEY
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+#   npx wrangler secret put LOVABLE_API_KEY   (opcional — fallback de IA)

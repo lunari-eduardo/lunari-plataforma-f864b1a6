@@ -2,12 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Template padrão de blocos para um novo material
+// Template padrão de blocos (V2) para um novo material
 const DEFAULT_TEMPLATE = [
-  { type: 'cover', data: { title: '', subtitle: '', image_url: '' } },
-  { type: 'about', data: { title: 'Sobre o Estúdio', text: '', photo_url: '' } },
-  { type: 'package', data: { name: 'Pacote Principal', price_cents: 0, description: '', items: [], highlight: false } },
-  { type: 'cta', data: { whatsapp: '', instagram: '', email: '', text: 'Entre em contato' } },
+  {
+    type: 'CoverBlock',
+    id: 'cover-1',
+    content: { eyebrow: 'Proposta personalizada', title: '', title_italic: '', subtitle: '', photographer_name: '', btnText: 'Quero viver essa experiência', btnLink: '', image_url: '' },
+  },
+  {
+    type: 'EditorialBlock',
+    id: 'editorial-1',
+    content: { eyebrow: 'Sobre a experiência', title: '', title_italic: '', body: '', vertical_label: '', details: [] },
+    props: { background: 'cream', photo_a: { width_pct: 72, height_pct: 80, image_ref: null }, photo_b: { width_pct: 62, height_pct: 66, image_ref: null } },
+  },
+  {
+    type: 'PricingTable',
+    id: 'pricing-1',
+    content: { eyebrow: 'Investimento', title: 'Pacotes', packages: [] },
+  },
+  {
+    type: 'CTABlock',
+    id: 'cta-1',
+    content: { cta_text: 'Vamos conversar?', links: [] },
+  },
 ];
 
 export interface CommercialMaterial {
@@ -83,15 +100,23 @@ export function useMaterials() {
       if (matError) throw matError;
 
       // 1.5. Resolver o conteúdo inicial
-      let finalContent = initialContent || DEFAULT_TEMPLATE;
+      let finalContent: any[] = initialContent || DEFAULT_TEMPLATE;
       if (template_id) {
         const { data: template, error: tmplError } = await (supabase as any)
           .from('proposal_templates')
-          .select('blocks_json')
+          .select('blocks_json, design_tokens')
           .eq('template_id', template_id)
           .single();
         if (!tmplError && template && template.blocks_json) {
           finalContent = template.blocks_json;
+          // Preserva os design tokens do template dentro do bloco sintético global_settings
+          // (a coluna content é o único armazenamento da versão)
+          if (template.design_tokens) {
+            finalContent = [
+              ...finalContent.filter((b: any) => b?.type !== 'global_settings'),
+              { type: 'global_settings', data: { design_tokens: template.design_tokens } },
+            ];
+          }
         }
       }
 

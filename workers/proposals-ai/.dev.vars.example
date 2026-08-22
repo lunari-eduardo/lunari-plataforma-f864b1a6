@@ -1,0 +1,7 @@
+# Copie para .dev.vars para rodar `npm run dev` localmente (wrangler dev).
+# Estes valores ficam só na sua máquina — NUNCA comite .dev.vars.
+
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+LOVABLE_API_KEY=

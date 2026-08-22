@@ -41,8 +41,8 @@ export function useMaterialShares(materialId: string | undefined) {
       if (matErr || !material) throw new Error('Material não encontrado');
       if (!material.active_version_id) throw new Error('O material precisa ser publicado antes de enviar.');
 
-      // Gerar um token opaco simples
-      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      // Gerar um token opaco criptograficamente seguro
+      const token = crypto.randomUUID().replace(/-/g, '');
 
       const { data, error } = await (supabase as any)
         .from('material_shares')

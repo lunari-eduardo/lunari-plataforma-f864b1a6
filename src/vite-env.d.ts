@@ -1,5 +1,13 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  readonly VITE_PROPOSALS_AI_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Marcadores injetados pelo build (vite.config.ts → define). Em dev caem
 // para 'local-dev' / timestamp do boot.
 declare const __BUILD_COMMIT__: string;

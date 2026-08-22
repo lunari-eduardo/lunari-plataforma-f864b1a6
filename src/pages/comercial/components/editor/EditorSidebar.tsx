@@ -1,22 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BlockData } from '@/hooks/useMaterialEditor';
 import { cn } from '@/lib/utils';
-import { 
-  Image as ImageIcon, 
-  AlignLeft, 
-  DollarSign, 
-  Briefcase, 
-  HelpCircle, 
-  MessageSquare,
-  GripVertical,
-  Plus
-} from 'lucide-react';
+import { GripVertical, Plus, Sparkles, Palette, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   DndContext,
@@ -28,13 +19,14 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ADDABLE_BLOCK_TYPES, getBlockDef, getBlockName, DEFAULT_BLOCK_ICON } from '../../blocks/registry';
+import { DESIGN_PRESETS, useProposalOutline } from '@/hooks/useProposalAI';
 
 export interface EditorSidebarProps {
   blocks: BlockData[];
@@ -43,69 +35,10 @@ export interface EditorSidebarProps {
   onAddBlock: (type: string) => void;
   onMoveBlock: (index: number, direction: 'up' | 'down') => void;
   onReorderBlocks: (oldIndex: number, newIndex: number) => void;
+  /** Aplica design tokens (paletas do assistente de design) */
+  onApplyDesignTokens?: (tokens: { colors?: Record<string, string>; typography?: { display?: string; body?: string } }) => void;
+  materialTitle?: string;
 }
-
-const getBlockIcon = (type: string) => {
-  switch (type) {
-    case 'cover': 
-    case 'CoverBlock': return ImageIcon;
-    case 'about': 
-    case 'EditorialBlock': return AlignLeft;
-    case 'package': 
-    case 'PricingTable': return DollarSign;
-    case 'portfolio': 
-    case 'Gallery': return Briefcase;
-    case 'faq': 
-    case 'TestimonialBlock': return HelpCircle; // Testimonials will use HelpCircle or MessageSquare, let's use MessageSquare
-    case 'cta': 
-    case 'CTABlock': return MessageSquare;
-    case 'text': 
-    case 'FooterTerms': return AlignLeft;
-    default: return AlignLeft;
-  }
-};
-
-const getBlockName = (type: string) => {
-  switch (type) {
-    case 'cover': 
-    case 'CoverBlock': return 'Capa';
-    case 'about': return 'Apresentação';
-    case 'EditorialBlock': return 'Editorial';
-    case 'package': 
-    case 'PricingTable': return 'Tabela de Preços';
-    case 'portfolio': 
-    case 'Gallery': return 'Galeria';
-    case 'faq': return 'Perguntas Frequentes';
-    case 'TestimonialBlock': return 'Depoimentos';
-    case 'cta': 
-    case 'CTABlock': return 'Chamada para ação';
-    case 'text': return 'Texto Livre';
-    case 'FooterTerms': return 'Rodapé';
-    default: return 'Seção';
-  }
-};
-
-const getBlockDesc = (type: string) => {
-  switch (type) {
-    case 'cover': 
-    case 'CoverBlock': return 'Seção de abertura';
-    case 'about': return 'Sobre você e seu trabalho';
-    case 'EditorialBlock': return 'Bloco de conteúdo com imagens';
-    case 'package': 
-    case 'PricingTable': return 'Pacotes e valores';
-    case 'portfolio': 
-    case 'Gallery': return 'Mostre seus resultados';
-    case 'faq': return 'Dúvidas comuns';
-    case 'TestimonialBlock': return 'O que dizem sobre você';
-    case 'cta': 
-    case 'CTABlock': return 'Botão de contato e links';
-    case 'text': return 'Conteúdo customizado';
-    case 'FooterTerms': return 'Direitos autorais e termos';
-    default: return '';
-  }
-};
-
-const blockTypes = ['CoverBlock', 'EditorialBlock', 'PricingTable', 'Gallery', 'TestimonialBlock', 'CTABlock', 'FooterTerms', 'text'];
 
 // Item sortable extraído para o dnd-kit
 function SortableSidebarItem({ block, index, isActive, onSelect }: { block: BlockData, index: number, isActive: boolean, onSelect: () => void }) {
@@ -125,7 +58,7 @@ function SortableSidebarItem({ block, index, isActive, onSelect }: { block: Bloc
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const Icon = getBlockIcon(block.type);
+  const Icon = getBlockDef(block.type)?.icon ?? DEFAULT_BLOCK_ICON;
 
   return (
     <div 
@@ -145,10 +78,10 @@ function SortableSidebarItem({ block, index, isActive, onSelect }: { block: Bloc
       
       <div className="flex flex-1 flex-col overflow-hidden">
         <span className={cn("text-sm font-semibold leading-tight", isActive ? "text-foreground" : "text-foreground/80")}>
-          {block.content?.title || block.content?.eyebrow || block.data?.title || getBlockName(block.type)}
+          {block.content?.title || block.content?.cta_text || block.content?.eyebrow || block.data?.title || getBlockName(block.type)}
         </span>
         <span className="text-[11px] text-muted-foreground truncate mt-0.5">
-          {getBlockDesc(block.type)}
+          {getBlockDef(block.type)?.description ?? ''}
         </span>
       </div>
       
@@ -169,9 +102,11 @@ export function EditorSidebar({
   activeIndex,
   onSelectBlock,
   onAddBlock,
-  onReorderBlocks
+  onReorderBlocks,
+  onApplyDesignTokens,
+  materialTitle
 }: EditorSidebarProps) {
-  
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -182,6 +117,9 @@ export function EditorSidebar({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const { suggest, isLoading: outlineLoading } = useProposalOutline();
+  const [outline, setOutline] = useState<{ type: string; reason: string }[] | null>(null);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -245,8 +183,9 @@ export function EditorSidebar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="w-56 rounded-xl">
-              {blockTypes.map((type) => {
-                const Icon = getBlockIcon(type);
+              {ADDABLE_BLOCK_TYPES.map((type) => {
+                const def = getBlockDef(type);
+                const Icon = def?.icon ?? DEFAULT_BLOCK_ICON;
                 return (
                   <DropdownMenuItem key={type} onClick={() => onAddBlock(type)} className="gap-3 py-2 cursor-pointer">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-muted/50">
@@ -254,7 +193,7 @@ export function EditorSidebar({
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{getBlockName(type)}</span>
-                      <span className="text-[10px] text-muted-foreground">{getBlockDesc(type)}</span>
+                      <span className="text-[10px] text-muted-foreground">{def?.description}</span>
                     </div>
                   </DropdownMenuItem>
                 );
@@ -262,6 +201,90 @@ export function EditorSidebar({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* ASSISTENTE DE DESIGN (paletas + estrutura com IA) */}
+        {onApplyDesignTokens && (
+          <div className="mt-4 pt-3 border-t border-border space-y-3">
+            <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <Palette className="h-3 w-3" />
+              Assistente de Design
+            </h3>
+
+            <div className="grid grid-cols-2 gap-2">
+              {DESIGN_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  title={preset.description}
+                  onClick={() => onApplyDesignTokens(preset.tokens)}
+                  className="group rounded-lg border border-border p-2 text-left hover:border-primary/50 hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex gap-1 mb-1.5">
+                    {(['cream', 'accent', 'ink'] as const).map((c) => (
+                      <span
+                        key={c}
+                        className="h-3.5 w-3.5 rounded-full border border-black/5"
+                        style={{ backgroundColor: preset.tokens.colors?.[c] }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-medium leading-tight block">{preset.name}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-primary text-xs h-8"
+                disabled={outlineLoading}
+                onClick={async () => {
+                  const result = await suggest({
+                    session_type: 'proposta comercial',
+                    highlights: materialTitle ? `Proposta: ${materialTitle}` : undefined,
+                  });
+                  setOutline(result);
+                }}
+              >
+                {outlineLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                Sugerir estrutura com IA
+              </Button>
+
+              {outline && outline.length > 0 && (
+                <div className="space-y-1">
+                  {outline.map((o, i) => {
+                    const exists = blocks.some((b) => b.type === o.type);
+                    return (
+                      <div key={`${o.type}-${i}`} className="flex items-start gap-2 rounded-md bg-muted/30 p-2">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11px] font-medium flex items-center gap-1">
+                            {getBlockName(o.type)}
+                            {exists && <Check className="h-3 w-3 text-emerald-600" />}
+                          </span>
+                          <p className="text-[10px] text-muted-foreground line-clamp-2">{o.reason}</p>
+                        </div>
+                        {!exists && (
+                          <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] shrink-0" onClick={() => onAddBlock(o.type)}>
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-[10px] h-7 text-muted-foreground"
+                    onClick={() => setOutline(null)}
+                  >
+                    Fechar sugestões
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

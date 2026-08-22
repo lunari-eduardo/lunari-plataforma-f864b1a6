@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag, FileText, UploadCloud, Archive, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag, FileText, UploadCloud, Archive, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,9 @@ import { useMaterialShares } from '@/hooks/useMaterialShares';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
+import { gestaoR2Upload } from '@/lib/gestaoR2Upload';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProposalGenerate, type ProposalBriefing } from '@/hooks/useProposalAI';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,14 +42,7 @@ export function formatWhatsAppNumber(phone: string): string {
   return numbers;
 }
 
-// Mock de conteúdo inicial gerado por IA (MVP — será substituído por IA real)
-const MOCK_AI_CONTENT = [
-  { type: 'cover', data: { title: 'Proposta Exclusiva', subtitle: 'Registrando momentos únicos da sua história.', btnText: 'Vamos começar' } },
-  { type: 'about', data: { title: 'Por que me escolher', content: 'Minha fotografia não é apenas sobre o click, mas sobre a experiência...' } },
-  { type: 'package', data: { title: 'Pacote Essencial', price_cents: 189000, description: '1h de ensaio\n20 fotos digitais\nGaleria online' } },
-  { type: 'package', data: { title: 'Pacote Premium', price_cents: 249000, description: '2h de ensaio\nTodas as fotos digitais\nÁlbum 20x20', highlight: true } },
-  { type: 'faq', data: { title: 'Dúvidas Comuns', content: 'Posso levar acompanhante? Sim.' } }
-];
+// (A geração de conteúdo com IA é real: edge function proposal-generate)
 
 type Categoria = { id: string; nome: string; cor: string | null };
 
@@ -61,10 +56,14 @@ export type DbTemplate = {
 };
 
 // Etapas do wizard de criação
-type Step = 'category' | 'method' | 'template-gallery' | 'pdf-upload';
+type Step = 'category' | 'method' | 'template-gallery' | 'pdf-upload' | 'ai-briefing';
+
+const SESSION_TYPES = ['Ensaio Gestante', 'Casamento', 'Newborn', 'Família', 'Aniversário', 'Ensaios de Casal', 'Corporativo', 'Produto', 'Outro'];
+const TONES = ['Acolhedor', 'Sofisticado', 'Divertido', 'Minimalista', 'Poético'];
 
 export default function BibliotecaComercialPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { materials, isLoading, createMaterial, archiveMaterial, deleteMaterial, duplicateMaterial } = useMaterials();
   const isPendingCreate = createMaterial.isPending;
@@ -79,6 +78,10 @@ export default function BibliotecaComercialPage() {
   const [customTitle, setCustomTitle] = useState('');
   const [creationMethod, setCreationMethod] = useState<'ai' | 'template' | 'db-template' | 'pdf' | null>(null);
   const [selectedDbTemplate, setSelectedDbTemplate] = useState<DbTemplate | null>(null);
+
+  // Briefing para geração com IA
+  const { generate, isGenerating } = useProposalGenerate();
+  const [briefing, setBriefing] = useState<ProposalBriefing>({ session_type: 'Ensaio Gestante', tone: 'Acolhedor' });
 
   // PDF Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,9 +157,20 @@ export default function BibliotecaComercialPage() {
     if (!resolvedTitle || !creationMethod) return;
 
     let initialContent: any = undefined;
-    
+
     if (creationMethod === 'ai') {
-      initialContent = MOCK_AI_CONTENT;
+      // Geração real por IA: briefing → edge proposal-generate → blocos V2 validados
+      const generated = await generate({
+        ...briefing,
+        photographer_name: briefing.photographer_name || undefined,
+      });
+      if (!generated) {
+        toast.error('Não foi possível gerar a proposta com IA. Tente novamente ou use um modelo.');
+        return;
+      }
+      initialContent = generated.design_tokens
+        ? [...generated.blocks, { type: 'global_settings', data: { design_tokens: generated.design_tokens } }]
+        : generated.blocks;
     } else if (creationMethod === 'db-template' && selectedDbTemplate) {
       // Neste caso, a criação é tratada no `useMaterials.ts` passando o `template_id`
       // Mas podemos passar uma prop separada. Como o `createMaterial` atual já
@@ -178,20 +192,12 @@ export default function BibliotecaComercialPage() {
     } else if (creationMethod === 'pdf' && selectedPdf) {
       try {
         setIsUploadingPdf(true);
-        const fileExt = selectedPdf.name.split('.').pop();
-        const fileName = `${user?.id}/${crypto.randomUUID()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('proposals_pdfs')
-          .upload(fileName, selectedPdf);
-        
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('proposals_pdfs')
-          .getPublicUrl(fileName);
-
-        initialContent = { type: 'pdf', url: publicUrl };
+        // Upload unificado no R2 (mesmo contexto usado na substituição dentro do editor)
+        const result = await gestaoR2Upload({ file: selectedPdf, context: 'proposals-pdf' });
+        const pdfUrl = result.url || `https://media.lunarihub.com/${result.storagePath}`;
+        initialContent = { type: 'pdf', url: pdfUrl };
       } catch (err) {
+        console.error(err);
         toast.error('Erro ao fazer upload do PDF.');
         setIsUploadingPdf(false);
         return;
@@ -328,7 +334,11 @@ export default function BibliotecaComercialPage() {
                 coverUrl={material.cover_image_url}
                 onOpen={handleOpenEditor}
                 onArchive={() => archiveMaterial.mutate(material.id)}
-                onDelete={() => deleteMaterial.mutate(material.id)}
+                onDelete={() => {
+                  if (window.confirm(`Excluir "${material.title}" permanentemente?\n\nEsta ação exclui a proposta e todo o histórico de compartilhamentos e não pode ser desfeita.`)) {
+                    deleteMaterial.mutate(material.id);
+                  }
+                }}
                 onSend={handleOpenSendModal}
                 onDuplicate={(id) => duplicateMaterial.mutate(id)}
                 onViewShares={() => navigate(`/app/comercial/compartilhamentos?material=${encodeURIComponent(material.title)}`)}
@@ -360,6 +370,7 @@ export default function BibliotecaComercialPage() {
               {step === 'method' && 'Escolha como deseja iniciar a criação.'}
               {step === 'template-gallery' && 'Escolha um modelo premium para iniciar.'}
               {step === 'pdf-upload' && 'Faça o upload do seu arquivo PDF estático.'}
+              {step === 'ai-briefing' && 'Conte sobre a sessão para a IA escrever a proposta.'}
               {step === 'category' && 'Selecione a categoria para este material comercial.'}
             </DialogDescription>
           </DialogHeader>
@@ -460,6 +471,71 @@ export default function BibliotecaComercialPage() {
             </div>
           )}
 
+          {/* ─── PASSO IA: Briefing para geração ─── */}
+          {step === 'ai-briefing' && (
+            <div className="py-4 space-y-4 animate-in slide-in-from-right-4 fade-in duration-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tipo de sessão *</label>
+                  <Select
+                    value={briefing.session_type}
+                    onValueChange={(v) => setBriefing((b) => ({ ...b, session_type: v }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SESSION_TYPES.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tom da escrita</label>
+                  <Select
+                    value={briefing.tone || 'Acolhedor'}
+                    onValueChange={(v) => setBriefing((b) => ({ ...b, tone: v }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TONES.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nome do cliente (opcional)</label>
+                  <Input
+                    value={briefing.client_name || ''}
+                    onChange={(e) => setBriefing((b) => ({ ...b, client_name: e.target.value }))}
+                    placeholder="Ex: Mariana"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Seu nome / estúdio (opcional)</label>
+                  <Input
+                    value={briefing.photographer_name || ''}
+                    onChange={(e) => setBriefing((b) => ({ ...b, photographer_name: e.target.value }))}
+                    placeholder="Ex: Camila Ramos Fotografias"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Destaques e observações</label>
+                <Textarea
+                  value={briefing.highlights || ''}
+                  onChange={(e) => setBriefing((b) => ({ ...b, highlights: e.target.value }))}
+                  placeholder="Ex: ensaio no estúdio com luz natural, 2 trocas de roupa, entrega em 10 dias, álbum incluso..."
+                  className="min-h-[90px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  A IA gera a estrutura e os textos (capa, editorial, pacotes, depoimentos e CTA).
+                  Depois você edita tudo normalmente no construtor.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ─── PASSO 3: Galeria de Templates do Banco ─── */}
           {step === 'template-gallery' && (
             <div className="py-4 space-y-4 animate-in slide-in-from-right-4 fade-in duration-200">
@@ -480,30 +556,55 @@ export default function BibliotecaComercialPage() {
               ) : (
                 <div className="grid grid-cols-2 gap-4 max-h-[350px] overflow-y-auto pr-1">
                   {dbTemplates.map(template => (
-                    <button
+                    <div
                       key={template.id}
-                      type="button"
-                      onClick={() => setSelectedDbTemplate(template)}
                       className={cn(
-                        'flex flex-col rounded-xl border-2 overflow-hidden text-left transition-all',
+                        'relative flex flex-col rounded-xl border-2 overflow-hidden text-left transition-all',
                         selectedDbTemplate?.id === template.id
                           ? 'border-primary ring-2 ring-primary/20'
                           : 'border-border hover:border-primary/50'
                       )}
                     >
-                      <div className="h-32 w-full bg-muted flex items-center justify-center border-b border-border">
-                        <LayoutTemplate className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <div className="p-3 bg-card">
-                        <h4 className="font-medium text-sm text-foreground">{template.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
-                        <div className="flex gap-1 mt-2 flex-wrap">
-                          {template.tags?.slice(0,2).map(tag => (
-                            <span key={tag} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{tag}</span>
-                          ))}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDbTemplate(template)}
+                        className="flex flex-col flex-1 text-left"
+                      >
+                        <div className="h-32 w-full bg-muted flex items-center justify-center border-b border-border">
+                          <LayoutTemplate className="h-8 w-8 text-muted-foreground" />
                         </div>
-                      </div>
-                    </button>
+                        <div className="p-3 bg-card">
+                          <h4 className="font-medium text-sm text-foreground">{template.name}</h4>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{template.description}</p>
+                          <div className="flex gap-1 mt-2 flex-wrap">
+                            {template.tags?.slice(0,2).map(tag => (
+                              <span key={tag} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        title="Desativar este modelo"
+                        className="absolute top-1.5 right-1.5 h-7 w-7 rounded-md bg-background/80 border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 items-center justify-center hidden sm:flex"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!window.confirm(`Desativar o modelo "${template.name}"? Ele deixa de aparecer na galeria.`)) return;
+                          const { error } = await (supabase as any)
+                            .from('proposal_templates')
+                            .update({ is_active: false })
+                            .eq('id', template.id);
+                          if (error) {
+                            toast.error('Erro ao desativar modelo: ' + error.message);
+                          } else {
+                            toast.success('Modelo desativado.');
+                            queryClient.invalidateQueries({ queryKey: ['proposal-templates'] });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -587,6 +688,7 @@ export default function BibliotecaComercialPage() {
                   onClick={() => {
                     if (creationMethod === 'db-template') setStep('template-gallery');
                     else if (creationMethod === 'pdf') setStep('pdf-upload');
+                    else if (creationMethod === 'ai') setStep('ai-briefing');
                     else setStep('method');
                   }}
                   className="hover:text-foreground transition-colors underline underline-offset-2"
@@ -656,9 +758,21 @@ export default function BibliotecaComercialPage() {
                 onClick={() => {
                   if (creationMethod === 'db-template') setStep('template-gallery');
                   else if (creationMethod === 'pdf') setStep('pdf-upload');
+                  else if (creationMethod === 'ai') setStep('ai-briefing');
                   else setStep('category');
                 }}
                 disabled={!creationMethod}
+                className="gap-2"
+              >
+                Continuar
+                <ChevronRight size={16} />
+              </Button>
+            )}
+
+            {step === 'ai-briefing' && (
+              <Button
+                onClick={() => setStep('category')}
+                disabled={!briefing.session_type}
                 className="gap-2"
               >
                 Continuar
@@ -691,10 +805,20 @@ export default function BibliotecaComercialPage() {
             {step === 'category' && (
               <Button
                 onClick={handleCreate}
-                disabled={!selectedCategoria || isPendingCreate}
+                disabled={!selectedCategoria || isPendingCreate || isGenerating}
                 className="gap-2"
               >
-                {isPendingCreate ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Criar Proposta'}
+                {isPendingCreate || isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {creationMethod === 'ai' ? 'Gerando com IA...' : 'Criando...'}
+                  </>
+                ) : (
+                  <>
+                    {creationMethod === 'ai' && <Sparkles className="h-4 w-4" />}
+                    Criar Proposta
+                  </>
+                )}
               </Button>
             )}
           </DialogFooter>

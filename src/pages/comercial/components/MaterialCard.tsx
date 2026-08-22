@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  MoreHorizontal, 
-  Link as LinkIcon, 
-  FileText, 
+import {
+  MoreHorizontal,
+  FileText,
   Image as ImageIcon,
-  History,
   Share2,
-  BarChart2,
   Copy as CopyIcon,
   Archive,
   Trash2

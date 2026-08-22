@@ -75,29 +75,33 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   const pdfUrl = isPdfFormat ? contentData.url : '';
   let blocks = isPdfFormat ? [] : (contentData || []);
   let hideWhatsApp = false;
+  let designTokens: any = undefined;
   if (isPdfFormat && contentData?.settings) {
     hideWhatsApp = contentData.settings.hideWhatsApp;
+    designTokens = contentData.settings.design_tokens;
   } else if (!isPdfFormat) {
     const settingsBlock = blocks.find((b: any) => b.type === 'global_settings');
     if (settingsBlock) {
       hideWhatsApp = settingsBlock.data?.hideWhatsApp;
+      designTokens = settingsBlock.data?.design_tokens;
       blocks = blocks.filter((b: any) => b.type !== 'global_settings');
     }
   }
 
   // Lógica do CTA WhatsApp
-  const handleWhatsAppClick = () => {
-    trackEvent('cta_click', { cta_type: 'whatsapp' });
-    
+  const handleWhatsAppClick = (ctaLabel?: string) => {
+    trackEvent('cta_click', { cta_type: ctaLabel ? 'block_cta' : 'whatsapp' });
+
     if (!userProfile?.whatsapp) {
       alert('O fotógrafo ainda não configurou um número de WhatsApp.');
       return;
     }
-    
+
     const phone = userProfile.whatsapp.replace(/\D/g, '');
     const title = materialInfo?.title || 'orçamento';
-    const message = encodeURIComponent(`Olá! Vi o orçamento de ${title} e tenho interesse.`);
-    
+    const suffix = ctaLabel ? ` (interessado em: ${ctaLabel})` : '';
+    const message = encodeURIComponent(`Olá! Vi o orçamento de ${title}${suffix} e tenho interesse.`);
+
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
 
@@ -106,6 +110,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
     // Aqui garantimos que qualquer mídia autoplay possa iniciar após a interação do usuário
   };
 
+  // Portão de mensagem personalizada: só existe enquanto o usuário não avançou
   if (!hasStarted && result.customMessage) {
     return (
       <PublicThemeWrapper primaryColor={(result as any).theme?.primaryColor || undefined}>
@@ -120,7 +125,7 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
             <p className="text-[#6D655E] mb-8 whitespace-pre-wrap italic">
               "{result.customMessage}"
             </p>
-            <button 
+            <button
               onClick={handleStart}
               className="w-full bg-[#2C2825] hover:bg-black text-white px-6 py-4 rounded-xl font-medium transition-all"
             >
@@ -132,22 +137,19 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
     );
   }
 
-  // Se não tem mensagem, e ainda não marcou started, marca direto (pode causar render extra, mas simplifica a lógica)
-  if (!hasStarted && !result.customMessage) {
-    setHasStarted(true);
-    return null;
-  }
-
   return (
     <PublicThemeWrapper primaryColor={(result as any).theme?.primaryColor || undefined} className="flex flex-col relative pb-24">
       {isPdfFormat ? (
         <NativePdfViewer url={pdfUrl} logoUrl={userProfile?.avatar_url} />
       ) : (
-        <VisualRenderer 
+        <VisualRenderer
           blocks={blocks}
           activeIndex={-1}
           onSelectBlock={() => {}}
           viewMode="desktop"
+          mode="public"
+          onCtaClick={({ label }) => handleWhatsAppClick(label)}
+          designTokens={designTokens}
           onSectionView={(blockId, blockType, position) => {
             trackEvent('section_view', { blockId, blockType, position });
           }}
@@ -158,9 +160,9 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
         <>
           {/* Floating CTA WhatsApp */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background/90 to-transparent flex justify-center z-50 pointer-events-none">
-            <button 
+            <button
               ref={ctaRef}
-              onClick={handleWhatsAppClick}
+              onClick={() => handleWhatsAppClick()}
               className="pointer-events-auto shadow-2xl bg-green-600 hover:bg-green-700 text-white px-6 py-4 rounded-full font-medium flex items-center gap-3 transition-transform hover:scale-105 active:scale-95"
             >
               <MessageCircle className="w-5 h-5" />
