@@ -46,7 +46,7 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Fase 1 concluída: Mapa do codebase gerado, imagens de referência processadas e presets de IA atualizados.
+          Fase 2 implementada: Novo bloco EditorialComposition criado, registrado no motor de blocos e integrado ao VisualRenderer.
         </div>
         <InstallPWAButton />
 
