@@ -46,18 +46,8 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Está ocorrendo erro ao tetar gerar link compartilhavel de propostas, dizendo que proposta precisa estar publicada, mesmo quando proposta já está publicada.
-
-          Não está sendo possível acessar o editar, dizendo que "Algo deu errado
-          O aplicativo encontrou um erro inesperado ao carregar. Por favor, recarregue a página." dando opçao de recarregar ou limpar cache, e nada resolve.
-
-          Faça uma investigação a fundo 
-
-          Quero um plano completo, nos minimos detalhes, sem soluções genéricas.
-
-          NÃO QUERO que implemente nada ainda, apenas faça uma verredura completa para criar um plano detalhado de correção
-
-          FAÇA ISSO NO MODO "PLAN"
+          Ok, prossiga com o passo 1:
+          Auditoria de Banco de Dados (Investigação Imediata)
         </div>
         <InstallPWAButton />
 
