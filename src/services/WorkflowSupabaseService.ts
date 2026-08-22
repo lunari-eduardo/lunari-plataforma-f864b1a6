@@ -65,7 +65,7 @@ export class WorkflowSupabaseService {
 
       const { data: appointment } = await supabase
         .from('appointments')
-        .select('package_id, description, date, time')
+        .select('package_id, description, date, time, paid_amount')
         .eq('id', appointmentId)
         .eq('user_id', userId)
         .maybeSingle();

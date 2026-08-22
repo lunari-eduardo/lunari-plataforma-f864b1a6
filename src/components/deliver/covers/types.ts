@@ -23,6 +23,7 @@ export interface CoverVariant {
   id: string;
   name: string;
   description: string;
-  Component: LazyExoticComponent<ComponentType<CoverVariantProps>>;
+  /** Aceita componente estático ou lazy — ambos renderizam em JSX. */
+  Component: ComponentType<CoverVariantProps> | LazyExoticComponent<ComponentType<CoverVariantProps>>;
   Thumbnail: ComponentType<{ className?: string }>;
 }
