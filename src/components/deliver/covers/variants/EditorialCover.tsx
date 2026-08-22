@@ -60,8 +60,8 @@ export default function EditorialCover({
   
   const isSingleLine = !line2;
   const maxFontSizeVw = spec.orientation === 'vertical'
-    ? (isSingleLine ? 18 : 12)
-    : (isSingleLine ? 30 : 22);
+    ? (isSingleLine ? 16 : 11)
+    : (isSingleLine ? 28 : 17);
 
   const coverUrl = coverPhoto ? getPhotoUrl(coverPhoto, 'preview') : '/placeholder.svg';
   
@@ -72,7 +72,7 @@ export default function EditorialCover({
     spec.title.height,
     sessionFont || 'serif',
     maxFontSizeVw,
-    spec.orientation === 'vertical' ? 24 : 32
+    spec.orientation === 'vertical' ? 24 : 26
   );
 
   const titleIntersection = useMemo(() => {
@@ -151,9 +151,7 @@ export default function EditorialCover({
     alignItems: 'center'
   } : {
     left: `${spec.title.x}px`,
-    top: isSingleLine
-      ? `${spec.seamPx - (fontSize * 0.44)}px` // Centraliza o nome de 1 linha no corte
-      : `${spec.seamPx - (fontSize * 0.65)}px`, // Linha 1 cruza a costura e Linha 2 fica na foto
+    top: `${spec.seamPx - (fontSize * 0.42)}px`, // Ancoragem perfeita no corte da costura
     width: `${spec.title.width}px`,
     display: 'flex',
     alignItems: 'flex-start',

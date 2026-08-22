@@ -96,8 +96,8 @@ export function useSeamContrast(
         }
       } catch (e) {
         if (isMounted) {
-          setTitleColor(isDark ? '#FFFFFF' : '#171513');
-          setCtaColor(isDark ? '#FFFFFF' : '#171513');
+          setTitleColor('#FFFFFF');
+          setCtaColor('#FFFFFF');
         }
       }
     };
@@ -114,8 +114,8 @@ export function useSeamContrast(
       };
       img.onerror = () => {
         if (isMounted) {
-          setTitleColor(isDark ? '#FFFFFF' : '#171513');
-          setCtaColor(isDark ? '#FFFFFF' : '#171513');
+          setTitleColor('#FFFFFF');
+          setCtaColor('#FFFFFF');
         }
       };
     }
