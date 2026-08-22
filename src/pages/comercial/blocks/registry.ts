@@ -8,9 +8,10 @@ import {
   MessageSquare,
   Type,
   Heading1,
-  Scale,
-  Quote,
-} from 'lucide-react';
+   Scale,
+   Quote,
+   Layout,
+ } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ============================================================
