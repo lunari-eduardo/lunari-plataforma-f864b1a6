@@ -26,6 +26,7 @@ export interface PropertiesSidebarProps {
     materialTitle?: string;
     sessionType?: string;
     tone?: string;
+    designTokens?: any;
   };
 }
 
