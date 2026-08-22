@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Camera, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { uploadProposalImage } from './uploadImage';
+import { uploadProposalImage, uploadMultipleProposalImages } from './uploadImage';
 
 interface EditableImageProps {
   value: string | null | undefined;
@@ -151,7 +151,6 @@ export function AddImageTile({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { uploadMultipleProposalImages } = require('./uploadImage');
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
