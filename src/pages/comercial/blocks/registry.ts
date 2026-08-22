@@ -352,6 +352,37 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       props: { align: 'center', background: 'white' },
     }),
   },
+  EditorialComposition: {
+    type: 'EditorialComposition',
+    name: 'Composição Editorial',
+    description: 'Layout premium com foco em tipografia e impacto visual',
+    icon: Layout,
+    fields: [
+      { key: 'eyebrow', label: 'Rótulo Superior', kind: 'text', placeholder: 'A experiência' },
+      { key: 'title', label: 'Título Principal', kind: 'text', placeholder: 'Essência' },
+      { key: 'title_italic', label: 'Título em Itálico', kind: 'text', placeholder: 'Através do Olhar' },
+      { key: 'body', label: 'Texto (Corpo)', kind: 'textarea', placeholder: 'Uma narrativa visual construída...' },
+      { key: 'side_label', label: 'Rótulo Lateral', kind: 'text', placeholder: 'Lunari · Estúdio' },
+      { key: 'image_url', label: 'Imagem Principal', kind: 'image' },
+    ],
+    layoutFields: [
+      backgroundField(),
+      {
+        key: 'layout',
+        label: 'Layout da Composição',
+        kind: 'select',
+        options: [
+          { value: 'split-left', label: 'Imagem à Esquerda' },
+          { value: 'split-right', label: 'Imagem à Direita' },
+          { value: 'full-overlap', label: 'Sobreposição Total' },
+        ],
+      },
+    ],
+    factory: () => ({
+      content: { eyebrow: '', title: '', title_italic: '', body: '', side_label: '', image_url: '' },
+      props: { background: 'cream', layout: 'split-left' },
+    }),
+  },
 };
 
 // Tipos V1 legados mapeados na normalização

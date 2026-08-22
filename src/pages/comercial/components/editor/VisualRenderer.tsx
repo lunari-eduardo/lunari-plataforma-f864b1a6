@@ -7,6 +7,7 @@ import { ProposalDesignTokens, tokensToCssVars, ensureFontLoaded, fontDisplayCss
 import { EditableText } from '../../blocks/EditableText';
 import { EditableImage, AddImageTile } from '../../blocks/EditableImage';
 import { InlineEditContext, useInlineEdit } from '../../blocks/inlineContext';
+import { EditorialComposition } from '../../blocks/EditorialComposition';
 
 interface VisualRendererProps {
   blocks: BlockData[];
@@ -690,6 +691,7 @@ export function VisualRenderer({
                 {block.type === 'package' && <PackageRenderer data={block.data} onCtaClick={onCtaClick} />}
                 {block.type === 'EditorialBlock' && <EditorialRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'PricingTable' && <PricingTableRenderer content={block.content} data={block.data} props={block.props} onCtaClick={onCtaClick} />}
+                {block.type === 'EditorialComposition' && <EditorialComposition content={block.content} props={block.props} />}
                 {block.type === 'TestimonialBlock' && <TestimonialRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'FAQBlock' && <FAQRenderer content={block.content} data={block.data} props={block.props} />}
                 {block.type === 'Gallery' && <GalleryRenderer content={block.content} data={block.data} props={block.props} />}
