@@ -46,13 +46,23 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Execute esta instrucao no projeto: Finanças:
+          Quero que você faça uma varredura completa no editor de propostas na página comercial.
 
-No painel de novo lançamento, não temos opção de marcar como despesa recorrente
+Quero uma refatoração completa, a ponto de deixar o sistema capaz de realmente gerar uma proposta em link como as referências anexadas.
 
-Ao selecionar Forma: Cartão de crédito ou débito, deveria mostra as oções de cartões cadastrados para selecionar, isso não acontece.
+O sistema hoje conta com vários bugs e erros:
 
-Revisar como reimplementar funcionalidade de despesa parcelada. Inclusive revisar fucnionalidade de lançar em meses a frente sem atingir faturamento já fechado do cartão, como ele está configurado
+Todos layout criados a partir da criação com AI, ficam iguais
+
+Campos de fotos não mudam conforme orientação da foto
+
+Não temos montagem automática de grid, nem possibilidade de subir várias fotos juntas na seção portifólio
+
+Permitir escolha de fonte de texto, título, tudo para tornar realmente personalizável
+
+Mas primeiramente precisamos de um modelo pronto que seja capaz de replicar o arquivo anexado (modelo-proposta-lunari-2.pdf)
+
+A imagem (image.png) é como o sistema está atualmente, com um modelo todo quebrado
 
 Quero um plano completo, nos minimos detalhes, sem soluções genéricas.
 
