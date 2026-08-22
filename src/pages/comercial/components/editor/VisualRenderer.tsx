@@ -508,6 +508,16 @@ function GalleryRenderer({ content, data, props }: { content?: any; data?: any; 
     inline?.set('images', [...images, { id: crypto.randomUUID(), image_ref: url, span: 'normal', ratio: 'auto' }]);
   };
 
+  const addMultipleImages = (urls: string[]) => {
+    const newImages = urls.map(url => ({
+      id: crypto.randomUUID(),
+      image_ref: url,
+      span: 'normal',
+      ratio: 'auto'
+    }));
+    inline?.set('images', [...images, ...newImages]);
+  };
+
   const ratioStyle = (img: any): React.CSSProperties | undefined => {
     if (!img.ratio || img.ratio === 'auto') return undefined;
     return { aspectRatio: img.ratio.replace('/', ' / ') };
@@ -541,7 +551,7 @@ function GalleryRenderer({ content, data, props }: { content?: any; data?: any; 
             ))}
             {editable && (
               <div className="mb-2 break-inside-avoid">
-                <AddImageTile onAdd={addImage} />
+                <AddImageTile onAdd={addImage} onAddMultiple={addMultipleImages} />
               </div>
             )}
           </div>
@@ -575,7 +585,7 @@ function GalleryRenderer({ content, data, props }: { content?: any; data?: any; 
               );
             })}
             {editable && (
-              <AddImageTile onAdd={addImage} />
+              <AddImageTile onAdd={addImage} onAddMultiple={addMultipleImages} />
             )}
           </div>
         )}

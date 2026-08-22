@@ -2,7 +2,21 @@ import { gestaoR2Upload } from '@/lib/gestaoR2Upload';
 
 // Upload de imagem para propostas: redimensiona no client (máx 1920px,
 // JPEG 85%) e envia para o R2 via Edge Function do Studio.
-export function uploadProposalImage(file: File): Promise<string> {
+export async function uploadProposalImage(file: File): Promise<string> {
+  return uploadSingleImage(file);
+}
+
+/**
+ * Upload múltiplo de imagens para propostas.
+ * Processa o redimensionamento e o envio em paralelo.
+ */
+export async function uploadMultipleProposalImages(files: FileList | File[]): Promise<string[]> {
+  const fileArray = Array.from(files);
+  const promises = fileArray.map(file => uploadSingleImage(file));
+  return Promise.all(promises);
+}
+
+function uploadSingleImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
