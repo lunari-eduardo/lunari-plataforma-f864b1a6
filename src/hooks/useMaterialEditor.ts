@@ -264,6 +264,10 @@ export function useMaterialEditor(materialId: string | undefined) {
     mutate('global-settings', (prev) => ({ ...prev, globalSettings: { ...prev.globalSettings, ...updates } }));
   }, [mutate]);
 
+  const updateDesignTokens = useCallback((tokens: any) => {
+    updateGlobalSettings({ design_tokens: tokens });
+  }, [updateGlobalSettings]);
+
   const updateBlock = useCallback((index: number, dataOrUpdates: Record<string, any>, coalesceKey?: string) => {
     const key = coalesceKey ?? `block-${index}`;
     mutate(key, (prev) => {
@@ -466,6 +470,7 @@ export function useMaterialEditor(materialId: string | undefined) {
     updateBlockField,
     updatePdfUrl,
     updateGlobalSettings,
+    updateDesignTokens,
     addBlock,
     removeBlock,
     moveBlock,

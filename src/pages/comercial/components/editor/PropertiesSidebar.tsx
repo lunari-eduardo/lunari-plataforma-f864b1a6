@@ -19,12 +19,14 @@ export interface PropertiesSidebarProps {
   block: BlockData;
   blockIndex: number;
   onUpdateBlock: (index: number, data: Record<string, any>) => void;
+  onUpdateDesignTokens?: (tokens: any) => void;
   onRemoveBlock: (index: number) => void;
   /** Contexto para os botões de ajuda de texto com IA */
   aiContext?: {
     materialTitle?: string;
     sessionType?: string;
     tone?: string;
+    designTokens?: any;
   };
 }
 
@@ -38,6 +40,7 @@ export function PropertiesSidebar({
   block,
   blockIndex,
   onUpdateBlock,
+  onUpdateDesignTokens,
   onRemoveBlock,
   aiContext
 }: PropertiesSidebarProps) {
@@ -46,8 +49,9 @@ export function PropertiesSidebar({
   const [isUploading, setIsUploading] = useState(false);
 
   const def = getBlockDef(block.type);
-  const content: Record<string, any> = block.content ?? block.data ?? {};
+  const content: Record<string, any> = block.content ?? {};
   const props: Record<string, any> = block.props ?? {};
+
 
   const setContent = (updates: Record<string, any>) => {
     onUpdateBlock(blockIndex, { content: { ...content, ...updates } });
@@ -127,16 +131,51 @@ export function PropertiesSidebar({
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider opacity-60">Fonte Principal (Display)</Label>
                 <select 
-                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground"
+
+                  value={(aiContext as any)?.designTokens?.typography?.display || 'Playfair Display'}
                   onChange={(e) => {
-                    // Aqui implementaríamos a lógica de update global via useMaterialEditor se disponível
-                    toast.info("Lógica de tipografia global sendo integrada à Fase 3...");
+                    const currentTokens = (aiContext as any)?.designTokens || {};
+                    onUpdateDesignTokens?.({
+                      ...currentTokens,
+                      typography: {
+                        ...(currentTokens.typography || {}),
+                        display: e.target.value
+                      }
+                    });
                   }}
                 >
-                  <option>Playfair Display</option>
-                  <option>Cormorant Garamond</option>
-                  <option>Inter</option>
-                  <option>Jost</option>
+                  <option value="Playfair Display">Playfair Display</option>
+                  <option value="Cormorant Garamond">Cormorant Garamond</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Jost">Jost</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Lora">Lora</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-wider opacity-60">Fonte do Corpo</Label>
+                <select 
+                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground"
+                  value={(aiContext as any)?.designTokens?.typography?.body || 'Inter'}
+                  onChange={(e) => {
+                    const currentTokens = (aiContext as any)?.designTokens || {};
+                    onUpdateDesignTokens?.({
+                      ...currentTokens,
+                      typography: {
+                        ...(currentTokens.typography || {}),
+                        body: e.target.value
+                      }
+                    });
+                  }}
+                >
+                  <option value="Inter">Inter</option>
+                  <option value="Jost">Jost</option>
+                  <option value="Playfair Display">Playfair Display</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Manrope">Manrope</option>
+                  <option value="Open Sans">Open Sans</option>
                 </select>
               </div>
             </CollapsibleContent>
