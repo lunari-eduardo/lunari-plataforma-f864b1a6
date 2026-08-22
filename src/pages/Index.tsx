@@ -46,8 +46,15 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Ok, prossiga com o passo 1:
-          Auditoria de Banco de Dados (Investigação Imediata)
+          Implemente o plano
+
+          A. Refatorar o trigger trigger_sync_active_version para garantir que ele dispare corretamente em INSERT e UPDATE na tabela material_versions.
+          Ativar RLS nas tabelas de compartilhamento e aplicar políticas de isolamento por user_id.
+          B. Blindagem do Editor (Frontend)
+          Adicionar Optional Chaining e fallbacks na função normalizeBlock em src/pages/comercial/blocks/registry.ts.
+          Implementar um log de erro detalhado no ErrorBoundary para que, caso ocorra outro crash, saibamos exatamente qual bloco causou o problema.
+          C. Resiliência no Hook de Compartilhamento
+          Atualizar useMaterialShares.ts para buscar a última versão publicada como fallback caso active_version_id seja nulo, evitando o bloqueio do usuário enquanto o trigger sincroniza.
         </div>
         <InstallPWAButton />
 
