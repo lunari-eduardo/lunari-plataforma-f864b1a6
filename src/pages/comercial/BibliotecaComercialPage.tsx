@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag, FileText, UploadCloud, Archive, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Search, BookOpen, Loader2, Sparkles, LayoutTemplate, ChevronRight, Tag, FileText, UploadCloud, Archive, Check, ChevronsUpDown, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,10 @@ import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useClientesRealtime } from '@/hooks/useClientesRealtime';
 import { supabase } from '@/integrations/supabase/client';
 import { gestaoR2Upload } from '@/lib/gestaoR2Upload';
+import { uploadProposalImage } from './blocks/uploadImage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useConfigurationContext } from '@/contexts/ConfigurationContext';
 import { useProposalGenerate, type ProposalBriefing } from '@/hooks/useProposalAI';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -82,6 +85,75 @@ export default function BibliotecaComercialPage() {
   // Briefing para geração com IA
   const { generate, isGenerating } = useProposalGenerate();
   const [briefing, setBriefing] = useState<ProposalBriefing>({ session_type: 'Ensaio Gestante', tone: 'Acolhedor' });
+  const [selectedPacoteIds, setSelectedPacoteIds] = useState<string[]>([]);
+
+  // Referências de layout/design para a IA (imagens/PDF no R2, textos inline)
+  type AiRef = { id: string; name: string; kind: 'image' | 'pdf' | 'text'; url?: string; content?: string; mime: string };
+  const [aiRefs, setAiRefs] = useState<AiRef[]>([]);
+  const [isUploadingRef, setIsUploadingRef] = useState(false);
+
+  const addRefImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (!files.length) return;
+    const room = Math.max(0, 6 - aiRefs.filter((r) => r.kind === 'image').length);
+    if (files.length > room) toast.info('Máximo de 6 imagens de referência.');
+    setIsUploadingRef(true);
+    try {
+      for (const f of files.slice(0, room)) {
+        if (f.size > 10 * 1024 * 1024) { toast.error(`"${f.name}" passa de 10MB.`); continue; }
+        try {
+          const url = await uploadProposalImage(f);
+          setAiRefs((prev) => [...prev, { id: crypto.randomUUID(), name: f.name, kind: 'image', url, mime: 'image/jpeg' }]);
+        } catch { toast.error(`Erro ao enviar "${f.name}".`); }
+      }
+    } finally {
+      setIsUploadingRef(false);
+    }
+  };
+
+  const addRefPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    if (aiRefs.some((r) => r.kind === 'pdf')) { toast.error('Envie no máximo 1 PDF de referência.'); return; }
+    if (f.size > 15 * 1024 * 1024) { toast.error('O PDF passa de 15MB.'); return; }
+    setIsUploadingRef(true);
+    try {
+      const result = await gestaoR2Upload({ file: f, context: 'proposals-pdf' });
+      const url = result.url || `https://documents.lunarihub.com/${result.storagePath}`;
+      setAiRefs((prev) => [...prev, { id: crypto.randomUUID(), name: f.name, kind: 'pdf', url, mime: 'application/pdf' }]);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao enviar PDF de referência.');
+    } finally {
+      setIsUploadingRef(false);
+    }
+  };
+
+  const addRefText = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    for (const f of files) {
+      if (f.size > 300 * 1024) { toast.error(`"${f.name}" passa de 300KB.`); continue; }
+      const content = await f.text();
+      setAiRefs((prev) => [...prev, { id: crypto.randomUUID(), name: f.name, kind: 'text', content, mime: 'text/plain' }]);
+    }
+  };
+
+  // Dados da conta: perfil (nome do estúdio) e pacotes cadastrados
+  const { profile } = useUserProfile();
+  const { pacotes, produtos } = useConfigurationContext();
+
+  // Nome do fotógrafo: preenchido automaticamente com o perfil (empresa || nome)
+  useEffect(() => {
+    if (step === 'ai-briefing' && profile) {
+      const name = (profile.empresa || profile.nome || '').trim();
+      if (name) {
+        setBriefing((b) => (b.photographer_name ? b : { ...b, photographer_name: name }));
+      }
+    }
+  }, [step, profile]);
 
   // PDF Upload State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,6 +215,8 @@ export default function BibliotecaComercialPage() {
     setCreationMethod(null);
     setSelectedDbTemplate(null);
     setSelectedPdf(null);
+    setSelectedPacoteIds([]);
+    setAiRefs([]);
   };
 
   const handleCloseModal = () => {
@@ -159,10 +233,38 @@ export default function BibliotecaComercialPage() {
     let initialContent: any = undefined;
 
     if (creationMethod === 'ai') {
-      // Geração real por IA: briefing → edge proposal-generate → blocos V2 validados
+      // Geração real por IA: briefing → worker proposal-generate → blocos V2 validados
+      // Pacotes cadastrados selecionados viram inputs reais (nomes/preços da conta)
+      const aiPackages = (pacotes || [])
+        .filter((p) => selectedPacoteIds.includes(p.id))
+        .map((p) => {
+          const features: string[] = [];
+          if (p.fotos_incluidas) features.push(`${p.fotos_incluidas} fotos digitais`);
+          if (p.duracao_minutos) {
+            features.push(p.duracao_minutos >= 60
+              ? `${Math.round((p.duracao_minutos / 60) * 10) / 10}h de sessão`
+              : `${p.duracao_minutos} min de sessão`);
+          }
+          for (const inc of p.produtosIncluidos || []) {
+            const prod = (produtos || []).find((pr) => pr.id === inc.produtoId);
+            if (prod?.nome) features.push(`${inc.quantidade ?? 1}x ${prod.nome}`);
+          }
+          return {
+            name: p.nome,
+            price: p.valor_base != null ? `R$ ${Number(p.valor_base).toLocaleString('pt-BR')}` : '',
+            features,
+          };
+        });
+
+      const refFiles = aiRefs.filter((r) => (r.kind === 'image' || r.kind === 'pdf') && r.url);
+      const refTexts = aiRefs.filter((r) => r.kind === 'text' && r.content);
+
       const generated = await generate({
         ...briefing,
         photographer_name: briefing.photographer_name || undefined,
+        packages: aiPackages.length > 0 ? aiPackages : undefined,
+        references: refFiles.length > 0 ? refFiles.map((r) => ({ url: r.url!, mime_type: r.mime, name: r.name })) : undefined,
+        reference_texts: refTexts.length > 0 ? refTexts.map((r) => ({ name: r.name, content: r.content! })) : undefined,
       });
       if (!generated) {
         toast.error('Não foi possível gerar a proposta com IA. Tente novamente ou use um modelo.');
@@ -194,7 +296,8 @@ export default function BibliotecaComercialPage() {
         setIsUploadingPdf(true);
         // Upload unificado no R2 (mesmo contexto usado na substituição dentro do editor)
         const result = await gestaoR2Upload({ file: selectedPdf, context: 'proposals-pdf' });
-        const pdfUrl = result.url || `https://media.lunarihub.com/${result.storagePath}`;
+        // Bucket público de documentos comerciais (documents.lunarihub.com)
+        const pdfUrl = result.url || `https://documents.lunarihub.com/${result.storagePath}`;
         initialContent = { type: 'pdf', url: pdfUrl };
       } catch (err) {
         console.error(err);
@@ -474,9 +577,49 @@ export default function BibliotecaComercialPage() {
           {/* ─── PASSO IA: Briefing para geração ─── */}
           {step === 'ai-briefing' && (
             <div className="py-4 space-y-4 animate-in slide-in-from-right-4 fade-in duration-200">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('method')}
+                  className="hover:text-foreground transition-colors underline underline-offset-2"
+                >
+                  ← Voltar
+                </button>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo de sessão *</label>
+                  <label className="text-sm font-medium">Categoria *</label>
+                  {isLoadingCategorias ? (
+                    <Skeleton className="h-10 w-full rounded-md" />
+                  ) : (
+                    <Select
+                      value={selectedCategoria?.id || ''}
+                      onValueChange={(val) => {
+                        const cat = categorias.find((c) => c.id === val) || null;
+                        setSelectedCategoria(cat);
+                        if (cat) setBriefing((b) => ({ ...b, session_type: cat.nome }));
+                      }}
+                    >
+                      <SelectTrigger className="bg-card"><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
+                      <SelectContent>
+                        {categorias.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Título da proposta (opcional)</label>
+                  <Input
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    placeholder={selectedCategoria?.nome || 'Proposta'}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tipo de sessão</label>
                   <Select
                     value={briefing.session_type}
                     onValueChange={(v) => setBriefing((b) => ({ ...b, session_type: v }))}
@@ -512,14 +655,129 @@ export default function BibliotecaComercialPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Seu nome / estúdio (opcional)</label>
+                  <label className="text-sm font-medium">Seu nome / estúdio</label>
                   <Input
                     value={briefing.photographer_name || ''}
                     onChange={(e) => setBriefing((b) => ({ ...b, photographer_name: e.target.value }))}
                     placeholder="Ex: Camila Ramos Fotografias"
                   />
+                  {profile?.empresa && (
+                    <p className="text-xs text-muted-foreground">Preenchido com o nome da sua conta.</p>
+                  )}
                 </div>
               </div>
+
+              {/* Pacotes cadastrados (nomes e preços reais para a IA) */}
+              {(pacotes || []).length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Usar meus pacotes cadastrados (opcional)</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(pacotes || []).map((p) => {
+                      const active = selectedPacoteIds.includes(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setSelectedPacoteIds((ids) =>
+                            active ? ids.filter((i) => i !== p.id) : [...ids, p.id]
+                          )}
+                          className={cn(
+                            'rounded-full border px-3 py-1.5 text-xs transition-colors',
+                            active
+                              ? 'border-primary bg-primary/10 text-primary font-medium'
+                              : 'border-border text-muted-foreground hover:border-primary/40'
+                          )}
+                        >
+                          {p.nome}
+                          {p.valor_base ? ` · R$ ${Number(p.valor_base).toLocaleString('pt-BR')}` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Selecionando pacotes, a IA usa nomes e preços reais em vez de inventar valores.
+                  </p>
+                </div>
+              )}
+
+              {/* Referências de layout/design para a IA analisar */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Referências de layout/design (opcional)</label>
+                <p className="text-xs text-muted-foreground">
+                  Envie prints, imagens ou PDF de propostas que você gostou. A IA analisa estrutura,
+                  cores, tipografia e tom para gerar algo próximo da referência.
+                </p>
+                {aiRefs.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {aiRefs.map((r) => (
+                      <span
+                        key={r.id}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs max-w-full"
+                      >
+                        {r.kind === 'image'
+                          ? <ImageIcon className="h-3 w-3 shrink-0 text-primary" />
+                          : <FileText className="h-3 w-3 shrink-0 text-primary" />}
+                        <span className="truncate max-w-[160px]">{r.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAiRefs((prev) => prev.filter((x) => x.id !== r.id))}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          title="Remover"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      className="hidden"
+                      onChange={addRefImages}
+                      disabled={isUploadingRef}
+                    />
+                    <span className="inline-flex h-8 cursor-pointer items-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent">
+                      {isUploadingRef ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <UploadCloud className="mr-2 h-3 w-3" />}
+                      Imagens (até 6)
+                    </span>
+                  </label>
+                  <label>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={addRefPdf}
+                      disabled={isUploadingRef}
+                    />
+                    <span className="inline-flex h-8 cursor-pointer items-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent">
+                      {isUploadingRef ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <UploadCloud className="mr-2 h-3 w-3" />}
+                      PDF (1)
+                    </span>
+                  </label>
+                  <label>
+                    <input
+                      type="file"
+                      accept=".txt,.md,text/plain"
+                      multiple
+                      className="hidden"
+                      onChange={addRefText}
+                      disabled={isUploadingRef}
+                    />
+                    <span className="inline-flex h-8 cursor-pointer items-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent">
+                      <UploadCloud className="mr-2 h-3 w-3" />
+                      Texto (.txt/.md)
+                    </span>
+                  </label>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Imagens e textos funcionam com qualquer provedor; PDF exige o provedor Gemini.
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Destaques e observações</label>
                 <Textarea
@@ -771,12 +1029,12 @@ export default function BibliotecaComercialPage() {
 
             {step === 'ai-briefing' && (
               <Button
-                onClick={() => setStep('category')}
-                disabled={!briefing.session_type}
+                onClick={handleCreate}
+                disabled={!selectedCategoria || isPendingCreate || isGenerating}
                 className="gap-2"
               >
-                Continuar
-                <ChevronRight size={16} />
+                {(isPendingCreate || isGenerating) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {isGenerating ? 'Gerando com IA…' : isPendingCreate ? 'Criando…' : 'Gerar e Criar'}
               </Button>
             )}
 

@@ -90,12 +90,15 @@ serve(async (req) => {
         return new Response(JSON.stringify({ type: 'not_found' }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // 4. Buscar perfil do fotógrafo
-      const { data: profile } = await supabaseClient
+      // 4. Buscar perfil do fotógrafo (profiles não tem coluna whatsapp — usa telefone/telefones)
+      const { data: profileRow } = await supabaseClient
         .from('profiles')
-        .select('id, nome, whatsapp, avatar_url')
+        .select('id, nome, empresa, telefone, telefones, avatar_url')
         .eq('id', share.user_id)
         .single();
+      const profile = profileRow
+        ? { ...profileRow, whatsapp: profileRow.telefone || profileRow.telefones?.[0] || null }
+        : null;
 
       return new Response(JSON.stringify({
         type: 'active',
@@ -169,11 +172,14 @@ serve(async (req) => {
         return new Response(JSON.stringify({ type: 'not_found' }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const { data: profile } = await supabaseClient
+      const { data: profileRow } = await supabaseClient
         .from('profiles')
-        .select('id, nome, whatsapp, avatar_url')
+        .select('id, nome, empresa, telefone, telefones, avatar_url')
         .eq('id', targetUserId)
         .single();
+      const profile = profileRow
+        ? { ...profileRow, whatsapp: profileRow.telefone || profileRow.telefones?.[0] || null }
+        : null;
 
       return new Response(JSON.stringify({
         type: 'active',

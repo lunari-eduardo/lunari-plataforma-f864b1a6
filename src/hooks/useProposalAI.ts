@@ -18,6 +18,10 @@ export interface ProposalBriefing {
   highlights?: string;
   photographer_name?: string;
   packages?: { name: string; price: string; features: string[] }[];
+  /** Referências de layout/design (URLs públicas do R2 — imagens e PDF) */
+  references?: { url: string; mime_type: string; name?: string }[];
+  /** Textos de referência enviados inline (txt/md) */
+  reference_texts?: { name: string; content: string }[];
 }
 
 export interface GeneratedProposal {

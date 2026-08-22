@@ -9,6 +9,7 @@ import {
   Type,
   Heading1,
   Scale,
+  Quote,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -27,7 +28,8 @@ export type FieldKind =
   | 'stringlist'      // lista de strings (1 por linha)
   | 'list'            // lista de objetos com itemFields
   | 'image'           // upload de imagem
-  | 'select';
+  | 'select'
+  | 'align';          // controle segmentado esquerda/centro/direita/justificado
 
 export interface BlockField {
   key: string;
@@ -55,16 +57,45 @@ export interface BlockDefinition {
   description: string;
   icon: LucideIcon;
   fields: BlockField[];
+  /** Campos de layout (alinhamento, fundo…) — gravados em block.props */
+  layoutFields?: BlockField[];
   /** Slots de imagem em props (ex.: EditorialBlock photo_a/photo_b) */
   propImageSlots?: PropImageSlot[];
   factory: () => { content: Record<string, any>; props?: Record<string, any> };
 }
 
+// ---- Helpers de campos de layout (compartilhados entre blocos) ----
+
+const ALIGN_FIELD: BlockField = { key: 'align', label: 'Alinhamento do Texto', kind: 'align' };
+
+const BACKGROUND_OPTIONS = [
+  { value: 'white', label: 'Branco' },
+  { value: 'cream', label: 'Creme' },
+  { value: 'linen', label: 'Linho' },
+  { value: 'dark', label: 'Escuro' },
+];
+
+const backgroundField = (): BlockField => ({
+  key: 'background',
+  label: 'Fundo da Seção',
+  kind: 'select',
+  options: BACKGROUND_OPTIONS,
+});
+
+const IMAGE_RATIO_OPTIONS = [
+  { value: 'auto', label: 'Proporção original' },
+  { value: '1/1', label: 'Quadrada (1:1)' },
+  { value: '4/5', label: 'Retrato (4:5)' },
+  { value: '4/3', label: 'Paisagem (4:3)' },
+  { value: '16/9', label: 'Panorâmica (16:9)' },
+];
+
 const detailItem = () => ({ id: crypto.randomUUID(), label: '', value: '' });
 const packageItem = () => ({ id: crypto.randomUUID(), name: 'Novo Pacote', price: '', price_unit: 'sessão', badge: '', features: [] });
 const testimonialItem = () => ({ id: crypto.randomUUID(), quote: '', author: '', service: '' });
 const linkItem = () => ({ id: crypto.randomUUID(), label: '', href: '' });
-const galleryItem = () => ({ id: crypto.randomUUID(), image_ref: '', span: 'normal' });
+const galleryItem = () => ({ id: crypto.randomUUID(), image_ref: '', span: 'normal', ratio: 'auto' });
+const faqItem = () => ({ id: crypto.randomUUID(), question: '', answer: '' });
 
 export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
   CoverBlock: {
@@ -82,8 +113,10 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       { key: 'btnLink', label: 'Link do Botão', kind: 'url', placeholder: 'https://wa.me/5511999999999' },
       { key: 'image_url', label: 'Imagem de Capa', kind: 'image' },
     ],
+    layoutFields: [ALIGN_FIELD],
     factory: () => ({
       content: { eyebrow: '', title: '', title_italic: '', subtitle: '', photographer_name: '', btnText: '', btnLink: '', image_url: '' },
+      props: { align: 'left' },
     }),
   },
 
@@ -110,6 +143,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
         itemFactory: detailItem,
       },
     ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
     propImageSlots: [
       { key: 'photo_a', label: 'Foto Principal (Plano de fundo)' },
       { key: 'photo_b', label: 'Foto Sobreposta (Blend)' },
@@ -117,6 +151,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     factory: () => ({
       content: { eyebrow: '', title: '', title_italic: '', body: '', vertical_label: '', details: [] },
       props: {
+        align: 'left',
         background: 'dark',
         photo_a: { width_pct: 72, height_pct: 80, image_ref: null },
         photo_b: { width_pct: 62, height_pct: 66, image_ref: null },
@@ -142,13 +177,16 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
           { key: 'price', label: 'Preço (texto livre)', kind: 'text', placeholder: 'R$ 1.200' },
           { key: 'price_unit', label: 'Unidade', kind: 'text', placeholder: 'sessão' },
           { key: 'badge', label: 'Selo (ex: Mais escolhido)', kind: 'text', placeholder: 'Mais escolhido' },
+          { key: 'image_ref', label: 'Imagem do pacote', kind: 'image' },
           { key: 'features', label: 'Itens inclusos (1 por linha)', kind: 'stringlist', placeholder: '1h de ensaio\n10 fotos digitais' },
         ],
         itemFactory: packageItem,
       },
     ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
     factory: () => ({
       content: { eyebrow: '', title: 'Pacotes', packages: [] },
+      props: { align: 'center', background: 'white' },
     }),
   },
 
@@ -176,12 +214,28 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
               { value: 'wide_2cols', label: 'Larga (2 colunas)' },
             ],
           },
+          {
+            key: 'ratio', label: 'Proporção (no modo grade)', kind: 'select',
+            options: IMAGE_RATIO_OPTIONS,
+          },
         ],
         itemFactory: galleryItem,
       },
     ],
+    layoutFields: [
+      ALIGN_FIELD,
+      backgroundField(),
+      {
+        key: 'layout', label: 'Disposição das Fotos', kind: 'select',
+        options: [
+          { value: 'masonry', label: 'Masonry (proporção real)' },
+          { value: 'grid', label: 'Grade (proporção fixa)' },
+        ],
+      },
+    ],
     factory: () => ({
       content: { eyebrow: '', title: 'Portfólio', caption: '', images: [] },
+      props: { align: 'center', background: 'dark', layout: 'masonry' },
     }),
   },
 
@@ -189,7 +243,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     type: 'TestimonialBlock',
     name: 'Depoimentos',
     description: 'O que dizem sobre você',
-    icon: HelpCircle,
+    icon: Quote,
     fields: [
       { key: 'eyebrow', label: 'Rótulo Superior (Eyebrow)', kind: 'text', placeholder: 'Depoimentos' },
       { key: 'title', label: 'Título', kind: 'text', placeholder: 'Depoimentos' },
@@ -206,8 +260,10 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
         itemFactory: testimonialItem,
       },
     ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
     factory: () => ({
       content: { eyebrow: '', title: 'Depoimentos', items: [] },
+      props: { align: 'center', background: 'cream' },
     }),
   },
 
@@ -218,6 +274,7 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     icon: MessageSquare,
     fields: [
       { key: 'cta_text', label: 'Título da Chamada', kind: 'textarea', placeholder: 'Vamos conversar?' },
+      { key: 'button_label', label: 'Texto do Botão', kind: 'text', placeholder: 'Entrar em contato' },
       {
         key: 'links',
         label: 'Links',
@@ -230,8 +287,37 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
         itemFactory: linkItem,
       },
     ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
     factory: () => ({
-      content: { cta_text: 'Vamos conversar?', links: [] },
+      content: { cta_text: 'Vamos conversar?', button_label: 'Entrar em contato', links: [] },
+      props: { align: 'center', background: 'white' },
+    }),
+  },
+
+  FAQBlock: {
+    type: 'FAQBlock',
+    name: 'Perguntas Frequentes',
+    description: 'Dúvidas comuns em formato sanfona',
+    icon: HelpCircle,
+    fields: [
+      { key: 'eyebrow', label: 'Rótulo Superior (Eyebrow)', kind: 'text', placeholder: 'Dúvidas' },
+      { key: 'title', label: 'Título', kind: 'text', placeholder: 'Perguntas Frequentes' },
+      {
+        key: 'items',
+        label: 'Perguntas',
+        kind: 'list',
+        itemLabel: 'Pergunta',
+        itemFields: [
+          { key: 'question', label: 'Pergunta', kind: 'text', placeholder: 'Como funciona a entrega?' },
+          { key: 'answer', label: 'Resposta', kind: 'textarea', placeholder: 'Em até 15 dias você recebe...' },
+        ],
+        itemFactory: faqItem,
+      },
+    ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
+    factory: () => ({
+      content: { eyebrow: '', title: 'Perguntas Frequentes', items: [] },
+      props: { align: 'center', background: 'cream' },
     }),
   },
 
@@ -243,8 +329,10 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
     fields: [
       { key: 'copyright', label: 'Texto de Direitos', kind: 'text', placeholder: '© 2026 Seu Estúdio — Todos os direitos reservados' },
     ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
     factory: () => ({
       content: { copyright: '© Todos os direitos reservados' },
+      props: { align: 'center', background: 'cream' },
     }),
   },
 
@@ -257,8 +345,10 @@ export const BLOCK_REGISTRY: Record<string, BlockDefinition> = {
       { key: 'title', label: 'Título', kind: 'text', placeholder: 'Sobre o processo' },
       { key: 'body', label: 'Conteúdo', kind: 'textarea', placeholder: 'Escreva aqui...' },
     ],
+    layoutFields: [ALIGN_FIELD, backgroundField()],
     factory: () => ({
       content: { title: '', body: '' },
+      props: { align: 'center', background: 'white' },
     }),
   },
 };
@@ -332,6 +422,7 @@ function normalizeBlock(raw: any): BlockData | null {
           btnLink: d.btnLink || '',
           image_url: d.image_url || '',
         },
+        props: { align: 'left' },
       });
 
     case V1_ABOUT:
@@ -346,6 +437,7 @@ function normalizeBlock(raw: any): BlockData | null {
           details: [],
         },
         props: {
+          align: 'left',
           background: 'cream',
           photo_a: { width_pct: 72, height_pct: 80, image_ref: d.photo_url || null },
           photo_b: { width_pct: 62, height_pct: 66, image_ref: null },
@@ -373,6 +465,7 @@ function normalizeBlock(raw: any): BlockData | null {
             features,
           }],
         },
+        props: { align: 'center', background: 'white' },
       });
     }
 
@@ -388,20 +481,28 @@ function normalizeBlock(raw: any): BlockData | null {
                 id: crypto.randomUUID(),
                 image_ref: typeof img === 'string' ? img : img?.image_ref || '',
                 span: typeof img === 'object' ? (img?.span || 'normal') : 'normal',
+                ratio: typeof img === 'object' ? (img?.ratio || 'auto') : 'auto',
               }))
             : [],
         },
+        props: { align: 'center', background: 'dark', layout: 'masonry' },
       });
 
     case V1_FAQ:
       return withId({
-        type: 'text',
+        type: 'FAQBlock',
         content: {
+          eyebrow: '',
           title: 'Perguntas Frequentes',
-          body: Array.isArray(d.items)
-            ? d.items.map((i: any) => `${i.question}\n${i.answer}`).join('\n\n')
-            : '',
+          items: Array.isArray(d.items)
+            ? d.items.map((i: any) => ({
+                id: crypto.randomUUID(),
+                question: i?.question || '',
+                answer: i?.answer || '',
+              }))
+            : [],
         },
+        props: { align: 'center', background: 'cream' },
       });
 
     case V1_CTA:
@@ -409,22 +510,25 @@ function normalizeBlock(raw: any): BlockData | null {
         type: 'CTABlock',
         content: {
           cta_text: d.title || d.text || 'Vamos conversar?',
+          button_label: 'Entrar em contato',
           links: [
             ...(d.whatsapp ? [{ id: crypto.randomUUID(), label: 'WhatsApp', href: d.whatsapp.startsWith('http') ? d.whatsapp : `https://wa.me/${d.whatsapp}` }] : []),
             ...(d.instagram ? [{ id: crypto.randomUUID(), label: 'Instagram', href: d.instagram.startsWith('http') ? d.instagram : `https://instagram.com/${d.instagram}` }] : []),
             ...(d.email ? [{ id: crypto.randomUUID(), label: 'E-mail', href: `mailto:${d.email}` }] : []),
           ],
         },
+        props: { align: 'center', background: 'white' },
       });
 
     case 'text':
-      return withId({ type: 'text', content: { title: d.title || '', body: d.body || '' } });
+      return withId({ type: 'text', content: { title: d.title || '', body: d.body || '' }, props: { align: 'center', background: 'white' } });
 
     default:
       // Tipo desconhecido: preserva como bloco de texto livre para não perder conteúdo
       return withId({
         type: 'text',
         content: { title: BLOCK_UNKNOWN_FALLBACK_TITLE, body: JSON.stringify(d ?? {}, null, 2) },
+        props: { align: 'center', background: 'white' },
       });
   }
 }

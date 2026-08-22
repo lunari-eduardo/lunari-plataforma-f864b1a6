@@ -281,14 +281,21 @@ export function useMaterialEditor(materialId: string | undefined) {
     });
   }, [mutate]);
 
-  /** Edição inline / granular: atualiza content por caminho pontuado ("details.0.label"). */
+  /** Edição inline / granular: atualiza content por caminho pontuado
+   * ("details.0.label"). Caminhos "props.*" gravam em block.props
+   * (slots de imagem, alinhamento, fundo etc.). */
   const updateBlockField = useCallback((index: number, path: string, value: any) => {
     mutate(`block-${index}:${path}`, (prev) => {
       const newBlocks = [...prev.blocks];
       const target = newBlocks[index];
       if (!target) return prev;
-      const content = setPath(target.content ?? {}, path, value);
-      newBlocks[index] = { ...target, content };
+      if (path.startsWith('props.')) {
+        const props = setPath(target.props ?? {}, path.slice('props.'.length), value);
+        newBlocks[index] = { ...target, props };
+      } else {
+        const content = setPath(target.content ?? {}, path, value);
+        newBlocks[index] = { ...target, content };
+      }
       return { ...prev, blocks: newBlocks };
     });
   }, [mutate]);

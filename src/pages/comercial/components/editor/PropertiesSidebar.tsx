@@ -47,13 +47,14 @@ export function PropertiesSidebar({
 
   const def = getBlockDef(block.type);
   const content: Record<string, any> = block.content ?? block.data ?? {};
+  const props: Record<string, any> = block.props ?? {};
 
   const setContent = (updates: Record<string, any>) => {
     onUpdateBlock(blockIndex, { content: { ...content, ...updates } });
   };
 
   const setProps = (updates: Record<string, any>) => {
-    onUpdateBlock(blockIndex, { props: { ...(block.props ?? {}), ...updates } });
+    onUpdateBlock(blockIndex, { props: { ...props, ...updates } });
   };
 
   const importPackage = (pacote: any) => {
@@ -89,6 +90,7 @@ export function PropertiesSidebar({
   };
 
   const hasFields = (def?.fields?.length ?? 0) > 0;
+  const hasLayoutFields = (def?.layoutFields?.length ?? 0) > 0;
   const hasSlots = (def?.propImageSlots?.length ?? 0) > 0;
 
   return (
@@ -130,6 +132,26 @@ export function PropertiesSidebar({
                     value={content[field.key]}
                     onChange={(v) => setContent({ [field.key]: v })}
                     aiContext={{ blockType: block.type, ...aiContext }}
+                  />
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Accordion: LAYOUT (alinhamento, fundo, disposição — grava em props) */}
+          {hasLayoutFields && (
+            <Collapsible defaultOpen className="space-y-2 border-t border-border pt-4">
+              <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+                Layout
+                <ChevronDown className="h-4 w-4" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-2 pb-4">
+                {def!.layoutFields!.map((field) => (
+                  <FieldEditor
+                    key={field.key}
+                    field={field}
+                    value={props[field.key]}
+                    onChange={(v) => setProps({ [field.key]: v })}
                   />
                 ))}
               </CollapsibleContent>
@@ -192,7 +214,7 @@ export function PropertiesSidebar({
             </Collapsible>
           )}
 
-          {!hasFields && !hasSlots && (
+          {!hasFields && !hasLayoutFields && !hasSlots && (
             <p className="text-xs text-muted-foreground">Este bloco não possui campos editáveis.</p>
           )}
 

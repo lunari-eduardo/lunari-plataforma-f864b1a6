@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2, Image as ImageIcon, ChevronUp, ChevronDown, Plus, Sparkles, Wand2 } from 'lucide-react';
+import { Trash2, Loader2, Image as ImageIcon, ChevronUp, ChevronDown, Plus, Sparkles, Wand2, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -183,6 +184,9 @@ export function FieldEditor(props: FieldEditorProps) {
         </div>
       );
 
+    case 'align':
+      return <AlignField field={field} value={value} onChange={onChange} />;
+
     case 'image':
       return <ImageField field={field} value={value} onChange={onChange} />;
 
@@ -192,6 +196,42 @@ export function FieldEditor(props: FieldEditorProps) {
     default:
       return null;
   }
+}
+
+const ALIGN_OPTIONS = [
+  { value: 'left', label: 'Esquerda', icon: AlignLeft },
+  { value: 'center', label: 'Centro', icon: AlignCenter },
+  { value: 'right', label: 'Direita', icon: AlignRight },
+  { value: 'justify', label: 'Justificado', icon: AlignJustify },
+];
+
+/** Controle segmentado de alinhamento de texto. */
+function AlignField({ field, value, onChange }: { field: BlockField; value: any; onChange: (v: any) => void }) {
+  const current = typeof value === 'string' && value ? value : 'left';
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground">{field.label}</Label>
+      <div className="grid grid-cols-4 gap-1 rounded-lg border border-input p-1 bg-background">
+        {ALIGN_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            title={opt.label}
+            aria-label={opt.label}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              'flex h-8 items-center justify-center rounded-md transition-colors',
+              current === opt.value
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            <opt.icon className="h-4 w-4" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ImageField({ field, value, onChange }: FieldEditorProps) {

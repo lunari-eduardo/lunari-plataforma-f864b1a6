@@ -960,3 +960,25 @@ a,
   }
 }
 
+
+/* ============================================================
+   Editor de propostas — edição inline (EditableText)
+   Campos vazios ficam visíveis e clicáveis no modo de edição.
+   ============================================================ */
+.pa-editable-text:empty {
+  display: inline-block;
+  min-width: 3ch;
+  min-height: 1em;
+}
+
+.pa-editable-text:empty::before {
+  content: attr(data-placeholder);
+  opacity: 0.4;
+  font-style: italic;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: bottom;
+}
