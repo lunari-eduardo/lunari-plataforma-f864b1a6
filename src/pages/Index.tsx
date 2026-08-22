@@ -46,11 +46,11 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Implemente o plano em fases
-Tipografia Global no Editor
-useMaterialEditor.ts: Adicionar updateDesignTokens para gerenciar fontes e cores globais.
-PropertiesSidebar.tsx: Conectar o seletor de fontes ao estado global da proposta.
-blocks/design.ts: Garantir que as fontes selecionadas sejam injetadas via Google Fonts dinamicamente.
+          Prossiga com:
+          
+          2. Fluxo de Link Público
+          EditorPropostaPage.tsx: Revisar a chamada de openSlugModal para garantir que o link seja gerado antes da personalização.
+          PublicProposalViewer.tsx: Garantir que os designTokens (fontes) sejam aplicados corretamente no PublicThemeWrapper para o cliente final.
         </div>
         <InstallPWAButton />
 
