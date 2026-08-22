@@ -138,7 +138,10 @@ export default function PublicProposalViewer({ mode }: { mode: 'public' | 'track
   }
 
   return (
-    <PublicThemeWrapper primaryColor={(result as any).theme?.primaryColor || undefined} className="flex flex-col relative pb-24">
+    <PublicThemeWrapper 
+      primaryColor={(result as any).theme?.primaryColor || undefined} 
+      className="flex flex-col relative pb-24"
+    >
       {isPdfFormat ? (
         <NativePdfViewer url={pdfUrl} logoUrl={userProfile?.avatar_url} />
       ) : (

@@ -3,7 +3,7 @@ import { BlockData } from '@/hooks/useMaterialEditor';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ChevronDown } from 'lucide-react';
-import { ProposalDesignTokens, tokensToCssVars, ensureFontLoaded, fontDisplayCss } from '../../blocks/design';
+import { ProposalDesignTokens, tokensToCssVars, ensureFontLoaded, fontDisplayCss, fontBodyCss } from '../../blocks/design';
 import { EditableText } from '../../blocks/EditableText';
 import { EditableImage, AddImageTile } from '../../blocks/EditableImage';
 import { InlineEditContext, useInlineEdit } from '../../blocks/inlineContext';
@@ -35,8 +35,8 @@ interface VisualRendererProps {
 // Textos editam com duplo clique (EditableText); imagens trocam com
 // duplo clique (EditableImage) — ambos apenas no editor.
 // ---------------------------------------------------------
-
 const fd = () => ({ fontFamily: fontDisplayCss() });
+const fb = () => ({ fontFamily: fontBodyCss() });
 
 type CtaHandler = (ctx: { blockType: string; label?: string }) => void;
 
@@ -107,7 +107,7 @@ function CoverRenderer({ data, props, onCtaClick }: { data?: any; props?: any; o
           )}
         </h1>
         <EditableText as="p" {...et('subtitle', subtitle)} multiline
-          className="text-[var(--pa-taupe,#6D655E)] text-lg max-w-[40ch] mb-10 leading-relaxed font-light" />
+          className="text-[var(--pa-taupe,#6D655E)] text-lg max-w-[40ch] mb-10 leading-relaxed font-light" style={fb()} />
         {btnText && (
           editable ? (
             <div

@@ -111,12 +111,14 @@ export default function EditorMaterialPage() {
   const [slugInput, setSlugInput] = useState('');
 
   const openSlugModal = () => {
+    // Se já tem link, apenas abre o modal para editar
     if (publicLink.data?.slug) {
       setSlugInput(publicLink.data.slug);
       setIsSlugModalOpen(true);
       return;
     }
-    // Sem link ainda: gera um e já abre a personalização
+    
+    // Sem link: gera um primeiro (freeze na versão atual) e depois abre o modal
     publicLink.generateLink.mutate(undefined, {
       onSuccess: (link) => {
         setSlugInput(link.slug);

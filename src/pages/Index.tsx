@@ -48,9 +48,13 @@ export default function Index() {
         <div className="hidden">
           Prossiga com:
           
-          2. Fluxo de Link Público
-          EditorPropostaPage.tsx: Revisar a chamada de openSlugModal para garantir que o link seja gerado antes da personalização.
-          PublicProposalViewer.tsx: Garantir que os designTokens (fontes) sejam aplicados corretamente no PublicThemeWrapper para o cliente final.
+          3. Ajustes de UI Finais
+          
+          
+          Garantir que EditorialComposition e outros blocos respeitem as fontes globais injetadas nas CSS variables.
+          
+          
+          Verificar o comportamento do "Botão Flutuante do WhatsApp" no modo público.
         </div>
         <InstallPWAButton />
 
