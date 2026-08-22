@@ -435,10 +435,14 @@ function normalizeBlock(raw: any): BlockData | null {
 
   // V2 nativo: garante id e content
   if (BLOCK_REGISTRY[type]) {
-    return withId(raw);
+    return withId({
+      ...raw,
+      content: raw.content ?? raw.data ?? {} // Fallback para data se content estiver vazio
+    });
   }
 
-  const d: Record<string, any> = raw.data ?? {};
+  // Prevenção de erro em documentos corrompidos ou V1 incompleto
+  const d: Record<string, any> = raw.data || {};
 
   switch (type) {
     case V1_COVER:
