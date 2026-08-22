@@ -48,8 +48,14 @@ export function PropertiesSidebar({
   const [isUploading, setIsUploading] = useState(false);
 
   const def = getBlockDef(block.type);
-  const content: Record<string, any> = block.content ?? block.data ?? {};
+  const content: Record<string, any> = block.content ?? {};
   const props: Record<string, any> = block.props ?? {};
+  // Pega design tokens das configurações globais se existirem no estado do editor
+  const globalTokens = aiContext && (block as any).globalTokens; 
+  // Na verdade, precisamos passar o estado global do editor ou os tokens especificamente.
+  // Vou ajustar para que o componente use os tokens vindos do block.content ou props se for o caso,
+  // mas o design_tokens costuma estar no globalSettings que é injetado no rascunho.
+
 
   const setContent = (updates: Record<string, any>) => {
     onUpdateBlock(blockIndex, { content: { ...content, ...updates } });
@@ -129,7 +135,8 @@ export function PropertiesSidebar({
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider opacity-60">Fonte Principal (Display)</Label>
                 <select 
-                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground"
+
                   value={block.content?.globalSettings?.design_tokens?.typography?.display || 'Playfair Display'}
                   onChange={(e) => {
                     const currentTokens = block.content?.globalSettings?.design_tokens || {};
@@ -154,7 +161,7 @@ export function PropertiesSidebar({
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider opacity-60">Fonte do Corpo</Label>
                 <select 
-                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground"
                   value={block.content?.globalSettings?.design_tokens?.typography?.body || 'Inter'}
                   onChange={(e) => {
                     const currentTokens = block.content?.globalSettings?.design_tokens || {};
