@@ -29,6 +29,7 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
 
   // Tokens de design e layout
   const fd = useMemo(() => ({ fontFamily: fontDisplayCss() }), []);
+  const fb = useMemo(() => ({ fontFamily: fontBodyCss() }), []);
   
   const layout = p.layout || 'split-left'; // split-left, split-right, full-overlap
   const isDark = p.background === 'dark';
@@ -110,6 +111,7 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
               "text-lg @md:text-xl font-light leading-relaxed opacity-80",
               textColor
             )}
+            style={fb}
           />
         </div>
 
