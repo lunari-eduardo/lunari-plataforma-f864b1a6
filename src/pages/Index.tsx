@@ -46,7 +46,11 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Fase 3 iniciada: Implementado suporte a múltiplos uploads e novos controles de estilo na barra lateral.
+          Implemente o plano em fases
+Tipografia Global no Editor
+useMaterialEditor.ts: Adicionar updateDesignTokens para gerenciar fontes e cores globais.
+PropertiesSidebar.tsx: Conectar o seletor de fontes ao estado global da proposta.
+blocks/design.ts: Garantir que as fontes selecionadas sejam injetadas via Google Fonts dinamicamente.
         </div>
         <InstallPWAButton />
 
