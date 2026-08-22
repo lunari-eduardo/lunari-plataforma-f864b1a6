@@ -180,6 +180,7 @@ export default function EditorMaterialPage() {
       block={activeBlock}
       blockIndex={activeIndex}
       onUpdateBlock={editor.updateBlock}
+      onUpdateDesignTokens={editor.updateDesignTokens}
       aiContext={{ materialTitle: state.title }}
       onRemoveBlock={(index) => {
         const nextCount = state.blocks.length - 1;

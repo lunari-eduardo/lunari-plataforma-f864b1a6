@@ -43,6 +43,13 @@ export const DEFAULT_DESIGN_TOKENS: Required<Pick<ProposalDesignTokens, 'colors'
 /** Converte tokens em CSS variables para injetar no container da arte. */
 export function tokensToCssVars(tokens?: ProposalDesignTokens): React.CSSProperties {
   const c = { ...DEFAULT_DESIGN_TOKENS.colors, ...(tokens?.colors ?? {}) };
+  const displayFont = tokens?.typography?.display || 'Playfair Display';
+  const bodyFont = tokens?.typography?.body || 'Inter';
+  
+  // Garante carregamento das fontes caso não sejam as padrão
+  ensureFontLoaded(displayFont);
+  ensureFontLoaded(bodyFont);
+  
   return {
     ['--pa-cream' as any]: c.cream,
     ['--pa-linen' as any]: c.linen,
@@ -51,8 +58,8 @@ export function tokensToCssVars(tokens?: ProposalDesignTokens): React.CSSPropert
     ['--pa-accent' as any]: c.accent,
     ['--pa-ink' as any]: c.ink,
     ['--pa-white' as any]: c.white,
-    ['--pa-font-display' as any]: tokens?.typography?.display || 'Playfair Display',
-    ['--pa-font-body' as any]: tokens?.typography?.body || 'Inter',
+    ['--pa-font-display' as any]: displayFont,
+    ['--pa-font-body' as any]: bodyFont,
   };
 }
 
