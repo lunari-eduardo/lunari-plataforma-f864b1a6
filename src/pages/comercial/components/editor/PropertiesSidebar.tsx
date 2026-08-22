@@ -117,9 +117,34 @@ export function PropertiesSidebar({
             </Button>
           )}
 
+          {/* Accordion: CONFIGURAÇÕES GLOBAIS (Tipografia e Estilo) */}
+          <Collapsible className="space-y-2 border-t border-border pt-4">
+            <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-xs font-bold uppercase tracking-widest text-primary hover:text-primary/80">
+              Estilo e Tipografia
+              <ChevronDown className="h-4 w-4" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-2 pb-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-wider opacity-60">Fonte Principal (Display)</Label>
+                <select 
+                  className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm"
+                  onChange={(e) => {
+                    // Aqui implementaríamos a lógica de update global via useMaterialEditor se disponível
+                    toast.info("Lógica de tipografia global sendo integrada à Fase 3...");
+                  }}
+                >
+                  <option>Playfair Display</option>
+                  <option>Cormorant Garamond</option>
+                  <option>Inter</option>
+                  <option>Jost</option>
+                </select>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           {/* Accordion: CONTEÚDO (schema-driven) */}
           {hasFields && (
-            <Collapsible defaultOpen className="space-y-2">
+            <Collapsible defaultOpen className="space-y-2 border-t border-border pt-4">
               <CollapsibleTrigger className="flex w-full items-center justify-between py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
                 Conteúdo
                 <ChevronDown className="h-4 w-4" />

@@ -190,6 +190,7 @@ export function AddImageTile({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
+        multiple
         onChange={handleUpload}
         disabled={isUploading}
       />

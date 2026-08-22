@@ -46,7 +46,7 @@ export default function Index() {
     <PageContainer>
       <main className="space-y-6 relative z-10 py-4">
         <div className="hidden">
-          Fase 2 implementada: Novo bloco EditorialComposition criado, registrado no motor de blocos e integrado ao VisualRenderer.
+          Fase 3 iniciada: Implementado suporte a múltiplos uploads e novos controles de estilo na barra lateral.
         </div>
         <InstallPWAButton />
 
