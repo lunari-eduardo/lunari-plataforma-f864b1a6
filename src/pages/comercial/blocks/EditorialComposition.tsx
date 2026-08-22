@@ -35,40 +35,46 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
   
   // Cores semânticas baseadas nos tokens
   const bgTextColor = isDark ? 'text-white' : 'text-[var(--pa-ink,#1A1714)]';
-  // No modo split, o texto sobre a foto é quase sempre branco (assumindo fotos contrastantes)
-  // mas podemos tornar dinâmico se necessário.
   const photoTextColor = 'text-white'; 
 
-  const TitleLayer = ({ className, style, clipPath }: { className?: string, style?: React.CSSProperties, clipPath?: string }) => (
-    <div 
-      className={cn(
-        "absolute inset-0 z-20 flex flex-col justify-center pointer-events-none",
-        layout === 'full-overlap' ? "items-center text-center px-8" : "p-8 @md:p-20",
-        layout === 'split-left' && "items-start @md:items-end @md:pr-[10%]",
-        layout === 'split-right' && "items-start @md:items-start @md:pl-[10%]",
-        className
-      )}
-      style={{ ...style, clipPath }}
-    >
-      <div className="max-w-[90%]">
-        <h2 
-          className="text-5xl @md:text-7xl @lg:text-[10rem] leading-[0.85] tracking-tight pointer-events-auto"
-          style={fd}
-        >
-          <EditableText {...et('title', c.title)} placeholder="Título" />
-          {c.title_italic && (
-            <em className="block italic opacity-90 -mt-2 @md:-mt-4">
-              <EditableText {...et('title_italic', c.title_italic)} placeholder="Itálico" />
-            </em>
-          )}
-        </h2>
+  const TitleLayer = ({ layerType, className }: { layerType: 'bg' | 'photo', className?: string }) => {
+    const clipClass = layout === 'split-left' 
+      ? (layerType === 'bg' ? 'clip-seam-left-bg' : 'clip-seam-left-photo')
+      : layout === 'split-right'
+      ? (layerType === 'bg' ? 'clip-seam-right-bg' : 'clip-seam-right-photo')
+      : (layerType === 'photo' ? 'clip-none' : 'clip-hide');
+
+    return (
+      <div 
+        className={cn(
+          "absolute inset-0 z-20 flex flex-col justify-center pointer-events-none transition-all duration-700",
+          layout === 'full-overlap' ? "items-center text-center px-8" : "p-8 @md:p-20",
+          layout === 'split-left' && "items-center @md:items-end @md:pr-[10%]",
+          layout === 'split-right' && "items-center @md:items-start @md:pl-[10%]",
+          clipClass,
+          className
+        )}
+      >
+        <div className="max-w-[90%] md:max-w-[80%]">
+          <h2 
+            className="text-5xl @md:text-7xl @lg:text-[10rem] leading-[0.85] tracking-tight pointer-events-auto"
+            style={fd}
+          >
+            <EditableText {...et('title', c.title)} placeholder="Título" />
+            {c.title_italic && (
+              <em className="block italic opacity-90 -mt-2 @md:-mt-4">
+                <EditableText {...et('title_italic', c.title_italic)} placeholder="Itálico" />
+              </em>
+            )}
+          </h2>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <section className={cn(
-      "relative min-h-[600px] @md:min-h-[800px] overflow-hidden flex flex-col @md:flex-row",
+      "relative min-h-[600px] @md:min-h-[800px] overflow-hidden flex flex-col @md:flex-row editorial-seam-container",
       p.background === 'cream' && "bg-[var(--pa-cream,#FDFBF7)]",
       p.background === 'linen' && "bg-[var(--pa-linen,#F0E9E1)]",
       p.background === 'stone' && "bg-[var(--pa-stone,#D8C7B8)]",
@@ -89,7 +95,6 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
           className="absolute inset-0 w-full h-full"
           imgClassName="object-cover w-full h-full"
         />
-        {/* Overlay sutil para garantir leitura do texto branco sobre fotos claras */}
         <div className="absolute inset-0 bg-black/10 pointer-events-none" />
       </div>
 
@@ -100,7 +105,6 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
         layout === 'split-left' && "bg-inherit",
         layout === 'split-right' && "bg-inherit"
       )}>
-        {/* Eyebrow */}
         <EditableText
           as="span"
           {...et('eyebrow', c.eyebrow)}
@@ -110,10 +114,8 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
           )}
         />
 
-        {/* Espaçador para o Título (que é absoluto) */}
         <div className="h-32 @md:h-48 @lg:h-64 mb-10" />
 
-        {/* Corpo de Texto */}
         <div className={cn("max-w-[40ch] space-y-6", layout === 'full-overlap' && "max-w-[60ch]")}>
           <EditableText
             as="p"
@@ -127,7 +129,6 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
           />
         </div>
 
-        {/* Assinatura Vertical */}
         {c.side_label && (
           <div className={cn(
             "hidden @lg:block absolute right-8 top-1/2 -translate-y-1/2 rotate-90 origin-right text-[10px] tracking-[0.5em] uppercase opacity-30 whitespace-nowrap",
@@ -144,15 +145,13 @@ export function EditorialComposition({ content, props }: EditorialCompositionPro
 
       <style dangerouslySetInnerHTML={{ __html: `
         .editorial-seam-container {
-          container-type: size;
+          container-type: inline-size;
         }
-        /* Mobile: Split Horizontal (50/50) */
         .clip-seam-left-bg { clip-path: inset(50% 0 0 0); }
         .clip-seam-left-photo { clip-path: inset(0 0 50% 0); }
         .clip-seam-right-bg { clip-path: inset(0 0 50% 0); }
         .clip-seam-right-photo { clip-path: inset(50% 0 0 0); }
         
-        /* Desktop: Split Vertical (50/50) */
         @container (min-width: 768px) {
           .clip-seam-left-bg { clip-path: inset(0 0 0 50%); }
           .clip-seam-left-photo { clip-path: inset(0 50% 0 0); }
