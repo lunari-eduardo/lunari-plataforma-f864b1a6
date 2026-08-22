@@ -1,53 +1,35 @@
-# Plano de Investigação e Correção: Editor de Propostas e Links Públicos
+# Auditoria de Banco de Dados: Módulo Comercial
 
-## Problemas Identificados
-1. **Erro de Publicação Fantasma**: O sistema impede a geração de links rastreáveis alegando que a proposta não está publicada, mesmo quando o usuário já clicou em "Publicar".
-2. **Crash Crítico no Editor**: Erro "Algo deu errado" ao tentar acessar o construtor, impedindo qualquer edição.
+## 1. Integridade de Gatilhos (Triggers)
+A função `sync_active_version_on_publish` existe no banco de dados, porém a auditoria revelou que ela pode estar falhando silenciosamente ou não estar vinculada corretamente em todos os casos.
+- **Evidência**: Encontramos o material **"Sessão Casal"** (ID `5f8fa4af...`) que possui uma versão publicada em `2026-08-22 18:11:40`, mas seu campo `active_version_id` na tabela `commercial_materials` está **nulo**.
+- **Impacto**: O hook `useMaterialShares` (linha 42) lança um erro `O material precisa ser publicado antes de enviar` porque ele confia exclusivamente no `active_version_id` da tabela pai.
 
----
+## 2. Segurança e RLS (Row Level Security)
+- As tabelas `material_share_links` e `material_shares` estão com **Row Level Security DESATIVADO** (`rowsecurity: false`).
+- Embora os dados estejam acessíveis, a falta de RLS nessas tabelas é uma vulnerabilidade crítica, pois permite que qualquer usuário autenticado (ou até anônimo, dependendo da configuração do PostgREST) possa listar ou modificar links de outros fotógrafos se descobrir o ID/Slug.
 
-## Análise Técnica Preliminar
+## 3. Estrutura de Normalização (Potencial de Crash)
+- O `useMaterialEditor.ts` utiliza a função `normalizeBlocks` que manipula profundamente o JSON retornado do banco.
+- Se um bloco V1 for carregado sem a propriedade `data` (ou com `data` nulo), a função pode estourar um erro de referência ao tentar acessar caminhos como `d.title` ou `d.text`, o que explica o erro "Algo deu errado" no Editor.
 
-### 1. Link Público vs. Versão Ativa
-No arquivo `useMaterialShares.ts` (linhas 34-42), existe uma trava explícita:
-```typescript
-if (!material.active_version_id) throw new Error('O material precisa ser publicado antes de enviar.');
-```
-O problema é que `active_version_id` na tabela `commercial_materials` é atualizado via trigger no Supabase (`sync_active_version_on_publish`) quando uma linha em `material_versions` ganha um `published_at`.
-- **Hipótese A**: O trigger está falhando ou não existe em alguns ambientes, deixando o material sem `active_version_id` mesmo com versões publicadas.
-- **Hipótese B**: A interface de "Publicar Versão" no `EditorPropostaPage.tsx` está criando a versão mas o estado local ou o cache do TanStack Query não está refletindo a atualização do ID do material pai.
-
-### 2. Erro "Algo deu errado" (Runtime Crash)
-Este erro é disparado pelo `RootErrorBoundary`. As causas prováveis para o Editor especificamente:
-- **Falha na Normalização de Blocos**: O `useMaterialEditor.ts` chama `normalizeBlocks(version.content)`. Se o JSON no banco estiver corrompido ou em um formato V1 inesperado, a função pode lançar uma exceção não tratada.
-- **Recursão Infinita de Tipos**: Já corrigimos um erro similar em `useSupabaseGalleries`, pode haver outro no `useMaterialEditor` ao lidar com as tabelas de versões.
-- **Propriedades Indefinidas**: O `VisualRenderer` ou `EditorialComposition` podem estar tentando acessar `designTokens` ou `props` de um bloco que veio nulo do banco.
+## 4. Inconsistência de Link Público
+- O material "Sessão Casal" já possui um link gerado na tabela `material_share_links` (slug `sessao-casal-a86n`), mas como o material pai não aponta para uma versão ativa, o sistema entra em loop tentando gerar um link para uma "proposta não publicada".
 
 ---
 
-## Plano de Ação (Fase de Investigação)
+# Plano de Correção Sugerido (Fase 1.5)
 
-### Passo 1: Auditoria de Banco de Dados (Investigação Imediata)
-- Verificar a existência e integridade do trigger `sync_active_version_on_publish`.
-- Validar se existem materiais com `published_at` em suas versões mas com `active_version_id` nulo na tabela pai.
-- Verificar permissões RLS na tabela `material_share_links` e `material_versions`.
+### A. Reparo de Dados e Gatilho (SQL Migration)
+1. Executar um script de reparo para preencher `active_version_id` em todos os materiais que possuem versões publicadas mas estão com o campo nulo.
+2. Refatorar o trigger `trigger_sync_active_version` para garantir que ele dispare corretamente em `INSERT` e `UPDATE` na tabela `material_versions`.
+3. Ativar RLS nas tabelas de compartilhamento e aplicar políticas de isolamento por `user_id`.
 
-### Passo 2: Debug de Runtime e Resiliência (Correção do Crash)
-- Implementar logs defensivos no `useMaterialEditor` para capturar o erro exato antes dele subir para o `ErrorBoundary`.
-- Adicionar `try/catch` na função `normalizeBlocks` com fallback para um array vazio em vez de crashar a página toda.
-- Validar o schema do `globalSettings` durante o carregamento.
+### B. Blindagem do Editor (Frontend)
+1. Adicionar `Optional Chaining` e `fallbacks` na função `normalizeBlock` em `src/pages/comercial/blocks/registry.ts`.
+2. Implementar um log de erro detalhado no `ErrorBoundary` para que, caso ocorra outro crash, saibamos exatamente qual bloco causou o problema.
 
-### Passo 3: Sincronização de Publicação (Correção do Link)
-- Alterar `useMaterialShares` para, em caso de `active_version_id` nulo, tentar buscar a última versão com `published_at` antes de desistir.
-- Garantir que `editor.publish()` invalide corretamente a query `['commercial-materials']` e a query do material específico.
+### C. Resiliência no Hook de Compartilhamento
+1. Atualizar `useMaterialShares.ts` para buscar a última versão publicada como fallback caso `active_version_id` seja nulo, evitando o bloqueio do usuário enquanto o trigger sincroniza.
 
-### Passo 4: Validação em Preview
-- Criar um script Playwright para reproduzir o fluxo: Criar -> Publicar -> Gerar Link.
-- Capturar logs do console durante o processo para identificar falhas silenciosas.
-
----
-
-## Próximos Passos Sugeridos
-1. **Não implementar nada ainda**, conforme instrução.
-2. Aguardar confirmação se houve alguma alteração recente no schema de `commercial_materials` ou `material_versions`.
-3. Autorizar a execução dos comandos de auditoria de trigger no banco.
+**Deseja que eu elabore a migração SQL para corrigir estes pontos imediatamente ou prefere revisar a blindagem do frontend primeiro?**
