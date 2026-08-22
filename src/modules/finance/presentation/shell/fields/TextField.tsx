@@ -10,6 +10,12 @@ interface BaseProps {
   placeholder?: string;
   disabled?: boolean;
   maxLength?: number;
+  /** Tipo nativo do input (default: "text"). Use "number" para inteiros simples. */
+  type?: string;
+  /** inputMode para teclados mobile (ex.: "numeric", "decimal"). */
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
+  min?: number;
+  max?: number;
 }
 
 export const TextField = memo(function TextField({
@@ -18,10 +24,17 @@ export const TextField = memo(function TextField({
   placeholder,
   disabled,
   maxLength,
+  type = 'text',
+  inputMode,
+  min,
+  max,
 }: BaseProps) {
   return (
     <input
-      type="text"
+      type={type}
+      inputMode={inputMode}
+      min={min}
+      max={max}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

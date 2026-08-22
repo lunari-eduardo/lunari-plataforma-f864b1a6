@@ -267,7 +267,8 @@ export function useSupabaseGalleries() {
       if (activeError) throw activeError;
 
       // 2. Buscar galerias arquivadas/excluídas do histórico
-      const { data: archivedData, error: archivedError } = await supabase
+      // Nota: `galerias_arquivadas` ainda não está nos types gerados do Supabase — acesso sem tipagem.
+      const { data: archivedData, error: archivedError } = await (supabase as any)
         .from('galerias_arquivadas')
         .select('*')
         .order('archived_at', { ascending: false });

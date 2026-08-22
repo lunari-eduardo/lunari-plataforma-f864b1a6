@@ -109,9 +109,11 @@ interface Props {
   onClose: () => void;
   onCreated?: () => void;
   isMobile?: boolean;
+  /** Quando presente (natureza "entrada"), mostra atalho para o painel de Venda Avulsa. */
+  onSelectVendaAvulsa?: () => void;
 }
 
-export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false }: Props) {
+export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCreated, isMobile = false, onSelectVendaAvulsa }: Props) {
   const meta = getLancamentoTipoMeta(tipo);
   const { toast } = useToast();
   const {
@@ -499,6 +501,16 @@ export const LancamentoForm = memo(function LancamentoForm({ tipo, onClose, onCr
         className={`flex items-center gap-2 border-t border-border/40 shrink-0 ${isMobile ? 'justify-stretch px-5 py-3' : 'justify-end px-6 py-4'}`}
         style={isMobile ? { paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' } : undefined}
       >
+        {onSelectVendaAvulsa && meta.natureza === 'entrada' && (
+          <button
+            type="button"
+            onClick={onSelectVendaAvulsa}
+            disabled={submitting}
+            className="mr-auto rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground/70 transition-colors hover:text-accent-gold disabled:opacity-50"
+          >
+            É uma venda avulsa?
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
