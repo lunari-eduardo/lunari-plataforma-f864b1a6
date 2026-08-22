@@ -137,9 +137,9 @@ export function PropertiesSidebar({
                 <select 
                   className="w-full bg-background border border-input rounded-md px-3 py-2 text-sm text-foreground"
 
-                  value={block.content?.globalSettings?.design_tokens?.typography?.display || 'Playfair Display'}
+                  value={(aiContext as any)?.designTokens?.typography?.display || 'Playfair Display'}
                   onChange={(e) => {
-                    const currentTokens = block.content?.globalSettings?.design_tokens || {};
+                    const currentTokens = (aiContext as any)?.designTokens || {};
                     onUpdateDesignTokens?.({
                       ...currentTokens,
                       typography: {
