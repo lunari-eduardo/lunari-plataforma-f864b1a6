@@ -71,13 +71,25 @@ export function extractJson(text: string): unknown {
   throw new Error('Não foi possível interpretar o JSON da IA');
 }
 
-/** Completa um prompt exigindo saída JSON estrita. */
-export async function completeJson(env: Env, system: string, user: string): Promise<unknown> {
+/** Anexo multimodal (base64 sem prefixo data:) para análise de referências. */
+export interface AiAttachment {
+  mime: string;
+  data: string;
+  isImage: boolean;
+}
+
+/** Completa um prompt exigindo saída JSON estrita. Anexos (imagens/PDF)
+ * são enviados como conteúdo multimodal — PDF apenas com Gemini. */
+export async function completeJson(env: Env, system: string, user: string, attachments: AiAttachment[] = []): Promise<unknown> {
   const cfg = await resolveAiConfig(env);
   const systemPrompt = `${system}\n\nResponda APENAS com JSON válido, sem texto ao redor, sem markdown.`;
   let text: string;
 
   if (cfg.provider === 'gemini') {
+    const parts: any[] = [{ text: user }];
+    for (const a of attachments) {
+      parts.push({ inline_data: { mime_type: a.mime, data: a.data } });
+    }
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`,
       {
@@ -85,7 +97,7 @@ export async function completeJson(env: Env, system: string, user: string): Prom
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.apiKey },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: user }] }],
+          contents: [{ role: 'user', parts }],
           generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
         }),
       }
@@ -95,6 +107,10 @@ export async function completeJson(env: Env, system: string, user: string): Prom
     text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? '').join('') ?? '';
   } else {
     // OpenAI-compatible: OpenAI, DeepSeek e Lovable Gateway
+    if (attachments.some((a) => !a.isImage)) {
+      throw new Error('O provedor de IA atual não suporta análise de PDFs. Use o provedor Gemini para enviar referências em PDF.');
+    }
+
     const baseURL =
       cfg.provider === 'openai'
         ? 'https://api.openai.com/v1'
@@ -106,6 +122,16 @@ export async function completeJson(env: Env, system: string, user: string): Prom
     if (cfg.provider === 'lovable') headers['Lovable-API-Key'] = cfg.apiKey;
     else headers['Authorization'] = `Bearer ${cfg.apiKey}`;
 
+    const userContent: any = attachments.length
+      ? [
+          { type: 'text', text: user },
+          ...attachments.map((a) => ({
+            type: 'image_url',
+            image_url: { url: `data:${a.mime};base64,${a.data}` },
+          })),
+        ]
+      : user;
+
     const res = await fetch(`${baseURL}/chat/completions`, {
       method: 'POST',
       headers,
@@ -113,7 +139,7 @@ export async function completeJson(env: Env, system: string, user: string): Prom
         model: cfg.model,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: user },
+          { role: 'user', content: userContent },
         ],
         temperature: 0.7,
       }),

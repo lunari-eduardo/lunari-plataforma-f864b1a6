@@ -7,6 +7,7 @@ export const BLOCK_TYPES = [
   'PricingTable',
   'Gallery',
   'TestimonialBlock',
+  'FAQBlock',
   'CTABlock',
   'FooterTerms',
   'text',
@@ -18,10 +19,13 @@ const STRING_FIELDS: Record<string, string[]> = {
   PricingTable: ['eyebrow', 'title'],
   Gallery: ['eyebrow', 'title', 'caption'],
   TestimonialBlock: ['eyebrow', 'title'],
-  CTABlock: ['cta_text'],
+  FAQBlock: ['eyebrow', 'title'],
+  CTABlock: ['cta_text', 'button_label'],
   FooterTerms: ['copyright'],
   text: ['title', 'body'],
 };
+
+const GALLERY_RATIOS = ['auto', '1/1', '4/5', '4/3', '16/9'];
 
 export type Block = {
   id?: string;
@@ -59,6 +63,7 @@ export function sanitizeBlock(raw: any, index: number): Block | null {
         price: String(p.price ?? ''),
         price_unit: String(p.price_unit ?? 'sessão'),
         badge: String(p.badge ?? ''),
+        image_ref: typeof p.image_ref === 'string' ? p.image_ref : '',
         features: Array.isArray(p.features) ? p.features.map((f: any) => String(f)).slice(0, 12) : [],
       }));
   }
@@ -71,6 +76,16 @@ export function sanitizeBlock(raw: any, index: number): Block | null {
         quote: String(t.quote ?? ''),
         author: String(t.author ?? ''),
         service: String(t.service ?? ''),
+      }));
+  }
+
+  if (type === 'FAQBlock' && Array.isArray(raw.content?.items)) {
+    content.items = raw.content.items
+      .filter((q: any) => q && typeof q === 'object')
+      .map((q: any, i: number) => ({
+        id: typeof q.id === 'string' ? q.id : `faq-${index}-${i}`,
+        question: String(q.question ?? ''),
+        answer: String(q.answer ?? ''),
       }));
   }
 
@@ -89,6 +104,7 @@ export function sanitizeBlock(raw: any, index: number): Block | null {
       id: typeof g?.id === 'string' ? g.id : `gi-${index}-${i}`,
       image_ref: typeof g?.image_ref === 'string' ? g.image_ref : '',
       span: ['normal', 'tall_2rows', 'wide_2cols'].includes(g?.span) ? g.span : 'normal',
+      ratio: GALLERY_RATIOS.includes(g?.ratio) ? g.ratio : 'auto',
     }));
   }
 
@@ -96,6 +112,29 @@ export function sanitizeBlock(raw: any, index: number): Block | null {
   if (typeof raw.id === 'string' && raw.id) block.id = raw.id;
   if (raw.props && typeof raw.props === 'object') block.props = raw.props;
   return block;
+}
+
+/**
+ * A IA às vezes devolve vários blocos PricingTable (um por pacote), gerando
+ * seções "Investimento" duplicadas. Mescla todos em um único bloco.
+ */
+export function mergePricingTables(blocks: Block[]): Block[] {
+  const out: Block[] = [];
+  let merged: Block | null = null;
+  for (const b of blocks) {
+    if (b.type !== 'PricingTable') {
+      out.push(b);
+      continue;
+    }
+    if (!merged) {
+      merged = b;
+      out.push(b);
+      continue;
+    }
+    const extra = Array.isArray(b.content?.packages) ? b.content.packages : [];
+    merged.content.packages = [...(merged.content.packages ?? []), ...extra].slice(0, 6);
+  }
+  return out;
 }
 
 export function sanitizeDesignTokens(raw: any) {
