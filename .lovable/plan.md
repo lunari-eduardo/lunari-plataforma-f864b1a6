@@ -1,53 +1,55 @@
-# Plano de Transformação: Capa FLOATING FRAME (Ajuste Editorial/Moderno)
+# Mapa de Navegação do Codebase para IAs Externas
 
-Este plano detalha a reconstrução da capa `FloatingFrameCover.tsx` (ou a criação de uma nova lógica de composição se necessário) para atingir o visual "Editorial Flutuante" solicitado: fotografia horizontal centralizada com sombra suave, tipografia serifada monumental abaixo e fundo off-white minimalista.
+## Objetivo
 
-## 1. Análise da Arquitetura Atual
-- **EditorialCover.tsx**: Atualmente usa um sistema complexo de "costura" (split-screen) com inversão de cores. Não serve como base direta para o Floating Frame, mas possui o motor tipográfico (`useFittedTitle`) que queremos reaproveitar.
-- **FloatingFrameCover.tsx**: É uma implementação básica com foto em proporção 16:10, sombra 2xl e flex vertical simples. Precisamos elevar o nível dessa implementação para o padrão "Lunari Premium".
+Criar **um documento-mapa** (`docs/AI_CODEBASE_MAP.md`) que permita a qualquer IA externa entender o contexto do Lunari, localizar a página/arquivo certo para cada tipo de pedido e editar com segurança — sem precisar ler o sistema inteiro. O documento é um **índice com ponteiros**, não uma cópia da documentação: ele diz *onde* está cada coisa e *qual doc resolver* cada dúvida.
 
-## 2. Nova Composição Visual (Floating Frame v2)
-### Geometria (Desktop)
-- **Fundo**: `#F7F4EE` (Off-white) fixo, ignorando o tema escuro se o usuário optar por esta estética editorial "física".
-- **Container da Foto**:
-    - Centralizado horizontalmente.
-    - Margem superior generosa (ex: `15vh`).
-    - Sombras: `shadow-[0_20px_50px_rgba(0,0,0,0.15)]` para simular profundidade real.
-    - Proporção: Horizontal (3:2 ou 16:10).
-- **Bloco de Texto**:
-    - Posicionado imediatamente abaixo da foto com espaçamento controlado (`mt-12` a `mt-20`).
-    - **Título**: Serif Display (proporcional à largura do container, mas não monumental a ponto de tocar as bordas, preservando o "respiro").
-    - **Subtítulo**: Sans-serif, tracking alto (`tracking-[0.3em]`), posicionado abaixo do título.
-- **CTA**: Botão minimalista, borda de 1px, centralizado.
+Documento único, em português, com tabelas e caminhos exatos. Meta: ≤ ~800 linhas, denso em ponteiros, zero prosa desnecessária.
 
-### Geometria (Mobile)
-- A foto reduz proporcionalmente mantendo a margem de respiro lateral (ex: `px-6`).
-- A sombra é suavizada para não parecer pesada em telas pequenas.
-- Hierarquia vertical estrita: Foto -> Título -> Subtítulo -> CTA.
+## O que a varredura encontrou (insumos do mapa)
 
-## 3. Plano de Implementação Técnica
+- **Rotas**: definidas em `src/app-photographer/PhotographerApp.tsx` (app do fotógrafo sob `/app/*`), `src/app-admin/AdminApp.tsx` (admin) e site público na raiz. ~60 rotas mapeadas (páginas em `src/pages/*`).
+- **Arquitetura dual em transição**:
+  - Nova: `src/modules/<modulo>/` (domain/application/ports/infrastructure/presentation/ai + MODULE.md) — módulos: `agenda, assistant, automation, billing, clientes, configuracoes, contratos, decision, finance, formularios, gallery, intelligence, knowledge, leads, learning, memory, observation, precificacao, support, tasks, workflow`.
+  - Legada: `src/hooks/` (189 hooks), `src/components/<dominio>/`, `src/pages/`, `src/features/workflow/` (refatoração em ondas).
+  - Migração por estrangulamento (ADR-017) — o mapa precisa dizer, por domínio, **qual lado é a fonte atual** e para onde está migrando.
+- **Backend**: 90 edge functions em `supabase/functions/` (agrupáveis por domínio: asaas, mercadopago, infinitepay, autentique, gallery, r2, assistant, automation...). 327 migrations; ~100 tabelas já identificadas por domínio.
+- **Docs oficiais existentes**: `docs/constitution/*` (CONSTITUTION, ARCHITECTURE, PRODUCT_GUIDE, ASSISTANT_GUIDE, DESIGN_DNA), `docs/ARCHITECTURE_TECHNICAL.md`, 20 ADRs, handoffs. O mapa referencia — não duplica.
+- **Regras operacionais** (memória do projeto): capability-first, sem toast de sucesso, máscara BRL via `useCurrencyInput`, valores financeiros só via triggers DB, uploads sempre R2, padrões de z-index, etc.
 
-### Fase 1: Motor de Composição
-1. **Novo Spec**: Criar `src/components/deliver/covers/editorial/floatingSpec.ts` para calcular as dimensões e espaçamentos baseados no viewport.
-    - Diferente do Editorial atual, o Floating Frame não tem "seam". Ele tem um "anchor point" central.
-2. **Reuso Tipográfico**: Garantir que `useFittedTitle` suporte o novo alinhamento centralizado sem quebras indesejadas.
+## Estrutura do documento `docs/AI_CODEBASE_MAP.md`
 
-### Fase 2: Componente `FloatingFrameCover.tsx`
-1. **Limpeza**: Remover elementos de numeração, estúdio ou identificação que poluem a peça.
-2. **Camadas**:
-    - `Layer 0`: Background off-white.
-    - `Layer 1`: Fotografia com `aspect-ratio` e `shadow-floating`.
-    - `Layer 2`: Bloco de texto (`flex flex-col items-center`).
-3. **Refinamento da Sombra**: Implementar uma sombra difusa que "vaze" para baixo e para os lados, criando a sensação de papel flutuante.
+1. **Como usar este mapa** — fluxo de 3 passos: (1) identificar domínio do pedido, (2) consultar tabela de rotas/módulo, (3) abrir só os arquivos apontados. Aviso de ordem de leitura: Constituição → este mapa → MODULE.md do módulo → código.
+2. **Visão do produto em 10 linhas** — Lunari Studio vs Gallery, fluxo Lead→Pós-venda, público.
+3. **Tabela de Rotas → Arquivos** — cada URL (`/app/financas`, `/app/workflow`, `/app/gallery/...`, site público, rotas públicas de cliente como `/formulario/:token`, `/checkout/:cobrancaId`) com: arquivo da página, componentes principais, hooks/módulo que alimentam, tabelas envolvidas. É a seção mais importante — "quero mexer na tela X" resolve aqui.
+4. **Mapa de Módulos (`src/modules/`)** — tabela por módulo: status (esqueleto/em ondas/ativo), tabelas que possui, capabilities expostas, MODULE.md. Indicação explícita de módulos que ainda são esqueleto vs. os que já carregam lógica real.
+5. **Mapa do Legado** — `src/hooks/` agrupados por domínio (financeiro, agenda, leads, gallery...), `src/components/<dominio>/`, `src/features/workflow/` com status das ondas. Regra: "se o módulo novo existe, prefira ele; senão o legado é a fonte".
+6. **Mapa de Dados** — tabelas agrupadas por domínio (CRM, financeiro, billing, agenda, gallery, tasks, assistant, intelligence...), views (`extrato_unificado`), triggers críticos (status_financeiro, anti-regressão de status gallery), funções SECURITY DEFINER relevantes.
+7. **Mapa de Edge Functions** — as 90 functions agrupadas por provedor/domínio com uma linha cada; contratos especiais (shared com Gallery: skip JWT, userId no body; webhooks com idempotência).
+8. **Infra compartilhada (`src/shared/`)** — capability system, ai registry, event-bus, ports, policy, result. Como Lu/MCP enxergam o sistema.
+9. **Regras Inegociáveis** (checklist antes de qualquer edição) — capability-first, RLS + GRANTs obrigatórios, roles em tabela separada, nunca localStorage como verdade, uploads só R2, máscara BRL, sem success toast, z-index padrão, links canônicos com VITE_SITE_URL, registro financeiro via trigger.
+10. **Receitas por tipo de pedido** — 10-15 cenários frequentes ("adicionar campo na sessão", "mudar painel de lançamento financeiro", "alterar capa da galeria", "criar nova página", "adicionar integração de pagamento") cada um com a lista exata de arquivos a abrir, em ordem.
+11. **Índice de documentos oficiais** — tabela: pergunta → doc que responde (ex.: "posso criar tabela?" → ARCHITECTURE.md; "como a Lu acessa?" → ASSISTANT_GUIDE.md).
+12. **Como manter este mapa** — regra de atualização: toda nova rota/módulo/tabela atualiza o mapa no mesmo PR; ponteiro no README.
 
-### Fase 3: Responsividade
-1. Ajustar o `max-height` da foto no mobile para não empurrar o texto para fora da primeira dobra (fold).
-2. Garantir que o CTA tenha o tamanho de toque (44px) adequado mesmo sendo minimalista.
+## Etapas de implementação
 
-## 4. Detalhes de Design (DNA Lunari)
-- **Tipografia**: Usar a fonte serifada configurada na galeria.
-- **Espaço Negativo**: Mínimo de 8% de margem em todos os lados para a fotografia.
-- **Cor**: Manter o contraste preto sobre off-white para o texto, garantindo a estética editorial clássica.
+1. **Etapa 1 — Extração automatizada**: script de varredura (rg) para gerar esqueleto factual: rotas do `PhotographerApp.tsx`/`AdminApp.tsx`, lista de módulos com presença/ausência de cada camada, edge functions, tabelas por migration. Garante que o mapa nasce 100% fiel ao código, sem achismo.
+2. **Etapa 2 — Enriquecimento por domínio**: para cada uma das ~12 áreas (CRM, Agenda, Leads, Workflow, Financeiro, Billing, Gallery, Tarefas, Formulários, Contratos, Precificação, Assistente/IA), cruzar rota ↔ página ↔ hook/módulo ↔ tabelas ↔ edge functions, lendo os MODULE.md e os pontos de entrada.
+3. **Etapa 3 — Redação das seções 9-11** (regras, receitas, índice de docs) consolidando o que hoje está disperso em memória + constitution.
+4. **Etapa 4 — Validação**: conferir 100% dos caminhos citados existem de fato (script de verificação de paths), e testar o mapa com 3 pedidos simulados ("mexer no checkout", "adicionar coluna no kanban de leads", "mudar capa editorial") verificando se o mapa leva aos arquivos certos.
+5. **Etapa 5 — Ponteiros**: adicionar referência ao mapa no `README.md` e na memória do projeto (regra: consultar `docs/AI_CODEBASE_MAP.md` no início de qualquer tarefa).
 
----
-**Nenhuma alteração foi realizada no código ainda.** Aguardando aprovação do plano para iniciar a implementação da nova `FloatingFrameCover`.
+## Detalhes técnicos
+
+- Arquivo único: `docs/AI_CODEBASE_MAP.md` (markdown puro, tabelas, sem front matter).
+- Nenhuma alteração de código de produto — apenas documentação + 1 linha no README + memória.
+- Caminhos sempre relativos à raiz do repo (`src/pages/NovaFinancas.tsx`), nunca descrições vagas.
+- Onde houver dualidade módulo novo × legado, o mapa marca: `[NOVO]`, `[LEGADO]`, `[MIGRANDO → módulo X]`.
+- Tabelas/funções citadas apenas se confirmadas nas migrations/código (a varredura inicial já levantou a lista real).
+
+## Fora de escopo
+
+- Não altera nenhum código, rota ou comportamento.
+- Não substitui os docs da constituição — apenas indexa e aponta.
+- Não gera documentação de API de capabilities (já coberta por MODULE.md e `docs/handoff/MCP_SURFACE_MATRIX.md`).
